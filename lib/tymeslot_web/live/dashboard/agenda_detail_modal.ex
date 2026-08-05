@@ -18,10 +18,12 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :entry, Entry, required: true
   attr :timezone, :string, required: true
+  attr :time_format, :string, required: true
   attr :now, DateTime, required: true
   attr :myself, :any, required: true
 
@@ -52,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             {date_label(@entry, @timezone)}
           </.info_line>
           <.info_line icon="hero-clock" label={dgettext("dashboard_home", "Time")}>
-            {time_label(@entry, @timezone)}<span :if={duration_label(@entry)} class="text-tymeslot-400 font-semibold">
+            {time_label(@entry, @timezone, @time_format)}<span :if={duration_label(@entry)} class="text-tymeslot-400 font-semibold">
               · {duration_label(@entry)}</span>
           </.info_line>
           <.info_line
@@ -246,10 +248,11 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
 
   defp date_label(%Entry{} = entry, tz), do: entry.start_at |> local(tz) |> long_date()
 
-  defp time_label(%Entry{all_day?: true}, _tz), do: dgettext("dashboard_home", "All day")
+  defp time_label(%Entry{all_day?: true}, _tz, _time_format),
+    do: dgettext("dashboard_home", "All day")
 
-  defp time_label(%Entry{} = entry, tz) do
-    "#{clock(entry.start_at, tz)} – #{clock(entry.end_at, tz)}"
+  defp time_label(%Entry{} = entry, tz, time_format) do
+    "#{clock(entry.start_at, tz, time_format)} – #{clock(entry.end_at, tz, time_format)}"
   end
 
   defp duration_label(%Entry{all_day?: true}), do: nil
@@ -293,10 +296,8 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   defp countdown(seconds),
     do: dgettext("dashboard_home", "in %{days}d", days: div(seconds, 86_400))
 
-  defp clock(datetime, tz) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    datetime |> local(tz) |> LocaleFormat.format_time(locale)
-  end
+  defp clock(datetime, tz, time_format),
+    do: datetime |> local(tz) |> TimeFormat.format(time_format)
 
   defp long_date(date) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)

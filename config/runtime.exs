@@ -302,6 +302,9 @@ if config_env() == :prod do
          {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
          # Run daily at 02:45 UTC for video room recovery scan
          {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
+         # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
+         # meetings whose video room was never cleaned up
+         {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
          # Run daily at 03:15 UTC
          {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
          # Run daily at 02:00 UTC to renew expiring webhook channels

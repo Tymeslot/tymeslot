@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Availability.Helpers
 
   # Grid spans 6:00 AM to 10:30 PM (990 minutes total)
@@ -70,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
         <div class="sm:hidden space-y-2">
           <%= for {day_name, day_num} <- @days do %>
             <% avail = Map.get(@day_map, day_num) %>
-            <% row = mobile_row_data(avail) %>
+            <% row = mobile_row_data(avail, @time_format) %>
             <div class="flex items-center gap-3 py-1">
               <span class={["w-20 shrink-0 text-xs font-bold", if(row.active, do: "text-tymeslot-700", else: "text-tymeslot-400")]}>
                 {day_name}
@@ -123,7 +124,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
               <%= for hour <- 6..22 do %>
                 <%= for minute <- [0, 30] do %>
                   <div class="font-black text-tymeslot-400 text-right py-1 pr-4 text-token-2xs sm:text-xs uppercase tracking-tighter">
-                    {format_time_slot(hour, minute)}
+                    {format_time_slot(hour, minute, @time_format)}
                   </div>
                   <%= for day_num <- 1..7 do %>
                     <% availability = Map.get(@day_map, day_num) %>
@@ -189,12 +190,15 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   end
 
   # Computes display data for a single mobile timeline row.
-  defp mobile_row_data(%{
-         is_available: true,
-         start_time: %Time{} = start_time,
-         end_time: %Time{} = end_time,
-         breaks: breaks
-       }) do
+  defp mobile_row_data(
+         %{
+           is_available: true,
+           start_time: %Time{} = start_time,
+           end_time: %Time{} = end_time,
+           breaks: breaks
+         },
+         time_format
+       ) do
     start_min = time_to_minutes(start_time)
     end_min = time_to_minutes(end_time)
 
@@ -217,12 +221,13 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
       active: true,
       left: bar_left(start_min),
       width: bar_width(start_min, end_min),
-      label: "#{format_time_label(start_time)} – #{format_time_label(end_time)}",
+      label:
+        "#{TimeFormat.format(start_time, time_format)} – #{TimeFormat.format(end_time, time_format)}",
       breaks: break_segments
     }
   end
 
-  defp mobile_row_data(_row),
+  defp mobile_row_data(_row, _time_format),
     do: %{
       active: false,
       left: 0,
@@ -241,21 +246,8 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   defp bar_width(start_min, end_min),
     do: Float.round((end_min - start_min) / @grid_total_minutes * 100, 2)
 
-  defp format_time_label(%Time{hour: h, minute: m}) when h < 12,
-    do: "#{h}:#{String.pad_leading(Integer.to_string(m), 2, "0")} AM"
-
-  defp format_time_label(%Time{hour: 12, minute: m}),
-    do: "12:#{String.pad_leading(Integer.to_string(m), 2, "0")} PM"
-
-  defp format_time_label(%Time{hour: h, minute: m}) when h > 12,
-    do: "#{h - 12}:#{String.pad_leading(Integer.to_string(m), 2, "0")} PM"
-
-  defp format_time_slot(hour, 0) when hour < 12, do: "#{hour}:00"
-  defp format_time_slot(hour, 30) when hour < 12, do: "#{hour}:30"
-  defp format_time_slot(12, 0), do: "12:00"
-  defp format_time_slot(12, 30), do: "12:30"
-  defp format_time_slot(hour, 0) when hour > 12, do: "#{hour - 12}:00"
-  defp format_time_slot(hour, 30) when hour > 12, do: "#{hour - 12}:30"
+  defp format_time_slot(hour, minute, time_format),
+    do: hour |> Time.new!(minute, 0) |> TimeFormat.format(time_format)
 
   defp get_time_slot_status(nil, _hour, _minute),
     do: {:unavailable, dgettext("dashboard_availability", "Day not configured")}

@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :show, :boolean, required: true
   attr :meeting, :map, required: true
   attr :timezone, :string, default: "UTC"
+  attr :time_format, :string, default: "24h"
   attr :cancelling, :boolean, required: true
   attr :on_cancel, JS, required: true
   attr :confirm_event, :string, required: true
@@ -77,7 +78,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
             name: @meeting.attendee_name,
             when:
-              "#{Helpers.format_meeting_date(@meeting, @timezone)} • #{Helpers.format_meeting_time(@meeting, @timezone)}"
+              "#{Helpers.format_meeting_date(@meeting, @timezone)} • #{Helpers.format_meeting_time(@meeting, @timezone, @time_format)}"
           )}
         </p>
 

@@ -4,13 +4,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
           default_view: String.t(),
           hidden_integration_ids: [integer()],
           week_start_day: String.t(),
-          time_format: String.t(),
+          time_format: String.t() | nil,
           show_week_numbers: boolean(),
           show_weekends: boolean(),
           desktop_reminders_enabled: boolean(),
@@ -23,7 +25,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :default_view, :string, default: "week"
     field :hidden_integration_ids, {:array, :integer}, default: []
     field :week_start_day, :string, default: "monday"
-    field :time_format, :string, default: "12h"
+    # nil means "never chosen", which defers to the organiser's language.
+    # Resolve it through `TimeFormat.resolve/2` rather than reading it raw.
+    field :time_format, :string
     field :show_week_numbers, :boolean, default: false
     field :show_weekends, :boolean, default: true
     field :desktop_reminders_enabled, :boolean, default: false
@@ -33,7 +37,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
 
   @valid_views ~w(week day month agenda)
   @valid_week_starts ~w(monday sunday)
-  @valid_time_formats ~w(12h 24h)
+  @valid_time_formats TimeFormat.formats()
 
   @castable_fields [
     :user_id,

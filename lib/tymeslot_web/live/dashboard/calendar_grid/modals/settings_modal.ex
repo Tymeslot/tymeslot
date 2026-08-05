@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Components.UI.Toggle
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
   attr :preferences, :any, required: true
   attr :myself, :any, required: true
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
           </div>
           <Toggle.toggle
             id="time-format-toggle"
-            active_option={safe_to_atom(@preferences.time_format, :"12h")}
+            active_option={safe_to_atom(PreferenceHelpers.time_format(@preferences), :"12h")}
             phx_click="update_time_format"
             phx_target={@myself}
             options={[

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Status helpers
@@ -64,14 +65,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
     LocaleFormat.format_date(local_time, locale)
   end
 
-  @spec format_meeting_time(Ecto.Schema.t(), String.t()) :: String.t()
-  def format_meeting_time(meeting, timezone) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+  @doc """
+  Formats a meeting's time range for the organiser's dashboard.
+
+  Takes the clock format explicitly rather than defaulting it: the dashboard is
+  organiser-facing and must follow their preference, so a call site that has
+  not thought about which clock to use should fail to compile rather than
+  quietly pick one.
+  """
+  @spec format_meeting_time(Ecto.Schema.t(), String.t(), String.t()) :: String.t()
+  def format_meeting_time(meeting, timezone, time_format) do
     local_start = DateTimeUtils.convert_to_timezone(meeting.start_time, timezone)
     local_end = DateTimeUtils.convert_to_timezone(meeting.end_time, timezone)
 
-    start_time = LocaleFormat.format_time(local_start, locale)
-    end_time = LocaleFormat.format_time(local_end, locale)
+    start_time = TimeFormat.format(local_start, time_format)
+    end_time = TimeFormat.format(local_end, time_format)
     "#{start_time} - #{end_time}"
   end
 end

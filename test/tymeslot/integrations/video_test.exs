@@ -10,8 +10,10 @@ defmodule Tymeslot.Integrations.VideoTest do
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.IntegrationHealthWorker
+  alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
 
   setup :verify_on_exit!
 
@@ -79,13 +81,44 @@ defmodule Tymeslot.Integrations.VideoTest do
     end
   end
 
-  describe "delete_integration/2" do
+  describe "delete_integration/3" do
     test "deletes user's integration" do
       user = insert(:user)
       integration = insert(:video_integration, user: user)
 
       assert {:ok, :deleted} = Video.delete_integration(user.id, integration.id)
       assert Video.list_integrations(user.id) == []
+    end
+
+    test "leaves provider rooms alone by default" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user)
+
+      assert {:ok, :deleted} = Video.delete_integration(user.id, integration.id)
+
+      # Upcoming bookings' join URLs are already in attendees' calendar invites,
+      # so disconnecting alone must not break them.
+      refute_enqueued(worker: VideoIntegrationDisconnectWorker)
+    end
+
+    test "soft-deletes and schedules the drain when room cleanup is requested" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user)
+
+      assert {:ok, :cleanup_scheduled} =
+               Video.delete_integration(user.id, integration.id, delete_rooms: true)
+
+      assert_enqueued(
+        worker: VideoIntegrationDisconnectWorker,
+        args: %{"integration_id" => integration.id}
+      )
+
+      # Gone from the user's view immediately, but still present so the job can
+      # authenticate against the provider.
+      assert Video.list_integrations(user.id) == []
+      assert {:ok, pending} = VideoIntegrationQueries.get(integration.id)
+      assert pending.deleted_at
+      refute pending.is_active
     end
   end
 

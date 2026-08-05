@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   alias TymeslotWeb.Dashboard.ProfileSettings.{
     AvatarUploadComponent,
     DisplayNameFormComponent,
+    TimeFormatFormComponent,
     TimezoneFormComponent,
     UsernameFormComponent
   }
@@ -87,6 +88,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                     module={TimezoneFormComponent}
                     id="timezone-form"
                     profile={@profile}
+                  />
+                </div>
+
+                <div class="border-t-2 border-tymeslot-50 pt-10">
+                  <.live_component
+                    module={TimeFormatFormComponent}
+                    id="time-format-form"
+                    current_user={@current_user}
                   />
                 </div>
               </div>

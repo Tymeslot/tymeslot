@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @spec week_start(Date.t(), map()) :: Date.t()
@@ -118,13 +119,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def show_week_numbers?(%{preferences: %{show_week_numbers: true}}), do: true
   def show_week_numbers?(_assigns), do: false
 
-  # Accepts either an assigns map (`%{preferences: %{time_format: …}}`) or a bare
-  # preferences map (`%{time_format: …}`), so view helpers can pass whichever
-  # they hold without re-deriving the fallback.
+  @doc """
+  The clock format to render in: the organiser's stored choice, or the preset
+  their language implies when they have never set one.
+
+  Accepts either an assigns map (`%{preferences: %{time_format: …}}`) or a bare
+  preferences map (`%{time_format: …}`), so view helpers can pass whichever they
+  hold without re-deriving the fallback.
+  """
   @spec time_format(map()) :: String.t()
-  def time_format(%{preferences: %{time_format: fmt}}), do: fmt
-  def time_format(%{time_format: fmt}) when is_binary(fmt), do: fmt
-  def time_format(_assigns), do: "12h"
+  def time_format(%{preferences: %{time_format: stored}}), do: resolve_time_format(stored)
+  def time_format(%{time_format: stored}) when is_binary(stored), do: resolve_time_format(stored)
+  def time_format(_assigns), do: resolve_time_format(nil)
+
+  defp resolve_time_format(stored),
+    do: TimeFormat.resolve(stored, Gettext.get_locale(TymeslotWeb.Gettext))
 
   @valid_views %{
     "week" => :week,

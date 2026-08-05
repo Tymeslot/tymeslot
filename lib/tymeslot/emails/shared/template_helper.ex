@@ -93,6 +93,46 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
     |> MjmlEmail.compile_mjml()
   end
 
+  @doc """
+  Rewrites a shared appointment payload for an organiser-addressed render.
+
+  The payload is built once and rendered twice, for the attendee and for the
+  organiser, so the organiser's clock travels under `:organizer_time_format`
+  where an attendee render cannot mistake it for its own. Promoting it to the
+  generic `:time_format` key here marks the point where the audience is known,
+  and is the only place that promotion happens.
+  """
+  @spec as_organizer_view(map()) :: map()
+  def as_organizer_view(appointment_details) do
+    Map.put(
+      appointment_details,
+      :time_format,
+      Map.get(appointment_details, :organizer_time_format)
+    )
+  end
+
+  @doc """
+  The meeting-details map for an organiser-addressed render: the meeting as the
+  organiser sees it, in their own timezone and on the clock they chose.
+
+  Three templates (confirmation, cancellation, reminder) render the same block
+  from the same payload, so the shape lives here once. Two copies of "which
+  fields the organiser's meeting card shows" is exactly where a new field gets
+  added to one and forgotten in the other.
+  """
+  @spec organizer_meeting_details(map()) :: map()
+  def organizer_meeting_details(appointment_details) do
+    %{
+      date: appointment_details.date,
+      start_time: appointment_details.start_time_owner_tz,
+      duration: appointment_details.duration,
+      location: appointment_details.location,
+      location_type: Map.get(appointment_details, :location_type),
+      meeting_type: appointment_details.meeting_type,
+      time_format: Map.get(appointment_details, :organizer_time_format)
+    }
+  end
+
   @doc "Formats error reasons for display in templates."
   @spec format_error_reason(any()) :: String.t()
   def format_error_reason(reason) when is_binary(reason), do: reason

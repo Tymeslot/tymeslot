@@ -90,14 +90,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
   def render(:organizer, organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
-      meeting_details = %{
-        date: appointment_details.date,
-        start_time: appointment_details.start_time_owner_tz,
-        duration: appointment_details.duration,
-        location: appointment_details.location,
-        location_type: Map.get(appointment_details, :location_type),
-        meeting_type: appointment_details.meeting_type
-      }
+      meeting_details = TemplateHelper.organizer_meeting_details(appointment_details)
 
       mjml_content = """
       #{MeetingComponents.meeting_details_table(meeting_details, organizer_locale(appointment_details))}
@@ -176,6 +169,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
   end
 
   defp build_organizer_text_body(appointment_details) do
+    appointment_details = TemplateHelper.as_organizer_view(appointment_details)
+
     meeting_details =
       TextBodyHelper.format_meeting_details(
         appointment_details,

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
@@ -165,14 +166,20 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
 
   @doc """
   Formats a DateTime for display in the automation UI, or "Never" for nil.
-  """
-  @spec format_datetime(DateTime.t() | nil) :: String.t()
-  def format_datetime(nil), do: dgettext("dashboard_automation", "Never")
 
-  def format_datetime(%DateTime{} = dt) do
+  The date stays locale-ordered while the clock follows the organiser's
+  resolved preference: these timestamps are read only by the organiser, so they
+  should match the clock the rest of their dashboard uses.
+  """
+  @spec format_datetime(DateTime.t() | nil, String.t()) :: String.t()
+  def format_datetime(datetime, time_format)
+
+  def format_datetime(nil, _time_format), do: dgettext("dashboard_automation", "Never")
+
+  def format_datetime(%DateTime{} = dt, time_format) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
     date = LocaleFormat.format_date(dt, locale)
-    time = LocaleFormat.format_time(dt, locale)
+    time = TimeFormat.format(dt, time_format)
     dgettext("dashboard_automation", "%{date} at %{time}", date: date, time: time)
   end
 

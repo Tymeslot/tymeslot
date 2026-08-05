@@ -237,6 +237,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
           webhook={@selected_webhook}
           deliveries={@deliveries}
           stats={@delivery_stats}
+          time_format={@time_format}
           on_close={JS.push("hide_deliveries", target: @myself)}
         />
       <% end %>
@@ -262,6 +263,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
           integration={@selected_telegram}
           deliveries={@telegram_deliveries}
           stats={@telegram_delivery_stats}
+          time_format={@time_format}
           on_close={JS.push("hide_telegram_deliveries", target: @myself)}
         />
       <% end %>
@@ -281,6 +283,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
           integration={@selected_slack}
           deliveries={@slack_deliveries}
           stats={@slack_delivery_stats}
+          time_format={@time_format}
           on_close={JS.push("slack_hide_deliveries", target: @myself)}
         />
       <% end %>
@@ -349,12 +352,14 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
               <WebhookTab.webhook_tab_content
                 webhooks={@webhooks}
                 testing_connection={@testing_connection}
+                time_format={@time_format}
                 myself={@myself}
               />
             <% :telegram -> %>
               <TelegramTab.telegram_tab_content
                 integrations={@telegram_integrations}
                 telegram_testing={@telegram_testing}
+                time_format={@time_format}
                 myself={@myself}
               />
             <% :slack -> %>
@@ -362,6 +367,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
                 integrations={@slack_integrations}
                 slack_testing={@slack_testing}
                 oauth_mode_available?={@slack_oauth_mode_available?}
+                time_format={@time_format}
                 myself={@myself}
               />
           <% end %>

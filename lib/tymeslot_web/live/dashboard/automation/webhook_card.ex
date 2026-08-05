@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
   alias TymeslotWeb.Dashboard.Automation.Helpers
 
   attr :webhook, :map, required: true
+  attr :time_format, :string, required: true
   attr :testing, :boolean, default: false
   attr :target, :any, required: true
   attr :on_edit, :any, required: true
@@ -97,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                 <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
                 <span>
                   {dgettext("dashboard_automation", "Last triggered: %{time}",
-                    time: Helpers.format_datetime(@webhook.last_triggered_at)
+                    time: Helpers.format_datetime(@webhook.last_triggered_at, @time_format)
                   )}
                   <%= if @webhook.last_status do %>
                     <span class={["ml-1", status_color(@webhook.last_status)]}>

@@ -5,6 +5,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
 
   require Logger
+  alias Tymeslot.CalendarGrid
+  alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
@@ -36,8 +38,20 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.merge(url_details)
       |> Map.merge(reminder_details)
       |> Map.put(:attendee_locale, attendee_locale)
+      |> Map.put(:organizer_time_format, organizer_time_format(meeting))
       |> Map.put(:booking_payment, booking_payment_for(meeting))
     end)
+  end
+
+  # The organiser's chosen clock, resolved once per payload rather than per
+  # template. Deliberately namespaced away from the plain `:time_format` key the
+  # hero and text bodies read, so an attendee-addressed branch cannot pick it up
+  # by accident: only the organiser branches copy it across.
+  defp organizer_time_format(meeting) do
+    CalendarGrid.get_user_time_format(
+      Map.get(meeting, :organizer_user_id),
+      Locales.default_locale()
+    )
   end
 
   # Look up the booking payment row attached to this meeting, if any.

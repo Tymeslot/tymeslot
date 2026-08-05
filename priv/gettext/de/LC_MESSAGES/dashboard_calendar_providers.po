@@ -1008,6 +1008,16 @@ msgstr "Verbindung zu mailbox.org erfolgreich"
 msgid "mailbox.org requires HTTPS"
 msgstr "mailbox.org erfordert HTTPS"
 
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
+#, elixir-autogen, elixir-format
+msgid "The calendar server refused the request (HTTP %{status})."
+msgstr "Der Kalenderserver hat die Anfrage abgelehnt (HTTP %{status})."
+
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
+#, elixir-autogen, elixir-format
+msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
+msgstr "Dieser Änderung fehlt die Start- oder Endzeit des Termins, daher konnte sie nicht an den Kalenderserver gesendet werden."
+
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
 #, elixir-autogen, elixir-format
@@ -1104,17 +1114,7 @@ msgstr "Der Kalender-Feed hat den Link abgelehnt. Möglicherweise wurde er wider
 msgid "The calendar feed returned HTTP %{status}."
 msgstr "Der Kalender-Feed hat HTTP %{status} zurückgegeben."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
-#, elixir-autogen, elixir-format
-msgid "The calendar server refused the request (HTTP %{status})."
-msgstr "Der Kalenderserver hat die Anfrage abgelehnt (HTTP %{status})."
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:86
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
 msgstr "Dieser Kalender bleibt schreibgeschützt: Er blockiert die Zeiten, in denen Sie bereits beschäftigt sind, und es werden nie Buchungen hineingeschrieben. Wählen Sie einen anderen Kalender als Ziel für Ihre Buchungen."
-
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
-#, elixir-autogen, elixir-format
-msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
-msgstr "Dieser Änderung fehlt die Start- oder Endzeit des Termins, daher konnte sie nicht an den Kalenderserver gesendet werden."

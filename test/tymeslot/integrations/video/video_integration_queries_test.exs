@@ -146,4 +146,82 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
       assert DateTime.compare(active_integration.token_expires_at, DateTime.utc_now()) == :gt
     end
   end
+
+  describe "soft_delete/1" do
+    test "hides the integration from the user's listing" do
+      user = insert(:user)
+      kept = insert(:video_integration, user: user, provider: "zoom")
+      going = insert(:video_integration, user: user, provider: "google_meet")
+
+      assert {:ok, _soft} = VideoIntegrationQueries.soft_delete(going)
+
+      ids = user.id |> VideoIntegrationQueries.list_all_for_user() |> Enum.map(& &1.id)
+      assert kept.id in ids
+      refute going.id in ids
+
+      assert VideoIntegrationQueries.count_for_user(user.id) == 1
+    end
+
+    test "keeps the row fetchable by id so cleanup can still authenticate" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+
+      assert {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      # The drain worker reaches its dying integration through these.
+      assert {:ok, by_id} = VideoIntegrationQueries.get(integration.id)
+      assert by_id.id == integration.id
+
+      assert {:ok, for_user} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      assert for_user.id == integration.id
+    end
+
+    test "is not offered as a provider fallback" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom", is_active: true)
+
+      assert {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      assert {:error, :not_found} =
+               VideoIntegrationQueries.get_by_provider_for_user(user.id, "zoom")
+    end
+
+    test "marks the row inactive so it falls outside every unique index" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: "acct-1",
+          is_active: true
+        )
+
+      assert {:ok, soft} = VideoIntegrationQueries.soft_delete(integration)
+      refute soft.is_active
+      assert soft.deleted_at
+
+      # Reconnecting the same Zoom account while cleanup is still draining must
+      # not collide with the row on its way out.
+      assert {:ok, _fresh} =
+               VideoIntegrationQueries.create(%{
+                 name: "Zoom",
+                 provider: "zoom",
+                 provider_account_id: "acct-1",
+                 access_token: "fresh-access-token",
+                 refresh_token: "fresh-refresh-token",
+                 user_id: user.id,
+                 is_active: true
+               })
+    end
+
+    test "cannot be reactivated by a stale toggle" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom", is_active: true)
+
+      assert {:ok, soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      assert {:error, :not_found} = VideoIntegrationQueries.toggle_active(soft)
+    end
+  end
 end

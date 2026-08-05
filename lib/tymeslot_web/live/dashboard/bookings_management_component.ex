@@ -288,6 +288,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           meetings_stream={@streams.meetings}
           filter={@filter}
           profile={@profile}
+          time_format={@time_format}
           cancelling_meeting={@cancelling_meeting}
           sending_reschedule={@sending_reschedule}
           target={@myself}
@@ -322,6 +323,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
             do: Helpers.get_meeting_timezone(@cancel_meeting_modal_data, @profile),
             else: "UTC"
         }
+        time_format={@time_format}
         cancelling={@cancelling_meeting != nil}
         on_cancel={JS.push("hide_cancel_modal", target: @myself)}
         confirm_event="confirm_cancel_meeting"
@@ -337,6 +339,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
             do: Helpers.get_meeting_timezone(@reschedule_request_modal_data, @profile),
             else: "UTC"
         }
+        time_format={@time_format}
         sending={
           !!(@reschedule_request_modal_data && @sending_reschedule &&
                @sending_reschedule == @reschedule_request_modal_data.id)

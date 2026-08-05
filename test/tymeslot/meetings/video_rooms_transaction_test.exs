@@ -73,6 +73,17 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
       )
     end
 
+    test "records the provider alongside the room so a disconnect cannot orphan it" do
+      %{meeting: meeting} = build_mirotalk_scenario()
+
+      assert {:ok, %MeetingSchema{} = updated} =
+               VideoRooms.add_video_room_to_meeting(meeting.id)
+
+      # `video_integration_id` is nulled when the integration is deleted, so the
+      # provider has to be recorded independently or the room becomes unreachable.
+      assert updated.video_provider == "mirotalk"
+    end
+
     test "is idempotent when the meeting already has a video room attached" do
       user = insert(:user)
       _profile = insert(:profile, user: user)

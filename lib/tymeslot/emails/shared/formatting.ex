@@ -18,6 +18,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   gettext-backed helpers read the ambient one.**
   """
 
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -83,6 +84,25 @@ defmodule Tymeslot.Emails.Shared.Formatting do
     time = DateTime.to_time(datetime)
     tz = Calendar.strftime(datetime, "%Z")
     "#{LocaleFormat.format_time(time, locale)} #{tz}"
+  end
+
+  @doc """
+  Formats a time with timezone, letting an organiser's chosen clock override
+  the locale convention.
+
+  `time_format` is `nil` for every attendee-addressed email: an attendee never
+  chose a clock and is often reading in a different language from the organiser,
+  so their locale decides and this behaves exactly like `format_time/2`. Only
+  organiser-addressed emails pass "12h" or "24h", and only then does the
+  preference win. The locale stays required either way, so no call site can
+  silently lose it.
+  """
+  @spec format_time(DateTime.t(), String.t(), String.t() | nil) :: String.t()
+  def format_time(%DateTime{} = datetime, locale, nil), do: format_time(datetime, locale)
+
+  def format_time(%DateTime{} = datetime, _locale, time_format) do
+    tz = Calendar.strftime(datetime, "%Z")
+    "#{TimeFormat.format(datetime, time_format)} #{tz}"
   end
 
   @doc """

@@ -1008,6 +1008,16 @@ msgstr "Connessione a mailbox.org riuscita"
 msgid "mailbox.org requires HTTPS"
 msgstr "mailbox.org richiede HTTPS"
 
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
+#, elixir-autogen, elixir-format
+msgid "The calendar server refused the request (HTTP %{status})."
+msgstr "Il server del calendario ha rifiutato la richiesta (HTTP %{status})."
+
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
+#, elixir-autogen, elixir-format
+msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
+msgstr "A questa modifica manca l’ora di inizio o di fine dell’evento, quindi non è stato possibile inviarla al server del calendario."
+
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
 #, elixir-autogen, elixir-format
@@ -1104,17 +1114,7 @@ msgstr "Il feed del calendario ha rifiutato il link. Potrebbe essere stato revoc
 msgid "The calendar feed returned HTTP %{status}."
 msgstr "Il feed del calendario ha restituito HTTP %{status}."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
-#, elixir-autogen, elixir-format
-msgid "The calendar server refused the request (HTTP %{status})."
-msgstr "Il server del calendario ha rifiutato la richiesta (HTTP %{status})."
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:86
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
 msgstr "Questo calendario resta di sola lettura: blocca gli orari in cui sei già occupato e le prenotazioni non ci vengono mai scritte. Scegli un altro calendario come destinazione delle prenotazioni."
-
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
-#, elixir-autogen, elixir-format
-msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
-msgstr "A questa modifica manca l’ora di inizio o di fine dell’evento, quindi non è stato possibile inviarla al server del calendario."

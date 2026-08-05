@@ -639,36 +639,6 @@ msgstr ""
 msgid "Too many changes - saving shortly…"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:84
-#, elixir-autogen, elixir-format
-msgid "Between 2 and %{max} participants per slot."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:41
-#, elixir-autogen, elixir-format
-msgid "Group bookings"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:62
-#, elixir-autogen, elixir-format
-msgid "Let multiple people book the same time slot"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:70
-#, elixir-autogen, elixir-format
-msgid "Participant limit"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:46
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr ""
-
 #: lib/tymeslot/utils/form_helpers.ex:86
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price"
@@ -717,4 +687,34 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:295
 #, elixir-autogen, elixir-format
 msgid "or choose a different account."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:84
+#, elixir-autogen, elixir-format
+msgid "Between 2 and %{max} participants per slot."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:41
+#, elixir-autogen, elixir-format
+msgid "Group bookings"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:62
+#, elixir-autogen, elixir-format
+msgid "Let multiple people book the same time slot"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:70
+#, elixir-autogen, elixir-format
+msgid "Participant limit"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require payment."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:46
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to enable group bookings."
 msgstr ""

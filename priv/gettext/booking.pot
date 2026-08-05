@@ -11,18 +11,18 @@
 msgid ""
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:329
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:339
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:336
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:346
 #, elixir-autogen, elixir-format
 msgid "%{count} hours"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:344
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:351
 #, elixir-autogen, elixir-format
 msgid "%{count} minutes"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:63
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:64
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr ""
@@ -32,17 +32,17 @@ msgstr ""
 msgid "%{days} days in advance"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:97
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:98
 #, elixir-autogen, elixir-format
 msgid "%{day} %{month} %{year} at %{time} %{timezone}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:346
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:353
 #, elixir-autogen, elixir-format
 msgid "%{hour_text} %{minute_text}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:323
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:330
 #, elixir-autogen, elixir-format
 msgid "%{minutes} minutes"
 msgstr ""
@@ -52,13 +52,13 @@ msgstr ""
 msgid "%{months} months in advance"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:148
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:149
 #, elixir-autogen, elixir-format
 msgid "%{month} %{day}, %{year}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:280
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:296
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:287
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:303
 #, elixir-autogen, elixir-format
 msgid "%{month} %{year}"
 msgstr ""
@@ -78,22 +78,22 @@ msgstr ""
 msgid "%{name}, your meeting %{organizer} is confirmed"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:309
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:316
 #, elixir-autogen, elixir-format
 msgid "%{start_month} %{start_year} - %{end_month} %{end_year}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:302
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:309
 #, elixir-autogen, elixir-format
 msgid "%{start_month} - %{end_month} %{year}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:78
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:79
 #, elixir-autogen, elixir-format
 msgid "%{time} %{timezone}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:82
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:83
 #, elixir-autogen, elixir-format
 msgid "%{time} UTC"
 msgstr ""
@@ -103,7 +103,7 @@ msgstr ""
 msgid "%{time} local time"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:53
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:54
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}"
 msgstr ""
@@ -123,14 +123,14 @@ msgstr ""
 msgid "1 day in advance"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:325
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:338
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:332
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:345
 #, elixir-autogen, elixir-format
 msgid "1 hour"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:320
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:343
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:327
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:350
 #, elixir-autogen, elixir-format
 msgid "1 minute"
 msgstr ""
@@ -166,7 +166,7 @@ msgstr ""
 msgid "Additional Message (Optional)"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:22
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:23
 #, elixir-autogen, elixir-format
 msgid "Afternoon"
 msgstr ""
@@ -176,7 +176,7 @@ msgstr ""
 msgid "Appointment host"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:219
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:220
 #, elixir-autogen, elixir-format
 msgid "April"
 msgstr ""
@@ -187,7 +187,7 @@ msgstr ""
 msgid "Are you sure you want to cancel this appointment?"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:223
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:224
 #, elixir-autogen, elixir-format
 msgid "August"
 msgstr ""
@@ -289,7 +289,7 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:227
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:228
 #, elixir-autogen, elixir-format
 msgid "December"
 msgstr ""
@@ -316,7 +316,7 @@ msgstr ""
 msgid "Duration: %{duration}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:20
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:21
 #, elixir-autogen, elixir-format
 msgid "Early Morning"
 msgstr ""
@@ -331,17 +331,17 @@ msgstr ""
 msgid "Enter Your Details"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:23
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:24
 #, elixir-autogen, elixir-format
 msgid "Evening"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:257
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:258
 #, elixir-autogen, elixir-format
 msgid "FRI"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:217
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:218
 #, elixir-autogen, elixir-format
 msgid "February"
 msgstr ""
@@ -351,7 +351,7 @@ msgstr ""
 msgid "Fri"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:241
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:242
 #, elixir-autogen, elixir-format
 msgid "Friday"
 msgstr ""
@@ -378,12 +378,12 @@ msgstr ""
 msgid "I acknowledge the above"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:68
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:69
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:216
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:217
 #, elixir-autogen, elixir-format
 msgid "January"
 msgstr ""
@@ -393,12 +393,12 @@ msgstr ""
 msgid "John Doe"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:222
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:223
 #, elixir-autogen, elixir-format
 msgid "July"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:221
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:222
 #, elixir-autogen, elixir-format
 msgid "June"
 msgstr ""
@@ -409,7 +409,7 @@ msgstr ""
 msgid "Keep Meeting"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:24
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:25
 #, elixir-autogen, elixir-format
 msgid "Late Night"
 msgstr ""
@@ -432,17 +432,17 @@ msgstr ""
 msgid "Loading available times..."
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:253
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:254
 #, elixir-autogen, elixir-format
 msgid "MON"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:218
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:219
 #, elixir-autogen, elixir-format
 msgid "March"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:220
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:221
 #, elixir-autogen, elixir-format
 msgid "May"
 msgstr ""
@@ -483,12 +483,12 @@ msgstr ""
 msgid "Mon"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:237
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:238
 #, elixir-autogen, elixir-format
 msgid "Monday"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:21
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:22
 #, elixir-autogen, elixir-format
 msgid "Morning"
 msgstr ""
@@ -519,12 +519,12 @@ msgstr ""
 msgid "No time selected"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:226
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:227
 #, elixir-autogen, elixir-format
 msgid "November"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:225
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:226
 #, elixir-autogen, elixir-format
 msgid "October"
 msgstr ""
@@ -621,12 +621,12 @@ msgstr ""
 msgid "Return to booking"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:258
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:259
 #, elixir-autogen, elixir-format
 msgid "SAT"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:259
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:260
 #, elixir-autogen, elixir-format
 msgid "SUN"
 msgstr ""
@@ -636,7 +636,7 @@ msgstr ""
 msgid "Sat"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:242
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:243
 #, elixir-autogen, elixir-format
 msgid "Saturday"
 msgstr ""
@@ -704,7 +704,7 @@ msgstr ""
 msgid "Sent to"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:224
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:225
 #, elixir-autogen, elixir-format
 msgid "September"
 msgstr ""
@@ -724,17 +724,17 @@ msgstr ""
 msgid "Sun"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:243
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:244
 #, elixir-autogen, elixir-format
 msgid "Sunday"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:256
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:257
 #, elixir-autogen, elixir-format
 msgid "THU"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:254
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:255
 #, elixir-autogen, elixir-format
 msgid "TUE"
 msgstr ""
@@ -768,7 +768,7 @@ msgstr ""
 msgid "Thu"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:240
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:241
 #, elixir-autogen, elixir-format
 msgid "Thursday"
 msgstr ""
@@ -788,13 +788,13 @@ msgstr ""
 msgid "Tue"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:238
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:239
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:198
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:208
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:199
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:209
 #, elixir-autogen, elixir-format
 msgid "Unknown duration"
 msgstr ""
@@ -810,7 +810,7 @@ msgstr ""
 msgid "Verifying..."
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:255
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:256
 #, elixir-autogen, elixir-format
 msgid "WED"
 msgstr ""
@@ -831,7 +831,7 @@ msgstr ""
 msgid "Wed"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:239
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:240
 #, elixir-autogen, elixir-format
 msgid "Wednesday"
 msgstr ""
@@ -980,11 +980,6 @@ msgstr ""
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:230
 #, elixir-autogen, elixir-format
 msgid "submit"
-msgstr ""
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:268
-#, elixir-autogen, elixir-format
-msgid "time_format_type"
 msgstr ""
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:265
@@ -1161,7 +1156,7 @@ msgstr ""
 msgid "Preview session expired. Reload the page to continue."
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:173
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:174
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{date}"
 msgstr ""
@@ -1270,17 +1265,42 @@ msgstr ""
 msgid "Pick an option below."
 msgstr ""
 
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:257
+#, elixir-autogen, elixir-format
+msgid "Booking submitted successfully!"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:248
+#, elixir-autogen, elixir-format
+msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:242
+#, elixir-autogen, elixir-format
+msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:254
+#, elixir-autogen, elixir-format
+msgid "Meeting rescheduled successfully!"
+msgstr ""
+
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:14
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:22
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:30
+#, elixir-autogen, elixir-format
+msgid "Schedule a meeting"
+msgstr ""
+
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
+msgstr ""
+
 #: lib/tymeslot_web/themes/shared/components/seat_badge.ex:31
 #, elixir-autogen, elixir-format
 msgid "%{count} seat left"
 msgid_plural "%{count} seats left"
-msgstr[0] ""
-msgstr[1] ""
-
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:153
-#, elixir-autogen, elixir-format
-msgid "You can add up to %{count} guest."
-msgid_plural "You can add up to %{count} guests."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1319,39 +1339,14 @@ msgstr ""
 msgid "Yes, cancel my spot"
 msgstr ""
 
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:153
+#, elixir-autogen, elixir-format
+msgid "You can add up to %{count} guest."
+msgid_plural "You can add up to %{count} guests."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/tymeslot_web/controllers/seat_html.ex:63
 #, elixir-autogen, elixir-format
 msgid "Your spot has been cancelled"
-msgstr ""
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:257
-#, elixir-autogen, elixir-format
-msgid "Booking submitted successfully!"
-msgstr ""
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:248
-#, elixir-autogen, elixir-format
-msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
-msgstr ""
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:242
-#, elixir-autogen, elixir-format
-msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
-msgstr ""
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:254
-#, elixir-autogen, elixir-format
-msgid "Meeting rescheduled successfully!"
-msgstr ""
-
-#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:14
-#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:22
-#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:30
-#, elixir-autogen, elixir-format
-msgid "Schedule a meeting"
-msgstr ""
-
-#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:57
-#, elixir-autogen, elixir-format
-msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
 msgstr ""

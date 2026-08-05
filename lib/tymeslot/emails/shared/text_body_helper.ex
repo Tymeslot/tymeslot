@@ -184,7 +184,8 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       end
 
     if time_key && appointment_details[:duration] do
-      time_str = Formatting.format_time(appointment_details[time_key], locale)
+      time_format = Map.get(appointment_details, :time_format)
+      time_str = Formatting.format_time(appointment_details[time_key], locale, time_format)
       duration_str = Formatting.format_duration(appointment_details.duration, locale)
       "#{dgettext("emails", "Time:")} #{time_str} (#{duration_str})"
     end

@@ -639,36 +639,6 @@ msgstr "Affiché sous la question - utilisez-le pour clarifier ce que vous deman
 msgid "Too many changes - saving shortly…"
 msgstr "Trop de modifications - enregistrement sous peu…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:84
-#, elixir-autogen, elixir-format
-msgid "Between 2 and %{max} participants per slot."
-msgstr "Entre 2 et %{max} participants par créneau."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:41
-#, elixir-autogen, elixir-format
-msgid "Group bookings"
-msgstr "Réservations de groupe"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:62
-#, elixir-autogen, elixir-format
-msgid "Let multiple people book the same time slot"
-msgstr "Permettre à plusieurs personnes de réserver le même créneau"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:70
-#, elixir-autogen, elixir-format
-msgid "Participant limit"
-msgstr "Limite de participants"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:46
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Désactivez les paiements pour activer les réservations de groupe."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Désactivez les réservations de groupe pour exiger un paiement."
-
 #: lib/tymeslot/utils/form_helpers.ex:86
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price"
@@ -718,3 +688,33 @@ msgstr "Mettez à jour votre sélection de calendriers"
 #, elixir-autogen, elixir-format
 msgid "or choose a different account."
 msgstr "ou choisissez un autre compte."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:84
+#, elixir-autogen, elixir-format
+msgid "Between 2 and %{max} participants per slot."
+msgstr "Entre 2 et %{max} participants par créneau."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:41
+#, elixir-autogen, elixir-format
+msgid "Group bookings"
+msgstr "Réservations de groupe"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:62
+#, elixir-autogen, elixir-format
+msgid "Let multiple people book the same time slot"
+msgstr "Permettre à plusieurs personnes de réserver le même créneau"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:70
+#, elixir-autogen, elixir-format
+msgid "Participant limit"
+msgstr "Limite de participants"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require payment."
+msgstr "Désactivez les réservations de groupe pour exiger un paiement."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:46
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to enable group bookings."
+msgstr "Désactivez les paiements pour activer les réservations de groupe."

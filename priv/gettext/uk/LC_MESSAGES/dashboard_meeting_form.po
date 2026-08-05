@@ -639,36 +639,6 @@ msgstr "Відображається під запитанням - викори�
 msgid "Too many changes - saving shortly…"
 msgstr "Забагато змін - збереження за мить…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:84
-#, elixir-autogen, elixir-format
-msgid "Between 2 and %{max} participants per slot."
-msgstr "Від 2 до %{max} учасників на слот."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:41
-#, elixir-autogen, elixir-format
-msgid "Group bookings"
-msgstr "Групові бронювання"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:62
-#, elixir-autogen, elixir-format
-msgid "Let multiple people book the same time slot"
-msgstr "Дозвольте кільком людям бронювати той самий часовий слот"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:70
-#, elixir-autogen, elixir-format
-msgid "Participant limit"
-msgstr "Ліміт учасників"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:46
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Вимкніть оплату, щоб увімкнути групові бронювання."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Вимкніть групові бронювання, щоб вимагати оплату."
-
 #: lib/tymeslot/utils/form_helpers.ex:86
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price"
@@ -718,3 +688,33 @@ msgstr "Змініть вибір календарів"
 #, elixir-autogen, elixir-format
 msgid "or choose a different account."
 msgstr "або виберіть інший обліковий запис."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:84
+#, elixir-autogen, elixir-format
+msgid "Between 2 and %{max} participants per slot."
+msgstr "Від 2 до %{max} учасників на слот."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:41
+#, elixir-autogen, elixir-format
+msgid "Group bookings"
+msgstr "Групові бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:62
+#, elixir-autogen, elixir-format
+msgid "Let multiple people book the same time slot"
+msgstr "Дозвольте кільком людям бронювати той самий часовий слот"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:70
+#, elixir-autogen, elixir-format
+msgid "Participant limit"
+msgstr "Ліміт учасників"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require payment."
+msgstr "Вимкніть групові бронювання, щоб вимагати оплату."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:46
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to enable group bookings."
+msgstr "Вимкніть оплату, щоб увімкнути групові бронювання."

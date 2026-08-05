@@ -1009,6 +1009,16 @@ msgstr "Підключення до mailbox.org успішне"
 msgid "mailbox.org requires HTTPS"
 msgstr "Для mailbox.org потрібен HTTPS"
 
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
+#, elixir-autogen, elixir-format
+msgid "The calendar server refused the request (HTTP %{status})."
+msgstr "Сервер календаря відхилив запит (HTTP %{status})."
+
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
+#, elixir-autogen, elixir-format
+msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
+msgstr "У цій зміні відсутній час початку або завершення події, тому її не вдалося надіслати на сервер календаря."
+
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
 #, elixir-autogen, elixir-format
@@ -1105,17 +1115,7 @@ msgstr "Фід календаря відхилив посилання. Можл�
 msgid "The calendar feed returned HTTP %{status}."
 msgstr "Фід календаря повернув HTTP %{status}."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
-#, elixir-autogen, elixir-format
-msgid "The calendar server refused the request (HTTP %{status})."
-msgstr "Сервер календаря відхилив запит (HTTP %{status})."
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:86
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
 msgstr "Цей календар залишається доступним лише для перегляду: він блокує час, коли ви вже зайняті, і бронювання ніколи не записуються до нього. Виберіть інший календар як місце призначення для бронювань."
-
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
-#, elixir-autogen, elixir-format
-msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
-msgstr "У цій зміні відсутній час початку або завершення події, тому її не вдалося надіслати на сервер календаря."

@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
       assigns = %{
         webhook: webhook,
         testing: false,
+        time_format: "12h",
         target: "#webhook-1",
         on_edit: "edit",
         on_delete: "delete",
