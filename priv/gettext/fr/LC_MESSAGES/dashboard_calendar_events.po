@@ -68,17 +68,17 @@ msgstr "1 heure avant"
 msgid "10 minutes before"
 msgstr "10 minutes avant"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:49
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:50
 #, elixir-autogen, elixir-format
 msgid "12-hour or 24-hour clock"
 msgstr "Horloge sur 12 heures ou 24 heures"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:57
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:58
 #, elixir-autogen, elixir-format
 msgid "12h"
 msgstr "12h"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:58
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:59
 #, elixir-autogen, elixir-format
 msgid "24h"
 msgstr "24h"
@@ -146,7 +146,7 @@ msgstr "Toute la journée"
 msgid "All events in series"
 msgstr "Tous les événements de la série"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:68
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:69
 #, elixir-autogen, elixir-format
 msgid "Also switches the current view"
 msgstr "Change également la vue actuelle"
@@ -176,7 +176,7 @@ msgstr "Les participants seront informés des modifications en attente."
 msgid "Calendar"
 msgstr "Calendrier"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:23
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:24
 #, elixir-autogen, elixir-format
 msgid "Calendar Settings"
 msgstr "Paramètres du calendrier"
@@ -264,7 +264,7 @@ msgstr "Création en cours…"
 msgid "Daily"
 msgstr "Quotidien"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:76
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:77
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr "Jour"
@@ -284,7 +284,7 @@ msgstr "Par défaut"
 msgid "Default calendar"
 msgstr "Calendrier par défaut"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:67
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:68
 #, elixir-autogen, elixir-format
 msgid "Default view"
 msgstr "Vue par défaut"
@@ -310,7 +310,7 @@ msgstr "Suppression en cours…"
 msgid "Description"
 msgstr "Description"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:117
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:118
 #, elixir-autogen, elixir-format
 msgid "Desktop reminders"
 msgstr "Notifications de bureau"
@@ -320,7 +320,7 @@ msgstr "Notifications de bureau"
 msgid "Discard"
 msgstr "Abandonner"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:103
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:104
 #, elixir-autogen, elixir-format
 msgid "Display Saturday and Sunday in week view"
 msgstr "Afficher samedi et dimanche dans la vue semaine"
@@ -421,7 +421,7 @@ msgstr "Échec du déplacement de l’événement"
 msgid "Failed to save preference"
 msgstr "Échec de l’enregistrement de la préférence"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:29
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:30
 #, elixir-autogen, elixir-format
 msgid "First day of week"
 msgstr "Premier jour de la semaine"
@@ -497,12 +497,12 @@ msgid "Meeting created and invitation sent"
 msgstr "Réunion créée et invitation envoyée"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:246
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:38
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:39
 #, elixir-autogen, elixir-format
 msgid "Mon"
 msgstr "Lun."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:78
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:79
 #, elixir-autogen, elixir-format
 msgid "Month"
 msgstr "Mois"
@@ -717,28 +717,28 @@ msgstr[1] "Envoyer l’annulation à %{count} participants ?"
 msgid "Send cancellation?"
 msgstr "Envoyer l’annulation ?"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:88
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:89
 #, elixir-autogen, elixir-format
 msgid "Show ISO week numbers in month view"
 msgstr "Afficher les numéros de semaine ISO dans la vue mois"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:119
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:120
 #, elixir-autogen, elixir-format
 msgid "Show browser notifications before events while Tymeslot is open"
 msgstr "Afficher des notifications du navigateur avant les événements lorsque Tymeslot est ouvert"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:102
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:103
 #, elixir-autogen, elixir-format
 msgid "Show weekends"
 msgstr "Afficher les week-ends"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:30
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:31
 #, elixir-autogen, elixir-format
 msgid "Start weeks on Monday or Sunday"
 msgstr "Commencer la semaine le lundi ou le dimanche"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:252
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:39
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:40
 #, elixir-autogen, elixir-format
 msgid "Sun"
 msgstr "Dim."
@@ -788,7 +788,7 @@ msgstr "Heure"
 msgid "Time editing is not available for all-day events."
 msgstr "La modification de l’heure n’est pas disponible pour les événements sur toute la journée."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:48
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "Time format"
 msgstr "Format de l’heure"
@@ -853,12 +853,12 @@ msgstr "S%{week}"
 msgid "Wed"
 msgstr "Mer."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:77
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:78
 #, elixir-autogen, elixir-format
 msgid "Week"
 msgstr "Semaine"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:87
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:88
 #, elixir-autogen, elixir-format
 msgid "Week numbers"
 msgstr "Numéros de semaine"

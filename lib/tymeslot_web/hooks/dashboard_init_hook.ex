@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
 
   import Phoenix.LiveView
   import Phoenix.Component
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Dashboard.ExtensionSchema
   alias Tymeslot.Features
@@ -72,6 +73,14 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       socket
       |> assign(:profile, profile)
       |> assign(:integration_status, integration_status)
+      # Resolved once here rather than per component: every dashboard surface
+      # renders the same clock, and a meeting list must not query per row.
+      # AppLocaleHook runs before this one, so the ambient locale is already the
+      # organiser's when it supplies the preset.
+      |> assign(
+        :time_format,
+        CalendarGrid.get_user_time_format(user.id, Gettext.get_locale(TymeslotWeb.Gettext))
+      )
       |> assign(:payments_allowed, payments_allowed?(user.id))
       |> assign_new(:saving, fn -> false end)
       |> assign_new(:saving_timer_ref, fn -> nil end)

@@ -31,7 +31,7 @@ msgstr ""
 msgid "Avatar updated successfully"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:65
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:66
 #, elixir-autogen, elixir-format
 msgid "Basic Information"
 msgstr ""
@@ -118,7 +118,7 @@ msgstr ""
 msgid "Profile Picture"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:37
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:38
 #, elixir-autogen, elixir-format
 msgid "Profile Settings"
 msgstr ""
@@ -203,4 +203,34 @@ msgstr ""
 #: lib/tymeslot/profiles.ex:254
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:82
+#, elixir-autogen, elixir-format
+msgid "12h (AM/PM)"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:83
+#, elixir-autogen, elixir-format
+msgid "24h"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:87
+#, elixir-autogen, elixir-format
+msgid "Controls how times are shown on your dashboard and in the emails you receive. Your booking page follows each visitor's own language."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:56
+#, elixir-autogen, elixir-format
+msgid "Failed to update time format"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:73
+#, elixir-autogen, elixir-format
+msgid "Time Format"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:52
+#, elixir-autogen, elixir-format
+msgid "Time format updated"
 msgstr ""

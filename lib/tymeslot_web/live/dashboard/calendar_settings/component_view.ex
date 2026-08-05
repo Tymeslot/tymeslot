@@ -8,20 +8,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
   unchanged (its `render/1` delegates straight to it), so LiveView change
   tracking is preserved.
 
-  The picker-group builders live here rather than in the component because they
-  shape data for one modal and are read by nothing else.
+  The picker groups come from `ProviderPicker`, which owns how provider
+  descriptors are categorised for that one modal.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelectionModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
+  alias TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker
 
   @doc "Renders calendar settings: the connected list, the free/busy feed, and the modal stack."
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
         }
         target={@myself}
         on_cancel={JS.push("hide_picker", target: @myself)}
-        groups={picker_groups(@available_calendar_providers, @integrations)}
+        groups={ProviderPicker.groups(@available_calendar_providers, @integrations)}
         config_active={@selected_provider != nil}
         back_event="back_to_grid"
       >
@@ -144,50 +144,5 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
       </button>
     </div>
     """
-  end
-
-  # Builds the grouped provider list for the picker modal: OAuth providers
-  # (Google, Outlook) first, then CalDAV presets, then feed subscriptions —
-  # no nested reveal. Grouping is by the descriptor's family rather than by
-  # its `oauth` boolean: a subscribed feed speaks no CalDAV, so listing it
-  # under "CalDAV servers" would describe it as something it isn't.
-  defp picker_groups(available, integrations) do
-    by_family =
-      available
-      |> Enum.map(&provider_entry(&1, integrations))
-      |> Enum.group_by(& &1.family)
-
-    Enum.reject(
-      [
-        %{label: nil, providers: Map.get(by_family, :oauth, [])},
-        %{
-          label: dgettext("dashboard_calendar_settings", "CalDAV servers"),
-          providers: Map.get(by_family, :caldav, [])
-        },
-        %{
-          label: dgettext("dashboard_calendar_settings", "Calendar subscriptions"),
-          providers: Map.get(by_family, :subscription, [])
-        },
-        %{
-          label: dgettext("dashboard_calendar_settings", "Other"),
-          providers: Map.get(by_family, :other, [])
-        }
-      ],
-      &(&1.providers == [])
-    )
-  end
-
-  defp provider_entry(descriptor, integrations) do
-    provider = Atom.to_string(descriptor.type)
-
-    %{
-      provider: provider,
-      title: descriptor.display_name,
-      description: descriptor.description,
-      click_event: ProviderConfig.click_event(descriptor.type),
-      connected?: Enum.any?(integrations, &(&1.provider == provider)),
-      oauth?: descriptor.oauth,
-      family: descriptor.family
-    }
   end
 end

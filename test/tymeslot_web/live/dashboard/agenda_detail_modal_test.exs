@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.AgendaDetailModalTest do
   @moduledoc """
-  Covers the modal's time rendering — `clock/2` must route through
-  `LocaleFormat.format_time/2` rather than hardcoding 12-hour `%-I:%M %p`,
-  so the time range respects the active locale (e.g. 24-hour for `de`).
+  Covers the modal's time rendering. The agenda is the organiser's own, so the
+  time range follows the clock they chose rather than the one their language
+  would imply, and must not hardcode 12-hour `%-I:%M %p`.
   """
 
   use TymeslotWeb.ConnCase, async: true
@@ -32,29 +32,38 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModalTest do
     }
   end
 
-  defp assigns do
+  defp assigns(time_format) do
     %{
       entry: entry(),
       timezone: "Etc/UTC",
+      time_format: time_format,
       now: ~U[2026-01-05 10:00:00Z],
       myself: %Phoenix.LiveComponent.CID{cid: 1}
     }
   end
 
-  test "renders the time range as 12-hour AM/PM for the en locale" do
-    Gettext.put_locale(TymeslotWeb.Gettext, "en")
-    html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns())
+  test "renders the time range on a 12-hour clock when that is the choice" do
+    html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns("12h"))
 
-    assert html =~ "02:30 PM"
-    assert html =~ "03:00 PM"
+    assert html =~ "2:30 PM"
+    assert html =~ "3:00 PM"
   end
 
-  test "renders the time range as 24-hour time for the de locale" do
-    Gettext.put_locale(TymeslotWeb.Gettext, "de")
-    html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns())
+  test "renders the time range on a 24-hour clock when that is the choice" do
+    html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns("24h"))
 
     assert html =~ "14:30"
     assert html =~ "15:00"
     refute html =~ "PM"
+  end
+
+  test "keeps the chosen clock even when the language would imply the other" do
+    Gettext.put_locale(TymeslotWeb.Gettext, "de")
+    html = render_component(&AgendaDetailModal.agenda_detail_modal/1, assigns("12h"))
+
+    assert html =~ "2:30 PM"
+    # The date beside it still follows German word order: only the clock is
+    # governed by the preference.
+    assert html =~ "Januar"
   end
 end

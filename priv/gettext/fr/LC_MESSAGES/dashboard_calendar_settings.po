@@ -43,7 +43,7 @@ msgstr "Toutes les actualisations de calendrier ont échoué."
 msgid "All calendars refreshed successfully"
 msgstr "Tous les calendriers ont été actualisés avec succès"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:164
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:35
 #, elixir-autogen, elixir-format
 msgid "CalDAV servers"
 msgstr "Serveurs CalDAV"
@@ -275,6 +275,26 @@ msgstr "le calendrier de réservation n’accepte plus de réservations"
 msgid "unknown calendar"
 msgstr "calendrier inconnu"
 
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:39
+#, elixir-autogen, elixir-format
+msgid "Calendar subscriptions"
+msgstr "Abonnements aux calendriers"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:43
+#, elixir-autogen, elixir-format
+msgid "Other"
+msgstr "Autres"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:367
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Lecture seule"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:206
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Please try again."
+msgstr "Une erreur s’est produite. Veuillez réessayer."
+
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:263
 #, elixir-autogen, elixir-format
 msgid "Calendar renamed"
@@ -294,23 +314,3 @@ msgstr "Impossible de mettre à jour la couleur"
 #, elixir-autogen, elixir-format
 msgid "Rename, recolour, and choose which calendars sync"
 msgstr "Renommer, changer la couleur et choisir les calendriers à synchroniser"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:168
-#, elixir-autogen, elixir-format
-msgid "Calendar subscriptions"
-msgstr "Abonnements aux calendriers"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:172
-#, elixir-autogen, elixir-format
-msgid "Other"
-msgstr "Autres"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:367
-#, elixir-autogen, elixir-format
-msgid "Read-only"
-msgstr "Lecture seule"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:206
-#, elixir-autogen, elixir-format
-msgid "Something went wrong. Please try again."
-msgstr "Une erreur s’est produite. Veuillez réessayer."

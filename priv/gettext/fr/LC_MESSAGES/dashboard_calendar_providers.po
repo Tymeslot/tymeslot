@@ -1008,31 +1008,15 @@ msgstr "Connexion à mailbox.org réussie"
 msgid "mailbox.org requires HTTPS"
 msgstr "mailbox.org nécessite HTTPS"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
 #, elixir-autogen, elixir-format
-msgid "Automatic"
-msgstr "Automatique"
+msgid "The calendar server refused the request (HTTP %{status})."
+msgstr "Le serveur de calendrier a refusé la requête (HTTP %{status})."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:82
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:95
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
 #, elixir-autogen, elixir-format
-msgid "Colour"
-msgstr "Couleur"
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:85
-#, elixir-autogen, elixir-format
-msgid "How this calendar's events are shown in your Tymeslot calendar."
-msgstr "Comment les événements de ce calendrier s'affichent dans votre calendrier Tymeslot."
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:62
-#, elixir-autogen, elixir-format
-msgid "Name"
-msgstr "Nom"
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:76
-#, elixir-autogen, elixir-format
-msgid "Rename"
-msgstr "Renommer"
+msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
+msgstr "Cette modification n’a pas d’heure de début ou de fin, elle n’a donc pas pu être envoyée au serveur de calendrier."
 
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
@@ -1130,17 +1114,33 @@ msgstr "Le flux de calendrier a rejeté le lien. Il a peut-être été révoqué
 msgid "The calendar feed returned HTTP %{status}."
 msgstr "Le flux de calendrier a renvoyé HTTP %{status}."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
-#, elixir-autogen, elixir-format
-msgid "The calendar server refused the request (HTTP %{status})."
-msgstr "Le serveur de calendrier a refusé la requête (HTTP %{status})."
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:86
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
 msgstr "Ce calendrier reste en lecture seule : il bloque les périodes où vous êtes déjà occupé et aucune réservation n’y est jamais écrite. Choisissez un autre calendrier comme destination de vos réservations."
 
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
 #, elixir-autogen, elixir-format
-msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
-msgstr "Cette modification n’a pas d’heure de début ou de fin, elle n’a donc pas pu être envoyée au serveur de calendrier."
+msgid "Automatic"
+msgstr "Automatique"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:82
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:95
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Couleur"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:85
+#, elixir-autogen, elixir-format
+msgid "How this calendar's events are shown in your Tymeslot calendar."
+msgstr "Comment les événements de ce calendrier s'affichent dans votre calendrier Tymeslot."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:62
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nom"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:76
+#, elixir-autogen, elixir-format
+msgid "Rename"
+msgstr "Renommer"

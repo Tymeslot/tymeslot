@@ -44,7 +44,7 @@ msgstr "Не вдалося оновити жоден календар."
 msgid "All calendars refreshed successfully"
 msgstr "Усі календарі успішно оновлено"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:164
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:35
 #, elixir-autogen, elixir-format
 msgid "CalDAV servers"
 msgstr "Сервери CalDAV"
@@ -276,6 +276,26 @@ msgstr "цільовий календар більше не може прийм�
 msgid "unknown calendar"
 msgstr "невідомий календар"
 
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:39
+#, elixir-autogen, elixir-format
+msgid "Calendar subscriptions"
+msgstr "Підписки на календарі"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:43
+#, elixir-autogen, elixir-format
+msgid "Other"
+msgstr "Інше"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:367
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Лише для перегляду"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:206
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Please try again."
+msgstr "Щось пішло не так. Спробуйте ще раз."
+
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:263
 #, elixir-autogen, elixir-format
 msgid "Calendar renamed"
@@ -295,23 +315,3 @@ msgstr "Не вдалося оновити колір"
 #, elixir-autogen, elixir-format
 msgid "Rename, recolour, and choose which calendars sync"
 msgstr "Перейменувати, змінити колір і вибрати, які календарі синхронізувати"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:168
-#, elixir-autogen, elixir-format
-msgid "Calendar subscriptions"
-msgstr "Підписки на календарі"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:172
-#, elixir-autogen, elixir-format
-msgid "Other"
-msgstr "Інше"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:367
-#, elixir-autogen, elixir-format
-msgid "Read-only"
-msgstr "Лише для перегляду"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:206
-#, elixir-autogen, elixir-format
-msgid "Something went wrong. Please try again."
-msgstr "Щось пішло не так. Спробуйте ще раз."

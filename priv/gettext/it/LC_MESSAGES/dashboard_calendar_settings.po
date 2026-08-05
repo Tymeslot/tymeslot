@@ -43,7 +43,7 @@ msgstr "Aggiornamento di tutti i calendari non riuscito."
 msgid "All calendars refreshed successfully"
 msgstr "Tutti i calendari sono stati aggiornati con successo"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:164
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:35
 #, elixir-autogen, elixir-format
 msgid "CalDAV servers"
 msgstr "Server CalDAV"
@@ -275,6 +275,26 @@ msgstr "il calendario di destinazione non accetta più prenotazioni"
 msgid "unknown calendar"
 msgstr "calendario sconosciuto"
 
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:39
+#, elixir-autogen, elixir-format
+msgid "Calendar subscriptions"
+msgstr "Abbonamenti ai calendari"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:43
+#, elixir-autogen, elixir-format
+msgid "Other"
+msgstr "Altro"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:367
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Sola lettura"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:206
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Please try again."
+msgstr "Qualcosa è andato storto. Riprova."
+
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:263
 #, elixir-autogen, elixir-format
 msgid "Calendar renamed"
@@ -294,23 +314,3 @@ msgstr "Impossibile aggiornare il colore"
 #, elixir-autogen, elixir-format
 msgid "Rename, recolour, and choose which calendars sync"
 msgstr "Rinomina, cambia colore e scegli quali calendari sincronizzare"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:168
-#, elixir-autogen, elixir-format
-msgid "Calendar subscriptions"
-msgstr "Abbonamenti ai calendari"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex:172
-#, elixir-autogen, elixir-format
-msgid "Other"
-msgstr "Altro"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:367
-#, elixir-autogen, elixir-format
-msgid "Read-only"
-msgstr "Sola lettura"
-
-#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:206
-#, elixir-autogen, elixir-format
-msgid "Something went wrong. Please try again."
-msgstr "Qualcosa è andato storto. Riprova."
