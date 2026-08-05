@@ -30,6 +30,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
           is_active: boolean(),
           needs_reauth: boolean(),
           sync_error: String.t() | nil,
+          deleted_at: DateTime.t() | nil,
           settings: map(),
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
@@ -56,6 +57,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:is_active, :boolean, default: true)
     field(:needs_reauth, :boolean, default: false)
     field(:sync_error, :string)
+    # Set when the user disconnects and asked for the provider-side rooms to be
+    # deleted: the row survives, hidden, only long enough for the cleanup job to
+    # use its credentials.
+    field(:deleted_at, :utc_datetime)
     field(:settings, :map, default: %{})
 
     # Virtual fields for decrypted credentials
