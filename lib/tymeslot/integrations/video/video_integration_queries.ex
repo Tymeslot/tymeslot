@@ -300,7 +300,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   def soft_delete(%VideoIntegrationSchema{} = integration) do
     integration
     |> Changeset.change(%{
-      deleted_at: DateTime.truncate(DateTime.utc_now(), :second),
+      deleted_at: DateTime.utc_now(:second),
       is_active: false
     })
     |> Repo.update()
