@@ -223,11 +223,10 @@ defmodule Tymeslot.Meetings.VideoRooms do
   # room lives after `video_integration_id` is nulled by the integration's
   # `nilify_all` foreign key. Without it a disconnected integration leaves the
   # room unreachable and it lingers on the organiser's provider account.
-  defp provider_string(provider_type) when is_atom(provider_type) and not is_nil(provider_type),
-    do: Atom.to_string(provider_type)
+  defp provider_string(nil), do: nil
 
-  defp provider_string(provider_type) when is_binary(provider_type), do: provider_type
-  defp provider_string(_unknown), do: nil
+  defp provider_string(provider_type) when is_atom(provider_type),
+    do: Atom.to_string(provider_type)
 
   @spec persist_video_room(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, term()}
