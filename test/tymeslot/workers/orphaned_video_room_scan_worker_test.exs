@@ -90,7 +90,7 @@ defmodule Tymeslot.Workers.OrphanedVideoRoomScanWorkerTest do
   # meetings for the same organiser at the same time.
   defp insert_cancelled(user, hours_out, opts) do
     cancelled_ago = Keyword.fetch!(opts, :cancelled_ago)
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.utc_now(:second)
 
     insert_meeting_for_user(user, %{
       start_offset: hours_out * 3600,

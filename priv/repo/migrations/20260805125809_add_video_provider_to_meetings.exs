@@ -40,6 +40,10 @@ defmodule Tymeslot.Repo.Migrations.AddVideoProviderToMeetings do
 
   def down do
     alter table(:meetings) do
+      # Dropping the column is the whole point of the rollback, and it only ever
+      # runs deliberately. The backfill cannot be reversed by inference, which is
+      # why this is an up/down pair rather than a `change`.
+      # excellent_migrations:safety-assured-for-next-line column_removed
       remove :video_provider
     end
   end
