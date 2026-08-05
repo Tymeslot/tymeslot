@@ -8,6 +8,15 @@ defmodule Tymeslot.Repo.Migrations.AddBookingLimitsToProfiles do
   current data.
   """
 
+  # excellent_migrations:safety-assured-for-this-file check_constraint_added
+  #
+  # Each constraint covers a column added in this same migration, so every
+  # existing row is NULL and satisfies `IS NULL OR … > 0` — the validation
+  # scan cannot fail. Migrations run offline: `start.sh` executes them in a
+  # one-shot VM and only starts Phoenix once they finish, so the ACCESS
+  # EXCLUSIVE lock blocks no traffic. Revisit this if a deployment target
+  # ever migrates against a running instance.
+
   def change do
     alter table(:profiles) do
       add(:max_bookings_per_day, :integer)
