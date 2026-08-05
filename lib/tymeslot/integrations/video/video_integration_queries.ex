@@ -33,9 +33,17 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   # Private helper for shared query pattern
   defp base_active_query(user_id) do
     VideoIntegrationSchema
+    |> exclude_deleted()
     |> where([v], v.user_id == ^user_id and v.is_active == true)
     |> order_by([v], asc: v.name)
   end
+
+  # Soft-deleted rows exist only so background cleanup can still authenticate
+  # against the provider. They are never part of the user's integration surface,
+  # so every listing and every by-provider or by-account lookup excludes them.
+  # `get/1` and `get_for_user/2` deliberately do not: they take an explicit id,
+  # and the cleanup worker reaches its dying integration through them.
+  defp exclude_deleted(query), do: where(query, [v], is_nil(v.deleted_at))
 
   @doc """
   Gets all active video integrations across all users.
@@ -44,6 +52,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @spec list_all_active() :: list(VideoIntegrationSchema.t())
   def list_all_active do
     VideoIntegrationSchema
+    |> exclude_deleted()
     |> where([v], v.is_active == true)
     |> order_by([v], asc: v.name)
     |> Repo.all()
@@ -56,6 +65,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @spec list_all_for_user(integer()) :: [VideoIntegrationSchema.t()]
   def list_all_for_user(user_id) do
     VideoIntegrationSchema
+    |> exclude_deleted()
     |> where([v], v.user_id == ^user_id)
     |> order_by([v], desc: v.is_active, asc: v.name)
     |> Repo.all()
@@ -147,6 +157,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   def get_by_provider_for_user(user_id, provider) do
     result =
       VideoIntegrationSchema
+      |> exclude_deleted()
       |> where([v], v.user_id == ^user_id and v.provider == ^provider and v.is_active == true)
       |> limit(1)
       |> Repo.one()
@@ -166,6 +177,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
       when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
     result =
       VideoIntegrationSchema
+      |> exclude_deleted()
       |> where(
         [v],
         v.user_id == ^user_id and
@@ -192,6 +204,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
       when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
     result =
       VideoIntegrationSchema
+      |> exclude_deleted()
       |> where(
         [v],
         v.user_id == ^user_id and
@@ -271,6 +284,29 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Marks an integration as disconnected without removing it.
+
+  The row has to outlive the user's click: deleting provider-side rooms needs the
+  OAuth credentials this row holds, and that work runs in a background job.
+  Setting `is_active: false` at the same time is what keeps a soft-deleted row
+  out of every unique index (they are all partial on `is_active = true`), so
+  reconnecting the same account immediately afterwards cannot collide.
+
+  `Tymeslot.Workers.VideoIntegrationDisconnectWorker` hard-deletes the row once
+  the cleanup has drained.
+  """
+  @spec soft_delete(VideoIntegrationSchema.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def soft_delete(%VideoIntegrationSchema{} = integration) do
+    integration
+    |> Changeset.change(%{
+      deleted_at: DateTime.utc_now(:second),
+      is_active: false
+    })
+    |> Repo.update()
+  end
+
+  @doc """
   Deletes every integration matching `(provider, provider_account_id)` regardless
   of the owning user. Used by provider-initiated revocation flows (e.g. the Zoom
   deauthorization webhook) where the only identifier we receive is the provider's
@@ -297,7 +333,14 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   `(user_id, provider, provider_account_id)` to prevent a unique-constraint violation.
   """
   @spec toggle_active(VideoIntegrationSchema.t()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :duplicate_account}
+          {:ok, VideoIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | :duplicate_account | :not_found}
+  # A soft-deleted row is on its way out and its rooms may already be gone;
+  # reactivating it from a stale dashboard render would resurrect an integration
+  # the user has disconnected.
+  def toggle_active(%VideoIntegrationSchema{deleted_at: %DateTime{}}),
+    do: {:error, :not_found}
+
   def toggle_active(%VideoIntegrationSchema{} = integration) do
     if integration.is_active do
       integration
@@ -337,6 +380,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @spec count_for_user(integer()) :: non_neg_integer()
   def count_for_user(user_id) do
     VideoIntegrationSchema
+    |> exclude_deleted()
     |> where([v], v.user_id == ^user_id)
     |> select([v], count(v.id))
     |> Repo.one() || 0
@@ -349,6 +393,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @spec list_all() :: list(VideoIntegrationSchema.t())
   def list_all do
     VideoIntegrationSchema
+    |> exclude_deleted()
     |> Repo.all()
     |> Enum.map(&VideoIntegrationSchema.decrypt_credentials/1)
   end

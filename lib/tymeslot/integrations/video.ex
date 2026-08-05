@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
+  alias Tymeslot.Integrations.Video.Disconnect
   alias Tymeslot.Integrations.Video.Discovery
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Rooms
@@ -259,25 +260,18 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # Delete
   # ---------------
-  @spec delete_integration(pos_integer(), pos_integer()) :: {:ok, :deleted} | {:error, any()}
-  def delete_integration(user_id, id) when is_integer(user_id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
-      {:ok, integration} ->
-        case VideoIntegrationQueries.delete(integration) do
-          {:ok, _result} -> {:ok, :deleted}
-          {:error, _reason} = err -> err
-        end
+  @doc """
+  Disconnects a video integration.
 
-      {:error, :not_found} = err ->
-        err
-
-      {:error, :requires_reencryption, integration} ->
-        case VideoIntegrationQueries.delete(integration) do
-          {:ok, _result} -> {:ok, :deleted}
-          {:error, _reason} = err -> err
-        end
-    end
-  end
+  With `delete_rooms: true` the integration is soft-deleted and a background job
+  deletes the provider-side rooms of the user's upcoming bookings before purging
+  the row. Without it the row goes immediately and existing rooms are left
+  running, so join URLs already sitting in attendees' calendar invites keep
+  working.
+  """
+  @spec delete_integration(pos_integer(), pos_integer(), keyword()) ::
+          {:ok, :deleted | :cleanup_scheduled} | {:error, any()}
+  defdelegate delete_integration(user_id, id, opts \\ []), to: Disconnect, as: :run
 
   @doc """
   Removes every video integration matching `(provider, provider_account_id)`,

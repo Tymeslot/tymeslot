@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings.MeetingQueries
   alias TymeslotWeb.Dashboard.{CalendarSettingsComponent, VideoSettingsComponent}
 
   @impl Phoenix.LiveComponent
@@ -16,7 +17,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
     {:ok,
      socket
      |> assign(:show, false)
-     |> assign(:integration_id, nil)}
+     |> assign(:integration_id, nil)
+     |> assign(:affected_bookings, 0)
+     |> assign(:delete_rooms, false)}
   end
 
   @impl Phoenix.LiveComponent
@@ -31,12 +34,22 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
         {:noreply,
          socket
          |> assign(:show, true)
-         |> assign(:integration_id, integration_id)}
+         |> assign(:integration_id, integration_id)
+         |> assign(:delete_rooms, false)
+         |> assign(
+           :affected_bookings,
+           count_affected(socket.assigns.integration_type, integration_id)
+         )}
 
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_integrations", "Invalid integration ID"))
         {:noreply, socket}
     end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_delete_rooms", _params, socket) do
+    {:noreply, assign(socket, :delete_rooms, not socket.assigns.delete_rooms)}
   end
 
   @impl Phoenix.LiveComponent
@@ -69,7 +82,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
               Calendar.delete_with_primary_reassignment_and_invalidate(user_id, integration_id)
 
             :video ->
-              Video.delete_integration(user_id, integration_id)
+              Video.delete_integration(user_id, integration_id,
+                delete_rooms: socket.assigns.delete_rooms
+              )
           end
 
         case result do
@@ -160,6 +175,33 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
               data: format_integration_data(@integration_type)
             )}
           </p>
+          <%!-- Only video integrations own provider-side rooms, and only rooms
+                that still belong to an upcoming booking are worth asking about. --%>
+          <div :if={@integration_type == :video and @affected_bookings > 0} class="space-y-3">
+            <p class="text-tymeslot-500 font-medium">
+              {dngettext(
+                "dashboard_integrations",
+                "%{count} upcoming booking still uses this integration. Its meeting room keeps working unless you delete it here.",
+                "%{count} upcoming bookings still use this integration. Their meeting rooms keep working unless you delete them here.",
+                @affected_bookings,
+                count: @affected_bookings
+              )}
+            </p>
+            <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
+              <.input
+                type="checkbox"
+                name="delete_rooms"
+                checked={@delete_rooms}
+                phx-click={JS.push("toggle_delete_rooms", target: @myself)}
+              />
+              <span class="flex-1 text-token-sm text-tymeslot-600 font-medium">
+                {dgettext(
+                  "dashboard_integrations",
+                  "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
+                )}
+              </span>
+            </label>
+          </div>
         </div>
         <:footer>
           <div class="flex justify-end gap-3">
@@ -183,6 +225,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   end
 
   # Private helper functions
+
+  # Only video integrations own provider-side rooms; calendar disconnect has no
+  # equivalent cleanup, so it never asks the question.
+  defp count_affected(:video, integration_id) do
+    MeetingQueries.count_upcoming_with_video_room_for_integration(
+      integration_id,
+      DateTime.utc_now()
+    )
+  end
+
+  defp count_affected(_other_type, _integration_id), do: 0
 
   defp get_parent_component_module(:calendar), do: CalendarSettingsComponent
   defp get_parent_component_module(:video), do: VideoSettingsComponent
