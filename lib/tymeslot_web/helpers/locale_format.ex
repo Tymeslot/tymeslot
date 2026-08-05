@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   Handles different formatting conventions for different languages.
   """
 
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+
   @doc """
   Formats a date according to locale conventions.
   - en: January 15, 2026
@@ -83,16 +85,17 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   - en: 02:30 PM (12-hour)
   - de: 14:30 (24-hour)
   - uk: 14:30 (24-hour)
+
+  Which languages use which clock is `TimeFormat.for_locale/1`, shared with the
+  organiser's clock preference so the two can't drift apart. The hour padding
+  differs on purpose: this renders "02:30 PM" for a reader who never chose a
+  format, while a chosen 12-hour clock renders the more conversational "2:30 PM".
   """
   @spec format_time(Calendar.time(), String.t()) :: String.t()
   def format_time(time, locale) do
-    case locale do
-      "en" -> Calendar.strftime(time, "%I:%M %p")
-      "de" -> Calendar.strftime(time, "%H:%M")
-      "uk" -> Calendar.strftime(time, "%H:%M")
-      "fr" -> Calendar.strftime(time, "%H:%M")
-      "it" -> Calendar.strftime(time, "%H:%M")
-      _other_locale -> Calendar.strftime(time, "%I:%M %p")
+    case TimeFormat.for_locale(locale) do
+      "12h" -> Calendar.strftime(time, "%I:%M %p")
+      "24h" -> Calendar.strftime(time, "%H:%M")
     end
   end
 

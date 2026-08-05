@@ -205,6 +205,24 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Counts upcoming live bookings holding a provider room created by the given
+  integration.
+
+  Drives the "N upcoming bookings use this" line in the disconnect modal, so the
+  user knows what the optional room cleanup would affect before choosing it.
+  """
+  @spec count_upcoming_with_video_room_for_integration(pos_integer(), DateTime.t()) ::
+          non_neg_integer()
+  def count_upcoming_with_video_room_for_integration(integration_id, %DateTime{} = now) do
+    Meeting
+    |> MeetingState.where_live_booking()
+    |> where([m], m.end_time > ^now)
+    |> where([m], m.video_integration_id == ^integration_id)
+    |> where([m], not is_nil(m.video_room_id))
+    |> Repo.aggregate(:count, :id)
+  end
+
+  @doc """
   Returns the count of bookings created for an organizer within the given
   window. Used by the analytics dashboard to compute conversion rate.
   """

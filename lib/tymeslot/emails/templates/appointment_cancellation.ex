@@ -93,7 +93,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       mjml_content = """
       #{Text.centered_text(dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
-      #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, organizer_locale(appointment_details))}
+      #{MeetingComponents.meeting_details_table(TemplateHelper.organizer_meeting_details(appointment_details), organizer_locale(appointment_details))}
 
       #{MeetingComponents.custom_answers_section(appointment_details)}
 
@@ -174,6 +174,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
   end
 
   defp text_body_organizer(appointment_details) do
+    appointment_details = TemplateHelper.as_organizer_view(appointment_details)
+
     meeting_details =
       TextBodyHelper.format_meeting_details(
         appointment_details,

@@ -68,14 +68,14 @@ msgstr "Verfügbarkeit"
 msgid "Available"
 msgstr "Verfügbar"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:291
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:283
 #, elixir-autogen, elixir-format
 msgid "Available for booking"
 msgstr "Für Buchungen verfügbar"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:149
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:211
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:314
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:215
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:306
 #, elixir-autogen, elixir-format
 msgid "Break"
 msgstr "Pause"
@@ -90,7 +90,7 @@ msgstr "Pause hinzugefügt"
 msgid "Break deleted"
 msgstr "Pause gelöscht"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:308
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:300
 #, elixir-autogen, elixir-format
 msgid "Break: %{label}"
 msgstr "Pause: %{label}"
@@ -122,12 +122,12 @@ msgstr "Tag leeren"
 msgid "Clear Day Settings"
 msgstr "Tageseinstellungen löschen"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:261
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:253
 #, elixir-autogen, elixir-format
 msgid "Day not configured"
 msgstr "Tag nicht konfiguriert"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:264
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:256
 #, elixir-autogen, elixir-format
 msgid "Day unavailable"
 msgstr "Tag nicht verfügbar"
@@ -169,12 +169,12 @@ msgstr "Pause konnte nicht gelöscht werden"
 msgid "Failed to update availability"
 msgstr "Verfügbarkeit konnte nicht aktualisiert werden"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:113
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:114
 #, elixir-autogen, elixir-format
 msgid "Fri"
 msgstr "Fr"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:23
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:24
 #, elixir-autogen, elixir-format
 msgid "Friday"
 msgstr "Freitag"
@@ -184,7 +184,7 @@ msgstr "Freitag"
 msgid "From"
 msgstr "Von"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:166
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:167
 #, elixir-autogen, elixir-format
 msgid "Full Availability"
 msgstr "Volle Verfügbarkeit"
@@ -212,17 +212,17 @@ msgstr "Bezeichnung"
 msgid "List"
 msgstr "Liste"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:109
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:110
 #, elixir-autogen, elixir-format
 msgid "Mon"
 msgstr "Mo"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:19
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:20
 #, elixir-autogen, elixir-format
 msgid "Monday"
 msgstr "Montag"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:267
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:259
 #, elixir-autogen, elixir-format
 msgid "No hours set"
 msgstr "Keine Zeiten festgelegt"
@@ -237,17 +237,17 @@ msgstr "An diesem Tag werden keine Buchungen angenommen."
 msgid "Off"
 msgstr "Aus"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:283
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:275
 #, elixir-autogen, elixir-format
 msgid "Outside business hours"
 msgstr "Außerhalb der Geschäftszeiten"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:176
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:177
 #, elixir-autogen, elixir-format
 msgid "Partial (Breaks)"
 msgstr "Teilweise (Pausen)"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:313
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:305
 #, elixir-autogen, elixir-format
 msgid "Partially available (Break: %{label} overlaps)"
 msgstr "Teilweise verfügbar (Pause: %{label} überschneidet sich)"
@@ -257,12 +257,12 @@ msgstr "Teilweise verfügbar (Pause: %{label} überschneidet sich)"
 msgid "Quick break added"
 msgstr "Schnellpause hinzugefügt"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:114
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:115
 #, elixir-autogen, elixir-format
 msgid "Sat"
 msgstr "Sa"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:24
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:25
 #, elixir-autogen, elixir-format
 msgid "Saturday"
 msgstr "Samstag"
@@ -282,12 +282,12 @@ msgstr "Beginn"
 msgid "Start Time"
 msgstr "Startzeit"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:115
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:116
 #, elixir-autogen, elixir-format
 msgid "Sun"
 msgstr "So"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:25
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:26
 #, elixir-autogen, elixir-format
 msgid "Sunday"
 msgstr "Sonntag"
@@ -302,29 +302,29 @@ msgstr "Diese Aktion kann nicht rückgängig gemacht werden."
 msgid "This will remove all availability hours and breaks for this day. This action cannot be undone."
 msgstr "Dadurch werden alle Verfügbarkeitszeiten und Pausen für diesen Tag entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:112
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:113
 #, elixir-autogen, elixir-format
 msgid "Thu"
 msgstr "Do"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:22
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:23
 #, elixir-autogen, elixir-format
 msgid "Thursday"
 msgstr "Donnerstag"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:110
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:111
 #, elixir-autogen, elixir-format
 msgid "Tue"
 msgstr "Di"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:20
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:21
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr "Dienstag"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:182
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:230
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:309
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:183
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:235
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:301
 #, elixir-autogen, elixir-format
 msgid "Unavailable"
 msgstr "Nicht verfügbar"
@@ -334,12 +334,12 @@ msgstr "Nicht verfügbar"
 msgid "Until"
 msgstr "Bis"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:111
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:112
 #, elixir-autogen, elixir-format
 msgid "Wed"
 msgstr "Mi"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:21
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:22
 #, elixir-autogen, elixir-format
 msgid "Wednesday"
 msgstr "Mittwoch"
@@ -349,7 +349,7 @@ msgstr "Mittwoch"
 msgid "Weekly Schedule"
 msgstr "Wochenplan"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:62
+#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:63
 #, elixir-autogen, elixir-format
 msgid "Weekly Visual Grid"
 msgstr "Visuelles Wochenraster"

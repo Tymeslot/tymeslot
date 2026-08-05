@@ -14,6 +14,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
@@ -484,6 +485,40 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   end
 
   describe "Zoom video room sync" do
+    test "still enqueues the update job after the integration was disconnected" do
+      %{user: user, profile: _profile} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_provider: "zoom",
+          video_room_id: "123456789",
+          title: "Customer call"
+        })
+
+      assert {:ok, :deleted} = Video.delete_integration(user.id, integration.id)
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      assert {:ok, updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated.video_integration_id == nil
+
+      # Otherwise the Zoom meeting keeps advertising the old time on a join URL
+      # the attendee still holds.
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"meeting_id" => updated.id, "action" => "update"}
+      )
+    end
+
     test "enqueues a video-sync update job that PATCHes the Zoom meeting with new times" do
       %{user: user, profile: _profile} = create_user_with_profile()
       integration = insert_zoom_integration(user)

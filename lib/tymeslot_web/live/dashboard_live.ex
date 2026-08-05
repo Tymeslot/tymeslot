@@ -332,6 +332,7 @@ defmodule TymeslotWeb.DashboardLive do
             profile={Map.get(@component_props, :profile, @profile)}
             shared_data={Map.get(@component_props, :shared_data, %{})}
             integration_status={@integration_status}
+            time_format={@time_format}
             saving={@saving}
             client_ip={@client_ip}
             user_agent={@user_agent}
@@ -362,6 +363,15 @@ defmodule TymeslotWeb.DashboardLive do
      |> assign(profile: profile)
      |> handle_saving_animation()
      |> refresh_dashboard_data()}
+  end
+
+  # The clock is resolved once at mount, so changing it in settings has to be
+  # announced or the rest of the dashboard keeps rendering the old one until the
+  # next full page load.
+  @spec handle_info({:time_format_updated, String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:time_format_updated, time_format}, socket) do
+    {:noreply, assign(socket, time_format: time_format)}
   end
 
   @spec handle_info(

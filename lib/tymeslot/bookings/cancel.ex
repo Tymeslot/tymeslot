@@ -204,8 +204,10 @@ defmodule Tymeslot.Bookings.Cancel do
   # cancellation. Routed through Oban — not done inline — so a transient Zoom
   # 5xx/429 retries instead of leaving an orphaned meeting. Providers without a
   # server-side meeting object (Google Meet, Teams, MiroTalk, Custom) resolve to
-  # :ok inside the job. Never blocks cancellation.
-  defp delete_provider_video_room(%Meeting{video_integration_id: nil}), do: :ok
+  # :ok inside the job. Whether an integration can still reach the room is
+  # decided inside the job by `IntegrationResolver`, not here: a severed
+  # `video_integration_id` does not mean the room stopped existing. Never blocks
+  # cancellation.
   defp delete_provider_video_room(%Meeting{video_room_id: nil}), do: :ok
   defp delete_provider_video_room(%Meeting{organizer_user_id: nil}), do: :ok
 

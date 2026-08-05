@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Reminders whose fire time is older than this are pruned from the feed.
@@ -122,6 +123,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
     end
   end
 
-  defp time_label(local, "24h"), do: Calendar.strftime(local, "%H:%M")
-  defp time_label(local, _twelve_hour), do: Calendar.strftime(local, "%-I:%M %p")
+  defp time_label(local, time_format), do: TimeFormat.format(local, time_format)
 end

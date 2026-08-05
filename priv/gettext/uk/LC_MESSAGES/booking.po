@@ -11,18 +11,18 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:317
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:327
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:324
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:334
 #, elixir-autogen, elixir-format
 msgid "%{count} hours"
 msgstr "%{count} год"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:332
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:339
 #, elixir-autogen, elixir-format
 msgid "%{count} minutes"
 msgstr "%{count} хв"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:51
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:52
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr "%{date} о %{time}"
@@ -32,17 +32,17 @@ msgstr "%{date} о %{time}"
 msgid "%{days} days in advance"
 msgstr "%{days} дн."
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:85
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:86
 #, elixir-autogen, elixir-format
 msgid "%{day} %{month} %{year} at %{time} %{timezone}"
 msgstr "%{day} %{month} %{year} о %{time} %{timezone}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:334
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:341
 #, elixir-autogen, elixir-format
 msgid "%{hour_text} %{minute_text}"
 msgstr "%{hour_text} %{minute_text}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:311
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:318
 #, elixir-autogen, elixir-format
 msgid "%{minutes} minutes"
 msgstr "%{minutes} хв"
@@ -52,13 +52,13 @@ msgstr "%{minutes} хв"
 msgid "%{months} months in advance"
 msgstr "%{months} міс."
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:136
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:137
 #, elixir-autogen, elixir-format
 msgid "%{month} %{day}, %{year}"
 msgstr "%{day} %{month} %{year}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:268
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:284
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:275
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:291
 #, elixir-autogen, elixir-format
 msgid "%{month} %{year}"
 msgstr "%{month} %{year}"
@@ -78,22 +78,22 @@ msgstr "%{name}, усе готово до вашої зустрічі %{organize
 msgid "%{name}, your meeting %{organizer} is confirmed"
 msgstr "%{name}, вашу зустріч %{organizer} підтверджено"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:297
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:304
 #, elixir-autogen, elixir-format
 msgid "%{start_month} %{start_year} - %{end_month} %{end_year}"
 msgstr "%{start_month} %{start_year} - %{end_month} %{end_year}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:290
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:297
 #, elixir-autogen, elixir-format
 msgid "%{start_month} - %{end_month} %{year}"
 msgstr "%{start_month} - %{end_month} %{year}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:66
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:67
 #, elixir-autogen, elixir-format
 msgid "%{time} %{timezone}"
 msgstr "%{time} %{timezone}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:70
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:71
 #, elixir-autogen, elixir-format
 msgid "%{time} UTC"
 msgstr "%{time} за UTC"
@@ -103,7 +103,7 @@ msgstr "%{time} за UTC"
 msgid "%{time} local time"
 msgstr "%{time} за місцевим часом"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:41
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:42
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}"
 msgstr "%{weekday}, %{day} %{month} %{year} о %{time} %{timezone}"
@@ -123,14 +123,14 @@ msgstr "%{years} р."
 msgid "1 day in advance"
 msgstr "1 день"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:313
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:326
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:320
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:333
 #, elixir-autogen, elixir-format
 msgid "1 hour"
 msgstr "1 година"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:308
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:331
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:315
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:338
 #, elixir-autogen, elixir-format
 msgid "1 minute"
 msgstr "1 хвилина"
@@ -166,7 +166,7 @@ msgstr "Усім учасникам буде надіслано електрон
 msgid "Additional Message (Optional)"
 msgstr "Додаткове повідомлення (необов’язково)"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:21
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:22
 #, elixir-autogen, elixir-format
 msgid "Afternoon"
 msgstr "День"
@@ -176,7 +176,7 @@ msgstr "День"
 msgid "Appointment host"
 msgstr "Організатор зустрічі"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:207
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:208
 #, elixir-autogen, elixir-format
 msgid "April"
 msgstr "Квітень"
@@ -187,7 +187,7 @@ msgstr "Квітень"
 msgid "Are you sure you want to cancel this appointment?"
 msgstr "Ви впевнені, що хочете скасувати цю зустріч?"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:211
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:212
 #, elixir-autogen, elixir-format
 msgid "August"
 msgstr "Серпень"
@@ -289,7 +289,7 @@ msgstr "Деталі поточної зустрічі"
 msgid "Date"
 msgstr "Дата"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:215
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:216
 #, elixir-autogen, elixir-format
 msgid "December"
 msgstr "Грудень"
@@ -316,7 +316,7 @@ msgstr "Тривалість"
 msgid "Duration: %{duration}"
 msgstr "Тривалість: %{duration}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:19
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:20
 #, elixir-autogen, elixir-format
 msgid "Early Morning"
 msgstr "Ранній ранок"
@@ -331,17 +331,17 @@ msgstr "Електронна адреса"
 msgid "Enter Your Details"
 msgstr "Введіть свої дані"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:22
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:23
 #, elixir-autogen, elixir-format
 msgid "Evening"
 msgstr "Вечір"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:245
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:246
 #, elixir-autogen, elixir-format
 msgid "FRI"
 msgstr "Пт"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:205
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:206
 #, elixir-autogen, elixir-format
 msgid "February"
 msgstr "Лютий"
@@ -351,7 +351,7 @@ msgstr "Лютий"
 msgid "Fri"
 msgstr "Пт"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:229
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:230
 #, elixir-autogen, elixir-format
 msgid "Friday"
 msgstr "П’ятниця"
@@ -378,12 +378,12 @@ msgstr "Вітаю! Я %{name}."
 msgid "I acknowledge the above"
 msgstr "Я підтверджую вищезазначене"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:56
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:57
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
 msgstr "Некоректна дата або час"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:204
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:205
 #, elixir-autogen, elixir-format
 msgid "January"
 msgstr "Січень"
@@ -393,12 +393,12 @@ msgstr "Січень"
 msgid "John Doe"
 msgstr "Іван Петренко"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:210
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:211
 #, elixir-autogen, elixir-format
 msgid "July"
 msgstr "Липень"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:209
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:210
 #, elixir-autogen, elixir-format
 msgid "June"
 msgstr "Червень"
@@ -409,7 +409,7 @@ msgstr "Червень"
 msgid "Keep Meeting"
 msgstr "Залишити зустріч"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:23
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:24
 #, elixir-autogen, elixir-format
 msgid "Late Night"
 msgstr "Пізня ніч"
@@ -432,17 +432,17 @@ msgstr "Зв’яжімося!"
 msgid "Loading available times..."
 msgstr "Завантаження доступного часу…"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:241
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:242
 #, elixir-autogen, elixir-format
 msgid "MON"
 msgstr "Пн"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:206
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:207
 #, elixir-autogen, elixir-format
 msgid "March"
 msgstr "Березень"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:208
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:209
 #, elixir-autogen, elixir-format
 msgid "May"
 msgstr "Травень"
@@ -483,12 +483,12 @@ msgstr "Зустріч з"
 msgid "Mon"
 msgstr "Пн"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:225
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:226
 #, elixir-autogen, elixir-format
 msgid "Monday"
 msgstr "Понеділок"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:20
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:21
 #, elixir-autogen, elixir-format
 msgid "Morning"
 msgstr "Ранок"
@@ -519,12 +519,12 @@ msgstr "Немає доступних типів зустрічей"
 msgid "No time selected"
 msgstr "Час не обрано"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:214
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:215
 #, elixir-autogen, elixir-format
 msgid "November"
 msgstr "Листопад"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:213
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:214
 #, elixir-autogen, elixir-format
 msgid "October"
 msgstr "Жовтень"
@@ -621,12 +621,12 @@ msgstr "Перенести зустріч"
 msgid "Return to booking"
 msgstr "Повернутися до бронювання"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:246
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:247
 #, elixir-autogen, elixir-format
 msgid "SAT"
 msgstr "Сб"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:247
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:248
 #, elixir-autogen, elixir-format
 msgid "SUN"
 msgstr "Нд"
@@ -636,7 +636,7 @@ msgstr "Нд"
 msgid "Sat"
 msgstr "Сб"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:230
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:231
 #, elixir-autogen, elixir-format
 msgid "Saturday"
 msgstr "Субота"
@@ -704,7 +704,7 @@ msgstr "Виберіть…"
 msgid "Sent to"
 msgstr "Надіслано на"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:212
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:213
 #, elixir-autogen, elixir-format
 msgid "September"
 msgstr "Вересень"
@@ -724,17 +724,17 @@ msgstr "Успішно перенесено!"
 msgid "Sun"
 msgstr "Нд"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:231
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:232
 #, elixir-autogen, elixir-format
 msgid "Sunday"
 msgstr "Неділя"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:244
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:245
 #, elixir-autogen, elixir-format
 msgid "THU"
 msgstr "Чт"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:242
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:243
 #, elixir-autogen, elixir-format
 msgid "TUE"
 msgstr "Вт"
@@ -768,7 +768,7 @@ msgstr "Цей сайт захищено reCAPTCHA, і застосовують�
 msgid "Thu"
 msgstr "Чт"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:228
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:229
 #, elixir-autogen, elixir-format
 msgid "Thursday"
 msgstr "Четвер"
@@ -788,13 +788,13 @@ msgstr "Часовий пояс"
 msgid "Tue"
 msgstr "Вт"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:226
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:227
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr "Вівторок"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:186
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:196
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:187
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:197
 #, elixir-autogen, elixir-format
 msgid "Unknown duration"
 msgstr "Невідома тривалість"
@@ -810,7 +810,7 @@ msgstr "Перевірка доступності та створення зус
 msgid "Verifying..."
 msgstr "Перевірка…"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:243
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:244
 #, elixir-autogen, elixir-format
 msgid "WED"
 msgstr "Ср"
@@ -831,7 +831,7 @@ msgstr "Ми відкрили Stripe Checkout у новій вкладці бр�
 msgid "Wed"
 msgstr "Ср"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:227
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:228
 #, elixir-autogen, elixir-format
 msgid "Wednesday"
 msgstr "Середа"
@@ -981,11 +981,6 @@ msgstr "тільки в цей день"
 #, elixir-autogen, elixir-format
 msgid "submit"
 msgstr "Надіслати"
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:256
-#, elixir-autogen, elixir-format
-msgid "time_format_type"
-msgstr "24 год"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:265
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:187
@@ -1162,7 +1157,7 @@ msgstr "Оберіть зручний для вас час і забронюйт
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Сеанс попереднього перегляду завершився. Перезавантажте сторінку, щоб продовжити."
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:161
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:162
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{date}"
 msgstr "%{weekday}, %{date}"
@@ -1270,12 +1265,6 @@ msgstr "Ваше бронювання вже обробляється. Будь 
 msgid "Pick an option below."
 msgstr "Оберіть варіант нижче."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:25
-#, elixir-autogen, elixir-format
-msgid "The host is no longer accepting bookings for this period. Please pick a different day."
-msgstr ""
-"Організатор більше не приймає бронювання на цей період. Виберіть інший день."
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:257
 #, elixir-autogen, elixir-format
 msgid "Booking submitted successfully!"
@@ -1307,3 +1296,9 @@ msgstr "Запланувати зустріч"
 #, elixir-autogen, elixir-format
 msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
 msgstr "Для бронювання зустрічей на цій сторінці потрібен JavaScript. Увімкніть його, щоб продовжити."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:25
+#, elixir-autogen, elixir-format
+msgid "The host is no longer accepting bookings for this period. Please pick a different day."
+msgstr ""
+"Організатор більше не приймає бронювання на цей період. Виберіть інший день."

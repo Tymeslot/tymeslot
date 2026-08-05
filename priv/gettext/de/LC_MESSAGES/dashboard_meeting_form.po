@@ -639,40 +639,6 @@ msgstr "Wird unter der Frage angezeigt - nutzen Sie ihn, um zu verdeutlichen, wa
 msgid "Too many changes - saving shortly…"
 msgstr "Zu viele Änderungen - wird in Kürze gespeichert…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:27
-#, elixir-autogen, elixir-format
-msgid "Booking limits"
-msgstr "Buchungslimits"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:33
-#, elixir-autogen, elixir-format
-msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr ""
-"Begrenzen Sie die Anzahl der Buchungen für diesen Termintyp. Lassen Sie ein "
-"Feld leer, wenn es kein Limit geben soll."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:51
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:70
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:89
-#, elixir-autogen, elixir-format
-msgid "No limit"
-msgstr "Kein Limit"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:42
-#, elixir-autogen, elixir-format
-msgid "Per day"
-msgstr "Pro Tag"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:80
-#, elixir-autogen, elixir-format
-msgid "Per month"
-msgstr "Pro Monat"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:61
-#, elixir-autogen, elixir-format
-msgid "Per week"
-msgstr "Pro Woche"
-
 #: lib/tymeslot/utils/form_helpers.ex:86
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price"
@@ -722,3 +688,37 @@ msgstr "Aktualisieren Sie Ihre Kalenderauswahl"
 #, elixir-autogen, elixir-format
 msgid "or choose a different account."
 msgstr "oder wählen Sie ein anderes Konto."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:27
+#, elixir-autogen, elixir-format
+msgid "Booking limits"
+msgstr "Buchungslimits"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:33
+#, elixir-autogen, elixir-format
+msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
+msgstr ""
+"Begrenzen Sie die Anzahl der Buchungen für diesen Termintyp. Lassen Sie ein "
+"Feld leer, wenn es kein Limit geben soll."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:51
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:70
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:89
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Kein Limit"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:42
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "Pro Tag"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:80
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "Pro Monat"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "Pro Woche"

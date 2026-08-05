@@ -639,40 +639,6 @@ msgstr "Відображається під запитанням - викори�
 msgid "Too many changes - saving shortly…"
 msgstr "Забагато змін - збереження за мить…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:27
-#, elixir-autogen, elixir-format
-msgid "Booking limits"
-msgstr "Ліміти бронювань"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:33
-#, elixir-autogen, elixir-format
-msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr ""
-"Обмежте кількість бронювань цього типу, які ви приймаєте. Залиште поле "
-"порожнім, якщо обмеження не потрібні."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:51
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:70
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:89
-#, elixir-autogen, elixir-format
-msgid "No limit"
-msgstr "Без обмежень"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:42
-#, elixir-autogen, elixir-format
-msgid "Per day"
-msgstr "На день"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:80
-#, elixir-autogen, elixir-format
-msgid "Per month"
-msgstr "На місяць"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:61
-#, elixir-autogen, elixir-format
-msgid "Per week"
-msgstr "На тиждень"
-
 #: lib/tymeslot/utils/form_helpers.ex:86
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price"
@@ -722,3 +688,37 @@ msgstr "Змініть вибір календарів"
 #, elixir-autogen, elixir-format
 msgid "or choose a different account."
 msgstr "або виберіть інший обліковий запис."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:27
+#, elixir-autogen, elixir-format
+msgid "Booking limits"
+msgstr "Ліміти бронювань"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:33
+#, elixir-autogen, elixir-format
+msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
+msgstr ""
+"Обмежте кількість бронювань цього типу, які ви приймаєте. Залиште поле "
+"порожнім, якщо обмеження не потрібні."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:51
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:70
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:89
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Без обмежень"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:42
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "На день"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:80
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "На місяць"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "На тиждень"

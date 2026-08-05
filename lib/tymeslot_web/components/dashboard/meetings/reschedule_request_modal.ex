@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
   attr :show, :boolean, required: true
   attr :meeting, :map, required: true
   attr :timezone, :string, default: "UTC"
+  attr :time_format, :string, default: "24h"
   attr :sending, :boolean, required: true
   attr :on_cancel, JS, required: true
   attr :on_confirm, JS, required: true
@@ -80,7 +81,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
             <div class="text-tymeslot-900 font-black text-lg space-y-2">
               <div class="flex items-center gap-3">
                 <CoreComponents.icon name="hero-calendar" class="w-5 h-5 text-turquoise-600" />
-                <span>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(@meeting, @timezone)}</span>
+                <span>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(@meeting, @timezone, @time_format)}</span>
               </div>
               <div class="flex items-center gap-3">
                 <CoreComponents.icon name="hero-clock" class="w-5 h-5 text-turquoise-600" />

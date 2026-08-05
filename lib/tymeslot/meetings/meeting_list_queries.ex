@@ -196,6 +196,49 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Returns upcoming live bookings that still hold a provider-side room created by
+  the given integration.
+
+  Used when a user disconnects an integration and asks for the rooms to be
+  deleted along with it. Past bookings are left alone: they are history, and
+  their provider rooms have generally expired on their own.
+  """
+  @spec list_upcoming_with_video_room_for_integration(
+          pos_integer(),
+          DateTime.t(),
+          pos_integer()
+        ) :: [Meeting.t()]
+  def list_upcoming_with_video_room_for_integration(integration_id, now, limit \\ 500) do
+    Meeting
+    |> MeetingState.where_live_booking()
+    |> upcoming(now)
+    |> where([m], m.video_integration_id == ^integration_id)
+    |> where([m], not is_nil(m.video_room_id))
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns cancelled meetings that still hold a provider-side room.
+
+  Successful provider deletion clears `video_room_id`, so a cancelled meeting
+  that still carries one has not been cleaned up: either it predates that
+  behaviour, or its integration was disconnected before the release that
+  resolves a fallback. `cancelled_before` keeps the scan clear of bookings whose
+  cancellation job is still in flight.
+  """
+  @spec list_cancelled_with_video_room(DateTime.t(), pos_integer()) :: [Meeting.t()]
+  def list_cancelled_with_video_room(cancelled_before, limit \\ 200) do
+    Meeting
+    |> where([m], m.status == "cancelled")
+    |> where([m], not is_nil(m.video_room_id))
+    |> where([m], m.cancelled_at < ^cancelled_before)
+    |> order_by([m], asc: m.cancelled_at)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
   defp meetings_missing_video_rooms_base(now) do
     Meeting
     |> MeetingState.where_live_booking()

@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
 
   attr :integration, :map, required: true
+  attr :time_format, :string, required: true
   attr :testing, :boolean, default: false
   attr :target, :any, required: true
   attr :on_edit, :any, required: true
@@ -79,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                   <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
-                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}", time: AutomationHelpers.format_datetime(@integration.last_triggered_at))}</span>
+                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}", time: AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format))}</span>
                 </div>
               <% else %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
