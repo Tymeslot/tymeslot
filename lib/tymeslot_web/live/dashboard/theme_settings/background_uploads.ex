@@ -69,11 +69,27 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BackgroundUploads do
   @doc """
   Consumes a finished upload and refreshes the customisation from the profile.
 
+  Readiness is checked *before* the rate limit, and deliberately so. Both
+  entry points reach here: the `phx-change` validate handler fires on every
+  change event during an upload, so charging the limit first would spend a
+  user's whole budget on events that had nothing to consume, and lock them out
+  of their own upload part-way through. Charging only when there is genuinely a
+  finished file to process makes the limit mean "uploads processed", which is
+  the thing worth limiting.
+
   A rate-limited or not-yet-finished upload returns the socket untouched: the
   entry stays put and the next progress message tries again.
   """
   @spec consume(Phoenix.LiveView.Socket.t(), kind()) :: Phoenix.LiveView.Socket.t()
   def consume(socket, kind) do
+    if ready?(socket, @kinds[kind].upload_key) do
+      rate_limited(socket, fn -> process(socket, kind) end)
+    else
+      socket
+    end
+  end
+
+  defp rate_limited(socket, fun) do
     user_id = socket.assigns.profile.user_id
 
     case RateLimiter.check_rate_limit(
@@ -82,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BackgroundUploads do
            @rate_limit_window_ms
          ) do
       :ok ->
-        maybe_process(socket, kind)
+        fun.()
 
       {:error, :rate_limited} ->
         Flash.error(
@@ -103,25 +119,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BackgroundUploads do
       end
 
       {:noreply, socket}
-    end
-  end
-
-  @doc """
-  Processes a finished upload *without* charging the rate limit.
-
-  Used by the `phx-change` validate handlers, which reach this point only after
-  the browser has already finished sending the bytes. Note this means the
-  change path is not rate limited while the submit path is; the asymmetry
-  predates this module and is preserved here rather than quietly altered.
-  """
-  @spec process_if_ready(Phoenix.LiveView.Socket.t(), kind()) :: Phoenix.LiveView.Socket.t()
-  def process_if_ready(socket, kind), do: maybe_process(socket, kind)
-
-  defp maybe_process(socket, kind) do
-    if ready?(socket, @kinds[kind].upload_key) do
-      process(socket, kind)
-    else
-      socket
     end
   end
 

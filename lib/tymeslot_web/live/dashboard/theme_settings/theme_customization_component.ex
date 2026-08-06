@@ -290,7 +290,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   end
 
   def handle_event("validate_image", _params, socket) do
-    {:noreply, BackgroundUploads.process_if_ready(socket, :image)}
+    {:noreply, BackgroundUploads.consume(socket, :image)}
   end
 
   def handle_event("save_background_image", _params, socket) do
@@ -298,7 +298,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   end
 
   def handle_event("validate_video", _params, socket) do
-    {:noreply, BackgroundUploads.process_if_ready(socket, :video)}
+    {:noreply, BackgroundUploads.consume(socket, :video)}
   end
 
   def handle_event("save_background_video", _params, socket) do
