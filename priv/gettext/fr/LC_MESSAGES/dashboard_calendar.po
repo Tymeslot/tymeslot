@@ -89,18 +89,18 @@ msgid_plural "+%{count} more"
 msgstr[0] "+%{count} de plus"
 msgstr[1] "+%{count} de plus"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:261
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:251
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:80
 #, elixir-autogen, elixir-format
 msgid "3 Days"
 msgstr "3 jours"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:279
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:269
 #, elixir-autogen, elixir-format
 msgid "Add event"
 msgstr "Ajouter un événement"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:264
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:254
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:83
 #, elixir-autogen, elixir-format
 msgid "Agenda"
@@ -125,12 +125,12 @@ msgstr "Toute la journée : %{event}"
 msgid "Calendar data may be outdated (last synced %{age})."
 msgstr "Les données du calendrier sont peut-être obsolètes (dernière synchronisation %{age})."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:136
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:141
 #, elixir-autogen, elixir-format
 msgid "Calendar settings"
 msgstr "Paramètres du calendrier"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:168
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:175
 #, elixir-autogen, elixir-format
 msgid "Calendars"
 msgstr "Calendriers"
@@ -145,40 +145,40 @@ msgstr "Connecter un calendrier"
 msgid "Connect at least one calendar to see your events here."
 msgstr "Connectez au moins un calendrier pour voir vos événements ici."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:260
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:250
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:79
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr "Jour"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:127
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:132
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Raccourcis clavier"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:128
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:133
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts (?)"
 msgstr "Raccourcis clavier (?)"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:263
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:253
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:82
 #, elixir-autogen, elixir-format
 msgid "Month"
 msgstr "Mois"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:161
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:172
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:168
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex:32
 #, elixir-autogen, elixir-format
 msgid "My Calendars"
 msgstr "Mes calendriers"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:59
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:62
 #, elixir-autogen, elixir-format
 msgid "Next period"
 msgstr "Période suivante"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:194
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex:90
 #, elixir-autogen, elixir-format
 msgid "No calendars connected"
 msgstr "Aucun calendrier connecté"
@@ -208,18 +208,18 @@ msgstr "Rien à voir ici"
 msgid "Now"
 msgstr "Maintenant"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:51
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:54
 #, elixir-autogen, elixir-format
 msgid "Previous period"
 msgstr "Période précédente"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:282
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:272
 #, elixir-autogen, elixir-format
 msgid "Quick add"
 msgstr "Ajout rapide"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:299
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:302
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:289
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:292
 #, elixir-autogen, elixir-format
 msgid "Refresh"
 msgstr "Actualiser"
@@ -245,7 +245,7 @@ msgstr "Rechercher des événements"
 msgid "Some calendars have never been synced."
 msgstr "Certains calendriers n’ont jamais été synchronisés."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:218
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:208
 #, elixir-autogen, elixir-format
 msgid "Switch view"
 msgstr "Changer de vue"
@@ -256,12 +256,12 @@ msgid "Syncing calendars%{progress}..."
 msgstr "Synchronisation des calendriers%{progress}..."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:113
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:69
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:72
 #, elixir-autogen, elixir-format
 msgid "Today"
 msgstr "Aujourd’hui"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:164
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:171
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
 msgstr "Afficher/masquer les calendriers"
@@ -279,7 +279,7 @@ msgstr "Demain"
 msgid "Untitled event"
 msgstr "Événement sans titre"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:262
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:252
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:81
 #, elixir-autogen, elixir-format
 msgid "Week"
@@ -344,3 +344,13 @@ msgstr "Mandarine"
 #, elixir-autogen, elixir-format
 msgid "Tomato"
 msgstr "Tomate"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex:78
+#, elixir-autogen, elixir-format
+msgid "Colour for %{calendar}"
+msgstr "Couleur pour %{calendar}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex:76
+#, elixir-autogen, elixir-format
+msgid "Same as account"
+msgstr "Comme le compte"

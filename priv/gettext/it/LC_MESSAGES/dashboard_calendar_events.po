@@ -182,7 +182,7 @@ msgid "Calendar Settings"
 msgstr "Impostazioni calendario"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:65
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:133
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:186
 #, elixir-autogen, elixir-format
 msgid "Calendars refreshed"
 msgstr "Calendari aggiornati"
@@ -197,17 +197,17 @@ msgid "Cancel"
 msgstr "Annulla"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex:36
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:463
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:475
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:511
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:522
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:583
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:419
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:431
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:467
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:478
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:539
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex:88
 #, elixir-autogen, elixir-format
 msgid "Changes saved."
 msgstr "Modifiche salvate."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:591
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:547
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex:24
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Attendees will be notified shortly."
@@ -413,10 +413,12 @@ msgstr "Eliminazione dell'evento non riuscita"
 msgid "Failed to move event"
 msgstr "Spostamento dell'evento non riuscito"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:51
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:74
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:118
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:94
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:57
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:100
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:130
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:174
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:101
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:147
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
 msgstr "Salvataggio della preferenza non riuscito"
@@ -441,12 +443,12 @@ msgstr "Ven"
 msgid "Go back"
 msgstr "Indietro"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:397
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:400
 #, elixir-autogen, elixir-format
 msgid "Input contains invalid characters"
 msgstr "Il testo contiene caratteri non validi"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:396
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:399
 #, elixir-autogen, elixir-format
 msgid "Input too long"
 msgstr "Testo troppo lungo"
@@ -547,7 +549,7 @@ msgstr "Periodo successivo"
 msgid "No"
 msgstr "No"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:126
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:179
 #, elixir-autogen, elixir-format
 msgid "No calendars to sync"
 msgstr "Nessun calendario da sincronizzare"
@@ -607,7 +609,7 @@ msgstr "Periodo precedente"
 msgid "Primary"
 msgstr "Principale"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:113
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:166
 #, elixir-autogen, elixir-format
 msgid "Refresh failed for %{count} integration"
 msgid_plural "Refresh failed for %{count} integrations"
@@ -783,7 +785,7 @@ msgstr "Gio"
 msgid "Time"
 msgstr "Ora"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:545
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:501
 #, elixir-autogen, elixir-format
 msgid "Time editing is not available for all-day events."
 msgstr "La modifica dell'orario non è disponibile per gli eventi che durano tutto il giorno."
@@ -811,12 +813,12 @@ msgstr "Attiva/disattiva questa guida"
 msgid "Too many edits. Please wait a moment."
 msgstr "Troppe modifiche. Attendi un momento."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:346
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:349
 #, elixir-autogen, elixir-format
 msgid "Too many moves. Please wait a moment."
 msgstr "Troppi spostamenti. Attendi un momento."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:67
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:120
 #, elixir-autogen, elixir-format
 msgid "Too many refreshes. Please wait a moment."
 msgstr "Troppi aggiornamenti. Attendi un momento."
@@ -909,7 +911,7 @@ msgstr "Non hai l'autorizzazione per eliminare questo evento"
 msgid "You don't have permission to modify this event"
 msgstr "Non hai l'autorizzazione per modificare questo evento"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:333
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:336
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to move this event"
 msgstr "Non hai l'autorizzazione per spostare questo evento"

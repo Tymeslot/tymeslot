@@ -115,17 +115,17 @@ msgstr ""
 msgid "Dismiss"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:399
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:434
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:492
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:399
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:593
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:541
 #, elixir-autogen, elixir-format
 msgid "Failed to load meetings"
 msgstr ""
@@ -135,7 +135,7 @@ msgstr ""
 msgid "Failed to load more meetings"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:535
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:483
 #, elixir-autogen, elixir-format
 msgid "Failed to send reschedule request. Please try again."
 msgstr ""
@@ -190,17 +190,17 @@ msgstr ""
 msgid "Meeting Notes"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:486
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:437
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled and refund issued."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:441
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:388
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:489
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:440
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr ""
@@ -255,7 +255,7 @@ msgstr ""
 msgid "Real-time updates"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:396
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:431
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
 msgstr ""
@@ -281,7 +281,7 @@ msgstr ""
 msgid "Reschedule Requested"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:506
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:454
 #, elixir-autogen, elixir-format
 msgid "Reschedule request sent to %{attendee_name}"
 msgstr ""
@@ -336,7 +336,7 @@ msgstr ""
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:377
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:425
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the attendee."
 msgstr ""

@@ -115,17 +115,17 @@ msgstr "Дата й час"
 msgid "Dismiss"
 msgstr "Закрити"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:399
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:434
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
 msgstr "Вкажіть коректну суму часткового повернення."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:492
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:399
 #, elixir-autogen, elixir-format
 msgid "Failed to cancel meeting. Please try again."
 msgstr "Не вдалося скасувати зустріч. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:593
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:541
 #, elixir-autogen, elixir-format
 msgid "Failed to load meetings"
 msgstr "Не вдалося завантажити зустрічі"
@@ -135,7 +135,7 @@ msgstr "Не вдалося завантажити зустрічі"
 msgid "Failed to load more meetings"
 msgstr "Не вдалося завантажити більше зустрічей"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:535
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:483
 #, elixir-autogen, elixir-format
 msgid "Failed to send reschedule request. Please try again."
 msgstr "Не вдалося надіслати запит на перенесення. Спробуйте ще раз."
@@ -190,17 +190,17 @@ msgstr "Керування зустрічами"
 msgid "Meeting Notes"
 msgstr "Нотатки до зустрічі"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:486
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:437
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled and refund issued."
 msgstr "Зустріч скасовано, а кошти повернено."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:441
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:388
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Зустріч скасовано, але не вдалося повернути кошти. Будь ласка, зробіть це вручну на панелі керування Stripe."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:489
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:440
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Зустріч успішно скасовано"
@@ -255,7 +255,7 @@ msgstr "Швидкий доступ до зустрічей"
 msgid "Real-time updates"
 msgstr "Оновлення в реальному часі"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:396
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:431
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
 msgstr "Сума повернення перевищує залишок, доступний для повернення."
@@ -281,7 +281,7 @@ msgstr "Перенести"
 msgid "Reschedule Requested"
 msgstr "Запит на перенесення"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:506
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:454
 #, elixir-autogen, elixir-format
 msgid "Reschedule request sent to %{attendee_name}"
 msgstr "Запит на перенесення надіслано учаснику %{attendee_name}"
@@ -336,7 +336,7 @@ msgstr "Цю подію було видалено з вашого зовнішн
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Цю подію було перенесено у вашому зовнішньому календарі."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:377
+#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:425
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the attendee."
 msgstr "Поставте прапорець для підтвердження, щоб скасувати зустріч без повернення коштів учаснику."

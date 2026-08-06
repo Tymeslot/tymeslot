@@ -21,8 +21,8 @@ msgstr "Tema %{theme_name}"
 msgid "%{theme_name} Theme Preview"
 msgstr "Anteprima del tema %{theme_name}"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:464
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:488
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:325
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:349
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please refresh the page and try again."
 msgstr "Si è verificato un errore. Ricarica la pagina e riprova."
@@ -195,7 +195,7 @@ msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenota
 msgid "Solid Color"
 msgstr "Colore pieno"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:127
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:126
 #, elixir-autogen, elixir-format
 msgid "Theme Customization"
 msgstr "Personalizzazione del tema"
@@ -216,7 +216,7 @@ msgstr "Tema aggiornato a %{theme_name}"
 msgid "This preview reflects your current color scheme and background."
 msgstr "Questa anteprima riflette lo schema di colori e lo sfondo attuali."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:341
+#: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex:89
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr "Troppi tentativi di caricamento. Attendi qualche minuto e riprova."

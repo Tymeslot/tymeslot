@@ -21,8 +21,8 @@ msgstr "Thème %{theme_name}"
 msgid "%{theme_name} Theme Preview"
 msgstr "Aperçu du thème %{theme_name}"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:464
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:488
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:325
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:349
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please refresh the page and try again."
 msgstr "Une erreur s’est produite. Veuillez actualiser la page et réessayer."
@@ -195,7 +195,7 @@ msgstr "Choisissez les couleurs principales de l’interface de votre page de r�
 msgid "Solid Color"
 msgstr "Couleur unie"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:127
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:126
 #, elixir-autogen, elixir-format
 msgid "Theme Customization"
 msgstr "Personnalisation du thème"
@@ -216,7 +216,7 @@ msgstr "Thème mis à jour vers %{theme_name}"
 msgid "This preview reflects your current color scheme and background."
 msgstr "Cet aperçu reflète votre palette de couleurs et votre arrière-plan actuels."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:341
+#: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex:89
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr "Trop de tentatives de téléversement. Veuillez patienter quelques minutes et réessayer."

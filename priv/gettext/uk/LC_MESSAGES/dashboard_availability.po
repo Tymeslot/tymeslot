@@ -11,7 +11,7 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:120
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:122
 #, elixir-autogen, elixir-format
 msgid "%{count} total"
 msgid_plural "%{count} total"
@@ -34,22 +34,22 @@ msgstr "Доступність на %{day} оновлено"
 msgid "%{day} hours updated"
 msgstr "Години на %{day} оновлено"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:215
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:217
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Додати"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:140
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:142
 #, elixir-autogen, elixir-format
 msgid "Add Break"
 msgstr "Додати перерву"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:246
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:248
 #, elixir-autogen, elixir-format
 msgid "Apply to All Days"
 msgstr "Застосувати до всіх днів"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:258
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:260
 #, elixir-autogen, elixir-format
 msgid "Apply to Workdays"
 msgstr "Застосувати до робочих днів"
@@ -64,7 +64,7 @@ msgstr "Ви впевнені, що хочете видалити цю пере�
 msgid "Availability"
 msgstr "Доступність"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:71
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:73
 #, elixir-autogen, elixir-format
 msgid "Available"
 msgstr "Доступно"
@@ -74,7 +74,7 @@ msgstr "Доступно"
 msgid "Available for booking"
 msgstr "Доступно для бронювання"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:149
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:151
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:215
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:306
 #, elixir-autogen, elixir-format
@@ -96,14 +96,14 @@ msgstr "Перерву видалено"
 msgid "Break: %{label}"
 msgstr "Перерва: %{label}"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:111
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:113
 #, elixir-autogen, elixir-format
 msgid "Breaks"
 msgstr "Перерви"
 
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:76
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex:75
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:222
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:224
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
@@ -113,7 +113,7 @@ msgstr "Скасувати"
 msgid "Clear All Settings"
 msgstr "Очистити всі налаштування"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:270
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:272
 #, elixir-autogen, elixir-format
 msgid "Clear Day"
 msgstr "Очистити день"
@@ -135,17 +135,17 @@ msgstr "День недоступний"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex:55
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex:78
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:158
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:160
 #, elixir-autogen, elixir-format
 msgid "Delete Break"
 msgstr "Видалити перерву"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:205
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:207
 #, elixir-autogen, elixir-format
 msgid "End"
 msgstr "Кінець"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:97
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:99
 #, elixir-autogen, elixir-format
 msgid "End Time"
 msgstr "Час завершення"
@@ -180,7 +180,7 @@ msgstr "Пт"
 msgid "Friday"
 msgstr "П'ятниця"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:192
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:194
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "З"
@@ -203,7 +203,7 @@ msgstr "Сітка"
 msgid "Invalid time format"
 msgstr "Некоректний формат часу"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:182
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:184
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr "Мітка"
@@ -228,12 +228,12 @@ msgstr "Понеділок"
 msgid "No hours set"
 msgstr "Години не встановлено"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:276
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:278
 #, elixir-autogen, elixir-format
 msgid "Not taking any bookings on this day."
 msgstr "У цей день бронювання не приймаються."
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:72
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "Off"
 msgstr "Вихідний"
@@ -273,12 +273,12 @@ msgstr "Субота"
 msgid "Settings copied to %{day_names}"
 msgstr "Налаштування скопійовано на %{day_names}"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:194
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:196
 #, elixir-autogen, elixir-format
 msgid "Start"
 msgstr "Початок"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:88
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:90
 #, elixir-autogen, elixir-format
 msgid "Start Time"
 msgstr "Час початку"
@@ -330,7 +330,7 @@ msgstr "Вівторок"
 msgid "Unavailable"
 msgstr "Недоступно"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:203
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:205
 #, elixir-autogen, elixir-format
 msgid "Until"
 msgstr "До"
@@ -360,7 +360,7 @@ msgstr "Тижнева візуальна сітка"
 msgid "You're adding breaks too quickly. Please wait a bit."
 msgstr "Ви додаєте перерви надто швидко. Будь ласка, зачекайте трохи."
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:183
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:185
 #, elixir-autogen, elixir-format
 msgid "e.g. Lunch"
 msgstr "напр., обід"
