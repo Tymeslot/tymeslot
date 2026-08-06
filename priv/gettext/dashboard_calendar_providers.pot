@@ -22,7 +22,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:101
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars we check to prevent double bookings."
 msgstr ""
@@ -47,7 +47,7 @@ msgstr ""
 msgid "Could not sign in with those credentials"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:170
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:169
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr ""
@@ -161,7 +161,7 @@ msgstr ""
 msgid "My mailbox.org Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:158
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:157
 #, elixir-autogen, elixir-format
 msgid "No calendars found. Try refreshing the integration."
 msgstr ""
@@ -188,7 +188,7 @@ msgstr ""
 msgid "Please select at least one calendar to sync."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:146
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:145
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr ""
@@ -285,7 +285,7 @@ msgstr ""
 msgid "Sync calendars from your mailbox.org account"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:109
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:108
 #, elixir-autogen, elixir-format
 msgid "Syncing %{selected} of %{count} calendar"
 msgid_plural "Syncing %{selected} of %{count} calendars"
@@ -1120,13 +1120,8 @@ msgstr ""
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
-#, elixir-autogen, elixir-format
-msgid "Automatic"
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:82
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:95
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr ""

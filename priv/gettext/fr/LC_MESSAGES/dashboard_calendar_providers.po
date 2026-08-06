@@ -22,7 +22,7 @@ msgstr "Calendrier reconnecté"
 msgid "Cancel"
 msgstr "Annuler"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:101
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars we check to prevent double bookings."
 msgstr "Choisissez les calendriers que nous vérifions pour éviter les doubles réservations."
@@ -47,7 +47,7 @@ msgstr "Impossible d’enregistrer : %{reason}"
 msgid "Could not sign in with those credentials"
 msgstr "Impossible de se connecter avec ces identifiants"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:170
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:169
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Terminé"
@@ -161,7 +161,7 @@ msgstr "Mon mailbox.org"
 msgid "My mailbox.org Calendar"
 msgstr "Mon calendrier mailbox.org"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:158
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:157
 #, elixir-autogen, elixir-format
 msgid "No calendars found. Try refreshing the integration."
 msgstr "Aucun calendrier trouvé. Essayez d’actualiser l’intégration."
@@ -188,7 +188,7 @@ msgstr "Mot de passe / mot de passe d’application"
 msgid "Please select at least one calendar to sync."
 msgstr "Veuillez sélectionner au moins un calendrier à synchroniser."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:146
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:145
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr "Principal"
@@ -285,7 +285,7 @@ msgstr "Synchronisez les calendriers de votre serveur Zimbra"
 msgid "Sync calendars from your mailbox.org account"
 msgstr "Synchronisez les calendriers de votre compte mailbox.org"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:109
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:108
 #, elixir-autogen, elixir-format
 msgid "Syncing %{selected} of %{count} calendar"
 msgid_plural "Syncing %{selected} of %{count} calendars"
@@ -1120,13 +1120,8 @@ msgstr "Le flux de calendrier a renvoyé HTTP %{status}."
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
 msgstr "Ce calendrier reste en lecture seule : il bloque les périodes où vous êtes déjà occupé et aucune réservation n’y est jamais écrite. Choisissez un autre calendrier comme destination de vos réservations."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
-#, elixir-autogen, elixir-format
-msgid "Automatic"
-msgstr "Automatique"
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:82
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:95
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Couleur"

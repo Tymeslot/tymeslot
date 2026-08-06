@@ -91,7 +91,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
               selected={@integration.colour}
               event="set_integration_colour"
               target={@target}
-              clear_label={dgettext("dashboard_calendar_providers", "Automatic")}
               group_label={dgettext("dashboard_calendar_providers", "Colour")}
               values={%{"phx-value-integration_id" => @integration.id}}
             />

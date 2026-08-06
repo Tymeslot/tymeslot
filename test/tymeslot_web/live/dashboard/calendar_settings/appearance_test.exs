@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.AppearanceTest do
       assert reload(integration, user).colour == "peacock"
     end
 
-    test "the Automatic pill clears the colour", %{conn: conn, user: user} do
+    test "the clearing swatch clears the colour", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, colour: "peacock")
       view = open_manage_modal(conn, integration)
 

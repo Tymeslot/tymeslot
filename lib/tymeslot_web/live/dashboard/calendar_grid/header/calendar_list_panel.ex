@@ -73,7 +73,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
             selected={colour_key(@calendar_colour_keys, integration.id, calendar.id)}
             event="set_calendar_colour"
             target={@myself}
-            clear_label={dgettext("dashboard_calendar", "Same as account")}
             group_label={
               dgettext("dashboard_calendar", "Colour for %{calendar}", calendar: calendar.name)
             }

@@ -41,13 +41,13 @@ msgid "%{method} %{minutes}"
 msgstr "%{method} %{minutes}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:27
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:84
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:92
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:85
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:93
 #, elixir-autogen, elixir-format
 msgid "(No title)"
 msgstr "(Без назви)"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:327
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:328
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
@@ -103,17 +103,17 @@ msgid "Actions"
 msgstr "Дії"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:169
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:313
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:314
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Додати"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:229
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:230
 #, elixir-autogen, elixir-format
 msgid "Add description"
 msgstr "Додати опис"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:197
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:198
 #, elixir-autogen, elixir-format
 msgid "Add location"
 msgstr "Додати місце"
@@ -139,8 +139,8 @@ msgid "Agenda view"
 msgstr "Подання «Розклад»"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:50
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:112
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:173
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:113
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:174
 #, elixir-autogen, elixir-format
 msgid "All day"
 msgstr "Увесь день"
@@ -165,17 +165,17 @@ msgstr "Учасника додано та запрошено."
 msgid "Attendee removed and notified."
 msgstr "Учасника видалено та сповіщено."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:249
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:250
 #, elixir-autogen, elixir-format
 msgid "Attendees"
 msgstr "Учасники"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:54
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:55
 #, elixir-autogen, elixir-format
 msgid "Attendees will be notified of pending changes."
 msgstr "Учасників буде сповіщено про очікувані зміни."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:393
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:394
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Календар"
@@ -194,7 +194,7 @@ msgstr "Календарі оновлено"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:51
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:44
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:221
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:62
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:63
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:57
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -222,12 +222,12 @@ msgstr "Зміни збережено. Учасників незабаром б�
 msgid "Close dialogs"
 msgstr "Закрити діалогові вікна"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:71
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:72
 #, elixir-autogen, elixir-format
 msgid "Close modal"
 msgstr "Закрити модальне вікно"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:412
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:413
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:418
 #, elixir-autogen, elixir-format
 msgid "Colour"
@@ -253,7 +253,7 @@ msgstr "Створити"
 msgid "Create event"
 msgstr "Створити подію"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:100
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:101
 #, elixir-autogen, elixir-format
 msgid "Created by Tymeslot"
 msgstr "Створено Tymeslot"
@@ -277,11 +277,6 @@ msgstr "День"
 #, elixir-autogen, elixir-format
 msgid "Day view"
 msgstr "Денне подання"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:417
-#, elixir-autogen, elixir-format
-msgid "Default"
-msgstr "Стандартний"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:66
 #, elixir-autogen, elixir-format
@@ -309,7 +304,7 @@ msgstr "Видалити подію"
 msgid "Deleting..."
 msgstr "Видалення..."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:223
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:224
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr "Опис"
@@ -334,7 +329,7 @@ msgstr "Показувати суботу та неділю в тижневом�
 msgid "Does not repeat"
 msgstr "Не повторюється"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:317
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:318
 #, elixir-autogen, elixir-format
 msgid "Each person will receive an invitation from your calendar provider."
 msgstr "Кожна особа отримає запрошення від вашого провайдера календаря."
@@ -390,7 +385,7 @@ msgstr "Подію видалено."
 msgid "Event deleted. Attendees have been notified."
 msgstr "Подію видалено. Учасників сповіщено."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:46
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:47
 #, elixir-autogen, elixir-format
 msgid "Event details"
 msgstr "Деталі події"
@@ -492,7 +487,7 @@ msgstr "Перейти до сьогодні"
 msgid "Keyboard shortcuts"
 msgstr "Комбінації клавіш"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:188
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:189
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr "Місце"
@@ -639,8 +634,8 @@ msgid "Remove"
 msgstr "Видалити"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:146
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:271
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:290
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:272
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:291
 #, elixir-autogen, elixir-format
 msgid "Remove %{email}"
 msgstr "Видалити %{email}"
@@ -791,7 +786,7 @@ msgstr "Це також видалить її у вашого провайдер
 msgid "Thu"
 msgstr "Чт"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:105
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:106
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Час"
@@ -845,8 +840,8 @@ msgid "Unsent invitations"
 msgstr "Ненадіслані запрошення"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:178
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:340
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:344
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:341
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:345
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr "Відео"

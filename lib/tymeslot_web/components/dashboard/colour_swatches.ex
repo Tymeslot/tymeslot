@@ -5,20 +5,26 @@ defmodule TymeslotWeb.Components.Dashboard.ColourSwatches do
   the event detail modal, a whole integration's colour in the calendar
   selection modal.
 
-  A leading pill clears the choice (each caller names what "cleared" means to
-  it — the calendar's colour for an event, the automatic rotation for an
-  integration) and pushes the sentinel `"default"`; every other swatch pushes
-  its palette key. Both arrive as `phx-value-colour`, so a handler always reads
-  the same param.
+  A trailing swatch clears the choice and pushes the sentinel `"default"`;
+  every other swatch pushes its palette key. Both arrive as `phx-value-colour`,
+  so a handler always reads the same param.
+
+  The clearing swatch is shaped and sized like the colours it sits beside, and
+  comes last, so every picker in the app lines up on one grid however many of
+  them are stacked. It carries one shared label rather than a per-caller one:
+  what it inherits from differs by caller (an event falls back to its calendar,
+  a calendar to its account), but naming the mechanism asked the reader to hold
+  that hierarchy in their head. Naming the action does not, and saying it the
+  same way everywhere is worth more than describing each case precisely.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.EventColour
 
   attr :selected, :any, default: nil, doc: "the stored palette key, or nil when cleared"
   attr :event, :string, required: true, doc: "the phx-click event each swatch pushes"
   attr :target, :any, required: true
-  attr :clear_label, :string, required: true, doc: "label for the pill that clears the choice"
 
   attr :group_label, :string,
     required: true,
@@ -34,22 +40,6 @@ defmodule TymeslotWeb.Components.Dashboard.ColourSwatches do
 
     ~H"""
     <div role="group" aria-label={@group_label} class="flex flex-wrap items-center gap-1.5">
-      <button
-        type="button"
-        phx-click={@event}
-        phx-value-colour="default"
-        phx-target={@target}
-        aria-pressed={to_string(is_nil(@selected))}
-        {@values}
-        class={[
-          "inline-flex items-center gap-1 px-2 py-1 rounded-token-lg border text-token-xs transition-all",
-          (is_nil(@selected) &&
-             "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold") ||
-            "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"
-        ]}
-      >
-        {@clear_label}
-      </button>
       <button
         :for={{key, label, swatch_class} <- @palette}
         type="button"
@@ -67,7 +57,29 @@ defmodule TymeslotWeb.Components.Dashboard.ColourSwatches do
         ]}
       >
       </button>
+      <button
+        type="button"
+        phx-click={@event}
+        phx-value-colour="default"
+        phx-target={@target}
+        title={clear_label()}
+        aria-label={clear_label()}
+        aria-pressed={to_string(is_nil(@selected))}
+        {@values}
+        class={[
+          "w-6 h-6 rounded-token-full ring-2 ring-offset-1 transition-all",
+          "inline-flex items-center justify-center border border-tymeslot-300 bg-white",
+          (is_nil(@selected) && "ring-turquoise-500 text-turquoise-700") ||
+            "ring-transparent text-tymeslot-500 hover:ring-tymeslot-300"
+        ]}
+      >
+        <.icon name="hero-no-symbol-micro" class="w-3.5 h-3.5" />
+      </button>
     </div>
     """
   end
+
+  # The swatch carries no visible text, so this is its only name — for a screen
+  # reader and for the tooltip alike.
+  defp clear_label, do: dgettext("dashboard_calendar", "Default colour")
 end

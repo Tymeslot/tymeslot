@@ -415,7 +415,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             selected={Map.get(@selected_event, :colour)}
             event="update_event_colour"
             target={@myself}
-            clear_label={dgettext("dashboard_calendar_events", "Default")}
             group_label={dgettext("dashboard_calendar_events", "Colour")}
           />
         </div>
