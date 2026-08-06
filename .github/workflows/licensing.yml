@@ -122,11 +122,18 @@ jobs:
     # so a stray trailing newline is fine there but would stop == from ever firing this
     # job. Triggering liberally and letting the action match strictly means a malformed
     # signature wastes a run; the reverse would swallow a good one in silence.
+    #
+    # issue_comment fires for issues as well as pull requests, and the action resolves
+    # committers through repository.pullRequest(number:), which is null for an issue and
+    # fails the run. github.event.issue.pull_request is present only on pull request
+    # comments, so it keeps this job off plain issues rather than letting them fail
+    # loudly in front of whoever just commented.
     if: >-
       github.server_url == 'https://github.com' &&
       (github.event_name == 'pull_request_target' ||
-       github.event.comment.body == 'recheck' ||
-       contains(github.event.comment.body, 'I have read the Tymeslot Contributor Licence Agreement and I hereby sign it'))
+       (github.event.issue.pull_request &&
+        (github.event.comment.body == 'recheck' ||
+         contains(github.event.comment.body, 'I have read the Tymeslot Contributor Licence Agreement and I hereby sign it'))))
 
     permissions:
       contents: write # commits the signature record to the cla-signatures branch
