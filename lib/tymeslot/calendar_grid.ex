@@ -7,6 +7,8 @@ defmodule Tymeslot.CalendarGrid do
   display colours to integrations.
   """
 
+  alias Tymeslot.Integrations.Calendar.Appearance
+  alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -153,6 +155,26 @@ defmodule Tymeslot.CalendarGrid do
     |> Enum.with_index()
     |> Map.new(fn {integration, index} ->
       {integration.id, colour_class(integration, index)}
+    end)
+  end
+
+  @doc """
+  Tailwind classes for the calendars the organiser has given a colour of their
+  own, keyed by `{integration_id, provider_calendar_id}`.
+
+  Only calendars with an explicit choice appear. Everything else is absent on
+  purpose, so the caller falls through to the integration's colour and then the
+  rotation, rather than this map having to restate either.
+  """
+  @spec calendar_colour_classes([CalendarAppearanceSchema.t()]) :: %{
+          {integer(), String.t()} => String.t()
+        }
+  def calendar_colour_classes(appearances) do
+    appearances
+    |> Enum.filter(&Appearance.chosen?/1)
+    |> Map.new(fn appearance ->
+      {{appearance.calendar_integration_id, appearance.provider_calendar_id},
+       EventColour.tailwind_class(appearance.colour)}
     end)
   end
 

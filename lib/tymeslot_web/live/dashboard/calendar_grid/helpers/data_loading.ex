@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Timezones
@@ -33,7 +34,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     |> assign(:preferences, prefs)
     |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
     |> assign(:video_integrations, video_integrations)
+    |> assign_calendar_appearances(user_id)
     |> check_staleness()
+  end
+
+  @doc """
+  Assigns the three maps derived from the organiser's per-calendar choices.
+
+  All three move together on purpose. `:calendar_colors` paints the grid,
+  `:calendar_colour_keys` marks the right swatch pressed in the picker, and
+  `:hidden_calendar_keys` filters the events. Refreshing only some of them after
+  a write leaves the grid and the control it was clicked from disagreeing.
+  """
+  @spec assign_calendar_appearances(Phoenix.LiveView.Socket.t(), integer()) ::
+          Phoenix.LiveView.Socket.t()
+  def assign_calendar_appearances(socket, user_id) do
+    appearances = Appearance.list_for_user(user_id)
+
+    socket
+    |> assign(:calendar_colors, CalendarGrid.calendar_colour_classes(appearances))
+    |> assign(:calendar_colour_keys, Appearance.colour_keys(appearances))
+    |> assign(:hidden_calendar_keys, Appearance.hidden_keys(appearances))
   end
 
   @spec check_staleness(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -85,7 +106,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     raw_tz = get_in(assigns, [:profile, Access.key(:timezone)]) || "Etc/UTC"
     user_id = get_in(assigns, [:current_user, Access.key(:id)])
     tz = Timezones.validate_or_utc(raw_tz, user_id: user_id)
-    v_events = do_visible_events(assigns.events, assigns.hidden_integration_ids)
+    v_events =
+      do_visible_events(
+        assigns.events,
+        assigns.hidden_integration_ids,
+        Map.get(assigns, :hidden_calendar_keys, MapSet.new())
+      )
     v_days = visible_days(assigns)
 
     socket
@@ -142,10 +168,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   # Private helpers
 
-  defp do_visible_events(events, []), do: events
+  # An event is hidden when its whole account is hidden, or when the organiser
+  # has hidden the single calendar it sits in. The two are separate controls
+  # over separate stores, so both are consulted rather than one deriving the
+  # other: hiding an account must not erase the per-calendar choices underneath
+  # it, which the organiser gets back when they show the account again.
+  defp do_visible_events(events, hidden_ids, hidden_keys) do
+    if hidden_ids == [] and MapSet.size(hidden_keys) == 0 do
+      events
+    else
+      Enum.reject(events, &hidden_event?(&1, hidden_ids, hidden_keys))
+    end
+  end
 
-  defp do_visible_events(events, hidden_ids) do
-    Enum.reject(events, fn e -> e.calendar_integration_id in hidden_ids end)
+  defp hidden_event?(event, hidden_ids, hidden_keys) do
+    event.calendar_integration_id in hidden_ids or
+      MapSet.member?(
+        hidden_keys,
+        {event.calendar_integration_id, Map.get(event, :provider_calendar_id)}
+      )
   end
 
   defp visible_days(%{view: :week, date: date} = assigns) do
