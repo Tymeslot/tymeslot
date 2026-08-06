@@ -498,7 +498,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:baikal), do: "Baikal"
   # The only descriptive name in this list rather than a brand, so it is the
   # only one that translates: "Nextcloud" reads the same in every locale, but
-  # "Calendar subscription" is prose and heads the provider picker card.
+  # "Calendar subscription" is prose. Anything reaching the provider directory
+  # gets this string from `Ics.Provider.display_name/0`, which the directory
+  # prefers; this clause serves direct callers of this module. Both translate
+  # the same msgid, so the two paths cannot disagree.
   def display_name(:ics_url),
     do: dgettext("dashboard_calendar_providers", "Calendar subscription")
 

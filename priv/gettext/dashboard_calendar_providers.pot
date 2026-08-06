@@ -1018,7 +1018,8 @@ msgstr ""
 msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
+#: lib/tymeslot/integrations/calendar/ics/provider.ex:68
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:506
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
 #, elixir-autogen, elixir-format
 msgid "Calendar subscription"
