@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
             {dgettext("dashboard_integrations", "Connected")}
           </span>
         </div>
-        <p :if={@provider.description} class="truncate text-token-xs text-tymeslot-500">
+        <p :if={@provider.description} class="line-clamp-2 text-token-xs leading-relaxed text-tymeslot-500">
           {@provider.description}
         </p>
       </div>
