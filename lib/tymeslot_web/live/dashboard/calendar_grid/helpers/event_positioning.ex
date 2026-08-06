@@ -26,10 +26,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
     Float.round(1 / total_cols * 100, 2)
   end
 
+  # `CalendarGrid.integration_colour_classes/1` resolves the class, so this is
+  # a lookup with a fallback for the ids it does not cover: an event whose
+  # integration was hidden, deleted, or is not the current user's.
   @spec color_class_for_integration(map(), term()) :: String.t()
   def color_class_for_integration(integration_colors, integration_id) do
-    index = Map.get(integration_colors, integration_id)
-    calendar_color_class(index)
+    Map.get(integration_colors, integration_id, EventColour.fallback_class())
   end
 
   @spec color_dot(map(), map()) :: String.t()
@@ -58,9 +60,4 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   def event_display_date(%{start_at: %DateTime{} = start_at}, timezone) do
     start_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
   end
-
-  # Private helpers
-
-  defp calendar_color_class(nil), do: "bg-calendar-fallback"
-  defp calendar_color_class(index), do: "bg-calendar-#{index}"
 end

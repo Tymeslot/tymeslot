@@ -60,9 +60,10 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
   ]
 
   # Helper components rendered inside a page component, which carries the
-  # section header on their behalf. Every entry below matches a directory that
-  # exists; prune it when one is removed, rather than leaving a pattern that
-  # silently matches nothing.
+  # section header on their behalf, plus the page components whose `render/1`
+  # delegates to a `ComponentView` that carries it. Every entry below matches a
+  # directory or file that exists; prune it when one is removed, rather than
+  # leaving a pattern that silently matches nothing.
   @helper_paths [
     "/availability/",
     "/calendar_grid/",
@@ -71,7 +72,8 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     "/shared/",
     "/subscription/",
     "/theme_customization/",
-    "calendar_grid_component"
+    "calendar_grid_component",
+    "calendar_settings_component"
   ]
 
   defp dashboard_page_component?(filename) do

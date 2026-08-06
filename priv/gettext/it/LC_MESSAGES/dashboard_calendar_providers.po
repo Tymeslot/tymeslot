@@ -22,7 +22,7 @@ msgstr "Calendario riconnesso"
 msgid "Cancel"
 msgstr "Annulla"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:51
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:101
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars we check to prevent double bookings."
 msgstr "Scegli quali calendari controlliamo per evitare doppie prenotazioni."
@@ -47,7 +47,7 @@ msgstr "Impossibile salvare: %{reason}"
 msgid "Could not sign in with those credentials"
 msgstr "Impossibile accedere con quelle credenziali"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:120
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:170
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Fine"
@@ -79,7 +79,7 @@ msgstr "ID calendario non valido"
 msgid "Lightweight CalDAV server integration"
 msgstr "Integrazione leggera con server CalDAV"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:47
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:50
 #, elixir-autogen, elixir-format
 msgid "Manage calendars"
 msgstr "Gestisci calendari"
@@ -161,7 +161,7 @@ msgstr "Il mio mailbox.org"
 msgid "My mailbox.org Calendar"
 msgstr "Il mio calendario mailbox.org"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:108
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:158
 #, elixir-autogen, elixir-format
 msgid "No calendars found. Try refreshing the integration."
 msgstr "Nessun calendario trovato. Prova ad aggiornare l'integrazione."
@@ -188,7 +188,7 @@ msgstr "Password / Password per app"
 msgid "Please select at least one calendar to sync."
 msgstr "Seleziona almeno un calendario da sincronizzare."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:96
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:146
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr "Principale"
@@ -285,7 +285,7 @@ msgstr "Sincronizza i calendari dal tuo server Zimbra"
 msgid "Sync calendars from your mailbox.org account"
 msgstr "Sincronizza i calendari dal tuo account mailbox.org"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:59
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:109
 #, elixir-autogen, elixir-format
 msgid "Syncing %{selected} of %{count} calendar"
 msgid_plural "Syncing %{selected} of %{count} calendars"
@@ -1118,3 +1118,29 @@ msgstr "Il feed del calendario ha restituito HTTP %{status}."
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
 msgstr "Questo calendario resta di sola lettura: blocca gli orari in cui sei già occupato e le prenotazioni non ci vengono mai scritte. Scegli un altro calendario come destinazione delle prenotazioni."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr "Automatico"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:82
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:95
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Colore"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:85
+#, elixir-autogen, elixir-format
+msgid "How this calendar's events are shown in your Tymeslot calendar."
+msgstr "Come vengono mostrati gli eventi di questo calendario nel tuo calendario Tymeslot."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:62
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nome"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:76
+#, elixir-autogen, elixir-format
+msgid "Rename"
+msgstr "Rinomina"

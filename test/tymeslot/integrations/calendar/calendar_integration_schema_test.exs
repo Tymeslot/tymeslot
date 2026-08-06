@@ -259,6 +259,56 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
                %CalendarEntry{id: "cal1", name: "Personal", selected: true}
              ]
     end
+
+    test "accepts a palette colour" do
+      integration = insert(:calendar_integration)
+
+      changeset = CalendarIntegrationSchema.changeset(integration, %{colour: "peacock"})
+
+      assert changeset.valid?
+      assert changeset.changes.colour == "peacock"
+    end
+
+    test "rejects a colour outside the palette" do
+      integration = insert(:calendar_integration)
+
+      changeset = CalendarIntegrationSchema.changeset(integration, %{colour: "burnt-sienna"})
+
+      refute changeset.valid?
+      assert "is not a valid colour" in errors_on(changeset).colour
+    end
+
+    test "accepts a nil colour, which means the automatic rotation" do
+      integration = insert(:calendar_integration, colour: "peacock")
+
+      changeset = CalendarIntegrationSchema.changeset(integration, %{colour: nil})
+
+      assert changeset.valid?
+      assert changeset.changes.colour == nil
+    end
+
+    test "treats an empty colour as nil rather than an invalid key" do
+      # `cast/3` empties "" to nil before `validate_inclusion/3` sees it, so
+      # clearing the colour through a form field cannot fail validation.
+      integration = insert(:calendar_integration, colour: "peacock")
+
+      changeset = CalendarIntegrationSchema.changeset(integration, %{colour: ""})
+
+      assert changeset.valid?
+      assert changeset.changes.colour == nil
+    end
+
+    test "rejects a name longer than the column" do
+      # Without this the insert reaches Postgres and raises rather than
+      # returning an invalid changeset.
+      integration = insert(:calendar_integration)
+
+      changeset =
+        CalendarIntegrationSchema.changeset(integration, %{name: String.duplicate("a", 256)})
+
+      refute changeset.valid?
+      assert changeset.errors[:name]
+    end
   end
 
   describe "CalendarEntry.cast/1 and dump/1" do

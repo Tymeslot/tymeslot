@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioningTest do
   @moduletag :unit
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning
 
   describe "top_rem/2" do
@@ -61,24 +62,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioningTest do
 
   describe "color_for_event/2" do
     test "uses the per-integration colour when the event has no colour override" do
-      assigns = %{integration_colors: %{42 => 3}}
+      assigns = %{integration_colors: %{42 => "bg-calendar-3"}}
       event = %{calendar_integration_id: 42, colour: nil}
 
       assert EventPositioning.color_for_event(assigns, event) == "bg-calendar-3"
     end
 
     test "prefers the event's palette colour override over the integration colour" do
-      assigns = %{integration_colors: %{42 => 3}}
+      assigns = %{integration_colors: %{42 => "bg-calendar-3"}}
       event = %{calendar_integration_id: 42, colour: "tomato"}
 
-      assert EventPositioning.color_for_event(assigns, event) == "bg-calendar-7"
+      assert EventPositioning.color_for_event(assigns, event) ==
+               EventColour.tailwind_class("tomato")
     end
 
     test "falls back to a neutral class for an unrecognised stored colour value" do
       # Inbound Google stores a raw colorId (e.g. "11") which is not a palette
       # key — it must resolve gracefully rather than crash.
-      assigns = %{integration_colors: %{42 => 3}}
+      assigns = %{integration_colors: %{42 => "bg-calendar-3"}}
       event = %{calendar_integration_id: 42, colour: "11"}
+
+      assert EventPositioning.color_for_event(assigns, event) == "bg-calendar-fallback"
+    end
+
+    test "falls back to a neutral class for an integration the map does not cover" do
+      # An event whose calendar was hidden or removed since the colours were
+      # resolved still has to render.
+      assigns = %{integration_colors: %{42 => "bg-calendar-3"}}
+      event = %{calendar_integration_id: 99, colour: nil}
 
       assert EventPositioning.color_for_event(assigns, event) == "bg-calendar-fallback"
     end

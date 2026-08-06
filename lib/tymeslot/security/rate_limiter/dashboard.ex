@@ -75,6 +75,21 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
   def check_integration_write(user_id),
     do: Helpers.invalid_user_id("integration write", user_id)
 
+  @spec check_integration_appearance(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_integration_appearance(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "integration_appearance:#{user_id}",
+      150,
+      1_800_000,
+      "integration appearance",
+      to_string(user_id)
+    )
+  end
+
+  def check_integration_appearance(user_id),
+    do: Helpers.invalid_user_id("integration appearance", user_id)
+
   @spec check_meeting_type_write(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_meeting_type_write(user_id) when is_integer(user_id) and user_id > 0 do
