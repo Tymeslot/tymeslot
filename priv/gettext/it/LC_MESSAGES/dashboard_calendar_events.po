@@ -182,7 +182,7 @@ msgid "Calendar Settings"
 msgstr "Impostazioni calendario"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:65
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:133
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:186
 #, elixir-autogen, elixir-format
 msgid "Calendars refreshed"
 msgstr "Calendari aggiornati"
@@ -413,10 +413,12 @@ msgstr "Eliminazione dell'evento non riuscita"
 msgid "Failed to move event"
 msgstr "Spostamento dell'evento non riuscito"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:51
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:74
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:118
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:94
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:57
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:100
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:130
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:174
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:101
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:147
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
 msgstr "Salvataggio della preferenza non riuscito"
@@ -547,7 +549,7 @@ msgstr "Periodo successivo"
 msgid "No"
 msgstr "No"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:126
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:179
 #, elixir-autogen, elixir-format
 msgid "No calendars to sync"
 msgstr "Nessun calendario da sincronizzare"
@@ -607,7 +609,7 @@ msgstr "Periodo precedente"
 msgid "Primary"
 msgstr "Principale"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:113
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:166
 #, elixir-autogen, elixir-format
 msgid "Refresh failed for %{count} integration"
 msgid_plural "Refresh failed for %{count} integrations"
@@ -816,7 +818,7 @@ msgstr "Troppe modifiche. Attendi un momento."
 msgid "Too many moves. Please wait a moment."
 msgstr "Troppi spostamenti. Attendi un momento."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:67
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:120
 #, elixir-autogen, elixir-format
 msgid "Too many refreshes. Please wait a moment."
 msgstr "Troppi aggiornamenti. Attendi un momento."

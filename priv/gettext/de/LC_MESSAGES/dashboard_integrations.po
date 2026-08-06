@@ -174,7 +174,7 @@ msgstr "Zurück zu den Anbietern"
 msgid "Base URL"
 msgstr "Basis-URL"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:246
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:250
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Kalender"
@@ -185,7 +185,7 @@ msgid "Calendars"
 msgstr "Kalender"
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:59
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:212
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:216
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:92
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:128
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:293
@@ -255,7 +255,7 @@ msgstr "Benutzerdefinierter Videolink"
 msgid "Delete %{type} Integration"
 msgstr "%{type}-Integration löschen"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:218
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:222
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Integration löschen"
@@ -710,7 +710,7 @@ msgstr "Verwenden Sie einen Unterstrich statt eines Bindestrichs: {{meeting_id}}
 msgid "Variable name should be: {{meeting_id}}"
 msgstr "Der Variablenname sollte lauten: {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:247
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:251
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:87
 #, elixir-autogen, elixir-format
 msgid "Video"
@@ -748,7 +748,7 @@ msgstr "Ihr Stripe-Konto ist eingeschränkt."
 msgid "Zoom connected successfully!"
 msgstr "Zoom erfolgreich verbunden!"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:249
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:253
 #, elixir-autogen, elixir-format
 msgid "calendar data"
 msgstr "Kalenderdaten"
@@ -764,7 +764,7 @@ msgstr "benutzerdefiniert"
 msgid "self-hosted"
 msgstr "selbst gehostet"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:252
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:256
 #, elixir-autogen, elixir-format
 msgid "video conferencing configuration"
 msgstr "Videokonferenz-Konfiguration"
@@ -1029,7 +1029,7 @@ msgstr "Zeitüberschreitung beim Aufruf der URL"
 msgid "Connection validation failed"
 msgstr "Die Überprüfung der Verbindung ist fehlgeschlagen"
 
-#: lib/tymeslot/integrations/video.ex:519
+#: lib/tymeslot/integrations/video.ex:482
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Ihr Konto konnte nicht identifiziert werden. Bitte versuchen Sie es erneut. Falls das Problem weiterhin besteht, entfernen Sie die Integration und fügen Sie sie erneut hinzu."
@@ -1303,7 +1303,7 @@ msgid_plural "%{count} upcoming bookings still use this integration. Their meeti
 msgstr[0] "%{count} anstehende Buchung nutzt diese Integration noch. Ihr Meetingraum bleibt bestehen, sofern Sie ihn nicht hier löschen."
 msgstr[1] "%{count} anstehende Buchungen nutzen diese Integration noch. Ihre Meetingräume bleiben bestehen, sofern Sie sie nicht hier löschen."
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:198
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:202
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr "Auch deren Meetingräume löschen. Teilnehmende, die den Beitrittslink bereits haben, können ihn dann nicht mehr verwenden."

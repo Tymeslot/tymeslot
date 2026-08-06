@@ -174,7 +174,7 @@ msgstr "Torna ai provider"
 msgid "Base URL"
 msgstr "URL di base"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:246
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:250
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Calendario"
@@ -185,7 +185,7 @@ msgid "Calendars"
 msgstr "Calendari"
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:59
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:212
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:216
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:92
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:128
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:293
@@ -255,7 +255,7 @@ msgstr "Link video personalizzato"
 msgid "Delete %{type} Integration"
 msgstr "Elimina integrazione %{type}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:218
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:222
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Elimina integrazione"
@@ -710,7 +710,7 @@ msgstr "Usa il trattino basso, non il trattino: {{meeting_id}} non {{meeting-id}
 msgid "Variable name should be: {{meeting_id}}"
 msgstr "Il nome della variabile dovrebbe essere: {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:247
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:251
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:87
 #, elixir-autogen, elixir-format
 msgid "Video"
@@ -748,7 +748,7 @@ msgstr "Il tuo account Stripe è soggetto a restrizioni."
 msgid "Zoom connected successfully!"
 msgstr "Zoom collegato con successo!"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:249
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:253
 #, elixir-autogen, elixir-format
 msgid "calendar data"
 msgstr "dati del calendario"
@@ -764,7 +764,7 @@ msgstr "personalizzato"
 msgid "self-hosted"
 msgstr "self-hosted"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:252
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:256
 #, elixir-autogen, elixir-format
 msgid "video conferencing configuration"
 msgstr "configurazione della videoconferenza"
@@ -1029,7 +1029,7 @@ msgstr "Connessione scaduta nel tentativo di raggiungere l'URL"
 msgid "Connection validation failed"
 msgstr "Convalida della connessione non riuscita"
 
-#: lib/tymeslot/integrations/video.ex:519
+#: lib/tymeslot/integrations/video.ex:482
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Impossibile identificare il tuo account. Riprova. Se il problema persiste, rimuovi e aggiungi di nuovo l'integrazione."
@@ -1303,7 +1303,7 @@ msgid_plural "%{count} upcoming bookings still use this integration. Their meeti
 msgstr[0] "%{count} prenotazione futura usa ancora questa integrazione. La sua stanza riunioni resta attiva, a meno che tu non la elimini qui."
 msgstr[1] "%{count} prenotazioni future usano ancora questa integrazione. Le loro stanze riunioni restano attive, a meno che tu non le elimini qui."
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:198
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:202
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr "Elimina anche le loro stanze riunioni. Chi ha già il link di partecipazione scoprirà che non funziona più."

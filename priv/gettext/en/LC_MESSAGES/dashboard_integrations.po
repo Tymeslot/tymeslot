@@ -174,7 +174,7 @@ msgstr ""
 msgid "Base URL"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:246
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:250
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
@@ -185,7 +185,7 @@ msgid "Calendars"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:59
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:212
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:216
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:92
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:128
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:293
@@ -255,7 +255,7 @@ msgstr ""
 msgid "Delete %{type} Integration"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:218
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:222
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr ""
@@ -710,7 +710,7 @@ msgstr ""
 msgid "Variable name should be: {{meeting_id}}"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:247
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:251
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:87
 #, elixir-autogen, elixir-format
 msgid "Video"
@@ -748,7 +748,7 @@ msgstr ""
 msgid "Zoom connected successfully!"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:249
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:253
 #, elixir-autogen, elixir-format
 msgid "calendar data"
 msgstr ""
@@ -764,7 +764,7 @@ msgstr ""
 msgid "self-hosted"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:252
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:256
 #, elixir-autogen, elixir-format
 msgid "video conferencing configuration"
 msgstr ""
@@ -1029,7 +1029,7 @@ msgstr ""
 msgid "Connection validation failed"
 msgstr ""
 
-#: lib/tymeslot/integrations/video.ex:519
+#: lib/tymeslot/integrations/video.ex:482
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr ""
@@ -1303,7 +1303,7 @@ msgid_plural "%{count} upcoming bookings still use this integration. Their meeti
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:198
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:202
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr ""

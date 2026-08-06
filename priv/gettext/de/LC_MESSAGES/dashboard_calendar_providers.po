@@ -1018,7 +1018,8 @@ msgstr "Der Kalenderserver hat die Anfrage abgelehnt (HTTP %{status})."
 msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
 msgstr "Dieser Änderung fehlt die Start- oder Endzeit des Termins, daher konnte sie nicht an den Kalenderserver gesendet werden."
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
+#: lib/tymeslot/integrations/calendar/ics/provider.ex:68
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:506
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
 #, elixir-autogen, elixir-format
 msgid "Calendar subscription"
