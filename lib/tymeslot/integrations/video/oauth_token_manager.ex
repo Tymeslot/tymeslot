@@ -214,7 +214,11 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
         on_refresh.(config)
 
       {:error, reason} ->
-        Logger.error("#{label} token validation failed", reason: inspect(reason))
+        Logger.error("Video OAuth token validation failed",
+          provider: label,
+          reason: inspect(reason)
+        )
+
         {:error, "Token validation failed: #{reason}"}
     end
   end
@@ -240,7 +244,8 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
         write_tokens(integration, attrs, integration_id, label)
 
       {:error, :not_found} ->
-        Logger.warning("#{label} integration vanished before token update",
+        Logger.warning("Video integration vanished before token update",
+          provider: label,
           integration_id: integration_id
         )
 
@@ -251,11 +256,16 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
   defp write_tokens(integration, attrs, integration_id, label) do
     case VideoIntegrationQueries.update(integration, attrs) do
       {:ok, _updated} ->
-        Logger.info("Updated #{label} OAuth tokens", integration_id: integration_id)
+        Logger.info("Updated video OAuth tokens",
+          provider: label,
+          integration_id: integration_id
+        )
+
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to persist #{label} tokens",
+        Logger.error("Failed to persist video OAuth tokens",
+          provider: label,
           integration_id: integration_id,
           reason: inspect(reason)
         )
@@ -291,11 +301,13 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
     user_id = Map.get(config, :user_id)
 
     if is_nil(integration_id) or is_nil(user_id) do
-      Logger.warning("#{label} integration needs reauth but no integration_id to flag",
+      Logger.warning("Video integration needs reauth but no integration_id to flag",
+        provider: label,
         event: event
       )
     else
-      Logger.warning("Flagging #{label} integration for reauth",
+      Logger.warning("Flagging video integration for reauth",
+        provider: label,
         event: event,
         integration_id: integration_id
       )

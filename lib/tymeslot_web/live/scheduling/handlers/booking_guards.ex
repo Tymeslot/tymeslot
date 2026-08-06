@@ -184,10 +184,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
       user_agent: ClientIP.get_user_agent(socket)
     }
 
-    raw_params
-    |> Map.get("g-recaptcha-response", "")
-    |> RecaptchaHelpers.maybe_verify_booking_token(metadata)
-    |> case do
+    token = Map.get(raw_params, "g-recaptcha-response", "")
+
+    case RecaptchaHelpers.maybe_verify_booking_token(token, metadata) do
       :ok -> :ok
       {:error, reason} -> {:error, recaptcha_error(socket, reason)}
     end

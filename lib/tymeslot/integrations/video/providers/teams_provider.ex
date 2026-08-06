@@ -277,12 +277,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # Microsoft may omit the scope from a refresh response, so an absent or blank
   # one leaves the stored scope alone rather than clearing it.
   defp token_attrs(refreshed_tokens) do
-    %{
+    attrs = %{
       access_token: refreshed_tokens.access_token,
       refresh_token: refreshed_tokens.refresh_token || refreshed_tokens.access_token,
       token_expires_at: refreshed_tokens.expires_at
     }
-    |> maybe_put_scope(refreshed_tokens[:scope] || refreshed_tokens.scope)
+
+    maybe_put_scope(attrs, refreshed_tokens[:scope] || refreshed_tokens.scope)
   end
 
   defp maybe_put_scope(attrs, scope) when is_binary(scope) and scope != "",

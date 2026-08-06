@@ -428,8 +428,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       )
 
   defp refund_error_flash(:exceeds_remaining),
-    do:
-      dgettext("dashboard_bookings", "Refund amount exceeds the remaining refundable balance.")
+    do: dgettext("dashboard_bookings", "Refund amount exceeds the remaining refundable balance.")
 
   defp refund_error_flash(_reason),
     do: dgettext("dashboard_bookings", "Enter a valid partial refund amount.")

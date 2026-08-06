@@ -178,8 +178,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   defp with_extra_paths(integration, client, tier_name, primary_fun) do
     case client.calendar_paths do
       [] ->
-        Logger.debug("No calendar path configured; skipping #{tier_name} sync",
-          calendar_integration_id: integration.id
+        Logger.debug("No calendar path configured; skipping tiered sync",
+          calendar_integration_id: integration.id,
+          tier: tier_name
         )
 
         :ok

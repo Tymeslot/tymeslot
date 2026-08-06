@@ -101,7 +101,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
   # that has to redact. The caller gets an opaque message: the detail is in the
   # logs, where it is truncated and stripped of credentials.
   defp default_handle({:ok, %{status: status, body: body}}, label) do
-    Logger.error("#{label} API error",
+    Logger.error("Calendar API error",
+      provider: label,
       status: status,
       body: Redactor.redact_and_truncate(body)
     )
