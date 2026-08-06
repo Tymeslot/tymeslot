@@ -435,6 +435,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
             break_duration_presets={@break_duration_presets}
             form_errors={@form_errors}
             show_add_break_form={@show_add_break_form}
+            time_format={@time_format}
             myself={@myself}
           />
         <% end %>

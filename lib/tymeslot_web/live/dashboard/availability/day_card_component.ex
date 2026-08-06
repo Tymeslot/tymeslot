@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers
@@ -13,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
   attr :break_duration_presets, :list, required: true
   attr :form_errors, :map, required: true
   attr :show_add_break_form, :any, required: true
+  attr :time_format, :string, required: true
   attr :myself, :any, required: true
 
   @spec day_card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -86,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   type="select"
                   name="start"
                   label={dgettext("dashboard_availability", "Start Time")}
-                  options={TimeOptions.time_options()}
+                  options={TimeOptions.time_options(@time_format)}
                   value={BreakHelpers.format_time(@day_availability.start_time)}
                 />
               </div>
@@ -95,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   type="select"
                   name="end"
                   label={dgettext("dashboard_availability", "End Time")}
-                  options={TimeOptions.time_options()}
+                  options={TimeOptions.time_options(@time_format)}
                   value={BreakHelpers.format_time(@day_availability.end_time)}
                 />
               </div>
@@ -148,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                 <div class="inline-flex items-center bg-white border-2 border-tymeslot-100 rounded-token-xl px-4 py-2 text-token-sm font-bold text-tymeslot-700 shadow-sm group/break hover:border-turquoise-200 transition-all">
                   <span class="mr-3">{break.label || dgettext("dashboard_availability", "Break")}</span>
                   <span class="text-turquoise-600">
-                    {BreakHelpers.format_time(break.start_time)} - {BreakHelpers.format_time(break.end_time)}
+                    {TimeFormat.format(break.start_time, @time_format)} - {TimeFormat.format(break.end_time, @time_format)}
                   </span>
                   <button
                     phx-click="show_delete_break_modal"
@@ -192,7 +194,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   label={dgettext("dashboard_availability", "From")}
                   required
                   prompt={dgettext("dashboard_availability", "Start")}
-                  options={TimeOptions.time_options()}
+                  options={TimeOptions.time_options(@time_format)}
                   errors={FormValidationHelpers.field_errors(@form_errors, :start_time)}
                 />
               </div>
@@ -203,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   label={dgettext("dashboard_availability", "Until")}
                   required
                   prompt={dgettext("dashboard_availability", "End")}
-                  options={TimeOptions.time_options()}
+                  options={TimeOptions.time_options(@time_format)}
                   errors={FormValidationHelpers.field_errors(@form_errors, :end_time)}
                 />
               </div>

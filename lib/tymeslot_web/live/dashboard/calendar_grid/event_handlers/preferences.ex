@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
     case CalendarGrid.save_preferences(user_id, %{key => value}) do
       {:ok, _preferences} ->
         prefs = %{socket.assigns.preferences | key => value}
+        notify_parent(key, value)
 
         socket =
           socket
@@ -56,6 +57,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   end
 
   def handle_update_preference(_params, socket, _key), do: {:noreply, socket}
+
+  # `time_format` is the one preference the dashboard mirrors outside this
+  # component: `DashboardInitHook` resolves it once into `@time_format`, which
+  # the overview, the agenda modal and the availability grid all render from.
+  # Without this the calendar's own toggle would leave every other surface, and
+  # the profile toggle that writes the same column, showing the old clock until
+  # the next full page load.
+  defp notify_parent(:time_format, value), do: send(self(), {:time_format_updated, value})
+  defp notify_parent(_key, _value), do: :ok
 
   @spec handle_update_default_view(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

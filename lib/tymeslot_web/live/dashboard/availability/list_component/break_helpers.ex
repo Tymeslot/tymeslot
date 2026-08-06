@@ -22,7 +22,14 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent.BreakHelpers do
     end)
   end
 
-  @doc "Format a `Time` struct to \"HH:MM\", or return an empty string for nil."
+  @doc """
+  Format a `Time` struct to 24h "HH:MM", or return an empty string for nil.
+
+  This is the wire format, not a display format: it produces the `value` a time
+  `<select>` submits and `Tymeslot.Availability` parses, so it stays 24h whatever
+  clock the organiser reads. To show a time to someone, use
+  `Tymeslot.Utils.DateTimeUtils.TimeFormat.format/2` with their `time_format`.
+  """
   @spec format_time(Time.t() | nil) :: String.t()
   def format_time(nil), do: ""
   def format_time(time), do: Calendar.strftime(time, "%H:%M")

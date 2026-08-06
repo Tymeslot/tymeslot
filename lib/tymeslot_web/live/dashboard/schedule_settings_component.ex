@@ -127,6 +127,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
             id="availability-list"
             weekly_schedule={@weekly_schedule}
             profile={@profile}
+            time_format={@time_format}
             form_errors={@form_errors}
             client_ip={@client_ip}
             user_agent={@user_agent}
