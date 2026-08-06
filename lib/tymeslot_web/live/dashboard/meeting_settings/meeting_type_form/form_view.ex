@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
 
+  @spec form(map()) :: Phoenix.LiveView.Rendered.t()
   def form(assigns) do
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>

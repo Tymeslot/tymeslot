@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
   alias TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent
   alias TymeslotWeb.Endpoint
 
+  @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">

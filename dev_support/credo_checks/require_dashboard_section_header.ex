@@ -73,7 +73,9 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     "/subscription/",
     "/theme_customization/",
     "calendar_grid_component",
-    "calendar_settings_component"
+    "calendar_settings_component",
+    "service_settings_component",
+    "video_settings_component"
   ]
 
   defp dashboard_page_component?(filename) do

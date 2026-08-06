@@ -11,11 +11,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
-  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
-  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Autosave, Init, Validation}
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
+    Autosave,
+    FormView,
+    Init,
+    Validation
+  }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 

@@ -5,13 +5,13 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
+  alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
   require Logger
 
   @impl Phoenix.LiveComponent

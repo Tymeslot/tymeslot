@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Dashboard.VideoSettings.ComponentView
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Providers.Directory
@@ -15,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Utils.SanitizeMerge
+  alias TymeslotWeb.Dashboard.VideoSettings.ComponentView
   alias TymeslotWeb.Dashboard.VideoSettings.FormInput
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers

@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Dashboard.VideoSettings.Components
 
+  @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
