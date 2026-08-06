@@ -1,0 +1,161 @@
+name: Licensing
+
+# One workflow, two gates, because they certify two different things.
+#
+#   dco-check  Provenance. Every commit carries a Signed-off-by matching its author,
+#              certifying the Developer Certificate of Origin: that the contributor
+#              wrote the code, or otherwise has the right to submit it.
+#   cla-check  Rights. The contributor has affirmatively accepted CLA.md, which grants
+#              the sublicensing rights the DCO deliberately does not.
+#
+# Keeping them apart is the point. Signed-off-by has a fixed public meaning, set by the
+# verbatim DCO 1.1 text in this repository, and that text says nothing about
+# sublicensing. Asking one trailer to also signal assent to a much broader grant leaves
+# the grant resting on whether the contributor happened to read a different file. The
+# CLA gate replaces that inference with a recorded, timestamped act.
+#
+# Both jobs use pull_request_target rather than pull_request. pull_request runs from the
+# merge of the fork's head into this branch, so GitHub treats it as untrusted and holds
+# it for maintainer approval whenever the author is a first-time contributor. The check
+# then never reports, and because these are required status checks the pull request sits
+# blocked rather than failing honestly. pull_request_target runs this file from the base
+# branch in this repository's context, so it needs no approval and reports immediately.
+# That trigger is only safe because neither job touches the fork's code: there is no
+# checkout of the head, and commit metadata is read from the API.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed]
+  issue_comment:
+    types: [created]
+
+# Granted per job instead, so the read-only gate cannot borrow the write scopes the
+# signature gate needs.
+permissions: {}
+
+jobs:
+  dco-check:
+    runs-on: ubuntu-latest
+    # Only run on GitHub, not Gitea. 'closed' exists for the signature gate below and
+    # carries no new commits to check.
+    if: >-
+      github.server_url == 'https://github.com' &&
+      github.event_name == 'pull_request_target' &&
+      github.event.action != 'closed'
+
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Check Developer Certificate of Origin sign-off
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # The commits endpoint returns at most 250 commits. Refuse to pass silently
+          # past that rather than leave a gap an unsigned commit could hide in.
+          total=$(gh api "repos/${REPO}/pulls/${PR}" --jq '.commits')
+          if [ "$total" -gt 250 ]; then
+            echo "This pull request has ${total} commits, more than the 250 the API returns."
+            echo "Sign-off cannot be verified automatically. Please split the pull request."
+            exit 1
+          fi
+
+          gh api --paginate "repos/${REPO}/pulls/${PR}/commits" > commits.json
+
+          failed=0
+          checked=0
+
+          # Merge commits (two or more parents) carry no new work and are filtered out.
+          while IFS= read -r row; do
+            entry=$(printf '%s' "$row" | base64 -d)
+            sha=$(printf '%s' "$entry" | jq -r '.sha')
+            author_email=$(printf '%s' "$entry" | jq -r '.email')
+            message=$(printf '%s' "$entry" | jq -r '.message')
+            subject=$(printf '%s\n' "$message" | head -1)
+
+            checked=$((checked + 1))
+
+            # A commit passes if any Signed-off-by line carries the author's email.
+            if printf '%s\n' "$message" | grep -i '^Signed-off-by:' | grep -qF "<${author_email}>"; then
+              echo "✓ ${sha:0:12}  ${subject}"
+            else
+              echo "✗ ${sha:0:12}  ${subject}"
+              echo "      missing: Signed-off-by: <author> <${author_email}>"
+              failed=1
+            fi
+          done < <(jq -r '.[]
+            | select((.parents | length) < 2)
+            | {sha: .sha, email: .commit.author.email, message: .commit.message}
+            | @base64' commits.json)
+
+          if [ "$checked" -eq 0 ]; then
+            echo "No commits to check."
+            exit 0
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            echo ""
+            echo "One or more commits are not signed off."
+            echo "See CONTRIBUTING.md → 'Signing off your commits'."
+            echo ""
+            echo "Fix with:"
+            echo "  git rebase --signoff ${BASE_SHA}"
+            echo "  git push --force-with-lease"
+            exit 1
+          fi
+
+          echo ""
+          echo "All commits are signed off."
+
+  cla-check:
+    runs-on: ubuntu-latest
+    # Runs on pull requests, and again when someone comments the signature phrase so the
+    # gate can flip without a push. 'recheck' is the action's own retry keyword.
+    #
+    # contains() rather than ==, deliberately. With custom-pr-sign-comment set, the
+    # action matches the comment body by exact equality after trimming and lowercasing,
+    # so a stray trailing newline is fine there but would stop == from ever firing this
+    # job. Triggering liberally and letting the action match strictly means a malformed
+    # signature wastes a run; the reverse would swallow a good one in silence.
+    if: >-
+      github.server_url == 'https://github.com' &&
+      (github.event_name == 'pull_request_target' ||
+       github.event.comment.body == 'recheck' ||
+       contains(github.event.comment.body, 'I have read the Tymeslot Contributor Licence Agreement and I hereby sign it'))
+
+    permissions:
+      contents: write # commits the signature record to the cla-signatures branch
+      pull-requests: write # posts and updates the signature request comment
+      statuses: write # reports this gate back onto the pull request
+      actions: write # re-runs the blocked run once a signature lands
+
+    steps:
+      - name: Check Contributor Licence Agreement signature
+        uses: contributor-assistant/github-action@v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-document: https://github.com/Tymeslot/tymeslot/blob/main/CLA.md
+          path-to-signatures: signatures/cla.json
+          # Signatures live on their own branch, not on main. Required status checks
+          # apply to direct pushes as well as merges, so a bot commit landing on main
+          # would wait forever on a dco-check that only ever runs for pull requests.
+          # A separate branch also keeps signature history out of the code history.
+          branch: cla-signatures
+          # Bots cannot agree to anything, and the copyright holder has nothing to sign.
+          allowlist: wahve3,dependabot[bot],renovate[bot],*[bot]
+          create-file-commit-message: "chore: create the CLA signature record"
+          # Only $contributorName, $owner and $repo interpolate. $pullRequestNo is
+          # commented out in the action as of v2.6.1 and would be committed literally.
+          signed-commit-message: "chore: record $contributorName's CLA signature"
+          custom-pr-sign-comment: "I have read the Tymeslot Contributor Licence Agreement and I hereby sign it"
+          custom-notsigned-prcomment: |
+            Thanks for contributing to Tymeslot.
+
+            Before this can be merged, please read the [Contributor Licence Agreement](https://github.com/Tymeslot/tymeslot/blob/main/CLA.md) and, if you agree to it, post a comment on this pull request containing exactly:
+          custom-allsigned-prcomment: "All contributors have signed the Contributor Licence Agreement. Thank you."
