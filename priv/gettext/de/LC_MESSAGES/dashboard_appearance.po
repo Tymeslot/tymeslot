@@ -216,7 +216,7 @@ msgstr "Design auf %{theme_name} geändert"
 msgid "This preview reflects your current color scheme and background."
 msgstr "Diese Vorschau zeigt Ihr aktuelles Farbschema und Ihren Hintergrund."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex:89
+#: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex:105
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr "Zu viele Upload-Versuche. Bitte warten Sie einige Minuten und versuchen Sie es erneut."
