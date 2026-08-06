@@ -22,6 +22,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       selected_event: nil,
       current_time: DateTime.utc_now(),
       hidden_integration_ids: [],
+      # Seeded empty so the first static render, which happens before
+      # `load_integrations/1` has run, has the same assign shape as every render
+      # after it.
+      calendar_colors: %{},
+      calendar_colour_keys: %{},
+      hidden_calendar_keys: MapSet.new(),
       preferences: nil,
       show_calendar_list: false,
       show_view_menu: false,

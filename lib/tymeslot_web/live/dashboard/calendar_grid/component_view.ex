@@ -48,7 +48,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           date={@date}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colour_keys={@calendar_colour_keys}
           hidden_integration_ids={@hidden_integration_ids}
+          hidden_calendar_keys={@hidden_calendar_keys}
           show_calendar_list={@show_calendar_list}
           show_view_menu={@show_view_menu}
           mini_month_open={@mini_month_open}
