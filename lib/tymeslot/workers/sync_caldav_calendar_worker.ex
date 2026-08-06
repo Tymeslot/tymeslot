@@ -36,7 +36,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
+  alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarManagement
@@ -122,8 +122,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # no operator action can fix. `Http` has already logged the status and the
   # server's own explanation, and the health check surfaces the integration.
   defp handle_sync_result({:error, reason} = result, _integration) do
-    if CalDAVBase.terminal_error?(reason) do
-      {:discard, "CalDAV server refused the sync request: #{CalDAVBase.describe_error(reason)}"}
+    if CalDAVErrors.terminal_error?(reason) do
+      {:discard, "CalDAV server refused the sync request: #{CalDAVErrors.describe_error(reason)}"}
     else
       result
     end
