@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         class="grid border-b border-tymeslot-200 bg-white"
         style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
       >
-        <div class="text-token-xs text-tymeslot-400 flex items-end justify-end pr-2 pb-1">{dgettext("dashboard_calendar", "all-day")}</div>
+        <div class="text-token-xs text-tymeslot-500 flex items-end justify-end pr-2 pb-1">{dgettext("dashboard_calendar", "all-day")}</div>
         <AllDayRow.all_day_cell
           :for={day <- @visible_days}
           assigns_ref={assigns}
@@ -97,9 +97,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
         >
           <div class="flex items-center justify-end pr-2 sticky left-0 bg-white z-10">
-            <span class="text-token-xs text-tymeslot-400"><%= Helpers.user_tz_abbr(assigns) %></span>
+            <span class="text-token-xs text-tymeslot-500"><%= Helpers.user_tz_abbr(assigns) %></span>
           </div>
-          <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-100 #{Helpers.day_header_class(day, @user_timezone)}"}>
+          <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-200 #{Helpers.day_header_class(day, @user_timezone)}"}>
             <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline"><%= full_day_label(day, @locale) %></span>
             <span :if={@view == :day} class="text-token-sm font-medium sm:hidden"><%= short_day_label(day, @locale) %></span>
             <span :if={@view != :day} class="text-token-sm"><%= short_day_label(day, @locale) %></span>
@@ -115,9 +115,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
         >
           <%!-- Time axis (sticky left) --%>
-          <div class="relative sticky left-0 bg-white z-[5] border-r border-tymeslot-100">
-            <div :for={hour <- 0..23} class="h-16 border-b border-tymeslot-100 flex items-start justify-end pr-2 pt-0.5">
-              <span class="text-token-xs text-tymeslot-400">
+          <div class="relative sticky left-0 bg-white z-[5] border-r border-tymeslot-200">
+            <div :for={hour <- 0..23} class="h-16 border-b border-tymeslot-200 flex items-start justify-end pr-2 pt-0.5">
+              <span class="text-token-xs text-tymeslot-500">
                 <%= Helpers.format_hour(hour, assigns) %>
               </span>
             </div>
@@ -126,12 +126,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           <%!-- Day columns --%>
           <div
             :for={day <- @visible_days}
-            class="relative border-l border-tymeslot-100"
+            class="relative border-l border-tymeslot-200"
             data-day-col={Date.to_iso8601(day)}
             style="min-height: 96rem;"
           >
             <%!-- Hour grid lines --%>
-            <div :for={_hour <- 0..23} class="h-16 border-b border-tymeslot-100"></div>
+            <div :for={_hour <- 0..23} class="h-16 border-b border-tymeslot-200"></div>
             <%!-- Events --%>
             <div
               :for={{event, col_idx, total_cols} <- elem(Map.get(@day_layouts, day, {[], []}), 0)}

@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
       |> assign(:hidden_count, length(hidden))
 
     ~H"""
-    <details class="group border-l border-tymeslot-100 p-0.5 min-h-[1.5rem] [&>summary::-webkit-details-marker]:hidden">
+    <details class="group border-l border-tymeslot-200 p-0.5 min-h-[1.5rem] [&>summary::-webkit-details-marker]:hidden">
       <summary class="flex flex-col gap-0.5 list-none cursor-default">
         <div
           :for={event <- @shown}
