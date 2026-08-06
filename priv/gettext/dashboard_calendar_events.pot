@@ -413,9 +413,9 @@ msgstr ""
 msgid "Failed to move event"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:51
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:74
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:118
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:52
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:84
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:128
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:94
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
