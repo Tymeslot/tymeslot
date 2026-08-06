@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   attr :selected_event, :map, required: true
   attr :integrations, :list, required: true
   attr :integration_colors, :map, required: true
+  attr :calendar_colors, :map, required: true
   attr :user_timezone, :string, required: true
   attr :time_format, :string, default: "12h"
   attr :myself, :any, required: true

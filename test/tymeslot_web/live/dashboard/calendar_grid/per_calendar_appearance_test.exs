@@ -43,6 +43,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
     view |> element("button[phx-click='toggle_calendar_list']") |> render_click()
   end
 
+  # The class list of the grid element rendering the event with this title.
+  defp event_classes(html, summary) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("[id^='event-']")
+    |> Enum.filter(&(Floki.text(&1) =~ summary))
+    |> Floki.attribute("class")
+    |> Enum.join(" ")
+  end
+
   defp pressed?(html, calendar_id, colour) do
     html
     |> Floki.parse_document!()
@@ -176,6 +186,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
 
       assert [%{provider_calendar_id: "cal-main", colour: "banana"}] =
                Appearance.list_for_user(user.id)
+    end
+
+    test "paints that calendar's events in the grid and leaves its siblings alone", %{
+      conn: conn,
+      integration: integration
+    } do
+      # Storing the row is not the feature; painting the event is. Asserting only
+      # on the stored colour passes even when no view receives the colour map,
+      # which is exactly how the first version of this shipped broken.
+      at = DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC")
+
+      for {cal, summary} <- [{"cal-main", "Sprint planning"}, {"cal-birthdays", "A birthday"}] do
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider_calendar_id: cal,
+          summary: summary,
+          start_at: at,
+          end_at: DateTime.add(at, 3600)
+        )
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar")
+      open_dropdown(view)
+
+      view
+      |> element(
+        "button[phx-click='set_calendar_colour'][phx-value-calendar_id='cal-main'][phx-value-colour='tomato']"
+      )
+      |> render_click()
+
+      html = render(view)
+
+      assert event_classes(html, "Sprint planning") =~ "bg-calendar-tomato"
+      refute event_classes(html, "A birthday") =~ "bg-calendar-tomato"
     end
 
     test "leaves the account's other calendars inheriting", %{conn: conn, user: user} do

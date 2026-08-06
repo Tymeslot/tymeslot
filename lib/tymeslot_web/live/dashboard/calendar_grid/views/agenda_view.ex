@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
   attr :visible_days, :list, required: true
   attr :visible_events, :list, required: true
   attr :integration_colors, :map, required: true
+  attr :calendar_colors, :map, required: true
   attr :user_timezone, :string, required: true
   attr :preferences, :any
   attr :myself, :any, required: true

@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   attr :events, :list, required: true
   attr :integrations, :list, required: true
   attr :integration_colors, :map, required: true
+  attr :calendar_colors, :map, required: true
   attr :hidden_integration_ids, :list, required: true
   attr :current_time, :any, required: true
   attr :user_timezone, :string, required: true

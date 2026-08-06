@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthViewTest do
       visible_events: events,
       integrations: [],
       integration_colors: %{1 => EventColour.rotation_class(1)},
+      calendar_colors: %{},
       hidden_integration_ids: [],
       date: ~D[2026-04-15],
       user_timezone: "Etc/UTC",

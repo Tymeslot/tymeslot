@@ -53,15 +53,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
     end
   end
 
-  # Read through `Map.get/3` on the assigns rather than `assigns.calendar_colors`:
-  # this helper is called from function components that build their own assigns
-  # maps in tests, and an absent key means "no per-calendar choices", not a crash.
+  # `assigns.calendar_colors`, not `Map.get(assigns, :calendar_colors, %{})`.
+  # The forgiving version defaulted a missing assign to "no choices", which is
+  # indistinguishable from a real empty map: when a view component forgot to
+  # declare and receive the assign, every event quietly kept its integration's
+  # colour and nothing failed. A view that paints events must be given the map.
   defp calendar_colour(assigns, event) do
     key = {event.calendar_integration_id, Map.get(event, :provider_calendar_id)}
 
-    assigns
-    |> Map.get(:calendar_colors, %{})
-    |> Map.get(key)
+    Map.get(assigns.calendar_colors, key)
   end
 
   @spec event_display_date(map(), String.t()) :: Date.t()

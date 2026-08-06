@@ -72,6 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           events={@events}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           hidden_integration_ids={@hidden_integration_ids}
           current_time={@current_time}
           user_timezone={@user_timezone}
@@ -91,6 +92,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           visible_events={@visible_events}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           hidden_integration_ids={@hidden_integration_ids}
           date={@date}
           user_timezone={@user_timezone}
@@ -103,6 +105,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           visible_days={@visible_days}
           visible_events={@visible_events}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           user_timezone={@user_timezone}
           preferences={@preferences}
           myself={@myself}
@@ -136,6 +139,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           selected_event={@selected_event}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           user_timezone={@user_timezone}
           time_format={Helpers.time_format(assigns)}
           myself={@myself}

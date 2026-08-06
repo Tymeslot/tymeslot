@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
   attr :visible_events, :list, required: true
   attr :integrations, :list, required: true
   attr :integration_colors, :map, required: true
+  attr :calendar_colors, :map, required: true
   attr :hidden_integration_ids, :list, required: true
   attr :date, :any, required: true
   attr :user_timezone, :string, required: true
