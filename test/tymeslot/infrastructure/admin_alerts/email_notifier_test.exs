@@ -10,6 +10,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Endpoint
 
   setup do
     # Force the EmailNotifier impl regardless of any env override
@@ -140,6 +141,17 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
       assert Map.has_key?(metadata, "timestamp")
       # Caller-provided metadata is preserved
       assert metadata["event_id"] == "evt_enrich_007"
+    end
+
+    test "deployment context names the domain the instance serves" do
+      assert :ok =
+               AdminAlerts.send_alert(:unhandled_webhook, %{
+                 event_type: "charge.failed",
+                 event_id: "evt_domain_009"
+               })
+
+      [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["metadata"]["domain"] == Endpoint.host()
     end
 
     test "carries the recipient address from config" do
