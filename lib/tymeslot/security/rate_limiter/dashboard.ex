@@ -90,6 +90,32 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
   def check_integration_appearance(user_id),
     do: Helpers.invalid_user_id("integration appearance", user_id)
 
+  @doc """
+  Rate limit showing and hiding individual calendars in the dashboard grid.
+
+  Deliberately the loosest budget on this module. Toggling a calendar is a view
+  control an organiser may click repeatedly while scanning a busy week, so the
+  limit sits where no hand-driven session reaches it: 300 in ten minutes is one
+  click every two seconds sustained for the entire window. It exists to stop a
+  script hammering the write, not to cap normal use.
+
+  Returns `:ok` if allowed, `{:error, :rate_limited, message}` if exceeded.
+  """
+  @spec check_calendar_visibility(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_calendar_visibility(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "calendar_visibility:#{user_id}",
+      300,
+      600_000,
+      "calendar visibility",
+      to_string(user_id)
+    )
+  end
+
+  def check_calendar_visibility(user_id),
+    do: Helpers.invalid_user_id("calendar visibility", user_id)
+
   @spec check_meeting_type_write(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_meeting_type_write(user_id) when is_integer(user_id) and user_id > 0 do

@@ -28,16 +28,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarAppearanceQueriesTest do
     end
 
     test "updates the existing row rather than inserting a second", %{integration: integration} do
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "banana"})
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "grape"})
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "banana"})
+
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "grape"})
 
       assert [%{colour: "grape"}] =
                CalendarAppearanceQueries.list_for_integrations([integration.id])
     end
 
     test "leaves hidden alone when only the colour is written", %{integration: integration} do
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{hidden: true})
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "sage"})
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{hidden: true})
+
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "sage"})
 
       assert [%{colour: "sage", hidden: true}] =
                CalendarAppearanceQueries.list_for_integrations([integration.id])
@@ -46,7 +52,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarAppearanceQueriesTest do
     test "clearing the colour back to nil is allowed and means inherit", %{
       integration: integration
     } do
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "sage"})
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "sage"})
 
       assert {:ok, %{colour: nil}} =
                CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: nil})
@@ -60,8 +67,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarAppearanceQueriesTest do
     end
 
     test "keeps two calendars in one integration apart", %{integration: integration} do
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "sage"})
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-2", %{colour: "grape"})
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "sage"})
+
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-2", %{colour: "grape"})
 
       colours =
         [integration.id]
@@ -79,13 +89,16 @@ defmodule Tymeslot.Integrations.Calendar.CalendarAppearanceQueriesTest do
 
     test "does not leak another integration's rows", %{integration: integration} do
       other = insert(:calendar_integration, is_active: true)
-      {:ok, _} = CalendarAppearanceQueries.upsert(other.id, "cal-1", %{colour: "tomato"})
+
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(other.id, "cal-1", %{colour: "tomato"})
 
       assert CalendarAppearanceQueries.list_for_integrations([integration.id]) == []
     end
 
     test "is empty for an empty id list", %{integration: integration} do
-      {:ok, _} = CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "tomato"})
+      {:ok, _appearance} =
+        CalendarAppearanceQueries.upsert(integration.id, "cal-1", %{colour: "tomato"})
 
       assert CalendarAppearanceQueries.list_for_integrations([]) == []
     end
