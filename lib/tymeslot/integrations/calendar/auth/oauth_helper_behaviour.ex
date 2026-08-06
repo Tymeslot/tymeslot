@@ -8,6 +8,19 @@ defmodule Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour do
   @callback authorization_url(pos_integer(), String.t()) :: String.t()
   @callback authorization_url(pos_integer(), String.t(), list(atom() | String.t()) | keyword()) ::
               String.t()
+  # Scopes and options together, used when reconnecting an existing
+  # integration: the scopes are fixed by the caller while `integration_id` and
+  # `login_hint` target the account already connected.
+  @callback authorization_url(
+              pos_integer(),
+              String.t(),
+              list(atom() | String.t()),
+              keyword()
+            ) :: String.t()
+
+  # Optional because only the Google helper needs it: Outlook implements this
+  # behaviour too but its authorisation URL takes no caller-supplied scopes.
+  @optional_callbacks authorization_url: 4
   @type callback_error :: :calendar_scope_missing | String.t()
 
   @callback handle_callback(String.t(), String.t(), String.t()) ::

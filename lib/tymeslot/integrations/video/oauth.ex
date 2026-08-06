@@ -72,29 +72,15 @@ defmodule Tymeslot.Integrations.Video.OAuth do
   defp redirect_uri(%{callback: callback}),
     do: "#{Endpoint.url()}/auth/#{callback}/video/callback"
 
-  # The empty-opts clauses are not redundant. Each helper is swapped for a Mox
-  # mock in test, and a mock only answers the arities its behaviour declares:
-  # the Google and Teams behaviours stop one arity short of the opts-carrying
-  # form. Calling the shorter arity when there are no opts keeps the connect
-  # path working against those mocks.
-  defp url_for(:google_meet, user_id, redirect_uri, []) do
-    google_helper().authorization_url(user_id, redirect_uri, @google_scopes)
-  end
-
+  # Each provider's helper takes its options last; Google additionally needs
+  # its scopes stated explicitly, which is the only shape difference worth a
+  # clause each.
   defp url_for(:google_meet, user_id, redirect_uri, opts) do
     google_helper().authorization_url(user_id, redirect_uri, @google_scopes, opts)
   end
 
-  defp url_for(:teams, user_id, redirect_uri, []) do
-    teams_helper().authorization_url(user_id, redirect_uri)
-  end
-
   defp url_for(:teams, user_id, redirect_uri, opts) do
     teams_helper().authorization_url(user_id, redirect_uri, opts)
-  end
-
-  defp url_for(:zoom, user_id, redirect_uri, []) do
-    zoom_helper().authorization_url(user_id, redirect_uri)
   end
 
   defp url_for(:zoom, user_id, redirect_uri, opts) do
