@@ -551,13 +551,13 @@ msgstr ""
 msgid "Please contact the organizer"
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:487
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:293
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:113
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:340
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:109
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:216
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
 msgstr ""
@@ -1152,7 +1152,7 @@ msgstr ""
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:473
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:279
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr ""
@@ -1239,23 +1239,22 @@ msgstr ""
 msgid "Payment not found."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:398
+#: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex:200
 #, elixir-autogen, elixir-format
 msgid "Security verification failed. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:409
+#: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex:209
 #, elixir-autogen, elixir-format
 msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:143
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:176
+#: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex:177
 #, elixir-autogen, elixir-format
 msgid "Too many booking attempts. Please try again later."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:208
+#: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex:124
 #, elixir-autogen, elixir-format
 msgid "Your booking is already being processed. Please wait..."
 msgstr ""
@@ -1266,22 +1265,22 @@ msgstr ""
 msgid "Pick an option below."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:257
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:151
 #, elixir-autogen, elixir-format
 msgid "Booking submitted successfully!"
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:248
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:142
 #, elixir-autogen, elixir-format
 msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:242
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:136
 #, elixir-autogen, elixir-format
 msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:254
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:148
 #, elixir-autogen, elixir-format
 msgid "Meeting rescheduled successfully!"
 msgstr ""

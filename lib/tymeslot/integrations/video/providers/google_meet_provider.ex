@@ -27,11 +27,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
-  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.RoomData
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   @capabilities Capabilities.new!(
                   recording: true,
@@ -337,39 +335,26 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     end
   end
 
+  # Best-effort persistence: Google does not rotate its refresh token, so the
+  # caller can proceed on the merged config even if the write fails. A config
+  # carrying no integration ids is transient (a connection probe) and has no
+  # row to write back to.
   defp update_stored_integration(old_config, new_config) do
     integration_id = Map.get(old_config, :integration_id)
     user_id = Map.get(old_config, :user_id)
 
-    attrs = %{
-      access_token: Map.get(new_config, :access_token),
-      refresh_token: Map.get(new_config, :refresh_token),
-      token_expires_at: Map.get(new_config, :token_expires_at),
-      oauth_scope: Map.get(new_config, :oauth_scope)
-    }
+    if is_integer(integration_id) and is_integer(user_id) do
+      attrs = %{
+        access_token: Map.get(new_config, :access_token),
+        refresh_token: Map.get(new_config, :refresh_token),
+        token_expires_at: Map.get(new_config, :token_expires_at),
+        oauth_scope: Map.get(new_config, :oauth_scope)
+      }
 
-    with id when is_integer(id) <- integration_id,
-         uid when is_integer(uid) <- user_id,
-         {:ok, integration} <- Video.fetch_integration_for_user(id, uid),
-         {:ok, _result} <- VideoIntegrationQueries.update(integration, attrs) do
-      :ok
-    else
-      nil ->
-        :ok
-
-      {:error, :not_found} ->
-        Logger.warning(
-          "Could not find integration to persist refreshed Google tokens",
-          integration_id: integration_id,
-          user_id: user_id
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to persist refreshed Google tokens", reason: Redactor.redact(reason))
-        :ok
+      OAuthTokenManager.persist_tokens(old_config, attrs, "Google Meet")
     end
+
+    :ok
   end
 
   # Creates a standalone Google Meet space via the Meet REST API. An empty body
@@ -478,33 +463,15 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # surfaces this via the "Reconnect required" badge on the video row. Purely
   # additive: it does not touch token validation or the OAuthTokenManager flow.
   defp flag_revoked_token(config) do
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      Logger.warning("Google Meet token appears revoked but no integration_id to flag",
-        event: "google_meet_token_revoked"
-      )
-    else
-      Logger.warning("Google Meet token revoked; flagging integration for reauth",
-        event: "google_meet_token_revoked",
-        integration_id: integration_id
-      )
-
-      case Video.fetch_integration_for_user(integration_id, user_id) do
-        {:ok, integration} ->
-          VideoIntegrationQueries.mark_needs_reauth(
-            integration,
-            dgettext(
-              "dashboard_integrations",
-              "Google Meet access was revoked. Please reconnect your Google account."
-            )
-          )
-
-        {:error, :not_found} ->
-          :ok
-      end
-    end
+    OAuthTokenManager.flag_needs_reauth(config,
+      label: "Google Meet",
+      event: "google_meet_token_revoked",
+      message:
+        dgettext(
+          "dashboard_integrations",
+          "Google Meet access was revoked. Please reconnect your Google account."
+        )
+    )
   end
 
   defp get_calendar_list(config) do

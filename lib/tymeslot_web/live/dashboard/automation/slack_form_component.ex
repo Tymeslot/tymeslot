@@ -399,59 +399,68 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
   defp lookup_channel_name(_channels, _id), do: ""
 
-  defp form_title(:oauth_pending), do: dgettext("dashboard_automation_chat", "Finish Slack setup")
+  # One row per render mode. The four labels always vary together, so a table
+  # keeps a new mode from being added to three of them and forgotten in the
+  # fourth. Copy is stored as `dgettext_noop` msgids and translated on read: a
+  # `dgettext/2` call inside a module attribute would freeze the locale at
+  # compile time.
+  @modes %{
+    oauth_pending: %{
+      title: dgettext_noop("dashboard_automation_chat", "Finish Slack setup"),
+      subtitle:
+        dgettext_noop(
+          "dashboard_automation_chat",
+          "Pick a channel for Tymeslot to post booking notifications to."
+        ),
+      submit_event: "slack_save_channel",
+      submit_label: dgettext_noop("dashboard_automation_chat", "Save channel")
+    },
+    oauth_existing: %{
+      title: dgettext_noop("dashboard_automation_chat", "Edit Slack Integration"),
+      subtitle:
+        dgettext_noop(
+          "dashboard_automation_chat",
+          "Update the channel and event subscriptions for this Slack workspace."
+        ),
+      submit_event: "slack_update",
+      submit_label: dgettext_noop("dashboard_automation_chat", "Update")
+    },
+    webhook_url: %{
+      title: dgettext_noop("dashboard_automation_chat", "Add Slack via Webhook URL"),
+      subtitle:
+        dgettext_noop(
+          "dashboard_automation_chat",
+          "Paste the Incoming Webhook URL Slack generated for your channel."
+        ),
+      submit_event: "slack_save_webhook",
+      submit_label: dgettext_noop("dashboard_automation_chat", "Save")
+    },
+    webhook_url_existing: %{
+      title: dgettext_noop("dashboard_automation_chat", "Edit Slack Integration"),
+      subtitle:
+        dgettext_noop(
+          "dashboard_automation_chat",
+          "Update the webhook URL or event subscriptions for this Slack integration."
+        ),
+      submit_event: "slack_update",
+      submit_label: dgettext_noop("dashboard_automation_chat", "Update")
+    }
+  }
 
-  defp form_title(:oauth_existing),
-    do: dgettext("dashboard_automation_chat", "Edit Slack Integration")
+  defp form_title(mode), do: translate(@modes[mode].title)
+  defp details_subtitle(mode), do: translate(@modes[mode].subtitle)
+  defp submit_event(mode), do: @modes[mode].submit_event
+  defp submit_label(mode), do: translate(@modes[mode].submit_label)
 
-  defp form_title(:webhook_url),
-    do: dgettext("dashboard_automation_chat", "Add Slack via Webhook URL")
+  defp translate(msgid),
+    do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_automation_chat", msgid)
 
-  defp form_title(:webhook_url_existing),
-    do: dgettext("dashboard_automation_chat", "Edit Slack Integration")
-
-  defp details_subtitle(:oauth_pending),
-    do:
-      dgettext(
-        "dashboard_automation_chat",
-        "Pick a channel for Tymeslot to post booking notifications to."
-      )
-
-  defp details_subtitle(:oauth_existing),
-    do:
-      dgettext(
-        "dashboard_automation_chat",
-        "Update the channel and event subscriptions for this Slack workspace."
-      )
-
-  defp details_subtitle(:webhook_url),
-    do:
-      dgettext(
-        "dashboard_automation_chat",
-        "Paste the Incoming Webhook URL Slack generated for your channel."
-      )
-
-  defp details_subtitle(:webhook_url_existing),
-    do:
-      dgettext(
-        "dashboard_automation_chat",
-        "Update the webhook URL or event subscriptions for this Slack integration."
-      )
-
-  defp submit_event(:oauth_pending), do: "slack_save_channel"
-  defp submit_event(:oauth_existing), do: "slack_update"
-  defp submit_event(:webhook_url), do: "slack_save_webhook"
-  defp submit_event(:webhook_url_existing), do: "slack_update"
-
+  # The one label that is not per-mode: only an existing webhook can be left
+  # blank to keep the stored URL.
   defp webhook_url_placeholder(:webhook_url_existing),
     do: dgettext("dashboard_automation_chat", "Leave blank to keep current URL")
 
   defp webhook_url_placeholder(_mode), do: "https://hooks.slack.com/services/T.../B.../..."
-
-  defp submit_label(:oauth_pending), do: dgettext("dashboard_automation_chat", "Save channel")
-  defp submit_label(:oauth_existing), do: dgettext("dashboard_automation_chat", "Update")
-  defp submit_label(:webhook_url), do: dgettext("dashboard_automation_chat", "Save")
-  defp submit_label(:webhook_url_existing), do: dgettext("dashboard_automation_chat", "Update")
 
   defp can_submit?(assigns) do
     values = assigns.form_values

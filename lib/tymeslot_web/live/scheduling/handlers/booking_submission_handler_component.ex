@@ -39,13 +39,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.Bookings.DemoOrchestrator
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
-  alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.InputProcessor
-  alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Security.SecurityLogger
-  alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingGuards
   alias TymeslotWeb.Live.Shared.Flash
 
   require Logger
@@ -94,9 +91,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   def submit_booking(socket, booking_params) do
     Logger.info("Submit event triggered for booking form")
 
-    # Check honeypot first (fastest gate)
-    if honeypot_tripped?(booking_params) do
-      handle_honeypot_booking(socket, booking_params)
+    if BookingGuards.honeypot_tripped?(booking_params) do
+      {:honeypot, BookingGuards.handle_honeypot(socket)}
     else
       case InputProcessor.validate_form(booking_params, BookingConfig.booking_field_spec()) do
         {:ok, sanitized_params} ->
@@ -114,108 +110,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
           {:error, socket}
       end
-    end
-  end
-
-  @doc """
-  Checks rate limit for booking submissions.
-
-  This prevents abuse by limiting the number of booking attempts
-  from the same IP address within a time window.
-  """
-  @spec check_rate_limit(Phoenix.LiveView.Socket.t()) ::
-          {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
-  def check_rate_limit(socket) do
-    client_ip = ClientIP.get(socket)
-
-    case RateLimiter.check_booking_submission_limit(client_ip) do
-      {:allow, _count} ->
-        {:ok, socket}
-
-      {:deny, _limit} ->
-        Logger.warning("Booking rate limit exceeded", client_ip: inspect(client_ip))
-
-        socket =
-          socket
-          |> release_submission()
-          |> Flash.put_flash(
-            :error,
-            dgettext("booking", "Too many booking attempts. Please try again later.")
-          )
-
-        {:error, socket}
-    end
-  end
-
-  @doc """
-  Checks the per-recipient booking rate limit.
-
-  Complements the per-IP limit: stops an attacker rotating source IPs from
-  bombing a single attendee mailbox with confirmation emails. Keyed on the
-  validated attendee email address.
-  """
-  @spec check_recipient_rate_limit(Phoenix.LiveView.Socket.t(), map()) ::
-          {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
-  def check_recipient_rate_limit(socket, %{"email" => email})
-      when is_binary(email) and email != "" do
-    case RateLimiter.check_booking_recipient_limit(email) do
-      :ok ->
-        {:ok, socket}
-
-      {:error, :rate_limited, _message} ->
-        Logger.warning("Booking recipient rate limit exceeded",
-          operation: "booking",
-          limit_type: "recipient"
-        )
-
-        socket =
-          socket
-          |> release_submission()
-          |> Flash.put_flash(
-            :error,
-            dgettext("booking", "Too many booking attempts. Please try again later.")
-          )
-
-        {:error, socket}
-    end
-  end
-
-  def check_recipient_rate_limit(socket, _params), do: {:ok, socket}
-
-  @doc """
-  Checks for duplicate submission attempts.
-
-  This function prevents duplicate submissions by checking if a submission
-  is already being processed.
-
-  ## Examples
-
-      case BookingSubmissionHandlerComponent.check_duplicate_submission(socket) do
-        {:ok, socket} -> # Proceed with submission
-        {:error, socket} -> # Duplicate submission detected
-      end
-  """
-  @spec check_duplicate_submission(Phoenix.LiveView.Socket.t()) ::
-          {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
-  def check_duplicate_submission(socket) do
-    if socket.assigns[:submission_processed] do
-      Logger.warning("Duplicate submission attempt detected")
-
-      socket =
-        Flash.put_flash(
-          socket,
-          :warning,
-          dgettext("booking", "Your booking is already being processed. Please wait...")
-        )
-
-      {:error, socket}
-    else
-      socket =
-        socket
-        |> assign(:submission_processed, true)
-        |> assign(:submitting, true)
-
-      {:ok, socket}
     end
   end
 
@@ -289,7 +183,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   def handle_booking_error(socket, reason) do
     socket =
       socket
-      |> release_submission()
+      |> BookingGuards.release_submission()
       |> Flash.put_flash(:error, BookingErrorMessage.message(reason))
 
     Logger.error("Failed to create meeting appointment", reason: inspect(reason))
@@ -299,31 +193,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   # Private functions
 
-  # Ends an in-flight submission attempt: clears the spinner *and* releases the
-  # duplicate-submission lock claimed by `check_duplicate_submission/1`.
-  #
-  # Both flags must move together. The lock is claimed before the rate-limit and
-  # reCAPTCHA gates run, so a failure branch that clears only `:submitting`
-  # leaves `:submission_processed` set and wedges the form: every retry in that
-  # session is rejected as "already being processed" until the booker reloads
-  # the page. Route every non-success exit through here rather than assigning
-  # the flags by hand.
-  defp release_submission(socket) do
-    socket
-    |> assign(:submitting, false)
-    |> assign(:submission_processed, false)
-  end
-
   defp validate_and_submit(socket, sanitized_params, booking_params) do
     engine = socket.assigns[:engine]
     snapshot = if engine, do: engine.definitions, else: []
     raw_answers = if engine, do: engine.answers, else: %{}
 
     with {:ok, custom_answers} <- CustomFields.validate_answers(snapshot, raw_answers),
-         {:ok, socket} <- check_duplicate_submission(socket),
-         {:ok, socket} <- check_rate_limit(socket),
-         :ok <- verify_recaptcha(socket, booking_params),
-         {:ok, socket} <- check_recipient_rate_limit(socket, sanitized_params) do
+         {:ok, socket} <- BookingGuards.run(socket, sanitized_params, booking_params) do
       enriched_params =
         sanitized_params
         |> Map.put("custom_fields_snapshot", snapshot)
@@ -342,76 +218,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         {:error, socket}
 
       {:error, socket} ->
-        {:error, socket}
-    end
-  end
-
-  defp honeypot_tripped?(params) do
-    case Map.get(params, "website") do
-      value when is_binary(value) -> value != ""
-      _other -> false
-    end
-  end
-
-  defp handle_honeypot_booking(socket, _booking_params) do
-    log_honeypot(socket)
-
-    # Return fake success to mislead the bot
-    Logger.info("Honeypot triggered in booking form - simulating success")
-
-    socket =
-      socket
-      |> assign(:submitting, false)
-      |> assign(:custom_fields_snapshot, [])
-      |> assign(:custom_field_answers, %{})
-
-    {:honeypot, socket}
-  end
-
-  defp log_honeypot(socket) do
-    SecurityLogger.log_security_event("booking_honeypot_triggered", %{
-      ip_address: ClientIP.get(socket),
-      user_agent: ClientIP.get_user_agent(socket)
-    })
-  end
-
-  defp verify_recaptcha(socket, booking_params) do
-    recaptcha_token = Map.get(booking_params, "g-recaptcha-response", "")
-    client_ip = ClientIP.get(socket)
-    user_agent = ClientIP.get_user_agent(socket)
-
-    metadata = %{
-      ip: client_ip,
-      user_agent: user_agent
-    }
-
-    case RecaptchaHelpers.maybe_verify_booking_token(recaptcha_token, metadata) do
-      :ok ->
-        :ok
-
-      {:error, :recaptcha_failed} ->
-        socket =
-          socket
-          |> release_submission()
-          |> Flash.put_flash(
-            :error,
-            dgettext("booking", "Security verification failed. Please try again.")
-          )
-
-        {:error, socket}
-
-      {:error, :recaptcha_script_blocked} ->
-        socket =
-          socket
-          |> release_submission()
-          |> Flash.put_flash(
-            :error,
-            dgettext(
-              "booking",
-              "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
-            )
-          )
-
         {:error, socket}
     end
   end
@@ -467,7 +273,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   defp handle_expired_preview(socket) do
     socket =
       socket
-      |> release_submission()
+      |> BookingGuards.release_submission()
       |> Flash.put_flash(
         :error,
         dgettext("booking", "Preview session expired. Reload the page to continue.")
@@ -481,7 +287,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       socket
       |> assign(:form, Component.to_form(sanitized_params))
       |> assign(:validation_errors, Enum.into(errors, %{}))
-      |> release_submission()
+      |> BookingGuards.release_submission()
       |> Flash.put_flash(
         :error,
         dgettext("booking", "Please correct the errors below before submitting.")
@@ -501,7 +307,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   defp handle_slot_taken(socket) do
     socket =
       socket
-      |> release_submission()
+      |> BookingGuards.release_submission()
       |> Flash.put_flash(:error, BookingErrorMessage.message(:slot_taken))
 
     {:slot_taken, socket}

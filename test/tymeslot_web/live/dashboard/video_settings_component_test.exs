@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     end
 
     test "initiates google meet oauth", %{conn: conn} do
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes, _opts ->
         "https://accounts.google.com/o/oauth2/v2/auth"
       end)
 

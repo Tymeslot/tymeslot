@@ -27,7 +27,7 @@ msgid "%{provider} authentication succeeded but session creation failed."
 msgstr "Автентифікація через %{provider} пройшла успішно, але не вдалося створити сеанс."
 
 #: lib/tymeslot/auth/registration.ex:47
-#: lib/tymeslot_web/live/auth_live.ex:422
+#: lib/tymeslot_web/live/auth_live/signup_events.ex:85
 #, elixir-autogen, elixir-format
 msgid "Account created successfully. Please check your email for verification instructions."
 msgstr "Обліковий запис успішно створено. Перевірте свою електронну пошту, щоб отримати інструкції з підтвердження."
@@ -148,7 +148,7 @@ msgstr "Не вдалося пройти автентифікацію через
 msgid "Failed to create session. Please try again."
 msgstr "Не вдалося створити сеанс. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/auth_live.ex:396
+#: lib/tymeslot_web/live/auth_live/verification_events.ex:115
 #, elixir-autogen, elixir-format
 msgid "Failed to send verification email. Please try again later."
 msgstr "Не вдалося надіслати лист для підтвердження. Спробуйте пізніше."
@@ -168,7 +168,7 @@ msgstr "Перейти до входу"
 msgid "Invalid Link"
 msgstr "Недійсне посилання"
 
-#: lib/tymeslot_web/live/auth_live.ex:322
+#: lib/tymeslot_web/live/auth_live/password_reset_events.ex:146
 #, elixir-autogen, elixir-format
 msgid "Invalid reset token"
 msgstr "Недійсний маркер скидання"
@@ -259,7 +259,7 @@ msgstr "Пароль змінено"
 msgid "Password Reset Successfully"
 msgstr "Пароль успішно скинуто"
 
-#: lib/tymeslot_web/live/auth_live.ex:465
+#: lib/tymeslot_web/live/auth_live.ex:175
 #, elixir-autogen, elixir-format
 msgid "Password is required"
 msgstr "Потрібно ввести пароль"
@@ -313,9 +313,8 @@ msgstr "Скидання пароля"
 msgid "Return to login"
 msgstr "Повернутися до входу"
 
-#: lib/tymeslot_web/live/auth_live.ex:185
-#: lib/tymeslot_web/live/auth_live.ex:239
-#: lib/tymeslot_web/live/auth_live.ex:317
+#: lib/tymeslot_web/live/auth_live/password_reset_events.ex:157
+#: lib/tymeslot_web/live/auth_live/signup_events.ex:107
 #, elixir-autogen, elixir-format
 msgid "Security validation failed. Please refresh the page."
 msgstr "Помилка перевірки безпеки. Оновіть сторінку."
@@ -433,7 +432,7 @@ msgstr "Забагато спроб підтвердження. Спробуйт
 msgid "Try again"
 msgstr "Спробувати ще раз"
 
-#: lib/tymeslot_web/live/auth_live.ex:407
+#: lib/tymeslot_web/live/auth_live/verification_events.ex:99
 #, elixir-autogen, elixir-format
 msgid "Unable to resend verification email. Please try signing up again."
 msgstr "Не вдалося повторно надіслати лист для підтвердження. Спробуйте зареєструватися ще раз."
@@ -450,8 +449,7 @@ msgstr "Цей провайдер OAuth не підтримується."
 msgid "Unsupported OAuth provider: %{provider}"
 msgstr "Непідтримуваний провайдер OAuth: %{provider}"
 
-#: lib/tymeslot_web/live/auth_live.ex:353
-#: lib/tymeslot_web/live/auth_live.ex:377
+#: lib/tymeslot_web/live/auth_live/verification_events.ex:131
 #, elixir-autogen, elixir-format
 msgid "Verification email sent! Please check your inbox."
 msgstr "Лист для підтвердження надіслано! Перевірте свою поштову скриньку."

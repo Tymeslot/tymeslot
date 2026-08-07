@@ -1,9 +1,22 @@
 defmodule TymeslotWeb.AuthLive do
   @moduledoc """
-  Unified LiveView for all authentication flows.
+  One LiveView for every authentication flow: login, signup, password reset,
+  email verification and OAuth completion.
 
-  Handles login, signup, password reset, email verification, and OAuth completion
-  with smooth transitions between states to eliminate page flashes.
+  They share a process so moving between them patches the current view rather
+  than loading a new page, which is what keeps "sign in" to "create an account"
+  from flashing. The cost is that four independent flows would otherwise pile
+  into one module, so each keeps its own handlers next door and this module is
+  left with what genuinely spans them: the state machine, the login form, and
+  the render that picks a component for the current state.
+
+  - `TymeslotWeb.AuthLive.SignupEvents`
+  - `TymeslotWeb.AuthLive.PasswordResetEvents`
+  - `TymeslotWeb.AuthLive.VerificationEvents`
+  - `TymeslotWeb.AuthLive.StateHelper` for the state machine itself
+
+  Login is the exception that stays here: its form posts to `SessionController`
+  rather than to this process, so all that is left of it is live validation.
   """
 
   use TymeslotWeb, :live_view
@@ -11,11 +24,14 @@ defmodule TymeslotWeb.AuthLive do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Phoenix.Controller
-  alias Tymeslot.Auth.{AuthActions, Session, SignupSecurity, Verification}
+  alias Tymeslot.Auth.{AuthActions, Session}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.FieldValidators.PasswordValidator
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
-  alias TymeslotWeb.AuthLive.{PageMetaHelper, SecurityHelper, StateHelper}
+  alias Tymeslot.Security.InputProcessor
+  alias TymeslotWeb.AuthLive.PageMetaHelper
+  alias TymeslotWeb.AuthLive.PasswordResetEvents
+  alias TymeslotWeb.AuthLive.SignupEvents
+  alias TymeslotWeb.AuthLive.StateHelper
+  alias TymeslotWeb.AuthLive.VerificationEvents
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Registration.CompleteRegistrationComponent
   alias TymeslotWeb.Registration.SignupComponent
@@ -25,32 +41,23 @@ defmodule TymeslotWeb.AuthLive do
 
   require Logger
 
-  # How long the "resend verification email" button stays disabled after a click,
-  # to stop users from hammering it. Server-side rate limiting remains the real
-  # security boundary; this is purely a UX guard with a live countdown.
-  @resend_cooldown_seconds 60
-
   @impl Phoenix.LiveView
   def mount(_params, session, socket) do
-    csrf_token = Controller.get_csrf_token()
-    client_ip = ClientIP.get_from_mount(socket)
-    user_agent = ClientIP.get_user_agent_from_mount(socket)
-    unverified_user = Session.get_unverified_user_from_session(session)
-
     socket =
-      socket
-      |> assign(:loading, false)
-      |> assign(:resend_cooldown, 0)
-      |> assign(:errors, %{})
-      |> assign(:current_year, DateTime.utc_now().year)
-      |> assign(:current_state, :login)
-      |> assign(:previous_state, nil)
-      |> assign(:form_data, %{})
-      |> assign(:csrf_token, csrf_token)
-      |> assign(:client_ip, client_ip)
-      |> assign(:user_agent, user_agent)
-      |> assign(:unverified_user, unverified_user)
-      |> assign(:pending_oauth_registration, session["pending_oauth_registration"])
+      assign(socket,
+        loading: false,
+        resend_cooldown: 0,
+        errors: %{},
+        current_year: DateTime.utc_now().year,
+        current_state: :login,
+        previous_state: nil,
+        form_data: %{},
+        csrf_token: Controller.get_csrf_token(),
+        client_ip: ClientIP.get_from_mount(socket),
+        user_agent: ClientIP.get_user_agent_from_mount(socket),
+        unverified_user: Session.get_unverified_user_from_session(session),
+        pending_oauth_registration: session["pending_oauth_registration"]
+      )
 
     {:ok, socket}
   end
@@ -71,415 +78,105 @@ defmodule TymeslotWeb.AuthLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_info(:resend_cooldown_tick, socket) do
-    case socket.assigns.resend_cooldown - 1 do
-      remaining when remaining > 0 ->
-        Process.send_after(self(), :resend_cooldown_tick, 1000)
-        {:noreply, assign(socket, :resend_cooldown, remaining)}
-
-      _elapsed ->
-        {:noreply, assign(socket, :resend_cooldown, 0)}
-    end
-  end
+  def handle_info(:resend_cooldown_tick, socket), do: VerificationEvents.tick(socket)
 
   @impl Phoenix.LiveView
   def handle_event("navigate_to", %{"state" => state}, socket) do
     Logger.info("AuthLive: navigate_to event received", state: state)
 
-    cond do
-      state == "signup" and not Config.password_auth_enabled?() ->
-        Logger.info("AuthLive: signup navigation blocked (password auth disabled)")
-        {:noreply, put_flash(socket, :info, AuthActions.password_auth_disabled_message())}
-
-      state == "signup" and not Config.registration_enabled?() ->
-        Logger.info("AuthLive: signup navigation blocked (registration disabled)")
-        {:noreply, put_flash(socket, :info, AuthActions.registration_disabled_message())}
-
-      state == "reset_password" and not Config.password_auth_enabled?() ->
-        Logger.info("AuthLive: reset_password navigation blocked (password auth disabled)")
-        {:noreply, put_flash(socket, :info, AuthActions.password_auth_disabled_message())}
-
-      StateHelper.valid_state?(state) ->
-        path = StateHelper.get_path_for_state(String.to_existing_atom(state))
-        Logger.info("AuthLive: navigating", path: path)
-        {:noreply, push_patch(socket, to: path)}
-
-      true ->
-        Logger.warning("AuthLive: invalid state", state: state)
-        {:noreply, socket}
+    case blocked_reason(state) do
+      nil -> navigate(state, socket)
+      message -> {:noreply, put_flash(socket, :info, message)}
     end
   end
 
-  # Login Events
+  # Login's form posts directly to SessionController, so only validation runs
+  # through this process.
   def handle_event("validate_login_email", %{"value" => email}, socket) do
-    form_data = Map.put(socket.assigns[:form_data] || %{}, :email, email)
-    params = %{"email" => email, "password" => ""}
+    errors = login_errors(%{"email" => email, "password" => ""})
 
-    case validate_login_params(params) do
-      {:ok, _validated} ->
-        {:noreply, socket |> assign(:errors, %{}) |> assign(:form_data, form_data)}
-
-      {:error, errors} ->
-        {:noreply,
-         socket |> assign(:errors, Map.take(errors, [:email])) |> assign(:form_data, form_data)}
-    end
+    {:noreply,
+     socket
+     |> assign(:errors, Map.take(errors, [:email]))
+     |> assign(:form_data, Map.put(socket.assigns[:form_data] || %{}, :email, email))}
   end
 
   def handle_event("validate_login", %{"email" => email, "password" => password}, socket) do
-    params = %{"email" => email, "password" => password}
-
-    case validate_login_params(params) do
-      {:ok, _validated} ->
-        {:noreply, assign(socket, :errors, %{})}
-
-      {:error, errors} ->
-        {:noreply, assign(socket, :errors, errors)}
-    end
+    {:noreply, assign(socket, :errors, login_errors(%{"email" => email, "password" => password}))}
   end
 
-  # Login form now submits directly to SessionController via standard HTML form submission
-  # This handler is no longer needed since the form has action="/auth/session"
-  # def handle_event("submit_login", params, socket) do
-  #   # Form submission is handled by SessionController.create/2
-  # end
+  def handle_event("validate_signup", params, socket),
+    do: SignupEvents.validate(params, socket)
 
-  # Signup Events
-  def handle_event("validate_signup", params, socket) do
-    user_params = params["user"] || %{}
-    metadata = SecurityHelper.extract_client_metadata(socket)
-    form_data = Map.merge(socket.assigns[:form_data] || %{}, %{email: user_params["email"] || ""})
+  def handle_event("submit_signup", params, socket),
+    do: SignupEvents.submit(params, socket)
 
-    case InputProcessor.validate_form(
-           user_params,
-           [{"email", :email}],
-           metadata: metadata
-         ) do
-      {:ok, _sanitized_params} ->
-        {:noreply, socket |> assign(:errors, %{}) |> assign(:form_data, form_data)}
+  def handle_event("validate_reset_request", %{"email" => email}, socket),
+    do: PasswordResetEvents.validate_request(email, socket)
 
-      {:error, errors} ->
-        email_errors = Map.take(errors, [:email])
-        {:noreply, socket |> assign(:errors, email_errors) |> assign(:form_data, form_data)}
-    end
-  end
+  def handle_event("submit_reset_request", %{"email" => email} = params, socket),
+    do: PasswordResetEvents.submit_request(email, params, socket)
 
-  def handle_event("submit_signup", %{"user" => user_params} = params, socket) do
-    case SecurityHelper.validate_csrf_token(socket, params) do
-      :ok ->
-        metadata = SecurityHelper.extract_client_metadata(socket)
+  def handle_event("validate_password_reset", params, socket),
+    do: PasswordResetEvents.validate_new_password(params, socket)
 
-        case SignupSecurity.gate(user_params, metadata) do
-          :ok ->
-            handle_recaptcha_verified_signup(socket, user_params)
-
-          :honeypot ->
-            handle_honeypot_signup(socket, user_params)
-
-          {:error, _kind, message} ->
-            {:noreply, SecurityHelper.set_errors(socket, %{general: message})}
-        end
-
-      {:error, :invalid_csrf} ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{
-           general: dgettext("auth", "Security validation failed. Please refresh the page.")
-         })}
-    end
-  end
-
-  # Password Reset Events
-  def handle_event("validate_reset_request", %{"email" => email}, socket) do
-    params = %{"email" => email}
-    metadata = SecurityHelper.extract_client_metadata(socket)
-
-    case InputProcessor.validate_form(params, [{"email", :email}], metadata: metadata) do
-      {:ok, sanitized_params} ->
-        socket =
-          socket
-          |> assign(:errors, %{})
-          |> assign(:form_data, %{email: sanitized_params["email"]})
-
-        {:noreply, socket}
-
-      {:error, errors} ->
-        # Only show email errors for password reset
-        email_errors = Map.take(errors, [:email])
-
-        socket =
-          socket
-          |> assign(:errors, email_errors)
-          |> assign(:form_data, %{email: email})
-
-        {:noreply, socket}
-    end
-  end
-
-  def handle_event("submit_reset_request", %{"email" => email} = params, socket) do
-    metadata = SecurityHelper.extract_client_metadata(socket)
-    ip = normalize_ip_for_security(metadata.ip)
-
-    with :ok <- SecurityHelper.validate_csrf_token(socket, params),
-         :ok <- RateLimiter.check_password_reset_rate_limit(email, ip) do
-      case AuthActions.request_password_reset(email, socket) do
-        {:ok, new_state, message} ->
-          socket =
-            socket
-            |> AuthActions.transition_state(new_state, :reset_password)
-            |> put_flash(:info, message)
-
-          {:noreply, push_patch(socket, to: ~p"/auth/reset-password-sent")}
-
-        {:error, error_message} ->
-          {:noreply, SecurityHelper.set_errors(socket, %{general: error_message})}
-      end
-    else
-      {:error, :invalid_csrf} ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{
-           general: dgettext("auth", "Security validation failed. Please refresh the page.")
-         })}
-
-      {:error, :rate_limited, message} ->
-        {:noreply, SecurityHelper.set_errors(socket, %{general: message})}
-    end
-  end
-
-  def handle_event("validate_password_reset", params, socket) do
-    validation_input = %{
-      "password" => params["password"],
-      "password_confirmation" => params["password_confirmation"]
-    }
-
-    metadata = SecurityHelper.extract_client_metadata(socket)
-
-    with {:ok, sanitized_params} <-
-           InputProcessor.validate_form(
-             validation_input,
-             [{"password", :password}, {"password_confirmation", :password}],
-             metadata: metadata
-           ),
-         :ok <-
-           PasswordValidator.validate_confirmation(
-             sanitized_params["password"],
-             sanitized_params["password_confirmation"]
-           ) do
-      socket =
-        socket
-        |> assign(:errors, %{})
-        |> assign(:form_data, sanitized_params)
-
-      {:noreply, socket}
-    else
-      {:error, errors} when is_map(errors) ->
-        socket =
-          socket
-          |> assign(:errors, errors)
-          |> assign(:form_data, validation_input)
-
-        {:noreply, socket}
-
-      {:error, confirmation_error} ->
-        socket =
-          socket
-          |> assign(:errors, %{password_confirmation: confirmation_error})
-          |> assign(:form_data, validation_input)
-
-        {:noreply, socket}
-    end
-  end
-
-  def handle_event("submit_password_reset", params, socket) do
-    token = socket.assigns[:reset_token]
-
-    with :ok <- SecurityHelper.validate_csrf_token(socket, params),
-         true <- not is_nil(token) do
-      case AuthActions.reset_password(
-             token,
-             params["password"],
-             params["password_confirmation"],
-             socket
-           ) do
-        {:ok, new_state, message} ->
-          socket =
-            socket
-            |> AuthActions.transition_state(new_state, :reset_password_form)
-            |> put_flash(:success, message)
-
-          {:noreply, push_patch(socket, to: ~p"/auth/password-reset-success")}
-
-        {:error, error_message} ->
-          {:noreply, SecurityHelper.set_errors(socket, %{general: error_message})}
-      end
-    else
-      {:error, :invalid_csrf} ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{
-           general: dgettext("auth", "Security validation failed. Please refresh the page.")
-         })}
-
-      false ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{general: dgettext("auth", "Invalid reset token")})}
-    end
-  end
-
-  def handle_event("resend_verification", _params, socket)
-      when socket.assigns.resend_cooldown > 0 do
-    # The button is disabled client-side during the cooldown, but a fast double-click
-    # can deliver a second event before the DOM patch lands. Ignore it server-side so
-    # we never spawn a duplicate timer chain (which would drain the countdown early)
-    # or trigger a redundant resend.
-    {:noreply, socket}
-  end
+  def handle_event("submit_password_reset", params, socket),
+    do: PasswordResetEvents.submit_new_password(params, socket)
 
   def handle_event("resend_verification", _params, socket) do
-    # Start the cooldown on every click — success, rate-limited or error — so the
-    # button can't be hammered while the (possibly deduplicated) email is in flight.
-    socket = start_resend_cooldown(socket)
-
-    if socket.assigns[:honeypot_signup] do
-      metadata = SecurityHelper.extract_client_metadata(socket)
-      ip = normalize_ip_for_security(metadata.ip)
-
-      case RateLimiter.check_verification_rate_limit("honeypot", ip) do
-        :ok ->
-          SignupSecurity.log_honeypot_resend(metadata)
-
-          socket =
-            socket
-            |> assign(:loading, false)
-            |> put_flash(
-              :info,
-              dgettext("auth", "Verification email sent! Please check your inbox.")
-            )
-
-          {:noreply, socket}
-
-        {:error, :rate_limited, message} ->
-          socket =
-            socket
-            |> assign(:loading, false)
-            |> put_flash(:error, message)
-
-          {:noreply, socket}
-      end
+    if VerificationEvents.cooling_down?(socket) do
+      {:noreply, socket}
     else
-      email = Session.get_verification_email(socket)
-
-      if email do
-        case Verification.resend_verification_email_by_email(email, socket) do
-          {:ok, _user} ->
-            socket =
-              socket
-              |> assign(:loading, false)
-              |> put_flash(
-                :info,
-                dgettext("auth", "Verification email sent! Please check your inbox.")
-              )
-
-            {:noreply, socket}
-
-          {:error, :rate_limited, message} ->
-            socket =
-              socket
-              |> assign(:loading, false)
-              |> put_flash(:error, message)
-
-            {:noreply, socket}
-
-          {:error, _reason} ->
-            socket =
-              socket
-              |> assign(:loading, false)
-              |> put_flash(
-                :error,
-                dgettext("auth", "Failed to send verification email. Please try again later.")
-              )
-
-            {:noreply, socket}
-        end
-      else
-        socket =
-          socket
-          |> assign(:loading, false)
-          |> put_flash(
-            :error,
-            dgettext("auth", "Unable to resend verification email. Please try signing up again.")
-          )
-
-        {:noreply, socket}
-      end
+      VerificationEvents.resend(socket)
     end
   end
 
   # Catch-all event handler
-  def handle_event(_event, _params, socket) do
-    {:noreply, socket}
-  end
+  def handle_event(_event, _params, socket), do: {:noreply, socket}
 
-  defp handle_honeypot_signup(socket, user_params) do
-    message =
-      dgettext(
-        "auth",
-        "Account created successfully. Please check your email for verification instructions."
-      )
-
-    socket =
-      socket
-      |> AuthActions.transition_state(:verify_email, :signup)
-      |> put_flash(:info, message)
-      |> assign(:form_data, %{email: user_params["email"]})
-      |> assign(:honeypot_signup, true)
-
-    {:noreply, push_patch(socket, to: ~p"/auth/verify-email")}
-  end
-
-  defp handle_recaptcha_verified_signup(socket, user_params) do
-    case AuthActions.register_user(user_params, socket) do
-      {:ok, new_state, message} ->
-        socket =
-          socket
-          |> AuthActions.transition_state(new_state, :signup)
-          |> put_flash(:info, message)
-          |> assign(:form_data, %{email: user_params["email"]})
-
-        {:noreply, push_patch(socket, to: ~p"/auth/verify-email")}
-
-      {:error, :field_errors, errors} ->
-        {:noreply, SecurityHelper.set_errors(socket, errors)}
-
-      {:error, error_message} ->
-        {:noreply, SecurityHelper.set_errors(socket, %{general: error_message})}
+  # Both self-hosters and the managed offering can turn password auth or new
+  # registrations off, and the sidebar links stay visible either way, so the
+  # navigation itself has to refuse rather than land on a dead form.
+  defp blocked_reason("signup") do
+    cond do
+      not Config.password_auth_enabled?() -> AuthActions.password_auth_disabled_message()
+      not Config.registration_enabled?() -> AuthActions.registration_disabled_message()
+      true -> nil
     end
   end
 
-  defp validate_login_params(params) do
+  defp blocked_reason("reset_password") do
+    if Config.password_auth_enabled?(),
+      do: nil,
+      else: AuthActions.password_auth_disabled_message()
+  end
+
+  defp blocked_reason(_state), do: nil
+
+  defp navigate(state, socket) do
+    if StateHelper.valid_state?(state) do
+      path = StateHelper.get_path_for_state(String.to_existing_atom(state))
+      Logger.info("AuthLive: navigating", path: path)
+      {:noreply, push_patch(socket, to: path)}
+    else
+      Logger.warning("AuthLive: invalid state", state: state)
+      {:noreply, socket}
+    end
+  end
+
+  defp login_errors(params) do
     errors =
       case InputProcessor.validate_field(params["email"], :email) do
         {:ok, _sanitized} -> %{}
-        {:error, msg} -> %{email: msg}
+        {:error, message} -> %{email: message}
       end
 
-    errors =
-      if is_nil(params["password"]) or params["password"] == "" do
-        Map.put(errors, :password, dgettext("auth", "Password is required"))
-      else
-        errors
-      end
-
-    if map_size(errors) == 0, do: {:ok, params}, else: {:error, errors}
+    if params["password"] in [nil, ""] do
+      Map.put(errors, :password, dgettext("auth", "Password is required"))
+    else
+      errors
+    end
   end
-
-  defp start_resend_cooldown(socket) do
-    Process.send_after(self(), :resend_cooldown_tick, 1000)
-    assign(socket, :resend_cooldown, @resend_cooldown_seconds)
-  end
-
-  defp normalize_ip_for_security(ip) when ip in [nil, ""] do
-    "unknown"
-  end
-
-  defp normalize_ip_for_security(ip), do: ip
 
   @impl Phoenix.LiveView
   def render(assigns) do

@@ -8,12 +8,12 @@ defmodule Tymeslot.Bookings.Create do
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Locales
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
@@ -307,7 +307,12 @@ defmodule Tymeslot.Bookings.Create do
     meeting_attrs = Policy.build_meeting_attributes(BuildParams.new(booking_data))
 
     if paid_meeting_type?(booking_data) do
-      create_paid_booking(meeting_attrs, booking_data)
+      PaidBooking.create(meeting_attrs, booking_data,
+        create_meeting: &create_meeting/1,
+        create_guests: &create_guests/2,
+        classify_error: &classify_error/1,
+        on_created: &emit_booking_created/0
+      )
     else
       meeting_attrs
       |> run_meeting_transaction(booking_data, opts)
@@ -334,72 +339,6 @@ defmodule Tymeslot.Bookings.Create do
 
   defp paid_meeting_type?(%{meeting_type: %{payment_required: true}}), do: true
   defp paid_meeting_type?(_other), do: false
-
-  defp create_paid_booking(meeting_attrs, booking_data) do
-    paid_attrs = Map.put(meeting_attrs, :status, "awaiting_payment")
-
-    # The Stripe checkout call deliberately runs OUTSIDE any DB transaction:
-    # holding a pooled DB connection open across a network round-trip to Stripe
-    # risks pool exhaustion under Stripe slowness. The meeting is created (and
-    # conflict-checked) atomically first; the Stripe call follows.
-    #
-    # On checkout failure we expire the just-created meeting so its slot is
-    # released immediately rather than waiting on the reconciliation sweep —
-    # the sweeper remains the net for failures we cannot observe here (e.g. a
-    # crash between session creation and the client redirect).
-    #
-    # Guest insertion runs after the meeting is committed, so on guest failure
-    # we also expire the meeting immediately rather than leaving an orphaned
-    # awaiting_payment record holding the slot until the reconciliation sweep.
-    case create_meeting(paid_attrs) do
-      {:ok, meeting} ->
-        case create_guests(meeting, booking_data) do
-          {:ok, _guests} ->
-            case create_checkout_or_expire(meeting) do
-              {:ok, %{checkout_url: url}} ->
-                emit_booking_created()
-                {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
-
-              {:error, reason} ->
-                {:error, classify_error(reason)}
-            end
-
-          {:error, reason} ->
-            expire_unpaid_meeting(meeting, reason)
-            {:error, classify_error(reason)}
-        end
-
-      {:error, reason} ->
-        {:error, classify_error(reason)}
-    end
-  end
-
-  defp create_checkout_or_expire(meeting) do
-    case MeetingPayments.create_checkout_session(meeting) do
-      {:ok, result} ->
-        {:ok, result}
-
-      {:error, reason} ->
-        expire_unpaid_meeting(meeting, reason)
-        {:error, {:checkout_failed, reason}}
-    end
-  end
-
-  defp expire_unpaid_meeting(meeting, reason) do
-    case Scheduling.update_meeting_with_conflict_check(meeting, %{status: "expired"}) do
-      {:ok, _expired} ->
-        :ok
-
-      {:error, expire_error} ->
-        Logger.warning("Failed to expire meeting after checkout failure",
-          meeting_id: meeting.id,
-          checkout_error: inspect(reason),
-          expire_error: inspect(expire_error)
-        )
-
-        :ok
-    end
-  end
 
   defp run_meeting_transaction(meeting_attrs, booking_data, opts) do
     Repo.transaction(fn ->

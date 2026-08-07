@@ -3,18 +3,13 @@ defmodule Tymeslot.MeetingTypes do
   Context for managing meeting types.
   """
   alias Tymeslot.BookingPage.Publication
-  alias Tymeslot.Features
-  alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
-  alias Tymeslot.Integrations.Video
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes.Duration
+  alias Tymeslot.MeetingTypes.FormMapper
+  alias Tymeslot.MeetingTypes.FormValidation
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.Slugs
-  alias Tymeslot.Utils.ReminderUtils
-  alias Tymeslot.Utils.UriUtils
   require Logger
 
   @doc """
@@ -206,12 +201,9 @@ defmodule Tymeslot.MeetingTypes do
   @spec create_meeting_type_from_form(integer(), map(), map()) ::
           {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
   def create_meeting_type_from_form(user_id, form_params, ui_state) do
-    with {:ok, attrs} <- build_meeting_type_attrs(form_params, ui_state),
-         :ok <- gate_custom_fields_change(user_id, attrs),
-         :ok <- gate_payment_change(user_id, attrs),
-         :ok <- validate_video_integration(attrs, user_id),
-         :ok <- validate_calendar_integration(attrs, user_id) do
-      create_meeting_type(Map.put(attrs, :user_id, user_id), payment_opts(user_id))
+    with {:ok, attrs} <- FormMapper.build_attrs(form_params, ui_state),
+         :ok <- FormValidation.check(user_id, attrs) do
+      create_meeting_type(Map.put(attrs, :user_id, user_id), FormMapper.payment_opts(user_id))
     end
   end
 
@@ -221,12 +213,11 @@ defmodule Tymeslot.MeetingTypes do
   @spec update_meeting_type_from_form(Ecto.Schema.t(), map(), map()) ::
           {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
   def update_meeting_type_from_form(meeting_type, form_params, ui_state) do
-    with {:ok, attrs} <- build_meeting_type_attrs(form_params, ui_state),
-         :ok <- gate_custom_fields_change(meeting_type.user_id, attrs),
-         :ok <- gate_payment_change(meeting_type.user_id, attrs),
-         :ok <- validate_video_integration(attrs, meeting_type.user_id),
-         :ok <- validate_calendar_integration(attrs, meeting_type.user_id) do
-      update_meeting_type(meeting_type, attrs, payment_opts(meeting_type.user_id))
+    user_id = meeting_type.user_id
+
+    with {:ok, attrs} <- FormMapper.build_attrs(form_params, ui_state),
+         :ok <- FormValidation.check(user_id, attrs) do
+      update_meeting_type(meeting_type, attrs, FormMapper.payment_opts(user_id))
     end
   end
 
@@ -310,274 +301,4 @@ defmodule Tymeslot.MeetingTypes do
       }
     ]
   end
-
-  defp build_meeting_type_attrs(params, ui_state) do
-    video_integration_id =
-      if ui_state.meeting_mode == "video" do
-        ui_state.selected_video_integration_id
-      else
-        nil
-      end
-
-    payment_required = params["payment_required"] == "true"
-
-    with {:ok, duration_minutes} <- parse_duration(params["duration"]),
-         {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]),
-         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]) do
-      attrs = %{
-        name: params["name"],
-        duration_minutes: duration_minutes,
-        description: params["description"],
-        icon: ui_state.selected_icon,
-        is_active: params["is_active"] == "true",
-        allow_video: ui_state.meeting_mode == "video",
-        allow_guests: params["allow_guests"] == "true",
-        video_integration_id: video_integration_id,
-        calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
-        target_calendar_id: blank_to_nil(params["target_calendar_id"]),
-        reminder_config: reminder_config,
-        payment_required: payment_required,
-        price_cents: price_cents
-      }
-
-      attrs =
-        if Map.has_key?(params, "custom_fields") do
-          Map.put(attrs, :custom_fields, params["custom_fields"])
-        else
-          attrs
-        end
-
-      {:ok, attrs}
-    end
-  end
-
-  defp parse_duration(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {duration, ""} -> {:ok, duration}
-      _other -> {:error, :invalid_duration}
-    end
-  end
-
-  defp parse_duration(_value), do: {:error, :invalid_duration}
-
-  defp blank_to_nil(""), do: nil
-  defp blank_to_nil(value), do: value
-
-  # Builds the payment-validation opts the schema changeset needs. The
-  # schema must not reach into the payments domain itself (layering), so
-  # the context resolves the host's charge capability, default currency,
-  # and the per-currency minimum here and threads them in as opts.
-  defp payment_opts(user_id) do
-    currency = host_currency(user_id)
-
-    [
-      host_charges_enabled: MeetingPayments.charges_enabled_for_user?(user_id),
-      currency: currency,
-      currency_minimum_cents: MeetingPayments.currency_minimum_cents(currency)
-    ]
-  end
-
-  # The host's pricing currency is their Connect account's default
-  # currency. When no account exists yet, fall back to the first entry of
-  # the currency allowlist (defaulting to "usd"), matching the default the
-  # payments dashboard surfaces.
-  defp host_currency(user_id) do
-    case MeetingPayments.get_connect_account_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" ->
-        currency
-
-      _other ->
-        List.first(MeetingPayments.currency_allowlist()) || "usd"
-    end
-  end
-
-  # Converts the major-unit price string from the form into integer cents.
-  # When payment is not required the price is irrelevant and stored as nil.
-  # Bad input yields `{:error, :invalid_price}` so the form surfaces it the
-  # same way an invalid duration does.
-  defp parse_price_cents(false, _price), do: {:ok, nil}
-  defp parse_price_cents(true, nil), do: {:ok, nil}
-  defp parse_price_cents(true, ""), do: {:ok, nil}
-
-  defp parse_price_cents(true, price) when is_binary(price) do
-    case Decimal.parse(String.trim(price)) do
-      {decimal, ""} ->
-        cents =
-          decimal
-          |> Decimal.mult(100)
-          |> Decimal.round(0)
-          |> Decimal.to_integer()
-
-        {:ok, cents}
-
-      _invalid ->
-        {:error, :invalid_price}
-    end
-  end
-
-  defp parse_price_cents(true, _price), do: {:error, :invalid_price}
-
-  # Custom booking questions are gated behind the :custom_questions_allowed
-  # feature flag. Core's default checker always allows access, so self-hosted
-  # deployments are unaffected; SaaS overrides this to require a Pro plan.
-  # Only writes that would add or modify a non-empty question list are gated —
-  # an absent or empty list (the no-questions path) is always allowed.
-  defp gate_custom_fields_change(user_id, attrs) do
-    case Map.get(attrs, :custom_fields) do
-      nil -> :ok
-      fields when fields == [] or fields == %{} -> :ok
-      _non_empty -> Features.check_access(user_id, :custom_questions_allowed)
-    end
-  end
-
-  # Paid meeting types are gated behind the :meeting_payments feature. The form
-  # hides the price controls when the host lacks access, but a forged save with
-  # `payment_required=true` must not slip a paid type through — and on SaaS it
-  # must not bypass the Pro-plan requirement. Only a write that *enables*
-  # payment is gated; turning payment off is always allowed so a downgraded
-  # host can still disable a previously paid type.
-  #
-  # `:stripe_required` is treated as allowed at this layer: the host has the
-  # plan but no charges-enabled Connect account yet. The schema changeset
-  # (driven by `payment_opts/1`'s `host_charges_enabled`) is the authority on
-  # whether a price may actually be persisted without a live account.
-  defp gate_payment_change(user_id, %{payment_required: true}) do
-    case Features.check_access(user_id, :meeting_payments) do
-      :ok -> :ok
-      {:error, :stripe_required} -> :ok
-      {:error, _reason} = error -> error
-    end
-  end
-
-  defp gate_payment_change(_user_id, _attrs), do: :ok
-
-  defp validate_video_integration(%{allow_video: true, video_integration_id: nil}, _user_id) do
-    {:error, :video_integration_required}
-  end
-
-  defp validate_video_integration(%{allow_video: true, video_integration_id: ""}, _user_id),
-    do: {:error, :video_integration_required}
-
-  defp validate_video_integration(%{allow_video: true, video_integration_id: id}, user_id)
-       when is_integer(id) do
-    case Video.fetch_integration_for_user(id, user_id) do
-      {:ok, %{is_active: true}} -> :ok
-      {:ok, _integration} -> {:error, :invalid_video_integration}
-      {:error, :not_found} -> {:error, :invalid_video_integration}
-    end
-  end
-
-  defp validate_video_integration(_attrs, _user_id), do: :ok
-
-  defp validate_calendar_integration(
-         %{calendar_integration_id: nil, target_calendar_id: nil},
-         _user_id
-       ),
-       do: :ok
-
-  defp validate_calendar_integration(
-         %{calendar_integration_id: "", target_calendar_id: nil},
-         _user_id
-       ),
-       do: :ok
-
-  defp validate_calendar_integration(%{calendar_integration_id: nil}, _user_id),
-    do: {:error, :calendar_integration_required}
-
-  defp validate_calendar_integration(
-         %{calendar_integration_id: "", target_calendar_id: _target},
-         _user_id
-       ),
-       do: {:error, :calendar_integration_required}
-
-  defp validate_calendar_integration(
-         %{calendar_integration_id: id, target_calendar_id: target_calendar_id},
-         user_id
-       )
-       when is_integer(id) do
-    with {:ok, integration} <- CalendarManagement.fetch_integration_for_user(id, user_id),
-         :ok <- validate_target_calendar(target_calendar_id, integration) do
-      :ok
-    else
-      {:error, :not_found} -> {:error, :calendar_integration_invalid}
-      {:error, _reason} = error -> error
-    end
-  end
-
-  defp validate_calendar_integration(%{calendar_integration_id: id}, _user_id)
-       when is_binary(id) and id != "" do
-    {:error, :calendar_integration_invalid}
-  end
-
-  defp validate_calendar_integration(_other_attrs, _user_id), do: :ok
-
-  defp validate_target_calendar(nil, integration), do: target_calendar_missing_error(integration)
-
-  defp validate_target_calendar("", integration), do: target_calendar_missing_error(integration)
-
-  defp validate_target_calendar(target_calendar_id, integration) do
-    calendar_list = integration.calendar_list
-
-    if calendar_list == [] do
-      :ok
-    else
-      # Only writable calendars are valid save targets — the same set the
-      # picker offers (`Tymeslot.Integrations.Calendar.writable_calendars/1`).
-      # A deselected or read-only id must be rejected here even though it is
-      # still present in the full `calendar_list`, otherwise a stored
-      # `target_calendar_id` that became read-only after a refresh would
-      # keep saving successfully while every booking against it fails later.
-      found? =
-        Enum.any?(Calendar.writable_calendars(calendar_list), fn cal ->
-          UriUtils.uri_safe_match?(cal.id, target_calendar_id)
-        end)
-
-      if found? do
-        :ok
-      else
-        {:error, :target_calendar_invalid}
-      end
-    end
-  end
-
-  # No target chosen yet. Distinguishes the ordinary "not selected yet" state
-  # from the dead end where every calendar the user selected for this
-  # integration is read-only, so the picker has nothing to offer and
-  # `:target_calendar_required` would leave the user stuck with no way to
-  # comply.
-  defp target_calendar_missing_error(integration) do
-    if Calendar.all_selected_read_only?(integration.calendar_list) do
-      {:error, :no_writable_calendars}
-    else
-      {:error, :target_calendar_required}
-    end
-  end
-
-  defp normalize_reminder_config_params(nil), do: {:ok, nil}
-  defp normalize_reminder_config_params(""), do: {:ok, nil}
-
-  defp normalize_reminder_config_params(reminders) when is_list(reminders) do
-    normalized = Enum.map(reminders, &ReminderUtils.normalize_reminder_string_keys/1)
-
-    if Enum.any?(normalized, &match?({:error, _error_reason}, &1)) do
-      {:error, :invalid_reminder_config}
-    else
-      {:ok, Enum.map(normalized, fn {:ok, reminder} -> reminder end)}
-    end
-  end
-
-  defp normalize_reminder_config_params(reminders) when is_map(reminders) do
-    reminders
-    |> Map.values()
-    |> normalize_reminder_config_params()
-  end
-
-  defp normalize_reminder_config_params(reminders) when is_binary(reminders) do
-    case Jason.decode(reminders) do
-      {:ok, decoded} -> normalize_reminder_config_params(decoded)
-      {:error, _decode_error} -> {:error, :invalid_reminder_config}
-    end
-  end
-
-  defp normalize_reminder_config_params(_other), do: {:error, :invalid_reminder_config}
 end

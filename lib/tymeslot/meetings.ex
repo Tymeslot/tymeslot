@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings do
 
   alias Tymeslot.Meetings.{
     CalendarEvents,
+    Cancellation,
     ExternalCalendarChanges,
     Guests,
     Listing,
@@ -132,6 +133,33 @@ defmodule Tymeslot.Meetings do
   def cancel_meeting(meeting_or_uid) do
     Cancel.execute(meeting_or_uid)
   end
+
+  @doc """
+  Works out which refund a host's cancellation choice implies.
+
+  See `Tymeslot.Meetings.Cancellation` for the rule.
+  """
+  @spec resolve_cancellation_refund(map() | nil, map()) ::
+          {:ok, Cancellation.refund_action()} | {:error, Cancellation.refund_error()}
+  defdelegate resolve_cancellation_refund(payment, params),
+    to: Cancellation,
+    as: :resolve_refund
+
+  @doc """
+  Cancels a meeting and issues the resolved refund to the attendee.
+
+  Returns `{:error, {:refund_failed, reason}}` when the meeting was cancelled
+  but the refund could not be issued, so callers can tell the host to settle it
+  manually rather than reporting a failed cancellation.
+  """
+  @spec cancel_meeting_with_refund(
+          Ecto.Schema.t() | String.t(),
+          map() | nil,
+          Cancellation.refund_action()
+        ) :: {:ok, Ecto.Schema.t()} | {:error, term()}
+  defdelegate cancel_meeting_with_refund(meeting_or_uid, payment, refund_action),
+    to: Cancellation,
+    as: :cancel
 
   @doc """
   Reschedules an existing meeting.

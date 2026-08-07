@@ -32,7 +32,7 @@ msgid "Active"
 msgstr "Активна"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex:40
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:408
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:429
 #, elixir-autogen, elixir-format
 msgid "Add Slack via Webhook URL"
 msgstr "Додати Slack через URL-адресу вебхука"
@@ -221,8 +221,8 @@ msgstr "Від'єднати Telegram"
 msgid "Edit"
 msgstr "Редагувати"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:405
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:411
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:419
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:439
 #, elixir-autogen, elixir-format
 msgid "Edit Slack Integration"
 msgstr "Редагувати інтеграцію зі Slack"
@@ -293,7 +293,7 @@ msgstr "Не вдалося оновити інтеграцію"
 msgid "Failed to update status"
 msgstr "Не вдалося оновити статус"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:402
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:409
 #, elixir-autogen, elixir-format
 msgid "Finish Slack setup"
 msgstr "Завершити налаштування Slack"
@@ -364,7 +364,7 @@ msgstr "Інтеграцію успішно оновлено"
 msgid "Last triggered: %{time}"
 msgstr "Останнє спрацювання: %{time}"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:447
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:461
 #, elixir-autogen, elixir-format
 msgid "Leave blank to keep current URL"
 msgstr "Залиште порожнім, щоб зберегти поточну URL-адресу"
@@ -416,7 +416,7 @@ msgstr "Немає доступних каналів. Запросіть бот�
 msgid "Open in Telegram"
 msgstr "Відкрити в Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:429
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:431
 #, elixir-autogen, elixir-format
 msgid "Paste the Incoming Webhook URL Slack generated for your channel."
 msgstr "Вставте URL-адресу вхідного вебхука, яку Slack згенерував для вашого каналу."
@@ -432,7 +432,7 @@ msgstr "Призупинено"
 msgid "Pick a channel"
 msgstr "Виберіть канал"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:415
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:411
 #, elixir-autogen, elixir-format
 msgid "Pick a channel for Tymeslot to post booking notifications to."
 msgstr "Виберіть канал, куди Tymeslot надсилатиме сповіщення про бронювання."
@@ -468,13 +468,13 @@ msgstr "Оновити"
 msgid "Refresh channel list from Slack"
 msgstr "Оновити список каналів зі Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:453
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:436
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:242
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "Зберегти"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:451
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:416
 #, elixir-autogen, elixir-format
 msgid "Save channel"
 msgstr "Зберегти канал"
@@ -622,19 +622,19 @@ msgstr "Перевірка та збереження..."
 msgid "The link has expired. Click below to generate a new one."
 msgstr "Термін дії посилання минув. Натисніть нижче, щоб створити нове."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:452
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:454
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:426
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:446
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:243
 #, elixir-autogen, elixir-format
 msgid "Update"
 msgstr "Оновити"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:422
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:421
 #, elixir-autogen, elixir-format
 msgid "Update the channel and event subscriptions for this Slack workspace."
 msgstr "Оновіть канал та підписки на події для цього робочого простору Slack."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:436
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:441
 #, elixir-autogen, elixir-format
 msgid "Update the webhook URL or event subscriptions for this Slack integration."
 msgstr "Оновіть URL-адресу вебхука або підписки на події для цієї інтеграції зі Slack."
