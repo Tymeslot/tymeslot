@@ -193,7 +193,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                     id="edit_custom_meeting_url"
                     name="integration[custom_meeting_url]"
                     label={dgettext("dashboard_integrations", "Meeting URL")}
-                    value={Map.get(@form_values, "custom_meeting_url", @integration.custom_meeting_url || "")}
+                    value={
+                      Map.get(
+                        @form_values,
+                        "custom_meeting_url",
+                        @integration.custom_meeting_url || ""
+                      )
+                    }
                     placeholder={
                       dgettext("dashboard_integrations", "https://jitsi.example.org/{{meeting_id}}")
                     }
@@ -207,7 +213,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       )
                     }
                   />
-
                 <% "mirotalk" -> %>
                   <SharedForm.url_field
                     id="edit_base_url"
@@ -235,13 +240,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       target={@myself}
                     />
                   </div>
-
                 <% _ -> %>
               <% end %>
             </div>
 
             <%= if @integration.provider == "custom" do %>
-              <% url_value = Map.get(@form_values, "custom_meeting_url", @integration.custom_meeting_url || "") %>
+              <% url_value =
+                Map.get(@form_values, "custom_meeting_url", @integration.custom_meeting_url || "") %>
               <%= case TemplateAnalyzer.analyze(url_value) do %>
                 <% {:ok, :valid_template, preview, _message} -> %>
                   <TemplatePreviewBox.render
@@ -252,7 +257,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                     }
                     preview={preview}
                   />
-
                 <% {:warning, _type, preview, error_message} -> %>
                   <TemplatePreviewBox.render
                     status={:warning}
@@ -260,7 +264,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                     message={error_message}
                     preview={preview}
                   />
-
                 <% {:ok, :static, _url, _message} -> %>
                   <TemplatePreviewBox.render
                     status={:static}
@@ -269,7 +272,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       dgettext("dashboard_integrations", "All meetings will use the same room URL")
                     }
                   />
-
                 <% {:ok, :empty, _url, _message} -> %>
                   <TemplatePreviewBox.render
                     status={:empty}

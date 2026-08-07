@@ -11,7 +11,7 @@ Thank you for your interest in contributing to Tymeslot! We welcome contribution
 - [Development Setup](#development-setup)
 - [Code Standards](#code-standards)
 - [Testing Guidelines](#testing-guidelines)
-- [Contributor Licence](#contributor-licence)
+- [Contributor Licensing](#contributor-licensing)
 - [Pull Request Process](#pull-request-process)
 - [Issue Guidelines](#issue-guidelines)
 - [Architecture Guidelines](#architecture-guidelines)
@@ -37,6 +37,7 @@ We welcome many types of contributions:
 - 🐛 **Bug fixes** - Help us squash bugs and improve stability
 - ✨ **New features** - Add functionality that benefits users
 - 📚 **Documentation** - Improve guides, API docs, and examples
+- 🌍 **Translations** - Bring the whole app (dashboard, booking pages and emails) to a new language, or improve an existing one - start with [priv/gettext/TRANSLATING.md](priv/gettext/TRANSLATING.md)
 - 🧪 **Testing** - Add test coverage and improve test quality
 - 🎨 **Themes** - Create new booking interface themes
 - 🔌 **Integrations** - Add support for new calendar/video providers
@@ -276,23 +277,34 @@ end
 - **No `Process.sleep/1`.** Use `assert_receive`, ExUnit async helpers, or Oban's test mode.
 - **Mock at system boundaries only.** Mock external HTTP calls and third-party APIs — not your own modules.
 
-## 📝 Contributor Licence
+## 📝 Contributor Licensing
 
-Tymeslot Core is distributed under the [GNU Affero General Public License v3.0 or later](LICENSE). By submitting a contribution to this project — a pull request, patch, or any code, documentation, translation, or other material — you agree that your contribution is made available to the public under that same licence, and you agree to the following terms. This keeps the project's licensing clean and lets us continue to evolve how Tymeslot is distributed.
+Tymeslot Core is distributed under the [GNU Affero General Public License v3.0 or later](LICENSE). Contributing involves two separate steps, and they certify different things:
 
-1. **You have the right to submit it.** The contribution is your original work, or you otherwise have the legal right to submit it under these terms, and it does not knowingly infringe any third party's rights.
+| | What it certifies | How often |
+|---|---|---|
+| [DCO sign-off](#signing-off-your-commits) | **Provenance.** You wrote the code, or otherwise have the right to submit it. | Every commit |
+| [Contributor Licence Agreement](CLA.md) | **Rights.** You grant Diletta Luna OÜ a licence broad enough to keep distributing and relicensing the project as a whole. | Once, ever |
 
-2. **You grant a broad licence.** You grant Diletta Luna OÜ and its successors a perpetual, worldwide, non-exclusive, royalty-free, irrevocable licence to use, reproduce, modify, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute your contribution and such derivative works, **under any licensing terms — including open-source, proprietary, or dual-licensing arrangements — now or in the future**.
+Both are required, and neither substitutes for the other. The sign-off has a fixed public meaning, set by the [DCO](DCO) text, and that text says nothing about licensing rights; the CLA covers what the DCO deliberately leaves out. You keep the copyright in your work either way.
 
-3. **You retain your copyright.** You keep ownership of your contribution; this is a licence grant, not an assignment.
+Read [CLA.md](CLA.md) before opening a pull request. If you cannot agree to it, please do not submit a contribution.
 
-4. **Patent grant.** You grant a perpetual, worldwide, non-exclusive, royalty-free, irrevocable patent licence covering your contribution, to the extent any patent claims you control are necessarily infringed by it.
+### Signing the CLA
 
-If you cannot agree to these terms, please do not submit a contribution.
+Open your pull request as normal. A bot will comment asking you to sign, and you sign by replying on the pull request with exactly:
+
+```
+I have read the Tymeslot Contributor Licence Agreement and I hereby sign it
+```
+
+You sign once. The record covers your later contributions too, and lives on the `cla-signatures` branch of this repository.
+
+If you are contributing as part of your job, read [Contributing on behalf of an employer](CLA.md#contributing-on-behalf-of-an-employer) first: your employer may hold the rights, in which case your personal signature is not the one we need.
 
 ### Signing off your commits
 
-Tymeslot uses the [Developer Certificate of Origin](DCO) (DCO). **Every commit in a contribution must be signed off.** The sign-off is how you certify — on the public record, per commit — that you wrote the code (or otherwise have the right to submit it) and that you agree to the Contributor Licence terms above.
+Tymeslot uses the [Developer Certificate of Origin](DCO) (DCO). **Every commit in a contribution must be signed off.** The sign-off is how you certify, on the public record and per commit, that you wrote the code or otherwise have the right to submit it.
 
 Add the sign-off automatically with the `-s` flag:
 
@@ -306,7 +318,7 @@ This appends a line to your commit message using your configured Git name and em
 Signed-off-by: Your Name <you@example.com>
 ```
 
-Use your real name and an email you can be reached at. Pull requests are only merged once **all** their commits are signed off. To add the sign-off to commits you have already made, run `git rebase --signoff <base>` (or `git commit --amend -s` for the most recent commit) and force-push the branch.
+Use your real name and an email you can be reached at. Pull requests are only merged once **all** their commits are signed off and the CLA is signed. To add the sign-off to commits you have already made, run `git rebase --signoff <base>` (or `git commit --amend -s` for the most recent commit) and force-push the branch.
 
 ## 🔄 Pull Request Process
 
@@ -329,7 +341,7 @@ test(bookings): add integration tests for meeting creation
 refactor(themes): extract common theme utilities
 ```
 
-Sign off every commit with the `-s` flag (`git commit -s`) — see [Signing off your commits](#signing-off-your-commits).
+Sign off every commit with the `-s` flag (`git commit -s`); see [Signing off your commits](#signing-off-your-commits).
 
 The changelog is auto-generated from `feat` and `fix` commits. To exclude a `feat` or `fix` commit from the changelog (e.g. internal test fixes, Dialyzer suppressions), add a `Changelog: skip` footer:
 
@@ -361,7 +373,8 @@ Before submitting a PR, ensure:
 - [ ] Security considerations are addressed
 - [ ] Breaking changes are clearly documented
 - [ ] PR description explains the change and motivation
-- [ ] All commits are signed off (`git commit -s`), certifying the [DCO](DCO) and agreement to the [Contributor Licence](#contributor-licence)
+- [ ] All commits are signed off (`git commit -s`), certifying the [DCO](DCO)
+- [ ] The [Contributor Licence Agreement](CLA.md) is signed (the bot will prompt you on the PR)
 
 ### PR Description Template
 
@@ -526,9 +539,9 @@ Security-related contributions should:
 ### Documentation
 
 - [README.md](README.md) - Project overview and setup
-- [DESIGN_LANGUAGE.md](DESIGN_LANGUAGE.md) - UI/UX guidelines
 - [docs/THEME_DEVELOPMENT_GUIDE.md](docs/THEME_DEVELOPMENT_GUIDE.md) - Theme creation
-- [DEBUG_ROUTES.md](DEBUG_ROUTES.md) - Debug utilities
+- [priv/gettext/TRANSLATING.md](priv/gettext/TRANSLATING.md) - Translating Tymeslot into your language
+- [docs/ADMIN.md](docs/ADMIN.md) - Self-host administration
 
 ### Communication
 

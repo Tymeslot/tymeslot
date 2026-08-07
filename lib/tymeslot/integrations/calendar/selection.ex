@@ -253,10 +253,10 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   Otherwise picks the right matching signal for the event's provider:
 
   - CalDAV events (`provider_event_id` is a CalDAV href starting with `/`)
-    must match a selected calendar by **path prefix**. Their
-    `provider_calendar_id` is set to the integration's first selected path
-    regardless of the event's true origin, so it is useless as a
-    discriminator.
+    match a selected calendar by **path prefix**. The href is rooted at the
+    collection the event lives in, so it holds regardless of what
+    `provider_calendar_id` says — including for rows written before that
+    column was filed per calendar rather than per integration.
   - Other providers (Google, Outlook) tag every cached row with the
     originating calendar in `provider_calendar_id`, so match that against
     the selected entries' `id`.

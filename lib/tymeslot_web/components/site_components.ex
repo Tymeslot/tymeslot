@@ -72,12 +72,12 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </.link>
         <% end %>
 
-    <%!-- Desktop Navigation: marketing links (centre zone) --%>
+        <%!-- Desktop Navigation: marketing links (centre zone) --%>
         <div class="hidden lg:flex flex-1 items-center justify-center gap-1">
           <.nav_section :for={section <- @menu_sections} section={section} />
         </div>
 
-    <%!-- Desktop Navigation: account actions (right zone) --%>
+        <%!-- Desktop Navigation: account actions (right zone) --%>
         <div class="hidden lg:flex items-center gap-3">
           {render_slot(@end_actions)}
           <%= if @current_user do %>
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           <% end %>
         </div>
 
-    <%!-- Mobile Menu Button --%>
+        <%!-- Mobile Menu Button --%>
         <button
           class="lg:hidden mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-turquoise-100 hover:bg-turquoise-200 transition-colors"
           phx-click={
@@ -124,7 +124,13 @@ defmodule TymeslotWeb.Components.SiteComponents do
           }
           aria-label={dgettext("common", "Toggle menu")}
         >
-          <svg class="w-7 h-7 text-turquoise-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+          <svg
+            class="w-7 h-7 text-turquoise-700"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="3"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -134,7 +140,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </svg>
         </button>
 
-    <%!-- Mobile Menu --%>
+        <%!-- Mobile Menu --%>
         <div
           id="mobile-menu"
           class="mobile-menu lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-tymeslot-200 shadow-lg hidden"
@@ -329,7 +335,12 @@ defmodule TymeslotWeb.Components.SiteComponents do
           url={@section.overview.url}
           class="group/feat mobile-nav-link flex items-center gap-3 px-4 py-2.5 text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-700 font-bold rounded-lg transition-colors"
         >
-          <.nav_icon_tile name={@section.overview.icon} variant={:solid} class="w-8 h-8" icon_class="w-4 h-4" />
+          <.nav_icon_tile
+            name={@section.overview.icon}
+            variant={:solid}
+            class="w-8 h-8"
+            icon_class="w-4 h-4"
+          />
           {@section.overview.label}
         </.nav_sublink>
         <.nav_sublink

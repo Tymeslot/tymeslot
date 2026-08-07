@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -47,6 +48,58 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
     case Shared.parse_int(id_str) do
       {:ok, integration_id} -> handle_toggle_integration(socket, integration_id)
       :error -> {:noreply, socket}
+    end
+  end
+
+  @doc """
+  Shows or hides one calendar inside an integration.
+
+  Rate limited on its own loose budget rather than the appearance one: this is a
+  view control clicked while reading the week, not a settings change, so the
+  limit sits where no hand-driven session reaches it.
+  """
+  @spec handle_toggle_calendar_visibility(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_calendar_visibility(
+        %{"integration-id" => id_str, "calendar-id" => calendar_id},
+        socket
+      )
+      when is_binary(calendar_id) and calendar_id != "" do
+    case Shared.parse_int(id_str) do
+      {:ok, integration_id} -> toggle_calendar(socket, integration_id, calendar_id)
+      :error -> {:noreply, socket}
+    end
+  end
+
+  def handle_toggle_calendar_visibility(_params, socket), do: {:noreply, socket}
+
+  defp toggle_calendar(socket, integration_id, calendar_id) do
+    user_id = socket.assigns.current_user.id
+    key = {integration_id, calendar_id}
+    hide? = not MapSet.member?(socket.assigns.hidden_calendar_keys, key)
+
+    with :ok <- RateLimiter.check_calendar_visibility_rate_limit(user_id),
+         {:ok, _appearance} <- Appearance.set_hidden(user_id, integration_id, calendar_id, hide?) do
+      keys =
+        if hide?,
+          do: MapSet.put(socket.assigns.hidden_calendar_keys, key),
+          else: MapSet.delete(socket.assigns.hidden_calendar_keys, key)
+
+      {:noreply,
+       socket
+       |> assign(:hidden_calendar_keys, keys)
+       |> Helpers.precompute_derived()}
+    else
+      {:error, :rate_limited, message} ->
+        {:noreply, Flash.put_flash(socket, :warning, message)}
+
+      _other ->
+        {:noreply,
+         Flash.put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_calendar_events", "Failed to save preference")
+         )}
     end
   end
 

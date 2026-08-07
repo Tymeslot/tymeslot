@@ -39,13 +39,26 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
               integration={integration}
               testing={@telegram_testing == integration.id}
               target={@myself}
-              on_edit={JS.push("show_edit_telegram_form", value: %{"id" => integration.id}, target: @myself)}
-              on_delete={JS.push("show_telegram_delete_modal", value: %{"id" => integration.id}, target: @myself)}
+              on_edit={
+                JS.push("show_edit_telegram_form", value: %{"id" => integration.id}, target: @myself)
+              }
+              on_delete={
+                JS.push("show_telegram_delete_modal",
+                  value: %{"id" => integration.id},
+                  target: @myself
+                )
+              }
               on_toggle="toggle_telegram"
               on_test={JS.push("test_telegram", value: %{"id" => integration.id}, target: @myself)}
-              on_view_deliveries={JS.push("show_telegram_deliveries", value: %{"id" => integration.id}, target: @myself)}
-              on_reenable={JS.push("reenable_telegram", value: %{"id" => integration.id}, target: @myself)}
-              on_disconnect={JS.push("disconnect_telegram", value: %{"id" => integration.id}, target: @myself)}
+              on_view_deliveries={
+                JS.push("show_telegram_deliveries", value: %{"id" => integration.id}, target: @myself)
+              }
+              on_reenable={
+                JS.push("reenable_telegram", value: %{"id" => integration.id}, target: @myself)
+              }
+              on_disconnect={
+                JS.push("disconnect_telegram", value: %{"id" => integration.id}, target: @myself)
+              }
               on_reconnect={
                 if integration.bot_mode == "shared" do
                   JS.push("reconnect_telegram", value: %{"id" => integration.id}, target: @myself)
@@ -56,7 +69,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
         </div>
       </div>
     <% else %>
-      <TelegramEmptyState.telegram_empty_state on_create={JS.push("show_telegram_form", target: @myself)} />
+      <TelegramEmptyState.telegram_empty_state on_create={
+        JS.push("show_telegram_form", target: @myself)
+      } />
     <% end %>
     """
   end

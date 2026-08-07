@@ -44,7 +44,8 @@ defmodule TymeslotWeb.Themes.Shared.Components.AwaitingPayment do
           {dgettext("booking", "Complete your payment in the new tab")}
         </h1>
         <p class="awaiting-payment-message">
-          {dgettext("booking", 
+          {dgettext(
+            "booking",
             "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
           )}
         </p>

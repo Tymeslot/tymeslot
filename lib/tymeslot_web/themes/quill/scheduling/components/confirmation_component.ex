@@ -79,9 +79,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       </.section_header>
                       <p class="confirmation-subtitle text-quill-primary">
                         <%= if @is_rescheduling do %>
-                          {dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.", name: @name, organizer: get_organizer_text(@organizer_profile))}
+                          {dgettext(
+                            "booking",
+                            "%{name}, your meeting %{organizer} has been rescheduled.",
+                            name: @name,
+                            organizer: get_organizer_text(@organizer_profile)
+                          )}
                         <% else %>
-                          {dgettext("booking", "%{name}, your meeting %{organizer} is all set.", name: @name, organizer: get_organizer_text(@organizer_profile))}
+                          {dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
+                            name: @name,
+                            organizer: get_organizer_text(@organizer_profile)
+                          )}
                         <% end %>
                       </p>
                     </div>

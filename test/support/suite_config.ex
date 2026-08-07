@@ -23,21 +23,15 @@ defmodule Tymeslot.Test.SuiteConfig do
   def default_exclude_tags, do: @default_exclude_tags
 
   @doc """
-  Concurrency cap for ExUnit. Honours `TEST_MAX_CASES`, otherwise uses half the
-  DB pool size (min 2) to leave headroom for sandbox and multi-repo overhead.
-  Returns `nil` when `TEST_MAX_CASES` is set but unparseable, letting the caller
-  fall back to the ExUnit default.
+  Concurrency cap for ExUnit. Honours `TEST_MAX_CASES`, otherwise one case per
+  scheduler, bounded by the DB pool (min 2). Returns `nil` when `TEST_MAX_CASES`
+  is set but unparseable, letting the caller fall back to the ExUnit default.
   """
   @spec max_cases() :: pos_integer() | nil
   def max_cases do
     case System.get_env("TEST_MAX_CASES") do
       nil ->
-        pool_size =
-          :tymeslot
-          |> Application.get_env(Tymeslot.Repo, [])
-          |> Keyword.get(:pool_size, 10)
-
-        max(div(pool_size, 2), 2)
+        default_max_cases()
 
       value ->
         case Integer.parse(value) do
@@ -45,6 +39,23 @@ defmodule Tymeslot.Test.SuiteConfig do
           :error -> nil
         end
     end
+  end
+
+  # An async case checks out one sandbox connection and holds it for its whole
+  # lifetime, so the pool is the ceiling; two are left spare for checkouts made
+  # outside a case's own owner. Cases spend most of their time waiting on
+  # Postgres rather than on CPU, so the scheduler term oversubscribes (matching
+  # ExUnit's own default) and the pool is what actually binds on a derived pool.
+  @spec default_max_cases() :: pos_integer()
+  defp default_max_cases do
+    pool_size =
+      :tymeslot
+      |> Application.get_env(Tymeslot.Repo, [])
+      |> Keyword.get(:pool_size, 10)
+
+    (System.schedulers_online() * 2)
+    |> min(pool_size - 2)
+    |> max(2)
   end
 
   @doc """

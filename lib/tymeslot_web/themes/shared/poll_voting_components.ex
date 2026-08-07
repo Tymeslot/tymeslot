@@ -106,7 +106,11 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   @spec identity_form(map()) :: Phoenix.LiveView.Rendered.t()
   def identity_form(assigns) do
     ~H"""
-    <form phx-submit="register_participant" class="poll-identity-form" data-testid="poll-register-form">
+    <form
+      phx-submit="register_participant"
+      class="poll-identity-form"
+      data-testid="poll-register-form"
+    >
       <%!-- Honeypot: hidden from real users, tempting to bots. A non-empty
             value is silently rejected by the register handler. --%>
       <div class="honeypot-field" aria-hidden="true">
@@ -258,7 +262,12 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         </span>
       </div>
 
-      <div :if={@editable} class="poll-vote-controls" role="radiogroup" aria-label={format_datetime(@slot.start_time, @tz)}>
+      <div
+        :if={@editable}
+        class="poll-vote-controls"
+        role="radiogroup"
+        aria-label={format_datetime(@slot.start_time, @tz)}
+      >
         <label :for={response <- responses()} class={"poll-vote-option poll-vote-option--#{response}"}>
           <input
             type="radio"

@@ -11,560 +11,555 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:198
-#: lib/tymeslot_web/helpers/page_titles.ex:18
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr "Konto"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:139
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Add a meeting type so guests have something to book"
 msgstr "Fügen Sie einen Termintyp hinzu, damit Gäste etwas buchen können"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:123
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr "Analyse"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:211
-#: lib/tymeslot_web/helpers/page_titles.ex:31
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr "Automatisierung"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:151
-#: lib/tymeslot_web/helpers/page_titles.ex:16
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr "Verfügbarkeit"
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:98
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:146
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:157
-#: lib/tymeslot_web/components/dashboard_layout.ex:179
-#: lib/tymeslot_web/helpers/page_titles.ex:23
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Kalender"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:51
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Close sidebar"
 msgstr "Seitenleiste schließen"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:179
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar or video provider to finish setup"
 msgstr "Verbinden Sie einen Kalender- oder Video-Anbieter, um die Einrichtung abzuschließen"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:85
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Copy link to clipboard"
 msgstr "Link in die Zwischenablage kopieren"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:188
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Distribution"
 msgstr "Verbreitung"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:192
-#: lib/tymeslot_web/helpers/page_titles.ex:34
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
 msgstr "Einbetten & Teilen"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:103
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "General"
 msgstr "Allgemein"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:171
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:182
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Integrationen"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:142
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Termintypen"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:112
-#: lib/tymeslot_web/helpers/page_titles.ex:33
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings"
 msgstr "Termine"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:107
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Übersicht"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:332
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Pro"
 msgstr "Pro"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:202
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Profil"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex:170
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:131
+#: lib/tymeslot_web/components/dashboard_layout.ex
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
 msgstr "Terminplanung"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:311
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Setup recommended"
 msgstr "Einrichtung empfohlen"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:165
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Design"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex:113
+#: lib/tymeslot_web/components/dashboard_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle sidebar"
 msgstr "Seitenleiste ein-/ausblenden"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:66
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:74
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "View Page"
 msgstr "Seite ansehen"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:83
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling link copied to clipboard!"
 msgstr "Terminplanungslink in die Zwischenablage kopiert!"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:65
+#: lib/tymeslot_web/components/user_dropdown_component.ex
 #, elixir-autogen, elixir-format
 msgid "Account Settings"
 msgstr "Kontoeinstellungen"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:73
+#: lib/tymeslot_web/components/user_dropdown_component.ex
 #, elixir-autogen, elixir-format
 msgid "Admin Settings"
 msgstr "Admin-Einstellungen"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:81
+#: lib/tymeslot_web/components/user_dropdown_component.ex
 #, elixir-autogen, elixir-format
 msgid "Sign Out"
 msgstr "Abmelden"
 
-#: lib/tymeslot_web/live/dashboard/component_dispatch.ex:123
+#: lib/tymeslot_web/live/dashboard/component_dispatch.ex
 #, elixir-autogen, elixir-format
 msgid "This feature (%{feature_name}) is not available on your current plan."
 msgstr "Diese Funktion (%{feature_name}) ist in Ihrem aktuellen Tarif nicht verfügbar."
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:129
+#: lib/tymeslot_web/components/user_dropdown_component.ex
 #, elixir-autogen, elixir-format
 msgid "User"
 msgstr "Nutzer"
 
-#: lib/tymeslot_web/components/icons/provider_icon.ex:76
+#: lib/tymeslot_web/components/icons/provider_icon.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} icon"
 msgstr "%{provider}-Symbol"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:50
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "%{section} - Dashboard"
 msgstr "%{section} – Dashboard"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:26
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Integration"
 msgstr "Kalender-Integration"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:79
+#: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Complete setup to enable this feature"
 msgstr "Schließen Sie die Einrichtung ab, um diese Funktion zu aktivieren"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:73
+#: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar in Calendar settings to enable this feature"
 msgstr "Verbinden Sie einen Kalender in den Kalendereinstellungen, um diese Funktion zu aktivieren"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:12
-#: lib/tymeslot_web/helpers/page_titles.ex:43
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
 msgstr "Dashboard"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:21
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Settings"
 msgstr "Termineinstellungen"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:35
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Zahlungen"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:70
+#: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Legen Sie einen Nutzernamen in den Einstellungen fest, um diese Funktion zu aktivieren"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:13
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr "Einstellungen"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:32
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Theme Selection"
 msgstr "Design-Auswahl"
 
-#: lib/tymeslot_web/helpers/page_titles.ex:29
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
 msgstr "Video-Integration"
 
-#: lib/tymeslot_web/components/icons/provider_icon.ex:73
+#: lib/tymeslot_web/components/icons/provider_icon.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar subscription"
 msgstr "Kalenderabonnement"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:157
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} of %{max} time"
 msgid_plural "%{count} of %{max} times"
 msgstr[0] "%{count} von %{max} Zeit"
 msgstr[1] "%{count} von %{max} Zeiten"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:108
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} participant"
 msgid_plural "%{count} participants"
 msgstr[0] "%{count} Teilnehmer"
 msgstr[1] "%{count} Teilnehmer"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:98
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} time option"
 msgid_plural "%{count} time options"
 msgstr[0] "%{count} Zeitoption"
 msgstr[1] "%{count} Zeitoptionen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:118
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} vote"
 msgid_plural "%{count} votes"
 msgstr[0] "%{count} Stimme"
 msgstr[1] "%{count} Stimmen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:95
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Add any context for your guests"
 msgstr "Fügen Sie Kontext für Ihre Gäste hinzu"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:499
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Add at least one candidate time"
 msgstr "Fügen Sie mindestens eine Zeitoption hinzu"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:198
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Add time"
 msgstr "Zeit hinzufügen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:201
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar conflict"
 msgstr "Kalenderkonflikt"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:211
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:118
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel poll"
 msgstr "Umfrage absagen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:189
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
 msgstr "Abgesagt"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:81
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Candidate time"
 msgstr "Zeitoption"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:174
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Candidate time %{n}"
 msgstr "Zeitoption %{n}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:154
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Candidate times"
 msgstr "Zeitoptionen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:73
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Checking your calendar for conflicts…"
 msgstr "Kalender wird auf Konflikte geprüft …"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:60
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Close results"
 msgstr "Ergebnisse schließen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:216
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm this time"
 msgstr "Diese Zeit bestätigen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:188
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmed"
 msgstr "Bestätigt"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:138
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Copy poll link to clipboard"
 msgstr "Umfrage-Link in die Zwischenablage kopieren"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:218
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't cancel this poll. Please try again."
 msgstr "Diese Umfrage konnte nicht abgesagt werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:199
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't confirm this time. Please try again."
 msgstr "Diese Zeit konnte nicht bestätigt werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:245
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't load your availability. Add times manually instead."
 msgstr "Ihre Verfügbarkeit konnte nicht geladen werden. Fügen Sie die Zeiten stattdessen manuell hinzu."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:36
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Create a poll to propose a few times and let your guests vote."
 msgstr "Erstellen Sie eine Umfrage, schlagen Sie einige Zeiten vor und lassen Sie Ihre Gäste abstimmen."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:214
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Create poll"
 msgstr "Umfrage erstellen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:93
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Beschreibung (optional)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:122
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Dauer (Minuten)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:113
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{minutes} min (from meeting type)"
 msgstr "Dauer: %{minutes} Min. (aus Termintyp)"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:89
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Find a time that works for everyone. Propose a few slots and let your guests vote."
 msgstr "Finden Sie eine Zeit, die allen passt. Schlagen Sie einige Zeiten vor und lassen Sie Ihre Gäste abstimmen."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:305
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "If need be"
 msgstr "Zur Not"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:176
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting confirmed. Your guests have been notified."
 msgstr "Termin bestätigt. Ihre Gäste wurden benachrichtigt."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:103
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type (optional)"
 msgstr "Termintyp (optional)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:70
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:104
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "New poll"
 msgstr "Neue Umfrage"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:306
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "No"
 msgstr "Nein"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:307
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "No answer"
 msgstr "Keine Antwort"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:252
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No free times on that date."
 msgstr "An diesem Datum sind keine Zeiten frei."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:105
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting type"
 msgstr "Kein Termintyp"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:33
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "No polls yet"
 msgstr "Noch keine Umfragen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:187
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr "Offen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:509
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Paid meeting types can't be used for polls"
 msgstr "Kostenpflichtige Termintypen können nicht für Umfragen verwendet werden"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:211
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Poll cancelled"
 msgstr "Umfrage abgesagt"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:327
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Poll created"
 msgstr "Umfrage erstellt"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:136
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Poll link copied to clipboard!"
 msgstr "Umfrage-Link in die Zwischenablage kopiert!"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:156
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:84
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "Polls"
 msgstr "Umfragen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:183
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Remove time"
 msgstr "Zeit entfernen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:240
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Suggest times"
 msgstr "Zeiten vorschlagen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:236
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Suggest times for date"
 msgstr "Zeiten für dieses Datum vorschlagen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:223
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Suggest times from your availability"
 msgstr "Zeiten aus Ihrer Verfügbarkeit vorschlagen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:514
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "That meeting type is unavailable"
 msgstr "Dieser Termintyp ist nicht verfügbar"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:134
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is confirmed. The winning time is highlighted below."
 msgstr "Diese Umfrage ist bestätigt. Die gewählte Zeit ist unten hervorgehoben."
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:228
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This poll is no longer open."
 msgstr "Diese Umfrage ist nicht mehr geöffnet."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:146
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "This poll was cancelled. Voting is closed."
 msgstr "Diese Umfrage wurde abgesagt. Die Abstimmung ist beendet."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:198
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar"
 msgstr "Diese Zeit überschneidet sich mit einem Termin in Ihrem Kalender"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex:190
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer free"
 msgstr "Diese Zeit ist nicht mehr frei"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:504
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Times must be in the future"
 msgstr "Die Zeiten müssen in der Zukunft liegen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:52
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"
 msgstr "Zeiten angezeigt in %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:136
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Zeitzone"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:82
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Titel"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:525
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
 msgstr "Bis zu %{max} Zeiten"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:136
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "View meeting"
 msgstr "Termin ansehen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex:159
+#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "View results"
 msgstr "Ergebnisse ansehen"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:145
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Voting deadline (optional)"
 msgstr "Abstimmungsfrist (optional)"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:155
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Voting is open. Confirm a time once your guests have voted."
 msgstr "Die Abstimmung läuft. Bestätigen Sie eine Zeit, sobald Ihre Gäste abgestimmt haben."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:193
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Winner"
 msgstr "Gewinner"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex:304
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr "Ja"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:85
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Team sync"
 msgstr "z. B. Team-Sync"

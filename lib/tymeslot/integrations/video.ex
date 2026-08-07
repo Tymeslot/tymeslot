@@ -8,21 +8,18 @@ defmodule Tymeslot.Integrations.Video do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
-  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Disconnect
   alias Tymeslot.Integrations.Video.Discovery
+  alias Tymeslot.Integrations.Video.OAuth
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Rooms
-  alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
-  alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
-  alias TymeslotWeb.Endpoint
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
@@ -498,9 +495,7 @@ defmodule Tymeslot.Integrations.Video do
           {:ok, String.t()} | {:error, String.t()}
   def oauth_authorization_url(user_id, provider) when is_integer(user_id) do
     case ProviderConfig.parse(provider) do
-      {:ok, :google_meet} -> google_oauth_authorization_url(user_id)
-      {:ok, :teams} -> teams_oauth_authorization_url(user_id)
-      {:ok, :zoom} -> zoom_oauth_authorization_url(user_id)
+      {:ok, parsed} -> OAuth.authorization_url(parsed, user_id)
       _other -> {:error, "Provider does not support OAuth"}
     end
   end
@@ -518,111 +513,15 @@ defmodule Tymeslot.Integrations.Video do
     ]
 
     case ProviderConfig.parse_known(integration.provider) do
-      {:ok, :google_meet} ->
-        redirect_uri = "#{Endpoint.url()}/auth/google/video/callback"
-
-        url =
-          google_oauth_helper().authorization_url(user_id, redirect_uri, [:calendar, :meet], opts)
-
-        {:ok, url}
-
-      {:ok, :teams} ->
-        redirect_uri = "#{Endpoint.url()}/auth/teams/video/callback"
-        url = teams_oauth_helper().authorization_url(user_id, redirect_uri, opts)
-        {:ok, url}
-
-      {:ok, :zoom} ->
-        zoom_oauth_reconnect_url(user_id, opts)
+      {:ok, parsed} ->
+        if OAuth.supported?(parsed) do
+          OAuth.reconnect_url(parsed, user_id, opts)
+        else
+          {:error, "Provider does not support OAuth reconnection"}
+        end
 
       _other ->
         {:error, "Provider does not support OAuth reconnection"}
     end
   end
-
-  # ---------------
-  # Helpers
-  # ---------------
-  defp google_oauth_helper do
-    Application.get_env(:tymeslot, :google_calendar_oauth_helper, GoogleOAuthHelper)
-  end
-
-  defp teams_oauth_helper do
-    Application.get_env(:tymeslot, :teams_oauth_helper, TeamsOAuthHelper)
-  end
-
-  defp zoom_oauth_helper do
-    Application.get_env(:tymeslot, :zoom_oauth_helper, ZoomOAuthHelper)
-  end
-
-  defp format_google_oauth_error(%RuntimeError{message: "Google State Secret not configured"}),
-    do:
-      "Google OAuth is not configured. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_STATE_SECRET environment variables."
-
-  defp format_google_oauth_error(%RuntimeError{message: "Google Client ID not configured"}),
-    do: "Google OAuth is not configured. Please set GOOGLE_CLIENT_ID environment variable."
-
-  defp format_google_oauth_error(%RuntimeError{message: "Google Client Secret not configured"}),
-    do: "Google OAuth is not configured. Please set GOOGLE_CLIENT_SECRET environment variable."
-
-  defp format_google_oauth_error(error),
-    do: "Failed to setup Google OAuth: #{Exception.message(error)}"
-
-  defp format_outlook_oauth_error(%RuntimeError{message: "Outlook State Secret not configured"}),
-    do:
-      "Microsoft OAuth is not configured. Please set OUTLOOK_CLIENT_ID, OUTLOOK_CLIENT_SECRET, and OUTLOOK_STATE_SECRET environment variables."
-
-  defp format_outlook_oauth_error(%RuntimeError{message: "Outlook Client ID not configured"}),
-    do: "Microsoft OAuth is not configured. Please set OUTLOOK_CLIENT_ID environment variable."
-
-  defp format_outlook_oauth_error(%RuntimeError{message: "Outlook Client Secret not configured"}),
-    do:
-      "Microsoft OAuth is not configured. Please set OUTLOOK_CLIENT_SECRET environment variable."
-
-  defp format_outlook_oauth_error(error),
-    do: "Failed to setup Microsoft OAuth: #{Exception.message(error)}"
-
-  defp google_oauth_authorization_url(user_id) do
-    redirect_uri = "#{Endpoint.url()}/auth/google/video/callback"
-    url = google_oauth_helper().authorization_url(user_id, redirect_uri, [:calendar, :meet])
-    {:ok, url}
-  rescue
-    error -> {:error, format_google_oauth_error(error)}
-  end
-
-  defp teams_oauth_authorization_url(user_id) do
-    redirect_uri = "#{Endpoint.url()}/auth/teams/video/callback"
-    url = teams_oauth_helper().authorization_url(user_id, redirect_uri)
-    {:ok, url}
-  rescue
-    error -> {:error, format_outlook_oauth_error(error)}
-  end
-
-  defp zoom_oauth_authorization_url(user_id) do
-    redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
-    url = zoom_oauth_helper().authorization_url(user_id, redirect_uri)
-    {:ok, url}
-  rescue
-    error -> {:error, format_zoom_oauth_error(error)}
-  end
-
-  defp zoom_oauth_reconnect_url(user_id, opts) do
-    redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
-    url = zoom_oauth_helper().authorization_url(user_id, redirect_uri, opts)
-    {:ok, url}
-  rescue
-    error -> {:error, format_zoom_oauth_error(error)}
-  end
-
-  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom OAuth State Secret not configured"}),
-    do:
-      "Zoom OAuth is not configured. Please set ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, and ZOOM_STATE_SECRET environment variables."
-
-  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom Client ID not configured"}),
-    do: "Zoom OAuth is not configured. Please set ZOOM_CLIENT_ID environment variable."
-
-  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom Client Secret not configured"}),
-    do: "Zoom OAuth is not configured. Please set ZOOM_CLIENT_SECRET environment variable."
-
-  defp format_zoom_oauth_error(error),
-    do: "Failed to setup Zoom OAuth: #{Exception.message(error)}"
 end

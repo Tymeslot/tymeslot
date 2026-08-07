@@ -41,8 +41,8 @@ defmodule TymeslotWeb.AccountLive do
               <.icon name="hero-arrow-left" class="w-4 h-4" />
               <span>{dgettext("account", "Back to Dashboard")}</span>
             </.link>
-            
-    <%!-- User dropdown --%>
+
+            <%!-- User dropdown --%>
             <div class="relative">
               <.live_component
                 module={TymeslotWeb.Components.UserDropdownComponent}
@@ -54,8 +54,8 @@ defmodule TymeslotWeb.AccountLive do
           </div>
         </div>
       </nav>
-      
-    <%!-- Account content --%>
+
+      <%!-- Account content --%>
       <div class="container mx-auto px-4 py-8">
         <main>
           <div class="max-w-6xl mx-auto">

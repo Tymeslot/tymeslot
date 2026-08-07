@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -130,7 +131,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         with :ok <- EditWorkflow.assert_owns_event(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
-          optimistic_event = toggle_all_day(event, socket.assigns.user_timezone)
+          optimistic_event =
+            AllDay.toggle(event, socket.assigns.user_timezone, &Shared.to_utc/4)
+
           push_all_day_change(socket, event, optimistic_event)
         else
           {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
@@ -404,53 +407,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   defp normalize_time(t) when byte_size(t) == 5, do: t <> ":00"
   defp normalize_time(t), do: t
-
-  # Converts a timed event to all-day (deriving the date range from the local
-  # start/end) and vice versa (defaulting a single-day all-day event to a
-  # 09:00–10:00 timed slot in the user's timezone).
-  #
-  # `end_date` is stored exclusively (matching the iCal/Google/Outlook all-day
-  # convention and the grid's render filter), so a single-day all-day event has
-  # `end_date == start_date + 1`. The conversions translate between that
-  # exclusive boundary and the inclusive last day a timed event touches.
-  defp toggle_all_day(%{all_day: true} = event, tz) do
-    start_date = event.start_date
-    # Exclusive end_date → inclusive last day the event covers.
-    last_day = Date.add(event.end_date, -1)
-    last_day = if Date.compare(last_day, start_date) == :lt, do: start_date, else: last_day
-
-    # DST gap/ambiguous is extremely unlikely at 09:00/10:00, but we default
-    # gracefully rather than crashing: on gap the shifted `just_after` is used,
-    # and on ambiguous the DST-side is picked — both are acceptable defaults
-    # when toggling the all-day flag programmatically.
-    {:ok, start_at} = Shared.to_utc(start_date, 9, 0, tz)
-    {:ok, end_at} = Shared.to_utc(last_day, 10, 0, tz)
-
-    %{
-      event
-      | all_day: false,
-        start_at: start_at,
-        end_at: end_at,
-        start_date: nil,
-        end_date: nil
-    }
-  end
-
-  defp toggle_all_day(event, tz) do
-    start_date = event.start_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
-    last_day = event.end_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
-    # Inclusive last day → exclusive end_date.
-    end_date = Date.add(last_day, 1)
-
-    %{
-      event
-      | all_day: true,
-        start_date: start_date,
-        end_date: end_date,
-        start_at: nil,
-        end_at: nil
-    }
-  end
 
   defp push_colour_change(socket, original_event, new_colour) do
     optimistic_event = Map.put(original_event, :colour, new_colour)

@@ -25,7 +25,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal d
         <span class="font-medium text-tymeslot-700"><%= @confirm_remove_attendee.email %></span>?
       </p>
       <p class="mt-2 text-token-sm text-amber-600">
-        {dgettext("dashboard_calendar_events", "This person will receive a cancellation from your calendar provider.")}
+        {dgettext(
+          "dashboard_calendar_events",
+          "This person will receive a cancellation from your calendar provider."
+        )}
       </p>
 
       <:footer>

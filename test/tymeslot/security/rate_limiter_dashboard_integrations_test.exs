@@ -278,4 +278,59 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
              ) == :ok
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # check_integration_appearance_rate_limit/1 — 150 per 30 minutes
+  # ---------------------------------------------------------------------------
+
+  describe "check_integration_appearance_rate_limit/1" do
+    test "allows requests within the limit" do
+      user_id = 11_421
+
+      for i <- 1..150 do
+        assert :ok = RateLimiter.check_integration_appearance_rate_limit(user_id),
+               "Request #{i} should be allowed"
+      end
+    end
+
+    test "blocks requests exceeding the limit" do
+      user_id = 11_422
+
+      for _i <- 1..150 do
+        assert :ok = RateLimiter.check_integration_appearance_rate_limit(user_id)
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_integration_appearance_rate_limit(user_id)
+
+      assert message =~ "150"
+      assert message =~ "30 minutes"
+      assert message =~ "integration appearance"
+    end
+
+    test "is scoped per user" do
+      user_id_1 = 11_423
+      user_id_2 = 11_424
+
+      for _i <- 1..150, do: RateLimiter.check_integration_appearance_rate_limit(user_id_1)
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_integration_appearance_rate_limit(user_id_1)
+
+      assert :ok = RateLimiter.check_integration_appearance_rate_limit(user_id_2)
+    end
+
+    test "draws on a separate budget from the shared integration write bucket" do
+      # The point of the split: exhausting the connection-write budget must not
+      # stop someone recolouring a calendar, and vice versa.
+      user_id = 11_425
+
+      for _i <- 1..30, do: RateLimiter.check_integration_write_rate_limit(user_id)
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_integration_write_rate_limit(user_id)
+
+      assert :ok = RateLimiter.check_integration_appearance_rate_limit(user_id)
+    end
+  end
 end

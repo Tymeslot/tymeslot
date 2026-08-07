@@ -33,6 +33,14 @@ defmodule Tymeslot.Validation.Constraints do
   @spec duration_minutes_range() :: Range.t()
   def duration_minutes_range, do: 1..480
 
+  @spec booking_limit_range() :: Range.t()
+  def booking_limit_range, do: 1..500
+
+  @doc "The booking-limit fields, in day/week/month order."
+  @spec booking_limit_fields() :: [atom()]
+  def booking_limit_fields,
+    do: [:max_bookings_per_day, :max_bookings_per_week, :max_bookings_per_month]
+
   # Ecto-ready options (for validate_number/3)
 
   @spec buffer_minutes_opts() :: keyword()
@@ -56,6 +64,12 @@ defmodule Tymeslot.Validation.Constraints do
   @spec duration_minutes_opts() :: keyword()
   def duration_minutes_opts do
     range = duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec booking_limit_opts() :: keyword()
+  def booking_limit_opts do
+    range = booking_limit_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 

@@ -124,10 +124,26 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
             {dgettext("dashboard_analytics", "Analytics")}
           </h1>
           <div class="flex items-center gap-2">
-            <div class="flex gap-2" role="group" aria-label={dgettext("dashboard_analytics", "Date range")}>
-              <.range_button label={dgettext("dashboard_analytics", "7 days")} value="7d" current={@range} />
-              <.range_button label={dgettext("dashboard_analytics", "30 days")} value="30d" current={@range} />
-              <.range_button label={dgettext("dashboard_analytics", "90 days")} value="90d" current={@range} />
+            <div
+              class="flex gap-2"
+              role="group"
+              aria-label={dgettext("dashboard_analytics", "Date range")}
+            >
+              <.range_button
+                label={dgettext("dashboard_analytics", "7 days")}
+                value="7d"
+                current={@range}
+              />
+              <.range_button
+                label={dgettext("dashboard_analytics", "30 days")}
+                value="30d"
+                current={@range}
+              />
+              <.range_button
+                label={dgettext("dashboard_analytics", "90 days")}
+                value="90d"
+                current={@range}
+              />
             </div>
             <button
               type="button"

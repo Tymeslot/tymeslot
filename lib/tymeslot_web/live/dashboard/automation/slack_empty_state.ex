@@ -17,9 +17,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEmptyState do
         <IconComponents.icon name={:slack} class="w-10 h-10 text-turquoise-600" />
       </div>
 
-      <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">{dgettext("dashboard_automation_chat", "No Slack Integrations")}</h3>
+      <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">
+        {dgettext("dashboard_automation_chat", "No Slack Integrations")}
+      </h3>
       <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-        {dgettext("dashboard_automation_chat", "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled.")}
+        {dgettext(
+          "dashboard_automation_chat",
+          "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+        )}
       </p>
 
       <%= if @oauth_mode_available? do %>

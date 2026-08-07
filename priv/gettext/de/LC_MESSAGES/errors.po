@@ -26,12 +26,12 @@ msgstr "E-Mail erforderlich"
 msgid "email_invalid"
 msgstr "Bitte geben Sie eine gültige E-Mail-Adresse ein"
 
-#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
 msgid "calendar_setup_required"
 msgstr "Diese Buchungsseite ist noch nicht verfügbar"
 
-#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
 msgid "connect_calendar_first"
 msgstr "Falls Sie der Gastgeber sind: Bitte verknüpfen Sie einen Kalender in Ihrem Dashboard."
@@ -43,191 +43,196 @@ msgstr "Lädt…"
 msgid "submitting"
 msgstr "Wird gesendet…"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:30
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "are still associated with this entry"
 msgstr "sind noch mit diesem Eintrag verknüpft"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:21
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "can't be blank"
 msgstr "darf nicht leer sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:31
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "does not exist"
 msgstr "existiert nicht"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:28
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "does not match confirmation"
 msgstr "stimmt nicht mit der Bestätigung überein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:23
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "has already been taken"
 msgstr "ist bereits vergeben"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:26
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "has an invalid entry"
 msgstr "enthält einen ungültigen Eintrag"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:25
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "has invalid format"
 msgstr "hat ein ungültiges Format"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:22
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "is invalid"
 msgstr "ist ungültig"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:24
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "is reserved"
 msgstr "ist reserviert"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:29
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "is still associated with this entry"
 msgstr "ist noch mit diesem Eintrag verknüpft"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:27
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be accepted"
 msgstr "muss akzeptiert werden"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:37
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be equal to %{number}"
 msgstr "muss gleich %{number} sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:34
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be greater than %{number}"
 msgstr "muss größer als %{number} sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:36
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be greater than or equal to %{number}"
 msgstr "muss größer oder gleich %{number} sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:33
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be less than %{number}"
 msgstr "muss kleiner als %{number} sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:35
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be less than or equal to %{number}"
 msgstr "muss kleiner oder gleich %{number} sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:38
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be not equal to %{number}"
 msgstr "darf nicht gleich %{number} sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:46
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be %{count} byte(s)"
 msgid_plural "should be %{count} byte(s)"
 msgstr[0] "sollte %{count} Byte sein"
 msgstr[1] "sollte %{count} Byte sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:40
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be %{count} character(s)"
 msgid_plural "should be %{count} character(s)"
 msgstr[0] "sollte %{count} Zeichen lang sein"
 msgstr[1] "sollte %{count} Zeichen lang sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:55
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at least %{count} byte(s)"
 msgid_plural "should be at least %{count} byte(s)"
 msgstr[0] "sollte mindestens %{count} Byte sein"
 msgstr[1] "sollte mindestens %{count} Byte sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:49
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at least %{count} character(s)"
 msgid_plural "should be at least %{count} character(s)"
 msgstr[0] "sollte mindestens %{count} Zeichen lang sein"
 msgstr[1] "sollte mindestens %{count} Zeichen lang sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:73
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at most %{count} byte(s)"
 msgid_plural "should be at most %{count} byte(s)"
 msgstr[0] "sollte höchstens %{count} Byte sein"
 msgstr[1] "sollte höchstens %{count} Byte sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:67
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at most %{count} character(s)"
 msgid_plural "should be at most %{count} character(s)"
 msgstr[0] "sollte höchstens %{count} Zeichen lang sein"
 msgstr[1] "sollte höchstens %{count} Zeichen lang sein"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:47
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should have %{count} item(s)"
 msgid_plural "should have %{count} item(s)"
 msgstr[0] "sollte %{count} Element enthalten"
 msgstr[1] "sollte %{count} Elemente enthalten"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:61
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should have at least %{count} item(s)"
 msgid_plural "should have at least %{count} item(s)"
 msgstr[0] "sollte mindestens %{count} Element enthalten"
 msgstr[1] "sollte mindestens %{count} Elemente enthalten"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:79
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should have at most %{count} item(s)"
 msgid_plural "should have at most %{count} item(s)"
 msgstr[0] "sollte höchstens %{count} Element enthalten"
 msgstr[1] "sollte höchstens %{count} Elemente enthalten"
 
-#: lib/tymeslot_web/gettext/ecto_error_msgids.ex:32
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "violates an exclusion constraint"
 msgstr "verletzt eine Ausschlussbedingung"
 
-#: lib/tymeslot_web/controllers/error_html/404.html.heex:42
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Error 404"
 msgstr "Fehler 404"
 
-#: lib/tymeslot_web/controllers/error_html/404.html.heex:55
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Go to Tymeslot"
 msgstr "Zu Tymeslot"
 
-#: lib/tymeslot_web/controllers/error_html/404.html.heex:7
-#: lib/tymeslot_web/live/scheduling/organizer_helpers.ex:45
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#: lib/tymeslot_web/live/scheduling/organizer_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Page not found"
 msgstr "Seite nicht gefunden"
 
-#: lib/tymeslot_web/controllers/error_html/404.html.heex:48
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "The link may be broken, or the page may have moved."
 msgstr "Der Link ist möglicherweise fehlerhaft oder die Seite wurde verschoben."
 
-#: lib/tymeslot_web/controllers/error_html/404.html.heex:45
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "This page doesn't exist"
 msgstr "Diese Seite existiert nicht"
 
-#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:182
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "an integration for this account already exists"
 msgstr "für dieses Konto existiert bereits eine Integration"
 
-#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:186
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "an integration for this provider already exists"
 msgstr "für diesen Anbieter existiert bereits eine Integration"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid colour"
+msgstr "ist keine gültige Farbe"

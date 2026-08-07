@@ -11,30 +11,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
-  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Utils.ReminderUtils
-  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
-    CustomQuestionsSection,
-    GuestsSection,
-    HiddenFields,
+    FormView,
     Init,
-    PaymentsSection,
-    QuestionEditorComponent,
-    ShowAsFreeSection,
     Validation
   }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  import GuestsSection, only: [guests_section: 1]
-  import ShowAsFreeSection, only: [show_as_free_section: 1]
-  import HiddenFields, only: [hidden_fields: 1]
-  import PaymentsSection, only: [payments_section: 1]
-  import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
-  import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
 
   # Public assigns passed from parent
   # - type: existing meeting type or nil
@@ -77,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_price, "")
      |> assign(:allow_guests, false)
      |> assign(:show_as_free, false)
+     |> assign(:booking_limits, Init.get_booking_limits(nil))
      |> assign(:__initialized__, false)}
   end
 
@@ -103,226 +91,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def render(assigns) do
-    ~H"""
-    <div id={"meeting-type-form-wrapper-#{@id}"}>
-    <form
-      id={"meeting-type-form-#{@id}"}
-      phx-submit={if @is_edit, do: "flush_autosave", else: "save_meeting_type"}
-      phx-target={if @is_edit, do: @myself, else: @parent_myself}
-      class="space-y-4"
-    >
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <.input
-          name="meeting_type[name]"
-          label={dgettext("dashboard_meeting_form", "Name")}
-          value={Map.get(@form_data, "name", if(@type, do: @type.name, else: ""))}
-          required
-          maxlength={Constraints.name_length_opts()[:max]}
-          placeholder={dgettext("dashboard_meeting_form", "e.g., Quick Chat")}
-          phx-change="validate_meeting_type"
-          phx-debounce="500"
-          phx-target={@myself}
-          errors={
-            FormValidationHelpers.field_errors(@form_errors, :name)
-            |> Enum.map(&Helpers.format_errors/1)
-          }
-          icon="hero-tag"
-        />
-
-        <div>
-          <.input
-            type="number"
-            name="meeting_type[duration]"
-            label={dgettext("dashboard_meeting_form", "Duration (minutes)")}
-            value={Map.get(@form_data, "duration", if(@type, do: @type.duration_minutes, else: "30"))}
-            min={Constraints.duration_minutes_form_min()}
-            max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
-            step="5"
-            required
-            placeholder="30"
-            phx-change="validate_meeting_type"
-            phx-debounce="500"
-            phx-target={@myself}
-            errors={
-              FormValidationHelpers.field_errors(@form_errors, :duration)
-              |> Enum.map(&Helpers.format_errors/1)
-            }
-            icon="hero-clock"
-          />
-          <p class="mt-1 text-token-sm text-tymeslot-600">
-            {dgettext(
-              "dashboard_meeting_form",
-              "Enter a duration between %{min} and %{max} minutes",
-              min: Constraints.duration_minutes_form_min(),
-              max: Constraints.duration_minutes_opts()[:less_than_or_equal_to]
-            )}
-          </p>
-        </div>
-      </div>
-
-      <.input
-        name="meeting_type[description]"
-        label={dgettext("dashboard_meeting_form", "Description (optional)")}
-        value={Map.get(@form_data, "description", if(@type, do: @type.description, else: ""))}
-        maxlength={Constraints.description_max_length()}
-        placeholder={dgettext("dashboard_meeting_form", "Brief description of this meeting type")}
-        phx-change="validate_meeting_type"
-        phx-debounce="500"
-        phx-target={@myself}
-        errors={
-          FormValidationHelpers.field_errors(@form_errors, :description)
-          |> Enum.map(&Helpers.format_errors/1)
-        }
-        icon="hero-document-text"
-      />
-
-      <.reminders_section
-        reminders={@reminders}
-        new_reminder_value={@new_reminder_value}
-        new_reminder_unit={@new_reminder_unit}
-        reminder_error={@reminder_error}
-        show_custom_reminder={@show_custom_reminder}
-        reminder_confirmation={@reminder_confirmation}
-        form_errors={@form_errors}
-        myself={@myself}
-      />
-
-      <.icon_picker
-        selected_icon={@selected_icon}
-        form_errors={@form_errors}
-        myself={@myself}
-      />
-
-      <.meeting_mode_section
-        meeting_mode={@meeting_mode}
-        video_integrations={@video_integrations}
-        selected_video_integration_id={@selected_video_integration_id}
-        form_errors={@form_errors}
-        myself={@myself}
-      />
-
-      <.booking_destination_section
-        calendar_integrations={@calendar_integrations}
-        selected_calendar_integration_id={@selected_calendar_integration_id}
-        refreshing_calendars={@refreshing_calendars}
-        available_calendars={@available_calendars}
-        no_writable_calendars={@no_writable_calendars}
-        selected_target_calendar_id={@selected_target_calendar_id}
-        form_errors={@form_errors}
-        myself={@myself}
-      />
-
-      <.payments_section
-        :if={@payments_feature_enabled}
-        charges_enabled={@payments_charges_enabled}
-        payment_required={@payment_required}
-        payment_price={@payment_price}
-        currency={@payment_currency}
-        currency_minimum_cents={@payment_currency_minimum_cents}
-        form_errors={@form_errors}
-        myself={@myself}
-      />
-
-      <.guests_section
-        allow_guests={@allow_guests}
-        max_guests={Guests.max_guests()}
-        myself={@myself}
-      />
-
-      <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
-
-      <%!-- Custom questions section --%>
-      <.live_component
-        module={CustomQuestionsSection}
-        id={"custom-questions-section-#{@id}"}
-        custom_fields={@custom_fields}
-        form_id={@id}
-        allowed={@custom_questions_allowed}
-        current_user={@current_user}
-      />
-
-      <%!-- Create-mode form serialisation. Edits auto-save from socket assigns
-           (see Autosave/Submission) and never post the form, so these hidden
-           inputs are only needed when creating. --%>
-      <.hidden_fields
-        :if={!@is_edit}
-        type={@type}
-        meeting_mode={@meeting_mode}
-        selected_icon={@selected_icon}
-        selected_video_integration_id={@selected_video_integration_id}
-        selected_calendar_integration_id={@selected_calendar_integration_id}
-        selected_target_calendar_id={@selected_target_calendar_id}
-        reminders={@reminders}
-        custom_fields={@custom_fields}
-        custom_questions_allowed={@custom_questions_allowed}
-        payments_feature_enabled={@payments_feature_enabled}
-        payments_charges_enabled={@payments_charges_enabled}
-        payment_required={@payment_required}
-        payment_price={@payment_price}
-        allow_guests={@allow_guests}
-        show_as_free={@show_as_free}
-      />
-
-      <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
-        <p class="form-error">{Helpers.format_errors(error)}</p>
-      <% end %>
-
-      <div class="flex items-center justify-between gap-4">
-        <%= if @is_edit do %>
-          <Autosave.indicator status={@save_status} />
-          <button
-            type="button"
-            phx-click="close_edit_overlay"
-            phx-target={@parent_myself}
-            class="btn btn-primary"
-          >
-            {dgettext("dashboard_meeting_form", "Done")}
-          </button>
-        <% else %>
-          <span></span>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              phx-click="toggle_add_form"
-              phx-target={@parent_myself}
-              class="btn btn-secondary"
-            >
-              {dgettext("dashboard_meeting_form", "Cancel")}
-            </button>
-            <button
-              type="submit"
-              disabled={@saving || @refreshing_calendars}
-              class="btn btn-primary"
-            >
-              <%= if @saving do %>
-                <span class="flex items-center">
-                  <.spinner class="h-4 w-4 mr-2" />
-                  {dgettext("dashboard_meeting_form", "Saving...")}
-                </span>
-              <% else %>
-                {dgettext("dashboard_meeting_form", "Create Meeting Type")}
-              <% end %>
-            </button>
-          </div>
-        <% end %>
-      </div>
-    </form>
-
-    <%!-- Question editor modal — rendered outside <form> to avoid nested forms --%>
-    <%= if @editing_question do %>
-      <.live_component
-        module={QuestionEditorComponent}
-        id={"question-editor-#{@id}"}
-        definition={@editing_question}
-        existing_fields={@custom_fields}
-        form_id={@id}
-        mode={@editing_question_mode}
-      />
-    <% end %>
-    </div>
-    """
-  end
+  def render(assigns), do: FormView.form(assigns)
 
   @impl Phoenix.LiveComponent
   def handle_event("validate_meeting_type", %{"meeting_type" => params}, socket) do
@@ -460,6 +229,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("update_booking_limits", params, socket) do
+    # The inputs sit inside the meeting-type form, so the event carries the
+    # whole form's params under "meeting_type".
+    type_params = Map.get(params, "meeting_type", %{})
+
+    limits =
+      Map.new(Init.get_booking_limits(nil), fn {key, _default} ->
+        {key, parse_booking_limit(type_params[key])}
+      end)
+
+    {:noreply,
+     socket
+     |> assign(:booking_limits, limits)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_show_as_free", _params, socket) do
     {:noreply,
      socket
@@ -590,5 +376,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # Edit-mode submit (e.g. pressing Enter) persists current state in place
     # without closing the overlay — there is no separate "save" action.
     {:noreply, Autosave.maybe_run(socket)}
+  end
+
+  # Blank clears the limit; anything unparseable is treated as blank (the
+  # number input constrains typing, and the changeset enforces the range).
+  defp parse_booking_limit(nil), do: nil
+
+  defp parse_booking_limit(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {limit, ""} when limit > 0 -> limit
+      _other -> nil
+    end
   end
 end

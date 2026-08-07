@@ -42,6 +42,8 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Ics.Feed
@@ -57,8 +59,13 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :ics_url
 
+  # The only provider whose name is prose rather than a brand: "Nextcloud"
+  # reads the same in every locale, "Calendar subscription" does not. The
+  # provider directory prefers this callback over
+  # `ProviderConfig.display_name/1`, so this is the string the picker card and
+  # the connected-integration rows actually render.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def display_name, do: "Calendar subscription"
+  def display_name, do: dgettext("dashboard_calendar_providers", "Calendar subscription")
 
   # Same reasoning as the video `:custom` bucket: this probes an arbitrary
   # user-supplied host rather than one the operator configured, so it draws

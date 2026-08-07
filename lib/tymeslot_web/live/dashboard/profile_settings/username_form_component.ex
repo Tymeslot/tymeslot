@@ -132,7 +132,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     ~H"""
     <div id="username-form-container">
       <.section_header level={3} title={dgettext("dashboard_profile", "Custom URL")} class="mb-4" />
-      <form id="username-form" phx-submit="update_username" phx-change="check_username_availability" phx-target={@myself} class="space-y-4">
+      <form
+        id="username-form"
+        phx-submit="update_username"
+        phx-change="check_username_availability"
+        phx-target={@myself}
+        class="space-y-4"
+      >
         <div>
           <div class="flex flex-col sm:flex-row items-stretch gap-4">
             <div class="flex-1">
@@ -159,15 +165,35 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                     <%= case @username_available do %>
                       <% true -> %>
                         <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-emerald-50 text-emerald-700 text-token-2xs font-black uppercase tracking-wider border border-emerald-100">
-                          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                          <svg
+                            class="w-3 h-3 mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="3"
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                           {dgettext("dashboard_profile", "Available")}
                         </div>
                       <% false -> %>
                         <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-red-50 text-red-700 text-token-2xs font-black uppercase tracking-wider border border-red-100">
-                          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                          <svg
+                            class="w-3 h-3 mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="3"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
                           </svg>
                           {dgettext("dashboard_profile", "Taken")}
                         </div>
@@ -195,8 +221,18 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
           <div class="mt-4">
             <%= if @profile && @profile.username do %>
               <div class="flex items-center gap-2 text-token-sm font-bold text-tymeslot-500">
-                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-emerald-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2.5"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 {dgettext("dashboard_profile", "Live at:")}
                 <a
@@ -209,7 +245,10 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               </div>
             <% else %>
               <p class="text-token-sm text-tymeslot-500 font-medium">
-                {dgettext("dashboard_profile", "Choose a unique username for your personal booking page.")}
+                {dgettext(
+                  "dashboard_profile",
+                  "Choose a unique username for your personal booking page."
+                )}
               </p>
             <% end %>
           </div>

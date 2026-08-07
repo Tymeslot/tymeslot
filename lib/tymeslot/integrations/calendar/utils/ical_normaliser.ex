@@ -148,7 +148,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         uid: build_uid(raw),
         provider: provider,
         calendar_integration_id: context.calendar_integration_id,
-        provider_calendar_id: context.provider_calendar_id,
+        provider_calendar_id: calendar_id_for(raw, context),
         provider_event_id: raw[:href] || raw[:uid],
         synced_at: context.synced_at,
         summary: raw[:summary],
@@ -174,6 +174,30 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
       |> maybe_put_timezone(timezone)
 
     CalendarEvent.new(attrs)
+  end
+
+  # A CalDAV batch can span several collections, but the sync builds one context
+  # for the whole batch, so `context.provider_calendar_id` is only ever the
+  # integration's first path. The event's href is rooted at the collection it
+  # actually lives in, which makes it the authoritative signal; match it against
+  # the paths the integration knows rather than parsing it, so a server whose
+  # hrefs are shaped unexpectedly falls back instead of inventing a calendar.
+  # Longest match wins: CalDAV collections can nest, and the deepest one is the
+  # collection the event belongs to. ICS feeds carry no paths and keep the
+  # context value, which is correct — a subscription is a single calendar.
+  defp calendar_id_for(%{href: href}, context) when is_binary(href) do
+    case matching_paths(href, context) do
+      [] -> context.provider_calendar_id
+      paths -> Enum.max_by(paths, &byte_size/1)
+    end
+  end
+
+  defp calendar_id_for(_raw, context), do: context.provider_calendar_id
+
+  defp matching_paths(href, context) do
+    context
+    |> Map.get(:calendar_paths, [])
+    |> Enum.filter(&(is_binary(&1) and String.starts_with?(href, &1)))
   end
 
   # --- Timing resolution ---

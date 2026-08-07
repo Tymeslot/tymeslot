@@ -26,7 +26,12 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @spec buffer_time_step(map()) :: Phoenix.LiveView.Rendered.t()
   def buffer_time_step(assigns) do
     ~H"""
-    <form id="onboarding-buffer-time-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
+    <form
+      id="onboarding-buffer-time-form"
+      phx-change="update_scheduling_preferences"
+      phx-debounce="300"
+      class="onboarding-form"
+    >
       <p class="onboarding-preference-example">
         {buffer_example(@profile.buffer_minutes)}
       </p>
@@ -40,9 +45,10 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
             phx-value-_preset="true"
             class={[
               "btn-tag-selector btn-tag-selector-primary",
-              if(@profile.buffer_minutes == value and
-                   not Map.get(@custom_input_mode, :buffer_minutes, false),
-                 do: "btn-tag-selector-primary--active"
+              if(
+                @profile.buffer_minutes == value and
+                  not Map.get(@custom_input_mode, :buffer_minutes, false),
+                do: "btn-tag-selector-primary--active"
               )
             ]}
           >
@@ -79,7 +85,12 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @spec booking_window_step(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_window_step(assigns) do
     ~H"""
-    <form id="onboarding-booking-window-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
+    <form
+      id="onboarding-booking-window-form"
+      phx-change="update_scheduling_preferences"
+      phx-debounce="300"
+      class="onboarding-form"
+    >
       <p class="onboarding-preference-example">
         {window_example(@profile.advance_booking_days)}
       </p>
@@ -93,9 +104,10 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
             phx-value-_preset="true"
             class={[
               "btn-tag-selector btn-tag-selector-secondary",
-              if(@profile.advance_booking_days == value and
-                   not Map.get(@custom_input_mode, :advance_booking_days, false),
-                 do: "btn-tag-selector-secondary--active"
+              if(
+                @profile.advance_booking_days == value and
+                  not Map.get(@custom_input_mode, :advance_booking_days, false),
+                do: "btn-tag-selector-secondary--active"
               )
             ]}
           >
@@ -132,7 +144,12 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @spec minimum_notice_step(map()) :: Phoenix.LiveView.Rendered.t()
   def minimum_notice_step(assigns) do
     ~H"""
-    <form id="onboarding-min-notice-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
+    <form
+      id="onboarding-min-notice-form"
+      phx-change="update_scheduling_preferences"
+      phx-debounce="300"
+      class="onboarding-form"
+    >
       <p class="onboarding-preference-example">
         {notice_example(@profile.min_advance_hours)}
       </p>
@@ -146,9 +163,10 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
             phx-value-_preset="true"
             class={[
               "btn-tag-selector btn-tag-selector-tertiary",
-              if(@profile.min_advance_hours == value and
-                   not Map.get(@custom_input_mode, :min_advance_hours, false),
-                 do: "btn-tag-selector-tertiary--active"
+              if(
+                @profile.min_advance_hours == value and
+                  not Map.get(@custom_input_mode, :min_advance_hours, false),
+                do: "btn-tag-selector-tertiary--active"
               )
             ]}
           >

@@ -76,7 +76,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
           type="number"
           name="meeting_type[price_input]"
           label={
-            dgettext("dashboard_meeting_form", "Price (%{currency})", currency: String.upcase(@currency))
+            dgettext("dashboard_meeting_form", "Price (%{currency})",
+              currency: String.upcase(@currency)
+            )
           }
           value={@payment_price}
           min="0"

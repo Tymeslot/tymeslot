@@ -31,39 +31,39 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
       </p>
       <div :if={@payments != []} class="overflow-x-auto">
         <table class="w-full">
-        <thead class="text-left text-token-sm text-tymeslot-500 border-b border-tymeslot-100">
-          <tr>
-            <th class="p-2">{dgettext("dashboard_payments", "Date")}</th>
-            <th class="p-2">{dgettext("dashboard_payments", "Attendee")}</th>
-            <th class="p-2">{dgettext("dashboard_payments", "Meeting type")}</th>
-            <th class="p-2 text-right">{dgettext("dashboard_payments", "Amount")}</th>
-            <th class="p-2">{dgettext("dashboard_payments", "Status")}</th>
-            <th class="p-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :for={p <- @payments} class="border-b border-tymeslot-50">
-            <td class="p-2 text-token-sm">{format_payment_date(p.inserted_at)}</td>
-            <td class="p-2 text-token-sm">{p.attendee_email}</td>
-            <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
-            <td class="p-2 text-token-sm text-right">
-              {format_amount(p.amount_cents, p.currency)}
-            </td>
-            <td class="p-2 text-token-sm">{format_status(p.status)}</td>
-            <td class="p-2 text-right">
-              <button
-                :if={MeetingPayments.refundable?(p) and not connect_account_deleted?(@account)}
-                type="button"
-                class="text-token-sm text-turquoise-700 font-semibold underline"
-                phx-click="open_refund_modal"
-                phx-value-id={p.id}
-                phx-target={@myself}
-              >
-                {dgettext("dashboard_payments", "Refund")}
-              </button>
-            </td>
-          </tr>
-        </tbody>
+          <thead class="text-left text-token-sm text-tymeslot-500 border-b border-tymeslot-100">
+            <tr>
+              <th class="p-2">{dgettext("dashboard_payments", "Date")}</th>
+              <th class="p-2">{dgettext("dashboard_payments", "Attendee")}</th>
+              <th class="p-2">{dgettext("dashboard_payments", "Meeting type")}</th>
+              <th class="p-2 text-right">{dgettext("dashboard_payments", "Amount")}</th>
+              <th class="p-2">{dgettext("dashboard_payments", "Status")}</th>
+              <th class="p-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={p <- @payments} class="border-b border-tymeslot-50">
+              <td class="p-2 text-token-sm">{format_payment_date(p.inserted_at)}</td>
+              <td class="p-2 text-token-sm">{p.attendee_email}</td>
+              <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
+              <td class="p-2 text-token-sm text-right">
+                {format_amount(p.amount_cents, p.currency)}
+              </td>
+              <td class="p-2 text-token-sm">{format_status(p.status)}</td>
+              <td class="p-2 text-right">
+                <button
+                  :if={MeetingPayments.refundable?(p) and not connect_account_deleted?(@account)}
+                  type="button"
+                  class="text-token-sm text-turquoise-700 font-semibold underline"
+                  phx-click="open_refund_modal"
+                  phx-value-id={p.id}
+                  phx-target={@myself}
+                >
+                  {dgettext("dashboard_payments", "Refund")}
+                </button>
+              </td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </.detail_card>

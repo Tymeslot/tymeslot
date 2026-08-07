@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthViewTest do
 
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView
 
   # Month of April 2026, rendered as a 6×7 matrix starting Monday 30 March.
@@ -16,7 +17,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthViewTest do
       visible_days: @visible_days,
       visible_events: events,
       integrations: [],
-      integration_colors: %{1 => 1},
+      integration_colors: %{1 => EventColour.rotation_class(1)},
+      calendar_colors: %{},
       hidden_integration_ids: [],
       date: ~D[2026-04-15],
       user_timezone: "Etc/UTC",

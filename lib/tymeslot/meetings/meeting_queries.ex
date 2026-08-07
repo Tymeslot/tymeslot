@@ -235,6 +235,42 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Lists the start times (and meeting type) of an organizer's slot-occupying
+  bookings whose `start_time` falls in `[from_utc, to_utc)`.
+
+  Counts only meetings that hold a slot (`MeetingState.where_slot_live/1`), so
+  cancelled, completed and expired bookings are excluded. Used by the booking
+  limits feature to bucket bookings into host-timezone periods.
+
+  Options:
+    * `:exclude_uid` — omit one meeting by UID (self-exclusion on reschedule).
+  """
+  @spec list_live_booking_starts(integer(), DateTime.t(), DateTime.t(), keyword()) :: [
+          %{start_time: DateTime.t(), meeting_type_id: integer() | nil}
+        ]
+  def list_live_booking_starts(
+        organizer_user_id,
+        %DateTime{} = from_utc,
+        %DateTime{} = to_utc,
+        opts \\ []
+      ) do
+    query =
+      Meeting
+      |> MeetingState.where_slot_live()
+      |> where([m], m.organizer_user_id == ^organizer_user_id)
+      |> where([m], m.start_time >= ^from_utc and m.start_time < ^to_utc)
+      |> select([m], %{start_time: m.start_time, meeting_type_id: m.meeting_type_id})
+
+    query =
+      case Keyword.get(opts, :exclude_uid) do
+        nil -> query
+        uid -> where(query, [m], m.uid != ^uid)
+      end
+
+    Repo.all(query)
+  end
+
+  @doc """
   Returns the count of bookings grouped by `utm_source` for an organizer
   within the given window. Only returns rows where `utm_source` is set.
   Intended as a primitive for analytics composition — callers should not

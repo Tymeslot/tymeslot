@@ -243,6 +243,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   def handle_event("toggle_integration_visibility", params, socket),
     do: Visibility.handle_toggle_integration_visibility(params, socket)
 
+  def handle_event("toggle_calendar_visibility", params, socket),
+    do: Visibility.handle_toggle_calendar_visibility(params, socket)
+
+  def handle_event("set_calendar_colour", params, socket),
+    do: Preferences.handle_set_calendar_colour(params, socket)
+
   @impl Phoenix.LiveComponent
   def handle_event("refresh", params, socket),
     do: Visibility.handle_refresh(params, socket)

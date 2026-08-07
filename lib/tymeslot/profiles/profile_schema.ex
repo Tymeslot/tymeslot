@@ -4,6 +4,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.Profiles
   alias Tymeslot.Security.FieldValidators.UsernameValidator
@@ -22,6 +23,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           buffer_minutes: integer(),
           advance_booking_days: integer(),
           min_advance_hours: integer(),
+          max_bookings_per_day: pos_integer() | nil,
+          max_bookings_per_week: pos_integer() | nil,
+          max_bookings_per_month: pos_integer() | nil,
           avatar: String.t() | nil,
           booking_theme: String.t() | nil,
           has_custom_theme: boolean(),
@@ -48,6 +52,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:buffer_minutes, :integer, default: 15)
     field(:advance_booking_days, :integer, default: 90)
     field(:min_advance_hours, :integer, default: 3)
+    field(:max_bookings_per_day, :integer)
+    field(:max_bookings_per_week, :integer)
+    field(:max_bookings_per_month, :integer)
     field(:avatar, :string)
     field(:booking_theme, :string, default: Catalog.default_id())
     field(:has_custom_theme, :boolean, default: false)
@@ -79,6 +86,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
       :buffer_minutes,
       :advance_booking_days,
       :min_advance_hours,
+      :max_bookings_per_day,
+      :max_bookings_per_week,
+      :max_bookings_per_month,
       :avatar,
       :booking_theme,
       :has_custom_theme,
@@ -94,6 +104,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     |> validate_number(:buffer_minutes, Constraints.buffer_minutes_opts())
     |> validate_number(:advance_booking_days, Constraints.advance_booking_days_opts())
     |> validate_number(:min_advance_hours, Constraints.min_advance_hours_opts())
+    |> validate_booking_limits(:profiles)
     |> unique_constraint(:username)
   end
 

@@ -119,7 +119,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                     class="absolute inset-0 bg-tymeslot-900/40 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-not-allowed z-20"
                   >
                     <div class="w-12 h-12 bg-white/20 rounded-token-2xl flex items-center justify-center mb-3">
-                      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        class="w-6 h-6 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           stroke-linecap="round"
                           stroke-linejoin="round"

@@ -31,7 +31,10 @@ defmodule TymeslotWeb.Components.ConfirmationModal do
         <div class="flex items-center gap-3">
           <div class={[
             "w-10 h-10 rounded-token-xl flex items-center justify-center border",
-            if(@confirm_variant == :danger, do: "bg-red-50 border-red-100", else: "bg-turquoise-50 border-turquoise-100")
+            if(@confirm_variant == :danger,
+              do: "bg-red-50 border-red-100",
+              else: "bg-turquoise-50 border-turquoise-100"
+            )
           ]}>
             <CoreComponents.icon
               name="hero-exclamation-triangle"

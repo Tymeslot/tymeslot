@@ -357,6 +357,40 @@ defmodule Tymeslot.Security.RateLimiter do
     do: Dashboard.check_integration_write(user_id)
 
   @doc """
+  Rate limit changes to how an integration is *presented* — its name and the
+  colour its events are painted in.
+
+  A separate, more permissive bucket from `check_integration_write_rate_limit/1`
+  because the two meter different things. That one guards writes that reach a
+  provider or move credentials around, where 30 in half an hour is already
+  generous. These write one column on a row the user owns and touch nothing
+  outside Tymeslot, and they are driven by a swatch grid: comparing colours by
+  clicking through them is how the control is meant to be used, and it would
+  exhaust a connection-sized budget in under a minute.
+
+  Limit: 150 writes per 30 minutes per user.
+  """
+  @spec check_integration_appearance_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_integration_appearance_rate_limit(user_id),
+    do: Dashboard.check_integration_appearance(user_id)
+
+  @doc """
+  Rate limit showing and hiding individual calendars in the dashboard grid.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Its own budget rather than the appearance one: hiding a calendar is a view
+  control clicked while reading the week, not a settings change, so it is sized
+  where normal use cannot reach it.
+
+  Limit: 300 toggles per 10 minutes per user.
+  """
+  @spec check_calendar_visibility_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_calendar_visibility_rate_limit(user_id),
+    do: Dashboard.check_calendar_visibility(user_id)
+
+  @doc """
   Rate limit meeting type write operations (create, update, toggle, delete, reorder) from the dashboard.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

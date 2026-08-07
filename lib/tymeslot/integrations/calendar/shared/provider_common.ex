@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
 
   @doc """
@@ -35,15 +36,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Beyond requiring a well-formed http/https URL with a host, this rejects
   plain HTTP for public hosts and any URL pointing at a private, loopback, or
   link-local address — matching the persistence posture in
-  `CalendarIntegrationSchema` (`block_private_ips: true`). An authenticated
-  user must not be able to probe internal hosts via a provider's
-  connection/discovery test any more than they can save such a URL.
+  `CalendarIntegrationSchema`. An authenticated user must not be able to probe
+  internal hosts via a provider's connection/discovery test any more than they
+  can save such a URL.
 
   The private-IP block can be lifted for trusted in-process callers (e.g.
-  integration tests against a local server) by either passing
-  `allow_private_ips: true` in `opts` or setting the application config key
-  `config :tymeslot, :allow_private_ips_for_calendar, true`. The production
-  default is `false` in both cases.
+  integration tests against a local server) by passing `allow_private_ips: true`
+  in `opts`, or for the whole deployment by the operator's
+  `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out, read via
+  `Tymeslot.Security.SsrfGuard.allow_private?/0`. The production default is
+  `false` in both cases.
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
   def validate_url(url, opts \\ []) do
@@ -54,12 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
         dgettext("dashboard_calendar_providers", "Invalid URL format")
       )
 
-    allow_private =
-      Keyword.get(
-        opts,
-        :allow_private_ips,
-        Application.get_env(:tymeslot, :allow_private_ips_for_calendar, false)
-      )
+    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private?())
 
     UrlValidation.validate_http_url(url,
       invalid_message: invalid_message,

@@ -33,7 +33,8 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       </h2>
 
       <.info_box variant={:info}>
-        {dgettext("dashboard_admin", 
+        {dgettext(
+          "dashboard_admin",
           "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
         )}
       </.info_box>
@@ -101,7 +102,10 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         <p class="mt-1 text-token-sm text-tymeslot-600 font-medium leading-relaxed">
           {Formatters.describe(@key)}
         </p>
-        <.recommended_chip :if={Formatters.recommended(@key) != nil} value={Formatters.recommended(@key)} />
+        <.recommended_chip
+          :if={Formatters.recommended(@key) != nil}
+          value={Formatters.recommended(@key)}
+        />
       </div>
 
       <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />

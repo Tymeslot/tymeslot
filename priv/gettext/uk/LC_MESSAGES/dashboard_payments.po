@@ -11,320 +11,316 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:52
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Already refunded:"
 msgstr "Уже повернено:"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:39
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Amount"
 msgstr "Сума"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:359
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Amount exceeds the remaining refundable balance."
 msgstr "Сума перевищує залишок, доступний для повернення."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:37
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee"
 msgstr "Учасник"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:61
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:118
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:94
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Charges and payouts are enabled."
 msgstr "Платежі та виплати ввімкнено."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:353
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a refund type."
 msgstr "Виберіть тип повернення."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:16
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:34
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe"
 msgstr "Підключити Stripe"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:118
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe to start charging for meetings."
 msgstr "Підключіть Stripe, щоб почати стягувати плату за зустрічі."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:18
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
 msgstr "Підключіть Stripe, щоб почати стягувати плату за зустрічі. Гроші надходитимуть безпосередньо на ваш рахунок Stripe."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:83
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Connected and ready"
 msgstr "Підключено та готово"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:32
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:57
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Connecting…"
 msgstr "Підключення…"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:59
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Continue onboarding"
 msgstr "Продовжити налаштування"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:154
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Could not disconnect Stripe. Please try again."
 msgstr "Не вдалося від'єднати Stripe. Спробуйте ще раз."
 
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex:67
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex:72
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Could not start Stripe connection. Please try again."
 msgstr "Не вдалося розпочати підключення Stripe. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:256
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Could not update currency. Please try again."
 msgstr "Не вдалося оновити валюту. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:169
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Currency not supported."
 msgstr "Валюта не підтримується."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:251
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Currency updated."
 msgstr "Валюту оновлено."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:242
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Currency updated. Paid event-type prices have been reset."
 msgstr "Валюту оновлено. Ціни на платні типи подій скинуто."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:36
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr "Дата"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:26
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
 #, elixir-autogen, elixir-format
 msgid "Default currency"
 msgstr "Валюта за замовчуванням"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:32
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:64
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:102
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:114
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect Stripe"
 msgstr "Від'єднати Stripe"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:104
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot. Existing payments remain visible. New paid bookings will fail until you reconnect."
 msgstr "Від'єднати обліковий запис Stripe від Tymeslot. Наявні платежі залишаться видимими. Нові платні бронювання не здійснюватимуться, доки ви не підключите його знову."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:38
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot? Existing payments remain visible, but new paid bookings will fail until you reconnect."
 msgstr "Від'єднати обліковий запис Stripe від Tymeslot? Наявні платежі залишаться видимими, але нові платні бронювання не здійснюватимуться, доки ви не підключите його знову."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:86
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnected"
 msgstr "Від'єднано"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:88
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Disputed"
 msgstr "Оскаржено"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:356
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid refund amount."
 msgstr "Введіть коректну суму повернення."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:90
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr "Помилка"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:87
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Finish connecting Stripe"
 msgstr "Завершити підключення Stripe"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:82
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Full refund"
 msgstr "Повне повернення"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:127
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Issue refund"
 msgstr "Повернути кошти"
 
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex:55
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting payments are not enabled for this account."
 msgstr "Оплата зустрічей для цього облікового запису не ввімкнена."
 
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex:58
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting payments require an upgraded plan."
 msgstr "Для оплати зустрічей потрібен вищий тарифний план."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:38
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
 msgstr "Тип зустрічі"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:30
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "No payments yet."
 msgstr "Поки немає платежів."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:88
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Not connected"
 msgstr "Не підключено"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:49
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Original charge:"
 msgstr "Початковий платіж:"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:82
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Paid"
 msgstr "Оплачено"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:100
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Partial amount"
 msgstr "Часткова сума"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:93
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Partial refund"
 msgstr "Часткове повернення"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:85
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Partially refunded"
 msgstr "Частково повернено"
 
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex:62
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Payment setup is temporarily unavailable. Please try again later."
 msgstr "Налаштування платежів тимчасово недоступне. Спробуйте пізніше."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:62
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Платежі"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:89
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr "Очікується"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:84
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Pending Stripe review"
 msgstr "Очікує на перевірку Stripe"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex:32
+#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
 #, elixir-autogen, elixir-format
 msgid "Platform fee paid"
 msgstr "Комісію платформи сплачено"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:91
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Reason: %{reason}"
 msgstr "Причина: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:28
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Recent payments"
 msgstr "Останні платежі"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:62
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Refund"
 msgstr "Повернення коштів"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:380
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount must be greater than zero and within the remaining balance."
 msgstr "Сума повернення має бути більшою за нуль і не перевищувати доступний залишок."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:303
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Refund issued. The attendee will receive a confirmation email."
 msgstr "Кошти повернено. Учасник отримає електронний лист із підтвердженням."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:35
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refund payment"
 msgstr "Повернути платіж"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:73
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refund type"
 msgstr "Тип повернення"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex:27
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:87
+#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Refunded"
 msgstr "Повернено"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:125
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refunding..."
 msgstr "Повернення..."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:363
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds older than 60 days must be processed in your Stripe dashboard."
 msgstr "Повернення коштів за платежі, здійснені понад 60 днів тому, потрібно обробляти на панелі керування Stripe."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:56
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Remaining refundable:"
 msgstr "Залишок до повернення:"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:85
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Restricted"
 msgstr "Обмежено"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:401
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong while issuing the refund. Please try again."
 msgstr "Під час повернення коштів щось пішло не так. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:40
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr "Статус"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:137
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe account disconnected."
 msgstr "Обліковий запис Stripe від'єднано."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:142
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe account disconnected. %{count} pending booking cancelled."
 msgid_plural "Stripe account disconnected. %{count} pending bookings cancelled."
@@ -332,47 +328,47 @@ msgstr[0] "Обліковий запис Stripe від'єднано. %{count} н
 msgstr[1] "Обліковий запис Stripe від'єднано. %{count} незавершені бронювання скасовано."
 msgstr[2] "Обліковий запис Stripe від'єднано. %{count} незавершених бронювань скасовано."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:394
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe has not yet captured a charge for this booking. Try again in a moment."
 msgstr "Stripe ще не стягнув плату за це бронювання. Спробуйте ще раз за мить."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:98
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
 msgstr "Stripe перевіряє ваш обліковий запис. Стягнення коштів увімкнеться автоматично після схвалення."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:62
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
 msgstr "Учасник отримає повну суму повернення. Комісія платформи Tymeslot буде пропорційно скасована, а комісія Stripe за обробку початкового платежу залишиться за вами."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:387
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This booking has not been paid yet, so it cannot be refunded."
 msgstr "Це бронювання ще не оплачено, тому кошти за нього неможливо повернути."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:193
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This payment can no longer be refunded from Tymeslot. Refunds older than 60 days must be processed in your Stripe dashboard."
 msgstr "Цей платіж більше не можна повернути через Tymeslot. Повернення коштів за платежі, здійснені понад 60 днів тому, потрібно обробляти на панелі керування Stripe."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:369
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This payment has already been fully refunded."
 msgstr "Кошти за цей платіж уже повністю повернено."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:373
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This payment is under dispute and must be handled in your Stripe dashboard."
 msgstr "Цей платіж оскаржується, тому його потрібно обробити на панелі керування Stripe."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex:22
+#: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
 #, elixir-autogen, elixir-format
 msgid "Total received"
 msgstr "Усього отримано"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:45
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You have %{count} pending booking awaiting payment. Disconnecting will cancel it."
 msgid_plural "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them."
@@ -380,22 +376,22 @@ msgstr[0] "У вас є %{count} незавершене бронювання, щ
 msgstr[1] "У вас є %{count} незавершені бронювання, що очікують на оплату. Від'єднання скасує їх."
 msgstr[2] "У вас є %{count} незавершених бронювань, що очікують на оплату. Від'єднання скасує їх."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:105
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
 msgstr "Ви почали підключення Stripe, але ще не завершили налаштування. Продовжіть, щоб почати приймати платежі."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:112
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
 msgstr "Ваш обліковий запис Stripe від'єднано. Підключіть його знову, щоб приймати платежі."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:41
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refund %{attendee} for %{meeting_type}."
 msgstr "Повернути кошти учаснику %{attendee} за %{meeting_type}."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
 msgstr "Зміна валюти зробить усі платні типи подій безкоштовними - поточні ціни збережено в попередній валюті, інакше кошти стягувалися б у новій."

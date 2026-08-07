@@ -49,10 +49,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               )}
               <button
                 type="button"
-                phx-click={JS.push("remove_reminder",
-                  value: %{value: reminder.value, unit: reminder.unit},
-                  target: @myself
-                )}
+                phx-click={
+                  JS.push("remove_reminder",
+                    value: %{value: reminder.value, unit: reminder.unit},
+                    target: @myself
+                  )
+                }
                 class="inline-flex items-center justify-center rounded-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
                 aria-label={dgettext("dashboard_meeting_form", "Remove reminder")}
               >
@@ -69,7 +71,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
           <%= unless Enum.any?(@reminders, &(&1.value == 30 and &1.unit == "minutes")) do %>
             <button
               type="button"
-              phx-click={JS.push("add_quick_reminder", value: %{amount: 30, unit: "minutes"}, target: @myself)}
+              phx-click={
+                JS.push("add_quick_reminder", value: %{amount: 30, unit: "minutes"}, target: @myself)
+              }
               disabled={length(@reminders) >= 3}
               title={
                 if length(@reminders) >= 3,
@@ -85,7 +89,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
           <%= unless Enum.any?(@reminders, &(&1.value == 60 and &1.unit == "minutes") or (&1.value == 1 and &1.unit == "hours")) do %>
             <button
               type="button"
-              phx-click={JS.push("add_quick_reminder", value: %{amount: 60, unit: "minutes"}, target: @myself)}
+              phx-click={
+                JS.push("add_quick_reminder", value: %{amount: 60, unit: "minutes"}, target: @myself)
+              }
               disabled={length(@reminders) >= 3}
               title={
                 if length(@reminders) >= 3,

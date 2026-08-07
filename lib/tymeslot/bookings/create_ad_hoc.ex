@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
@@ -125,7 +126,9 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   end
 
   defp create_meeting(attrs) do
-    case Scheduling.create_meeting_with_conflict_check(attrs) do
+    # Booking limits guard the host's public capacity; a host deliberately
+    # creating a meeting from their own dashboard may exceed their caps.
+    case Scheduling.create_meeting_with_conflict_check(attrs, enforce_booking_limits: false) do
       {:ok, meeting} -> {:ok, meeting}
       {:error, reason} -> {:error, reason}
     end
@@ -180,7 +183,11 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   defp attendees_for(_meeting), do: []
 
-  defp map_result({:ok, meeting}), do: {:ok, meeting}
+  defp map_result({:ok, meeting}) do
+    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+    {:ok, meeting}
+  end
+
   # Preserve the time-conflict reason distinctly so callers can tell an occupied
   # slot apart from a generic booking failure.
   defp map_result({:error, :time_conflict}), do: {:error, :time_conflict}

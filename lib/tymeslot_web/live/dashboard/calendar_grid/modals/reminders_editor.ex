@@ -29,7 +29,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
     <div class="flex items-start gap-3 mb-3">
       <.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
       <div class="flex-1">
-        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{dgettext("dashboard_calendar_events", "Reminders")}</p>
+        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
+          {dgettext("dashboard_calendar_events", "Reminders")}
+        </p>
 
         <div :if={@reminders != []} class="flex flex-wrap gap-1.5 mb-2">
           <span
@@ -43,7 +45,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
               phx-value-index={index}
               phx-target={@myself}
               class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
-              aria-label={dgettext("dashboard_calendar_events", "Remove reminder %{label}", label: reminder_label(reminder))}
+              aria-label={
+                dgettext("dashboard_calendar_events", "Remove reminder %{label}",
+                  label: reminder_label(reminder)
+                )
+              }
             >
               <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
             </button>
@@ -77,7 +83,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
           </button>
         </form>
         <p class="text-token-xs text-tymeslot-400 mt-1">
-          {dgettext("dashboard_calendar_events", "Reminders are synced to your calendar so it can alert you on your own devices.")}
+          {dgettext(
+            "dashboard_calendar_events",
+            "Reminders are synced to your calendar so it can alert you on your own devices."
+          )}
         </p>
       </div>
     </div>

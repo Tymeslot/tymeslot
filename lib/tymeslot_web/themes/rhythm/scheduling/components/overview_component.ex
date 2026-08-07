@@ -71,8 +71,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
             <%= if @username_context && @meeting_types == [] do %>
               <div class="overview-empty-state">
-                <p class="overview-empty-title">{dgettext("booking", "No meeting types available")}</p>
-                <p class="overview-empty-subtitle">{dgettext("booking", "Please contact the organizer")}</p>
+                <p class="overview-empty-title">
+                  {dgettext("booking", "No meeting types available")}
+                </p>
+                <p class="overview-empty-subtitle">
+                  {dgettext("booking", "Please contact the organizer")}
+                </p>
               </div>
             <% else %>
               <div class="duration-grid">

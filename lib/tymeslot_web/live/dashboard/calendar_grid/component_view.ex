@@ -29,7 +29,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   @spec grid(map()) :: Phoenix.LiveView.Rendered.t()
   def grid(assigns) do
     ~H"""
-    <div id="calendar-grid" class="flex flex-col h-full relative" phx-hook="CalendarMobile" phx-target={@myself}>
+    <div
+      id="calendar-grid"
+      class="flex flex-col h-full relative"
+      phx-hook="CalendarMobile"
+      phx-target={@myself}
+    >
       <%!-- Drives browser desktop reminders while the calendar is open. The hook
             reads the JSON feed and fires Notifications on its own timer; the feed
             refreshes on every 60s tick. --%>
@@ -48,7 +53,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           date={@date}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colour_keys={@calendar_colour_keys}
           hidden_integration_ids={@hidden_integration_ids}
+          hidden_calendar_keys={@hidden_calendar_keys}
           show_calendar_list={@show_calendar_list}
           show_view_menu={@show_view_menu}
           mini_month_open={@mini_month_open}
@@ -70,6 +77,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           events={@events}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           hidden_integration_ids={@hidden_integration_ids}
           current_time={@current_time}
           user_timezone={@user_timezone}
@@ -89,6 +97,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           visible_events={@visible_events}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           hidden_integration_ids={@hidden_integration_ids}
           date={@date}
           user_timezone={@user_timezone}
@@ -101,6 +110,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           visible_days={@visible_days}
           visible_events={@visible_events}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           user_timezone={@user_timezone}
           preferences={@preferences}
           myself={@myself}
@@ -134,6 +144,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           selected_event={@selected_event}
           integrations={@integrations}
           integration_colors={@integration_colors}
+          calendar_colors={@calendar_colors}
           user_timezone={@user_timezone}
           time_format={Helpers.time_format(assigns)}
           myself={@myself}

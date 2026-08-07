@@ -78,8 +78,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
           <p class="mt-2 text-token-sm text-tymeslot-500 font-medium">
             {if entry.progress == 100,
               do: dgettext("onboarding_wizard", "Processing…"),
-              else:
-                dgettext("onboarding_wizard", "Uploading… %{percent}%", percent: entry.progress)}
+              else: dgettext("onboarding_wizard", "Uploading… %{percent}%", percent: entry.progress)}
           </p>
         <% end %>
         <%= for err <- upload_errors(@uploads.avatar) do %>

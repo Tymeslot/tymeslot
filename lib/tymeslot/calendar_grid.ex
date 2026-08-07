@@ -4,13 +4,16 @@ defmodule Tymeslot.CalendarGrid do
 
   Provides functions to fetch cached calendar events for a date range,
   trigger background syncs for active integrations, and assign stable
-  color indices to integrations.
+  display colours to integrations.
   """
 
+  alias Tymeslot.Integrations.Calendar.Appearance
+  alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -21,8 +24,6 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Workers.SyncDebugCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
-
-  @palette_size 8
 
   @caldav_providers Enum.map(ProviderConfig.caldav_based_providers(), &Atom.to_string/1)
 
@@ -133,24 +134,58 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   @doc """
-  Returns a stable color-index map for the given integrations.
+  Returns the display class each of the given integrations paints its events in.
 
-  Integrations are sorted by id before assignment so that the same
-  integration always receives the same index (1..#{@palette_size}),
-  regardless of the order they are passed in. Indices rotate through
-  the palette size. The web layer maps these to CSS classes.
+  An integration whose owner has picked a colour resolves to that palette
+  key's class. The rest fall back to a rotation: integrations are sorted by id
+  first, so the same integration keeps the same colour regardless of the order
+  they are passed in, and the rotation wraps at `EventColour.rotation_size/0`.
 
-  Returns `%{integration_id => 1..#{@palette_size}}`.
+  A picked colour is deliberately *not* taken out of the rotation. Doing so
+  would shuffle every other integration's colour the moment one was picked,
+  which is the opposite of the stability the sort exists to provide; the cost
+  is that a picked colour may coincide with a rotated one.
+
+  Returns `%{integration_id => tailwind_class}`.
   """
-  @spec get_integration_color_indices([map()]) :: %{integer() => pos_integer()}
-  def get_integration_color_indices(integrations) do
+  @spec integration_colour_classes([map()]) :: %{integer() => String.t()}
+  def integration_colour_classes(integrations) do
     integrations
     |> Enum.sort_by(& &1.id)
     |> Enum.with_index()
     |> Map.new(fn {integration, index} ->
-      {integration.id, rem(index, @palette_size) + 1}
+      {integration.id, colour_class(integration, index)}
     end)
   end
+
+  @doc """
+  Tailwind classes for the calendars the organiser has given a colour of their
+  own, keyed by `{integration_id, provider_calendar_id}`.
+
+  Only calendars with an explicit choice appear. Everything else is absent on
+  purpose, so the caller falls through to the integration's colour and then the
+  rotation, rather than this map having to restate either.
+  """
+  @spec calendar_colour_classes([CalendarAppearanceSchema.t()]) :: %{
+          {integer(), String.t()} => String.t()
+        }
+  def calendar_colour_classes(appearances) do
+    appearances
+    |> Enum.filter(&Appearance.chosen?/1)
+    |> Map.new(fn appearance ->
+      {{appearance.calendar_integration_id, appearance.provider_calendar_id},
+       EventColour.tailwind_class(appearance.colour)}
+    end)
+  end
+
+  # A blank colour is treated as no colour, not as an unrecognised one: it can
+  # only reach the column from outside the changeset (a restore, a hand-written
+  # UPDATE), and rotating is a better answer there than painting it neutral.
+  defp colour_class(%{colour: colour}, _index) when is_binary(colour) and colour != "",
+    do: EventColour.tailwind_class(colour)
+
+  defp colour_class(_integration, index),
+    do: EventColour.rotation_class(rem(index, EventColour.rotation_size()) + 1)
 
   @doc """
   Returns integrations whose cached data is stale.

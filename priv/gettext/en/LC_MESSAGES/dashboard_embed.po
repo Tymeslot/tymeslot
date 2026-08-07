@@ -11,407 +11,407 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:122
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add Allowed Domain"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:191
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add Domain"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:69
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add domains"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:87
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add your booking page to any website. Choose the option that works best for you."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:214
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Already whitelisted: %{domains}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:103
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Book a Meeting →"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:46
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "By default, embedding is disabled to prevent unauthorized use of your booking page. To enable embedding, you must specify the domains you trust."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:148
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Code copied to clipboard!"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:382
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Container max-width. Modal popup defaults to 1000px."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:29
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Control which websites can embed your booking page"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:442
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Copy"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:165
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Current Status:"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:287
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Customise"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:124
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Direct Link"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:199
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Disable All Embedding"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:173
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Disabled:"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:234
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Domain removed successfully"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:126
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Easiest"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:82
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:95
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Embed Options"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:41
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Embed directly into your webpage"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:174
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Embedding is blocked everywhere (default)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:248
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Embedding is now disabled"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:300
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to save: %{errors}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:164
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Fixed button in corner of page"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:163
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Floating Button"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:238
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Get it on WordPress.org"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:43
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "How Domain Whitelisting Works"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:352
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Initial height (px)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:40
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Inline Embed"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:310
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Layout"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex:57
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Link Deactivated"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:116
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Live Preview"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:373
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Max width (px)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:182
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Only your whitelisted domains can embed"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:361
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Placeholder shown before the iframe auto-resizes. Inline only."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:209
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter at least one domain."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:87
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Popular"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:85
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Popup Modal"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex:39
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Previewing: %{type} Mode"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:165
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Pro"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:42
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Recommended"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:181
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Restricted:"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:142
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule a meeting with me →"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:109
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Security"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:25
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Security & Domain Control"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:205
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Security settings saved successfully!"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:153
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Share this link in emails, social media bios, or messages. No code needed."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:74
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Shows the booking calendar right on your page. Copy the code and paste it into your website's HTML."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:125
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Simple link to your booking page"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex:31
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Test It Live"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex:44
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "This is how your booking widget will appear on external sites"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:308
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Too many updates. Please wait a moment before trying again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:86
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Trigger a modal overlay with a button"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex:32
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Try your booking widget in action"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:80
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Use Disable Embedding"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:224
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Using WordPress?"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:114
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Visitors click a button on your page and the booking calendar opens in an overlay."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:62
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking widget here"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:263
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "embedding guide"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:249
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "source"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:58
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "you must restrict embedding"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:332
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:340
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Language for the booking page. Auto follows each visitor's browser preference."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:88
+#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Book a Meeting"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:93
+#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Booking system is currently unavailable."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:111
+#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule a meeting"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:75
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "%{action} to block all embedding (default)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:65
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "%{action} to enable and restrict embedding to only those sites"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:86
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Adding %{domain} automatically allows %{www_domain} too (and vice versa)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:128
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a domain and press enter to add it. Don't include %{scheme} or paths."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:53
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:258
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:97
+#: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Use %{wildcard} to allow all subdomains"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:197
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "A floating button stays visible as visitors scroll - like a chat widget, but for booking."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:334
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Auto - visitor's browser"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:312
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Column - wide canvas, fills the container (recommended)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:320
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Column adapts to any container width. Default centres the booker - useful when you want a self-contained card inside a wide page."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:314
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Default - centred with a ~640px cap (standalone-style)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:226
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Install the official Tymeslot plugin to embed your booking page with a block or shortcode - no code."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:289
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format
 msgid "Updates every snippet below. Defaults work for most embeds - adjust when your site needs them."
 msgstr ""

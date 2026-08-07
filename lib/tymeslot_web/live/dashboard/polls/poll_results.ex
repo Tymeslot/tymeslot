@@ -131,7 +131,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     ~H"""
     <div class="rounded-token-lg bg-blue-50 border border-blue-100 px-4 py-3 text-token-sm text-blue-800 flex items-center gap-2 flex-wrap">
       <Icons.icon name="hero-check-circle-solid" class="w-5 h-5 text-blue-500 shrink-0" />
-      <span>{dgettext("dashboard_common", "This poll is confirmed. The winning time is highlighted below.")}</span>
+      <span>{dgettext(
+        "dashboard_common",
+        "This poll is confirmed. The winning time is highlighted below."
+      )}</span>
       <.link navigate={@meetings_path} class="font-medium text-blue-700 underline hover:text-blue-900">
         {dgettext("dashboard_common", "View meeting")}
       </.link>
@@ -152,7 +155,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
     ~H"""
     <div class="rounded-token-lg bg-turquoise-50 border border-turquoise-100 px-4 py-3 text-token-sm text-turquoise-800 flex items-center gap-2">
       <Icons.icon name="hero-hand-raised" class="w-5 h-5 text-turquoise-500 shrink-0" />
-      <span>{dgettext("dashboard_common", "Voting is open. Confirm a time once your guests have voted.")}</span>
+      <span>{dgettext(
+        "dashboard_common",
+        "Voting is open. Confirm a time once your guests have voted."
+      )}</span>
     </div>
     """
   end
@@ -238,7 +244,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
 
   defp vote_mark(assigns) do
     ~H"""
-    <Icons.icon name={response_icon(@response)} class={"w-5 h-5 mx-auto " <> response_class(@response)} />
+    <Icons.icon
+      name={response_icon(@response)}
+      class={"w-5 h-5 mx-auto " <> response_class(@response)}
+    />
     <span class="sr-only">{@name}: {response_label(@response)}</span>
     """
   end
