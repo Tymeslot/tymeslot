@@ -46,7 +46,8 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
         {dgettext("dashboard_admin", "They will gain access to admin settings and user management.")}
       </p>
       <p :if={@action == :demote and @self?} class="mt-3 text-sm text-amber-600 font-medium">
-        {dgettext("dashboard_admin", 
+        {dgettext(
+          "dashboard_admin",
           "You will lose access to admin settings and user management, and be returned to your dashboard."
         )}
       </p>

@@ -121,62 +121,64 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     unstyled={true}
                     aria-label={dgettext("booking", "Select timezone")}
                   >
-                  <:trigger>
-                    <div class="timezone-display">
-                      <%= if country_code = Timezones.country_code(@user_timezone || "America/New_York") do %>
-                        <%= if Timezones.flag_exists?(country_code) do %>
-                          <Flagpack.flag name={country_code} class="timezone-flag" />
-                        <% else %>
-                          <span class="timezone-flag timezone-flag--fallback">🌐</span>
+                    <:trigger>
+                      <div class="timezone-display">
+                        <%= if country_code = Timezones.country_code(@user_timezone || "America/New_York") do %>
+                          <%= if Timezones.flag_exists?(country_code) do %>
+                            <Flagpack.flag name={country_code} class="timezone-flag" />
+                          <% else %>
+                            <span class="timezone-flag timezone-flag--fallback">🌐</span>
+                          <% end %>
                         <% end %>
-                      <% end %>
-                      <span class="timezone-text">
-                        {Timezones.format(@user_timezone || "America/New_York")}
-                      </span>
-                    </div>
-                    <div class="timezone-arrow">▼</div>
-                  </:trigger>
-                  <:panel>
-                    <div class="timezone-search-wrapper">
-                      <input
-                        id="timezone-search-input"
-                        type="text"
-                        placeholder={dgettext("booking", "Search cities, countries, or timezones...")}
-                        class="timezone-search"
-                        phx-keyup="search_timezone"
-                        phx-target={@myself}
-                        name="search"
-                        value={@timezone_search}
-                        phx-hook="AutoFocus"
-                      />
-                    </div>
-                    <div class="timezone-options scroll-y">
-                      <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
-                        <button
-                          class="timezone-option"
-                          phx-click="change_timezone"
-                          phx-value-timezone={value}
+                        <span class="timezone-text">
+                          {Timezones.format(@user_timezone || "America/New_York")}
+                        </span>
+                      </div>
+                      <div class="timezone-arrow">▼</div>
+                    </:trigger>
+                    <:panel>
+                      <div class="timezone-search-wrapper">
+                        <input
+                          id="timezone-search-input"
+                          type="text"
+                          placeholder={
+                            dgettext("booking", "Search cities, countries, or timezones...")
+                          }
+                          class="timezone-search"
+                          phx-keyup="search_timezone"
                           phx-target={@myself}
-                          type="button"
-                        >
-                          <div class="timezone-option-content">
-                            <%= if country_code = Timezones.country_code(value) do %>
-                              <%= if Timezones.flag_exists?(country_code) do %>
-                                <Flagpack.flag name={country_code} class="timezone-option-flag" />
-                              <% else %>
-                                <span class="timezone-option-flag timezone-flag--fallback">🌐</span>
+                          name="search"
+                          value={@timezone_search}
+                          phx-hook="AutoFocus"
+                        />
+                      </div>
+                      <div class="timezone-options scroll-y">
+                        <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
+                          <button
+                            class="timezone-option"
+                            phx-click="change_timezone"
+                            phx-value-timezone={value}
+                            phx-target={@myself}
+                            type="button"
+                          >
+                            <div class="timezone-option-content">
+                              <%= if country_code = Timezones.country_code(value) do %>
+                                <%= if Timezones.flag_exists?(country_code) do %>
+                                  <Flagpack.flag name={country_code} class="timezone-option-flag" />
+                                <% else %>
+                                  <span class="timezone-option-flag timezone-flag--fallback">🌐</span>
+                                <% end %>
                               <% end %>
-                            <% end %>
-                            <div class="timezone-option-text">
-                              <div class="timezone-option-label">{label}</div>
-                              <div class="timezone-option-offset">{offset}</div>
+                              <div class="timezone-option-text">
+                                <div class="timezone-option-label">{label}</div>
+                                <div class="timezone-option-offset">{offset}</div>
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      <% end %>
-                    </div>
-                  </:panel>
-                </.dropdown>
+                          </button>
+                        <% end %>
+                      </div>
+                    </:panel>
+                  </.dropdown>
                 </div>
               </div>
             </div>
@@ -189,16 +191,25 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     phx-click="prev_week"
                     phx-target={@myself}
                     phx-disable-with="..."
-                    disabled={CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)}
+                    disabled={
+                      CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)
+                    }
                   >
                     ←
                   </button>
-                  <h3 class="calendar-month-year">{LocalizationHelpers.get_week_display(@current_week_start)}</h3>
+                  <h3 class="calendar-month-year">
+                    {LocalizationHelpers.get_week_display(@current_week_start)}
+                  </h3>
                   <div class="cluster cluster-xs">
                     <%= if @availability_status in [:error, :timeout] do %>
                       <div class="calendar-error-inline">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
                         </svg>
                         {dgettext("booking", "Service slow")}
                       </div>
@@ -208,7 +219,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       phx-click="next_week"
                       phx-target={@myself}
                       phx-disable-with="..."
-                      disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone, @organizer_profile.advance_booking_days)}
+                      disabled={
+                        CalendarNavigation.next_week_disabled?(
+                          @current_week_start,
+                          @user_timezone,
+                          @organizer_profile.advance_booking_days
+                        )
+                      }
                     >
                       →
                     </button>
@@ -244,7 +261,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                   {dgettext("booking", "Available Times")}
                 </h3>
                 <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
-                <% slots_loaded? = @selected_date && !@loading_slots && !@calendar_error && normalized_slots != [] %>
+                <% slots_loaded? =
+                  @selected_date && !@loading_slots && !@calendar_error && normalized_slots != [] %>
                 <%!-- Concise, screen-reader-only announcement of the slot-loading
                       state so keyboard/AT users hear the result of picking a date. --%>
                 <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
@@ -291,7 +309,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                     phx-target={@myself}
                                     disabled={@loading_slots}
                                   >
-                                    {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot_value))}
+                                    {LocalizationHelpers.format_time_by_locale(
+                                      CalendarHelpers.parse_slot_time(slot_value)
+                                    )}
                                   </button>
                                 <% end %>
                               </div>

@@ -154,7 +154,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
             <div :if={@calendar_list == []} class="flex items-center gap-2 py-2 text-tymeslot-400">
               <.icon name="hero-information-circle" class="h-4 w-4" />
               <span class="text-token-xs font-medium italic">
-                {dgettext("dashboard_calendar_providers", "No calendars found. Try refreshing the integration.")}
+                {dgettext(
+                  "dashboard_calendar_providers",
+                  "No calendars found. Try refreshing the integration."
+                )}
               </span>
             </div>
           </div>

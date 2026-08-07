@@ -35,7 +35,12 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
   @spec text_like(map()) :: Phoenix.LiveView.Rendered.t()
   def text_like(assigns) do
     ~H"""
-    <form id={"cq-form-#{@definition["id"]}"} phx-change="answer" phx-submit="next" phx-target={@myself}>
+    <form
+      id={"cq-form-#{@definition["id"]}"}
+      phx-change="answer"
+      phx-submit="next"
+      phx-target={@myself}
+    >
       <.input
         id={"cq-input-#{@definition["id"]}"}
         type={@input_type}

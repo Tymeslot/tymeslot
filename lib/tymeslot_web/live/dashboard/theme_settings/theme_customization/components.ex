@@ -67,7 +67,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
           class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
           {dgettext("dashboard_appearance", "Close")}
         </button>
@@ -138,7 +143,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        <% active_scheme_id = if is_nil(@customization.custom_palette_seed), do: @customization.color_scheme %>
+        <% active_scheme_id =
+          if is_nil(@customization.custom_palette_seed), do: @customization.color_scheme %>
         <%= for {scheme_id, scheme} <- @presets.color_schemes do %>
           <button
             type="button"
@@ -212,7 +218,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
           {dgettext("dashboard_appearance", "Background Design")}
         </h3>
         <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-          {dgettext("dashboard_appearance", "Choose a visual style that matches your professional identity.")}
+          {dgettext(
+            "dashboard_appearance",
+            "Choose a visual style that matches your professional identity."
+          )}
         </p>
       </div>
 
@@ -224,8 +233,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
               class={[
                 "flex items-center justify-center gap-2 px-4 py-3 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 whitespace-nowrap",
                 if(@browsing_type == type,
-                  do: "bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02]",
-                  else: "bg-transparent border-transparent text-tymeslot-400 hover:text-tymeslot-600 hover:bg-white/50"
+                  do:
+                    "bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02]",
+                  else:
+                    "bg-transparent border-transparent text-tymeslot-400 hover:text-tymeslot-600 hover:bg-white/50"
                 )
               ]}
               phx-click="theme:set_browsing_type"

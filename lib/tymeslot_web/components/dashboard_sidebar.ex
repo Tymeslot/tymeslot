@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </button>
         </div>
 
-    <%!-- Scheduling Link (Mobile and Desktop) --%>
+        <%!-- Scheduling Link (Mobile and Desktop) --%>
         <div class="mb-6 flex gap-2">
           <.link
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </button>
         </div>
 
-    <%!-- Navigation Links --%>
+        <%!-- Navigation Links --%>
         <nav class="space-y-3 mt-6">
           <div>
             <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "General")}</div>
@@ -123,12 +123,13 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 <span>{dgettext("dashboard_common", "Analytics")}</span>
                 <.pro_badge :if={!@analytics_allowed} data-testid="analytics-pro-badge" />
               </.nav_link>
-
             </div>
           </div>
 
           <div>
-            <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "Scheduling")}</div>
+            <div class="dashboard-nav-section-title">
+              {dgettext("dashboard_common", "Scheduling")}
+            </div>
             <div class="space-y-0">
               <.nav_link
                 patch={~p"/dashboard/meeting-settings"}
@@ -136,7 +137,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:meeting_settings}
                 show_notification={not (@integration_status[:has_meeting_types] || false)}
                 notification_type="info"
-                notification_title={dgettext("dashboard_common", "Add a meeting type so guests have something to book")}
+                notification_title={
+                  dgettext("dashboard_common", "Add a meeting type so guests have something to book")
+                }
               >
                 <.icon name="hero-squares-2x2" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Meeting Types")}</span>
@@ -153,7 +156,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
 
               <.nav_link
                 patch={~p"/dashboard/theme"}
-                current={if @current_action == :theme_customization, do: :theme, else: @current_action}
+                current={
+                  if @current_action == :theme_customization, do: :theme, else: @current_action
+                }
                 action={:theme}
               >
                 <.icon name="hero-paint-brush" class="w-5 h-5" />
@@ -163,7 +168,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </div>
 
           <div>
-            <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "Integrations")}</div>
+            <div class="dashboard-nav-section-title">
+              {dgettext("dashboard_common", "Integrations")}
+            </div>
             <div class="space-y-0">
               <.nav_link
                 patch={~p"/dashboard/integrations"}
@@ -171,7 +178,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:integrations}
                 show_notification={needs_integration_setup?(@integration_status)}
                 notification_type="info"
-                notification_title={dgettext("dashboard_common", "Connect a calendar or video provider to finish setup")}
+                notification_title={
+                  dgettext("dashboard_common", "Connect a calendar or video provider to finish setup")
+                }
               >
                 <.icon name="hero-puzzle-piece" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Integrations")}</span>
@@ -180,7 +189,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </div>
 
           <div>
-            <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "Distribution")}</div>
+            <div class="dashboard-nav-section-title">
+              {dgettext("dashboard_common", "Distribution")}
+            </div>
             <div class="space-y-0">
               <.nav_link patch={~p"/dashboard/embed"} current={@current_action} action={:embed}>
                 <.icon name="hero-code-bracket" class="w-5 h-5" />
@@ -201,7 +212,8 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 patch={~p"/dashboard/automation"}
                 current={@current_action}
                 action={:automation}
-                locked={!@automations_allowed}>
+                locked={!@automations_allowed}
+              >
                 <.icon name="hero-bolt" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Automation")}</span>
                 <.pro_badge :if={!@automations_allowed} data-testid="automation-pro-badge" />

@@ -47,8 +47,7 @@ defmodule TymeslotWeb.OnboardingLive.ThemePreviewModal do
         title={dgettext("onboarding_wizard", "Booking page preview")}
         class="w-full h-full rounded-token-xl border border-tymeslot-100"
         style="background-color: #1a1f2e;"
-      >
-      </iframe>
+      ></iframe>
     </.modal>
     """
   end

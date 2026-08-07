@@ -84,10 +84,17 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     assigns = assigns |> assign(:size_classes, size_classes) |> assign(:icon_size, icon_size)
 
     ~H"""
-    <div
-      class={["mx-auto flex items-center justify-center #{@size_classes} rounded-3xl mb-6 bg-linear-to-br from-turquoise-600 to-cyan-600 shadow-xl shadow-turquoise-500/20 border-4 border-white transform transition-transform hover:scale-110", @class]}
-    >
-      <svg class={"#{@icon_size} text-white"} fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+    <div class={[
+      "mx-auto flex items-center justify-center #{@size_classes} rounded-3xl mb-6 bg-linear-to-br from-turquoise-600 to-cyan-600 shadow-xl shadow-turquoise-500/20 border-4 border-white transform transition-transform hover:scale-110",
+      @class
+    ]}>
+      <svg
+        class={"#{@icon_size} text-white"}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        stroke-width="2.5"
+      >
         {render_slot(@inner_block)}
       </svg>
     </div>

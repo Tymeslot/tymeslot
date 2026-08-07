@@ -20,7 +20,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
     >
       <:header>{dgettext("dashboard_calendar_events", "Edit recurring event")}</:header>
 
-      <p class="text-token-sm text-tymeslot-500 mb-4">{dgettext("dashboard_calendar_events", "Which events do you want to update?")}</p>
+      <p class="text-token-sm text-tymeslot-500 mb-4">
+        {dgettext("dashboard_calendar_events", "Which events do you want to update?")}
+      </p>
 
       <div class="flex flex-col gap-2 mb-4">
         <button

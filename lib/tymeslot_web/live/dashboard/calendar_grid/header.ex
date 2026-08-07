@@ -80,7 +80,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             myself={@myself}
           />
           <div class="hidden md:block ml-1 min-w-0">
-            <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
+            <AvailabilityHelpers.timezone_display
+              timezone_display={@timezone_display}
+              country_code={@timezone_country_code}
+            />
           </div>
 
           <%!--
@@ -102,7 +105,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         --%>
         <div class="flex flex-wrap items-center gap-1 md:gap-2">
           <div class="md:hidden">
-            <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
+            <AvailabilityHelpers.timezone_display
+              timezone_display={@timezone_display}
+              country_code={@timezone_country_code}
+            />
           </div>
           <SearchBox.search_box
             search_term={@search_term}

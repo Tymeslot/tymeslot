@@ -75,7 +75,10 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
             {dgettext("onboarding_wizard", "Finish setting up")}
           </h2>
           <p class="text-token-sm font-bold text-tymeslot-500 mt-1 text-pretty">
-            {dgettext("onboarding_wizard", "A few recommended steps - tick off the ones you don't need.")}
+            {dgettext(
+              "onboarding_wizard",
+              "A few recommended steps - tick off the ones you don't need."
+            )}
           </p>
         </div>
         <div class="flex items-center gap-3 shrink-0">
@@ -118,7 +121,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       "flex flex-wrap items-center gap-3 sm:gap-4 p-4 rounded-token-2xl border-2 transition-all",
       if(@item.done,
         do: "bg-tymeslot-50/50 border-tymeslot-50",
-        else: "bg-white border-turquoise-100 hover:border-turquoise-200 hover:shadow-lg hover:shadow-turquoise-500/5"
+        else:
+          "bg-white border-turquoise-100 hover:border-turquoise-200 hover:shadow-lg hover:shadow-turquoise-500/5"
       )
     ]}>
       <%!-- Manual recommendations get a tick; deterministic provider items get
@@ -140,7 +144,10 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
       <div class={[
         "shrink-0 w-11 h-11 rounded-token-xl flex items-center justify-center shadow-sm transition-colors",
-        if(@item.done, do: "bg-tymeslot-100 text-tymeslot-400", else: "bg-turquoise-50 text-turquoise-600")
+        if(@item.done,
+          do: "bg-tymeslot-100 text-tymeslot-400",
+          else: "bg-turquoise-50 text-turquoise-600"
+        )
       ]}>
         <.icon name={@item.icon} class="w-6 h-6" />
       </div>

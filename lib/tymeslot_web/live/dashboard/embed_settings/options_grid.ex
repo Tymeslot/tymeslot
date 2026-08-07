@@ -55,8 +55,19 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               <div class="h-2 bg-tymeslot-200 rounded w-1/2"></div>
               <div class="mt-4 p-3 bg-linear-to-br from-turquoise-50 to-cyan-50 border-2 border-turquoise-200 rounded-token-lg">
                 <div class="flex items-center space-x-2">
-                  <svg class="w-4 h-4 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  <svg
+                    class="w-4 h-4 text-turquoise-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    >
+                    </path>
                   </svg>
                   <div class="text-token-xs font-semibold text-turquoise-700">
                     {dgettext("dashboard_embed", "Your booking widget here")}
@@ -184,7 +195,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             <div class="absolute bottom-4 right-4">
               <div class="w-8 h-8 rounded-full shadow-lg flex items-center justify-center bg-turquoise-600">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  >
+                  </path>
                 </svg>
               </div>
             </div>
@@ -284,7 +301,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     <div class="mb-6 bg-white border-2 border-tymeslot-200 rounded-token-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="text-token-lg font-bold text-tymeslot-900">{dgettext("dashboard_embed", "Customise")}</h3>
+          <h3 class="text-token-lg font-bold text-tymeslot-900">
+            {dgettext("dashboard_embed", "Customise")}
+          </h3>
           <p class="text-token-sm text-tymeslot-600 mt-1">
             {dgettext(
               "dashboard_embed",
@@ -402,31 +421,41 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   defp embed_option_card(assigns) do
     ~H"""
     <div
-      class={["embed-option-card cursor-pointer group relative", @selected && "border-turquoise-500 shadow-md"]}
+      class={[
+        "embed-option-card cursor-pointer group relative",
+        @selected && "border-turquoise-500 shadow-md"
+      ]}
       phx-click="select_embed_type"
       phx-value-type={@type}
       phx-target={@myself}
       data-selected={to_string(@selected)}
     >
-      <div :if={@selected} class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-full flex items-center justify-center text-white shadow-lg z-10">
+      <div
+        :if={@selected}
+        class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-full flex items-center justify-center text-white shadow-lg z-10"
+      >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7">
+          </path>
         </svg>
       </div>
       <div class="p-6">
         <div class="flex items-start justify-between mb-4">
           <div>
-            <h3 class="text-token-xl font-bold text-tymeslot-900"><%= @title %></h3>
-            <p class="text-token-sm text-tymeslot-600 mt-1"><%= @description %></p>
+            <h3 class="text-token-xl font-bold text-tymeslot-900">{@title}</h3>
+            <p class="text-token-sm text-tymeslot-600 mt-1">{@description}</p>
           </div>
-          <span :if={@badge} class={["px-3 py-1 text-token-xs font-semibold rounded-full", @badge_class]}>
-            <%= @badge %>
+          <span
+            :if={@badge}
+            class={["px-3 py-1 text-token-xs font-semibold rounded-full", @badge_class]}
+          >
+            {@badge}
           </span>
         </div>
 
         <%!-- Preview --%>
         <div class="mb-4 bg-tymeslot-50 rounded-token-lg p-4 border-2 border-tymeslot-200">
-          <%= render_slot(@preview) %>
+          {render_slot(@preview)}
         </div>
 
         <%!-- Code Snippet --%>
@@ -444,10 +473,21 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         </div>
 
         <div class="mt-4 flex items-start space-x-2 text-token-xs text-tymeslot-700">
-          <svg class="w-4 h-4 text-turquoise-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          <svg
+            class="w-4 h-4 text-turquoise-600 shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            >
+            </path>
           </svg>
-          <span class="flex-1"><%= render_slot(@footer_info) %></span>
+          <span class="flex-1">{render_slot(@footer_info)}</span>
         </div>
       </div>
     </div>

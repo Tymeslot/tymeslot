@@ -92,7 +92,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
       <%!-- Tabbed Interface --%>
       <.tabs active_tab={@active_tab} target={@myself}>
-        <:tab id="options" label={dgettext("dashboard_embed", "Embed Options")} icon="hero-code-bracket">
+        <:tab
+          id="options"
+          label={dgettext("dashboard_embed", "Embed Options")}
+          icon="hero-code-bracket"
+        >
           <OptionsGrid.options_grid
             selected_embed_type={@selected_embed_type}
             username={@username}
@@ -113,7 +117,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
           />
         </:tab>
 
-        <:tab id="preview" label={dgettext("dashboard_embed", "Live Preview")} icon="hero-video-camera">
+        <:tab
+          id="preview"
+          label={dgettext("dashboard_embed", "Live Preview")}
+          icon="hero-video-camera"
+        >
           <LivePreview.live_preview
             selected_embed_type={@selected_embed_type}
             username={@username}

@@ -204,7 +204,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             phx-target={@myself}
             errors={FormValidationHelpers.field_errors(@field_errors, :label)}
           >
-            <:description>{dgettext("dashboard_meeting_form", "The question shown to the booker.")}</:description>
+            <:description>
+              {dgettext("dashboard_meeting_form", "The question shown to the booker.")}
+            </:description>
           </CoreComponents.input>
 
           <CoreComponents.input
@@ -213,7 +215,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             id="definition_help_text"
             type="text"
             label={dgettext("dashboard_meeting_form", "Help text (optional)")}
-            placeholder={dgettext("dashboard_meeting_form", "e.g., Enter your company's registered name")}
+            placeholder={
+              dgettext("dashboard_meeting_form", "e.g., Enter your company's registered name")
+            }
             phx-blur="field_blur"
             phx-value-field="help_text"
             phx-target={@myself}
@@ -235,7 +239,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             label={dgettext("dashboard_meeting_form", "Type")}
             options={type_options()}
           >
-            <:description>{dgettext("dashboard_meeting_form", "Controls how the booker enters their answer.")}</:description>
+            <:description>
+              {dgettext("dashboard_meeting_form", "Controls how the booker enters their answer.")}
+            </:description>
           </CoreComponents.input>
 
           <CoreComponents.input
@@ -269,7 +275,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 type="textarea"
                 label={dgettext("dashboard_meeting_form", "Body text")}
                 placeholder={
-                  dgettext("dashboard_meeting_form", "Text that the booker must acknowledge before proceeding")
+                  dgettext(
+                    "dashboard_meeting_form",
+                    "Text that the booker must acknowledge before proceeding"
+                  )
                 }
                 rows={4}
                 required
@@ -313,7 +322,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
           <% end %>
 
           <%= if @pending_type_change do %>
-            <div role="alertdialog" aria-live="polite" class="rounded-token-lg border-2 bg-amber-50 border-amber-200 text-amber-800 p-4">
+            <div
+              role="alertdialog"
+              aria-live="polite"
+              class="rounded-token-lg border-2 bg-amber-50 border-amber-200 text-amber-800 p-4"
+            >
               <p class="font-medium text-token-sm mb-3">
                 {dgettext(
                   "dashboard_meeting_form",

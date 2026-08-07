@@ -63,7 +63,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
             </button>
           </div>
         <% else %>
-          <% {active_integrations, inactive_integrations} = Enum.split_with(@integrations, & &1.is_active) %>
+          <% {active_integrations, inactive_integrations} =
+            Enum.split_with(@integrations, & &1.is_active) %>
           <% show_section_headers = active_integrations != [] and inactive_integrations != [] %>
 
           <div class="space-y-6">

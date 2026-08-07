@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                 "text-token-xl font-black tracking-tight",
                 if(@webhook.is_active, do: "text-tymeslot-900", else: "text-tymeslot-500")
               ]}>
-                <%= @webhook.name %>
+                {@webhook.name}
               </h3>
               <%= if !@webhook.is_active do %>
                 <span class="inline-flex items-center gap-1 bg-tymeslot-200 text-tymeslot-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             </div>
 
             <div class="text-token-sm text-tymeslot-600 font-mono mb-3 truncate">
-              <%= @webhook.url %>
+              {@webhook.url}
             </div>
 
             <%!-- Event Tags --%>
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                     if(@webhook.is_active, do: "bg-turquoise-500", else: "bg-tymeslot-400")
                   ]}>
                   </div>
-                  <%= event %>
+                  {event}
                 </span>
               <% end %>
             </div>
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                   )}
                   <%= if @webhook.last_status do %>
                     <span class={["ml-1", status_color(@webhook.last_status)]}>
-                      (<%= @webhook.last_status %>)
+                      ({@webhook.last_status})
                     </span>
                   <% end %>
                 </span>
@@ -138,8 +138,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             class={[
               "inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 font-bold transition-all text-token-sm",
               if(@webhook.is_active && !@testing,
-                do: "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
-                else: "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
+                do:
+                  "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
+                else:
+                  "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
               )
             ]}
             title={

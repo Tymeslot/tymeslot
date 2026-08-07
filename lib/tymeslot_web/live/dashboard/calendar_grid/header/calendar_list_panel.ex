@@ -76,10 +76,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
             group_label={
               dgettext("dashboard_calendar", "Colour for %{calendar}", calendar: calendar.name)
             }
-            values={%{
-              "phx-value-integration_id" => integration.id,
-              "phx-value-calendar_id" => calendar.id
-            }}
+            values={
+              %{
+                "phx-value-integration_id" => integration.id,
+                "phx-value-calendar_id" => calendar.id
+              }
+            }
           />
         </div>
       </div>

@@ -54,8 +54,10 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             {date_label(@entry, @timezone)}
           </.info_line>
           <.info_line icon="hero-clock" label={dgettext("dashboard_home", "Time")}>
-            {time_label(@entry, @timezone, @time_format)}<span :if={duration_label(@entry)} class="text-tymeslot-400 font-semibold">
-              · {duration_label(@entry)}</span>
+            {time_label(@entry, @timezone, @time_format)}
+            <span :if={duration_label(@entry)} class="text-tymeslot-400 font-semibold">
+              · {duration_label(@entry)}
+            </span>
           </.info_line>
           <.info_line
             :if={@entry.join_url}
@@ -80,7 +82,10 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
         </dl>
 
         <div :if={@entry.target}>
-          <p id="agenda-colour-picker-label" class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400 mb-2">
+          <p
+            id="agenda-colour-picker-label"
+            class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400 mb-2"
+          >
             {dgettext("dashboard_home", "Colour")}
           </p>
           <div
@@ -104,8 +109,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
                 @entry.colour == key && "ring-2 ring-turquoise-500 ring-offset-2 border-white",
                 @entry.colour != key && "border-transparent hover:scale-110"
               ]}
-            >
-            </button>
+            ></button>
             <button
               type="button"
               role="radio"

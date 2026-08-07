@@ -34,11 +34,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
       id="calendar-agenda"
       class={if @view == :agenda, do: "flex-1 overflow-y-auto bg-white", else: "hidden"}
     >
-      <div :if={@groups == []} class="flex flex-col items-center justify-center h-full px-6 py-16 text-center">
+      <div
+        :if={@groups == []}
+        class="flex flex-col items-center justify-center h-full px-6 py-16 text-center"
+      >
         <div class="w-16 h-16 bg-tymeslot-50 rounded-token-2xl flex items-center justify-center mb-4 border-2 border-dashed border-tymeslot-100">
           <.icon name="hero-calendar-days" class="w-8 h-8 text-tymeslot-300" />
         </div>
-        <h2 class="text-token-lg font-bold text-tymeslot-800 mb-1">{dgettext("dashboard_calendar", "No upcoming events")}</h2>
+        <h2 class="text-token-lg font-bold text-tymeslot-800 mb-1">
+          {dgettext("dashboard_calendar", "No upcoming events")}
+        </h2>
         <p class="text-token-sm text-tymeslot-500 max-w-sm">
           {dgettext(
             "dashboard_calendar",
@@ -50,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
       <ol :if={@groups != []} class="divide-y divide-tymeslot-100 animate-fade-in">
         <li :for={group <- @groups} class="px-3 md:px-4 py-3">
           <h3 class={"text-token-sm font-semibold mb-2 #{Helpers.day_header_class(group.date, @user_timezone)}"}>
-            <%= "#{LocaleFormat.format_weekday_name(Date.day_of_week(group.date), @locale, :short)} #{group.date.day} #{LocaleFormat.format_month_name(group.date.month, @locale)}" %>
+            {"#{LocaleFormat.format_weekday_name(Date.day_of_week(group.date), @locale, :short)} #{group.date.day} #{LocaleFormat.format_month_name(group.date.month, @locale)}"}
           </h3>
           <ul class="flex flex-col gap-1">
             <li
@@ -72,21 +77,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
               <span
                 class={"mt-0.5 w-2.5 h-2.5 rounded-full shrink-0 #{Helpers.color_for_event(assigns, event)}"}
                 aria-hidden="true"
-              >
-              </span>
+              ></span>
               <span class="w-28 md:w-32 shrink-0 text-token-xs text-tymeslot-500 tabular-nums pt-0.5">
-                <%= time_label(event, @user_timezone, @preferences) %>
+                {time_label(event, @user_timezone, @preferences)}
               </span>
               <span class="min-w-0 flex-1">
                 <span class="block text-token-sm font-medium text-tymeslot-800 truncate">
-                  <%= event.summary || dgettext("dashboard_calendar", "(No title)") %>
+                  {event.summary || dgettext("dashboard_calendar", "(No title)")}
                 </span>
                 <span
                   :if={event.location not in [nil, ""]}
                   class="mt-0.5 flex items-center gap-1 text-token-xs text-tymeslot-500"
                 >
                   <.icon name="hero-map-pin-micro" class="w-3 h-3 shrink-0" />
-                  <span class="truncate"><%= event.location %></span>
+                  <span class="truncate">{event.location}</span>
                 </span>
               </span>
             </li>

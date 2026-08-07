@@ -29,7 +29,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   @spec grid(map()) :: Phoenix.LiveView.Rendered.t()
   def grid(assigns) do
     ~H"""
-    <div id="calendar-grid" class="flex flex-col h-full relative" phx-hook="CalendarMobile" phx-target={@myself}>
+    <div
+      id="calendar-grid"
+      class="flex flex-col h-full relative"
+      phx-hook="CalendarMobile"
+      phx-target={@myself}
+    >
       <%!-- Drives browser desktop reminders while the calendar is open. The hook
             reads the JSON feed and fires Notifications on its own timer; the feed
             refreshes on every 60s tick. --%>

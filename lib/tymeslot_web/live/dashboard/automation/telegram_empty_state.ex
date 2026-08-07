@@ -15,9 +15,14 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEmptyState do
         <IconComponents.icon name={:telegram} class="w-10 h-10 text-turquoise-600" />
       </div>
 
-      <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">{dgettext("dashboard_automation_chat", "No Telegram Integrations")}</h3>
+      <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">
+        {dgettext("dashboard_automation_chat", "No Telegram Integrations")}
+      </h3>
       <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-        {dgettext("dashboard_automation_chat", "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled.")}
+        {dgettext(
+          "dashboard_automation_chat",
+          "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+        )}
       </p>
 
       <button phx-click={@on_create} class="btn-primary">
