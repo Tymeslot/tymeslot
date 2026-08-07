@@ -49,6 +49,18 @@ jobs:
       - run: mix deps.audit
       - run: mix excellent_migrations.check_safety
       - run: mix test
+      # Catalogue references drift whenever a translatable string is added,
+      # removed, or moved between files, and nothing else in this workflow
+      # notices. Run it locally the same way, from the repository root:
+      #
+      #     mix gettext.extract --check-up-to-date
+      #
+      # It reports staleness without writing, so it never mutates the tree it
+      # inspects. Extraction force-recompiles and needs the dev build, for the
+      # same reason as dialyzer below.
+      - run: mix gettext.extract --check-up-to-date
+        env:
+          MIX_ENV: dev
       # dialyxir is only: [:dev], so this step needs its own environment. The
       # job-wide MIX_ENV=test above would make the task unresolvable, and the
       # step has been silently failing that way. Dev also matches where
