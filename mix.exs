@@ -12,6 +12,15 @@ defmodule Tymeslot.MixProject do
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
+      gettext: [
+        # Reference comments keep the file but drop the line number. A line
+        # number is invalidated by any edit above the call, so with it on, every
+        # refactor, extraction or reformat leaves the catalogues stale and needs
+        # a re-extract commit carrying no information. Without it, references
+        # change only when a message is added, removed, or moved between files,
+        # which is the part a translator can act on.
+        write_reference_line_numbers: false
+      ],
       dialyzer: [
         ignore_warnings: ".dialyzer_ignore.exs",
         # Surfaces filters in .dialyzer_ignore.exs that no longer match, so
