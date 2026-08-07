@@ -125,119 +125,119 @@ msgstr ""
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:209
+#: lib/tymeslot/announcements/catalog.ex:230
 #, elixir-autogen, elixir-format
 msgid "A few more things we've shipped lately:"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:81
+#: lib/tymeslot/announcements/catalog.ex:102
 #, elixir-autogen, elixir-format
 msgid "All your integrations in one place"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:153
+#: lib/tymeslot/announcements/catalog.ex:174
 #, elixir-autogen, elixir-format
 msgid "Ask the right questions up front"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:213
+#: lib/tymeslot/announcements/catalog.ex:234
 #, elixir-autogen, elixir-format
 msgid "Booking pages and emails now in German, French, Ukrainian and Italian"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:173
+#: lib/tymeslot/announcements/catalog.ex:194
 #, elixir-autogen, elixir-format
 msgid "Collect payment automatically at the moment of booking, with Stripe-powered checkout built right into your booking page."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:99
+#: lib/tymeslot/announcements/catalog.ex:120
 #, elixir-autogen, elixir-format
 msgid "Colour-code your calendar events"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:212
+#: lib/tymeslot/announcements/catalog.ex:233
 #, elixir-autogen, elixir-format
 msgid "Faster, more responsive Quill and Rhythm booking pages"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:171
+#: lib/tymeslot/announcements/catalog.ex:192
 #, elixir-autogen, elixir-format
 msgid "Get paid when people book"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:117
+#: lib/tymeslot/announcements/catalog.ex:138
 #, elixir-autogen, elixir-format
 msgid "Invite guests to any booking"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:189
+#: lib/tymeslot/announcements/catalog.ex:210
 #, elixir-autogen, elixir-format
 msgid "Meet on Zoom, automatically"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:208
+#: lib/tymeslot/announcements/catalog.ex:229
 #, elixir-autogen, elixir-format
 msgid "Plus a host of improvements"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:161
-#: lib/tymeslot/announcements/catalog.ex:179
-#: lib/tymeslot/announcements/catalog.ex:197
+#: lib/tymeslot/announcements/catalog.ex:182
+#: lib/tymeslot/announcements/catalog.ex:200
+#: lib/tymeslot/announcements/catalog.ex:218
 #, elixir-autogen, elixir-format
 msgid "Read the docs"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:135
+#: lib/tymeslot/announcements/catalog.ex:156
 #, elixir-autogen, elixir-format
 msgid "Share private booking links"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:211
+#: lib/tymeslot/announcements/catalog.ex:232
 #, elixir-autogen, elixir-format
 msgid "Slack notifications when a booking is made"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:217
+#: lib/tymeslot/announcements/catalog.ex:238
 #, elixir-autogen, elixir-format
 msgid "Smarter embeds that auto-fit their height, with an optional column layout"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:65
+#: lib/tymeslot/announcements/catalog.ex:86
 #, elixir-autogen, elixir-format
 msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian and Ukrainian. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:63
+#: lib/tymeslot/announcements/catalog.ex:84
 #, elixir-autogen, elixir-format
 msgid "Tymeslot now speaks your language"
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:155
+#: lib/tymeslot/announcements/catalog.ex:176
 #, elixir-autogen, elixir-format
 msgid "Add custom questions to any meeting type - short text, long answers, dropdowns and more - so you have exactly what you need before each booking."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:119
+#: lib/tymeslot/announcements/catalog.ex:140
 #, elixir-autogen, elixir-format
 msgid "Bookings can now include additional guests. Each guest gets their own email invitation and can RSVP with a tap, so everyone who needs to be there is on the invite - without anyone booking a second time. Set a guest limit per meeting type to keep group sizes in check."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:83
+#: lib/tymeslot/announcements/catalog.ex:104
 #, elixir-autogen, elixir-format
 msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new - all from a single screen instead of hunting through separate settings pages."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:191
+#: lib/tymeslot/announcements/catalog.ex:212
 #, elixir-autogen, elixir-format
 msgid "Connect your Zoom account and Tymeslot creates a Zoom meeting for every booking - the link is added to the calendar invite and confirmation automatically."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:137
+#: lib/tymeslot/announcements/catalog.ex:158
 #, elixir-autogen, elixir-format
 msgid "Every meeting type now has its own direct link that takes people straight to booking it - without showing your other meeting types. Mark a type as unlisted to keep it off your public page, and randomise its link any time to make it unguessable or to retire an old one."
 msgstr ""
 
-#: lib/tymeslot/announcements/catalog.ex:101
+#: lib/tymeslot/announcements/catalog.ex:122
 #, elixir-autogen, elixir-format
 msgid "Give any event its own colour, right from your dashboard agenda. Colours you set in Tymeslot write back to your connected calendar, and colours already on your Google or CalDAV events show up here too - so your day is colour-coded exactly the way you like it, everywhere you look."
 msgstr ""
@@ -250,4 +250,14 @@ msgstr ""
 #: lib/tymeslot/onboarding/dashboard_tour.ex:55
 #, elixir-autogen, elixir-format
 msgid "Profile, availability, integrations, and automation - all one click away."
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex:67
+#, elixir-autogen, elixir-format
+msgid "Cap how many bookings you take"
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex:69
+#, elixir-autogen, elixir-format
+msgid "Set a maximum number of bookings per day, week or month - for a single meeting type, or across your whole account. Once a day reaches its cap it disappears from your booking page, so nobody can book you past the limit you set."
 msgstr ""

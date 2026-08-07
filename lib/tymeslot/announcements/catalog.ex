@@ -38,6 +38,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @languages_published_at ~U[2026-07-15 00:00:00Z]
   @languages_expires_at ~U[2026-08-14 00:00:00Z]
 
+  @booking_limits_published_at ~U[2026-08-07 00:00:00Z]
+  @booking_limits_expires_at ~U[2026-09-06 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -45,6 +48,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      booking_limits(),
       app_languages(),
       integrations_hub(),
       calendar_event_colours(),
@@ -55,6 +59,23 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp booking_limits do
+    %Announcement{
+      key: "booking_limits",
+      title: dgettext("onboarding", "Cap how many bookings you take"),
+      body:
+        dgettext(
+          "onboarding",
+          "Set a maximum number of bookings per day, week or month - for a single meeting " <>
+            "type, or across your whole account. Once a day reaches its cap it disappears " <>
+            "from your booking page, so nobody can book you past the limit you set."
+        ),
+      image_path: "/images/announcements/booking-limits.svg",
+      published_at: @booking_limits_published_at,
+      expires_at: @booking_limits_expires_at
+    }
   end
 
   defp app_languages do
