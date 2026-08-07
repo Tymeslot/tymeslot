@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAVCalendarIdBackfillTest do
     source = File.read!(Path.join(File.cwd!(), @migration))
 
     case Regex.run(~r/execute\("""\n(.*?)\n\s*"""\)/s, source) do
-      [_, sql] -> sql
+      [_whole_match, sql] -> sql
       nil -> flunk("could not extract the backfill SQL from #{@migration}")
     end
   end
