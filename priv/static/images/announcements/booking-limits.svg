@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="Booking limits capping how many bookings you take">
+  <defs>
+    <linearGradient id="bl-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="bl-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#bl-bg)"/>
+
+  <!-- booking page calendar: days at their cap drop out of the grid -->
+  <g filter="url(#bl-shadow)">
+    <rect x="72" y="40" width="300" height="160" rx="18" fill="#ffffff"/>
+  </g>
+  <rect x="96" y="62" width="96" height="8" rx="4" fill="#cbd5e1"/>
+
+  <!-- weekday header -->
+  <rect x="96" y="82" width="18" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="133" y="82" width="18" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="170" y="82" width="18" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="207" y="82" width="18" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="244" y="82" width="18" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="281" y="82" width="18" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="318" y="82" width="18" height="5" rx="2.5" fill="#e2e8f0"/>
+
+  <!-- row 1: all bookable -->
+  <rect x="96" y="98" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="133" y="98" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="170" y="98" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="207" y="98" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="244" y="98" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="281" y="98" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="318" y="98" width="30" height="22" rx="7" fill="#ccfbf1"/>
+
+  <!-- row 2: the second day has hit its cap and is struck out -->
+  <rect x="96" y="128" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="133" y="128" width="30" height="22" rx="7" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <path d="M141 145 l14 -12" stroke="#cbd5e1" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="170" y="128" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="207" y="128" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="244" y="128" width="30" height="22" rx="7" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <path d="M252 145 l14 -12" stroke="#cbd5e1" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="281" y="128" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="318" y="128" width="30" height="22" rx="7" fill="#ccfbf1"/>
+
+  <!-- row 3: one more day full, one day selected -->
+  <rect x="96" y="158" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="133" y="158" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="170" y="158" width="30" height="22" rx="7" fill="#0d9488"/>
+  <rect x="207" y="158" width="30" height="22" rx="7" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <path d="M215 175 l14 -12" stroke="#cbd5e1" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="244" y="158" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="281" y="158" width="30" height="22" rx="7" fill="#ccfbf1"/>
+  <rect x="318" y="158" width="30" height="22" rx="7" fill="#ccfbf1"/>
+
+  <!-- the limits you set: per day, per week, per month -->
+  <g filter="url(#bl-shadow)">
+    <rect x="420" y="52" width="148" height="136" rx="16" fill="#ffffff"/>
+  </g>
+  <rect x="440" y="72" width="72" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <rect x="440" y="92" width="108" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="452" y="101" width="40" height="6" rx="3" fill="#cbd5e1"/>
+  <circle cx="532" cy="104" r="9" fill="#0d9488"/>
+  <text x="532" y="108" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+
+  <rect x="440" y="124" width="108" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="452" y="133" width="52" height="6" rx="3" fill="#cbd5e1"/>
+  <circle cx="532" cy="136" r="9" fill="#14b8a6"/>
+  <text x="532" y="140" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+
+  <rect x="440" y="156" width="108" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <rect x="452" y="165" width="46" height="6" rx="3" fill="#cbd5e1"/>
+  <circle cx="532" cy="168" r="9" fill="#5eead4"/>
+  <text x="532" y="172" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#0f766e" text-anchor="middle">20</text>
+</svg>

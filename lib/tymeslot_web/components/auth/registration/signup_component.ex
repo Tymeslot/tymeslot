@@ -32,7 +32,9 @@ defmodule TymeslotWeb.Registration.SignupComponent do
     ~H"""
     <.auth_card_layout
       title={dgettext("auth", "Join Tymeslot")}
-      subtitle={dgettext("auth", "Start scheduling your meetings with ease. Zero friction, total control.")}
+      subtitle={
+        dgettext("auth", "Start scheduling your meetings with ease. Zero friction, total control.")
+      }
     >
       <:form>
         <.auth_form
@@ -79,7 +81,11 @@ defmodule TymeslotWeb.Registration.SignupComponent do
               required
               autofocus
             />
-            <div id="signup-password-toggle-container" data-password-container phx-hook="PasswordToggle">
+            <div
+              id="signup-password-toggle-container"
+              data-password-container
+              phx-hook="PasswordToggle"
+            >
               <.input
                 id="password-input"
                 name="user[password]"

@@ -68,7 +68,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig 
         myself={@myself}
         suggested_name={dgettext("dashboard_calendar_providers", "My Radicale")}
         name_placeholder={dgettext("dashboard_calendar_providers", "My Radicale Calendar")}
-        url_placeholder={dgettext("dashboard_calendar_providers", "https://radicale.example.com:5232")}
+        url_placeholder={
+          dgettext("dashboard_calendar_providers", "https://radicale.example.com:5232")
+        }
       />
     </div>
     """

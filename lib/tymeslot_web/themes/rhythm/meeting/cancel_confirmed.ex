@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                     {dgettext("booking", "Your meeting has been successfully cancelled.")}
                   </p>
                 </div>
-                
+
                 <div class="meeting-ticket">
                   <div class="ticket-body">
                     <div class="email-confirmation">
@@ -66,12 +66,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                         />
                       </svg>
                       <span>
-                        <strong>{dgettext("booking", "Cancellation emails have been sent to all participants.")}</strong>
+                        <strong>{dgettext(
+                          "booking",
+                          "Cancellation emails have been sent to all participants."
+                        )}</strong>
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div class="confirmation-actions">
                   <button
                     phx-click={JS.navigate("/")}

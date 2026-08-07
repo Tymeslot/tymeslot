@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ContextUtils
   alias TymeslotWeb.Components.MeetingUtils
@@ -95,7 +96,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         profile_id: organizer_profile.id,
         max_advance_booking_days: organizer_profile.advance_booking_days,
         min_advance_hours: organizer_profile.min_advance_hours,
-        buffer_minutes: organizer_profile.buffer_minutes
+        buffer_minutes: organizer_profile.buffer_minutes,
+        limit_checker:
+          build_limit_checker(organizer_user_id, organizer_profile, context, date, date)
       }
 
       meeting_type = ContextUtils.get_from_context(context, :meeting_type)
@@ -224,7 +227,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         max_advance_booking_days: organizer_profile.advance_booking_days,
         min_advance_hours: organizer_profile.min_advance_hours,
         buffer_minutes: organizer_profile.buffer_minutes,
-        duration_minutes: duration_minutes
+        duration_minutes: duration_minutes,
+        limit_checker:
+          build_limit_checker(user_id, organizer_profile, context, start_date, end_date)
       }
 
       with {:ok, base_map} <-
@@ -419,6 +424,18 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
   defp get_owner_timezone(organizer_profile) do
     {:ok, organizer_profile.timezone || Profiles.get_default_timezone()}
+  end
+
+  # Returns nil when the host has no booking limits configured, keeping the
+  # common path free of extra queries.
+  defp build_limit_checker(organizer_user_id, organizer_profile, context, start_date, end_date) do
+    Checker.build_slot_checker(
+      organizer_user_id,
+      organizer_profile,
+      ContextUtils.get_from_context(context, :meeting_type),
+      start_date,
+      end_date
+    )
   end
 
   defp get_duration_minutes(socket) do

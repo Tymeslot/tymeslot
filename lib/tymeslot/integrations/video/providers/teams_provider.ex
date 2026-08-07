@@ -11,13 +11,11 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
-  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   require Logger
 
@@ -227,17 +225,11 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp get_access_token(config) do
-    case teams_oauth_helper().validate_token(config) do
-      {:ok, :valid} ->
-        {:ok, Map.get(config, :access_token)}
-
-      {:ok, :needs_refresh} ->
-        refresh_and_update_token(config)
-
-      {:error, reason} ->
-        Logger.error("Token validation failed", reason: inspect(reason))
-        {:error, "Token validation failed: #{reason}"}
-    end
+    OAuthTokenManager.validated_access_token(config,
+      oauth_helper: teams_oauth_helper(),
+      label: "Teams",
+      on_refresh: &refresh_and_update_token/1
+    )
   end
 
   defp refresh_and_update_token(config) do
@@ -267,8 +259,11 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       {:ok, refreshed_tokens} ->
         Logger.info("Successfully refreshed Teams OAuth token")
 
-        if integration_id = Map.get(config, :integration_id) do
-          update_integration_tokens(integration_id, Map.get(config, :user_id), refreshed_tokens)
+        # Best-effort persistence: Teams does not rotate its refresh token, so a
+        # failed write leaves the stored credentials still usable and the caller
+        # can proceed with the token it just obtained.
+        if Map.get(config, :integration_id) do
+          OAuthTokenManager.persist_tokens(config, token_attrs(refreshed_tokens), "Teams")
         end
 
         {:ok, refreshed_tokens}
@@ -279,41 +274,22 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
-  defp update_integration_tokens(integration_id, user_id, refreshed_tokens) do
-    # Use the scope from refreshed tokens if present, otherwise keep existing scope
-    # Microsoft may not return scope in refresh responses, so we preserve what we have
-    scope = refreshed_tokens[:scope] || refreshed_tokens.scope
-
+  # Microsoft may omit the scope from a refresh response, so an absent or blank
+  # one leaves the stored scope alone rather than clearing it.
+  defp token_attrs(refreshed_tokens) do
     attrs = %{
       access_token: refreshed_tokens.access_token,
       refresh_token: refreshed_tokens.refresh_token || refreshed_tokens.access_token,
       token_expires_at: refreshed_tokens.expires_at
     }
 
-    # Only update scope if we got a new one from the refresh
-    attrs = if scope && scope != "", do: Map.put(attrs, :oauth_scope, scope), else: attrs
-
-    case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:error, :not_found} ->
-        Logger.warning("Could not find integration to update tokens",
-          integration_id: integration_id
-        )
-
-      {:ok, integration} ->
-        case VideoIntegrationQueries.update(integration, attrs) do
-          {:ok, _updated} ->
-            Logger.info("Updated Teams OAuth tokens in database",
-              integration_id: integration_id
-            )
-
-          {:error, reason} ->
-            Logger.error("Failed to update Teams OAuth tokens in database",
-              integration_id: integration_id,
-              reason: inspect(reason)
-            )
-        end
-    end
+    maybe_put_scope(attrs, refreshed_tokens[:scope] || refreshed_tokens.scope)
   end
+
+  defp maybe_put_scope(attrs, scope) when is_binary(scope) and scope != "",
+    do: Map.put(attrs, :oauth_scope, scope)
+
+  defp maybe_put_scope(attrs, _scope), do: attrs
 
   defp create_scheduled_meeting(token, config) do
     {start_time, end_time} = get_meeting_times(config)
@@ -358,33 +334,15 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # surfaces this via the "Reconnect required" badge on the video row. Purely
   # additive: it does not touch token validation or the OAuthTokenManager flow.
   defp flag_revoked_token(config) do
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      Logger.warning("Teams token appears revoked but no integration_id to flag",
-        event: "teams_token_revoked"
-      )
-    else
-      Logger.warning("Teams token revoked; flagging integration for reauth",
-        event: "teams_token_revoked",
-        integration_id: integration_id
-      )
-
-      case Video.fetch_integration_for_user(integration_id, user_id) do
-        {:ok, integration} ->
-          VideoIntegrationQueries.mark_needs_reauth(
-            integration,
-            dgettext(
-              "dashboard_integrations",
-              "Microsoft Teams access was revoked. Please reconnect your Teams account."
-            )
-          )
-
-        {:error, :not_found} ->
-          :ok
-      end
-    end
+    OAuthTokenManager.flag_needs_reauth(config,
+      label: "Teams",
+      event: "teams_token_revoked",
+      message:
+        dgettext(
+          "dashboard_integrations",
+          "Microsoft Teams access was revoked. Please reconnect your Teams account."
+        )
+    )
   end
 
   defp get_meeting_times(config) do

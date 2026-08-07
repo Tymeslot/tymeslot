@@ -403,6 +403,23 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Whether this integration belongs to this user.
+
+  An ownership check and nothing more, for callers that act on an integration
+  without needing to read it. `get_for_user/2` decrypts credentials and can
+  answer `{:error, :requires_reencryption}`, neither of which a display-only
+  change such as recolouring should have to care about or be blocked by.
+  """
+  @spec owned_by?(integer() | any(), integer() | any()) :: boolean()
+  def owned_by?(id, user_id) when is_integer(id) and is_integer(user_id) do
+    CalendarIntegrationSchema
+    |> where([c], c.id == ^id and c.user_id == ^user_id)
+    |> Repo.exists?()
+  end
+
+  def owned_by?(_id, _user_id), do: false
+
+  @doc """
   Counts calendar integrations for a user.
   """
   @spec count_for_user(integer()) :: non_neg_integer()

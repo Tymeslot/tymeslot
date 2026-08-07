@@ -173,7 +173,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
       <%!-- Mini month calendar (7 columns) --%>
       <div class="grid grid-cols-7 gap-1" style={slots_style(highlight?(@step, :slots))}>
-        <span :for={day <- 0..20} class="aspect-square rounded-token-sm" style={calendar_cell_style(@colors, day)} />
+        <span
+          :for={day <- 0..20}
+          class="aspect-square rounded-token-sm"
+          style={calendar_cell_style(@colors, day)}
+        />
       </div>
 
       <%!-- Multi-column slot grid --%>
@@ -253,9 +257,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       style={buffer_style(@colors)}
     >
       <.icon name="hero-arrows-up-down-mini" class="w-3 h-3" />
-      {dgettext("onboarding_wizard", "%{minutes} min buffer between meetings",
-        minutes: @minutes
-      )}
+      {dgettext("onboarding_wizard", "%{minutes} min buffer between meetings", minutes: @minutes)}
     </div>
     """
   end

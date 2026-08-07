@@ -234,7 +234,7 @@ defmodule Tymeslot.Integrations.VideoTest do
     test "generates google meet auth URL" do
       user = insert(:user)
 
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes, _opts ->
         "https://accounts.google.com/o/oauth2/v2/auth?client_id=123"
       end)
 
@@ -245,7 +245,7 @@ defmodule Tymeslot.Integrations.VideoTest do
     test "generates teams auth URL" do
       user = insert(:user)
 
-      expect(Tymeslot.TeamsOAuthHelperMock, :authorization_url, fn _uid, _uri ->
+      expect(Tymeslot.TeamsOAuthHelperMock, :authorization_url, fn _uid, _uri, _opts ->
         "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=456"
       end)
 
@@ -256,7 +256,7 @@ defmodule Tymeslot.Integrations.VideoTest do
     test "generates zoom auth URL" do
       user = insert(:user)
 
-      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri ->
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri, _opts ->
         "https://zoom.us/oauth/authorize?client_id=test-client-id&response_type=code"
       end)
 
@@ -267,7 +267,7 @@ defmodule Tymeslot.Integrations.VideoTest do
     test "returns error when zoom oauth helper raises" do
       user = insert(:user)
 
-      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri ->
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri, _opts ->
         raise RuntimeError, "Zoom Client ID not configured"
       end)
 
@@ -277,6 +277,91 @@ defmodule Tymeslot.Integrations.VideoTest do
 
     test "returns error for non-oauth provider" do
       assert {:error, _reason} = Video.oauth_authorization_url(1, :mirotalk)
+    end
+  end
+
+  # These paths were previously untestable: the reconnect call passes options
+  # on an arity the OAuth behaviours did not declare, so the Mox doubles could
+  # not answer it. The behaviours now declare it.
+  describe "oauth_reconnect_url/2" do
+    test "targets the connected Google account with scopes and login hint" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "google_meet",
+          provider_account_email: "someone@example.com"
+        )
+
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, scopes, opts ->
+        assert scopes == [:calendar, :meet]
+        assert Keyword.get(opts, :integration_id) == integration.id
+        assert Keyword.get(opts, :login_hint) == "someone@example.com"
+        "https://accounts.google.com/o/oauth2/v2/auth?login_hint=someone@example.com"
+      end)
+
+      assert {:ok, url} = Video.oauth_reconnect_url(user.id, integration)
+      assert String.contains?(url, "accounts.google.com")
+    end
+
+    test "targets the connected Teams account" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "teams",
+          provider_account_email: "someone@example.com"
+        )
+
+      expect(Tymeslot.TeamsOAuthHelperMock, :authorization_url, fn _uid, _uri, opts ->
+        assert Keyword.get(opts, :integration_id) == integration.id
+        assert Keyword.get(opts, :login_hint) == "someone@example.com"
+        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+      end)
+
+      assert {:ok, url} = Video.oauth_reconnect_url(user.id, integration)
+      assert String.contains?(url, "login.microsoftonline.com")
+    end
+
+    test "targets the connected Zoom account" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_email: "someone@example.com"
+        )
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri, opts ->
+        assert Keyword.get(opts, :integration_id) == integration.id
+        assert Keyword.get(opts, :login_hint) == "someone@example.com"
+        "https://zoom.us/oauth/authorize?client_id=test-client-id"
+      end)
+
+      assert {:ok, url} = Video.oauth_reconnect_url(user.id, integration)
+      assert String.contains?(url, "zoom.us")
+    end
+
+    test "reports a misconfiguration rather than raising" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri, _opts ->
+        raise RuntimeError, "Zoom Client Secret not configured"
+      end)
+
+      assert {:error, message} = Video.oauth_reconnect_url(user.id, integration)
+      assert message =~ "ZOOM_CLIENT_SECRET"
+    end
+
+    test "refuses a provider that does not support OAuth" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "mirotalk")
+
+      assert {:error, _reason} = Video.oauth_reconnect_url(user.id, integration)
     end
   end
 end

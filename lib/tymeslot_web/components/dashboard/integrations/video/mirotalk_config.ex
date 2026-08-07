@@ -43,7 +43,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
         </div>
       </div>
 
-      <form id="mirotalk-integration-form" phx-submit="add_integration" phx-change="track_form_change" phx-target={@target} class="space-y-5">
+      <form
+        id="mirotalk-integration-form"
+        phx-submit="add_integration"
+        phx-change="track_form_change"
+        phx-target={@target}
+        class="space-y-5"
+      >
         <input type="hidden" name="integration[provider]" value="mirotalk" />
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -93,10 +99,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
         <% end %>
 
         <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
-          <button type="button" phx-click="back_to_providers" phx-target={@target} class="btn-secondary">
+          <button
+            type="button"
+            phx-click="back_to_providers"
+            phx-target={@target}
+            class="btn-secondary"
+          >
             {dgettext("dashboard_integrations", "Cancel")}
           </button>
-          <TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents.form_submit_button saving={@saving} />
+          <TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents.form_submit_button saving={
+            @saving
+          } />
         </div>
       </form>
     </div>

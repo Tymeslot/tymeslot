@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.Availability.Helpers, as: AvailabilityHelpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel
   alias TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover
@@ -13,7 +14,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   attr :date, :any, required: true
   attr :integrations, :list, required: true
   attr :integration_colors, :map, required: true
+  attr :calendar_colour_keys, :map, required: true
   attr :hidden_integration_ids, :list, required: true
+  attr :hidden_calendar_keys, :any, required: true
   attr :show_calendar_list, :boolean, required: true
   attr :show_view_menu, :boolean, required: true
   attr :mini_month_open, :boolean, default: false
@@ -77,7 +80,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             myself={@myself}
           />
           <div class="hidden md:block ml-1 min-w-0">
-            <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
+            <AvailabilityHelpers.timezone_display
+              timezone_display={@timezone_display}
+              country_code={@timezone_country_code}
+            />
           </div>
 
           <%!--
@@ -99,7 +105,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         --%>
         <div class="flex flex-wrap items-center gap-1 md:gap-2">
           <div class="md:hidden">
-            <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
+            <AvailabilityHelpers.timezone_display
+              timezone_display={@timezone_display}
+              country_code={@timezone_country_code}
+            />
           </div>
           <SearchBox.search_box
             search_term={@search_term}
@@ -115,7 +124,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <.calendar_list_dropdown
             integrations={@integrations}
             integration_colors={@integration_colors}
+            calendar_colour_keys={@calendar_colour_keys}
             hidden_integration_ids={@hidden_integration_ids}
+            hidden_calendar_keys={@hidden_calendar_keys}
             show_calendar_list={@show_calendar_list}
             myself={@myself}
           />
@@ -145,7 +156,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   attr :integrations, :list, required: true
   attr :integration_colors, :map, required: true
+  attr :calendar_colour_keys, :map, required: true
   attr :hidden_integration_ids, :list, required: true
+  attr :hidden_calendar_keys, :any, required: true
   attr :show_calendar_list, :boolean, required: true
   attr :myself, :any, required: true
 
@@ -168,31 +181,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         <span class="hidden md:inline">{dgettext("dashboard_calendar", "Calendars")}</span>
       </:trigger>
       <:panel>
-        <h4 class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide mb-2">
-          {dgettext("dashboard_calendar", "My Calendars")}
-        </h4>
-        <label
-          :for={integration <- @integrations}
-          class="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-tymeslot-50 rounded px-1"
-        >
-          <input
-            type="checkbox"
-            checked={integration.id not in @hidden_integration_ids}
-            phx-click="toggle_integration_visibility"
-            phx-value-integration-id={integration.id}
-            phx-target={@myself}
-            class="rounded"
-          />
-          <div
-            class={"w-3 h-3 rounded-full shrink-0 #{Helpers.color_class_for_integration(@integration_colors, integration.id)}"}
-            aria-hidden="true"
-          >
-          </div>
-          <span class="text-token-sm text-tymeslot-700 truncate">{integration.name}</span>
-        </label>
-        <p :if={@integrations == []} class="text-token-sm text-tymeslot-400">
-          {dgettext("dashboard_calendar", "No calendars connected")}
-        </p>
+        <CalendarListPanel.calendar_list_panel
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          calendar_colour_keys={@calendar_colour_keys}
+          hidden_integration_ids={@hidden_integration_ids}
+          hidden_calendar_keys={@hidden_calendar_keys}
+          myself={@myself}
+        />
       </:panel>
     </.dropdown>
     """

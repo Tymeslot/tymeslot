@@ -11,226 +11,222 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex:87
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete your profile picture? This action cannot be undone."
 msgstr "Ви впевнені, що хочете видалити фото профілю? Цю дію неможливо скасувати."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:165
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Available"
 msgstr "Доступно"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex:44
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Avatar deleted successfully"
 msgstr "Аватар успішно видалено"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:106
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Avatar updated successfully"
 msgstr "Аватар успішно оновлено"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:66
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Basic Information"
 msgstr "Основна інформація"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex:98
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:212
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."
 msgstr "Виберіть унікальне ім'я користувача для особистої сторінки бронювання."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:134
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Custom URL"
 msgstr "Власна URL-адреса"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex:82
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex:104
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Avatar"
 msgstr "Видалити аватар"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:185
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Photo"
 msgstr "Видалити фото"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex:66
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex:76
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Display Name"
 msgstr "Відображуване ім'я"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex:50
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Display name updated"
 msgstr "Відображуване ім'я оновлено"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex:77
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your full name"
 msgstr "Введіть повне ім'я"
 
-#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex:50
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to delete avatar: %{reason}"
 msgstr "Не вдалося видалити аватар: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex:54
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update display name"
 msgstr "Не вдалося оновити відображуване ім'я"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:79
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update timezone"
 msgstr "Не вдалося оновити часовий пояс"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:176
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid"
 msgstr "Некоректно"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:195
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "JPG, PNG, GIF or WebP. Max 10MB."
 msgstr "JPG, PNG, GIF або WebP. Макс. 10 МБ."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:201
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Live at:"
 msgstr "Доступно за адресою:"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:214
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Processing..."
 msgstr "Обробка..."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:128
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Profile Picture"
 msgstr "Фото профілю"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:38
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Profile Settings"
 msgstr "Налаштування профілю"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:188
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "Збереження..."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:172
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Taken"
 msgstr "Зайнято"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex:82
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
 msgstr "Це ім'я бачитимуть відвідувачі під час бронювання зустрічей з вами. Зміни зберігаються автоматично."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:97
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Часовий пояс"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:73
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone updated to %{timezone}"
 msgstr "Часовий пояс оновлено на %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:190
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update URL"
 msgstr "Оновити URL-адресу"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:190
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload"
 msgstr "Завантажити"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:164
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:170
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload New"
 msgstr "Завантажити нове"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:99
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
 msgstr "Помилка завантаження"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:118
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed: %{reason}"
 msgstr "Помилка завантаження: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:163
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:215
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Завантаження..."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:99
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Username updated! Your booking page: %{url}"
 msgstr "Ім'я користувача оновлено! Ваша сторінка бронювання: %{url}"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:143
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Your Custom URL"
 msgstr "Ваша власна URL-адреса"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:145
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "yourname"
 msgstr "vashe_imya"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:57
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown timezone"
 msgstr "Невідомий часовий пояс"
 
-#: lib/tymeslot/profiles.ex:254
+#: lib/tymeslot/profiles.ex
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Забагато спроб змінити ім'я користувача. Спробуйте пізніше."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:82
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "12h (AM/PM)"
 msgstr "12-год. (AM/PM)"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:83
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "24h"
 msgstr "24-год."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:87
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Controls how times are shown on your dashboard and in the emails you receive. Your booking page follows each visitor's own language."
 msgstr "Визначає, як показується час на вашій панелі та в листах, які ви отримуєте. Ваша сторінка бронювання враховує мову кожного відвідувача."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:56
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update time format"
 msgstr "Не вдалося оновити формат часу"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:73
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Time Format"
 msgstr "Формат часу"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:52
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Time format updated"
 msgstr "Формат часу оновлено"

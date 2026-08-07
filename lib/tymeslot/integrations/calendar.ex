@@ -27,6 +27,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ColourResolver
+  alias Tymeslot.Integrations.Calendar.ColourWriteBack
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Defaults
@@ -40,10 +41,8 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
+  alias Tymeslot.Integrations.Shared.InputValidators
   alias Tymeslot.Profiles.ProfileQueries
-  alias Tymeslot.Workers.ColourWriteBackWorker
-
-  require Logger
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -110,6 +109,22 @@ defmodule Tymeslot.Integrations.Calendar do
           {:ok, integration()} | {:error, Ecto.Changeset.t()}
   def update_integration(integration, attrs) do
     CalendarManagement.update_calendar_integration(integration, attrs)
+  end
+
+  @doc """
+  Renames an integration to a name a person typed.
+
+  Sanitises and length-checks it exactly as the connection form does, rather
+  than trusting the caller, so a rename cannot store a name that could not have
+  been created. The `{:error, %{name: message}}` shape is the validator's, and
+  carries a message already translated for display.
+  """
+  @spec rename_integration(integration(), term(), map()) ::
+          {:ok, integration()} | {:error, Ecto.Changeset.t() | %{name: String.t()}}
+  def rename_integration(integration, name, metadata \\ %{}) do
+    with {:ok, sanitised} <- InputValidators.validate_integration_name(name, metadata) do
+      CalendarManagement.update_calendar_integration(integration, %{name: sanitised})
+    end
   end
 
   @doc """
@@ -572,7 +587,7 @@ defmodule Tymeslot.Integrations.Calendar do
   def set_event_colour(user_id, {:external, integration_id, uid}, colour) do
     with {:ok, override} <-
            ColourOverrideQueries.set_external(user_id, integration_id, uid, colour) do
-      maybe_enqueue_colour_write_back(user_id, integration_id, uid, colour)
+      ColourWriteBack.enqueue(user_id, integration_id, uid, colour)
       {:ok, override}
     end
   end
@@ -607,30 +622,4 @@ defmodule Tymeslot.Integrations.Calendar do
           String.t() | nil
   def resolve_event_colour(override, provider_colour),
     do: ColourResolver.resolve(override, provider_colour)
-
-  # Best-effort provider write-back for a *set*. The worker patches only the
-  # provider's colour field; Outlook and read-only calendars are handled
-  # inside the worker. `replace: [:args]` ensures that when a user changes the
-  # colour again before the previous job has run, the pending job's args are
-  # replaced in place to carry the newest colour — without it, `unique` alone
-  # would keep the *older* job (and its stale colour) and silently drop the
-  # newer enqueue.
-  defp maybe_enqueue_colour_write_back(user_id, integration_id, uid, colour) do
-    %{"user_id" => user_id, "integration_id" => integration_id, "uid" => uid, "colour" => colour}
-    |> ColourWriteBackWorker.new(replace: [:args])
-    |> Oban.insert()
-    |> log_colour_write_back_enqueue_error(user_id, integration_id)
-
-    :ok
-  end
-
-  defp log_colour_write_back_enqueue_error({:ok, _job}, _user_id, _integration_id), do: :ok
-
-  defp log_colour_write_back_enqueue_error({:error, reason}, user_id, integration_id) do
-    Logger.warning("Failed to enqueue colour write-back",
-      user_id: user_id,
-      integration_id: integration_id,
-      reason: inspect(reason)
-    )
-  end
 end

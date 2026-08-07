@@ -49,13 +49,13 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
                 "text-token-xl font-black tracking-tight",
                 if(@status == :active, do: "text-tymeslot-900", else: "text-tymeslot-500")
               ]}>
-                <%= @integration.name %>
+                {@integration.name}
               </h3>
               <.status_badge status={@status} reason={@integration.disabled_reason} />
             </div>
 
             <div class="text-token-sm text-tymeslot-600 font-medium mb-3 truncate">
-              <%= location_label(@integration) %>
+              {location_label(@integration)}
             </div>
 
             <%!-- Event Tags --%>
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
                   event_tag_style(@status)
                 ]}>
                   <div class={["w-1.5 h-1.5 rounded-full", event_dot_style(@status)]} />
-                  <%= event %>
+                  {event}
                 </span>
               <% end %>
             </div>
@@ -80,7 +80,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                   <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
-                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}", time: AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format))}</span>
+                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}",
+                    time:
+                      AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format)
+                  )}</span>
                 </div>
               <% else %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
@@ -91,7 +94,9 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
 
               <%= if @status == :auto_disabled do %>
                 <div class="mt-2 text-token-sm text-red-600 font-medium">
-                  {dgettext("dashboard_automation_chat", "Disabled: %{reason}", reason: disabled_reason_label(@integration.disabled_reason))}
+                  {dgettext("dashboard_automation_chat", "Disabled: %{reason}",
+                    reason: disabled_reason_label(@integration.disabled_reason)
+                  )}
                 </div>
               <% end %>
             <% end %>
@@ -131,7 +136,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               phx-click={@on_reconnect}
               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-amber-200 text-amber-700 hover:bg-amber-50 font-bold transition-all text-token-sm"
             >
-              <.icon name="hero-arrow-path" class="w-4 h-4" /> {dgettext("dashboard_automation_chat", "Reconnect")}
+              <.icon name="hero-arrow-path" class="w-4 h-4" /> {dgettext(
+                "dashboard_automation_chat",
+                "Reconnect"
+              )}
             </button>
           <% end %>
 
@@ -143,8 +151,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               class={[
                 "inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 font-bold transition-all text-token-sm",
                 if(@status == :active && !@testing,
-                  do: "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
-                  else: "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
+                  do:
+                    "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
+                  else:
+                    "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
                 )
               ]}
             >
@@ -175,7 +185,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
               {dgettext("dashboard_automation_chat", "Logs")}
             </button>

@@ -35,7 +35,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
     ~H"""
     <section class="card-glass py-6 text-center">
       <p class="text-token-sm text-tymeslot-500">
-        {dgettext("dashboard_meeting_form", "Custom booking questions are not available on your current plan.")}
+        {dgettext(
+          "dashboard_meeting_form",
+          "Custom booking questions are not available on your current plan."
+        )}
       </p>
     </section>
     """
@@ -63,7 +66,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
             {dgettext("dashboard_meeting_form", "Custom questions")}
           </h3>
           <p class="text-token-sm text-tymeslot-500 mt-0.5">
-            {dgettext("dashboard_meeting_form", "Ask bookers extra questions during the booking flow.")}
+            {dgettext(
+              "dashboard_meeting_form",
+              "Ask bookers extra questions during the booking flow."
+            )}
           </p>
         </div>
         <CoreComponents.action_button

@@ -76,8 +76,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           <span
             class={"mt-1 w-2.5 h-2.5 rounded-full shrink-0 #{Helpers.color_class_for_integration(@integration_colors, event.calendar_integration_id)}"}
             aria-hidden="true"
-          >
-          </span>
+          ></span>
           <span class="min-w-0">
             <span class="block text-token-sm text-tymeslot-800 truncate">
               {event.summary || dgettext("dashboard_calendar", "Untitled event")}

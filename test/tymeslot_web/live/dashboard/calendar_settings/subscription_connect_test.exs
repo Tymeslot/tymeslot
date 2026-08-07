@@ -106,9 +106,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
       stub_feed()
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
-      added = subscribe(view)
+      subscribe(view)
 
-      assert added =~ "Calendar integration added successfully"
+      # The success flash is raised by the config component but rendered by the
+      # parent LiveView, so `render_async/2` can return the component's own
+      # re-render before the parent has painted the flash. Snapshotting once
+      # makes this test position-dependent: it passes when earlier tests have
+      # warmed the flow and fails when it runs first (seed 0). Poll instead.
+      wait_until(fn -> render(view) =~ "Calendar integration added successfully" end)
+
+      added = render(view)
+
       assert added =~ "Work calendar"
       refute has_element?(view, "#calendar-subscription-form")
 

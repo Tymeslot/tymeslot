@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.EventColour
+
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
     _profile = insert(:profile, user: user, timezone: "Etc/UTC")
@@ -228,8 +230,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
 
       assert html =~ "Company offsite"
-      # blueberry maps to bg-calendar-2 (EventColour palette).
-      assert html =~ "bg-calendar-2"
+      assert html =~ EventColour.tailwind_class("blueberry")
     end
 
     test "renders the palette colour on a tomorrow peek row", %{conn: conn, user: user} do
@@ -262,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
 
       assert html =~ "Design review"
-      assert html =~ "bg-calendar-2"
+      assert html =~ EventColour.tailwind_class("blueberry")
     end
   end
 end

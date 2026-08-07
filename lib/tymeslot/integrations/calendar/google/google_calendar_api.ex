@@ -6,10 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   @behaviour Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
 
-  require Logger
-
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
-  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
@@ -18,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
 
@@ -435,65 +433,24 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   # --- HTTP response handling ---
 
-  # A bare 404 means "calendar" on a calendar-scoped path and "event" on an
-  # event-scoped one; only the request path, in scope here, can tell them apart.
   defp handle_http_response(response, path) do
-    case handle_http_response(response) do
-      {:error, :not_found, _generic} -> {:error, :not_found, HTTP.not_found_message(path)}
-      result -> result
-    end
+    ApiResponse.handle(response, path, label: "Google Calendar", custom: &google_status/1)
   end
 
-  defp handle_http_response({:ok, %Req.Response{status: status, body: body}})
-       when status in [200, 201, 204] do
-    if body == "" do
-      {:ok, %{}}
-    else
-      case Jason.decode(body) do
-        {:ok, decoded} -> {:ok, decoded}
-        {:error, _decode_error} -> {:error, :network_error, "Malformed JSON response"}
-      end
-    end
+  # The statuses Google answers differently from the shared envelope: a 403
+  # carrying its classification in `error.errors[].reason`, and a 410 marking a
+  # sync token the caller must discard.
+  defp google_status({:ok, %Req.Response{status: 403, body: body}}) do
+    ApiResponse.with_error_object(body, fn error_msg, decoded ->
+      classify_403(error_msg, get_in(decoded, ["error", "errors"]) || [])
+    end)
   end
 
-  defp handle_http_response({:ok, %Req.Response{status: 401}}) do
-    {:error, :unauthorized, "Token expired or invalid"}
-  end
-
-  defp handle_http_response({:ok, %Req.Response{status: 403, body: body}}) do
-    case Jason.decode(body) do
-      {:ok, response} ->
-        error_msg = get_in(response, ["error", "message"]) || "Forbidden"
-        reasons = get_in(response, ["error", "errors"]) || []
-        classify_403(error_msg, reasons)
-
-      {:error, _decode_error} ->
-        {:error, :network_error, "Forbidden (malformed response)"}
-    end
-  end
-
-  # Generic fallback: every request routed through `make_request/4` and
-  # `make_request_with_body/5` has its message refined by `handle_http_response/2`.
-  defp handle_http_response({:ok, %Req.Response{status: 404}}) do
-    {:error, :not_found, "Calendar not found"}
-  end
-
-  defp handle_http_response({:ok, %Req.Response{status: 410}}) do
+  defp google_status({:ok, %Req.Response{status: 410}}) do
     {:error, :gone, "Resource no longer available"}
   end
 
-  defp handle_http_response({:ok, %Req.Response{status: status, body: body}}) do
-    Logger.error("Google Calendar API error",
-      status: status,
-      body: Redactor.redact_and_truncate(body)
-    )
-
-    {:error, :network_error, "HTTP #{status} (see logs for details)"}
-  end
-
-  defp handle_http_response({:error, reason}) do
-    {:error, :network_error, "Network error: #{inspect(reason)}"}
-  end
+  defp google_status(_response), do: :default
 
   # --- Error classification ---
 

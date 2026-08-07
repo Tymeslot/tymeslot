@@ -37,8 +37,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
             width="160"
             height="160"
             class="block h-full w-full cursor-crosshair"
-          >
-          </canvas>
+          ></canvas>
           <div
             data-cp="canvas-thumb"
             class="pointer-events-none absolute -ml-2 -mt-2 h-4 w-4 rounded-full ring-2 ring-white shadow-md"

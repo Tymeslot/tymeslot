@@ -14,61 +14,73 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   than leaking internals.
   """
   @spec message(atom() | String.t()) :: String.t()
-  def message(reason) do
-    case reason do
-      :slot_taken ->
-        dgettext(
-          "booking",
-          "This time slot is no longer available. Please select a different time."
-        )
+  def message(:slot_taken) do
+    dgettext(
+      "booking",
+      "This time slot is no longer available. Please select a different time."
+    )
+  end
 
-      :meeting_type_inactive ->
-        dgettext("booking", "This meeting type is no longer available. Please refresh the page.")
+  def message(:booking_limit_reached) do
+    dgettext(
+      "booking",
+      "The host is no longer accepting bookings for this period. Please pick a different day."
+    )
+  end
 
-      :meeting_type_not_found ->
-        dgettext(
-          "booking",
-          "This meeting type is no longer available. Please go back and select another."
-        )
+  def message(:meeting_type_inactive) do
+    dgettext("booking", "This meeting type is no longer available. Please refresh the page.")
+  end
 
-      :organizer_required ->
-        dgettext("booking", "Organizer is required for booking")
+  def message(:meeting_type_not_found) do
+    dgettext(
+      "booking",
+      "This meeting type is no longer available. Please go back and select another."
+    )
+  end
 
-      :booking_failed ->
-        dgettext("booking", "Failed to save meeting to database")
+  def message(:organizer_required) do
+    dgettext("booking", "Organizer is required for booking")
+  end
 
-      :payments_unavailable ->
-        dgettext(
-          "booking",
-          "Payments are not available for this booking. Please contact the host."
-        )
+  def message(:booking_failed) do
+    dgettext("booking", "Failed to save meeting to database")
+  end
 
-      :host_not_found ->
-        dgettext("booking", "Host could not be found. Please refresh and try again.")
+  def message(:payments_unavailable) do
+    dgettext(
+      "booking",
+      "Payments are not available for this booking. Please contact the host."
+    )
+  end
 
-      :custom_field_errors ->
-        dgettext("booking", "Please fill in all required fields before submitting.")
+  def message(:host_not_found) do
+    dgettext("booking", "Host could not be found. Please refresh and try again.")
+  end
 
-      :checkout_failed ->
-        dgettext("booking", "We couldn't start the payment process. Please try again.")
+  def message(:custom_field_errors) do
+    dgettext("booking", "Please fill in all required fields before submitting.")
+  end
 
-      :failed_to_update_meeting ->
-        dgettext("booking", "Failed to process booking. Please try again.")
+  def message(:checkout_failed) do
+    dgettext("booking", "We couldn't start the payment process. Please try again.")
+  end
 
-      :meeting_not_found ->
-        dgettext("booking", "This meeting could not be found. Please refresh and try again.")
+  def message(:failed_to_update_meeting) do
+    dgettext("booking", "Failed to process booking. Please try again.")
+  end
 
-      # Intentional passthrough, not dead code: reschedule shares its domain
-      # validation with cancel (`Policy.can_reschedule_meeting?/1`,
-      # `Validation`), which still returns binaries directly — atomizing
-      # those is a future pass, out of scope here.
-      reason when is_binary(reason) ->
-        if String.length(reason) < 100,
-          do: reason,
-          else: dgettext("booking", "Failed to create appointment. Please try again.")
+  def message(:meeting_not_found) do
+    dgettext("booking", "This meeting could not be found. Please refresh and try again.")
+  end
 
-      _other ->
-        dgettext("booking", "Failed to create appointment. Please try again.")
-    end
+  # Intentional passthrough, not dead code: reschedule shares its domain
+  # validation with cancel (`Policy.can_reschedule_meeting?/1`,
+  # `Validation`), which still returns binaries directly — atomizing
+  # those is a future pass, out of scope here.
+  def message(reason) when is_binary(reason) and byte_size(reason) < 100, do: reason
+
+  def message(_other) do
+    dgettext("booking", "Failed to create appointment. Please try again.")
   end
 end

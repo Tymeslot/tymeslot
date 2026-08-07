@@ -61,7 +61,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
           id="calendar-period-label"
           class="text-token-sm md:text-token-base font-semibold text-tymeslot-800 truncate"
         >
-          {Helpers.period_label(%{view: @view, date: @date, preferences: @preferences, user_timezone: @user_timezone})}
+          {Helpers.period_label(%{
+            view: @view,
+            date: @date,
+            preferences: @preferences,
+            user_timezone: @user_timezone
+          })}
         </span>
         <span
           :if={@show_week_numbers and @view in [:week, :three_day, :day]}
@@ -100,13 +105,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
           class="grid gap-0.5 mb-1"
           style={grid_style(@show_week_numbers)}
         >
-          <div :if={@show_week_numbers} class="text-center text-token-2xs font-medium text-tymeslot-400">
+          <div
+            :if={@show_week_numbers}
+            class="text-center text-token-2xs font-medium text-tymeslot-400"
+          >
             {dgettext("dashboard_calendar_events", "Wk")}
           </div>
           <div
             :for={day_name <- Helpers.day_name_headers(assigns)}
             class="text-center text-token-2xs font-medium text-tymeslot-400 uppercase"
-          >{String.first(day_name)}</div>
+          >
+            {String.first(day_name)}
+          </div>
         </div>
 
         <%!-- 6×7 day cells --%>
@@ -115,7 +125,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             <div
               :if={@show_week_numbers}
               class="flex items-center justify-center text-token-2xs text-tymeslot-400"
-            >{Helpers.week_number(List.first(week_days))}</div>
+            >
+              {Helpers.week_number(List.first(week_days))}
+            </div>
             <button
               :for={day <- week_days}
               type="button"

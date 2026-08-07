@@ -156,7 +156,12 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
           csrf_token={@csrf_token}
         >
           <input type="hidden" name="token" value={@reset_token} />
-          <div class="space-y-1.5" id="reset-password-toggle-container" phx-hook="PasswordToggle" data-password-container>
+          <div
+            class="space-y-1.5"
+            id="reset-password-toggle-container"
+            phx-hook="PasswordToggle"
+            data-password-container
+          >
             <.input
               id="password-input"
               name="password"
@@ -175,7 +180,12 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             </.input>
             <.password_requirements />
           </div>
-          <div class="space-y-1.5" id="reset-confirm-password-toggle-container" phx-hook="PasswordToggle" data-password-container>
+          <div
+            class="space-y-1.5"
+            id="reset-confirm-password-toggle-container"
+            phx-hook="PasswordToggle"
+            data-password-container
+          >
             <.input
               id="confirm-password-input"
               name="password_confirmation"
@@ -221,7 +231,10 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             {dgettext("auth", "Password Reset Successfully")}
           </h2>
           <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
-            {dgettext("auth", "Your password has been reset. You can now log in with your new credentials.")}
+            {dgettext(
+              "auth",
+              "Your password has been reset. You can now log in with your new credentials."
+            )}
           </p>
         </div>
         <div class="mt-6">

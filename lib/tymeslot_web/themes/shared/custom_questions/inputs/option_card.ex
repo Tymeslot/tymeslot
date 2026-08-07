@@ -45,7 +45,15 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
         class={["custom-question-option-indicator", "is-#{@indicator}"]}
         aria-hidden="true"
       >
-        <svg :if={@indicator == :check} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          :if={@indicator == :check}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polyline points="4 12 10 18 20 6" />
         </svg>
       </span>

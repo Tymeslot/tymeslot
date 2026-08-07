@@ -61,7 +61,9 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
         use Phoenix.Component
         @spec test_overlay(map()) :: Phoenix.LiveView.Rendered.t()
         def test_overlay(assigns) do
-          ~H"<div id='test-extension'>Core Extension Hook Working</div>"
+          ~H"""
+          <div id="test-extension">Core Extension Hook Working</div>
+          """
         end
       end
 
@@ -77,7 +79,7 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
 
       # Assert
       response = html_response(conn, 200)
-      assert response =~ "id='test-extension'"
+      assert response =~ ~s(id="test-extension")
       assert response =~ "Core Extension Hook Working"
     end
 
@@ -107,13 +109,21 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
       defmodule MultiExt1 do
         use Phoenix.Component
         @spec r1(map()) :: Phoenix.LiveView.Rendered.t()
-        def r1(assigns), do: ~H"<div id='ext1'>First Extension</div>"
+        def r1(assigns) do
+          ~H"""
+          <div id="ext1">First Extension</div>
+          """
+        end
       end
 
       defmodule MultiExt2 do
         use Phoenix.Component
         @spec r2(map()) :: Phoenix.LiveView.Rendered.t()
-        def r2(assigns), do: ~H"<div id='ext2'>Second Extension</div>"
+        def r2(assigns) do
+          ~H"""
+          <div id="ext2">Second Extension</div>
+          """
+        end
       end
 
       Application.put_env(:tymeslot, :theme_extensions, [
@@ -131,13 +141,13 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
 
       # Assert: Both render in order
       response = html_response(conn, 200)
-      assert response =~ "id='ext1'"
+      assert response =~ ~s(id="ext1")
       assert response =~ "First Extension"
-      assert response =~ "id='ext2'"
+      assert response =~ ~s(id="ext2")
       assert response =~ "Second Extension"
 
       # Check order: ext1 should appear before ext2 in the HTML
-      assert response =~ ~r/id='ext1'.*id='ext2'/s
+      assert response =~ ~r/id="ext1".*id="ext2"/s
     end
 
     test "extension hook ignores completely invalid config shapes gracefully", %{conn: conn} do

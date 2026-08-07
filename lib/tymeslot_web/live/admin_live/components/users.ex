@@ -63,7 +63,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
               >
                 {dgettext("dashboard_admin", "Admin")}
               </span>
-              <span :if={!user.is_admin} class="text-sm text-tymeslot-500">{dgettext("dashboard_admin", "User")}</span>
+              <span :if={!user.is_admin} class="text-sm text-tymeslot-500">{dgettext(
+                "dashboard_admin",
+                "User"
+              )}</span>
             </td>
             <td class="px-6 py-4 text-right">
               <.user_row_action
@@ -127,7 +130,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
         {dgettext("dashboard_admin", "Demote")}
       </span>
       <span class="text-xs text-tymeslot-500 font-medium max-w-xs text-right">
-        {dgettext("dashboard_admin", "You're the only admin. Promote someone else before demoting yourself.")}
+        {dgettext(
+          "dashboard_admin",
+          "You're the only admin. Promote someone else before demoting yourself."
+        )}
       </span>
     </div>
 

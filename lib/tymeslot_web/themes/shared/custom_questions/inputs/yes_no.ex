@@ -37,7 +37,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
           phx-target={@myself}
         />
         <span class="custom-question-yes-no-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <polyline points="4 12 10 18 20 6" />
           </svg>
         </span>
@@ -60,7 +67,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
           phx-target={@myself}
         />
         <span class="custom-question-yes-no-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <line x1="6" y1="6" x2="18" y2="18" />
             <line x1="18" y1="6" x2="6" y2="18" />
           </svg>

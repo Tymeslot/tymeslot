@@ -69,7 +69,10 @@ defmodule TymeslotWeb.Components.DashboardLayout do
         <%!-- Main Content Area --%>
         <div
           id="dashboard-content-container"
-          class={["flex-1 min-w-0 w-full lg:ml-0", if(@full_width, do: "flex flex-col overflow-hidden", else: "overflow-y-auto")]}
+          class={[
+            "flex-1 min-w-0 w-full lg:ml-0",
+            if(@full_width, do: "flex flex-col overflow-hidden", else: "overflow-y-auto")
+          ]}
           phx-hook="ScrollReset"
           data-action={@current_action}
         >
@@ -129,7 +132,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 </button>
               <% end %>
 
-    <%!-- Logo with Icon and Text --%>
+              <%!-- Logo with Icon and Text --%>
               <div class="flex items-center space-x-3 min-w-0">
                 <TymeslotWeb.Components.CoreComponents.logo
                   mode={:full}
@@ -138,7 +141,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               </div>
             </div>
 
-    <%!-- Right side: User dropdown --%>
+            <%!-- Right side: User dropdown --%>
             <div class="relative shrink-0" data-tour="user-menu">
               <.live_component
                 module={UserDropdownComponent}
@@ -163,7 +166,13 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       <div class="flex items-stretch w-full gap-2">
         <.link
           patch={~p"/dashboard"}
-          class={["mode-tab flex-1 justify-center", if(mode(@current_action) == :scheduling, do: "mode-tab--active", else: "mode-tab--inactive")]}
+          class={[
+            "mode-tab flex-1 justify-center",
+            if(mode(@current_action) == :scheduling,
+              do: "mode-tab--active",
+              else: "mode-tab--inactive"
+            )
+          ]}
           data-testid="mode-tab-scheduling"
         >
           <.icon name="hero-squares-2x2" class="w-4 h-4" />
@@ -172,7 +181,10 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
         <.link
           patch={~p"/dashboard/calendar"}
-          class={["mode-tab flex-1 justify-center", if(mode(@current_action) == :calendar, do: "mode-tab--active", else: "mode-tab--inactive")]}
+          class={[
+            "mode-tab flex-1 justify-center",
+            if(mode(@current_action) == :calendar, do: "mode-tab--active", else: "mode-tab--inactive")
+          ]}
           data-testid="mode-tab-calendar"
         >
           <.icon name="hero-calendar-days" class="w-4 h-4" />

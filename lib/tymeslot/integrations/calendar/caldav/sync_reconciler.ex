@@ -287,9 +287,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
   # ---------------------------------------------------------------------------
 
   defp normalisation_context(integration) do
+    calendar_paths = integration.calendar_paths || []
+
     %{
       calendar_integration_id: integration.id,
-      provider_calendar_id: List.first(integration.calendar_paths),
+      # Only the fallback for an event whose href matches no known collection.
+      # The normaliser files each event under the path its own href is rooted
+      # at, so a batch spanning several calendars is filed per calendar rather
+      # than all under the first one.
+      provider_calendar_id: List.first(calendar_paths),
+      calendar_paths: calendar_paths,
       synced_at: DateTime.utc_now(:microsecond)
     }
   end

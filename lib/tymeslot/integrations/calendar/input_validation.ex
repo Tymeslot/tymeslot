@@ -8,9 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar.CredentialFields
   alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Shared.InputValidators
-  alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
+  alias Tymeslot.Security.SecurityLogger
 
   @doc """
   Validates calendar integration form input (name, url, username, password, calendar_paths).
@@ -28,11 +29,11 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
 
     with {:ok, sanitized_name} <-
            InputValidators.validate_integration_name(params["name"], metadata),
-         {:ok, sanitized_url} <- validate_server_url(params["url"], metadata),
-         {:ok, sanitized_username} <- validate_username(params["username"], metadata),
-         {:ok, sanitized_password} <- validate_password(params["password"], metadata),
+         {:ok, sanitized_url} <- CredentialFields.server_url(params["url"], metadata),
+         {:ok, sanitized_username} <- CredentialFields.username(params["username"], metadata),
+         {:ok, sanitized_password} <- CredentialFields.password(params["password"], metadata),
          {:ok, sanitized_calendar_paths} <-
-           validate_calendar_paths(params["calendar_paths"], metadata) do
+           CredentialFields.calendar_paths(params["calendar_paths"], metadata) do
       SecurityLogger.log_security_event("calendar_integration_form_validation_success", %{
         ip_address: metadata[:ip],
         user_agent: metadata[:user_agent],
@@ -89,7 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
     metadata = Keyword.get(opts, :metadata, %{})
     normalised = if is_binary(value), do: Feed.normalise_url(value), else: value
 
-    case validate_server_url(normalised, metadata) do
+    case CredentialFields.server_url(normalised, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{url: error}} -> {:error, error}
     end
@@ -98,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   def validate_single_field(:username, value, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    case validate_username(value, metadata) do
+    case CredentialFields.username(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{username: error}} -> {:error, error}
     end
@@ -107,7 +108,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   def validate_single_field(:password, value, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    case validate_password(value, metadata) do
+    case CredentialFields.password(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{password: error}} -> {:error, error}
     end
@@ -116,7 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   def validate_single_field(:calendar_paths, value, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    case validate_calendar_paths(value, metadata) do
+    case CredentialFields.calendar_paths(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{calendar_paths: error}} -> {:error, error}
     end
@@ -148,7 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
         ip_address: metadata[:ip],
         user_agent: metadata[:user_agent],
         user_id: metadata[:user_id],
-        url: sanitize_url_for_logging(sanitized_url)
+        url: CredentialFields.sanitize_url_for_logging(sanitized_url)
       })
 
       {:ok, %{"name" => sanitized_name, "url" => sanitized_url}}
@@ -198,7 +199,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
         {:error, %{url: "URL must be 2000 characters or less"}}
 
       true ->
-        case validate_calendar_url(url) do
+        case CredentialFields.validate_calendar_url(url) do
           :ok -> {:ok, url}
           {:error, error} -> {:error, %{url: error}}
         end
@@ -206,60 +207,39 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   end
 
   @doc """
-  Validates Nextcloud calendar discovery parameters.
-
-  ## Parameters
-  - `params` - Map containing discovery parameters (url, username, password)
-  - `opts` - Options including metadata for logging
-
-  ## Returns
-  - `{:ok, sanitized_params}` | `{:error, validation_errors}`
-  """
-  @spec validate_nextcloud_discovery(map(), keyword()) :: {:ok, map()} | {:error, map()}
-  def validate_nextcloud_discovery(params, opts \\ []) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    validate_discovery(params, metadata,
-      success_event: "nextcloud_discovery_validation_success",
-      failure_event: "nextcloud_discovery_validation_failure",
-      extra_success_meta: fn sanitized ->
-        %{url: sanitize_url_for_logging(sanitized["url"])}
-      end
-    )
-  end
-
-  @doc """
   Validates calendar discovery parameters for any CalDAV-based provider.
 
   Supports CalDAV, Radicale, Nextcloud, and other CalDAV-compatible providers.
+  Every outcome is recorded as a security event, because this endpoint takes a
+  URL and credentials from an authenticated user and makes the server connect
+  to it.
   """
   @spec validate_calendar_discovery(map(), keyword()) :: {:ok, map()} | {:error, map()}
   def validate_calendar_discovery(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
     provider = Keyword.get(opts, :provider, :caldav)
 
-    normalize_url =
-      case provider do
-        :radicale -> &normalize_radicale_base_url_for_discovery/2
-        _provider -> fn url, _username -> url end
-      end
+    case validate_discovery_credentials(params, metadata) do
+      {:ok, sanitized} ->
+        result = %{sanitized | "url" => normalize_base_url(provider, sanitized["url"])}
 
-    validate_discovery(params, metadata,
-      success_event: "#{provider}_discovery_validation_success",
-      failure_event: "#{provider}_discovery_validation_failure",
-      normalize_url: normalize_url,
-      extra_success_meta: fn sanitized ->
-        %{url: sanitize_url_for_logging(sanitized["url"]), provider: provider}
-      end,
-      extra_failure_meta: fn _errors -> %{provider: provider} end
-    )
+        log_discovery_success(provider, metadata, result)
+        {:ok, result}
+
+      {:error, errors} when is_map(errors) ->
+        log_discovery_failure(provider, metadata, errors)
+        {:error, errors}
+    end
   end
+
+  defp normalize_base_url(:radicale, url), do: normalize_radicale_base_url_for_discovery(url)
+  defp normalize_base_url(_provider, url), do: url
 
   # Radicale-specific: sanitize common mistakes in base URL.
   # - If user included '/.web' (or '/.web/'), drop it.
   # - If user appended '/<username>' (with or without trailing slash), drop it.
   # - Always reduce to scheme://host[:port] (no path) for discovery base URL.
-  defp normalize_radicale_base_url_for_discovery(url, _username) do
+  defp normalize_radicale_base_url_for_discovery(url) do
     url = String.trim(to_string(url))
 
     # Ensure scheme
@@ -284,221 +264,10 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
     end
   end
 
-  @doc """
-  Validates CalDAV calendar discovery parameters.
-  Delegates to the unified validation function for backward compatibility.
-  """
-  @spec validate_caldav_discovery(map(), keyword()) :: {:ok, map()} | {:error, map()}
-  def validate_caldav_discovery(params, opts \\ []) do
-    validate_calendar_discovery(params, Keyword.put(opts, :provider, :caldav))
-  end
-
-  @doc """
-  Validates Radicale calendar discovery parameters.
-  Delegates to the unified validation function for backward compatibility.
-  """
-  @spec validate_radicale_discovery(map(), keyword()) :: {:ok, map()} | {:error, map()}
-  def validate_radicale_discovery(params, opts \\ []) do
-    validate_calendar_discovery(params, Keyword.put(opts, :provider, :radicale))
-  end
-
-  # Private helper functions
-
-  # Optional for some providers
-  defp validate_server_url(nil, _metadata), do: {:ok, ""}
-  defp validate_server_url("", _metadata), do: {:ok, ""}
-
-  defp validate_server_url(url, metadata) when is_binary(url) do
-    case InputValidators.validate_server_url(url, metadata,
-           error_message:
-             dgettext(
-               "dashboard_calendar_providers",
-               "Please enter a valid server URL (e.g., https://cloud.example.com)"
-             ),
-           validate_url_fn: &validate_calendar_url/1
-         ) do
-      {:ok, sanitized_url} -> {:ok, sanitized_url}
-      {:error, error} -> {:error, %{url: error}}
-    end
-  end
-
-  defp validate_server_url(_value, _metadata) do
-    {:error, %{url: dgettext("dashboard_calendar_providers", "Server URL must be text")}}
-  end
-
-  defp validate_username(nil, _metadata), do: {:error, %{username: username_required_message()}}
-  defp validate_username("", _metadata), do: {:error, %{username: username_required_message()}}
-
-  defp validate_username(username, metadata) when is_binary(username) do
-    case UniversalSanitizer.sanitize_and_validate(username, allow_html: false, metadata: metadata) do
-      {:ok, sanitized_username} ->
-        cond do
-          String.length(sanitized_username) > 255 ->
-            {:error,
-             %{
-               username:
-                 dgettext(
-                   "dashboard_calendar_providers",
-                   "Username must be 255 characters or less"
-                 )
-             }}
-
-          String.length(String.trim(sanitized_username)) < 1 ->
-            {:error, %{username: username_required_message()}}
-
-          true ->
-            {:ok, String.trim(sanitized_username)}
-        end
-
-      {:error, error} ->
-        {:error, %{username: error}}
-    end
-  end
-
-  defp validate_username(_value, _metadata) do
-    {:error, %{username: dgettext("dashboard_calendar_providers", "Username must be text")}}
-  end
-
-  defp validate_password(nil, _metadata), do: {:error, %{password: password_required_message()}}
-  defp validate_password("", _metadata), do: {:error, %{password: password_required_message()}}
-
-  defp validate_password(password, _metadata) when is_binary(password) do
-    cond do
-      not String.valid?(password) ->
-        {:error, %{password: password_invalid_characters_message()}}
-
-      String.contains?(password, "\x00") ->
-        {:error, %{password: password_invalid_characters_message()}}
-
-      String.length(password) > 500 ->
-        {:error,
-         %{
-           password:
-             dgettext("dashboard_calendar_providers", "Password must be 500 characters or less")
-         }}
-
-      String.length(String.trim(password)) < 1 ->
-        {:error, %{password: password_required_message()}}
-
-      true ->
-        {:ok, password}
-    end
-  end
-
-  defp validate_password(_value, _metadata) do
-    {:error, %{password: dgettext("dashboard_calendar_providers", "Password must be text")}}
-  end
-
-  defp validate_calendar_paths(nil, _metadata), do: {:ok, ""}
-  defp validate_calendar_paths("", _metadata), do: {:ok, ""}
-  # Auto-discovery
-  defp validate_calendar_paths("*", _metadata), do: {:ok, "*"}
-
-  # Handle arrays by converting to comma-separated string
-  defp validate_calendar_paths(calendar_paths, metadata) when is_list(calendar_paths) do
-    validate_calendar_paths(Enum.join(calendar_paths, ","), metadata)
-  end
-
-  defp validate_calendar_paths(calendar_paths, metadata) when is_binary(calendar_paths) do
-    case UniversalSanitizer.sanitize_and_validate(calendar_paths,
-           allow_html: false,
-           metadata: metadata
-         ) do
-      {:ok, sanitized_paths} ->
-        case validate_calendar_paths_format(sanitized_paths) do
-          :ok -> {:ok, sanitized_paths}
-          {:error, error} -> {:error, %{calendar_paths: error}}
-        end
-
-      {:error, error} ->
-        {:error, %{calendar_paths: error}}
-    end
-  end
-
-  defp validate_calendar_paths(_value, _metadata) do
-    {:error,
-     %{calendar_paths: dgettext("dashboard_calendar_providers", "Calendar paths must be text")}}
-  end
-
-  defp validate_calendar_paths_format(paths) do
-    if String.length(paths) > 5000 do
-      {:error,
-       dgettext("dashboard_calendar_providers", "Calendar paths must be 5000 characters or less")}
-    else
-      # Split by newlines OR commas and validate each path/URL
-      separators = if String.contains?(paths, ","), do: [","], else: ["\n", "\r\n"]
-
-      paths
-      |> String.split(separators, trim: true)
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-      |> validate_individual_paths()
-    end
-  end
-
-  defp validate_individual_paths([]), do: :ok
-
-  defp validate_individual_paths(paths) do
-    invalid_paths = Enum.filter(paths, &invalid_path?/1)
-
-    if Enum.empty?(invalid_paths) do
-      :ok
-    else
-      {:error,
-       dgettext(
-         "dashboard_calendar_providers",
-         "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
-       )}
-    end
-  end
-
-  defp invalid_path?(path) do
-    cond do
-      String.starts_with?(path, ["http://", "https://"]) ->
-        case validate_calendar_url(path) do
-          :ok -> false
-          _error -> true
-        end
-
-      String.starts_with?(path, "/") ->
-        false
-
-      true ->
-        true
-    end
-  end
-
-  # Helper to sanitize URL for logging (remove credentials)
-  defp sanitize_url_for_logging(url) do
-    uri = URI.parse(url)
-    URI.to_string(%{uri | userinfo: nil})
-  end
-
-  defp validate_discovery(params, metadata, opts) do
-    success_event = Keyword.fetch!(opts, :success_event)
-    failure_event = Keyword.fetch!(opts, :failure_event)
-    normalize_url = Keyword.get(opts, :normalize_url, fn url, _username -> url end)
-    extra_success_meta = Keyword.get(opts, :extra_success_meta, fn _sanitized -> %{} end)
-    extra_failure_meta = Keyword.get(opts, :extra_failure_meta, fn _errors -> %{} end)
-
-    case validate_discovery_credentials(params, metadata) do
-      {:ok, sanitized} ->
-        normalized_url = normalize_url.(sanitized["url"], sanitized["username"])
-        result = %{sanitized | "url" => normalized_url}
-
-        log_discovery_success(success_event, metadata, extra_success_meta.(result))
-        {:ok, result}
-
-      {:error, errors} when is_map(errors) ->
-        log_discovery_failure(failure_event, metadata, errors, extra_failure_meta.(errors))
-        {:error, errors}
-    end
-  end
-
   defp validate_discovery_credentials(params, metadata) do
-    with {:ok, sanitized_url} <- validate_server_url(params["url"], metadata),
-         {:ok, sanitized_username} <- validate_username(params["username"], metadata),
-         {:ok, sanitized_password} <- validate_password(params["password"], metadata) do
+    with {:ok, sanitized_url} <- CredentialFields.server_url(params["url"], metadata),
+         {:ok, sanitized_username} <- CredentialFields.username(params["username"], metadata),
+         {:ok, sanitized_password} <- CredentialFields.password(params["password"], metadata) do
       {:ok,
        %{
          "url" => sanitized_url,
@@ -508,16 +277,25 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
     end
   end
 
-  defp log_discovery_success(event, metadata, extra) do
-    SecurityLogger.log_security_event(event, Map.merge(base_security_metadata(metadata), extra))
+  defp log_discovery_success(provider, metadata, sanitized) do
+    SecurityLogger.log_security_event(
+      "#{provider}_discovery_validation_success",
+      Map.merge(base_security_metadata(metadata), %{
+        url: CredentialFields.sanitize_url_for_logging(sanitized["url"]),
+        provider: provider
+      })
+    )
   end
 
-  defp log_discovery_failure(event, metadata, errors, extra) do
+  # Only the error *keys* are logged: the values are user-facing messages and
+  # the submitted credentials must never reach the log.
+  defp log_discovery_failure(provider, metadata, errors) do
     SecurityLogger.log_security_event(
-      event,
-      base_security_metadata(metadata)
-      |> Map.merge(%{errors: Map.keys(errors)})
-      |> Map.merge(extra)
+      "#{provider}_discovery_validation_failure",
+      Map.merge(base_security_metadata(metadata), %{
+        errors: Map.keys(errors),
+        provider: provider
+      })
     )
   end
 
@@ -528,32 +306,4 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
       user_id: metadata[:user_id]
     }
   end
-
-  # Mirrors the persistence posture in `CalendarIntegrationSchema`, which
-  # validates `:base_url` with `block_private_ips: true`. Discovery/test-connection
-  # forms must reject internal hosts (loopback, link-local, RFC 1918) so an
-  # authenticated user can't probe them server-side any more than they can save
-  # such a URL on the integration.
-  defp validate_calendar_url(url) do
-    UrlValidation.validate_http_url(url,
-      enforce_https_for_public: true,
-      block_private_ips: true,
-      https_error_message:
-        dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
-      private_ip_error_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Private or local network addresses are not allowed"
-        )
-    )
-  end
-
-  defp username_required_message,
-    do: dgettext("dashboard_calendar_providers", "Username is required")
-
-  defp password_required_message,
-    do: dgettext("dashboard_calendar_providers", "Password is required")
-
-  defp password_invalid_characters_message,
-    do: dgettext("dashboard_calendar_providers", "Password contains invalid characters")
 end

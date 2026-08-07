@@ -63,7 +63,10 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
             title={dgettext("dashboard_availability", "Weekly Visual Grid")}
           />
           <div class="shrink-0">
-            <Helpers.timezone_display timezone_display={@timezone_display} country_code={@country_code} />
+            <Helpers.timezone_display
+              timezone_display={@timezone_display}
+              country_code={@country_code}
+            />
           </div>
         </div>
 
@@ -73,7 +76,10 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
             <% avail = Map.get(@day_map, day_num) %>
             <% row = mobile_row_data(avail, @time_format) %>
             <div class="flex items-center gap-3 py-1">
-              <span class={["w-20 shrink-0 text-xs font-bold", if(row.active, do: "text-tymeslot-700", else: "text-tymeslot-400")]}>
+              <span class={[
+                "w-20 shrink-0 text-xs font-bold",
+                if(row.active, do: "text-tymeslot-700", else: "text-tymeslot-400")
+              ]}>
                 {day_name}
               </span>
               <div class="relative flex-1 h-6 bg-tymeslot-100 rounded-full overflow-hidden">
@@ -93,7 +99,10 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
                   <% end %>
                 <% end %>
               </div>
-              <span class={["w-28 shrink-0 text-right text-[11px] font-medium", if(row.active, do: "text-tymeslot-500", else: "text-tymeslot-400")]}>
+              <span class={[
+                "w-28 shrink-0 text-right text-[11px] font-medium",
+                if(row.active, do: "text-tymeslot-500", else: "text-tymeslot-400")
+              ]}>
                 {row.label}
               </span>
             </div>
@@ -105,7 +114,8 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
           <div class="min-w-[800px] bg-tymeslot-50/50 rounded-token-3xl p-6 border-2 border-tymeslot-50">
             <div class="grid grid-cols-8 gap-2 text-xs sm:text-sm">
               <%!-- Header Row --%>
-              <div class="font-black text-tymeslot-400 uppercase tracking-widest text-center py-4"></div>
+              <div class="font-black text-tymeslot-400 uppercase tracking-widest text-center py-4">
+              </div>
               <%= for {day_name, _day_number} <- [
                 {dgettext("dashboard_availability", "Mon"), 1},
                 {dgettext("dashboard_availability", "Tue"), 2},
@@ -133,16 +143,26 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
                       class={[
                         "h-5 sm:h-6 rounded-token-lg border-2 transition-all duration-300 transform hover:scale-110 hover:z-10",
                         case slot_status do
-                          :available -> "border-emerald-200 shadow-sm shadow-emerald-500/10 cursor-pointer"
-                          :partial -> "border-amber-200 shadow-sm shadow-amber-500/10 cursor-pointer"
-                          :unavailable -> "bg-tymeslot-100 border-tymeslot-100 opacity-40 hover:opacity-100"
+                          :available ->
+                            "border-emerald-200 shadow-sm shadow-emerald-500/10 cursor-pointer"
+
+                          :partial ->
+                            "border-amber-200 shadow-sm shadow-amber-500/10 cursor-pointer"
+
+                          :unavailable ->
+                            "bg-tymeslot-100 border-tymeslot-100 opacity-40 hover:opacity-100"
                         end
                       ]}
                       style={
                         case slot_status do
-                          :available -> "background-color: #10b981; opacity: 0.8;"
-                          :partial -> "background: linear-gradient(45deg, #10b981 50%, #f59e0b 50%); opacity: 0.8;"
-                          :unavailable -> ""
+                          :available ->
+                            "background-color: #10b981; opacity: 0.8;"
+
+                          :partial ->
+                            "background: linear-gradient(45deg, #10b981 50%, #f59e0b 50%); opacity: 0.8;"
+
+                          :unavailable ->
+                            ""
                         end
                       }
                       title={tooltip}
@@ -178,7 +198,8 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
             </span>
           </div>
           <div class="flex items-center gap-3">
-            <div class="w-5 h-5 bg-tymeslot-200 border-2 border-tymeslot-200 rounded-token-lg opacity-40"></div>
+            <div class="w-5 h-5 bg-tymeslot-200 border-2 border-tymeslot-200 rounded-token-lg opacity-40">
+            </div>
             <span class="text-tymeslot-700 font-bold text-sm">
               {dgettext("dashboard_availability", "Unavailable")}
             </span>

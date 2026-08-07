@@ -13,8 +13,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
        has not been enqueued within the last 24 hours)
 
   Metadata is enriched with deployment context (`tymeslot_version`,
-  `deployment_type`, `hostname`, `timestamp`) before being passed to the
-  template, so error reports include enough information to be actionable.
+  `deployment_type`, `domain`, `hostname`, `timestamp`) before being passed to
+  the template, so error reports include enough information to be actionable.
   """
 
   @behaviour Tymeslot.Infrastructure.AdminAlerts
@@ -25,6 +25,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias TymeslotWeb.Endpoint
 
   @impl Tymeslot.Infrastructure.AdminAlerts
   def send_alert(type, metadata) do
@@ -104,9 +105,27 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     %{
       tymeslot_version: tymeslot_version(),
       deployment_type: System.get_env("DEPLOYMENT_TYPE") || "unknown",
+      domain: domain(),
       hostname: hostname(),
       timestamp: DateTime.to_iso8601(DateTime.utc_now())
     }
+  end
+
+  # The public domain this deployment serves. It is what actually identifies the
+  # instance to an operator running more than one of them; `hostname/0` below
+  # reports the container name, which is an opaque id under Docker and Cloudron.
+  # Endpoint.host/0 raises when the endpoint is not running, which an alert
+  # raised during boot or shutdown can hit, so this degrades to "unknown" rather
+  # than losing the alert to the rescue in `AdminAlerts.send_alert/2`.
+  defp domain do
+    Endpoint.host()
+  rescue
+    exception ->
+      Logger.warning("Admin alert could not resolve the deployment domain",
+        error: Exception.message(exception)
+      )
+
+      "unknown"
   end
 
   defp tymeslot_version do

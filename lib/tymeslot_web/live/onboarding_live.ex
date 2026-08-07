@@ -103,9 +103,7 @@ defmodule TymeslotWeb.OnboardingLive do
           buffer_minutes={@profile.buffer_minutes}
           advance_booking_days={@profile.advance_booking_days}
           min_advance_hours={@profile.min_advance_hours}
-          calendar_connected={
-            @connected_calendars != [] or @calendar_choice not in [nil, "skip"]
-          }
+          calendar_connected={@connected_calendars != [] or @calendar_choice not in [nil, "skip"]}
           booking_host={booking_host()}
         />
       </:preview>

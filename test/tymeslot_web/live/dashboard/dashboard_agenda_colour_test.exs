@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.EventColour
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
@@ -57,8 +58,8 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
     assert Calendar.overrides_for(user.id) ==
              %{{:external, integration.id, "uid-colour-journey"} => "blueberry"}
 
-    # And the agenda re-renders in that palette colour (blueberry → bg-calendar-2).
-    assert html =~ "bg-calendar-2"
+    # And the agenda re-renders in that palette colour.
+    assert html =~ EventColour.tailwind_class("blueberry")
   end
 
   test "user clears a colour override", %{conn: conn, user: user} do
@@ -106,8 +107,8 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
     # Persisted as a durable override, keyed on the meeting id.
     assert Calendar.overrides_for(user.id) == %{{:meeting, meeting.id} => "blueberry"}
 
-    # And the agenda re-renders in that palette colour (blueberry → bg-calendar-2).
-    assert html =~ "bg-calendar-2"
+    # And the agenda re-renders in that palette colour.
+    assert html =~ EventColour.tailwind_class("blueberry")
   end
 
   test "malformed colour targets are ignored without crashing the LiveView",

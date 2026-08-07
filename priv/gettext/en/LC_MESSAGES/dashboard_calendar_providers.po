@@ -11,1110 +11,1113 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:143
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar reconnected"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:283
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:363
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:51
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars we check to prevent double bookings."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:222
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm or update the server URL and credentials for this integration. You'll be able to review and adjust the synced calendars on the next step."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:37
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex
 #, elixir-autogen, elixir-format
 msgid "Connect any CalDAV-compatible server"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:165
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Could not save: %{reason}"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:91
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Could not sign in with those credentials"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:120
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:83
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your server URL and credentials to discover calendars."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:179
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Integration Name"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:60
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:98
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:160
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Integration not found"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:56
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar ID"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:37
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex
 #, elixir-autogen, elixir-format
 msgid "Lightweight CalDAV server integration"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:47
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Manage calendars"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:93
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Apple iCloud"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:94
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Apple iCloud Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:69
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Baikal"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:70
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Baikal Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:69
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex
 #, elixir-autogen, elixir-format
 msgid "My CalDAV"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:70
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex
 #, elixir-autogen, elixir-format
 msgid "My CalDAV Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:69
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Nextcloud"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:70
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Nextcloud Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:69
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Radicale"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:70
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Radicale Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:69
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Zimbra"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:70
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Zimbra Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:85
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
 #, elixir-autogen, elixir-format
 msgid "My mailbox.org"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:86
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
 #, elixir-autogen, elixir-format
 msgid "My mailbox.org Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:108
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "No calendars found. Try refreshing the integration."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:328
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:199
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "No calendars were discovered. Double-check your credentials or try again."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:37
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex
 #, elixir-autogen, elixir-format
 msgid "PHP-based CalDAV/CardDAV server"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:262
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:139
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Password / App Password"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:151
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Please select at least one calendar to sync."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:96
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:291
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:186
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{name}"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:371
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Save selection"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:369
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:324
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:195
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Select calendars to sync:"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:54
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Select the calendars you want to sync for availability checks."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:239
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:111
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:241
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Server URL"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:120
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Session expired. Please start the reconnect process again."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:70
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
 #, elixir-autogen, elixir-format
 msgid "Settings → Security"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:59
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:55
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:55
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:59
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:55
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:55
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:55
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex
 #, elixir-autogen, elixir-format
 msgid "Setup guide"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:75
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:434
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:359
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:131
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:41
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your Apple iCloud account"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:37
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your Nextcloud server"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:37
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your Zimbra server"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:120
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:41
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your mailbox.org account"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:59
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Syncing %{selected} of %{count} calendar"
 msgid_plural "Syncing %{selected} of %{count} calendars"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:289
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Testing..."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:220
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Unnamed Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:251
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:127
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:129
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Username"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:70
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:47
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:90
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "My Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:141
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:100
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "This server address is fixed for this provider"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:5
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:5
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex
 #, elixir-autogen, elixir-format
 msgid "%{first} + %{remaining} more"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:156
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Discover calendars"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:157
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Discovering..."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:71
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex
 #, elixir-autogen, elixir-format
 msgid "https://baikal.example.com/dav.php"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:71
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex
 #, elixir-autogen, elixir-format
 msgid "https://caldav.example.com"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:71
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex
 #, elixir-autogen, elixir-format
 msgid "https://cloud.example.com"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:115
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "https://example.com/remote.php/dav"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:71
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex
 #, elixir-autogen, elixir-format
 msgid "https://mail.example.com"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:71
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex
 #, elixir-autogen, elixir-format
 msgid "https://radicale.example.com:5232"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:112
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Enterprise Zimbra calendar integration"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:167
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Full OAuth integration with Google Meet support"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:185
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Homepage demo provider"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:96
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Lightweight self-hosted calendar server"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:178
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Microsoft 365 and Outlook.com integration"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:142
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "PHP-based CalDAV/CardDAV server integration"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:104
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Self-hosted Nextcloud calendar sync"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:88
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Universal CalDAV server support"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:65
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
 #, elixir-autogen, elixir-format
 msgid "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:65
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked - untick to stop syncing them, or tick new calendars to add them."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:344
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} configuration error. Please verify your server URL and settings"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:102
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Access denied. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:116
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Access denied. You do not have permission to access this calendar resource."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:316
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Access denied. You don't have permission to access this %{provider} resource"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:109
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Access denied. iCloud requires an app-specific password generated at appleid.apple.com — your Apple ID password will not work for CalDAV."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:80
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "An error occurred while communicating with the calendar service."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:351
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "An unexpected error occurred with %{provider}"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:156
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "An unexpected error occurred. Please try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/apple/provider.ex:138
+#: lib/tymeslot/integrations/calendar/apple/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Apple iCloud CalDAV endpoint not found. The server URL must be https://caldav.icloud.com"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/apple/provider.ex:131
+#: lib/tymeslot/integrations/calendar/apple/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Apple iCloud connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/apple/provider.ex:196
+#: lib/tymeslot/integrations/calendar/apple/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Apple iCloud requires HTTPS"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:309
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed for %{provider}. Please check your username and password"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/baikal/provider.ex:121
+#: lib/tymeslot/integrations/calendar/baikal/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Check your Baikal username and password."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex:178
+#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Check your Nextcloud username and password. Consider using an app password."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/radicale/provider.ex:120
+#: lib/tymeslot/integrations/calendar/radicale/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Check your Radicale username and password."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/zimbra/provider.ex:119
+#: lib/tymeslot/integrations/calendar/zimbra/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Check your Zimbra username and password."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex:130
+#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:46
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:95
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please check your credentials."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:28
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please reconnect your calendar."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:88
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/apple/provider.ex:133
+#: lib/tymeslot/integrations/calendar/apple/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/baikal/provider.ex:119
+#: lib/tymeslot/integrations/calendar/baikal/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Baikal connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/baikal/provider.ex:221
+#: lib/tymeslot/integrations/calendar/baikal/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Baikal error: %{detail}"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/baikal/provider.ex:126
+#: lib/tymeslot/integrations/calendar/baikal/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Baikal server not found. Confirm the URL includes /dav.php (e.g., https://baikal.example.com/dav.php)."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/discovery.ex:118
-#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:365
+#: lib/tymeslot/integrations/calendar/caldav/discovery.ex
+#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:568
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV server"
 msgstr ""
 
-#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex:618
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "CalDAV server rejected the stored credentials. Please reconnect the integration."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/discovery.ex:142
-#: lib/tymeslot/integrations/calendar/discovery.ex:271
+#: lib/tymeslot/integrations/calendar/discovery.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar discovery could not be attributed to your account. Please try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/discovery.ex:431
+#: lib/tymeslot/integrations/calendar/discovery.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar discovery failed"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:120
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar discovery failed. Please check your credentials and try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:426
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar paths must be 5000 characters or less"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:420
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar paths must be text"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:21
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar service is not responding. Please try again later."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:436
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Check that Radicale is running and accessible at the specified URL and port"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:443
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Check that the server URL is correct and the CalDAV service is enabled"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:383
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Check your Radicale credentials. If using htpasswd authentication, ensure the password is correct"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:323
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Connection to %{provider} timed out. The server may be slow or unreachable"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:404
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Double-check your credentials and ensure they haven't expired"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:56
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to connect to calendar. Please try again or reconnect."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/google/provider.ex:225
+#: lib/tymeslot/integrations/calendar/google/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Google Calendar connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:452
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "If the problem persists, contact your calendar server administrator"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:390
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/apple/provider.ex:198
+#: lib/tymeslot/integrations/calendar/apple/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/baikal/provider.ex:87
+#: lib/tymeslot/integrations/calendar/baikal/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid Baikal URL. Should be your Baikal server URL including /dav.php (e.g., https://baikal.example.com/dav.php)"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex:98
+#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/radicale/provider.ex:86
+#: lib/tymeslot/integrations/calendar/radicale/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid Radicale URL. Should be your Radicale server URL (e.g., https://radicale.example.com:5232)"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:54
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid URL format"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/zimbra/provider.ex:186
+#: lib/tymeslot/integrations/calendar/zimbra/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:49
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar credentials. Please update your connection."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex:194
+#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex:92
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:26
+#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex
 #, elixir-autogen, elixir-format
 msgid "Missing required fields: %{fields}"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:137
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Network connection failed. Please check your internet connection."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex:174
-#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:359
+#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex
+#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex
 #, elixir-autogen, elixir-format
 msgid "Nextcloud connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex:185
+#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:270
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "No calendar is selected for this connection, so the change could not be sent to the calendar server."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/outlook/provider.ex:199
+#: lib/tymeslot/integrations/calendar/outlook/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Outlook Calendar connected successfully!"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:558
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Password contains invalid characters"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:555
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Password is required"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:377
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be 500 characters or less"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:389
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be text"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:314
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Please enter a valid server URL (e.g., https://cloud.example.com)"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:544
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:72
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex
 #, elixir-autogen, elixir-format
 msgid "Private or local network addresses are not allowed"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:362
-#: lib/tymeslot/integrations/calendar/radicale/provider.ex:118
+#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex
+#: lib/tymeslot/integrations/calendar/radicale/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Radicale connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/radicale/provider.ex:222
+#: lib/tymeslot/integrations/calendar/radicale/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Radicale error: %{detail}"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/radicale/provider.ex:125
+#: lib/tymeslot/integrations/calendar/radicale/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Radicale server not found. Check your server URL and port if needed."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/google/provider.ex:232
-#: lib/tymeslot/integrations/calendar/outlook/provider.ex:206
+#: lib/tymeslot/integrations/calendar/google/provider.ex
+#: lib/tymeslot/integrations/calendar/outlook/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Rate limited - please try again later"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:52
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:123
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Resource not found. Please verify your configuration."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:67
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Secure connection failed. Please check your server configuration."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:326
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Server URL must be text"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:448
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
 msgstr ""
 
-#: lib/tymeslot/workers/sync_google_calendar_worker.ex:295
+#: lib/tymeslot/workers/sync_google_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
 msgstr ""
 
-#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex:542
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:182
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server did not respond. Tymeslot will retry automatically."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:154
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:133
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server refused access to this calendar."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:126
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server rejected the stored credentials. Please reconnect the calendar."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:175
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server reported an error. Tymeslot will retry automatically."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:168
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server returned a response Tymeslot could not understand."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:189
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server took too long to respond. Tymeslot will retry automatically."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:144
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar service encountered an error. Please try again later."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:58
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar service is temporarily unavailable. Please try again later."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:147
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The event changed on the calendar server since Tymeslot last synced it."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:140
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The event no longer exists on the calendar server."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:64
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "The request timed out. Please try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:330
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Too many requests to %{provider}. Please wait a moment and try again"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:130
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Too many requests. Please wait a moment and try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:376
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Try using an app password instead of your regular password. You can create one in Nextcloud's security settings"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:197
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not complete the request against the calendar server."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:161
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not reach the calendar server. Tymeslot will retry automatically."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:277
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not send this change to the calendar server."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:337
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Unable to connect to %{provider}. Please check your network connection and server URL"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:73
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Unable to connect to the calendar service. Please check the URL and try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:42
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Unable to reach calendar service. Check your internet connection."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/discovery.ex:72
-#: lib/tymeslot/integrations/calendar/discovery.ex:201
-#: lib/tymeslot/integrations/calendar/discovery.ex:303
+#: lib/tymeslot/integrations/calendar/discovery.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown provider: %{provider}"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/discovery.ex:400
+#: lib/tymeslot/integrations/calendar/discovery.ex
 #, elixir-autogen, elixir-format
 msgid "Unsupported provider: %{provider}"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/zimbra/provider.ex:184
+#: lib/tymeslot/integrations/calendar/zimbra/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Use HTTPS for non-local Zimbra servers"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:542
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:70
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex
 #, elixir-autogen, elixir-format
 msgid "Use HTTPS for non-local calendar servers"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:552
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Username is required"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:340
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Username must be 255 characters or less"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:359
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Username must be text"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:420
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Verify the Radicale URL including port if needed (e.g., https://radicale.example.com:5232)"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:413
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Verify the URL format: https://your-domain.com (Nextcloud path will be added automatically)"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:427
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Verify the full CalDAV URL including the path (e.g., https://server.com/caldav/)"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:459
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Wait 60 seconds before trying again"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/display_helpers.ex:35
+#: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar access has expired. Please reconnect."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/zimbra/provider.ex:117
+#: lib/tymeslot/integrations/calendar/zimbra/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zimbra connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/zimbra/provider.ex:124
+#: lib/tymeslot/integrations/calendar/zimbra/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zimbra server not found. Check your server URL."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:576
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "calendar provider"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:397
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "iCloud requires an app-specific password. Generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex:135
+#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex
 #, elixir-autogen, elixir-format
 msgid "mailbox.org CalDAV endpoint not found. Confirm the server URL is https://dav.mailbox.org"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex:128
+#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex
 #, elixir-autogen, elixir-format
 msgid "mailbox.org connection successful"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex:192
+#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex
 #, elixir-autogen, elixir-format
 msgid "mailbox.org requires HTTPS"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server refused the request (HTTP %{status})."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
+#: lib/tymeslot/integrations/calendar/ics/provider.ex
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar subscription"
 msgstr ""
 
-#: lib/tymeslot/workers/sync_ics_calendar_worker.ex:193
+#: lib/tymeslot/workers/sync_ics_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar subscription sync failed while writing a fetched event to the cache (%{type}): %{detail}"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:145
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "Could not reach the calendar feed. Check the URL and try again."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:126
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the calendar feed URL."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:75
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Feed URL"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:30
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "My subscribed calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:58
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Paste the feed link your calendar gives you when you publish a calendar: Google's secret address in iCal format, Outlook's published calendar link, or any .ics URL. We check it for busy time only, and never write to it."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:101
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Subscribe"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:43
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Subscribe to a published calendar feed"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:153
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Subscribe to a published calendar feed, read-only"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:102
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Subscribing..."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:114
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "That URL did not return a calendar feed. Make sure it points at an .ics file."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:130
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "That URL points at a blocked address and cannot be reached."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:120
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "That calendar feed is too large to process."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:107
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed URL returned 404. Check that the link is complete and still published."
 msgstr ""
 
-#: lib/tymeslot/workers/sync_ics_calendar_worker.ex:202
+#: lib/tymeslot/workers/sync_ics_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed came back empty, but the cache still holds previously synced events. Keeping the cache in place and retrying rather than emptying your diary."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:123
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed redirected too many times."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:100
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed rejected the link. It may have been revoked or reset."
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/ics/feed.ex:137
+#: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed returned HTTP %{status}."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:86
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
+#, elixir-autogen, elixir-format
+msgid "How this calendar's events are shown in your Tymeslot calendar."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Rename"
 msgstr ""

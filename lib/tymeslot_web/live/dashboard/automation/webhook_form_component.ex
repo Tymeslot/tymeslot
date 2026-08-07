@@ -82,7 +82,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
           class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
           {dgettext("dashboard_automation", "Close")}
         </button>
@@ -117,7 +122,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
               name="webhook[name]"
               label={dgettext("dashboard_automation", "Webhook Name")}
               value={Map.get(@form_values, "name", "")}
-              phx-blur={JS.push("validate_field", value: %{"field" => "name"}, target: @parent_component)}
+              phx-blur={
+                JS.push("validate_field", value: %{"field" => "name"}, target: @parent_component)
+              }
               placeholder={dgettext("dashboard_automation", "My n8n Automation")}
               required
               errors={FormValidationHelpers.field_errors(@form_errors, :name)}
@@ -129,18 +136,33 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
               type="url"
               label={dgettext("dashboard_automation", "Webhook URL")}
               value={Map.get(@form_values, "url", "")}
-              phx-blur={JS.push("validate_field", value: %{"field" => "url"}, target: @parent_component)}
+              phx-blur={
+                JS.push("validate_field", value: %{"field" => "url"}, target: @parent_component)
+              }
               placeholder="https://your-n8n-instance.com/webhook/..."
               required
               errors={FormValidationHelpers.field_errors(@form_errors, :url)}
               icon="hero-link"
             />
 
-            <div :if={@mode == :create} class="p-4 rounded-token-xl bg-turquoise-50/50 border-2 border-turquoise-100">
+            <div
+              :if={@mode == :create}
+              class="p-4 rounded-token-xl bg-turquoise-50/50 border-2 border-turquoise-100"
+            >
               <div class="flex gap-3">
                 <div class="mt-0.5">
-                  <svg class="w-5 h-5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    class="w-5 h-5 text-turquoise-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                 </div>
                 <div>
@@ -161,7 +183,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
               <label class="block text-token-sm font-black text-tymeslot-900">
                 {dgettext("dashboard_automation", "Security Token")}
                 <span class="text-tymeslot-500 font-medium">
-                  - {dgettext("dashboard_automation", "Use this in your n8n/Zapier header verification")}
+                  - {dgettext(
+                    "dashboard_automation",
+                    "Use this in your n8n/Zapier header verification"
+                  )}
                 </span>
               </label>
               <div class="flex gap-2">
@@ -177,7 +202,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                   id="copy-webhook-token"
                   phx-hook="CopyOnClick"
                   data-copy-text={@webhook.webhook_token}
-                  data-copy-feedback={dgettext("dashboard_automation", "Security token copied to clipboard!")}
+                  data-copy-feedback={
+                    dgettext("dashboard_automation", "Security token copied to clipboard!")
+                  }
                   class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
                 >
                   {dgettext("dashboard_automation", "Copy")}
@@ -224,17 +251,22 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                   name="webhook[events][]"
                   value={event.value}
                   checked={event.value in Map.get(@form_values, "events", [])}
-                  phx-click={JS.push("toggle_event", value: %{"event" => event.value}, target: @parent_component)}
+                  phx-click={
+                    JS.push("toggle_event",
+                      value: %{"event" => event.value},
+                      target: @parent_component
+                    )
+                  }
                 />
                 <div class="flex-1">
-                  <div class="font-black text-tymeslot-900"><%= event.label %></div>
-                  <div class="text-token-sm text-tymeslot-600 font-medium"><%= event.description %></div>
+                  <div class="font-black text-tymeslot-900">{event.label}</div>
+                  <div class="text-token-sm text-tymeslot-600 font-medium">{event.description}</div>
                 </div>
               </label>
             <% end %>
           </div>
           <%= for error <- FormValidationHelpers.field_errors(@form_errors, :events) do %>
-            <p class="text-token-sm text-red-600 font-medium mt-3"><%= error %></p>
+            <p class="text-token-sm text-red-600 font-medium mt-3">{error}</p>
           <% end %>
         </div>
 
@@ -256,9 +288,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
             class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
             title={if !@can_submit, do: get_disabled_reason(assigns), else: ""}
           >
-            <%= if @mode == :create,
+            {if @mode == :create,
               do: dgettext("dashboard_automation", "Create Webhook"),
-              else: dgettext("dashboard_automation", "Update Webhook") %>
+              else: dgettext("dashboard_automation", "Update Webhook")}
           </CoreComponents.loading_button>
         </div>
       </form>

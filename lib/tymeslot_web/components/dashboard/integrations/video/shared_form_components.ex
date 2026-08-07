@@ -46,7 +46,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           required
           class={[
             "input input-with-icon w-full",
-            if(FormValidationHelpers.field_errors(@form_errors, :name) != [], do: "input-error", else: "")
+            if(FormValidationHelpers.field_errors(@form_errors, :name) != [],
+              do: "input-error",
+              else: ""
+            )
           ]}
           placeholder={@placeholder || dgettext("dashboard_integrations", "My Video Integration")}
         />
@@ -94,11 +97,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           id={@id}
           name={@name}
           value={@value}
-          phx-blur={JS.push("validate_field", value: %{"field" => Atom.to_string(@error_key)}, target: @target)}
+          phx-blur={
+            JS.push("validate_field",
+              value: %{"field" => Atom.to_string(@error_key)},
+              target: @target
+            )
+          }
           required
           class={[
             "input input-with-icon w-full",
-            if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [], do: "input-error", else: "")
+            if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],
+              do: "input-error",
+              else: ""
+            )
           ]}
           placeholder={@placeholder}
         />
@@ -152,11 +163,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           id={@id}
           name={@name}
           value={@value}
-          phx-blur={JS.push("validate_field", value: %{"field" => Atom.to_string(@error_key)}, target: @target)}
+          phx-blur={
+            JS.push("validate_field",
+              value: %{"field" => Atom.to_string(@error_key)},
+              target: @target
+            )
+          }
           required
           class={[
             "input input-with-icon w-full",
-            if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [], do: "input-error", else: "")
+            if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],
+              do: "input-error",
+              else: ""
+            )
           ]}
           placeholder={@placeholder || dgettext("dashboard_integrations", "Your API key")}
         />
@@ -218,7 +237,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center">
         <div class="text-turquoise-600 mr-3">
-          <%= Phoenix.HTML.raw(@icon) %>
+          {Phoenix.HTML.raw(@icon)}
         </div>
         <h3 class="text-lg font-semibold text-tymeslot-800">{@title}</h3>
       </div>

@@ -11,296 +11,338 @@ msgstr ""
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex:55
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
 msgstr "%{accepted} di %{total} ospiti partecipano"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex:62
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
 msgid_plural ", %{count} declined"
 msgstr[0] ", %{count} rifiutato"
 msgstr[1] ", %{count} rifiutati"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex:153
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} event"
 msgid_plural "%{count} events"
 msgstr[0] "%{count} evento"
 msgstr[1] "%{count} eventi"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:245
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} more event"
 msgid_plural "%{count} more events"
 msgstr[0] "%{count} altro evento"
 msgstr[1] "%{count} altri eventi"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:59
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "%{days}d ago"
 msgstr "%{days}g fa"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:93
+#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{day} at %{time}"
 msgstr "%{day} alle %{time}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:147
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex:65
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "%{event}, %{time}"
 msgstr "%{event}, %{time}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:58
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "%{hours}h ago"
 msgstr "%{hours}h fa"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:57
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes}m ago"
 msgstr "%{minutes}m fa"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:100
+#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "%{when_text} · %{location}"
 msgstr "%{when_text} · %{location}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:65
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:163
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex:81
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex:56
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex:72
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex:104
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex:111
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex:180
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex:196
+#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
 msgid "(No title)"
 msgstr "(Senza titolo)"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex:61
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex:187
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
 msgstr[0] "+%{count} altro"
 msgstr[1] "+%{count} altri"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:261
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:80
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "3 Days"
 msgstr "3 giorni"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:279
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Add event"
 msgstr "Aggiungi evento"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:264
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:83
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Agenda"
 msgstr "Agenda"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex:118
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex:14
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex:33
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex:55
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex:118
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "All day"
 msgstr "Tutto il giorno"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex:42
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #, elixir-autogen, elixir-format
 msgid "All-day: %{event}"
 msgstr "Tutto il giorno: %{event}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:34
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar data may be outdated (last synced %{age})."
 msgstr "I dati del calendario potrebbero non essere aggiornati (ultima sincronizzazione %{age})."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:136
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar settings"
 msgstr "Impostazioni del calendario"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:168
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars"
 msgstr "Calendari"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex:52
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
 msgstr "Collega un calendario"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex:45
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Connect at least one calendar to see your events here."
 msgstr "Collega almeno un calendario per visualizzare qui gli eventi."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:260
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:79
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr "Giorno"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:127
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Scorciatoie da tastiera"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:128
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts (?)"
 msgstr "Scorciatoie da tastiera (?)"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:263
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:82
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Month"
 msgstr "Mese"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:161
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:172
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex
 #, elixir-autogen, elixir-format
 msgid "My Calendars"
 msgstr "I miei calendari"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:59
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Next period"
 msgstr "Periodo successivo"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:194
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex
 #, elixir-autogen, elixir-format
 msgid "No calendars connected"
 msgstr "Nessun calendario collegato"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex:94
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
 #, elixir-autogen, elixir-format
 msgid "No matching events"
 msgstr "Nessun evento corrispondente"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex:40
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "No upcoming events"
 msgstr "Nessun evento imminente"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex:42
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing scheduled in the next 30 days. Events you add or sync will appear here."
 msgstr "Niente in programma nei prossimi 30 giorni. Gli eventi aggiunti o sincronizzati appariranno qui."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex:43
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing to see here"
 msgstr "Non c'è niente da vedere qui"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:213
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Adesso"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:51
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Previous period"
 msgstr "Periodo precedente"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:282
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Quick add"
 msgstr "Aggiunta rapida"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:299
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:302
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh"
 msgstr "Aggiorna"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:43
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh now"
 msgstr "Aggiorna ora"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:64
+#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder: %{title}"
 msgstr "Promemoria: %{title}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex:52
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex:53
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
 #, elixir-autogen, elixir-format
 msgid "Search events"
 msgstr "Cerca eventi"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:37
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "Some calendars have never been synced."
 msgstr "Alcuni calendari non sono mai stati sincronizzati."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:218
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Switch view"
 msgstr "Cambia vista"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:47
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "Syncing calendars%{progress}..."
 msgstr "Sincronizzazione dei calendari%{progress}..."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:113
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:69
+#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
 msgstr "Oggi"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:164
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
 msgstr "Attiva/disattiva calendari"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:116
+#: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
 msgid "Tomorrow"
 msgstr "Domani"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:148
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex:83
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex:66
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex:43
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/all_day_row.ex
 #, elixir-autogen, elixir-format
 msgid "Untitled event"
 msgstr "Evento senza titolo"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:262
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:81
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Week"
 msgstr "Settimana"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex:37
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/month_view.ex
 #, elixir-autogen, elixir-format
 msgid "Wk"
 msgstr "Sett"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:76
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
 #, elixir-autogen, elixir-format
 msgid "all-day"
 msgstr "tutto il giorno"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:56
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "just now"
 msgstr "proprio ora"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:67
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Next 30 days"
 msgstr "Prossimi 30 giorni"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Banana"
+msgstr "Banana"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Blueberry"
+msgstr "Mirtillo"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Grape"
+msgstr "Uva"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Graphite"
+msgstr "Grafite"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Peacock"
+msgstr "Pavone"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Sage"
+msgstr "Salvia"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Tangerine"
+msgstr "Mandarino"
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Tomato"
+msgstr "Pomodoro"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/header/calendar_list_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Colour for %{calendar}"
+msgstr "Colore per %{calendar}"
+
+#: lib/tymeslot_web/components/dashboard/colour_swatches.ex
+#, elixir-autogen, elixir-format
+msgid "Default colour"
+msgstr "Colore predefinito"

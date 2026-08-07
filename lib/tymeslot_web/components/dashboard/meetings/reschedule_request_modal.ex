@@ -81,7 +81,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
             <div class="text-tymeslot-900 font-black text-lg space-y-2">
               <div class="flex items-center gap-3">
                 <CoreComponents.icon name="hero-calendar" class="w-5 h-5 text-turquoise-600" />
-                <span>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(@meeting, @timezone, @time_format)}</span>
+                <span>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(
+                  @meeting,
+                  @timezone,
+                  @time_format
+                )}</span>
               </div>
               <div class="flex items-center gap-3">
                 <CoreComponents.icon name="hero-clock" class="w-5 h-5 text-turquoise-600" />
@@ -105,7 +109,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
             <ul class="text-turquoise-700 font-medium space-y-2">
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
-                <span>{dgettext("dashboard_bookings", "The current meeting will be cancelled immediately")}</span>
+                <span>{dgettext(
+                  "dashboard_bookings",
+                  "The current meeting will be cancelled immediately"
+                )}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
@@ -117,7 +124,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
-                <span>{dgettext("dashboard_bookings", "They can choose a new time from your availability")}</span>
+                <span>{dgettext(
+                  "dashboard_bookings",
+                  "They can choose a new time from your availability"
+                )}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>

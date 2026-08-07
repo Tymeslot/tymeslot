@@ -12,14 +12,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
-  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
   alias Tymeslot.Integrations.Video.RoomData
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
   require Logger
@@ -261,17 +259,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   defp get_access_token(config) do
-    case zoom_oauth_helper().validate_token(config) do
-      {:ok, :valid} ->
-        {:ok, Map.get(config, :access_token)}
-
-      {:ok, :needs_refresh} ->
-        refresh_and_update_token(config)
-
-      {:error, reason} ->
-        Logger.error("Zoom token validation failed", reason: inspect(reason))
-        {:error, "Token validation failed: #{reason}"}
-    end
+    OAuthTokenManager.validated_access_token(config,
+      oauth_helper: zoom_oauth_helper(),
+      label: "Zoom",
+      on_refresh: &refresh_and_update_token/1
+    )
   end
 
   defp refresh_and_update_token(config, opts \\ []) do
@@ -307,63 +299,41 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
+  # A config without an integration_id is a transient one (a connection probe,
+  # say) with no row to write back to, so the refreshed tokens are simply
+  # returned. Zoom is the one provider that treats a failed write as fatal:
+  # because it rotates the refresh token on every call, a token it cannot
+  # persist is a token already invalidated at zoom.us, and carrying on would
+  # leave the stored credentials permanently unusable.
   defp persist_refreshed_tokens(config, refreshed) do
     case Map.get(config, :integration_id) do
       nil ->
         {:ok, refreshed}
 
-      integration_id ->
-        case update_integration_tokens(integration_id, Map.get(config, :user_id), refreshed) do
+      _integration_id ->
+        case OAuthTokenManager.persist_tokens(config, token_attrs(refreshed), "Zoom") do
           :ok -> {:ok, refreshed}
           {:error, _reason} -> {:error, :token_persist_failed}
         end
     end
   end
 
-  defp update_integration_tokens(integration_id, user_id, refreshed) do
-    # Zoom rotates refresh tokens on every refresh, but if the response omits a
-    # new one we keep the existing refresh token rather than poisoning the field
-    # with the access token (which would break the next refresh entirely).
-    attrs =
-      maybe_put_refresh_token(
-        %{
-          access_token: refreshed.access_token,
-          token_expires_at: refreshed.expires_at
-        },
-        refreshed.refresh_token
-      )
-
-    attrs =
-      case refreshed[:scope] do
-        nil -> attrs
-        "" -> attrs
-        scope -> Map.put(attrs, :oauth_scope, scope)
-      end
-
-    case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, integration} ->
-        case VideoIntegrationQueries.update(integration, attrs) do
-          {:ok, _updated} ->
-            Logger.info("Updated Zoom OAuth tokens", integration_id: integration_id)
-            :ok
-
-          {:error, reason} ->
-            Logger.error("Failed to persist Zoom tokens",
-              integration_id: integration_id,
-              reason: inspect(reason)
-            )
-
-            {:error, reason}
-        end
-
-      {:error, :not_found} ->
-        Logger.warning("Zoom integration vanished before token update",
-          integration_id: integration_id
-        )
-
-        :ok
-    end
+  # Zoom rotates refresh tokens on every refresh, but if the response omits a
+  # new one we keep the existing refresh token rather than poisoning the field
+  # with the access token (which would break the next refresh entirely).
+  defp token_attrs(refreshed) do
+    %{
+      access_token: refreshed.access_token,
+      token_expires_at: refreshed.expires_at
+    }
+    |> maybe_put_refresh_token(refreshed.refresh_token)
+    |> maybe_put_scope(refreshed[:scope])
   end
+
+  defp maybe_put_scope(attrs, scope) when is_binary(scope) and scope != "",
+    do: Map.put(attrs, :oauth_scope, scope)
+
+  defp maybe_put_scope(attrs, _scope), do: attrs
 
   # Only overwrite the stored refresh token when Zoom returned a fresh one. A
   # blank/missing value means the previous refresh token is still valid, so we
@@ -621,25 +591,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   defp flag_for_reauth(config, event, message) do
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      Logger.warning("Zoom integration needs reauth but no integration_id to flag", event: event)
-    else
-      Logger.warning("Flagging Zoom integration for reauth",
-        event: event,
-        integration_id: integration_id
-      )
-
-      case Video.fetch_integration_for_user(integration_id, user_id) do
-        {:ok, integration} ->
-          VideoIntegrationQueries.mark_needs_reauth(integration, message)
-
-        {:error, :not_found} ->
-          :ok
-      end
-    end
+    OAuthTokenManager.flag_needs_reauth(config, label: "Zoom", event: event, message: message)
   end
 
   defp zoom_oauth_helper do

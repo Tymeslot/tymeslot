@@ -48,14 +48,16 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
                 "text-token-xl font-black tracking-tight",
                 if(@integration.status == :active, do: "text-tymeslot-900", else: "text-tymeslot-500")
               ]}>
-                <%= @integration.name %>
+                {@integration.name}
               </h3>
               <.status_badge status={@integration.status} reason={@integration.disabled_reason} />
             </div>
 
             <%= if @integration.chat_id do %>
               <div class="text-token-sm text-tymeslot-600 font-mono mb-3 truncate">
-                {dgettext("dashboard_automation_chat", "Chat: %{chat_id}", chat_id: truncate_chat_id(@integration.chat_id))}
+                {dgettext("dashboard_automation_chat", "Chat: %{chat_id}",
+                  chat_id: truncate_chat_id(@integration.chat_id)
+                )}
               </div>
             <% end %>
 
@@ -67,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
                   event_tag_style(@integration.status)
                 ]}>
                   <div class={["w-1.5 h-1.5 rounded-full", event_dot_style(@integration.status)]} />
-                  <%= event %>
+                  {event}
                 </span>
               <% end %>
             </div>
@@ -75,14 +77,20 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             <%!-- Status-specific content --%>
             <%= if @integration.status == :pending_link do %>
               <div class="text-token-sm text-amber-600 font-medium">
-                {dgettext("dashboard_automation_chat", "Connect Telegram to start receiving notifications.")}
+                {dgettext(
+                  "dashboard_automation_chat",
+                  "Connect Telegram to start receiving notifications."
+                )}
               </div>
             <% else %>
               <%!-- Last Triggered Info --%>
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                   <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
-                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}", time: AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format))}</span>
+                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}",
+                    time:
+                      AutomationHelpers.format_datetime(@integration.last_triggered_at, @time_format)
+                  )}</span>
                 </div>
               <% else %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
@@ -93,7 +101,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
 
               <%= if @integration.status == :auto_disabled do %>
                 <div class="mt-2 text-token-sm text-red-600 font-medium">
-                  {dgettext("dashboard_automation_chat", "Disabled: %{reason}", reason: @integration.disabled_reason)}
+                  {dgettext("dashboard_automation_chat", "Disabled: %{reason}",
+                    reason: @integration.disabled_reason
+                  )}
                 </div>
               <% end %>
             <% end %>
@@ -125,8 +135,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               class={[
                 "inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 font-bold transition-all text-token-sm",
                 if(@integration.status == :active && !@testing,
-                  do: "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
-                  else: "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
+                  do:
+                    "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
+                  else:
+                    "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
                 )
               ]}
             >

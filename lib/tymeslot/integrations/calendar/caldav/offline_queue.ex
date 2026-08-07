@@ -36,13 +36,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
+  alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
 
   # `sync_last_error` is read by the account owner, so every value written to
   # it is a sentence. Transport failures get theirs from
-  # `CalDAVBase.describe_error/1`; the three below cover the local-state
+  # `CalDAVErrors.describe_error/1`; the three below cover the local-state
   # failures that never reach the wire. They live as functions at the bottom of
   # this module rather than as module attributes: a `dgettext/2` call in an
   # attribute would freeze the locale at compile time.
@@ -229,7 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   defp skip_message(:incomplete_event_data), do: incomplete_event_message()
 
   # The log keeps the raw term for diagnosis; `sync_last_error` is a
-  # user-facing column, so it gets the sentence from `CalDAVBase.describe_error/1`
+  # user-facing column, so it gets the sentence from `CalDAVErrors.describe_error/1`
   # rather than an inspected atom.
   defp record_failure(integration, row, operation, reason) do
     Logger.warning("CalDAV offline queue replay failed",
@@ -242,7 +243,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     ProviderCalendarEventQueries.mark_sync_failed(
       integration.id,
       row.uid,
-      CalDAVBase.describe_error(reason)
+      CalDAVErrors.describe_error(reason)
     )
   end
 

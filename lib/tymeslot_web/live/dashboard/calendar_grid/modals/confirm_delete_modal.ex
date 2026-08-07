@@ -26,10 +26,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
         {dgettext("dashboard_calendar_events", "Are you sure you want to delete %{title}?",
           title: @event.summary || dgettext("dashboard_calendar_events", "(No title)")
         )}
-        {dgettext("dashboard_calendar_events", "This will also remove it from your calendar provider.")}
+        {dgettext(
+          "dashboard_calendar_events",
+          "This will also remove it from your calendar provider."
+        )}
       </p>
       <p :if={@linked_to_booking} class="mt-2 text-token-sm text-amber-600">
-        {dgettext("dashboard_calendar_events", "This event is linked to a booking. The attendee will be notified of the cancellation.")}
+        {dgettext(
+          "dashboard_calendar_events",
+          "This event is linked to a booking. The attendee will be notified of the cancellation."
+        )}
       </p>
 
       <:footer>

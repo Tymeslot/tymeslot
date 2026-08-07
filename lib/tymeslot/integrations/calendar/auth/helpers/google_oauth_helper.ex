@@ -55,6 +55,21 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   end
 
   @doc """
+  Generates the OAuth authorization URL with explicit scopes *and* options.
+
+  Used when reconnecting an existing integration: the caller fixes the scopes
+  while `integration_id` and `login_hint` target the account already connected,
+  so the user is not asked to pick one again and cannot connect the wrong one.
+  """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
+  @spec authorization_url(pos_integer(), String.t(), list(atom() | String.t()), keyword()) ::
+          String.t()
+  def authorization_url(user_id, redirect_uri, scopes, opts)
+      when is_list(scopes) and is_list(opts) do
+    GoogleOAuthHelper.authorization_url(user_id, redirect_uri, scopes, opts)
+  end
+
+  @doc """
   Handles the OAuth callback and creates or updates a calendar integration.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour

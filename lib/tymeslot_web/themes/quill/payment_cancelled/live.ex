@@ -41,7 +41,8 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledLive do
                 {dgettext("booking", "Payment cancelled")}
               </h1>
               <p class="payment-page-body">
-                {dgettext("booking", 
+                {dgettext(
+                  "booking",
                   "Your booking is not confirmed. You can return and try again at any time."
                 )}
               </p>

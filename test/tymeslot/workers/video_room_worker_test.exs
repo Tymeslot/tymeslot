@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.VideoRoom.Recovery
   alias Tymeslot.Workers.VideoRoomWorker
   alias Tymeslot.ZoomOAuthHelperMock
 
@@ -166,7 +167,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       # Meeting is 3 days away, but earliest reminder is 24h before.
       # Deadline = 3 days - 24h = 2 days away.
       assert {:ok, expected_snooze_first} =
-               VideoRoomWorker.calculate_recovery_snooze(meeting, 1, 5)
+               Recovery.snooze_seconds(meeting, 1, 5)
 
       assert {:snooze, snooze_first} =
                perform_job(
@@ -196,7 +197,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
 
       # Deadline is 4h away. Cutoff buffer is 5m.
       assert {:ok, expected_snooze_second} =
-               VideoRoomWorker.calculate_recovery_snooze(meeting, 2, 5)
+               Recovery.snooze_seconds(meeting, 2, 5)
 
       assert {:snooze, snooze_second} =
                perform_job(

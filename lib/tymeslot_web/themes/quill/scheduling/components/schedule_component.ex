@@ -178,17 +178,25 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">
-                          {dgettext("booking", "Bookings available up to %{advance}", advance: Panels.format_advance_booking_days(
-                            @organizer_profile.advance_booking_days
-                          ))}
+                          {dgettext("booking", "Bookings available up to %{advance}",
+                            advance:
+                              Panels.format_advance_booking_days(
+                                @organizer_profile.advance_booking_days
+                              )
+                          )}
                         </p>
                       <% end %>
 
                       <p class="schedule-duration-label text-glass-primary">
                         <%= if @meeting_type do %>
-                          {dgettext("booking", "Duration: %{duration}", duration: LocalizationHelpers.format_duration(@meeting_type.duration_minutes))}
+                          {dgettext("booking", "Duration: %{duration}",
+                            duration:
+                              LocalizationHelpers.format_duration(@meeting_type.duration_minutes)
+                          )}
                         <% else %>
-                          {dgettext("booking", "Duration: %{duration}", duration: Duration.format(@duration))}
+                          {dgettext("booking", "Duration: %{duration}",
+                            duration: Duration.format(@duration)
+                          )}
                         <% end %>
                       </p>
                     </div>
@@ -213,7 +221,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             phx-click="prev_week"
                             phx-target={@myself}
                             phx-disable-with="..."
-                            disabled={CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)}
+                            disabled={
+                              CalendarNavigation.prev_week_disabled?(
+                                @current_week_start,
+                                @user_timezone
+                              )
+                            }
                             class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                           >
                             ←
@@ -228,7 +241,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             phx-click="next_week"
                             phx-target={@myself}
                             phx-disable-with="..."
-                            disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone, @organizer_profile.advance_booking_days)}
+                            disabled={
+                              CalendarNavigation.next_week_disabled?(
+                                @current_week_start,
+                                @user_timezone,
+                                @organizer_profile.advance_booking_days
+                              )
+                            }
                             class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                           >
                             →
@@ -266,8 +285,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           <div class="calendar-nav-cluster">
                             <%= if @availability_status in [:error, :timeout] do %>
                               <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                <svg
+                                  class="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                  />
                                 </svg>
                                 {dgettext("booking", "Calendar is loading slowly")}
                               </div>
@@ -277,30 +306,33 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               phx-target={@myself}
                               phx-disable-with="..."
                               disabled={
-                                  CalendarNavigation.prev_month_disabled?(
-                                    @current_year,
-                                    @current_month,
-                                    @user_timezone
-                                  )
+                                CalendarNavigation.prev_month_disabled?(
+                                  @current_year,
+                                  @current_month,
+                                  @user_timezone
+                                )
                               }
                               class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                             >
                               ←
                             </button>
                             <div class="calendar-month-label font-semibold text-white">
-                              {LocalizationHelpers.get_month_year_display(@current_year, @current_month)}
+                              {LocalizationHelpers.get_month_year_display(
+                                @current_year,
+                                @current_month
+                              )}
                             </div>
                             <button
                               phx-click="next_month"
                               phx-target={@myself}
                               phx-disable-with="..."
                               disabled={
-                                  CalendarNavigation.next_month_disabled?(
-                                    @current_year,
-                                    @current_month,
-                                    @user_timezone,
-                                    @organizer_profile.advance_booking_days
-                                  )
+                                CalendarNavigation.next_month_disabled?(
+                                  @current_year,
+                                  @current_month,
+                                  @user_timezone,
+                                  @organizer_profile.advance_booking_days
+                                )
                               }
                               class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                             >
@@ -311,7 +343,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <div class="calendar-grid-container flex-1">
                           <div class="grid grid-cols-7 gap-0.5 text-center mb-1">
                             <div
-                              :for={day <- [dgettext("booking", "Sun"), dgettext("booking", "Mon"), dgettext("booking", "Tue"), dgettext("booking", "Wed"), dgettext("booking", "Thu"), dgettext("booking", "Fri"), dgettext("booking", "Sat")]}
+                              :for={
+                                day <- [
+                                  dgettext("booking", "Sun"),
+                                  dgettext("booking", "Mon"),
+                                  dgettext("booking", "Tue"),
+                                  dgettext("booking", "Wed"),
+                                  dgettext("booking", "Thu"),
+                                  dgettext("booking", "Fri"),
+                                  dgettext("booking", "Sat")
+                                ]
+                              }
                               class="calendar-weekday text-xs font-medium"
                             >
                               {String.slice(day, 0, 3)}

@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
         selected_event: @event,
         integrations: [@integration],
         integration_colors: %{1 => "bg-turquoise-500"},
+        calendar_colors: %{},
         user_timezone: "Europe/Berlin",
         time_format: "24h",
         myself: %Phoenix.LiveComponent.CID{cid: 1},

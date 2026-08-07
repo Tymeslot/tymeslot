@@ -81,6 +81,7 @@
    interpolation or live only in SaaS templates, so static scanning misses them. */
 @source inline("display-xl display-lg display-md");
 @source inline("bg-calendar-{1,2,3,4,5,6,7,8} bg-calendar-fallback");
+@source inline("bg-calendar-{tomato,tangerine,banana,sage,peacock,blueberry,grape,graphite}");
 @source inline("w-6 h-6 w-8 h-8 w-10 h-10 h-16 h-20 box-border");
 
 @theme {
@@ -145,6 +146,17 @@
   --color-calendar-7: #f43f5e;
   --color-calendar-8: #f59e0b;
   --color-calendar-fallback: #a1a1aa;
+
+  /* Calendar palette colours — the pickable ones, named rather than numbered.
+     Same inlining rationale as the rotation above. */
+  --color-calendar-tomato: #f43f5e;
+  --color-calendar-tangerine: #f97316;
+  --color-calendar-banana: #eab308;
+  --color-calendar-sage: #65a30d;
+  --color-calendar-peacock: #06b6d4;
+  --color-calendar-blueberry: #3b82f6;
+  --color-calendar-grape: #a855f7;
+  --color-calendar-graphite: #71717a;
 
   /* --- Token font sizes → text-token-* (formerly theme.extend.fontSize) --- */
   --text-token-2xs: var(--font-size-2xs);

@@ -62,8 +62,8 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
             />
           </svg>
         </span>
-        
-    <%!-- Active icon (checkmark) --%>
+
+        <%!-- Active icon (checkmark) --%>
         <span class={[
           "status-toggle-icon",
           icon_visibility_class(@checked)

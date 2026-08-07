@@ -44,8 +44,7 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
           <.info_box variant={:info}>
             No announcements are currently registered. Add entries to
             <code>Tymeslot.Announcements.Catalog</code>
-            or any module listed under
-            <code>:announcement_catalogs</code>
+            or any module listed under <code>:announcement_catalogs</code>
             and they will appear here.
           </.info_box>
         <% else %>

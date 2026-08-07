@@ -56,12 +56,15 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
       <%= if @meeting_type do %>
         <div class="space-y-4">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            {dgettext("dashboard_meeting_types", "Are you sure you want to delete the meeting type \"%{name}\"?",
+            {dgettext(
+              "dashboard_meeting_types",
+              "Are you sure you want to delete the meeting type \"%{name}\"?",
               name: @meeting_type.name
             )}
           </p>
           <p class="text-tymeslot-500 font-medium">
-            {dgettext("dashboard_meeting_types",
+            {dgettext(
+              "dashboard_meeting_types",
               "This action cannot be undone and will permanently remove this meeting type from your account."
             )}
           </p>

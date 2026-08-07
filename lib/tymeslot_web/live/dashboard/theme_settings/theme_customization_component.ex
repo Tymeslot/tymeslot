@@ -22,9 +22,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Dashboard.ThemeSettings.BackgroundUploads
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components
-  alias TymeslotWeb.Helpers.ThemeUploadHelper
-  alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Live.Shared.Flash
 
   @typedoc "Preset collections used by the component"
@@ -76,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   @impl Phoenix.LiveComponent
   @spec mount(Socket.t()) :: {:ok, Socket.t()}
   def mount(socket) do
-    socket = maybe_configure_uploads(socket)
+    socket = BackgroundUploads.configure(socket, __MODULE__)
 
     {:ok, socket}
   end
@@ -291,160 +290,22 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   end
 
   def handle_event("validate_image", _params, socket) do
-    if (socket.assigns.uploads && socket.assigns.uploads[:background_image] &&
-          socket.assigns.uploads.background_image.entries != []) and
-         Enum.all?(
-           socket.assigns.uploads.background_image.entries,
-           &(&1.done? or &1.cancelled?)
-         ) do
-      {:noreply, process_image_upload(socket)}
-    else
-      {:noreply, socket}
-    end
+    {:noreply, BackgroundUploads.consume(socket, :image)}
   end
 
   def handle_event("save_background_image", _params, socket) do
-    {:noreply, maybe_handle_theme_upload(socket, :image)}
+    {:noreply, BackgroundUploads.consume(socket, :image)}
   end
 
   def handle_event("validate_video", _params, socket) do
-    if (socket.assigns.uploads && socket.assigns.uploads[:background_video] &&
-          socket.assigns.uploads.background_video.entries != []) and
-         Enum.all?(
-           socket.assigns.uploads.background_video.entries,
-           &(&1.done? or &1.cancelled?)
-         ) do
-      {:noreply, process_video_upload(socket)}
-    else
-      {:noreply, socket}
-    end
+    {:noreply, BackgroundUploads.consume(socket, :video)}
   end
 
   def handle_event("save_background_video", _params, socket) do
-    {:noreply, maybe_handle_theme_upload(socket, :video)}
+    {:noreply, BackgroundUploads.consume(socket, :video)}
   end
 
   # Private functions
-
-  defp maybe_handle_theme_upload(socket, type) do
-    user_id = socket.assigns.profile.user_id
-
-    case RateLimiter.check_rate_limit("theme_upload:#{user_id}", 5, 600_000) do
-      :ok ->
-        case type do
-          :image -> process_image_upload(socket)
-          :video -> process_video_upload(socket)
-        end
-
-      {:error, :rate_limited} ->
-        Flash.error(
-          dgettext(
-            "dashboard_appearance",
-            "Too many upload attempts. Please wait a few minutes and try again."
-          )
-        )
-
-        socket
-    end
-  end
-
-  defp process_image_upload(socket) do
-    # Only consume if we have entries and they are all done/cancelled
-    if upload_ready?(socket, :background_image) do
-      case ThemeUploadHelper.process_background_image_upload(socket, socket.assigns.profile) do
-        {:ok, message} ->
-          handle_successful_upload(socket, message)
-
-        {:error, message} ->
-          Flash.error(message)
-          socket
-      end
-    else
-      socket
-    end
-  end
-
-  defp process_video_upload(socket) do
-    # Only consume if we have entries and they are all done/cancelled
-    if upload_ready?(socket, :background_video) do
-      case ThemeUploadHelper.process_background_video_upload(socket, socket.assigns.profile) do
-        {:ok, message} ->
-          handle_successful_upload(socket, message)
-
-        {:error, message} ->
-          Flash.error(message)
-          socket
-      end
-    else
-      socket
-    end
-  end
-
-  defp upload_ready?(socket, upload_key) do
-    case socket.assigns.uploads[upload_key] do
-      nil ->
-        false
-
-      %{entries: []} ->
-        false
-
-      %{entries: entries} ->
-        Enum.all?(entries, &(&1.done? or &1.cancelled?))
-    end
-  end
-
-  defp maybe_configure_uploads(socket) do
-    if socket.assigns[:uploads] && socket.assigns.uploads[:background_image] do
-      socket
-    else
-      img_exts = UploadConstraints.allowed_extensions(:image)
-      vid_exts = UploadConstraints.allowed_extensions(:video)
-
-      socket
-      |> allow_upload(:background_image,
-        accept: img_exts,
-        max_entries: 1,
-        max_file_size: UploadConstraints.max_file_size(:image),
-        auto_upload: true,
-        progress: &handle_theme_image_progress/3
-      )
-      |> allow_upload(:background_video,
-        accept: vid_exts,
-        max_entries: 1,
-        max_file_size: UploadConstraints.max_file_size(:video),
-        auto_upload: true,
-        progress: &handle_theme_video_progress/3
-      )
-    end
-  end
-
-  defp handle_theme_image_progress(_config, entry, socket) do
-    if entry.done? do
-      send_update(self(), __MODULE__, id: socket.assigns.id, consume_upload: :image)
-    end
-
-    {:noreply, socket}
-  end
-
-  defp handle_theme_video_progress(_config, entry, socket) do
-    if entry.done? do
-      send_update(self(), __MODULE__, id: socket.assigns.id, consume_upload: :video)
-    end
-
-    {:noreply, socket}
-  end
-
-  defp handle_successful_upload(socket, message) do
-    # Re-initialize customization to get the new paths
-    %{customization: customization} =
-      ThemeCustomizations.initialize_customization(
-        socket.assigns.profile.id,
-        socket.assigns.theme_id
-      )
-
-    Flash.info(message)
-    assign(socket, :customization, customization)
-  end
 
   # Rate limiting helper that validates user_id and checks rate limit before executing operation
   @spec with_rate_limit(Socket.t(), String.t(), (-> {:noreply, Socket.t()})) ::

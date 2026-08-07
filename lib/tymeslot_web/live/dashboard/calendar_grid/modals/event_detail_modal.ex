@@ -5,11 +5,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   attr :selected_event, :map, required: true
   attr :integrations, :list, required: true
   attr :integration_colors, :map, required: true
+  attr :calendar_colors, :map, required: true
   attr :user_timezone, :string, required: true
   attr :time_format, :string, default: "12h"
   attr :myself, :any, required: true
@@ -31,10 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   def event_detail_modal(assigns) do
     assigns =
       assigns
-      |> assign(
-        :read_only_attendees,
-        List.wrap(Map.get(assigns.selected_event, :attendees))
-      )
+      |> assign(:attendees, List.wrap(Map.get(assigns.selected_event, :attendees)))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
@@ -72,10 +71,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-click={JS.push("close_event_detail", target: @myself)}
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
-        <form id="event-title-form" :if={@editable} phx-change="update_event_title" phx-target={@myself} phx-submit="update_event_title" class="pr-8">
+        <form
+          :if={@editable}
+          id="event-title-form"
+          phx-change="update_event_title"
+          phx-target={@myself}
+          phx-submit="update_event_title"
+          class="pr-8"
+        >
           <input
             type="text"
             id="event-title-input"
@@ -89,27 +100,45 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           />
         </form>
         <h3 :if={!@editable} class="text-token-2xl font-black text-tymeslot-900 tracking-tight pr-8">
-          <%= @selected_event.summary || dgettext("dashboard_calendar_events", "(No title)") %>
+          {@selected_event.summary || dgettext("dashboard_calendar_events", "(No title)")}
         </h3>
       </div>
 
-      <div class={"h-1 rounded-full w-10 mb-2 #{Helpers.color_for_event(assigns, @selected_event)}"}></div>
+      <div class={"h-1 rounded-full w-10 mb-2 #{Helpers.color_for_event(assigns, @selected_event)}"}>
+      </div>
 
-      <div :if={Map.get(@selected_event, :created_by_tymeslot)} class="flex items-center gap-1 text-token-xs text-tymeslot-500 mb-2">
+      <div
+        :if={Map.get(@selected_event, :created_by_tymeslot)}
+        class="flex items-center gap-1 text-token-xs text-tymeslot-500 mb-2"
+      >
         <img src="/images/brand/logo.svg" alt="" class="w-3.5 h-3.5" />
         <span>{dgettext("dashboard_calendar_events", "Created by Tymeslot")}</span>
       </div>
 
       <%!-- Time --%>
       <div class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={dgettext("dashboard_calendar_events", "Time")}>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          title={dgettext("dashboard_calendar_events", "Time")}
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         <div class="flex-1">
           <% start_parts = Helpers.datetime_to_local_parts(@selected_event.start_at, @user_timezone) %>
           <% end_parts = Helpers.datetime_to_local_parts(@selected_event.end_at, @user_timezone) %>
           <div :if={@editable} class="flex items-center justify-between mb-2">
-            <span class="text-token-xs font-medium text-tymeslot-400">{dgettext("dashboard_calendar_events", "All day")}</span>
+            <span class="text-token-xs font-medium text-tymeslot-400">{dgettext(
+              "dashboard_calendar_events",
+              "All day"
+            )}</span>
             <StatusSwitch.status_switch
               id="event-all-day"
               checked={@selected_event.all_day || false}
@@ -118,7 +147,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               size={:small}
             />
           </div>
-          <form id="event-all-day-form" :if={@editable and @selected_event.all_day} phx-change="update_event_all_day_range" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
+          <form
+            :if={@editable and @selected_event.all_day}
+            id="event-all-day-form"
+            phx-change="update_event_all_day_range"
+            phx-target={@myself}
+            class="flex flex-wrap items-center gap-1 text-token-sm"
+          >
             <input
               type="date"
               id="event-all-day-start"
@@ -132,11 +167,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               type="date"
               id="event-all-day-end"
               name="end-date"
-              value={@selected_event.end_date && Date.to_iso8601(Date.add(@selected_event.end_date, -1))}
+              value={
+                @selected_event.end_date && Date.to_iso8601(Date.add(@selected_event.end_date, -1))
+              }
               class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
             />
           </form>
-          <form id="event-time-form" :if={@editable and not @selected_event.all_day} phx-change="update_event_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
+          <form
+            :if={@editable and not @selected_event.all_day}
+            id="event-time-form"
+            phx-change="update_event_time"
+            phx-target={@myself}
+            class="flex flex-wrap items-center gap-1 text-token-sm"
+          >
             <input
               type="date"
               id="event-start-date"
@@ -166,18 +209,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               value={end_parts.time}
               class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
             />
-            <span class="text-token-xs font-normal text-tymeslot-400 ml-1"><%= Helpers.tz_abbr(@user_timezone) %></span>
+            <span class="text-token-xs font-normal text-tymeslot-400 ml-1">{Helpers.tz_abbr(
+              @user_timezone
+            )}</span>
           </form>
           <div :if={!@editable}>
             <p class="text-token-sm font-medium text-tymeslot-700">
               <span :if={@selected_event.all_day}>{dgettext("dashboard_calendar_events", "All day")}</span>
               <span :if={!@selected_event.all_day}>
-                <%= Helpers.format_time_range_in_tz(@selected_event, @user_timezone, @time_format) %>
-                <span class="text-token-xs font-normal text-tymeslot-400 ml-1"><%= Helpers.tz_abbr(@user_timezone) %></span>
+                {Helpers.format_time_range_in_tz(@selected_event, @user_timezone, @time_format)}
+                <span class="text-token-xs font-normal text-tymeslot-400 ml-1">{Helpers.tz_abbr(
+                  @user_timezone
+                )}</span>
               </span>
             </p>
             <p class="text-token-xs text-tymeslot-400 mt-0.5">
-              <%= full_date_label(Helpers.event_display_date(@selected_event, @user_timezone), @locale) %>
+              {full_date_label(Helpers.event_display_date(@selected_event, @user_timezone), @locale)}
             </p>
           </div>
         </div>
@@ -185,9 +232,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Location --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={dgettext("dashboard_calendar_events", "Location")}>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <svg
+          class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          title={dgettext("dashboard_calendar_events", "Location")}
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+          />
         </svg>
         <input
           type="text"
@@ -202,9 +265,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         />
       </div>
       <div :if={!@editable and @selected_event.location} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <svg
+          class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+          />
         </svg>
         <a
           :if={Helpers.url?(@selected_event.location)}
@@ -213,15 +291,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           rel="noopener noreferrer"
           class="text-token-sm text-turquoise-600 hover:text-turquoise-800 underline break-all"
         >
-          <%= @selected_event.location %>
+          {@selected_event.location}
         </a>
-        <p :if={!Helpers.url?(@selected_event.location)} class="text-token-sm text-tymeslot-600"><%= @selected_event.location %></p>
+        <p :if={!Helpers.url?(@selected_event.location)} class="text-token-sm text-tymeslot-600">
+          {@selected_event.location}
+        </p>
       </div>
 
       <%!-- Description --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={dgettext("dashboard_calendar_events", "Description")}>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+        <svg
+          class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          title={dgettext("dashboard_calendar_events", "Description")}
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h7"
+          />
         </svg>
         <textarea
           id="event-description-input"
@@ -236,112 +327,53 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         ><%= @selected_event.description || "" %></textarea>
       </div>
       <div :if={!@editable and @selected_event.description} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+        <svg
+          class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h7"
+          />
         </svg>
         <div class="text-token-sm text-tymeslot-600 max-h-52 overflow-y-auto whitespace-pre-line break-words flex-1 leading-relaxed">
-          <%= Helpers.linkify_text(@selected_event.description) %>
+          {Helpers.linkify_text(@selected_event.description)}
         </div>
       </div>
 
       <%!-- Attendees --%>
-      <div :if={@editable or not Enum.empty?(@selected_event.attendees || [])} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={dgettext("dashboard_calendar_events", "Attendees")}>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <div class="flex-1">
-          <%!-- Editable attendee tags --%>
-          <div :if={@editable}>
-            <div
-              :if={(@selected_event.attendees || []) != [] or @pending_attendees != []}
-              class="flex flex-wrap gap-1.5 mb-2"
-            >
-              <%!-- Existing (invited) attendees — turquoise --%>
-              <span
-                :for={attendee <- @selected_event.attendees || []}
-                class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
-              >
-                {attendee["name"] || attendee["email"] || attendee[:email]}
-                <button
-                  type="button"
-                  phx-click="request_remove_attendee"
-                  phx-value-email={attendee["email"] || attendee[:email]}
-                  phx-target={@myself}
-                  class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
-                  aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: attendee["email"] || attendee[:email])}
-                >
-                  <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-              <%!-- Pending (unsent) attendees — amber dashed --%>
-              <span
-                :for={email <- @pending_attendees}
-                class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
-              >
-                {email}
-                <button
-                  type="button"
-                  phx-click="remove_pending_attendee"
-                  phx-value-email={email}
-                  phx-target={@myself}
-                  class="w-4 h-4 rounded-full hover:bg-amber-200 flex items-center justify-center transition-colors"
-                  aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
-                >
-                  <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            </div>
-            <form id="event-add-attendee-form" phx-submit="add_event_attendee" phx-target={@myself} class="flex gap-2">
-              <input
-                type="email"
-                id="edit-attendee-email"
-                name="email"
-                value={@attendee_input}
-                phx-change="update_attendee_input"
-                phx-target={@myself}
-                placeholder="attendee@example.com"
-                class="flex-1 bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-600 px-0 py-0 placeholder:text-tymeslot-400 transition-colors cursor-text"
-              />
-              <button
-                type="submit"
-                class="px-2 py-0.5 rounded-md border border-tymeslot-200 text-token-xs text-tymeslot-500 hover:bg-tymeslot-50 transition-colors"
-              >
-                {dgettext("dashboard_calendar_events", "Add")}
-              </button>
-            </form>
-            <p :if={@pending_attendees == []} class="text-token-xs text-tymeslot-400 mt-1">
-              {dgettext("dashboard_calendar_events", "Each person will receive an invitation from your calendar provider.")}
-            </p>
-          </div>
-          <%!-- Read-only attendee display --%>
-          <div :if={!@editable}>
-            <div :for={attendee <- Enum.take(@read_only_attendees, 5)} class="text-token-sm text-tymeslot-700 leading-snug">
-              <%= attendee["name"] || attendee["email"] %>
-              <span :if={attendee["name"] && attendee["email"] && attendee["name"] != attendee["email"]} class="text-token-xs text-tymeslot-400 ml-1"><%= attendee["email"] %></span>
-            </div>
-            <p :if={length(@read_only_attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">
-              {dngettext(
-                "dashboard_calendar_events",
-                "+%{count} more",
-                "+%{count} more",
-                length(@read_only_attendees) - 5
-              )}
-            </p>
-          </div>
-        </div>
-      </div>
+      <AttendeeEditor.attendee_editor
+        editable={@editable}
+        attendees={@attendees}
+        pending_attendees={@pending_attendees}
+        attendee_input={@attendee_input}
+        myself={@myself}
+      />
 
       <%!-- Video integration --%>
       <div :if={@editable and @video_integrations != []} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={dgettext("dashboard_calendar_events", "Video")}>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        <svg
+          class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          title={dgettext("dashboard_calendar_events", "Video")}
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+          />
         </svg>
         <div class="flex-1">
-          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{dgettext("dashboard_calendar_events", "Video")}</p>
+          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
+            {dgettext("dashboard_calendar_events", "Video")}
+          </p>
           <.video_integration_selector
             video_integrations={@video_integrations}
             selected_id={Map.get(@selected_event, :video_integration_id)}
@@ -379,26 +411,48 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         add_event="add_event_reminder"
         remove_event="remove_event_reminder"
       />
-      <div :if={!@editable and (Map.get(@selected_event, :reminders) || []) != []} class="flex items-start gap-3 mb-3">
+      <div
+        :if={!@editable and (Map.get(@selected_event, :reminders) || []) != []}
+        class="flex items-start gap-3 mb-3"
+      >
         <.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
         <div class="flex-1">
-          <p :for={reminder <- Map.get(@selected_event, :reminders) || []} class="text-token-sm text-tymeslot-600 leading-snug">
-            <%= RemindersEditor.reminder_label(reminder) %>
+          <p
+            :for={reminder <- Map.get(@selected_event, :reminders) || []}
+            class="text-token-sm text-tymeslot-600 leading-snug"
+          >
+            {RemindersEditor.reminder_label(reminder)}
           </p>
         </div>
       </div>
 
       <%!-- Calendar picker --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={dgettext("dashboard_calendar_events", "Calendar")}>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <svg
+          class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          title={dgettext("dashboard_calendar_events", "Calendar")}
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
         </svg>
         <div class="flex-1">
           <CalendarPicker.calendar_picker
             integrations={@integrations}
             integration_colors={@integration_colors}
             selected_integration_id={@selected_event.calendar_integration_id}
-            selected_calendar_id={CalendarPicker.derive_event_calendar_id(@selected_event, Enum.find(@integrations, &(&1.id == @selected_event.calendar_integration_id)))}
+            selected_calendar_id={
+              CalendarPicker.derive_event_calendar_id(
+                @selected_event,
+                Enum.find(@integrations, &(&1.id == @selected_event.calendar_integration_id))
+              )
+            }
             myself={@myself}
             event_name="update_event_calendar"
           />
@@ -409,8 +463,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <div :if={@editable} class="flex items-start gap-3 mb-3">
         <.icon name="hero-swatch" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
         <div class="flex-1">
-          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{dgettext("dashboard_calendar_events", "Colour")}</p>
-          <.colour_swatches selected={Map.get(@selected_event, :colour)} target={@myself} />
+          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
+            {dgettext("dashboard_calendar_events", "Colour")}
+          </p>
+          <ColourSwatches.colour_swatches
+            selected={Map.get(@selected_event, :colour)}
+            event="update_event_colour"
+            target={@myself}
+            group_label={dgettext("dashboard_calendar_events", "Colour")}
+          />
         </div>
       </div>
 
@@ -441,42 +502,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
     end
   end
 
-  attr :selected, :any, default: nil
-  attr :target, :any, required: true
-
-  # Palette swatch picker. A "Default" pill clears the override (falling back to
-  # the per-calendar colour); each swatch pushes the palette key. The active
-  # option is ringed.
-  defp colour_swatches(assigns) do
-    assigns = assign(assigns, :palette, EventColour.palette())
-
-    ~H"""
-    <div class="flex flex-wrap items-center gap-1.5">
-      <button
-        type="button"
-        phx-click="update_event_colour"
-        phx-value-colour="default"
-        phx-target={@target}
-        class={"inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@selected), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-      >
-        {dgettext("dashboard_calendar_events", "Default")}
-      </button>
-      <button
-        :for={{key, label, swatch_class} <- @palette}
-        type="button"
-        phx-click="update_event_colour"
-        phx-value-colour={key}
-        phx-target={@target}
-        title={label}
-        aria-label={label}
-        aria-pressed={to_string(@selected == key)}
-        class={"w-6 h-6 rounded-full #{swatch_class} ring-2 ring-offset-1 transition-all #{if @selected == key, do: "ring-turquoise-500", else: "ring-transparent hover:ring-tymeslot-300"}"}
-      >
-      </button>
-    </div>
-    """
-  end
-
   attr :video_integrations, :list, required: true
   attr :selected_id, :any, default: nil
   attr :target, :any, required: true
@@ -503,7 +528,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
       >
         <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
-        <span class="truncate max-w-[10rem]"><%= vi.name %></span>
+        <span class="truncate max-w-[10rem]">{vi.name}</span>
       </button>
     </div>
     """

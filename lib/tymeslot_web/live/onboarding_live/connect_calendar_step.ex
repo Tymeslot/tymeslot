@@ -133,7 +133,10 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         @selected && "onboarding-choice-card--selected"
       ]}
     >
-      <div class={["onboarding-provider-icon flex items-center justify-center rounded-lg", @icon_class]}>
+      <div class={[
+        "onboarding-provider-icon flex items-center justify-center rounded-lg",
+        @icon_class
+      ]}>
         <.icon name={@icon} class="w-5 h-5" />
       </div>
       <div class="flex-1 min-w-0">

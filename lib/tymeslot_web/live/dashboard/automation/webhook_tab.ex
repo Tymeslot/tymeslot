@@ -40,11 +40,15 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
               webhook={webhook}
               testing={@testing_connection == webhook.id}
               target={@myself}
-              on_edit={JS.push("show_edit_webhook_form", value: %{"id" => webhook.id}, target: @myself)}
+              on_edit={
+                JS.push("show_edit_webhook_form", value: %{"id" => webhook.id}, target: @myself)
+              }
               on_delete={JS.push("show_delete_modal", value: %{"id" => webhook.id}, target: @myself)}
               on_toggle="toggle_webhook"
               on_test={JS.push("test_connection", value: %{"id" => webhook.id}, target: @myself)}
-              on_view_deliveries={JS.push("show_deliveries", value: %{"id" => webhook.id}, target: @myself)}
+              on_view_deliveries={
+                JS.push("show_deliveries", value: %{"id" => webhook.id}, target: @myself)
+              }
             />
           <% end %>
         </div>

@@ -26,7 +26,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState do
           <div class="flex-1 overflow-hidden">
             <div :for={hour <- @hours} class="grid grid-cols-8 border-b border-tymeslot-200">
               <div class="py-4 px-2 text-right">
-                <span class="text-token-xs text-tymeslot-300/50">{rem(hour, 12) |> then(&if(&1 == 0, do: 12, else: &1))} {if(hour < 12, do: "AM", else: "PM")}</span>
+                <span class="text-token-xs text-tymeslot-300/50">{rem(hour, 12)
+                |> then(&if(&1 == 0, do: 12, else: &1))} {if(hour < 12, do: "AM", else: "PM")}</span>
               </div>
               <div :for={_day <- @days} class="py-4 border-l border-tymeslot-200"></div>
             </div>
@@ -40,7 +41,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState do
         <div class="w-20 h-20 bg-white/90 backdrop-blur rounded-token-2xl flex items-center justify-center mb-6 shadow-sm border-2 border-dashed border-tymeslot-100">
           <.icon name="hero-calendar-days" class="w-10 h-10 text-tymeslot-300" />
         </div>
-        <h2 class="text-token-xl font-bold text-tymeslot-800 mb-2">{dgettext("dashboard_calendar", "Nothing to see here")}</h2>
+        <h2 class="text-token-xl font-bold text-tymeslot-800 mb-2">
+          {dgettext("dashboard_calendar", "Nothing to see here")}
+        </h2>
         <p class="text-token-base text-tymeslot-500 text-center max-w-md mb-8">
           {dgettext("dashboard_calendar", "Connect at least one calendar to see your events here.")}
         </p>

@@ -63,7 +63,11 @@ defmodule TymeslotWeb.Session.LoginComponent do
                 required
                 autofocus
               />
-              <div id="login-password-toggle-container" phx-hook="PasswordToggle" data-password-container>
+              <div
+                id="login-password-toggle-container"
+                phx-hook="PasswordToggle"
+                data-password-container
+              >
                 <.input
                   id="password-input"
                   name="password"

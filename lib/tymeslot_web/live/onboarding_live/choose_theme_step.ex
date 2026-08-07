@@ -152,14 +152,21 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
         <span
           :for={n <- 1..4}
           class="w-2 h-2 rounded-full"
-          style={if(n == 1, do: "background: #{@primary};", else: "background: rgba(255,255,255,0.25);")}
+          style={
+            if(n == 1, do: "background: #{@primary};", else: "background: rgba(255,255,255,0.25);")
+          }
         />
       </div>
       <div class="grid grid-cols-5 gap-0.5">
         <span
           :for={cell <- 0..9}
           class="aspect-square rounded-token-sm"
-          style={if(cell in [2, 6], do: "background: #{@primary};", else: "background: rgba(255,255,255,0.12);")}
+          style={
+            if(cell in [2, 6],
+              do: "background: #{@primary};",
+              else: "background: rgba(255,255,255,0.12);"
+            )
+          }
         />
       </div>
     </div>

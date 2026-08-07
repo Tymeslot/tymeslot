@@ -289,90 +289,90 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       <% end %>
 
       <div class="space-y-10 pb-20">
-      <%= cond do %>
-        <% @show_webhook_form -> %>
-        <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <.live_component
-            module={WebhookFormComponent}
-            id={"webhook-form-#{@webhook_form_mode}-#{@webhook_form_timestamp}"}
-            mode={@webhook_form_mode}
-            webhook={@webhook_form_data}
-            form_values={@form_values}
-            form_errors={@form_errors}
-            saving={@saving}
-            parent_component={@myself}
-          />
-        </div>
-        <% @show_telegram_form -> %>
-        <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <.live_component
-            module={TelegramFormComponent}
-            id={"telegram-form-#{@telegram_form_mode}-#{@telegram_form_timestamp}"}
-            mode={@telegram_form_mode}
-            integration={@telegram_form_data}
-            form_values={@telegram_form_values}
-            form_errors={@telegram_form_errors}
-            saving={@telegram_saving}
-            current_user={@current_user}
-            parent_component={@myself}
-            wizard_step={@telegram_wizard_step}
-            link_expired={@telegram_link_expired}
-            deep_link={@telegram_deep_link}
-          />
-        </div>
-        <% @show_slack_form -> %>
-        <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <.live_component
-            module={SlackFormComponent}
-            id={"slack-form-#{@slack_form_mode}-#{@slack_form_timestamp}"}
-            mode={@slack_form_mode}
-            integration={@slack_form_data}
-            form_values={@slack_form_values}
-            form_errors={@slack_form_errors}
-            saving={@slack_saving}
-            current_user={@current_user}
-            parent_component={@myself}
-          />
-        </div>
-        <% true -> %>
-        <.section_header icon={:webhook} title={dgettext("dashboard_automation", "Automation")} />
+        <%= cond do %>
+          <% @show_webhook_form -> %>
+            <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <.live_component
+                module={WebhookFormComponent}
+                id={"webhook-form-#{@webhook_form_mode}-#{@webhook_form_timestamp}"}
+                mode={@webhook_form_mode}
+                webhook={@webhook_form_data}
+                form_values={@form_values}
+                form_errors={@form_errors}
+                saving={@saving}
+                parent_component={@myself}
+              />
+            </div>
+          <% @show_telegram_form -> %>
+            <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <.live_component
+                module={TelegramFormComponent}
+                id={"telegram-form-#{@telegram_form_mode}-#{@telegram_form_timestamp}"}
+                mode={@telegram_form_mode}
+                integration={@telegram_form_data}
+                form_values={@telegram_form_values}
+                form_errors={@telegram_form_errors}
+                saving={@telegram_saving}
+                current_user={@current_user}
+                parent_component={@myself}
+                wizard_step={@telegram_wizard_step}
+                link_expired={@telegram_link_expired}
+                deep_link={@telegram_deep_link}
+              />
+            </div>
+          <% @show_slack_form -> %>
+            <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <.live_component
+                module={SlackFormComponent}
+                id={"slack-form-#{@slack_form_mode}-#{@slack_form_timestamp}"}
+                mode={@slack_form_mode}
+                integration={@slack_form_data}
+                form_values={@slack_form_values}
+                form_errors={@slack_form_errors}
+                saving={@slack_saving}
+                current_user={@current_user}
+                parent_component={@myself}
+              />
+            </div>
+          <% true -> %>
+            <.section_header icon={:webhook} title={dgettext("dashboard_automation", "Automation")} />
 
-        <%!-- Tabs Navigation --%>
-        <TabNav.tab_nav
-          active_tab={@active_tab}
-          telegram_enabled={@telegram_enabled}
-          slack_enabled={@slack_enabled}
-          myself={@myself}
-        />
+            <%!-- Tabs Navigation --%>
+            <TabNav.tab_nav
+              active_tab={@active_tab}
+              telegram_enabled={@telegram_enabled}
+              slack_enabled={@slack_enabled}
+              myself={@myself}
+            />
 
-        <%!-- Tab Content --%>
-        <div class="space-y-12">
-          <%= case @active_tab do %>
-            <% :webhooks -> %>
-              <WebhookTab.webhook_tab_content
-                webhooks={@webhooks}
-                testing_connection={@testing_connection}
-                time_format={@time_format}
-                myself={@myself}
-              />
-            <% :telegram -> %>
-              <TelegramTab.telegram_tab_content
-                integrations={@telegram_integrations}
-                telegram_testing={@telegram_testing}
-                time_format={@time_format}
-                myself={@myself}
-              />
-            <% :slack -> %>
-              <SlackTab.slack_tab_content
-                integrations={@slack_integrations}
-                slack_testing={@slack_testing}
-                oauth_mode_available?={@slack_oauth_mode_available?}
-                time_format={@time_format}
-                myself={@myself}
-              />
-          <% end %>
-        </div>
-      <% end %>
+            <%!-- Tab Content --%>
+            <div class="space-y-12">
+              <%= case @active_tab do %>
+                <% :webhooks -> %>
+                  <WebhookTab.webhook_tab_content
+                    webhooks={@webhooks}
+                    testing_connection={@testing_connection}
+                    time_format={@time_format}
+                    myself={@myself}
+                  />
+                <% :telegram -> %>
+                  <TelegramTab.telegram_tab_content
+                    integrations={@telegram_integrations}
+                    telegram_testing={@telegram_testing}
+                    time_format={@time_format}
+                    myself={@myself}
+                  />
+                <% :slack -> %>
+                  <SlackTab.slack_tab_content
+                    integrations={@slack_integrations}
+                    slack_testing={@slack_testing}
+                    oauth_mode_available?={@slack_oauth_mode_available?}
+                    time_format={@time_format}
+                    myself={@myself}
+                  />
+              <% end %>
+            </div>
+        <% end %>
       </div>
     </div>
     """

@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
           myself={@myself}
           custom_mode={Map.get(@custom_input_mode, :min_advance_hours, false)}
         />
+        <SchedulingSettings.booking_limits_setting profile={@profile} myself={@myself} />
       </div>
     </div>
     """
@@ -194,6 +195,33 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("update_booking_limit", %{"_target" => [field]} = params, socket)
+      when field in ~w(max_bookings_per_day max_bookings_per_week max_bookings_per_month) do
+    case Profiles.update_booking_limit(
+           socket.assigns.profile,
+           String.to_existing_atom(field),
+           params[field]
+         ) do
+      {:ok, updated_profile} ->
+        Flash.info(
+          booking_limit_flash(Map.fetch!(updated_profile, String.to_existing_atom(field)))
+        )
+
+        send(self(), {:profile_updated, updated_profile})
+        {:noreply, assign(socket, :profile, updated_profile)}
+
+      {:error, _reason} ->
+        Flash.error(
+          dgettext("dashboard_meeting_types", "Booking limit must be between 1 and 500")
+        )
+
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("update_booking_limit", _params, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveComponent
   def handle_event("focus_custom_input", %{"setting" => "buffer_minutes"}, socket) do
     current_value = if socket.assigns.profile, do: socket.assigns.profile.buffer_minutes, else: 0
     custom_value = if current_value in [0, 5, 10, 15, 30, 60], do: 45, else: current_value
@@ -266,4 +294,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
         {:noreply, socket}
     end
   end
+
+  defp booking_limit_flash(nil), do: dgettext("dashboard_meeting_types", "Booking limit removed")
+
+  defp booking_limit_flash(limit),
+    do:
+      dgettext("dashboard_meeting_types", "Booking limit updated to %{limit} bookings",
+        limit: limit
+      )
 end

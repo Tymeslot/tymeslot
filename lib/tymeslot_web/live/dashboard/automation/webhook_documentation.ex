@@ -75,11 +75,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
             ], 1) do %>
               <div class="flex items-start gap-3 p-3 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 transition-all">
                 <div class="shrink-0 w-6 h-6 rounded-full bg-linear-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
-                  <%= step_index %>
+                  {step_index}
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="font-black text-tymeslot-900 text-token-sm"><%= elem(step, 0) %></div>
-                  <div class="text-tymeslot-600 text-token-xs font-medium"><%= elem(step, 1) %></div>
+                  <div class="font-black text-tymeslot-900 text-token-sm">{elem(step, 0)}</div>
+                  <div class="text-tymeslot-600 text-token-xs font-medium">{elem(step, 1)}</div>
                 </div>
               </div>
             <% end %>
@@ -103,18 +103,34 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
               <div class="p-4 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 hover:shadow-md transition-all">
                 <div class="flex items-center gap-2 mb-2">
                   <div class="p-1.5 bg-turquoise-50 rounded-lg">
-                    <svg class="w-4 h-4 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={icon_path} />
+                    <svg
+                      class="w-4 h-4 text-turquoise-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d={icon_path}
+                      />
                     </svg>
                   </div>
-                  <code class="text-token-sm font-black text-tymeslot-900"><%= event %></code>
+                  <code class="text-token-sm font-black text-tymeslot-900">{event}</code>
                 </div>
                 <p class="text-token-xs text-tymeslot-600 font-medium">
                   <%= case event do %>
                     <% "meeting.created" -> %>
-                      {dgettext("dashboard_automation", "Triggers when a new booking is successfully created")}
+                      {dgettext(
+                        "dashboard_automation",
+                        "Triggers when a new booking is successfully created"
+                      )}
                     <% "meeting.cancelled" -> %>
-                      {dgettext("dashboard_automation", "Triggers when an existing booking is cancelled")}
+                      {dgettext(
+                        "dashboard_automation",
+                        "Triggers when an existing booking is cancelled"
+                      )}
                     <% "meeting.rescheduled" -> %>
                       {dgettext("dashboard_automation", "Triggers when a booking time is changed")}
                   <% end %>
@@ -136,7 +152,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
             <div class="p-4 bg-tymeslot-50 rounded-token-xl border-2 border-tymeslot-100">
               <div class="flex items-start gap-3">
                 <div class="p-2 bg-white rounded-lg shrink-0">
-                  <svg class="w-5 h-5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    class="w-5 h-5 text-turquoise-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"

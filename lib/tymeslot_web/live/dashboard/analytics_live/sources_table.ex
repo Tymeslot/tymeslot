@@ -33,7 +33,11 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
     ~H"""
     <div class="card-glass overflow-hidden p-0">
       <div :if={@loading?} class="space-y-3 p-4" aria-hidden="true">
-        <div :for={i <- 1..3} class="h-6 w-full animate-pulse rounded-token-md bg-tymeslot-100" id={"src-skeleton-#{i}"}>
+        <div
+          :for={i <- 1..3}
+          class="h-6 w-full animate-pulse rounded-token-md bg-tymeslot-100"
+          id={"src-skeleton-#{i}"}
+        >
         </div>
       </div>
 

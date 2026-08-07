@@ -66,6 +66,18 @@ defmodule TymeslotWeb.AuthLive.SecurityHelper do
   end
 
   @doc """
+  The IP to key a rate limit on, from metadata produced by
+  `extract_client_metadata/1`.
+
+  An unattributable request still needs a stable key: keying it on `nil` would
+  give every such request its own bucket, which is no limit at all. They share
+  one instead.
+  """
+  @spec rate_limit_ip(map()) :: String.t()
+  def rate_limit_ip(%{ip: ip}) when ip in [nil, ""], do: "unknown"
+  def rate_limit_ip(%{ip: ip}), do: ip
+
+  @doc """
   Get current user ID from socket assigns for security logging.
   """
   @spec get_current_user_id(Phoenix.LiveView.Socket.t()) :: integer() | nil

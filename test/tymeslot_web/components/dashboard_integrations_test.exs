@@ -77,8 +77,9 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Paused"
     # The shared connection row dims inactive integrations.
     assert html =~ "opacity-70"
-    # No calendars to manage → the Manage calendars action is not shown.
-    refute html =~ "Manage calendars"
+    # The modal behind this action also holds the name and colour, which apply
+    # to a connection with no discovered calendars just as much as to one with.
+    assert html =~ "Manage calendars"
   end
 
   test "renders calendar_connection_row safely when calendar_list is nil" do
@@ -99,7 +100,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     # Should not crash
     html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
     assert html =~ "My Calendar"
-    refute html =~ "Manage calendars"
+    assert html =~ "Manage calendars"
   end
 
   test "renders shared close_button correctly" do

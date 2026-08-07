@@ -19,7 +19,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
     ~H"""
     <div>
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-token-xl font-semibold text-tymeslot-800">{dgettext("dashboard_meeting_types", "Meeting Types")}</h2>
+        <h2 class="text-token-xl font-semibold text-tymeslot-800">
+          {dgettext("dashboard_meeting_types", "Meeting Types")}
+        </h2>
         <%= unless @show_add_form || @editing_type do %>
           <button
             phx-click="toggle_add_form"
@@ -54,9 +56,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent do
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p class="text-tymeslot-600">{dgettext("dashboard_meeting_types", "No meeting types configured yet")}</p>
+          <p class="text-tymeslot-600">
+            {dgettext("dashboard_meeting_types", "No meeting types configured yet")}
+          </p>
           <p class="text-token-sm text-tymeslot-500 mt-1">
-            {dgettext("dashboard_meeting_types", "Create meeting types to offer different appointment options")}
+            {dgettext(
+              "dashboard_meeting_types",
+              "Create meeting types to offer different appointment options"
+            )}
           </p>
         </div>
       <% else %>

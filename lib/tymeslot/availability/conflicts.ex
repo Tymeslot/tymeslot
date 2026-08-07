@@ -20,6 +20,7 @@ defmodule Tymeslot.Availability.Conflicts do
           optional(:max_advance_booking_days) => pos_integer(),
           optional(:duration_minutes) => pos_integer(),
           optional(:profile_id) => integer() | nil,
+          optional(:limit_checker) => (DateTime.t() -> boolean()) | nil,
           optional(atom()) => term()
         }
 
@@ -55,9 +56,19 @@ defmodule Tymeslot.Availability.Conflicts do
         min_advance_hours,
         max_advance_booking_days
       ) and
-        not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffer_minutes)
+        not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffer_minutes) and
+        not limit_blocked?(config, slot_start)
     end)
   end
+
+  # Booking limits are checked per slot (not per day) because the absolute
+  # slot instant decides which host-timezone day/week/month it counts
+  # against — one booker-timezone day can straddle two host days.
+  defp limit_blocked?(%{limit_checker: checker}, slot_start) when is_function(checker, 1) do
+    checker.(slot_start)
+  end
+
+  defp limit_blocked?(_config, _slot_start), do: false
 
   defp meets_booking_constraints?(slot_start, current_time, min_advance_hours, max_advance_days) do
     TimeRange.meets_minimum_notice?(slot_start, current_time, min_advance_hours * 60) and
@@ -157,7 +168,8 @@ defmodule Tymeslot.Availability.Conflicts do
             slot_end,
             nearby_events,
             buffer_minutes
-          )
+          ) and
+          not limit_blocked?(config, slot_start)
       end)
     end)
   end

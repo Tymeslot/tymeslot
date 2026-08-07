@@ -1,46 +1,47 @@
 defmodule Tymeslot.Workers.VideoRoomWorker do
   @moduledoc """
-  Oban worker for handling video room creation jobs with intelligent retry logic.
+  Creates the video room for a confirmed meeting, in the background.
 
-  This worker handles:
-  - Async creation of MiroTalk video rooms after meeting is confirmed
-  - Smart retry logic with exponential backoff
-  - Error categorization for appropriate handling
-  - Timeouts for API operations
-  - Updates meeting record with video room details when successful
-  - Graceful degradation when video creation fails
+  Room creation is deliberately off the booking path: the booking is already
+  confirmed by the time this runs, so a slow or failing video provider delays a
+  join link rather than a booking. That trade makes the retry behaviour the
+  interesting part of this worker, and it is split across two collaborators:
+
+  - `Tymeslot.Workers.VideoRoom.ErrorPolicy` decides what a given failure means
+    for the job: wait it out, or stop trying.
+  - `Tymeslot.Workers.VideoRoom.Recovery` takes over once ordinary retries are
+    spent, pacing the remaining attempts against the moment the attendees
+    actually need the link and sending their emails without one meanwhile.
+
+  What is left here is the job itself: fetch the meeting, run the call under a
+  timeout, and report the outcome.
   """
 
   use Oban.Worker,
     queue: :video_rooms,
     max_attempts: 10,
-    # Highest priority for video room creation
+    # Highest priority: a booking is already confirmed and waiting on the link.
     priority: 0
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
-  alias Tymeslot.MeetingTypes.MeetingTypeQueries
-  alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.VideoRoom.{ErrorPolicy, Recovery}
+
   require Logger
 
-  # Configuration
-  # 20 seconds for video API calls
   @video_api_timeout_ms 20_000
-  # 1 second base for exponential backoff
   @backoff_base_ms 1_000
-  # Attempts before entering recovery mode (and sending fallback emails if enabled)
-  @fallback_email_attempt 5
-  # Max recovery snooze attempts after fallback threshold
-  @recovery_max_attempts 5
+  @backoff_cap_ms 16_000
 
-  @doc """
-  Performs the video room creation job with exponential backoff for retries.
-  """
+  # Deduplicate identical jobs within five minutes, so a retried booking step
+  # cannot queue a second room creation for the same meeting.
+  @unique [period: 300, fields: [:args, :queue], keys: [:meeting_id, :send_emails]]
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id} = args, attempt: attempt} = job) do
     send_emails = Map.get(args, "send_emails", false)
-    # Ensure meeting_id is a string to satisfy downstream specs
+    # Downstream specs take the id as a string, whatever the job args hold.
     meeting_id = to_string(meeting_id)
 
     Logger.metadata(job_id: job.id, attempt: attempt)
@@ -48,134 +49,98 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
         Logger.metadata(user_id: meeting.organizer_user_id)
-
-        # Apply exponential backoff for retries (but not on first attempt)
-        if attempt > 1 and not Application.get_env(:tymeslot, :test_mode, false) do
-          backoff_ms = calculate_backoff(attempt)
-
-          Logger.info("Retrying video room creation after backoff",
-            meeting_id: meeting_id,
-            backoff_ms: backoff_ms
-          )
-
-          Process.sleep(backoff_ms)
-        end
+        backoff(meeting_id, attempt)
 
         Logger.info("Starting video room creation",
           meeting_id: meeting_id,
           send_emails: send_emails
         )
 
-        execute_with_timeout(meeting_id, send_emails, attempt, job)
+        create_room(meeting_id, send_emails, attempt)
 
       {:error, :not_found} ->
-        Logger.warning("Meeting not found, discarding video room job",
-          meeting_id: meeting_id
-        )
-
+        Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
         {:discard, "Meeting not found"}
     end
   end
 
   @doc """
-  Schedules video room creation to happen asynchronously with highest priority.
+  Schedules video room creation for a meeting whose emails have already gone out.
   """
   @spec schedule_video_room_creation(String.t()) :: :ok | {:error, String.t()}
-  def schedule_video_room_creation(meeting_id) do
-    result =
-      %{"meeting_id" => meeting_id, "send_emails" => false}
-      |> new(
-        queue: :video_rooms,
-        # Highest priority
-        priority: 0,
-        unique: [
-          # 5 minutes uniqueness window
-          period: 300,
-          fields: [:args, :queue],
-          keys: [:meeting_id, :send_emails]
-        ]
-      )
-      |> Oban.insert()
-
-    case result do
-      {:ok, _job} ->
-        Logger.info("Video room creation job scheduled", meeting_id: meeting_id)
-        :ok
-
-      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
-        Logger.info("Video room creation job already exists, skipping duplicate",
-          meeting_id: meeting_id
-        )
-
-        # Return success since job already exists
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule video room creation",
-          meeting_id: meeting_id,
-          error: format_insert_error(reason)
-        )
-
-        {:error, "Failed to schedule job"}
-    end
-  end
+  def schedule_video_room_creation(meeting_id), do: schedule(meeting_id, false)
 
   @doc """
-  Schedules video room creation and emails after completion with highest priority.
-  Emails will be sent after video room creation completes (success or final failure).
+  Schedules video room creation, holding the meeting's emails until it finishes.
+
+  The emails are sent once the room exists, or without a link if creation
+  ultimately fails, so the attendees are never left without a confirmation.
   """
   @spec schedule_video_room_creation_with_emails(String.t()) :: :ok | {:error, String.t()}
-  def schedule_video_room_creation_with_emails(meeting_id) do
-    result =
-      %{"meeting_id" => meeting_id, "send_emails" => true}
-      |> new(
-        queue: :video_rooms,
-        # Highest priority for user-facing features
-        priority: 0,
-        unique: [
-          # 5 minutes uniqueness window
-          period: 300,
-          fields: [:args, :queue],
-          keys: [:meeting_id, :send_emails]
-        ]
-      )
-      |> Oban.insert()
+  def schedule_video_room_creation_with_emails(meeting_id), do: schedule(meeting_id, true)
 
-    case result do
-      {:ok, _job} ->
-        Logger.info("Video room creation with emails job scheduled",
-          meeting_id: meeting_id
-        )
-
-        :ok
-
-      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
-        Logger.info("Video room creation job already exists, skipping duplicate",
-          meeting_id: meeting_id
-        )
-
-        # Return success since job already exists
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule video room creation with emails",
-          meeting_id: meeting_id,
-          error: format_insert_error(reason)
-        )
-
-        {:error, "Failed to schedule job"}
-    end
+  defp schedule(meeting_id, send_emails) do
+    %{"meeting_id" => meeting_id, "send_emails" => send_emails}
+    |> new(queue: :video_rooms, priority: 0, unique: @unique)
+    |> Oban.insert()
+    |> handle_insert(meeting_id, send_emails)
   end
 
-  # Private functions
+  defp handle_insert({:ok, _job}, meeting_id, send_emails) do
+    Logger.info("Video room creation job scheduled",
+      meeting_id: meeting_id,
+      send_emails: send_emails
+    )
 
-  defp format_insert_error(%Changeset{} = changeset) do
-    Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+    :ok
   end
+
+  # The uniqueness window did its job; the existing job will create the room.
+  defp handle_insert({:error, %Changeset{errors: [unique: _details]}}, meeting_id, _send_emails) do
+    Logger.info("Video room creation job already exists, skipping duplicate",
+      meeting_id: meeting_id
+    )
+
+    :ok
+  end
+
+  defp handle_insert({:error, reason}, meeting_id, _send_emails) do
+    Logger.error("Failed to schedule video room creation",
+      meeting_id: meeting_id,
+      error: format_insert_error(reason)
+    )
+
+    {:error, "Failed to schedule job"}
+  end
+
+  defp format_insert_error(%Changeset{} = changeset),
+    do: Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
 
   defp format_insert_error(other), do: inspect(other)
 
-  defp execute_with_timeout(meeting_id, send_emails, attempt, job) do
+  # Exponential backoff between ordinary retries: 1s, 2s, 4s, 8s, 16s. Sleeping
+  # in the job (rather than snoozing) keeps the attempt counter moving, which is
+  # what the recovery threshold is measured against.
+  defp backoff(_meeting_id, 1), do: :ok
+
+  defp backoff(meeting_id, attempt) do
+    if Application.get_env(:tymeslot, :test_mode, false) do
+      :ok
+    else
+      backoff_ms = round(min(@backoff_base_ms * :math.pow(2, attempt - 1), @backoff_cap_ms))
+
+      Logger.info("Retrying video room creation after backoff",
+        meeting_id: meeting_id,
+        backoff_ms: backoff_ms
+      )
+
+      Process.sleep(backoff_ms)
+    end
+  end
+
+  # The provider call runs in a supervised task so a hung connection cannot pin
+  # the queue's worker for longer than the timeout.
+  defp create_room(meeting_id, send_emails, attempt) do
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
         Meetings.add_video_room_to_meeting(meeting_id)
@@ -183,15 +148,15 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
     case Task.yield(task, @video_api_timeout_ms) || Task.shutdown(task) do
       {:ok, {:ok, meeting}} ->
-        :ok = handle_success(meeting, send_emails)
-        :ok
+        handle_success(meeting, send_emails)
 
       {:ok, {:error, reason}} ->
-        result_after_error = handle_error(reason, meeting_id, send_emails, attempt, job)
-        handle_result(result_after_error, job)
+        reason
+        |> handle_failure(meeting_id, send_emails, attempt)
+        |> to_oban_result(attempt)
 
-      {:ok, other_result} ->
-        handle_result(other_result, job)
+      {:ok, other} ->
+        to_oban_result(other, attempt)
 
       nil ->
         Logger.error("Video room creation timed out",
@@ -199,309 +164,59 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           timeout_ms: @video_api_timeout_ms
         )
 
-        handle_timeout_with_fallback(meeting_id, send_emails, attempt, job)
+        handle_timeout(meeting_id, send_emails, attempt)
     end
   end
 
-  defp handle_result(result, job) do
-    case result do
-      :ok ->
-        :ok
-
-      {:snooze, _seconds} = snooze ->
-        snooze
-
-      {:error, error_type} ->
-        handle_video_error(error_type, job)
-
-      {:discard, reason} ->
-        {:discard, reason}
-
-      _other ->
-        handle_unexpected_video_result(result)
-    end
-  end
-
-  defp handle_video_error(:rate_limited, %{attempt: attempt}) do
-    # MiroTalk API rate limited us
-    # Max 5 minutes
-    snooze_seconds = min(300, 60 * attempt)
-
-    Logger.warning("Video API rate limited, snoozing",
-      snooze_seconds: snooze_seconds
-    )
-
-    {:snooze, snooze_seconds}
-  end
-
-  defp handle_video_error(:unauthorized, _job) do
-    Logger.error("Video API authentication failed, discarding job")
-    {:discard, "Authentication failed"}
-  end
-
-  defp handle_video_error(:meeting_not_found, _job) do
-    Logger.error("Meeting not found, discarding job")
-    {:discard, "Meeting not found"}
-  end
-
-  defp handle_video_error(:invalid_configuration, _job) do
-    Logger.error("Invalid video service configuration, discarding job")
-    {:discard, "Invalid configuration"}
-  end
-
-  defp handle_video_error(:service_unavailable, _job) do
-    # Service is down - use longer backoff
-    # Retry in 2 minutes
-    {:snooze, 120}
-  end
-
-  defp handle_video_error(reason, _job) when is_binary(reason) do
-    # Generic error - retry with backoff
-    {:error, reason}
-  end
-
-  defp handle_video_error(reason, _job) do
-    # Unknown error format - return as-is for retry
-    {:error, reason}
-  end
-
-  defp handle_unexpected_video_result(result) do
-    Logger.error("Unexpected result from video room job", result: result)
-    {:error, "Unexpected result"}
-  end
-
-  defp calculate_backoff(attempt) do
-    # Exponential backoff: 1s, 2s, 4s, 8s, 16s
-    round(min(@backoff_base_ms * :math.pow(2, attempt - 1), 16_000))
-  end
-
-  defp handle_success(meeting_with_video, send_emails) do
-    # Extract meeting if it's wrapped in {:ok, ...}
-    meeting_with_video =
-      case meeting_with_video do
-        {:ok, m} -> m
-        m -> m
-      end
-
-    # Be tolerant of different shapes; extract id/room_id if present
-    meeting_id = Map.get(meeting_with_video, :id)
-    room_id = Map.get(meeting_with_video, :video_room_id)
-
+  defp handle_success(meeting, send_emails) do
     Logger.info("Video room created successfully",
-      meeting_id: meeting_id,
-      room_id: room_id
+      meeting_id: Map.get(meeting, :id),
+      room_id: Map.get(meeting, :video_room_id)
     )
 
-    if send_emails and meeting_id do
-      Logger.info("Scheduling emails with video room info", meeting_id: meeting_id)
-      Meetings.schedule_email_notifications(meeting_with_video)
+    if send_emails and Map.get(meeting, :id) do
+      Logger.info("Scheduling emails with video room info", meeting_id: meeting.id)
+      Meetings.schedule_email_notifications(meeting)
     end
 
     :ok
   end
 
-  defp handle_error(reason, meeting_id, send_emails, attempt, _current_job) do
-    Logger.error("Failed to create video room",
-      meeting_id: meeting_id,
-      reason: reason
-    )
+  defp handle_failure(reason, meeting_id, send_emails, attempt) do
+    Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
 
-    # Categorize the error
-    categorized_error = categorize_error(reason)
+    {:error, categorized} = ErrorPolicy.categorize(reason)
 
-    # If integration is missing or inactive, discard without retries (send emails if requested)
-    if categorized_error in [
-         {:error, :video_integration_missing},
-         {:error, :video_integration_inactive}
-       ] do
-      if send_emails, do: send_fallback_emails(meeting_id)
+    cond do
+      # No integration to call means no amount of retrying will produce a link,
+      # so give up now and let the attendees have their emails without one.
+      categorized in [:video_integration_missing, :video_integration_inactive] ->
+        if send_emails, do: Recovery.send_fallback_emails(meeting_id)
+        {:discard, ErrorPolicy.discard_reason(categorized)}
 
-      discard_reason =
-        if categorized_error == {:error, :video_integration_missing},
-          do: "Video integration missing",
-          else: "Video integration inactive"
+      Recovery.recovering?(attempt, send_emails) ->
+        Recovery.enter(meeting_id, attempt, "creation failed: #{inspect(reason)}")
 
-      {:discard, discard_reason}
-    else
-      # If this is the final attempt and emails should be sent, send them without video
-      if send_emails and attempt >= @fallback_email_attempt do
-        # Log and send fallback emails only once (first attempt past max)
-        if attempt == @fallback_email_attempt do
-          Logger.warning(
-            "Video room creation failed after 5 attempts, sending fallback emails and entering recovery",
-            meeting_id: meeting_id,
-            reason: reason
-          )
-
-          send_fallback_emails(meeting_id)
-        end
-
-        # Enter long-term recovery if applicable
-        recovery_decision(meeting_id, attempt)
-      else
-        categorized_error
-      end
+      true ->
+        {:error, categorized}
     end
   end
 
-  defp handle_timeout_with_fallback(meeting_id, send_emails, attempt, _current_job) do
-    # If this is the final attempt and emails should be sent, send them without video
-    if send_emails and attempt >= @fallback_email_attempt do
-      if attempt == @fallback_email_attempt do
-        Logger.warning(
-          "Video room creation timed out after 5 attempts, sending fallback emails and entering recovery",
-          meeting_id: meeting_id
-        )
-
-        send_fallback_emails(meeting_id)
-      end
-
-      recovery_decision(meeting_id, attempt)
+  defp handle_timeout(meeting_id, send_emails, attempt) do
+    if Recovery.recovering?(attempt, send_emails) do
+      Recovery.enter(meeting_id, attempt, "creation timed out")
     else
       {:error, "Video room creation timed out"}
     end
   end
 
-  defp recovery_decision(meeting_id, attempt) do
-    recovery_attempt = max(attempt - @fallback_email_attempt + 1, 1)
+  defp to_oban_result(:ok, _attempt), do: :ok
+  defp to_oban_result({:snooze, _seconds} = snooze, _attempt), do: snooze
+  defp to_oban_result({:discard, _reason} = discard, _attempt), do: discard
+  defp to_oban_result({:error, reason}, attempt), do: ErrorPolicy.to_result(reason, attempt)
 
-    if recovery_attempt > @recovery_max_attempts do
-      {:discard, "Recovery attempts exhausted"}
-    else
-      case MeetingQueries.get_meeting(meeting_id) do
-        {:ok, meeting} ->
-          # Only enter recovery if meeting hasn't started yet
-          if DateTime.compare(meeting.start_time, DateTime.utc_now()) == :gt do
-            case calculate_recovery_snooze(meeting, recovery_attempt, @recovery_max_attempts) do
-              {:ok, snooze_seconds} ->
-                {:snooze, snooze_seconds}
-
-              {:error, :deadline_passed} ->
-                {:discard, "Recovery deadline passed"}
-            end
-          else
-            {:discard, "Meeting already started"}
-          end
-
-        {:error, :not_found} ->
-          {:discard, "Meeting not found"}
-      end
-    end
+  defp to_oban_result(other, _attempt) do
+    Logger.error("Unexpected result from video room job", result: inspect(other))
+    {:error, "Unexpected result"}
   end
-
-  @doc """
-  Calculates a dynamic snooze interval for recovery attempts for a meeting.
-  Distributes attempts evenly between now and the reminder cutoff.
-  """
-  @spec calculate_recovery_snooze(MeetingSchema.t(), pos_integer(), pos_integer()) ::
-          {:ok, pos_integer()} | {:error, :deadline_passed}
-  def calculate_recovery_snooze(meeting, recovery_attempt, recovery_max_attempts) do
-    now = DateTime.utc_now()
-
-    # Get the deadline (earliest reminder or meeting start)
-    deadline = get_recovery_deadline(meeting)
-
-    # We want the link ready 5 minutes before the deadline
-    recovery_cutoff_buffer = 300
-    time_until_deadline = DateTime.diff(deadline, now) - recovery_cutoff_buffer
-
-    if time_until_deadline <= 0 do
-      {:error, :deadline_passed}
-    else
-      remaining_attempts = max(recovery_max_attempts - recovery_attempt + 1, 1)
-      snooze_seconds = max(div(time_until_deadline, remaining_attempts), 1)
-      {:ok, snooze_seconds}
-    end
-  end
-
-  defp get_recovery_deadline(meeting) do
-    # 1. Check meeting-specific reminders first
-    # 2. Check meeting type reminder config
-    # 3. Fallback to meeting start time
-
-    reminders =
-      cond do
-        is_list(meeting.reminders) and meeting.reminders != [] ->
-          meeting.reminders
-
-        meeting.meeting_type_id ->
-          case MeetingTypeQueries.get_meeting_type_t(
-                 meeting.meeting_type_id,
-                 meeting.organizer_user_id
-               ) do
-            {:ok, %{reminder_config: config}} when is_list(config) and config != [] ->
-              config
-
-            _result ->
-              []
-          end
-
-        true ->
-          []
-      end
-
-    case reminders do
-      [] ->
-        meeting.start_time
-
-      list ->
-        # Find the earliest reminder (the one that fires first, i.e., has the largest interval)
-        # reminder_interval_seconds returns seconds before the meeting
-        max_interval =
-          list
-          |> Enum.map(fn r ->
-            val = Map.get(r, :value) || Map.get(r, "value")
-            unit = Map.get(r, :unit) || Map.get(r, "unit")
-
-            try do
-              ReminderUtils.reminder_interval_seconds(val, unit)
-            rescue
-              exception ->
-                Logger.warning("Ignoring unreadable reminder interval",
-                  meeting_id: meeting.id,
-                  value: inspect(val),
-                  unit: inspect(unit),
-                  error: Exception.message(exception)
-                )
-
-                0
-            end
-          end)
-          |> Enum.max()
-
-        DateTime.add(meeting.start_time, -max_interval, :second)
-    end
-  end
-
-  defp send_fallback_emails(meeting_id) do
-    Logger.info("Sending emails without video room due to creation failure",
-      meeting_id: meeting_id
-    )
-
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} ->
-        Meetings.schedule_email_notifications(meeting)
-
-      {:error, _error} ->
-        Logger.error("Could not fetch meeting for fallback email scheduling",
-          meeting_id: meeting_id
-        )
-    end
-  end
-
-  @spec categorize_error(term()) :: {:error, atom() | term()}
-  defp categorize_error({:unauthorized, _details}), do: {:error, :unauthorized}
-  defp categorize_error(:unauthorized), do: {:error, :unauthorized}
-
-  defp categorize_error({:configuration_error, _details}), do: {:error, :invalid_configuration}
-  defp categorize_error(:configuration_error), do: {:error, :invalid_configuration}
-
-  defp categorize_error({:http_error, status}) when is_integer(status) and status in 500..599,
-    do: {:error, :service_unavailable}
-
-  defp categorize_error(:rate_limited), do: {:error, :rate_limited}
-  defp categorize_error(:not_found), do: {:error, :meeting_not_found}
-  defp categorize_error(:video_integration_missing), do: {:error, :video_integration_missing}
-  defp categorize_error(:video_integration_inactive), do: {:error, :video_integration_inactive}
-  defp categorize_error(other), do: {:error, other}
 end

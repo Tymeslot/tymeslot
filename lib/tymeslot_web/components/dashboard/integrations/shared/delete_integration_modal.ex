@@ -188,10 +188,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
               )}
             </p>
             <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
+              <%!-- For a non-array name the input component derives its checked
+                    state by comparing value against checked_value ("true"), so
+                    the state has to be passed as value; a `checked` attribute is
+                    ignored and the box would never appear ticked. --%>
               <.input
                 type="checkbox"
                 name="delete_rooms"
-                checked={@delete_rooms}
+                value={to_string(@delete_rooms)}
                 phx-click={JS.push("toggle_delete_rooms", target: @myself)}
               />
               <span class="flex-1 text-token-sm text-tymeslot-600 font-medium">

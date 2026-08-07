@@ -11,224 +11,218 @@
 msgid ""
 msgstr ""
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex:15
+#: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "No"
 msgstr ""
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex:14
+#: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr ""
 
-#: lib/tymeslot/custom_fields/answer_renderer.ex:31
+#: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged (%{at})"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/forms.ex:364
+#: lib/tymeslot_web/components/core_components/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:164
+#: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts.ex:184
+#: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Browser Not Supported"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex:54
+#: lib/tymeslot_web/components/confirmation_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/components/language_switcher.ex:29
+#: lib/tymeslot_web/components/language_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "Change language"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:86
+#: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/modal.ex:105
+#: lib/tymeslot_web/components/core_components/modal.ex
 #, elixir-autogen, elixir-format
 msgid "Close modal"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex:65
+#: lib/tymeslot_web/components/confirmation_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:156
+#: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Connection Lost"
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts.ex:146
+#: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "JavaScript Disabled"
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts.ex:186
+#: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Learn About Modern Browsers"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/forms.ex:375
+#: lib/tymeslot_web/components/core_components/forms.ex
 #, elixir-autogen, elixir-format
 msgid "One lowercase letter"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/forms.ex:399
+#: lib/tymeslot_web/components/core_components/forms.ex
 #, elixir-autogen, elixir-format
 msgid "One number"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/forms.ex:388
+#: lib/tymeslot_web/components/core_components/forms.ex
 #, elixir-autogen, elixir-format
 msgid "One uppercase letter"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/forms.ex:351
+#: lib/tymeslot_web/components/core_components/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Password must contain:"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex:59
-#: lib/tymeslot_web/components/core_components/buttons.ex:81
+#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/buttons.ex
 #, elixir-autogen, elixir-format
 msgid "Processing..."
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts.ex:154
+#: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh Page"
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts/root.html.heex:13
+#: lib/tymeslot_web/components/layouts/root.html.heex
 #, elixir-autogen, elixir-format
 msgid "Schedule a Meeting"
 msgstr ""
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:112
+#: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Search cities, countries, or timezones..."
 msgstr ""
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:53
-#: lib/tymeslot_web/components/timezone_dropdown.ex:56
+#: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Select timezone"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/navigation.ex:78
+#: lib/tymeslot_web/components/core_components/navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Tabs"
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts.ex:185
+#: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts/root.html.heex:50
+#: lib/tymeslot_web/components/layouts/root.html.heex
 #, elixir-autogen, elixir-format
 msgid "This app requires JavaScript to function. Please enable it in your browser settings."
 msgstr ""
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:154
+#: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "This timezone will be used for your availability and scheduling."
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/brand.ex:33
+#: lib/tymeslot_web/components/core_components/brand.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot logo"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/layout.ex:69
+#: lib/tymeslot_web/components/core_components/layout.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot team"
 msgstr ""
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:41
+#: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Your Timezone"
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts.ex:193
+#: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "application"
 msgstr ""
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:74
-#: lib/tymeslot_web/components/timezone_dropdown.ex:142
+#: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "local time"
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts.ex:194
+#: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/layout.ex:64
+#: lib/tymeslot_web/components/core_components/layout.ex
 #, elixir-autogen, elixir-format
 msgid "Made with %{heart} by the %{team}"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:89
-#: lib/tymeslot_web/components/site_components.ex:151
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:113
-#: lib/tymeslot_web/components/site_components.ex:175
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Get Started"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:104
-#: lib/tymeslot_web/components/site_components.ex:165
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Login"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:97
-#: lib/tymeslot_web/components/site_components.ex:158
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Logout"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:125
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle menu"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:419
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:437
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "View on GitHub"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:450
+#: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "© %{year} Tymeslot. All rights reserved."
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/containers.ex:156
+#: lib/tymeslot_web/components/core_components/containers.ex
 #, elixir-autogen, elixir-format
 msgid "Saving changes..."
 msgstr ""

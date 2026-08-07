@@ -6,15 +6,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   @behaviour Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
 
-  require Logger
-
-  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
@@ -380,54 +378,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   # Response handling and error classification
 
-  # A bare 404 means "calendar" on a calendar-scoped path and "event" on an
-  # event-scoped one; only the request path, in scope here, can tell them apart.
   defp handle_response(response, path) do
-    case handle_response(response) do
-      {:error, :not_found, _generic} -> {:error, :not_found, HTTP.not_found_message(path)}
-      result -> result
-    end
+    ApiResponse.handle(response, path, label: "Outlook Calendar", custom: &graph_status/1)
   end
 
-  defp handle_response({:ok, %{status: status, body: body}})
-       when status in [200, 201, 204] do
-    if body == "" do
-      {:ok, %{}}
-    else
-      case Jason.decode(body) do
-        {:ok, decoded} -> {:ok, decoded}
-        {:error, _reason} -> {:error, :network_error, "Malformed JSON response"}
-      end
-    end
+  defp handle_response(response) do
+    ApiResponse.handle(response, label: "Outlook Calendar", custom: &graph_status/1)
   end
 
-  defp handle_response({:ok, %{status: 401}}) do
-    {:error, :unauthorized, "Token expired or invalid"}
+  # The statuses Graph answers differently from the shared envelope: a 403
+  # carrying its classification in `error.code`, and throttling reported as a
+  # bare 429. Both may carry a `Retry-After` the caller should honour.
+  defp graph_status({:ok, %{status: 403, body: body} = resp}) do
+    ApiResponse.with_error_object(body, fn msg, decoded ->
+      code = String.downcase(to_string(get_in(decoded, ["error", "code"]) || ""))
+      handle_403_reason(classify_outlook_403(msg, code), msg, parse_retry_after(resp))
+    end)
   end
 
-  defp handle_response({:ok, %{status: 403, body: body} = resp}) do
-    case Jason.decode(body) do
-      {:ok, response} ->
-        msg = get_in(response, ["error", "message"]) || "Forbidden"
-        code = String.downcase(to_string(get_in(response, ["error", "code"]) || ""))
-
-        reason = classify_outlook_403(msg, code)
-        retry_after = parse_retry_after(resp)
-
-        handle_403_reason(reason, msg, retry_after)
-
-      {:error, _reason} ->
-        {:error, :network_error, "Forbidden (malformed response)"}
-    end
-  end
-
-  # Generic fallback: every request routed through `make_request/4` and
-  # `make_request_with_body/5` has its message refined by `handle_response/2`.
-  defp handle_response({:ok, %{status: 404}}) do
-    {:error, :not_found, "Calendar not found"}
-  end
-
-  defp handle_response({:ok, %{status: 429} = resp}) do
+  defp graph_status({:ok, %{status: 429} = resp}) do
     case parse_retry_after(resp) do
       retry_after when is_integer(retry_after) ->
         {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
@@ -437,18 +406,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     end
   end
 
-  defp handle_response({:ok, %{status: status, body: body}}) do
-    Logger.error("Outlook Calendar API error",
-      status: status,
-      body: Redactor.redact_and_truncate(body)
-    )
-
-    {:error, :network_error, "HTTP #{status} (see logs for details)"}
-  end
-
-  defp handle_response({:error, reason}) do
-    {:error, :network_error, "Network error: #{inspect(reason)}"}
-  end
+  defp graph_status(_response), do: :default
 
   # Delta queries share the standard response handling but additionally map
   # 410 Gone — Graph's signal that the delta token is no longer valid and the

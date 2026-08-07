@@ -26,10 +26,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
     Float.round(1 / total_cols * 100, 2)
   end
 
+  # `CalendarGrid.integration_colour_classes/1` resolves the class, so this is
+  # a lookup with a fallback for the ids it does not cover: an event whose
+  # integration was hidden, deleted, or is not the current user's.
   @spec color_class_for_integration(map(), term()) :: String.t()
   def color_class_for_integration(integration_colors, integration_id) do
-    index = Map.get(integration_colors, integration_id)
-    calendar_color_class(index)
+    Map.get(integration_colors, integration_id, EventColour.fallback_class())
   end
 
   @spec color_dot(map(), map()) :: String.t()
@@ -37,19 +39,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
     color_class_for_integration(assigns.integration_colors, integration.id)
   end
 
-  # Prefers the event's own palette colour override (mapped to a Tailwind class
-  # via `EventColour`) when set; otherwise falls back to the per-integration
-  # colour. An unrecognised stored value (e.g. a raw inbound provider colour)
-  # resolves to a neutral class via `EventColour` and never crashes.
+  # Precedence, first match winning: the event's own palette override, then the
+  # organiser's colour for the calendar it sits in, then the integration's
+  # colour, then the rotation. Every step is a lookup that may miss, so an event
+  # whose calendar was deleted or never had a choice still paints. An
+  # unrecognised stored value (e.g. a raw inbound provider colour) resolves to a
+  # neutral class via `EventColour` and never crashes.
   @spec color_for_event(map(), map()) :: String.t()
   def color_for_event(assigns, event) do
-    case EventColour.tailwind_class(Map.get(event, :colour)) do
-      nil ->
-        color_class_for_integration(assigns.integration_colors, event.calendar_integration_id)
-
-      class ->
-        class
+    with nil <- EventColour.tailwind_class(Map.get(event, :colour)),
+         nil <- calendar_colour(assigns, event) do
+      color_class_for_integration(assigns.integration_colors, event.calendar_integration_id)
     end
+  end
+
+  # `assigns.calendar_colors`, not `Map.get(assigns, :calendar_colors, %{})`.
+  # The forgiving version defaulted a missing assign to "no choices", which is
+  # indistinguishable from a real empty map: when a view component forgot to
+  # declare and receive the assign, every event quietly kept its integration's
+  # colour and nothing failed. A view that paints events must be given the map.
+  defp calendar_colour(assigns, event) do
+    key = {event.calendar_integration_id, Map.get(event, :provider_calendar_id)}
+
+    Map.get(assigns.calendar_colors, key)
   end
 
   @spec event_display_date(map(), String.t()) :: Date.t()
@@ -58,9 +70,4 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   def event_display_date(%{start_at: %DateTime{} = start_at}, timezone) do
     start_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
   end
-
-  # Private helpers
-
-  defp calendar_color_class(nil), do: "bg-calendar-fallback"
-  defp calendar_color_class(index), do: "bg-calendar-#{index}"
 end

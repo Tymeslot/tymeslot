@@ -91,7 +91,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           title={dgettext("dashboard_integrations", "Reconnect integration")}
           aria-label={dgettext("dashboard_integrations", "Reconnect integration")}
         >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext("dashboard_integrations", "Reconnect")}</span>
+          <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
+            "dashboard_integrations",
+            "Reconnect"
+          )}</span>
         </button>
         <button
           phx-click="show"

@@ -54,17 +54,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
     } do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       modal_html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
-      # No palette swatch is active before the override is set.
-      refute modal_html =~ ~s(aria-pressed="true")
+      # Default is the pressed option before an override is set.
+      assert pressed_colours(modal_html) == ["default"]
 
       html =
         lv
         |> element("#calendar-grid")
         |> render_hook("update_event_colour", %{"colour" => "tomato"})
 
-      # tomato is now the active swatch (it pushes phx-value-colour="tomato").
-      assert html =~ ~s(phx-value-colour="tomato")
-      assert html =~ ~s(aria-pressed="true")
+      assert pressed_colours(html) == ["tomato"]
     end
 
     test "persists the colour to the cache on a successful provider write", %{
@@ -118,18 +116,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       modal_html = lv |> element("[id^='event-#{coloured.id}-']") |> render_click()
-      # The grape override starts active.
-      assert modal_html =~ ~s(aria-pressed="true")
+      # The grape override starts pressed.
+      assert pressed_colours(modal_html) == ["grape"]
 
       html =
         lv
         |> element("#calendar-grid")
         |> render_hook("update_event_colour", %{"colour" => "default"})
 
-      # Clearing the override removes the active palette swatch (Default is now
-      # the highlighted option, but no palette swatch carries aria-pressed=true).
-      refute html =~ ~s(aria-pressed="true")
+      assert pressed_colours(html) == ["default"]
     end
+  end
+
+  # The swatch picker is a set of mutually exclusive toggles, so exactly one
+  # option carries aria-pressed="true" at any time: a palette key, or "default"
+  # when the override is cleared. Reading the pressed keys out is sturdier than
+  # matching the attribute in the raw page, which cannot say which option it
+  # belongs to.
+  defp pressed_colours(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(~s(button[phx-value-colour][aria-pressed="true"]))
+    |> Enum.flat_map(&Floki.attribute(&1, "phx-value-colour"))
   end
 
   defp insert_event(integration, attrs) do

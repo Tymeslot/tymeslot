@@ -94,7 +94,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
 
               <div class="text-center">
                 <p class="mb-6" style="color: rgba(255,255,255,0.85);">
-                  {dgettext("booking", "Ready to pick a new time? Let's find one that works better for you.")}
+                  {dgettext(
+                    "booking",
+                    "Ready to pick a new time? Let's find one that works better for you."
+                  )}
                 </p>
 
                 <.action_button

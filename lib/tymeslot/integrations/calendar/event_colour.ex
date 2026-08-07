@@ -1,13 +1,19 @@
 defmodule Tymeslot.Integrations.Calendar.EventColour do
   @moduledoc """
-  The single source of truth for Tymeslot's per-event colour palette.
+  The single source of truth for Tymeslot's calendar colour palette.
 
-  An event may carry a stable, provider-independent palette **key** (e.g.
-  `"tomato"`) in its `:colour` field. This module maps that key to:
+  An event or a calendar integration may carry a stable, provider-independent
+  palette **key** (e.g. `"tomato"`) in its `:colour` field. This module maps
+  that key to:
 
     * a Tailwind display class for the calendar grid (`tailwind_class/1`)
     * a Google Calendar `colorId` (`google_color_id/1`)
     * a CSS3 colour name for the CalDAV/iCal `COLOR` property (`css_colour/1`)
+
+  It also owns the rotation an integration falls back to when its owner has
+  picked no colour (`rotation_class/1`, `rotation_size/0`), so every
+  `bg-calendar-*` class the grid can paint is named in this one module and the
+  `@source inline(…)` safelist in `app.css` has a single counterpart in Elixir.
 
   Mapping to a provider's colour space happens only at the mapper boundary; the
   database stores the palette key. Inbound provider colours (e.g. a raw Google
@@ -16,21 +22,43 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
   crashes the grid.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @typedoc "A palette colour key, e.g. `\"tomato\"`."
   @type key :: String.t()
 
-  # Ordered palette. Each entry is `{key, label, tailwind_class}`. The Tailwind
-  # classes reuse the existing safelisted `bg-calendar-*` tokens (see
-  # `app.css`), so no new CSS is required.
+  # Ordered palette, `{key, tailwind_class}`. Each key has a display token of
+  # its own (`bg-calendar-<key>`, defined in `base/variables.css`) rather than
+  # borrowing one from the rotation below: a key's name is the swatch's
+  # accessible label, so what it paints has to match what it is called. The
+  # anchors in `@rgb_anchors` are the same statement in RGB — both say a
+  # "banana" is yellow.
   @palette [
-    {"tomato", "Tomato", "bg-calendar-7"},
-    {"tangerine", "Tangerine", "bg-calendar-8"},
-    {"banana", "Banana", "bg-calendar-1"},
-    {"sage", "Sage", "bg-calendar-4"},
-    {"peacock", "Peacock", "bg-calendar-5"},
-    {"blueberry", "Blueberry", "bg-calendar-2"},
-    {"grape", "Grape", "bg-calendar-3"},
-    {"graphite", "Graphite", "bg-calendar-fallback"}
+    {"tomato", "bg-calendar-tomato"},
+    {"tangerine", "bg-calendar-tangerine"},
+    {"banana", "bg-calendar-banana"},
+    {"sage", "bg-calendar-sage"},
+    {"peacock", "bg-calendar-peacock"},
+    {"blueberry", "bg-calendar-blueberry"},
+    {"grape", "bg-calendar-grape"},
+    {"graphite", "bg-calendar-graphite"}
+  ]
+
+  # Classes the per-integration rotation cycles through when an integration has
+  # no colour of its own. Spelled out rather than interpolated so the set is
+  # greppable and matches `@source inline("bg-calendar-{1,…,8} …")` in
+  # `app.css` one for one. It is not the palette above: the rotation only has to
+  # keep adjacent calendars apart, so it is free to be any eight distinct hues
+  # and carries no names.
+  @rotation_classes [
+    "bg-calendar-1",
+    "bg-calendar-2",
+    "bg-calendar-3",
+    "bg-calendar-4",
+    "bg-calendar-5",
+    "bg-calendar-6",
+    "bg-calendar-7",
+    "bg-calendar-8"
   ]
 
   # Palette key → Google Calendar event `colorId` ("1".."11").
@@ -244,15 +272,61 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
 
   @doc """
   Returns the ordered palette as a list of `{key, label, tailwind_class}` tuples.
+
+  Built per call rather than held in the module attribute: the labels are
+  translated, and a `dgettext/2` call in an attribute would freeze them at the
+  compile-time locale.
   """
   @spec palette() :: [{key(), String.t(), String.t()}]
-  def palette, do: @palette
+  def palette, do: Enum.map(@palette, fn {key, class} -> {key, label(key), class} end)
+
+  @doc """
+  Returns the display name for a palette key, in the caller's locale.
+
+  This is the swatch's accessible name, not decoration: the swatches carry no
+  visible text, so for anyone using a screen reader it is the only thing
+  distinguishing one colour from another.
+  """
+  @spec label(key()) :: String.t()
+  def label("tomato"), do: dgettext("dashboard_calendar", "Tomato")
+  def label("tangerine"), do: dgettext("dashboard_calendar", "Tangerine")
+  def label("banana"), do: dgettext("dashboard_calendar", "Banana")
+  def label("sage"), do: dgettext("dashboard_calendar", "Sage")
+  def label("peacock"), do: dgettext("dashboard_calendar", "Peacock")
+  def label("blueberry"), do: dgettext("dashboard_calendar", "Blueberry")
+  def label("grape"), do: dgettext("dashboard_calendar", "Grape")
+  def label("graphite"), do: dgettext("dashboard_calendar", "Graphite")
 
   @doc """
   Returns the list of valid palette keys.
   """
   @spec keys() :: [key()]
-  def keys, do: Enum.map(@palette, fn {key, _label, _class} -> key end)
+  def keys, do: Enum.map(@palette, fn {key, _class} -> key end)
+
+  @doc """
+  Returns the neutral class painted when no colour can be resolved.
+  """
+  @spec fallback_class() :: String.t()
+  def fallback_class, do: @fallback_class
+
+  @doc """
+  Returns how many classes the per-integration colour rotation cycles through.
+  """
+  @spec rotation_size() :: pos_integer()
+  def rotation_size, do: length(@rotation_classes)
+
+  @doc """
+  Returns the rotation class at `index`, counting from 1.
+
+  Callers rotate with `rem(n, rotation_size()) + 1`, so the index is always in
+  range; anything else is a caller bug and gets the neutral fallback rather
+  than an exception, on the same principle as `tailwind_class/1`.
+  """
+  @spec rotation_class(term()) :: String.t()
+  def rotation_class(index) when is_integer(index) and index > 0,
+    do: Enum.at(@rotation_classes, index - 1, @fallback_class)
+
+  def rotation_class(_other), do: @fallback_class
 
   @doc """
   Returns `true` when `key` is a recognised palette key.
@@ -328,9 +402,7 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
 
   def nearest_key(_other), do: nil
 
-  defp class_map do
-    Map.new(@palette, fn {key, _label, class} -> {key, class} end)
-  end
+  defp class_map, do: Map.new(@palette)
 
   defp to_rgb(value) do
     value = value |> String.trim() |> String.downcase()

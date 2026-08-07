@@ -24,33 +24,29 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Http, UrlBuilder, XmlHandler}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
 
   require Logger
 
   # SSRF guard for outbound discovery/test-connection PROPFINDs.
   #
-  # Mirrors the persistence posture in `CalendarIntegrationSchema` (which
-  # validates `:base_url` with `block_private_ips: true`): an authenticated
-  # user must not be able to drive server-side requests at internal hosts
-  # (169.254.169.254, 10.x, loopback, link-local) during Discover/Test any
-  # more than they can save such a URL. Plain HTTP for public hosts is still
-  # rejected via `enforce_https_for_public`.
+  # Mirrors the persistence posture in `CalendarIntegrationSchema`: an
+  # authenticated user must not be able to drive server-side requests at
+  # internal hosts (169.254.169.254, 10.x, loopback, link-local) during
+  # Discover/Test any more than they can save such a URL. Plain HTTP for public
+  # hosts is still rejected via `enforce_https_for_public`.
   #
   # `opts[:allow_private_ips]` lets a trusted in-process caller (e.g. the live
   # CalDAV integration test against a local Baikal container) bypass the
-  # private-IP block. It defaults to `false`, so every request originating from
-  # a user-supplied URL — the only path that matters for SSRF — keeps the same
-  # posture as persistence.
+  # private-IP block. It otherwise defaults to the operator's
+  # `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out (false in production), so every
+  # request originating from a user-supplied URL — the only path that matters
+  # for SSRF — keeps the same posture as persistence.
   defp url_validation_opts(opts) do
     base = [enforce_https_for_public: true, block_private_ips: true]
 
-    allow_private =
-      Keyword.get(
-        opts,
-        :allow_private_ips,
-        Application.get_env(:tymeslot, :allow_private_ips_for_calendar, false)
-      )
+    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private?())
 
     if allow_private do
       Keyword.put(base, :block_private_ips, false)

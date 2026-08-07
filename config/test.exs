@@ -49,11 +49,14 @@ config :tymeslot, Tymeslot.Security.Encryption,
       "RsxoYoIVSu/K+QDV2yukDwTFD3wDyDSFxuGmoauNAX0FcXJF58dAz5LhEyiNqhFP"
 
 # Configure the database.
-# The pool is a fixed 10 rather than derived from the scheduler count: the old
-# formula capped at 10 anyway, so scaling only ever produced smaller pools on
-# smaller machines, making suite parallelism (see Tymeslot.Test.SuiteConfig)
-# depend on the host. TEST_DB_POOL_SIZE overrides it.
-default_pool_size = 10
+# An async test holds exactly one sandbox connection for its whole lifetime
+# (see Tymeslot.DataCase.setup_sandbox/1), so the pool is the hard ceiling on
+# suite parallelism: `max_cases` can never usefully exceed it. Sizing it one
+# per scheduler plus a small margin lets Tymeslot.Test.SuiteConfig derive a
+# `max_cases` that actually fills the machine, while the floor keeps small
+# hosts at the previous fixed value rather than below it. TEST_DB_POOL_SIZE
+# overrides it.
+default_pool_size = max(System.schedulers_online() + 4, 10)
 
 test_pool_size =
   case System.get_env("TEST_DB_POOL_SIZE") do

@@ -22,14 +22,17 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.SsrfGuard
 
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
           name: String.t() | nil,
+          colour: String.t() | nil,
           provider: String.t(),
           base_url: String.t() | nil,
           username_encrypted: binary() | nil,
@@ -74,6 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
 
   schema "calendar_integrations" do
     field(:name, :string)
+    field(:colour, :string)
     field(:provider, :string, default: "caldav")
     field(:base_url, :string)
     field(:username_encrypted, :binary)
@@ -143,6 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     calendar_integration
     |> cast(attrs, [
       :name,
+      :colour,
       :provider,
       :base_url,
       :username,
@@ -164,12 +169,25 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     ])
     |> update_change(:base_url, &PathUtils.normalize_base_url/1)
     |> validate_required([:name, :provider, :user_id])
+    # The column is a varchar(255); provider-supplied names (an Outlook mailbox,
+    # a CalDAV collection title) are not length-checked anywhere upstream, so
+    # without this an overlong one reaches Postgres and raises rather than
+    # returning an invalid changeset. Names a person types are held to the
+    # tighter `InputValidators.validate_integration_name/2` range at the form
+    # boundary; this is the floor under every path.
+    |> validate_length(:name, max: 255)
     |> validate_base_url_for_caldav()
     |> validate_inclusion(
       :provider,
       ProviderConfig.provider_constraint_list()
     )
-    |> URLValidator.validate_url(:base_url, block_private_ips: true)
+    # Only a palette key or nothing. `validate_inclusion/3` skips nil changes,
+    # so clearing the colour back to the automatic rotation passes untouched,
+    # and `cast/3` has already turned "" into nil.
+    |> validate_inclusion(:colour, EventColour.keys(),
+      message: dgettext_noop("errors", "is not a valid colour")
+    )
+    |> URLValidator.validate_url(:base_url, block_private_ips: not SsrfGuard.allow_private?())
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)

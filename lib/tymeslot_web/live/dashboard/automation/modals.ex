@@ -31,12 +31,17 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       size={:medium}
     >
       <:header>
-        <%= if @mode == :create,
+        {if @mode == :create,
           do: dgettext("dashboard_automation", "Create Webhook"),
-          else: dgettext("dashboard_automation", "Edit Webhook") %>
+          else: dgettext("dashboard_automation", "Edit Webhook")}
       </:header>
 
-      <form id="webhook-form-modal-form" phx-submit={@on_submit} phx-target={@myself} class="space-y-6">
+      <form
+        id="webhook-form-modal-form"
+        phx-submit={@on_submit}
+        phx-target={@myself}
+        class="space-y-6"
+      >
         <%!-- Name Field --%>
         <.input
           name="webhook[name]"
@@ -78,14 +83,14 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
                   phx-click={@on_toggle_event.(event.value)}
                 />
                 <div class="flex-1">
-                  <div class="font-black text-tymeslot-900"><%= event.label %></div>
-                  <div class="text-token-sm text-tymeslot-600 font-medium"><%= event.description %></div>
+                  <div class="font-black text-tymeslot-900">{event.label}</div>
+                  <div class="text-token-sm text-tymeslot-600 font-medium">{event.description}</div>
                 </div>
               </label>
             <% end %>
           </div>
           <%= for error <- FormValidationHelpers.field_errors(@form_errors, :events) do %>
-            <p class="text-token-sm text-red-600 font-medium mt-3"><%= error %></p>
+            <p class="text-token-sm text-red-600 font-medium mt-3">{error}</p>
           <% end %>
         </div>
 
@@ -105,9 +110,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
             loading={@saving}
             loading_text={dgettext("dashboard_automation", "Saving...")}
           >
-            <%= if @mode == :create,
+            {if @mode == :create,
               do: dgettext("dashboard_automation", "Create Webhook"),
-              else: dgettext("dashboard_automation", "Update Webhook") %>
+              else: dgettext("dashboard_automation", "Update Webhook")}
           </CoreComponents.loading_button>
         </div>
       </:footer>
@@ -302,8 +307,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     >
       <:header>
         <div class="flex flex-col">
-          <span><%= @webhook.name %></span>
-          <span class="text-tymeslot-500 font-medium font-mono text-token-xs mt-1"><%= @webhook.url %></span>
+          <span>{@webhook.name}</span>
+          <span class="text-tymeslot-500 font-medium font-mono text-token-xs mt-1">{@webhook.url}</span>
         </div>
       </:header>
 
@@ -470,7 +475,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           <div class="text-token-xs font-black text-tymeslot-600 uppercase tracking-wider">
             {dgettext("dashboard_automation", "Total")}
           </div>
-          <div class="text-token-3xl font-black text-tymeslot-900 mt-1"><%= @stats.total %></div>
+          <div class="text-token-3xl font-black text-tymeslot-900 mt-1">{@stats.total}</div>
           <div class="text-token-xs text-tymeslot-500 font-medium mt-1">
             {dngettext(
               "dashboard_automation",
@@ -485,7 +490,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           <div class="text-token-xs font-black text-green-600 uppercase tracking-wider">
             {dgettext("dashboard_automation", "Success")}
           </div>
-          <div class="text-token-3xl font-black text-green-700 mt-1"><%= @stats.successful %></div>
+          <div class="text-token-3xl font-black text-green-700 mt-1">{@stats.successful}</div>
           <%= if Map.get(@stats, :success_rate) do %>
             <div class="text-token-xs text-green-600 font-medium mt-1">
               {dgettext("dashboard_automation", "%{rate}% success rate", rate: @stats.success_rate)}
@@ -496,7 +501,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           <div class="text-token-xs font-black text-red-600 uppercase tracking-wider">
             {dgettext("dashboard_automation", "Failed")}
           </div>
-          <div class="text-token-3xl font-black text-red-700 mt-1"><%= @stats.failed %></div>
+          <div class="text-token-3xl font-black text-red-700 mt-1">{@stats.failed}</div>
         </div>
       </div>
     <% end %>
@@ -510,7 +515,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     ~H"""
     <%= if @deliveries == [] do %>
       <div class="text-center py-12 bg-tymeslot-50 rounded-token-2xl border-2 border-dashed border-tymeslot-200">
-        <p class="text-tymeslot-600 font-medium">{dgettext("dashboard_automation", "No deliveries yet")}</p>
+        <p class="text-tymeslot-600 font-medium">
+          {dgettext("dashboard_automation", "No deliveries yet")}
+        </p>
       </div>
     <% else %>
       <div class="space-y-3">
@@ -520,7 +527,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
               <div class="flex-1">
                 <div class="flex flex-wrap items-center gap-3 mb-2">
                   <span class="bg-turquoise-50 text-turquoise-700 text-token-xs font-black px-2 py-1 rounded-token-lg border border-turquoise-100">
-                    <%= delivery.event_type %>
+                    {delivery.event_type}
                   </span>
                   <%= if delivery.response_status do %>
                     <span class={[
@@ -530,20 +537,24 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
                         else: "bg-red-50 text-red-700 border-red-100"
                       )
                     ]}>
-                      <%= delivery.response_status %>
+                      {delivery.response_status}
                     </span>
                   <% end %>
                   <span class="text-token-xs text-tymeslot-500 font-medium">
-                    {dgettext("dashboard_automation", "Attempt %{count}", count: delivery.attempt_count)}
+                    {dgettext("dashboard_automation", "Attempt %{count}",
+                      count: delivery.attempt_count
+                    )}
                   </span>
                 </div>
                 <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
                   <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
-                  <%= AutomationHelpers.format_datetime(delivery.inserted_at, @time_format) %>
+                  {AutomationHelpers.format_datetime(delivery.inserted_at, @time_format)}
                 </div>
                 <%= if delivery.error_message do %>
                   <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">
-                    {dgettext("dashboard_automation", "Error: %{message}", message: delivery.error_message)}
+                    {dgettext("dashboard_automation", "Error: %{message}",
+                      message: delivery.error_message
+                    )}
                   </div>
                 <% end %>
               </div>

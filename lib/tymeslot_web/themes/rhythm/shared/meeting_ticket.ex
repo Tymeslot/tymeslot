@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicket do
 
       <%= if @footer != [] do %>
         <div class="ticket-footer">
-          <%= render_slot(@footer) %>
+          {render_slot(@footer)}
         </div>
       <% end %>
     </div>

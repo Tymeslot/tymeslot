@@ -27,8 +27,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- First day of week --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "First day of week")}</p>
-            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Start weeks on Monday or Sunday")}</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar_events", "First day of week")}
+            </p>
+            <p class="text-token-xs text-tymeslot-400">
+              {dgettext("dashboard_calendar_events", "Start weeks on Monday or Sunday")}
+            </p>
           </div>
           <Toggle.toggle
             id="week-start-toggle"
@@ -46,8 +50,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Time format --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Time format")}</p>
-            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "12-hour or 24-hour clock")}</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar_events", "Time format")}
+            </p>
+            <p class="text-token-xs text-tymeslot-400">
+              {dgettext("dashboard_calendar_events", "12-hour or 24-hour clock")}
+            </p>
           </div>
           <Toggle.toggle
             id="time-format-toggle"
@@ -65,8 +73,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Default view --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Default view")}</p>
-            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Also switches the current view")}</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar_events", "Default view")}
+            </p>
+            <p class="text-token-xs text-tymeslot-400">
+              {dgettext("dashboard_calendar_events", "Also switches the current view")}
+            </p>
           </div>
           <Toggle.toggle
             id="default-view-toggle"
@@ -85,8 +97,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Show week numbers --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Week numbers")}</p>
-            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Show ISO week numbers in month view")}</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar_events", "Week numbers")}
+            </p>
+            <p class="text-token-xs text-tymeslot-400">
+              {dgettext("dashboard_calendar_events", "Show ISO week numbers in month view")}
+            </p>
           </div>
           <StatusSwitch.status_switch
             id="week-numbers-switch"
@@ -100,8 +116,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Show weekends --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Show weekends")}</p>
-            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Display Saturday and Sunday in week view")}</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar_events", "Show weekends")}
+            </p>
+            <p class="text-token-xs text-tymeslot-400">
+              {dgettext("dashboard_calendar_events", "Display Saturday and Sunday in week view")}
+            </p>
           </div>
           <StatusSwitch.status_switch
             id="weekends-switch"
@@ -115,9 +135,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Desktop reminders --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Desktop reminders")}</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">
+              {dgettext("dashboard_calendar_events", "Desktop reminders")}
+            </p>
             <p class="text-token-xs text-tymeslot-400">
-              {dgettext("dashboard_calendar_events", "Show browser notifications before events while Tymeslot is open")}
+              {dgettext(
+                "dashboard_calendar_events",
+                "Show browser notifications before events while Tymeslot is open"
+              )}
             </p>
           </div>
           <StatusSwitch.status_switch

@@ -52,6 +52,61 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
           Logger.error("Invalid dashboard extensions: \#{inspect(errors)}")
           raise "Dashboard extension validation failed"
       end
+
+  ## Component Requirements
+
+  A component registered under `:dashboard_action_components` must be a
+  `Phoenix.LiveComponent` and accept the standard dashboard assigns in
+  `update/2`: `current_user`, `profile`, `integration_status`, `client_ip`,
+  `user_agent` and `shared_data`.
+
+      defmodule ExternalApp.Dashboard.MyFeatureComponent do
+        use Phoenix.LiveComponent
+
+        @impl Phoenix.LiveComponent
+        def update(assigns, socket) do
+          {:ok, assign(socket, assigns)}
+        end
+
+        @impl Phoenix.LiveComponent
+        def render(assigns) do
+          ~H\"\"\"
+          <div>
+            <h1>My Feature</h1>
+            <p>User: {@current_user.email}</p>
+          </div>
+          \"\"\"
+        end
+      end
+
+  ## Routing
+
+  An extension also has to register its own route. Reuse Core's
+  `TymeslotWeb.DashboardLive` with a custom action, so the sidebar, layout and
+  authentication all behave as they do for a built-in section, then forward
+  everything else back to Core:
+
+      scope "/dashboard" do
+        pipe_through [:browser, :require_authenticated_user]
+
+        live_session :external_dashboard,
+          on_mount: [
+            {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+            TymeslotWeb.Hooks.ClientInfoHook,
+            TymeslotWeb.Hooks.DashboardInitHook
+          ] do
+          live "/my-feature", TymeslotWeb.DashboardLive, :my_feature
+        end
+      end
+
+      forward "/", TymeslotWeb.Router
+
+  ## Why configuration rather than a behaviour
+
+  Core defines the contract (these config keys and this structure) and external
+  applications implement it. Core never names an external application, imports
+  from one, or checks whether one is present, so it runs standalone with no
+  extensions at all and extensions stay purely additive.
   """
 
   require Logger

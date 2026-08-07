@@ -217,7 +217,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   defp credentials_form(assigns) do
     ~H"""
-    <form id="caldav-reconnect-credentials-form" phx-submit="reconnect_caldav_discover" phx-target={@target} class="space-y-5">
+    <form
+      id="caldav-reconnect-credentials-form"
+      phx-submit="reconnect_caldav_discover"
+      phx-target={@target}
+      class="space-y-5"
+    >
       <p class="text-sm text-tymeslot-500">
         {dgettext(
           "dashboard_calendar_providers",
@@ -303,7 +308,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   defp calendar_selection(assigns) do
     ~H"""
-    <form id="caldav-reconnect-calendars-form" phx-submit="reconnect_caldav_submit" phx-target={@target} class="space-y-5">
+    <form
+      id="caldav-reconnect-calendars-form"
+      phx-submit="reconnect_caldav_submit"
+      phx-target={@target}
+      class="space-y-5"
+    >
       <p class="text-sm text-tymeslot-500">
         {dgettext(
           "dashboard_calendar_providers",

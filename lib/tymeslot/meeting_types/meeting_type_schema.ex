@@ -4,6 +4,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
+
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.Utils.ReminderUtils
@@ -27,6 +29,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           price_cents: integer() | nil,
           max_participants: integer(),
           is_archived: boolean(),
+          max_bookings_per_day: pos_integer() | nil,
+          max_bookings_per_week: pos_integer() | nil,
+          max_bookings_per_month: pos_integer() | nil,
           custom_fields: [FieldDefinition.t()],
           attachments: [MeetingTypeAttachment.t()],
           user_id: integer() | nil,
@@ -55,6 +60,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:price_cents, :integer)
     field(:max_participants, :integer, default: 1)
     field(:is_archived, :boolean, default: false)
+    field(:max_bookings_per_day, :integer)
+    field(:max_bookings_per_week, :integer)
+    field(:max_bookings_per_month, :integer)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
     belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema)
@@ -127,7 +135,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :payment_required,
       :price_cents,
       :max_participants,
-      :is_archived
+      :is_archived,
+      :max_bookings_per_day,
+      :max_bookings_per_week,
+      :max_bookings_per_month
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
     |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
@@ -137,6 +148,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
     |> validate_number(:max_participants, Constraints.max_participants_opts())
+    |> validate_booking_limits(:meeting_types)
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
     |> normalize_slug()
     |> validate_slug()

@@ -27,7 +27,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal do
             {title}
           </h4>
           <ul class="space-y-2">
-            <li :for={{keys, description} <- shortcuts} class="flex items-center justify-between gap-3">
+            <li
+              :for={{keys, description} <- shortcuts}
+              class="flex items-center justify-between gap-3"
+            >
               <span class="text-token-sm text-tymeslot-700">{description}</span>
               <span class="flex items-center gap-1 shrink-0">
                 <kbd

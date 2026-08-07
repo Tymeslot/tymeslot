@@ -40,8 +40,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
               "relative rounded-token-md border-2 transition-colors duration-200 group",
               "w-10 h-10 flex items-center justify-center overflow-hidden",
               if(@selected_icon == icon_value,
-                do: "bg-linear-to-br from-turquoise-50 to-turquoise-100 border-turquoise-500 shadow-md",
-                else: "bg-white/50 border-tymeslot-300/50 hover:border-turquoise-400/50 hover:bg-white/70"
+                do:
+                  "bg-linear-to-br from-turquoise-50 to-turquoise-100 border-turquoise-500 shadow-md",
+                else:
+                  "bg-white/50 border-tymeslot-300/50 hover:border-turquoise-400/50 hover:bg-white/70"
               )
             ]}
             style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; max-width: 40px; max-height: 40px;"
@@ -145,7 +147,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
             <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
               <p class="text-token-sm text-yellow-700">
                 {dgettext("dashboard_meeting_form", "No video integrations configured.")}
-                <a href={~p"/dashboard/integrations?tab=video"} class="underline hover:text-yellow-800">
+                <a
+                  href={~p"/dashboard/integrations?tab=video"}
+                  class="underline hover:text-yellow-800"
+                >
                   {dgettext("dashboard_meeting_form", "Set up video integration")}
                 </a>
               </p>
@@ -170,7 +175,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                   <div class="flex flex-col items-center justify-center space-y-1">
                     <.provider_icon provider={integration.provider} size={@icon_size} />
                     <span class="text-token-sm font-medium truncate max-w-full">{integration.name}</span>
-                    <span :if={integration.provider_account_email} class="text-token-xs text-muted truncate max-w-full">
+                    <span
+                      :if={integration.provider_account_email}
+                      class="text-token-xs text-muted truncate max-w-full"
+                    >
                       {integration.provider_account_email}
                     </span>
                   </div>
@@ -208,7 +216,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
         {dgettext("dashboard_meeting_form", "Booking Destination")}
       </label>
       <p class="text-token-sm text-tymeslot-600 mb-4">
-        {dgettext("dashboard_meeting_form", "Choose where new bookings for this meeting type should be created.")}
+        {dgettext(
+          "dashboard_meeting_form",
+          "Choose where new bookings for this meeting type should be created."
+        )}
       </p>
 
       <div class="space-y-4">
@@ -220,7 +231,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
             <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
               <p class="text-token-sm text-yellow-700">
                 {dgettext("dashboard_meeting_form", "No calendar integrations configured.")}
-                <a href={~p"/dashboard/integrations?tab=calendars"} class="underline hover:text-yellow-800">
+                <a
+                  href={~p"/dashboard/integrations?tab=calendars"}
+                  class="underline hover:text-yellow-800"
+                >
                   {dgettext("dashboard_meeting_form", "Connect a calendar")}
                 </a>
               </p>
@@ -239,7 +253,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                   }
                   class={[
                     "glass-selector h-20!",
-                    if(@selected_calendar_integration_id == integration.id, do: "glass-selector--active"),
+                    if(@selected_calendar_integration_id == integration.id,
+                      do: "glass-selector--active"
+                    ),
                     if(not integration.is_active, do: "opacity-60"),
                     if(@refreshing_calendars, do: "opacity-50 cursor-not-allowed")
                   ]}
@@ -313,7 +329,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       }
                       class={[
                         "flex items-center p-3 rounded-token-lg border-2 transition-all text-left",
-                        if(@selected_target_calendar_id == (cal.id),
+                        if(@selected_target_calendar_id == cal.id,
                           do: "bg-turquoise-50 border-turquoise-500 shadow-sm",
                           else: "bg-white border-tymeslot-100 hover:border-turquoise-200"
                         )
@@ -321,7 +337,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     >
                       <div class={[
                         "w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center",
-                        if(@selected_target_calendar_id == (cal.id),
+                        if(@selected_target_calendar_id == cal.id,
                           do: "border-turquoise-50 bg-turquoise-500",
                           else: "border-tymeslot-300"
                         )
@@ -334,7 +350,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       </div>
                       <span class={[
                         "text-token-sm font-medium truncate",
-                        if(@selected_target_calendar_id == (cal.id),
+                        if(@selected_target_calendar_id == cal.id,
                           do: "text-turquoise-900",
                           else: "text-tymeslot-700"
                         )

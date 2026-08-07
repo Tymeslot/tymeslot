@@ -106,16 +106,30 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>
                       {dgettext("booking", "You're booking a %{duration} meeting with %{name}",
-                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)),
-                        name: get_organizer_name(@organizer_profile, @username_context))}
+                        duration:
+                          if(@meeting_type,
+                            do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes),
+                            else: Duration.format(@duration)
+                          ),
+                        name: get_organizer_name(@organizer_profile, @username_context)
+                      )}
                     <% else %>
                       {dgettext("booking", "You're booking a %{duration} meeting",
-                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)))}
+                        duration:
+                          if(@meeting_type,
+                            do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes),
+                            else: Duration.format(@duration)
+                          )
+                      )}
                     <% end %>
                   </p>
 
                   <p class="booking-datetime text-quill-secondary">
-                    {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
+                    {LocalizationHelpers.format_booking_datetime(
+                      @selected_date,
+                      @selected_time,
+                      @user_timezone
+                    )}
                   </p>
 
                   <.form
@@ -211,7 +225,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       class="flex-1"
                       title={get_submit_title(@submitting, @form)}
                     >
-                      {if @is_rescheduling, do: dgettext("booking", "reschedule_meeting"), else: dgettext("booking", "book_meeting")} 🎆
+                      {if @is_rescheduling,
+                        do: dgettext("booking", "reschedule_meeting"),
+                        else: dgettext("booking", "book_meeting")} 🎆
                     </.loading_button>
                   </div>
                 </div>

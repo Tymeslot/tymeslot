@@ -51,14 +51,29 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
               integration={integration}
               testing={@slack_testing == integration.id}
               target={@myself}
-              on_edit={JS.push("slack_show_edit_form", value: %{"id" => integration.id}, target: @myself)}
-              on_delete={JS.push("slack_confirm_delete", value: %{"id" => integration.id}, target: @myself)}
+              on_edit={
+                JS.push("slack_show_edit_form", value: %{"id" => integration.id}, target: @myself)
+              }
+              on_delete={
+                JS.push("slack_confirm_delete", value: %{"id" => integration.id}, target: @myself)
+              }
               on_toggle="slack_toggle_active"
               on_test={JS.push("slack_test", value: %{"id" => integration.id}, target: @myself)}
-              on_view_deliveries={JS.push("slack_show_deliveries", value: %{"id" => integration.id}, target: @myself)}
-              on_reenable={JS.push("slack_reenable", value: %{"id" => integration.id}, target: @myself)}
-              on_pick_channel={JS.push("slack_show_channel_picker", value: %{"id" => integration.id}, target: @myself)}
-              on_disconnect={JS.push("slack_disconnect", value: %{"id" => integration.id}, target: @myself)}
+              on_view_deliveries={
+                JS.push("slack_show_deliveries", value: %{"id" => integration.id}, target: @myself)
+              }
+              on_reenable={
+                JS.push("slack_reenable", value: %{"id" => integration.id}, target: @myself)
+              }
+              on_pick_channel={
+                JS.push("slack_show_channel_picker",
+                  value: %{"id" => integration.id},
+                  target: @myself
+                )
+              }
+              on_disconnect={
+                JS.push("slack_disconnect", value: %{"id" => integration.id}, target: @myself)
+              }
               on_reconnect={
                 if @oauth_mode_available? do
                   JS.push("slack_reconnect", value: %{"id" => integration.id}, target: @myself)

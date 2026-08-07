@@ -48,12 +48,19 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
 
       <div :if={@meeting_type} class="space-y-5">
         <CoreComponents.info_box variant={:warning}>
-          {dgettext("dashboard_meeting_types", 
+          {dgettext(
+            "dashboard_meeting_types",
             "Changing this link will stop any links you have already shared for this meeting type from working."
           )}
         </CoreComponents.info_box>
 
-        <form id="booking-link-slug-form" phx-change="slug_draft_changed" phx-submit="confirm_slug_change" phx-target={@myself} class="space-y-2">
+        <form
+          id="booking-link-slug-form"
+          phx-change="slug_draft_changed"
+          phx-submit="confirm_slug_change"
+          phx-target={@myself}
+          class="space-y-2"
+        >
           <label for="booking-link-slug" class="block font-medium text-tymeslot-700">
             {dgettext("dashboard_meeting_types", "Link address")}
           </label>
@@ -78,7 +85,8 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
             </CoreComponents.action_button>
           </div>
           <p class="text-token-sm text-tymeslot-500">
-            {dgettext("dashboard_meeting_types", 
+            {dgettext(
+              "dashboard_meeting_types",
               "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
             )}
           </p>

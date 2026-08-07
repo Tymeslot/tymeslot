@@ -4,6 +4,9 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperBehaviour do
   """
 
   @callback authorization_url(term(), String.t()) :: String.t()
+  # With options, used when reconnecting an existing integration to target the
+  # account already connected via `integration_id` and `login_hint`.
+  @callback authorization_url(term(), String.t(), keyword()) :: String.t()
   @callback exchange_code_for_tokens(String.t(), String.t(), String.t()) ::
               {:ok, map()} | {:error, String.t()}
   @callback refresh_access_token(String.t(), String.t() | nil) ::

@@ -15,8 +15,21 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
       Enum.each(palette, fn entry ->
         assert {key, label, class} = entry
         assert key in EventColour.keys()
-        assert label == String.capitalize(key)
-        assert String.starts_with?(class, "bg-calendar-")
+        assert label == EventColour.label(key)
+        assert class == "bg-calendar-#{key}"
+      end)
+    end
+
+    test "labels follow the caller's locale" do
+      # The swatches carry no visible text, so the label is the whole
+      # accessible name of the control — it cannot stay English.
+      assert EventColour.label("blueberry") == "Blueberry"
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert EventColour.label("blueberry") == "Blaubeere"
+
+        assert {"blueberry", "Blaubeere", _class} =
+                 Enum.find(EventColour.palette(), &(elem(&1, 0) == "blueberry"))
       end)
     end
 
@@ -48,10 +61,39 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
     end
   end
 
+  describe "rotation_class/1 and rotation_size/0" do
+    test "returns a distinct class for every index in the rotation" do
+      classes = Enum.map(1..EventColour.rotation_size(), &EventColour.rotation_class/1)
+
+      assert length(Enum.uniq(classes)) == EventColour.rotation_size()
+      assert Enum.all?(classes, &String.starts_with?(&1, "bg-calendar-"))
+    end
+
+    test "falls back to the neutral class for an index outside the rotation" do
+      assert EventColour.rotation_class(EventColour.rotation_size() + 1) ==
+               EventColour.fallback_class()
+
+      assert EventColour.rotation_class(0) == EventColour.fallback_class()
+      assert EventColour.rotation_class(-1) == EventColour.fallback_class()
+      assert EventColour.rotation_class(nil) == EventColour.fallback_class()
+      assert EventColour.rotation_class("2") == EventColour.fallback_class()
+    end
+  end
+
   describe "tailwind_class/1" do
-    test "maps a palette key to its Tailwind class" do
-      assert EventColour.tailwind_class("tomato") == "bg-calendar-7"
-      assert EventColour.tailwind_class("blueberry") == "bg-calendar-2"
+    test "maps a palette key to its own Tailwind class" do
+      assert EventColour.tailwind_class("tomato") == "bg-calendar-tomato"
+      assert EventColour.tailwind_class("blueberry") == "bg-calendar-blueberry"
+    end
+
+    test "no palette key borrows a class from the rotation" do
+      # The two sets are separate on purpose: a palette class has to look like
+      # the name it is labelled with, a rotation class only has to differ from
+      # its neighbours. Sharing one would tie the two constraints together.
+      rotation = Enum.map(1..EventColour.rotation_size(), &EventColour.rotation_class/1)
+      palette = Enum.map(EventColour.palette(), fn {_key, _label, class} -> class end)
+
+      assert palette -- rotation == palette
     end
 
     test "every palette entry maps to a distinct Tailwind class" do

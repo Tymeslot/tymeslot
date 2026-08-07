@@ -38,7 +38,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.AppleConfig do
           <div>
             <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Apple iCloud</h3>
             <p class="text-sm text-tymeslot-500 font-medium">
-              {dgettext("dashboard_calendar_providers", "Sync calendars from your Apple iCloud account")}
+              {dgettext(
+                "dashboard_calendar_providers",
+                "Sync calendars from your Apple iCloud account"
+              )}
             </p>
           </div>
         </div>

@@ -135,7 +135,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
             class="w-full h-full object-cover"
           />
         </div>
-        <div class="absolute inset-0 bg-turquoise-400 blur-2xl opacity-20 rounded-full scale-75 transition-opacity"></div>
+        <div class="absolute inset-0 bg-turquoise-400 blur-2xl opacity-20 rounded-full scale-75 transition-opacity">
+        </div>
       </div>
 
       <div class="space-y-4 max-w-[240px] mx-auto">
@@ -156,12 +157,17 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
                 />
                 <div class="btn-primary w-full flex items-center justify-center gap-2 py-4 whitespace-nowrap">
                   <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
                   </svg>
                   <span>
-                    <%= if @uploads.avatar.entries != [],
+                    {if @uploads.avatar.entries != [],
                       do: dgettext("dashboard_profile", "Uploading..."),
-                      else: dgettext("dashboard_profile", "Upload New") %>
+                      else: dgettext("dashboard_profile", "Upload New")}
                   </span>
                 </div>
               </div>
@@ -180,7 +186,12 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
               class="btn-danger w-full py-4 flex items-center justify-center gap-2 whitespace-nowrap"
             >
               <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
               <span>{dgettext("dashboard_profile", "Delete Photo")}</span>
             </button>
@@ -200,7 +211,12 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
           <%= for err <- upload_errors(@uploads.avatar) do %>
             <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               {Phoenix.Naming.humanize(err)}
             </div>
@@ -210,9 +226,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
             <div class="mt-6 p-4 bg-turquoise-50 rounded-token-2xl border-2 border-turquoise-100">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-turquoise-700 font-black text-xs uppercase tracking-wider">
-                  <%= if entry.progress == 100,
+                  {if entry.progress == 100,
                     do: dgettext("dashboard_profile", "Processing..."),
-                    else: dgettext("dashboard_profile", "Uploading...") %>
+                    else: dgettext("dashboard_profile", "Uploading...")}
                 </span>
                 <span class="text-turquoise-600 font-black text-xs">{entry.progress}%</span>
               </div>
@@ -220,14 +236,20 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
                 <div
                   class="bg-linear-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
                   style={"width: #{entry.progress}%"}
-                ></div>
+                >
+                </div>
               </div>
             </div>
 
             <%= for err <- upload_errors(@uploads.avatar, entry) do %>
               <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2.5"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 {Phoenix.Naming.humanize(err)}
               </div>

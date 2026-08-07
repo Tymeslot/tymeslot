@@ -29,7 +29,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
 
     ~H"""
     <div class="container flex-1" data-locale={@locale}>
-      <.page_layout show_steps={true} current_step={3} slug={@duration} username_context={@username_context}>
+      <.page_layout
+        show_steps={true}
+        current_step={3}
+        slug={@duration}
+        username_context={@username_context}
+      >
         <div class="stack">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
             <div class="w-full">

@@ -11,143 +11,141 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n>1);\n"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:103
+#: lib/tymeslot_web/components/announcement_modal_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{current} / %{total}"
 msgstr "%{current} / %{total}"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:76
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Account settings and log out are here in the top-right."
 msgstr "Les paramètres du compte et la déconnexion se trouvent ici, en haut à droite."
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:95
-#: lib/tymeslot_web/components/tour_overlay.ex:53
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr "Retour"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:64
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Common tasks"
 msgstr "Tâches courantes"
 
-#: lib/tymeslot_web/components/step_navigation.ex:48
+#: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmation"
 msgstr "Confirmation"
 
-#: lib/tymeslot_web/components/step_navigation.ex:30
+#: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Date & Time"
 msgstr "Date et heure"
 
-#: lib/tymeslot_web/components/step_navigation.ex:39
+#: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Details"
 msgstr "Détails"
 
-#: lib/tymeslot_web/components/step_navigation.ex:21
+#: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Durée"
 
-#: lib/tymeslot_web/components/tour_overlay.ex:69
+#: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Finish"
 msgstr "Terminer"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:117
-#: lib/tymeslot_web/components/announcement_modal_component.ex:121
+#: lib/tymeslot_web/components/announcement_modal_component.ex
 #, elixir-autogen, elixir-format
 msgid "Got it"
 msgstr "Compris"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:62
+#: lib/tymeslot_web/components/announcement_modal_component.ex
 #, elixir-autogen, elixir-format
 msgid "New feature"
 msgstr "Nouvelle fonctionnalité"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:128
-#: lib/tymeslot_web/components/announcement_modal_component.ex:132
-#: lib/tymeslot_web/components/tour_overlay.ex:61
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Suivant"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:66
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Quick links to set up your profile, availability, and meeting types. Start here."
 msgstr "Liens rapides pour configurer votre profil, vos disponibilités et vos types de réunion. Commencez ici."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:53
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Settings live in the sidebar"
 msgstr "Les paramètres se trouvent dans la barre latérale"
 
-#: lib/tymeslot_web/components/tour_overlay.ex:47
+#: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Skip"
 msgstr "Passer"
 
-#: lib/tymeslot_web/components/tour_overlay.ex:40
+#: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Step %{n} of %{total}"
 msgstr "Étape %{n} sur %{total}"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:36
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Take 30 seconds to learn where everything lives."
 msgstr "Prenez 30 secondes pour découvrir où se trouve chaque chose."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:42
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Two modes"
 msgstr "Deux modes"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:35
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
 msgstr "Bienvenue sur votre tableau de bord Tymeslot"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:82
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "You're set"
 msgstr "Tout est prêt"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:75
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Your account"
 msgstr "Votre compte"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:44
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
 msgstr "Basculez entre Planification (vos types d’événement) et Calendrier (une vue complète de vos réservations et événements synchronisés)."
 
-#: lib/tymeslot/announcements/catalog.ex:209
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "A few more things we've shipped lately:"
 msgstr "Voici quelques nouveautés récemment déployées :"
 
-#: lib/tymeslot/announcements/catalog.ex:81
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "All your integrations in one place"
 msgstr "Toutes vos intégrations au même endroit"
 
-#: lib/tymeslot/announcements/catalog.ex:153
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Ask the right questions up front"
 msgstr "Posez les bonnes questions dès le départ"
 
-#: lib/tymeslot/announcements/catalog.ex:213
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Booking pages and emails now in German, French, Ukrainian and Italian"
 msgstr ""
 "Les pages de réservation et les e-mails sont désormais disponibles en "
 "allemand, français, ukrainien et italien"
 
-#: lib/tymeslot/announcements/catalog.ex:173
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Collect payment automatically at the moment of booking, with Stripe-powered checkout built right into your booking page."
 msgstr ""
@@ -155,61 +153,59 @@ msgstr ""
 " un module de paiement Stripe directement intégré à votre page de "
 "réservation."
 
-#: lib/tymeslot/announcements/catalog.ex:99
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Colour-code your calendar events"
 msgstr "Attribuez un code couleur aux événements de votre calendrier"
 
-#: lib/tymeslot/announcements/catalog.ex:212
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Faster, more responsive Quill and Rhythm booking pages"
 msgstr "Des pages de réservation Quill et Rhythm plus rapides et réactives"
 
-#: lib/tymeslot/announcements/catalog.ex:171
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Get paid when people book"
 msgstr "Faites-vous payer dès la réservation"
 
-#: lib/tymeslot/announcements/catalog.ex:117
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Invite guests to any booking"
 msgstr "Ajoutez des invités à n'importe quelle réservation"
 
-#: lib/tymeslot/announcements/catalog.ex:189
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Meet on Zoom, automatically"
 msgstr "Organisez automatiquement vos réunions sur Zoom"
 
-#: lib/tymeslot/announcements/catalog.ex:208
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Plus a host of improvements"
 msgstr "Ainsi qu'une multitude d'améliorations"
 
-#: lib/tymeslot/announcements/catalog.ex:161
-#: lib/tymeslot/announcements/catalog.ex:179
-#: lib/tymeslot/announcements/catalog.ex:197
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Read the docs"
 msgstr "Consulter la documentation"
 
-#: lib/tymeslot/announcements/catalog.ex:135
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Share private booking links"
 msgstr "Partagez des liens de réservation privés"
 
-#: lib/tymeslot/announcements/catalog.ex:211
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Slack notifications when a booking is made"
 msgstr "Notifications Slack à chaque nouvelle réservation"
 
-#: lib/tymeslot/announcements/catalog.ex:217
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Smarter embeds that auto-fit their height, with an optional column layout"
 msgstr ""
 "Des intégrations plus intelligentes qui ajustent automatiquement leur "
 "hauteur, avec une mise en page en colonnes facultative"
 
-#: lib/tymeslot/announcements/catalog.ex:65
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian and Ukrainian. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
 msgstr ""
@@ -220,12 +216,12 @@ msgstr ""
 "de votre compte. Vos invités reçoivent eux aussi les pages de réservation et"
 " les confirmations dans leur propre langue."
 
-#: lib/tymeslot/announcements/catalog.ex:63
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot now speaks your language"
 msgstr "Tymeslot parle désormais votre langue"
 
-#: lib/tymeslot/announcements/catalog.ex:155
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Add custom questions to any meeting type - short text, long answers, dropdowns and more - so you have exactly what you need before each booking."
 msgstr ""
@@ -233,7 +229,7 @@ msgstr ""
 " court, réponse longue, menu déroulant, etc.) afin d'obtenir toutes les "
 "informations nécessaires avant chaque rendez-vous."
 
-#: lib/tymeslot/announcements/catalog.ex:119
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings can now include additional guests. Each guest gets their own email invitation and can RSVP with a tap, so everyone who needs to be there is on the invite - without anyone booking a second time. Set a guest limit per meeting type to keep group sizes in check."
 msgstr ""
@@ -244,7 +240,7 @@ msgstr ""
 "réservation. Définissez une limite d'invités par type de réunion pour "
 "contrôler la taille des groupes."
 
-#: lib/tymeslot/announcements/catalog.ex:83
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new - all from a single screen instead of hunting through separate settings pages."
 msgstr ""
@@ -254,7 +250,7 @@ msgstr ""
 " fournisseur en un clic et ajoutez de nouveaux services, le tout depuis un "
 "écran unique au lieu de fouiller dans différentes pages de paramètres."
 
-#: lib/tymeslot/announcements/catalog.ex:191
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Connect your Zoom account and Tymeslot creates a Zoom meeting for every booking - the link is added to the calendar invite and confirmation automatically."
 msgstr ""
@@ -262,7 +258,7 @@ msgstr ""
 "réservation : le lien s'ajoute automatiquement à l'invitation du calendrier "
 "et à la confirmation."
 
-#: lib/tymeslot/announcements/catalog.ex:137
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Every meeting type now has its own direct link that takes people straight to booking it - without showing your other meeting types. Mark a type as unlisted to keep it off your public page, and randomise its link any time to make it unguessable or to retire an old one."
 msgstr ""
@@ -272,7 +268,7 @@ msgstr ""
 " publique, et générez un lien aléatoire à tout moment pour le rendre "
 "introuvable ou pour désactiver un ancien lien."
 
-#: lib/tymeslot/announcements/catalog.ex:101
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Give any event its own colour, right from your dashboard agenda. Colours you set in Tymeslot write back to your connected calendar, and colours already on your Google or CalDAV events show up here too - so your day is colour-coded exactly the way you like it, everywhere you look."
 msgstr ""
@@ -283,12 +279,22 @@ msgstr ""
 "Ainsi, votre journée est organisée par couleurs exactement comme vous le "
 "souhaitez, où que vous regardiez."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Go create your first event type - and let people book you."
 msgstr "Allez créer votre premier type d’événement - et laissez les autres réserver avec vous."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Profile, availability, integrations, and automation - all one click away."
 msgstr "Profil, disponibilités, intégrations et automatisation - tout à un clic."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Cap how many bookings you take"
+msgstr "Limitez le nombre de réservations que vous acceptez"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Set a maximum number of bookings per day, week or month - for a single meeting type, or across your whole account. Once a day reaches its cap it disappears from your booking page, so nobody can book you past the limit you set."
+msgstr "Définissez un nombre maximal de réservations par jour, semaine ou mois - pour un type de réunion précis ou pour l'ensemble de votre compte. Dès qu'une journée atteint sa limite, elle disparaît de votre page de réservation : personne ne peut donc réserver au-delà de la limite que vous avez fixée."

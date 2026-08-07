@@ -12,9 +12,34 @@ defmodule Tymeslot.MixProject do
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
+      gettext: [
+        # Reference comments keep the file but drop the line number. A line
+        # number is invalidated by any edit above the call, so with it on, every
+        # refactor, extraction or reformat leaves the catalogues stale and needs
+        # a re-extract commit carrying no information. Without it, references
+        # change only when a message is added, removed, or moved between files,
+        # which is the part a translator can act on.
+        write_reference_line_numbers: false
+      ],
       dialyzer: [
         ignore_warnings: ".dialyzer_ignore.exs",
-        plt_add_apps: [:mix]
+        # Surfaces filters in .dialyzer_ignore.exs that no longer match, so
+        # suppressions cannot outlive the warning they were added for.
+        list_unused_filters: true,
+        # Include Mix and Credo so Dialyzer knows about their behaviours and
+        # modules; the custom checks under dev_support/ implement Credo's.
+        plt_add_apps: [:mix, :credo],
+        # Analyse against the full runtime dependency tree rather than the
+        # direct deps alone, so cross-dependency contract errors are caught.
+        plt_add_deps: :app_tree,
+        # xmerl (pulled in by sweet_xml) has warn_missing_spec in its OTP 28
+        # BEAMs. PLT-construction warnings bypass dialyxir's filter, so we
+        # exclude xmerl from the PLT entirely. Sweet_xml's own specs are
+        # sufficient for our analysis.
+        plt_ignore_apps: [:xmerl],
+        plt_core_path: "priv/plts",
+        plt_local_path: "priv/plts",
+        flags: [:error_handling]
       ],
       releases: [
         tymeslot: [

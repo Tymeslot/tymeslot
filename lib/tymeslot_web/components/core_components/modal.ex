@@ -83,7 +83,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
       <div class="modal-container p-6">
         <div
           id={"#{@id}-content"}
-          class={["modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative overflow-hidden", modal_size_class(@size)]}
+          class={[
+            "modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative overflow-hidden",
+            modal_size_class(@size)
+          ]}
           role="dialog"
           aria-modal="true"
           {@dialog_label_attrs}
@@ -116,13 +119,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               </button>
             </div>
           <% end %>
-          
-    <%!-- Body --%>
+
+          <%!-- Body --%>
           <div class="modal-body p-8">
             {render_slot(@inner_block)}
           </div>
-          
-    <%!-- Footer --%>
+
+          <%!-- Footer --%>
           <%= if @footer != [] do %>
             <div class="modal-footer px-8 py-6 bg-tymeslot-50/50 border-t-2 border-tymeslot-50">
               {render_slot(@footer)}

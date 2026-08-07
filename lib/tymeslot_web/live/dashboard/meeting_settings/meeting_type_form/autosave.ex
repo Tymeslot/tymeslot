@@ -168,7 +168,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
           </span>
         <% :incomplete -> %>
           <.icon name="hero-information-circle-mini" class="w-4 h-4 text-tymeslot-400" />
-          <span class="text-tymeslot-500">{dgettext("dashboard_meeting_form", "Complete the form to save")}</span>
+          <span class="text-tymeslot-500">{dgettext(
+            "dashboard_meeting_form",
+            "Complete the form to save"
+          )}</span>
         <% _other -> %>
           <.icon name="hero-arrow-path-mini" class="w-4 h-4 text-amber-500" />
           <span class="text-amber-500">{dgettext("dashboard_meeting_form", "Unsaved changes")}</span>

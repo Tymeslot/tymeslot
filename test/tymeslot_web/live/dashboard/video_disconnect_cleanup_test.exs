@@ -112,6 +112,35 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
     assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
   end
 
+  test "ticking the box shows the box as ticked", %{conn: conn, user: user} do
+    integration = insert(:video_integration, user: user, provider: "zoom", is_active: true)
+
+    insert_meeting_for_user(user, %{
+      video_integration_id: integration.id,
+      video_provider: "zoom",
+      video_room_id: "444"
+    })
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+    html = open_delete_modal(view, "delete-video-modal", integration.id)
+    refute checked?(html)
+
+    # The assign flipping is not enough: the input component derives its checked
+    # state from `value`, so a `checked` attribute alone leaves the user ticking
+    # a box that never appears ticked.
+    html = tick_delete_rooms(view, "delete-video-modal")
+    assert checked?(html)
+  end
+
+  defp checked?(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(~s(input[name="delete_rooms"]))
+    |> Floki.attribute("checked")
+    |> Enum.any?()
+  end
+
   test "ticking the box soft-deletes and schedules the drain", %{conn: conn, user: user} do
     integration = insert(:video_integration, user: user, provider: "zoom", is_active: true)
 

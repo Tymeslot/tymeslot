@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                     {dgettext("booking", "Select a new time for your meeting")}
                   </p>
                 </div>
-                
+
                 <div class="meeting-ticket">
                   <div class="ticket-header">
                     <span class="ticket-label">{dgettext("booking", "Current Meeting Details")}</span>
@@ -77,12 +77,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                   <div class="ticket-footer">
                     <div class="email-confirmation">
                       <p class="ticket-footer-message">
-                        {dgettext("booking", "Ready to pick a new time? Let's find one that works better for you.")}
+                        {dgettext(
+                          "booking",
+                          "Ready to pick a new time? Let's find one that works better for you."
+                        )}
                       </p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div class="confirmation-actions centered">
                   <button
                     phx-click={JS.navigate(PathHandlers.organizer_scheduling_path(assigns))}

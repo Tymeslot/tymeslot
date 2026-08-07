@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelectionModal do
   @moduledoc """
-  Modal for choosing which of a connected integration's calendars are used for
+  Modal for managing one connected calendar integration: what it is called,
+  what colour its events are shown in, and which of its calendars are used for
   conflict checking.
 
   Hosts the calendar-selection chip grid that previously lived behind the
@@ -8,14 +9,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
   calendars" action keeps the row itself flat.
 
   Stateless — `show` and the selected integration are owned by the parent
-  `CalendarSettingsComponent`. Toggling a chip dispatches
-  `toggle_calendar_selection` back to `@target`; the parent reloads and
-  re-renders this modal with the updated selection.
+  `CalendarSettingsComponent`. Each control dispatches its event back to
+  `@target` (`rename_integration`, `set_integration_colour`,
+  `toggle_calendar_selection`); the parent reloads and re-renders this modal
+  with the updated integration.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
+  alias TymeslotWeb.Components.Dashboard.ColourSwatches
 
   attr :id, :string, required: true
   attr :show, :boolean, default: false
@@ -47,6 +50,52 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
         <:header>{dgettext("dashboard_calendar_providers", "Manage calendars")}</:header>
 
         <div :if={@integration}>
+          <form
+            id={"#{@id}-rename"}
+            phx-submit="rename_integration"
+            phx-target={@target}
+            class="mb-6 flex items-end gap-2"
+          >
+            <input type="hidden" name="integration_id" value={@integration.id} />
+            <div class="flex-1">
+              <label for={"#{@id}-name"} class="label mb-1.5 block">
+                {dgettext("dashboard_calendar_providers", "Name")}
+              </label>
+              <input
+                id={"#{@id}-name"}
+                type="text"
+                name="name"
+                value={@integration.name}
+                required
+                maxlength="100"
+                autocomplete="off"
+                class="input"
+              />
+            </div>
+            <TymeslotWeb.Components.CoreComponents.action_button type="submit" variant={:secondary}>
+              {dgettext("dashboard_calendar_providers", "Rename")}
+            </TymeslotWeb.Components.CoreComponents.action_button>
+          </form>
+
+          <div class="mb-6">
+            <p class="label mb-1.5 block">
+              {dgettext("dashboard_calendar_providers", "Colour")}
+            </p>
+            <p class="mb-2 text-token-sm text-tymeslot-500">
+              {dgettext(
+                "dashboard_calendar_providers",
+                "How this calendar's events are shown in your Tymeslot calendar."
+              )}
+            </p>
+            <ColourSwatches.colour_swatches
+              selected={@integration.colour}
+              event="set_integration_colour"
+              target={@target}
+              group_label={dgettext("dashboard_calendar_providers", "Colour")}
+              values={%{"phx-value-integration_id" => @integration.id}}
+            />
+          </div>
+
           <p class="mb-4 text-token-sm text-tymeslot-500">
             {dgettext(
               "dashboard_calendar_providers",
@@ -105,7 +154,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
             <div :if={@calendar_list == []} class="flex items-center gap-2 py-2 text-tymeslot-400">
               <.icon name="hero-information-circle" class="h-4 w-4" />
               <span class="text-token-xs font-medium italic">
-                {dgettext("dashboard_calendar_providers", "No calendars found. Try refreshing the integration.")}
+                {dgettext(
+                  "dashboard_calendar_providers",
+                  "No calendars found. Try refreshing the integration."
+                )}
               </span>
             </div>
           </div>

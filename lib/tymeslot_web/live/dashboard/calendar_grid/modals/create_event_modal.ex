@@ -47,7 +47,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <div class="mb-3 flex items-center justify-between">
-        <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "All day")}</p>
+        <p class="text-token-sm font-medium text-tymeslot-700">
+          {dgettext("dashboard_calendar_events", "All day")}
+        </p>
         <StatusSwitch.status_switch
           id="create-event-all-day"
           checked={@creating_event[:all_day] || false}
@@ -58,7 +60,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <div class="mb-3">
-        <form id="create-event-time-form" phx-change="update_create_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600">
+        <form
+          id="create-event-time-form"
+          phx-change="update_create_time"
+          phx-target={@myself}
+          class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600"
+        >
           <input
             type="date"
             id="create-event-start-date"
@@ -71,7 +78,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             type="time"
             id="create-event-start-time"
             name="start-time"
-            value={EditWorkflow.format_time_value(@creating_event.start_hour, @creating_event.start_minute)}
+            value={
+              EditWorkflow.format_time_value(@creating_event.start_hour, @creating_event.start_minute)
+            }
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <span class="text-tymeslot-400">&ndash;</span>
@@ -87,10 +96,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             type="time"
             id="create-event-end-time"
             name="end-time"
-            value={EditWorkflow.format_time_value(@creating_event.end_hour, @creating_event.end_minute)}
+            value={
+              EditWorkflow.format_time_value(@creating_event.end_hour, @creating_event.end_minute)
+            }
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
-          <span :if={!@creating_event[:all_day]} class="text-token-xs font-normal text-tymeslot-400 ml-1"><%= Helpers.tz_abbr(@user_timezone) %></span>
+          <span
+            :if={!@creating_event[:all_day]}
+            class="text-token-xs font-normal text-tymeslot-400 ml-1"
+          >{Helpers.tz_abbr(@user_timezone)}</span>
         </form>
       </div>
 
@@ -146,12 +160,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
               >
                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="3"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </span>
           </div>
-          <form id="create-add-attendee-form" phx-submit="add_create_attendee" phx-target={@myself} class="flex gap-2">
+          <form
+            id="create-add-attendee-form"
+            phx-submit="add_create_attendee"
+            phx-target={@myself}
+            class="flex gap-2"
+          >
             <input
               type="email"
               id="create-attendee-email"
@@ -170,7 +194,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             </button>
           </form>
           <p class="text-token-xs text-tymeslot-400 mt-1">
-            {dgettext("dashboard_calendar_events", "Invitations will be sent when you create the event.")}
+            {dgettext(
+              "dashboard_calendar_events",
+              "Invitations will be sent when you create the event."
+            )}
           </p>
         </div>
         <div :if={(@creating_event[:attendees] || []) != [] and @video_integrations != []}>
@@ -196,7 +223,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
             >
               <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
-              <span class="truncate max-w-[10rem]"><%= vi.name %></span>
+              <span class="truncate max-w-[10rem]">{vi.name}</span>
             </button>
           </div>
         </div>
