@@ -200,7 +200,7 @@ msgstr ""
 msgid "Unknown timezone"
 msgstr ""
 
-#: lib/tymeslot/profiles.ex:254
+#: lib/tymeslot/profiles.ex:257
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr ""

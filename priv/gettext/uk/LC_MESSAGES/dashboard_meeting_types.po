@@ -127,12 +127,12 @@ msgstr "6 місяців"
 msgid "Add Meeting Type"
 msgstr "Додати тип зустрічі"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:234
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:262
 #, elixir-autogen, elixir-format
 msgid "Advance booking set to custom value"
 msgstr "Для завчасного бронювання встановлено власне значення"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:127
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:128
 #, elixir-autogen, elixir-format
 msgid "Advance booking window updated to %{days} days"
 msgstr "Вікно завчасного бронювання оновлено: %{days} дн."
@@ -142,12 +142,12 @@ msgstr "Вікно завчасного бронювання оновлено: %
 msgid "Buffer Between Appointments"
 msgstr "Перерва між зустрічами"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:209
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:237
 #, elixir-autogen, elixir-format
 msgid "Buffer time set to custom value"
 msgstr "Для перерви встановлено власне значення"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:82
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:83
 #, elixir-autogen, elixir-format
 msgid "Buffer time updated to %{minutes} minutes"
 msgstr "Час перерви оновлено: %{minutes} хв"
@@ -210,7 +210,7 @@ msgstr "Типи зустрічей"
 msgid "Minimum Booking Notice"
 msgstr "Мінімальний час до бронювання"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:172
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:173
 #, elixir-autogen, elixir-format
 msgid "Minimum booking notice updated to %{hours} hours"
 msgstr "Мінімальний час до бронювання оновлено: %{hours} год"
@@ -220,7 +220,7 @@ msgstr "Мінімальний час до бронювання оновлено
 msgid "Minimum hours of notice required before an appointment can be booked."
 msgstr "Мінімальна кількість годин, які мають лишатися до зустрічі, щоб її можна було забронювати."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:259
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:287
 #, elixir-autogen, elixir-format
 msgid "Minimum notice set to custom value"
 msgstr "Для мінімального часу до бронювання встановлено власне значення"
@@ -284,3 +284,53 @@ msgstr "хв"
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
 msgstr "Ви впевнені, що хочете видалити тип зустрічі «%{name}»?"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:284
+#, elixir-autogen, elixir-format
+msgid "Booking Limits"
+msgstr "Ліміти бронювань"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:215
+#, elixir-autogen, elixir-format
+msgid "Booking limit must be between 1 and 500"
+msgstr "Ліміт бронювань має становити від 1 до 500"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:298
+#, elixir-autogen, elixir-format
+msgid "Booking limit removed"
+msgstr "Ліміт бронювань скасовано"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:302
+#, elixir-autogen, elixir-format
+msgid "Booking limit updated to %{limit} bookings"
+msgstr "Ліміт бронювань оновлено: %{limit}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:344
+#, elixir-autogen, elixir-format
+msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
+msgstr "Максимальна кількість бронювань, які ви приймаєте за всіма типами зустрічей. Дні, що досягли ліміту, зникають з вашої сторінки бронювання. Залиште поле порожнім, щоб не встановлювати ліміт."
+"Максимальна кількість бронювань, які ви приймаєте для всіх типів зустрічей. "
+"Дні, для яких вичерпано ліміт, зникають зі сторінки бронювання. Залиште поле"
+" порожнім, щоб не встановлювати обмежень."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:305
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:321
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:337
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Без обмежень"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:296
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "На день"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:328
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "На місяць"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:312
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "На тиждень"

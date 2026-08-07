@@ -57,7 +57,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-06-01],
           ~D[2026-06-07],
           "Europe/London",
-          30
+          30,
+          nil
         )
 
       month_key =
@@ -99,7 +100,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-07-01],
           ~D[2026-07-07],
           "Etc/UTC",
-          60
+          60,
+          nil
         )
 
       other_key =
@@ -108,7 +110,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-07-01],
           ~D[2026-07-07],
           "Etc/UTC",
-          60
+          60,
+          nil
         )
 
       owner_stale = {:stale, :owner}
@@ -140,7 +143,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-08-01],
           ~D[2026-08-07],
           "Etc/UTC",
-          30
+          30,
+          nil
         )
 
       value = {:live, :empty_sync}
@@ -166,7 +170,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-09-01],
           ~D[2026-09-07],
           "Etc/UTC",
-          45
+          45,
+          nil
         )
 
       AvailabilityCache.put(key, {:stale, :transactional})
@@ -194,7 +199,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           ~D[2026-10-01],
           ~D[2026-10-07],
           "Etc/UTC",
-          30
+          30,
+          nil
         )
 
       AvailabilityCache.put(key, {:stale, :deletion_only})

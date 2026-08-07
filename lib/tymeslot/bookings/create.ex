@@ -10,13 +10,16 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
   alias UUID
@@ -67,6 +70,7 @@ defmodule Tymeslot.Bookings.Create do
   def execute(meeting_params, form_data, opts \\ []) do
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          :ok <- validate_custom_field_answers(booking_data),
+         booking_data = put_meeting_type_record(booking_data),
          {:ok, :validated} <- validate_booking(booking_data, opts) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
     else
@@ -86,6 +90,8 @@ defmodule Tymeslot.Bookings.Create do
 
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          :ok <- validate_custom_field_answers(booking_data) do
+      booking_data = put_meeting_type_record(booking_data)
+
       # Try calendar pre-check for better UX
       case fresh_calendar_check(booking_data) do
         :ok ->
@@ -180,7 +186,7 @@ defmodule Tymeslot.Bookings.Create do
 
       user_id ->
         # Meeting type active check
-        with :ok <- validate_meeting_type_active(booking_data, user_id) do
+        with :ok <- validate_meeting_type_active(booking_data) do
           config = Policy.scheduling_config(user_id)
 
           # Time window validation
@@ -189,7 +195,8 @@ defmodule Tymeslot.Bookings.Create do
                    booking_data.start_datetime,
                    booking_data.user_timezone,
                    config
-                 ) do
+                 ),
+               :ok <- validate_booking_limits(booking_data, user_id) do
             # Optional fresh calendar validation
             if Keyword.get(opts, :skip_calendar_check, false) do
               {:ok, :validated}
@@ -201,16 +208,28 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp validate_meeting_type_active(%{meeting_type_id: nil}, _user_id), do: :ok
+  # Reads the record resolved by put_meeting_type_record/1 — a nil record
+  # with a meeting_type_id set means the type doesn't exist (or belongs to
+  # another host).
+  defp validate_meeting_type_active(%{meeting_type_id: nil}), do: :ok
+  defp validate_meeting_type_active(%{meeting_type: %{is_active: true}}), do: :ok
 
-  defp validate_meeting_type_active(%{meeting_type_id: type_id}, user_id) do
-    alias Tymeslot.MeetingTypes
+  defp validate_meeting_type_active(%{meeting_type: %{is_active: false}}),
+    do: {:error, :meeting_type_inactive}
 
-    case MeetingTypes.get_meeting_type(type_id, user_id) do
-      %{is_active: true} -> :ok
-      %{is_active: false} -> {:error, :meeting_type_inactive}
-      nil -> {:error, :meeting_type_not_found}
-    end
+  defp validate_meeting_type_active(%{meeting_type: nil}), do: {:error, :meeting_type_not_found}
+
+  # Fast pre-check with a friendly error before any side-effect setup. The
+  # race-safe check runs again inside the booking transaction
+  # (Tymeslot.Meetings.Scheduling), because the page can go stale between
+  # render and submit.
+  defp validate_booking_limits(booking_data, user_id) do
+    Checker.check_booking_allowed(
+      user_id,
+      Profiles.get_profile_settings(user_id),
+      booking_data.meeting_type,
+      booking_data.start_datetime
+    )
   end
 
   defp validate_calendar_availability(booking_data, _config) do
@@ -321,9 +340,12 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   # Resolves the meeting-type record once up front and stashes it on
-  # `booking_data`, so the paid? and guests-allowed? predicates (the latter
-  # running inside the booking transaction) read it from memory instead of each
-  # issuing its own identical query.
+  # `booking_data`, so the active/limits validations and the paid? and
+  # guests-allowed? predicates (the latter running inside the booking
+  # transaction) read it from memory instead of each issuing its own
+  # identical query.
+  defp put_meeting_type_record(%{meeting_type: _record} = booking_data), do: booking_data
+
   defp put_meeting_type_record(%{meeting_type_id: nil} = booking_data) do
     Map.put(booking_data, :meeting_type, nil)
   end
@@ -389,6 +411,7 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp map_transaction_result({:ok, meeting}) do
+    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
     emit_booking_created()
     {:ok, meeting}
   end
@@ -419,6 +442,7 @@ defmodule Tymeslot.Bookings.Create do
     time_conflict: :slot_taken,
     slot_unavailable: :slot_taken,
     availability_unverifiable: :slot_taken,
+    booking_limit_reached: :booking_limit_reached,
     organizer_required: :organizer_required,
     validation_error: :booking_failed,
     payments_unavailable: :payments_unavailable,

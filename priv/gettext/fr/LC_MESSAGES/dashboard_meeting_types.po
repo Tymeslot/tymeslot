@@ -126,12 +126,12 @@ msgstr "6 mois"
 msgid "Add Meeting Type"
 msgstr "Ajouter un type de réunion"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:234
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:262
 #, elixir-autogen, elixir-format
 msgid "Advance booking set to custom value"
 msgstr "Délai de réservation défini sur une valeur personnalisée"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:127
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:128
 #, elixir-autogen, elixir-format
 msgid "Advance booking window updated to %{days} days"
 msgstr "Délai de réservation mis à jour à %{days} jours"
@@ -141,12 +141,12 @@ msgstr "Délai de réservation mis à jour à %{days} jours"
 msgid "Buffer Between Appointments"
 msgstr "Marge entre les rendez-vous"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:209
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:237
 #, elixir-autogen, elixir-format
 msgid "Buffer time set to custom value"
 msgstr "Marge définie sur une valeur personnalisée"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:82
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:83
 #, elixir-autogen, elixir-format
 msgid "Buffer time updated to %{minutes} minutes"
 msgstr "Marge mise à jour à %{minutes} minutes"
@@ -209,7 +209,7 @@ msgstr "Types de réunion"
 msgid "Minimum Booking Notice"
 msgstr "Délai de réservation minimum"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:172
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:173
 #, elixir-autogen, elixir-format
 msgid "Minimum booking notice updated to %{hours} hours"
 msgstr "Délai de réservation minimum mis à jour à %{hours} heures"
@@ -219,7 +219,7 @@ msgstr "Délai de réservation minimum mis à jour à %{hours} heures"
 msgid "Minimum hours of notice required before an appointment can be booked."
 msgstr "Nombre minimum d’heures de préavis requis avant qu’un rendez-vous puisse être réservé."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:259
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:287
 #, elixir-autogen, elixir-format
 msgid "Minimum notice set to custom value"
 msgstr "Préavis minimum défini sur une valeur personnalisée"
@@ -283,3 +283,54 @@ msgstr "min"
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
 msgstr "Êtes-vous sûr de vouloir supprimer le type de réunion « %{name} » ?"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:284
+#, elixir-autogen, elixir-format
+msgid "Booking Limits"
+msgstr "Limites de réservation"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:215
+#, elixir-autogen, elixir-format
+msgid "Booking limit must be between 1 and 500"
+msgstr "La limite de réservation doit être comprise entre 1 et 500"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:298
+#, elixir-autogen, elixir-format
+msgid "Booking limit removed"
+msgstr "Limite de réservation supprimée"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:302
+#, elixir-autogen, elixir-format
+msgid "Booking limit updated to %{limit} bookings"
+msgstr "Limite de réservation mise à jour à %{limit} réservations"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:344
+#, elixir-autogen, elixir-format
+msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
+msgstr "Nombre maximal de réservations que vous acceptez, tous types de réunion confondus. Les jours ayant atteint leur limite disparaissent de votre page de réservation. Laissez un champ vide pour ne pas fixer de limite."
+"Nombre maximum de réservations que vous acceptez pour l'ensemble des types "
+"de réunion. Les jours ayant atteint leur limite n'apparaissent plus sur "
+"votre page de réservation. Laissez un champ vide pour n'imposer aucune "
+"limite."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:305
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:321
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:337
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Aucune limite"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:296
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "Par jour"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:328
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "Par mois"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:312
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "Par semaine"

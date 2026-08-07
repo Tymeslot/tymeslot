@@ -557,7 +557,7 @@ msgstr "Baikal-Fehler: %{detail}"
 msgid "Baikal server not found. Confirm the URL includes /dav.php (e.g., https://baikal.example.com/dav.php)."
 msgstr "Baikal-Server nicht gefunden. Stellen Sie sicher, dass die URL /dav.php enthält (z. B. https://baikal.example.com/dav.php)."
 
-#: lib/tymeslot/integrations/calendar/caldav/discovery.ex:118
+#: lib/tymeslot/integrations/calendar/caldav/discovery.ex:114
 #: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:365
 #, elixir-autogen, elixir-format
 msgid "CalDAV connection successful"
@@ -589,12 +589,12 @@ msgstr "Kalendersuche fehlgeschlagen"
 msgid "Calendar discovery failed. Please check your credentials and try again."
 msgstr "Kalendersuche fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten und versuchen Sie es erneut."
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:177
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:181
 #, elixir-autogen, elixir-format
 msgid "Calendar paths must be 5000 characters or less"
 msgstr "Kalenderpfade dürfen höchstens 5000 Zeichen lang sein"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:171
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:175
 #, elixir-autogen, elixir-format
 msgid "Calendar paths must be text"
 msgstr "Kalenderpfade müssen Text sein"
@@ -669,7 +669,7 @@ msgstr "Ungültige Nextcloud-URL. Erwartet wird die URL Ihres Nextcloud-Servers 
 msgid "Invalid Radicale URL. Should be your Radicale server URL (e.g., https://radicale.example.com:5232)"
 msgstr "Ungültige Radicale-URL. Erwartet wird die URL Ihres Radicale-Servers (z. B. https://radicale.example.com:5232)"
 
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:54
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:56
 #, elixir-autogen, elixir-format
 msgid "Invalid URL format"
 msgstr "Ungültiges URL-Format"
@@ -690,7 +690,7 @@ msgid "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mail
 msgstr "Ungültige mailbox.org-URL. Verwenden Sie https://dav.mailbox.org (oder Ihren eigenen mailbox.org-kompatiblen CalDAV-Endpunkt)."
 
 #: lib/tymeslot/integrations/calendar/nextcloud/provider.ex:92
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:26
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:27
 #, elixir-autogen, elixir-format
 msgid "Missing required fields: %{fields}"
 msgstr "Fehlende Pflichtfelder: %{fields}"
@@ -721,33 +721,33 @@ msgstr "Für diese Verbindung ist kein Kalender ausgewählt, daher konnte die Ä
 msgid "Outlook Calendar connected successfully!"
 msgstr "Outlook Calendar erfolgreich verbunden!"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:248
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:258
 #, elixir-autogen, elixir-format
 msgid "Password contains invalid characters"
 msgstr "Das Passwort enthält ungültige Zeichen"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:245
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:255
 #, elixir-autogen, elixir-format
 msgid "Password is required"
 msgstr "Passwort ist erforderlich"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:128
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:132
 #, elixir-autogen, elixir-format
 msgid "Password must be 500 characters or less"
 msgstr "Das Passwort darf höchstens 500 Zeichen lang sein"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:140
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:144
 #, elixir-autogen, elixir-format
 msgid "Password must be text"
 msgstr "Das Passwort muss Text sein"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:65
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:69
 #, elixir-autogen, elixir-format
 msgid "Please enter a valid server URL (e.g., https://cloud.example.com)"
 msgstr "Bitte geben Sie eine gültige Server-URL ein (z. B. https://cloud.example.com)"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:234
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:72
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:244
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:69
 #, elixir-autogen, elixir-format
 msgid "Private or local network addresses are not allowed"
 msgstr "Private oder lokale Netzwerkadressen sind nicht zulässig"
@@ -785,12 +785,12 @@ msgstr "Ressource nicht gefunden. Bitte überprüfen Sie Ihre Konfiguration."
 msgid "Secure connection failed. Please check your server configuration."
 msgstr "Die sichere Verbindung ist fehlgeschlagen. Bitte überprüfen Sie Ihre Serverkonfiguration."
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:77
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:81
 #, elixir-autogen, elixir-format
 msgid "Server URL must be text"
 msgstr "Die Server-URL muss Text sein"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:199
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:203
 #, elixir-autogen, elixir-format
 msgid "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
 msgstr "Einige Kalenderpfade haben ein ungültiges Format. Verwenden Sie vollständige URLs (https://...) oder Pfade (/calendar/)"
@@ -927,23 +927,23 @@ msgstr "Nicht unterstützter Anbieter: %{provider}"
 msgid "Use HTTPS for non-local Zimbra servers"
 msgstr "Verwenden Sie HTTPS für nicht lokale Zimbra-Server"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:232
-#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:70
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:242
+#: lib/tymeslot/integrations/calendar/shared/provider_common.ex:67
 #, elixir-autogen, elixir-format
 msgid "Use HTTPS for non-local calendar servers"
 msgstr "Verwenden Sie HTTPS für nicht lokale Kalenderserver"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:242
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:252
 #, elixir-autogen, elixir-format
 msgid "Username is required"
 msgstr "Nutzername ist erforderlich"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:91
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:95
 #, elixir-autogen, elixir-format
 msgid "Username must be 255 characters or less"
 msgstr "Der Nutzername darf höchstens 255 Zeichen lang sein"
 
-#: lib/tymeslot/integrations/calendar/credential_fields.ex:110
+#: lib/tymeslot/integrations/calendar/credential_fields.ex:114
 #, elixir-autogen, elixir-format
 msgid "Username must be text"
 msgstr "Der Nutzername muss Text sein"

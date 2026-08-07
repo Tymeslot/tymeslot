@@ -18,6 +18,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Validation.Constraints
 
   @typedoc "Why form input could not be mapped onto schema attributes."
   @type error :: :invalid_duration | :invalid_price | :invalid_reminder_config
@@ -51,6 +52,8 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         payment_required: payment_required,
         price_cents: price_cents
       }
+
+      attrs = Map.merge(attrs, booking_limits(params))
 
       {:ok, maybe_put_custom_fields(attrs, params)}
     end
@@ -95,6 +98,24 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   end
 
   defp parse_duration(_value), do: {:error, :invalid_duration}
+
+  defp booking_limits(params) do
+    Map.new(Constraints.booking_limit_fields(), fn field ->
+      {field, parse_booking_limit(params[Atom.to_string(field)])}
+    end)
+  end
+
+  # Blank means no limit; out-of-range values are left to the changeset.
+  defp parse_booking_limit(value) when is_integer(value), do: value
+
+  defp parse_booking_limit(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {limit, ""} -> limit
+      _other -> nil
+    end
+  end
+
+  defp parse_booking_limit(_value), do: nil
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value

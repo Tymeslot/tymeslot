@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     CustomQuestionsSection,
     GuestsSection,
     HiddenFields,
+    LimitsSection,
     PaymentsSection,
     QuestionEditorComponent,
     ShowAsFreeSection
@@ -27,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import GuestsSection, only: [guests_section: 1]
+  import LimitsSection, only: [limits_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import HiddenFields, only: [hidden_fields: 1]
   import PaymentsSection, only: [payments_section: 1]
@@ -160,6 +162,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         max_guests={Guests.max_guests()}
         myself={@myself}
       />
+
+      <.limits_section booking_limits={@booking_limits} myself={@myself} />
 
       <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
 

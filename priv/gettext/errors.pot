@@ -228,17 +228,17 @@ msgstr ""
 msgid "This page doesn't exist"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:199
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:200
 #, elixir-autogen, elixir-format
 msgid "an integration for this account already exists"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:203
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:204
 #, elixir-autogen, elixir-format
 msgid "an integration for this provider already exists"
 msgstr ""
 
-#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:187
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:188
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
 msgstr ""

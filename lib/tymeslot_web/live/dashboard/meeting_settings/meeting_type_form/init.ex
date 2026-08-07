@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> Component.assign(:allow_guests, get_allow_guests(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))
+    |> Component.assign(:booking_limits, get_booking_limits(type))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> then(fn socket ->
       if id = socket.assigns.selected_calendar_integration_id do
@@ -146,6 +147,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @spec get_show_as_free(Ecto.Schema.t() | nil) :: boolean()
   def get_show_as_free(%{show_as_free: true}), do: true
   def get_show_as_free(_type), do: false
+
+  @doc """
+  Returns the booking-limit values for an existing meeting type, keyed by
+  their form param names. `nil` values mean no limit.
+  """
+  @spec get_booking_limits(Ecto.Schema.t() | nil) :: map()
+  def get_booking_limits(nil) do
+    %{
+      "max_bookings_per_day" => nil,
+      "max_bookings_per_week" => nil,
+      "max_bookings_per_month" => nil
+    }
+  end
+
+  def get_booking_limits(type) do
+    %{
+      "max_bookings_per_day" => type.max_bookings_per_day,
+      "max_bookings_per_week" => type.max_bookings_per_week,
+      "max_bookings_per_month" => type.max_bookings_per_month
+    }
+  end
 
   @doc "Returns the selected icon for a meeting type, or `\"none\"` when absent."
   @spec get_selected_icon(Ecto.Schema.t() | nil) :: String.t()
