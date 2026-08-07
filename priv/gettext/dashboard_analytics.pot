@@ -11,158 +11,153 @@
 msgid ""
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:117
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} visit"
 msgid_plural "%{count} visits"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:24
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
 #, elixir-autogen, elixir-format
 msgid "(direct / unknown)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:138
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "30 days"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:133
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "7 days"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:143
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "90 days"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:124
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Analytics"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:103
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "Bar chart showing daily visit counts for the selected date range."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:36
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Booking analytics is not enabled on this installation."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:176
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:50
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:79
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:45
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:51
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:83
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
 #, elixir-autogen, elixir-format
 msgid "Conversion"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:50
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
 #, elixir-autogen, elixir-format
 msgid "Conversion (est.)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:65
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "Daily visits"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:99
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "Daily visits over the selected date range"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:130
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Date range"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:59
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
 #, elixir-autogen, elixir-format
 msgid "Desktop"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:27
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
 #, elixir-autogen, elixir-format
 msgid "Devices"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:58
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
 #, elixir-autogen, elixir-format
 msgid "Mobile"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:38
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:63
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:89
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:80
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "No traffic in this period yet."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:151
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:152
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh analytics"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:48
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:60
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
 #, elixir-autogen, elixir-format
 msgid "Tablet"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:40
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
 #, elixir-autogen, elixir-format
 msgid "Unique visitors"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:200
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unique visitors and conversion are cookieless estimates: each visitor is counted once per day, so totals over a longer range approximate the number of distinct people. Conversion is the share of visitors who went on to book and is indicative, not exact."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:61
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:165
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
 #, elixir-autogen, elixir-format
 msgid "Updated %{time}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:49
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:75
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:35
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
 #, elixir-autogen, elixir-format
 msgid "Visits"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:61
-#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:101
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
 #, elixir-autogen, elixir-format
 msgid "Visits over time"
 msgstr ""

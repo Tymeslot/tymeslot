@@ -11,251 +11,248 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n>1);\n"
 
-#: lib/tymeslot_web/live/account_live/components.ex:353
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} day ago"
 msgid_plural "%{count} days ago"
 msgstr[0] "il y a %{count} jour"
 msgstr[1] "il y a %{count} jours"
 
-#: lib/tymeslot_web/live/account_live/components.ex:349
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} hour ago"
 msgid_plural "%{count} hours ago"
 msgstr[0] "il y a %{count} heure"
 msgstr[1] "il y a %{count} heures"
 
-#: lib/tymeslot_web/live/account_live/components.ex:345
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} minute ago"
 msgid_plural "%{count} minutes ago"
 msgstr[0] "il y a %{count} minute"
 msgstr[1] "il y a %{count} minutes"
 
-#: lib/tymeslot_web/live/account_live/components.ex:307
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "A verification email has been sent to"
 msgstr "Un e-mail de vérification a été envoyé à"
 
-#: lib/tymeslot_web/live/account_live/components.ex:32
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Account Security"
 msgstr "Sécurité du compte"
 
-#: lib/tymeslot_web/live/account_live.ex:18
+#: lib/tymeslot_web/live/account_live.ex
 #, elixir-autogen, elixir-format
 msgid "Account Settings"
 msgstr "Paramètres du compte"
 
-#: lib/tymeslot_web/live/account_live/error_formatter.ex:40
+#: lib/tymeslot_web/live/account_live/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "An unexpected error occurred"
 msgstr "Une erreur inattendue s’est produite"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:75
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
 msgstr "Au moins 8 caractères"
 
-#: lib/tymeslot_web/live/account_live/components.ex:105
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication is managed through %{provider}"
 msgstr "L’authentification est gérée via %{provider}"
 
-#: lib/tymeslot_web/live/account_live.ex:42
+#: lib/tymeslot_web/live/account_live.ex
 #, elixir-autogen, elixir-format
 msgid "Back to Dashboard"
 msgstr "Retour au tableau de bord"
 
-#: lib/tymeslot_web/live/account_live/components.ex:60
-#: lib/tymeslot_web/live/account_live/components.ex:100
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annuler"
 
-#: lib/tymeslot_web/live/account_live/components.ex:323
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel email change"
 msgstr "Annuler le changement d’e-mail"
 
-#: lib/tymeslot_web/live/account_live/components.ex:61
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Change Email"
 msgstr "Changer d’e-mail"
 
-#: lib/tymeslot_web/live/account_live/components.ex:101
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Change Password"
 msgstr "Changer de mot de passe"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:85
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm New Password"
 msgstr "Confirmer le nouveau mot de passe"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:86
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your new password"
 msgstr "Confirmez votre nouveau mot de passe"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:34
-#: lib/tymeslot_web/live/account_live/forms.ex:64
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Current Password"
 msgstr "Mot de passe actuel"
 
-#: lib/tymeslot_web/live/account_live/components.ex:214
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Current email:"
 msgstr "E-mail actuel :"
 
-#: lib/tymeslot_web/live/account_live/components.ex:51
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address"
 msgstr "Adresse e-mail"
 
-#: lib/tymeslot_web/live/account_live/components.ex:303
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Email Change Pending"
 msgstr "Changement d’e-mail en attente"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:215
+#: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Email changes are managed through your %{provider} account"
 msgstr "Les changements d’e-mail sont gérés via votre compte %{provider}"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:35
-#: lib/tymeslot_web/live/account_live/forms.ex:65
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your current password"
 msgstr "Saisissez votre mot de passe actuel"
 
-#: lib/tymeslot_web/live/account_live/components.ex:109
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Last changed: %{last_changed}"
 msgstr "Dernière modification : %{last_changed}"
 
-#: lib/tymeslot_web/live/account_live/components.ex:273
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Managed by %{provider}"
 msgstr "Géré par %{provider}"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:24
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "New Email Address"
 msgstr "Nouvelle adresse e-mail"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:74
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "New Password"
 msgstr "Nouveau mot de passe"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:256
+#: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "New password must be different from current password"
 msgstr "Le nouveau mot de passe doit être différent du mot de passe actuel"
 
-#: lib/tymeslot_web/live/account_live/components.ex:93
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Mot de passe"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:220
+#: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Password authentication is not available for %{provider} login"
 msgstr "L’authentification par mot de passe n’est pas disponible pour la connexion via %{provider}"
 
-#: lib/tymeslot_web/live/account_live/components.ex:116
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Password authentication is not available for social login accounts"
 msgstr "L’authentification par mot de passe n’est pas disponible pour les comptes de connexion sociale"
 
-#: lib/tymeslot_web/live/account_live/components.ex:220
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Pending change to:"
 msgstr "Changement en attente vers :"
 
-#: lib/tymeslot_web/live/account_live/components.ex:312
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr "Envoyé %{time}"
 
-#: lib/tymeslot_web/live/account_live/error_formatter.ex:25
+#: lib/tymeslot_web/live/account_live/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
 msgstr "Trop de tentatives. Veuillez réessayer plus tard."
 
-#: lib/tymeslot_web/live/account_live/forms.ex:43
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Update Email"
 msgstr "Mettre à jour l’e-mail"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:95
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Update Password"
 msgstr "Mettre à jour le mot de passe"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:44
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Updating Email"
 msgstr "Mise à jour de l’e-mail"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:96
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Updating Password"
 msgstr "Mise à jour du mot de passe"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:171
+#: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Your password has been changed. Please sign in again with your new password."
 msgstr "Votre mot de passe a été modifié. Veuillez vous reconnecter avec votre nouveau mot de passe."
 
-#: lib/tymeslot_web/live/account_live/components.ex:337
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "just now"
 msgstr "à l’instant"
 
-#: lib/tymeslot_web/live/account_live/forms.ex:25
+#: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "your.new@email.com"
 msgstr "votre.nouvel@email.com"
 
-#: lib/tymeslot_web/live/account_live/helpers.ex:78
+#: lib/tymeslot_web/live/account_live/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Never"
 msgstr "Jamais"
 
-#: lib/tymeslot_web/live/account_live/components.ex:146
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose the language for your dashboard. Automatic follows your browser's preference."
 msgstr "Choisissez la langue de votre tableau de bord. Automatique suit la préférence de votre navigateur."
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:94
+#: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Could not save language preference."
 msgstr "Impossible d’enregistrer la préférence de langue."
 
-#: lib/tymeslot_web/live/account_live/components.ex:155
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Interface language"
 msgstr "Langue de l’interface"
 
-#: lib/tymeslot_web/live/account_live/components.ex:144
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "Langue"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:86
+#: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Language preference saved."
 msgstr "Préférence de langue enregistrée."
 
-#: lib/tymeslot_web/live/account_live/components.ex:171
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic"
 msgstr "Automatique"
 
-#: lib/tymeslot_web/live/account_live/components.ex:163
+#: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Follow your browser's language setting instead of a fixed choice."
 msgstr "Suit la langue configurée dans votre navigateur plutôt qu'un choix fixe."

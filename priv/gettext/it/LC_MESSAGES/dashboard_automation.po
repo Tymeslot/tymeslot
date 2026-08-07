@@ -11,580 +11,562 @@ msgstr ""
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:496
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "%{rate}% success rate"
 msgstr "Tasso di successo del %{rate}%"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:173
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "A unique security token will be automatically generated for this webhook once created. You'll use it to verify requests in your automation tool."
 msgstr "Una volta creato il webhook, verrà generato automaticamente un token di sicurezza univoco, che puoi usare per verificare le richieste nel tuo strumento di automazione."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:74
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Add actions to process the webhook data"
 msgstr "Aggiungi azioni per elaborare i dati del webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:65
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Add webhook trigger"
 msgstr "Aggiungi trigger webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:171
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "All webhook requests include a unique security token in the HTTP headers for verification:"
 msgstr "Tutte le richieste webhook includono un token di sicurezza univoco negli header HTTP per la verifica:"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:209
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
 msgstr "Vuoi davvero procedere? Il token di sicurezza attuale verrà invalidato immediatamente e tutte le integrazioni esistenti che lo utilizzano smetteranno di funzionare."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:326
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "At least one event subscription is required."
 msgstr "È richiesta almeno una sottoscrizione a un evento."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:544
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Attempt %{count}"
 msgstr "Tentativo %{count}"
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:338
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr "Automazione"
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:214
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Automation is available on Pro plans."
 msgstr "L'automazione è disponibile nei piani Pro."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:94
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Available Events"
 msgstr "Eventi disponibili"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:73
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Build automation"
 msgstr "Crea automazione"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:103
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:166
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:222
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:278
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:418
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:280
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annulla"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:70
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Choose which booking events to monitor"
 msgstr "Scegli quali eventi di prenotazione monitorare"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:336
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:368
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:456
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:92
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Chiudi"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:67
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Configure in Tymeslot"
 msgstr "Configura in Tymeslot"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:116
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Configure the basic information for your webhook."
 msgstr "Configura le informazioni di base del tuo webhook."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:28
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Tymeslot to n8n, Zapier, Make, or your custom automation workflows"
 msgstr "Collega Tymeslot a n8n, Zapier, Make o ai tuoi flussi di lavoro di automazione personalizzati"
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:229
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a Stripe account to use this automation."
 msgstr "Collega un account Stripe per utilizzare questa automazione."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:210
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Copy"
 msgstr "Copia"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:35
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:114
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:73
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:292
-#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex:32
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Create Webhook"
 msgstr "Crea webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex:31
+#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Create Your First Webhook"
 msgstr "Crea il tuo primo webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:68
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Create a webhook above and paste the URL"
 msgstr "Crea un webhook qui sopra e incolla l'URL"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:63
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Create a workflow"
 msgstr "Crea un flusso di lavoro"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:284
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:424
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Elimina integrazione"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:399
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Slack Integration?"
 msgstr "Eliminare l'integrazione Slack?"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:259
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Telegram Integration?"
 msgstr "Eliminare l'integrazione Telegram?"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:172
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:188
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
 msgstr "Elimina webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:147
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook?"
 msgstr "Eliminare il webhook?"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:66
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr "Disattivato"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:36
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:179
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:74
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit Webhook"
 msgstr "Modifica webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:149
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Enable webhook to test"
 msgstr "Abilita il webhook per provarlo"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:555
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Error: %{message}"
 msgstr "Errore: %{message}"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:239
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
 msgstr "Sottoscrizioni agli eventi"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:73
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Events to Subscribe *"
 msgstr "Eventi a cui sottoscriversi *"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:502
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr "Non riuscite"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:339
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to create webhook"
 msgstr "Creazione del webhook non riuscita"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:169
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to delete webhook"
 msgstr "Eliminazione del webhook non riuscita"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:372
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to regenerate token"
 msgstr "Rigenerazione del token non riuscita"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:342
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update webhook"
 msgstr "Aggiornamento del webhook non riuscito"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:201
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update webhook status"
 msgstr "Aggiornamento dello stato del webhook non riuscito"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:66
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Insert a Webhook node and copy its URL"
 msgstr "Inserisci un nodo Webhook e copia il suo URL"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:100
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Last triggered: %{time}"
 msgstr "Ultima attivazione: %{time}"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:171
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Logs"
 msgstr "Log"
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:177
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Never"
 msgstr "Mai"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:113
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Never triggered"
 msgstr "Mai attivato"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex:21
+#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "No Webhooks Yet"
 msgstr "Ancora nessun webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:519
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "No deliveries yet"
 msgstr "Ancora nessuna consegna"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:317
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please fix the validation errors above."
 msgstr "Correggi gli errori di convalida qui sopra."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:58
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Quick Setup with n8n"
 msgstr "Configurazione rapida con n8n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:322
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Recent Deliveries"
 msgstr "Consegne recenti"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:228
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:219
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate"
 msgstr "Rigenera"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:203
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Regenerate Token?"
 msgstr "Rigenerare il token?"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:190
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Request timestamp"
 msgstr "Timestamp della richiesta"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:111
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:286
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "Salvataggio in corso..."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:148
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Security & Authentication"
 msgstr "Sicurezza e autenticazione"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:170
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:184
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Security Token"
 msgstr "Token di sicurezza"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:182
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Security token"
 msgstr "Token di sicurezza"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:206
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Security token copied to clipboard!"
 msgstr "Token di sicurezza copiato negli appunti!"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:352
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Security token regenerated"
 msgstr "Token di sicurezza rigenerato"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:69
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Select events"
 msgstr "Seleziona eventi"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:242
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select which events should trigger this webhook."
 msgstr "Seleziona quali eventi devono attivare questo webhook."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex:24
+#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
 msgstr "Configura i webhook per attivare automaticamente azioni in n8n, Zapier o nei tuoi strumenti personalizzati quando le prenotazioni vengono create, annullate o riprogrammate."
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:56
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
 #, elixir-autogen, elixir-format
 msgid "Slack"
 msgstr "Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:64
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Start a new workflow in your n8n instance"
 msgstr "Avvia un nuovo flusso di lavoro nella tua istanza n8n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:491
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Success"
 msgstr "Riuscite"
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:38
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:43
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
 #, elixir-autogen, elixir-format
 msgid "Telegram"
 msgstr "Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:160
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Test"
 msgstr "Prova"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:151
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Test Connection"
 msgstr "Prova la connessione"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:326
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Test calls are not logged"
 msgstr "Le chiamate di prova non vengono registrate"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:71
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Test connection"
 msgstr "Prova la connessione"
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:304
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Test failed: %{reason}"
 msgstr "Prova non riuscita: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:157
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Testing"
 msgstr "Prova in corso"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:150
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Testing..."
 msgstr "Prova in corso..."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:265
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:405
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this integration will also be deleted."
 msgstr "Questa azione non può essere annullata. Verranno eliminati anche tutti i log di consegna di questa integrazione."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:153
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this webhook will also be deleted."
 msgstr "Questa azione non può essere annullata. Verranno eliminati anche tutti i log di consegna di questo webhook."
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:221
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This automation feature is available on the Pro plan."
 msgstr "Questa funzionalità di automazione è disponibile nel piano Pro."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:476
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Total"
 msgstr "Totale"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:135
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Si attiva quando l'orario di una prenotazione viene modificato"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:125
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Si attiva quando una nuova prenotazione viene creata con successo"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:130
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
 msgstr "Si attiva quando una prenotazione esistente viene annullata"
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:247
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Unable to perform this action. Please try again."
 msgstr "Impossibile eseguire questa azione. Riprova."
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:237
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Unable to verify subscription status. Please try again."
 msgstr "Impossibile verificare lo stato dell'abbonamento. Riprova."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:115
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:293
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update Webhook"
 msgstr "Aggiorna webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:186
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Use this in your n8n/Zapier header verification"
 msgstr "Usalo nella verifica dell'header di n8n/Zapier"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:195
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Verify the token in your automation tool to ensure requests are from Tymeslot."
 msgstr "Verifica il token nel tuo strumento di automazione per assicurarti che le richieste provengano da Tymeslot."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:72
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Verify the webhook is working correctly"
 msgstr "Verifica che il webhook funzioni correttamente"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:168
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "View Delivery Logs"
 msgstr "Visualizza i log di consegna"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:113
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Details"
 msgstr "Dettagli del webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:25
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Integration Guide"
 msgstr "Guida all'integrazione dei webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:48
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:123
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Name"
 msgstr "Nome del webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:61
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:137
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
 msgstr "URL del webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:323
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL is required."
 msgstr "L'URL del webhook è obbligatorio."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:333
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook created successfully"
 msgstr "Webhook creato correttamente"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:160
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook deleted successfully"
 msgstr "Webhook eliminato correttamente"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:320
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook name is required."
 msgstr "Il nome del webhook è obbligatorio."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:105
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:174
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:206
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:221
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:241
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:257
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook not found"
 msgstr "Webhook non trovato"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:187
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook status updated"
 msgstr "Stato del webhook aggiornato"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:220
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook test successful! Check your endpoint."
 msgstr "Prova del webhook riuscita! Controlla il tuo endpoint."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:336
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook updated successfully"
 msgstr "Webhook aggiornato correttamente"
 
-#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:29
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr "Webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:46
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur. Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations."
 msgstr "I webhook inviano notifiche HTTP POST in tempo reale ai tuoi strumenti di automazione ogni volta che si verifica un evento di prenotazione. Perfetti per attivare flussi di lavoro automatizzati, inviare email personalizzate, sincronizzare i dati o creare integrazioni."
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:42
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "What are webhooks?"
 msgstr "Cosa sono i webhook?"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex:28
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
 msgid "Your Webhooks"
 msgstr "I tuoi webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:51
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:128
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "My n8n Automation"
 msgstr "La mia automazione n8n"
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:224
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "This token is automatically sent in the %{header} header."
 msgstr "Questo token viene inviato automaticamente nell'header %{header}."
 
-#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:183
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr "%{date} alle %{time}"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:480
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Last %{days} day"
 msgid_plural "Last %{days} days"
 msgstr[0] "Ultimo %{days} giorno"
 msgstr[1] "Ultimi %{days} giorni"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:357
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:445
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Cronologia delle consegne - %{name}"
