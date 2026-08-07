@@ -33,10 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   def event_detail_modal(assigns) do
     assigns =
       assigns
-      |> assign(
-        :read_only_attendees,
-        List.wrap(Map.get(assigns.selected_event, :attendees))
-      )
+      |> assign(:attendees, List.wrap(Map.get(assigns.selected_event, :attendees)))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
@@ -351,8 +348,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <%!-- Attendees --%>
       <AttendeeEditor.attendee_editor
         editable={@editable}
-        attendees={@selected_event.attendees || []}
-        read_only_attendees={@read_only_attendees}
+        attendees={@attendees}
         pending_attendees={@pending_attendees}
         attendee_input={@attendee_input}
         myself={@myself}

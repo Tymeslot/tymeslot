@@ -20,7 +20,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
 
   attr :editable, :boolean, default: false
   attr :attendees, :list, default: []
-  attr :read_only_attendees, :list, default: []
   attr :pending_attendees, :list, default: []
   attr :attendee_input, :string, default: ""
   attr :myself, :any, required: true
@@ -136,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
         <%!-- Read-only attendee display --%>
         <div :if={!@editable}>
           <div
-            :for={attendee <- Enum.take(@read_only_attendees, 5)}
+            :for={attendee <- Enum.take(@attendees, 5)}
             class="text-token-sm text-tymeslot-700 leading-snug"
           >
             {attendee["name"] || attendee["email"]}
@@ -145,12 +144,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
               class="text-token-xs text-tymeslot-400 ml-1"
             >{attendee["email"]}</span>
           </div>
-          <p :if={length(@read_only_attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">
+          <p :if={length(@attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">
             {dngettext(
               "dashboard_calendar_events",
               "+%{count} more",
               "+%{count} more",
-              length(@read_only_attendees) - 5
+              length(@attendees) - 5
             )}
           </p>
         </div>
