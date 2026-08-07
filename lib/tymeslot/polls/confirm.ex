@@ -74,8 +74,14 @@ defmodule Tymeslot.Polls.Confirm do
     {:ok, pick_primary(participants, slot.id)}
   end
 
+  # "First" means first to register. The participants preload carries no
+  # ordering, so without sorting here the attendee is whichever row Postgres
+  # happened to return, and two voters who are both free for the slot swap
+  # places between runs.
   defp pick_primary(participants, slot_id) do
-    Enum.find(participants, List.first(participants), &available_for?(&1, slot_id))
+    ordered = Enum.sort_by(participants, & &1.id)
+
+    Enum.find(ordered, List.first(ordered), &available_for?(&1, slot_id))
   end
 
   defp available_for?(participant, slot_id) do
