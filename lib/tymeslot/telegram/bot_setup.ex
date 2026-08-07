@@ -12,6 +12,13 @@ defmodule Tymeslot.Telegram.BotSetup do
   @max_retries 4
   @initial_delay_ms 2_000
 
+  # Overridable so the retry ladder can be exercised without the suite paying
+  # its real cost: at the production base delay, exhausting the retries sleeps
+  # for 30 seconds.
+  defp initial_delay_ms do
+    Application.get_env(:tymeslot, :telegram_webhook_retry_delay_ms, @initial_delay_ms)
+  end
+
   @spec register_webhook() :: :ok | {:error, term()}
   def register_webhook do
     do_register(0)
@@ -76,7 +83,7 @@ defmodule Tymeslot.Telegram.BotSetup do
 
   defp retry_or_fail(error, attempt, webhook_url) do
     if attempt < @max_retries do
-      delay_ms = min(@initial_delay_ms * round(:math.pow(2, attempt)), 30_000)
+      delay_ms = min(initial_delay_ms() * round(:math.pow(2, attempt)), 30_000)
 
       Logger.info("Retrying Telegram webhook registration",
         delay_ms: delay_ms,
