@@ -31,6 +31,13 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
 
+  # Every factory user carries the same password, so hashing it per insert buys
+  # nothing: bcrypt is deliberately slow, and the suite builds users in the
+  # thousands. Hashing once at compile time keeps `verify_password/2` working
+  # against "Password123!" while dropping the per-insert cost to a map lookup.
+  @default_password "Password123!"
+  @default_password_hash Password.hash_password(@default_password)
+
   @spec meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def meeting_factory do
     start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
@@ -105,7 +112,7 @@ defmodule Tymeslot.Factory do
   def user_factory do
     %UserSchema{
       email: sequence(:email, &"user#{&1}@example.com"),
-      password_hash: Password.hash_password("Password123!"),
+      password_hash: @default_password_hash,
       name: sequence(:name, &"Test User #{&1}"),
       verified_at: DateTime.utc_now(),
       provider: "email"
