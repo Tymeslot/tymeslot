@@ -98,7 +98,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   <.icon name="hero-calendar" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">{LocalizationHelpers.format_date(@selected_date)}</div>
-                    <div class="summary-label">{@selected_time || dgettext("booking", "No time selected")}</div>
+                    <div class="summary-label">
+                      {@selected_time || dgettext("booking", "No time selected")}
+                    </div>
                   </div>
                 </div>
                 <div class="summary-item">
@@ -109,9 +111,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     </div>
                     <div class="summary-label">
                       <%= if @meeting_type do %>
-                        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)} {dgettext("booking", "meeting")}
+                        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)} {dgettext(
+                          "booking",
+                          "meeting"
+                        )}
                       <% else %>
-                        {LocalizationHelpers.format_duration(@selected_duration)} {dgettext("booking", "meeting")}
+                        {LocalizationHelpers.format_duration(@selected_duration)} {dgettext(
+                          "booking",
+                          "meeting"
+                        )}
                       <% end %>
                     </div>
                   </div>
@@ -203,33 +211,35 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
               >
                 <%= if @submitting do %>
-                    <svg
-                      class="loading-spinner icon-sm"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
+                  <svg
+                    class="loading-spinner icon-sm"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="loading-spinner-track"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
                     >
-                      <circle
-                        class="loading-spinner-track"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      >
-                      </circle>
-                      <path
-                        class="loading-spinner-path"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      >
-                      </path>
-                    </svg>
-                    <span>{dgettext("booking", "Verifying...")}</span>
-                  <% else %>
-                    {if @is_rescheduling, do: dgettext("booking", "reschedule_meeting"), else: dgettext("booking", "submit")}
-                  <% end %>
-                </button>
+                    </circle>
+                    <path
+                      class="loading-spinner-path"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    >
+                    </path>
+                  </svg>
+                  <span>{dgettext("booking", "Verifying...")}</span>
+                <% else %>
+                  {if @is_rescheduling,
+                    do: dgettext("booking", "reschedule_meeting"),
+                    else: dgettext("booking", "submit")}
+                <% end %>
+              </button>
             </div>
           </div>
         </div>

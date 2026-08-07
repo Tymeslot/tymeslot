@@ -48,7 +48,12 @@ defmodule TymeslotWeb.EmbedBlockedHTML do
       <body data-parent-origin={@parent_origin}>
         <main class="ts-card">
           <h1>{dgettext("embed", "This booking page can’t be embedded here")}</h1>
-          <p>{dgettext("embed", "The organiser hasn’t authorised this website to show their booking page.")}</p>
+          <p>
+            {dgettext(
+              "embed",
+              "The organiser hasn’t authorised this website to show their booking page."
+            )}
+          </p>
         </main>
         <script :if={@parent_origin} nonce={@csp_nonce}>
           (function () {

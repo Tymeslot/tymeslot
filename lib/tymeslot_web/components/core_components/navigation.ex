@@ -93,8 +93,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
                 if(@active_tab == tab.id,
                   do:
                     "bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/30 transform scale-105",
-                  else:
-                    "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-turquoise-700"
+                  else: "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-turquoise-700"
                 )
               ]}
             >

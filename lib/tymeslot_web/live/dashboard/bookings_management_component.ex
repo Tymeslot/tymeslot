@@ -302,7 +302,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
             disabled={@loading_more}
           >
             <span :if={@loading_more}>
-              <.spinner class="h-5 w-5 mr-3 inline-block" /> {dgettext("dashboard_bookings", "Loading...")}
+              <.spinner class="h-5 w-5 mr-3 inline-block" /> {dgettext(
+                "dashboard_bookings",
+                "Loading..."
+              )}
             </span>
             <span :if={!@loading_more}>{dgettext("dashboard_bookings", "Load more meetings")}</span>
           </button>

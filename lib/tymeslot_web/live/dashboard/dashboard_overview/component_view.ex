@@ -113,8 +113,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
                   EventColour.tailwind_class(entry.colour)
                 ]}
                 aria-hidden="true"
-              >
-              </span>
+              ></span>
               <.icon
                 :if={!EventColour.tailwind_class(entry.colour)}
                 name="hero-sun-mini"
@@ -277,17 +276,18 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
           class="mt-4 pt-4 border-t border-white/20 text-white/80 text-token-xs font-semibold truncate"
         >
           <span class="uppercase tracking-widest text-white/60">{dgettext(
-              "dashboard_home",
-              "then"
-            )}</span>
-          {@then_entry.title} · {time_label(@then_entry, @timezone, @time_format)}<span :if={@more_count > 0}>
-            ·
-            {dngettext(
+            "dashboard_home",
+            "then"
+          )}</span>
+          {@then_entry.title} · {time_label(@then_entry, @timezone, @time_format)}
+          <span :if={@more_count > 0}>
+            · {dngettext(
               "dashboard_home",
               "+%{count} more",
               "+%{count} more",
               @more_count
-            )}</span>
+            )}
+          </span>
         </p>
       </div>
     </div>
@@ -325,16 +325,17 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
         aria-label={dgettext("dashboard_home", "View details for %{title}", title: @entry.title)}
         class={[
           "flex-1 min-w-0 mb-3 flex items-center gap-3 p-4 rounded-token-2xl border-2 transition-all group cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-turquoise-400",
-          (@next? or @in_progress?) && "bg-white border-turquoise-200 shadow-md shadow-turquoise-500/10",
-          not (@next? or @in_progress?) && "bg-tymeslot-50/50 border-tymeslot-50 hover:bg-white hover:shadow-md"
+          (@next? or @in_progress?) &&
+            "bg-white border-turquoise-200 shadow-md shadow-turquoise-500/10",
+          not (@next? or @in_progress?) &&
+            "bg-tymeslot-50/50 border-tymeslot-50 hover:bg-white hover:shadow-md"
         ]}
       >
         <span
           :if={@colour_class}
           class={["w-1 self-stretch shrink-0 rounded-token-full", @colour_class]}
           aria-hidden="true"
-        >
-        </span>
+        ></span>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-tymeslot-900 font-black tracking-tight truncate group-hover:text-turquoise-700 transition-colors">
@@ -419,8 +420,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
         "absolute inset-y-0 border-l-2",
         @dashed && "border-dashed border-tymeslot-200",
         not @dashed && "border-tymeslot-100"
-      ]}>
-      </span>
+      ]}></span>
       <span
         :if={@node == :event}
         class={[
@@ -428,18 +428,15 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
           @colour_class && ["#{@colour_class}", "border-transparent"],
           !@colour_class && "bg-white border-tymeslot-300"
         ]}
-      >
-      </span>
+      ></span>
       <span
         :if={@node == :live}
         class="relative mt-4 w-3 h-3 rounded-token-full bg-turquoise-500 ring-4 ring-turquoise-500/15 animate-pulse"
-      >
-      </span>
+      ></span>
       <span
         :if={@node == :now}
         class="relative mt-1.5 w-3.5 h-3.5 rounded-token-full bg-turquoise-500 ring-4 ring-turquoise-500/20 animate-pulse"
-      >
-      </span>
+      ></span>
     </div>
     """
   end
@@ -460,18 +457,22 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
       class="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-token-xl cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 transition-colors"
     >
       <div class="w-14 shrink-0 text-token-xs font-black tabular-nums text-tymeslot-400">
-        {if @entry.all_day?, do: dgettext("dashboard_home", "All day"), else: time_label(@entry, @timezone, @time_format)}
+        {if @entry.all_day?,
+          do: dgettext("dashboard_home", "All day"),
+          else: time_label(@entry, @timezone, @time_format)}
       </div>
       <span
         :if={EventColour.tailwind_class(@entry.colour)}
         class={["w-2 h-2 shrink-0 rounded-token-full", EventColour.tailwind_class(@entry.colour)]}
         aria-hidden="true"
-      >
-      </span>
+      ></span>
       <span class="flex-1 min-w-0 text-token-sm text-tymeslot-700 font-bold truncate">
         {@entry.title}
       </span>
-      <span :if={@entry.who} class="shrink-0 text-token-xs text-tymeslot-400 font-semibold truncate max-w-[40%]">
+      <span
+        :if={@entry.who}
+        class="shrink-0 text-token-xs text-tymeslot-400 font-semibold truncate max-w-[40%]"
+      >
         {@entry.who}
       </span>
     </div>

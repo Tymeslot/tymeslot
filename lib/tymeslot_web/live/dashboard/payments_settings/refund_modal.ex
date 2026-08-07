@@ -46,7 +46,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
 
         <div class="rounded-token-md border border-tymeslot-100 bg-tymeslot-50 p-4 text-token-sm space-y-1">
           <p>
-            {dgettext("dashboard_payments", "Original charge:")} <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
+            {dgettext("dashboard_payments", "Original charge:")}
+            <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
           </p>
           <p>
             {dgettext("dashboard_payments", "Already refunded:")}
@@ -54,7 +55,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
           </p>
           <p>
             {dgettext("dashboard_payments", "Remaining refundable:")}
-            <strong>{format_amount(MeetingPayments.refundable_remaining_cents(@payment), @payment.currency)}</strong>
+            <strong>{format_amount(
+              MeetingPayments.refundable_remaining_cents(@payment),
+              @payment.currency
+            )}</strong>
           </p>
         </div>
 

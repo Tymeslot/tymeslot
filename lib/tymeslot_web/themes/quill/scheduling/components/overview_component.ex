@@ -104,14 +104,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                   </div>
 
                   <div>
-                    <h1
-                      class="section-header overview-title"
-                    >
+                    <h1 class="section-header overview-title">
                       {dgettext("booking", "Let's Connect!")}
                     </h1>
-                    <p
-                      class="overview-description text-glass-primary"
-                    >
+                    <p class="overview-description text-glass-primary">
                       <%= if display_name = Profiles.display_name(@organizer_profile) do %>
                         {dgettext("booking", "Hi! I'm %{name}.", name: display_name)}
                       <% end %>
@@ -121,8 +117,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                     <div class="overview-duration-list">
                       <%= if @meeting_types == [] do %>
                         <div class="text-center py-8 text-purple-300">
-                          <p class="text-lg font-medium">{dgettext("booking", "No meeting types available")}</p>
-                          <p class="text-sm mt-1">{dgettext("booking", "Please contact the organizer")}</p>
+                          <p class="text-lg font-medium">
+                            {dgettext("booking", "No meeting types available")}
+                          </p>
+                          <p class="text-sm mt-1">
+                            {dgettext("booking", "Please contact the organizer")}
+                          </p>
                         </div>
                       <% else %>
                         <%= for meeting_type <- @meeting_types do %>

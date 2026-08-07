@@ -99,7 +99,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
               {group.label}
             </h3>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <.provider_option :for={provider <- group.providers} provider={provider} target={@target} />
+              <.provider_option
+                :for={provider <- group.providers}
+                provider={provider}
+                target={@target}
+              />
             </div>
           </div>
         </div>
@@ -136,7 +140,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
             {dgettext("dashboard_integrations", "Connected")}
           </span>
         </div>
-        <p :if={@provider.description} class="line-clamp-2 text-token-xs leading-relaxed text-tymeslot-500">
+        <p
+          :if={@provider.description}
+          class="line-clamp-2 text-token-xs leading-relaxed text-tymeslot-500"
+        >
           {@provider.description}
         </p>
       </div>

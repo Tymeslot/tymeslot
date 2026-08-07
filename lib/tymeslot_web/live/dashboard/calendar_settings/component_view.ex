@@ -71,7 +71,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
         show={@show_picker}
         title={dgettext("dashboard_calendar_settings", "Connect a calendar")}
         subtitle={
-          dgettext("dashboard_calendar_settings", "Sync your availability to prevent double bookings.")
+          dgettext(
+            "dashboard_calendar_settings",
+            "Sync your availability to prevent double bookings."
+          )
         }
         target={@myself}
         on_cancel={JS.push("hide_picker", target: @myself)}

@@ -42,7 +42,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
                 <%= for i <- 0..(@total - 1) do %>
                   <span
                     aria-hidden="true"
-                    class={["rhythm-progress-dot", i == @index && "is-active", i < @index && "is-done"]}
+                    class={[
+                      "rhythm-progress-dot",
+                      i == @index && "is-active",
+                      i < @index && "is-done"
+                    ]}
                   />
                 <% end %>
               </div>

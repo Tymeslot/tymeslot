@@ -49,21 +49,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
     <div class="flex items-start gap-3">
       <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
       <div class="flex-1">
-        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{dgettext("dashboard_calendar_events", "Repeat")}</p>
+        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
+          {dgettext("dashboard_calendar_events", "Repeat")}
+        </p>
 
-        <form id={"recurrence-editor-form-#{@change_event}"} phx-change={@change_event} phx-target={@myself} class="space-y-2">
+        <form
+          id={"recurrence-editor-form-#{@change_event}"}
+          phx-change={@change_event}
+          phx-target={@myself}
+          class="space-y-2"
+        >
           <select
             name="freq"
             class="w-full rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
           >
-            <option :for={{value, label} <- @freq_options} value={value} selected={to_string(@freq) == value}>
+            <option
+              :for={{value, label} <- @freq_options}
+              value={value}
+              selected={to_string(@freq) == value}
+            >
               {label}
             </option>
           </select>
 
           <div :if={@freq != nil} class="space-y-2 pl-0.5">
             <div class="flex items-center gap-2">
-              <label class="text-token-xs text-tymeslot-600">{dgettext("dashboard_calendar_events", "Every")}</label>
+              <label class="text-token-xs text-tymeslot-600">{dgettext(
+                "dashboard_calendar_events",
+                "Every"
+              )}</label>
               <input
                 type="number"
                 name="interval"
@@ -82,7 +96,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
                   "px-2 py-1 rounded-md border text-token-xs cursor-pointer transition-all select-none",
                   if(day in @by_day,
                     do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 font-semibold",
-                    else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"
+                    else:
+                      "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"
                   )
                 ]}
               >
@@ -102,9 +117,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
                 name="end_type"
                 class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
               >
-                <option value="never" selected={@end_type == "never"}>{dgettext("dashboard_calendar_events", "Never ends")}</option>
-                <option value="count" selected={@end_type == "count"}>{dgettext("dashboard_calendar_events", "After")}</option>
-                <option value="until" selected={@end_type == "until"}>{dgettext("dashboard_calendar_events", "On date")}</option>
+                <option value="never" selected={@end_type == "never"}>
+                  {dgettext("dashboard_calendar_events", "Never ends")}
+                </option>
+                <option value="count" selected={@end_type == "count"}>
+                  {dgettext("dashboard_calendar_events", "After")}
+                </option>
+                <option value="until" selected={@end_type == "until"}>
+                  {dgettext("dashboard_calendar_events", "On date")}
+                </option>
               </select>
 
               <div :if={@end_type == "count"} class="flex items-center gap-1.5">
@@ -116,7 +137,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
                   value={@count}
                   class="w-16 rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
                 />
-                <span class="text-token-xs text-tymeslot-600">{dngettext("dashboard_calendar_events", "occurrence", "occurrences", @count)}</span>
+                <span class="text-token-xs text-tymeslot-600">{dngettext(
+                  "dashboard_calendar_events",
+                  "occurrence",
+                  "occurrences",
+                  @count
+                )}</span>
               </div>
 
               <input

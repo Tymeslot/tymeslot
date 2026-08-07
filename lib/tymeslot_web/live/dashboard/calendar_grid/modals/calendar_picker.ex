@@ -26,10 +26,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
         <% is_active_integration = integration.id == @selected_integration_id %>
         <%!-- Integration header --%>
         <div class="flex items-center gap-1.5 mb-1.5">
-          <div class={"w-2 h-2 rounded-full shrink-0 #{Helpers.color_dot(%{integration_colors: @integration_colors}, integration)}"}></div>
+          <div class={"w-2 h-2 rounded-full shrink-0 #{Helpers.color_dot(%{integration_colors: @integration_colors}, integration)}"}>
+          </div>
           <ProviderIcon.provider_icon provider={integration.provider} type="calendar" size="mini" />
           <span class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide truncate">
-            <%= integration.name %>
+            {integration.name}
           </span>
         </div>
 
@@ -37,7 +38,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
         <% fallback_id = EditWorkflow.default_calendar_id_for(integration) %>
         <div :if={calendars != []} class="flex flex-wrap gap-1.5 pl-3.5">
           <% cal_name = fn cal -> DisplayHelpers.extract_calendar_display_name(cal) end %>
-          <% is_selected = fn cal -> is_active_integration and calendar_selected?(cal.id, @selected_calendar_id, fallback_id) end %>
+          <% is_selected = fn cal ->
+            is_active_integration and calendar_selected?(cal.id, @selected_calendar_id, fallback_id)
+          end %>
           <button
             :for={cal <- calendars}
             type="button"
@@ -49,9 +52,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg border text-token-xs transition-all #{if is_selected.(cal), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
             title={cal_name.(cal)}
           >
-            <div :if={cal.color} class="w-2 h-2 rounded-token-full shrink-0" style={"background-color: #{cal.color}"}></div>
-            <span class="truncate max-w-[10rem]"><%= cal_name.(cal) %></span>
-            <span :if={cal.primary} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded-token-md text-tymeslot-500 uppercase">{dgettext("dashboard_calendar_events", "Primary")}</span>
+            <div
+              :if={cal.color}
+              class="w-2 h-2 rounded-token-full shrink-0"
+              style={"background-color: #{cal.color}"}
+            >
+            </div>
+            <span class="truncate max-w-[10rem]">{cal_name.(cal)}</span>
+            <span
+              :if={cal.primary}
+              class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded-token-md text-tymeslot-500 uppercase"
+            >{dgettext("dashboard_calendar_events", "Primary")}</span>
           </button>
         </div>
         <%!-- Fallback: integration with no calendar list (single calendar) --%>

@@ -37,7 +37,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GuestsSection do
         />
         <div class="space-y-1">
           <p class="text-token-sm font-medium text-tymeslot-700">
-            {dgettext("dashboard_meeting_form", "Let invitees add up to %{max_guests} guests to this meeting",
+            {dgettext(
+              "dashboard_meeting_form",
+              "Let invitees add up to %{max_guests} guests to this meeting",
               max_guests: @max_guests
             )}
           </p>

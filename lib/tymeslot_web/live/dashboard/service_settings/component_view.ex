@@ -54,7 +54,12 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               title={dgettext("dashboard_integrations", "Close")}
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -62,7 +67,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
           <div class="card-glass">
             <.live_component
               module={MeetingTypeForm}
-              id={if @editing_type, do: "meeting-type-form-edit-#{@editing_type.id}", else: "meeting-type-form-new"}
+              id={
+                if @editing_type,
+                  do: "meeting-type-form-edit-#{@editing_type.id}",
+                  else: "meeting-type-form-new"
+              }
               type={@editing_type}
               is_edit={!!@editing_type}
               video_integrations={@video_integrations}
@@ -120,7 +129,8 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 </.action_button>
               </div>
               <p class="text-token-sm text-tymeslot-500">
-                {dgettext("dashboard_integrations", 
+                {dgettext(
+                  "dashboard_integrations",
                   "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
                 )}
               </p>
@@ -132,7 +142,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                   {dgettext("dashboard_integrations", "Hide from public booking page")}
                 </p>
                 <p class="text-token-sm text-tymeslot-500">
-                  {dgettext("dashboard_integrations", "When on, this meeting type is reachable only through its direct link.")}
+                  {dgettext(
+                    "dashboard_integrations",
+                    "When on, this meeting type is reachable only through its direct link."
+                  )}
                 </p>
               </div>
               <button
@@ -181,7 +194,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
             />
           </div>
 
-    <%!-- Scheduling Settings --%>
+          <%!-- Scheduling Settings --%>
           <div>
             <.live_component
               module={SchedulingSettingsComponent}
@@ -193,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
           </div>
         </div>
 
-    <%!-- Delete Meeting Type Modal --%>
+        <%!-- Delete Meeting Type Modal --%>
         <DeleteMeetingTypeModal.delete_meeting_type_modal
           show={@show_delete_meeting_type_modal}
           meeting_type={@delete_meeting_type_modal_data}
@@ -201,7 +214,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
         />
       <% end %>
 
-    <%!-- Add spacing after content to prevent flush bottom --%>
+      <%!-- Add spacing after content to prevent flush bottom --%>
       <div class="pb-8"></div>
     </div>
     """

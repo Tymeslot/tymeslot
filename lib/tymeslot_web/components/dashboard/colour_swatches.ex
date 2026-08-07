@@ -55,8 +55,7 @@ defmodule TymeslotWeb.Components.Dashboard.ColourSwatches do
           swatch_class,
           (@selected == key && "ring-turquoise-500") || "ring-transparent hover:ring-tymeslot-300"
         ]}
-      >
-      </button>
+      ></button>
       <button
         type="button"
         phx-click={@event}

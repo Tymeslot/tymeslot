@@ -159,7 +159,9 @@ defmodule TymeslotWeb.AccountLive.Components do
           phx-click="change_language"
           phx-value-locale=""
           aria-pressed={is_nil(@current_user.locale)}
-          title={dgettext("account", "Follow your browser's language setting instead of a fixed choice.")}
+          title={
+            dgettext("account", "Follow your browser's language setting instead of a fixed choice.")
+          }
           class={[
             "btn-tag-selector btn-tag-selector-primary inline-flex items-center gap-2",
             is_nil(@current_user.locale) && "btn-tag-selector-primary--active"
@@ -209,12 +211,14 @@ defmodule TymeslotWeb.AccountLive.Components do
         <h3 class="text-lg font-medium text-tymeslot-800">{@title}</h3>
         <%= if @current_value do %>
           <p class="text-sm text-tymeslot-600 mt-1">
-            {dgettext("account", "Current email:")} <span class="font-medium text-tymeslot-800">{@current_value}</span>
+            {dgettext("account", "Current email:")}
+            <span class="font-medium text-tymeslot-800">{@current_value}</span>
           </p>
         <% end %>
         <%= if @pending_email do %>
           <p class="text-sm text-amber-600 mt-1">
-            {dgettext("account", "Pending change to:")} <span class="font-medium">{@pending_email}</span>
+            {dgettext("account", "Pending change to:")}
+            <span class="font-medium">{@pending_email}</span>
           </p>
         <% end %>
         <%= if @subtitle do %>
@@ -300,11 +304,14 @@ defmodule TymeslotWeb.AccountLive.Components do
           </h3>
           <div class="mt-2 text-sm text-amber-700">
             <p>
-              {dgettext("account", "A verification email has been sent to")} <strong>{@pending_email}</strong>
+              {dgettext("account", "A verification email has been sent to")}
+              <strong>{@pending_email}</strong>
             </p>
             <%= if @email_change_sent_at do %>
               <p class="mt-1 text-xs text-amber-600">
-                {dgettext("account", "Sent %{time}", time: format_relative_time(@email_change_sent_at))}
+                {dgettext("account", "Sent %{time}",
+                  time: format_relative_time(@email_change_sent_at)
+                )}
               </p>
             <% end %>
           </div>

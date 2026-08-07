@@ -20,7 +20,11 @@
     </script>
     <%!-- Route-specific bundle: loaded conditionally based on assigns[:route_bundle] --%>
     <%= if assigns[:route_bundle] do %>
-      <script phx-track-static type="module" src={TymeslotWeb.Endpoint.static_path("/assets/bundles/#{@route_bundle}.js")}>
+      <script
+        phx-track-static
+        type="module"
+        src={TymeslotWeb.Endpoint.static_path("/assets/bundles/#{@route_bundle}.js")}
+      >
       </script>
     <% else %>
       <%!-- Fallback: connect LiveSocket with core-only hooks for pages without route bundles --%>

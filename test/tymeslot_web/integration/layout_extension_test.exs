@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
         use Phoenix.Component
         @spec test_overlay(map()) :: Phoenix.LiveView.Rendered.t()
         def test_overlay(assigns) do
-          ~H"<div id='test-extension'>Core Extension Hook Working</div>"
+          ~H"<div id=\"test-extension\">Core Extension Hook Working</div>"
         end
       end
 
@@ -107,13 +107,13 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
       defmodule MultiExt1 do
         use Phoenix.Component
         @spec r1(map()) :: Phoenix.LiveView.Rendered.t()
-        def r1(assigns), do: ~H"<div id='ext1'>First Extension</div>"
+        def r1(assigns), do: ~H"<div id=\"ext1\">First Extension</div>"
       end
 
       defmodule MultiExt2 do
         use Phoenix.Component
         @spec r2(map()) :: Phoenix.LiveView.Rendered.t()
-        def r2(assigns), do: ~H"<div id='ext2'>Second Extension</div>"
+        def r2(assigns), do: ~H"<div id=\"ext2\">Second Extension</div>"
       end
 
       Application.put_env(:tymeslot, :theme_extensions, [

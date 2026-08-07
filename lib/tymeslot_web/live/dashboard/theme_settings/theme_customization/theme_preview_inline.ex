@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
         >
         </div>
 
-    <%!-- Foreground demo card to showcase primary colors and surfaces --%>
+        <%!-- Foreground demo card to showcase primary colors and surfaces --%>
         <div class="absolute inset-0 flex items-center justify-center p-4">
           <div
             class="rounded-xl shadow-lg max-w-sm w-full"

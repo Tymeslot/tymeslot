@@ -121,18 +121,18 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
       <div class="w-full max-w-[500px] relative z-10 animate-in fade-in zoom-in-95 duration-700">
         <div class="auth-glass-card max-w-none!">
           <.auth_logo_header title={@title} subtitle={@subtitle} />
-          
-          <%= if assigns[:heading], do: render_slot(@heading) %>
-          
+
+          {if assigns[:heading], do: render_slot(@heading)}
+
           <%= if Map.get(assigns, :flash) do %>
             <div class="mb-6">
               <.flash_group flash={@flash} />
             </div>
           <% end %>
-          
+
           <div class="space-y-6">
             {render_slot(@form)}
-            
+
             <%= if assigns[:social] do %>
               <div class="relative py-2">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
               {render_slot(@social)}
             <% end %>
           </div>
-          
+
           <%= if assigns[:footer] do %>
             <div class="mt-8 pt-6 border-t-2 border-tymeslot-50">
               {render_slot(@footer)}

@@ -27,7 +27,11 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown do
         {dgettext("dashboard_analytics", "Devices")}
       </div>
       <div :if={@loading?} class="space-y-3" aria-hidden="true">
-        <div :for={i <- 1..3} class="h-7 w-full animate-pulse rounded-token-md bg-tymeslot-100" id={"device-skeleton-#{i}"}>
+        <div
+          :for={i <- 1..3}
+          class="h-7 w-full animate-pulse rounded-token-md bg-tymeslot-100"
+          id={"device-skeleton-#{i}"}
+        >
         </div>
       </div>
       <div :if={!@loading? and @rows == []} class="text-token-sm text-tymeslot-400">

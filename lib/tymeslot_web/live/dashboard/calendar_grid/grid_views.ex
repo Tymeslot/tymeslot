@@ -74,7 +74,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         class="grid border-b border-tymeslot-200 bg-white"
         style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
       >
-        <div class="text-token-xs text-tymeslot-500 flex items-end justify-end pr-2 pb-1">{dgettext("dashboard_calendar", "all-day")}</div>
+        <div class="text-token-xs text-tymeslot-500 flex items-end justify-end pr-2 pb-1">
+          {dgettext("dashboard_calendar", "all-day")}
+        </div>
         <AllDayRow.all_day_cell
           :for={day <- @visible_days}
           assigns_ref={assigns}
@@ -98,109 +100,164 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
         >
           <div class="flex items-center justify-end pr-2 sticky left-0 bg-white z-10">
-            <span class="text-token-xs text-tymeslot-500"><%= Helpers.user_tz_abbr(assigns) %></span>
+            <span class="text-token-xs text-tymeslot-500">{Helpers.user_tz_abbr(assigns)}</span>
           </div>
-          <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-200 #{Helpers.day_header_class(day, @user_timezone)}"}>
-            <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline"><%= full_day_label(day, @locale) %></span>
-            <span :if={@view == :day} class="text-token-sm font-medium sm:hidden"><%= short_day_label(day, @locale) %></span>
-            <span :if={@view != :day} class="text-token-sm"><%= short_day_label(day, @locale) %></span>
+          <div
+            :for={day <- @visible_days}
+            class={"text-center py-2 border-l border-tymeslot-200 #{Helpers.day_header_class(day, @user_timezone)}"}
+          >
+            <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline">{full_day_label(
+              day,
+              @locale
+            )}</span>
+            <span :if={@view == :day} class="text-token-sm font-medium sm:hidden">{short_day_label(
+              day,
+              @locale
+            )}</span>
+            <span :if={@view != :day} class="text-token-sm">{short_day_label(day, @locale)}</span>
           </div>
         </div>
 
         <%!-- Time grid (keyed on view+date to retrigger fade on navigation) --%>
         <div id="calendar-create-zone" phx-hook="CalendarCreate" phx-target={@myself}>
-        <div id="calendar-resize-zone" phx-hook="CalendarResize" phx-target={@myself}>
-        <div
-          id={"calendar-time-grid-#{@view}-#{Date.to_iso8601(@date)}"}
-          class="grid relative animate-fade-in"
-          style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
-        >
-          <%!-- Time axis (sticky left) --%>
-          <div class="relative sticky left-0 bg-white z-[5] border-r border-tymeslot-200">
-            <div :for={hour <- 0..23} class="h-16 border-b border-tymeslot-200 flex items-start justify-end pr-2 pt-0.5">
-              <span class="text-token-xs text-tymeslot-500">
-                <%= Helpers.format_hour(hour, assigns) %>
-              </span>
+          <div id="calendar-resize-zone" phx-hook="CalendarResize" phx-target={@myself}>
+            <div
+              id={"calendar-time-grid-#{@view}-#{Date.to_iso8601(@date)}"}
+              class="grid relative animate-fade-in"
+              style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
+            >
+              <%!-- Time axis (sticky left) --%>
+              <div class="relative sticky left-0 bg-white z-[5] border-r border-tymeslot-200">
+                <div
+                  :for={hour <- 0..23}
+                  class="h-16 border-b border-tymeslot-200 flex items-start justify-end pr-2 pt-0.5"
+                >
+                  <span class="text-token-xs text-tymeslot-500">
+                    {Helpers.format_hour(hour, assigns)}
+                  </span>
+                </div>
+              </div>
+
+              <%!-- Day columns --%>
+              <div
+                :for={day <- @visible_days}
+                class="relative border-l border-tymeslot-200"
+                data-day-col={Date.to_iso8601(day)}
+                style="min-height: 96rem;"
+              >
+                <%!-- Hour grid lines --%>
+                <div :for={_hour <- 0..23} class="h-16 border-b border-tymeslot-200"></div>
+                <%!-- Events --%>
+                <div
+                  :for={{event, col_idx, total_cols} <- elem(Map.get(@day_layouts, day, {[], []}), 0)}
+                  id={"event-#{event.id}-#{day}"}
+                  class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
+                  style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
+                  phx-click="show_event"
+                  phx-value-event-id={event.id}
+                  phx-target={@myself}
+                  role="button"
+                  tabindex="0"
+                  aria-label={
+                    dgettext("dashboard_calendar", "%{event}, %{time}",
+                      event: event.summary || dgettext("dashboard_calendar", "Untitled event"),
+                      time:
+                        Helpers.format_display_time_range(
+                          event,
+                          Helpers.time_format(assigns),
+                          @user_timezone
+                        )
+                    )
+                  }
+                  data-draggable="true"
+                  data-event-id={event.id}
+                  data-event-date={Date.to_iso8601(day)}
+                  data-start-minutes={
+                    DateTime.shift_zone!(event.start_at, @user_timezone)
+                    |> then(&(&1.hour * 60 + &1.minute))
+                  }
+                  data-duration-minutes={
+                    max(
+                      15,
+                      round(
+                        DateTime.diff(
+                          Map.get(event, :display_end_at, event.end_at),
+                          Map.get(event, :display_start_at, event.start_at),
+                          :second
+                        ) / 60
+                      )
+                    )
+                  }
+                >
+                  <div class="truncate font-semibold">
+                    <.icon
+                      :if={(Map.get(event, :reminders) || []) != []}
+                      name="hero-bell-micro"
+                      class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
+                    />{event.summary || dgettext("dashboard_calendar", "(No title)")}
+                  </div>
+                  <div class="opacity-80">
+                    {Helpers.format_display_time_range(
+                      event,
+                      Helpers.time_format(assigns),
+                      @user_timezone
+                    )}
+                  </div>
+                  <img
+                    :if={Map.get(event, :created_by_tymeslot)}
+                    src="/images/brand/logo.svg"
+                    alt="Tymeslot"
+                    class="absolute top-0.5 right-0.5 w-3 h-3 opacity-60"
+                  />
+                  <EventBadges.event_guest_badge summary={
+                    EventBadges.guest_summary_for_event(@guest_rsvp_summaries, event)
+                  } />
+                  <%!-- Enlarged invisible resize hit-target for touch; visual handle revealed on hover --%>
+                  <div
+                    data-resize-handle
+                    class="absolute bottom-0 left-0 right-0 h-3 cursor-s-resize touch-none"
+                    aria-hidden="true"
+                  >
+                    <div class="absolute bottom-0 left-0 right-0 h-2 opacity-0 group-hover:opacity-100 bg-black/10 rounded-b">
+                    </div>
+                  </div>
+                </div>
+
+                <.overflow_chip
+                  :for={
+                    {overflow_cluster, idx} <-
+                      day
+                      |> overflow_clusters(elem(Map.get(@day_layouts, day, {[], []}), 1))
+                      |> Enum.with_index()
+                  }
+                  cluster={overflow_cluster}
+                  day={day}
+                  user_timezone={@user_timezone}
+                  key={"overflow-#{day}-#{idx}"}
+                  myself={@myself}
+                />
+
+                <%!-- Current time indicator --%>
+                <div
+                  :if={
+                    Date.compare(
+                      day,
+                      DateTime.to_date(DateTime.shift_zone!(@current_time, @user_timezone))
+                    ) == :eq
+                  }
+                  id={"current-time-#{day}"}
+                  class="absolute left-0 right-0 z-20 pointer-events-none"
+                  style={"top: #{@current_top_rem}rem"}
+                  aria-hidden="true"
+                >
+                  <div class="h-0.5 bg-red-500 relative">
+                    <div class="w-2.5 h-2.5 rounded-full bg-red-500 absolute -left-1.5 -top-[0.1875rem]">
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-
-          <%!-- Day columns --%>
-          <div
-            :for={day <- @visible_days}
-            class="relative border-l border-tymeslot-200"
-            data-day-col={Date.to_iso8601(day)}
-            style="min-height: 96rem;"
-          >
-            <%!-- Hour grid lines --%>
-            <div :for={_hour <- 0..23} class="h-16 border-b border-tymeslot-200"></div>
-            <%!-- Events --%>
-            <div
-              :for={{event, col_idx, total_cols} <- elem(Map.get(@day_layouts, day, {[], []}), 0)}
-              id={"event-#{event.id}-#{day}"}
-              class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
-              style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
-              phx-click="show_event"
-              phx-value-event-id={event.id}
-              phx-target={@myself}
-              role="button"
-              tabindex="0"
-              aria-label={
-                dgettext("dashboard_calendar", "%{event}, %{time}",
-                  event: event.summary || dgettext("dashboard_calendar", "Untitled event"),
-                  time: Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone)
-                )
-              }
-              data-draggable="true"
-              data-event-id={event.id}
-              data-event-date={Date.to_iso8601(day)}
-              data-start-minutes={DateTime.shift_zone!(event.start_at, @user_timezone) |> then(&(&1.hour * 60 + &1.minute))}
-              data-duration-minutes={max(15, round(DateTime.diff(Map.get(event, :display_end_at, event.end_at), Map.get(event, :display_start_at, event.start_at), :second) / 60))}
-            >
-              <div class="truncate font-semibold">
-                <.icon
-                  :if={(Map.get(event, :reminders) || []) != []}
-                  name="hero-bell-micro"
-                  class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
-                />{event.summary || dgettext("dashboard_calendar", "(No title)")}
-              </div>
-              <div class="opacity-80"><%= Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone) %></div>
-              <img
-                :if={Map.get(event, :created_by_tymeslot)}
-                src="/images/brand/logo.svg"
-                alt="Tymeslot"
-                class="absolute top-0.5 right-0.5 w-3 h-3 opacity-60"
-              />
-              <EventBadges.event_guest_badge summary={EventBadges.guest_summary_for_event(@guest_rsvp_summaries, event)} />
-              <%!-- Enlarged invisible resize hit-target for touch; visual handle revealed on hover --%>
-              <div data-resize-handle class="absolute bottom-0 left-0 right-0 h-3 cursor-s-resize touch-none" aria-hidden="true">
-                <div class="absolute bottom-0 left-0 right-0 h-2 opacity-0 group-hover:opacity-100 bg-black/10 rounded-b"></div>
-              </div>
-            </div>
-
-            <.overflow_chip
-              :for={{overflow_cluster, idx} <- day |> overflow_clusters(elem(Map.get(@day_layouts, day, {[], []}), 1)) |> Enum.with_index()}
-              cluster={overflow_cluster}
-              day={day}
-              user_timezone={@user_timezone}
-              key={"overflow-#{day}-#{idx}"}
-              myself={@myself}
-            />
-
-            <%!-- Current time indicator --%>
-            <div
-              :if={Date.compare(day, DateTime.to_date(DateTime.shift_zone!(@current_time, @user_timezone))) == :eq}
-              id={"current-time-#{day}"}
-              class="absolute left-0 right-0 z-20 pointer-events-none"
-              style={"top: #{@current_top_rem}rem"}
-              aria-hidden="true"
-            >
-              <div class="h-0.5 bg-red-500 relative">
-                <div class="w-2.5 h-2.5 rounded-full bg-red-500 absolute -left-1.5 -top-[0.1875rem]"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
         </div>
 
         <%!-- "Jump to now" pill (shown by CalendarDrag hook when marker off-screen) --%>
@@ -252,7 +309,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         )
       }
     >
-      +<%= length(@cluster.events) %>
+      +{length(@cluster.events)}
     </button>
     """
   end

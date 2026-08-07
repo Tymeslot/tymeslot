@@ -53,12 +53,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
             :if={(Map.get(event, :reminders) || []) != []}
             name="hero-bell-micro"
             class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
-          /><%= event.summary || dgettext("dashboard_calendar", "(No title)") %>
+          />{event.summary || dgettext("dashboard_calendar", "(No title)")}
         </div>
         <span
           :if={@hidden_count > 0}
           class="text-token-xs text-tymeslot-500 hover:text-tymeslot-700 cursor-pointer px-1 group-open:hidden"
-        >{dngettext("dashboard_calendar", "+%{count} more", "+%{count} more", @hidden_count, count: @hidden_count)}</span>
+        >{dngettext("dashboard_calendar", "+%{count} more", "+%{count} more", @hidden_count,
+          count: @hidden_count
+        )}</span>
       </summary>
       <div :if={@hidden_count > 0} class="flex flex-col gap-0.5 mt-0.5">
         <div
@@ -69,7 +71,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
           phx-target={@myself}
           role="button"
           tabindex="0"
-        ><%= event.summary || dgettext("dashboard_calendar", "(No title)") %></div>
+        >
+          {event.summary || dgettext("dashboard_calendar", "(No title)")}
+        </div>
       </div>
     </details>
     """

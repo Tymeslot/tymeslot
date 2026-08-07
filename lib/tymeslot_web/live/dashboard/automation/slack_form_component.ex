@@ -163,9 +163,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         <%!-- Details --%>
         <div class="card-glass">
           <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">{dgettext("dashboard_automation_chat", "Integration Details")}</h3>
+            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
+              {dgettext("dashboard_automation_chat", "Integration Details")}
+            </h3>
             <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-              <%= details_subtitle(@mode) %>
+              {details_subtitle(@mode)}
             </p>
           </div>
 
@@ -175,14 +177,22 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 name="slack[name]"
                 label={dgettext("dashboard_automation_chat", "Integration Name")}
                 value={Map.get(@form_values, "name", "")}
-                phx-blur={JS.push("slack_validate_field", value: %{"field" => "name"}, target: @parent_component)}
+                phx-blur={
+                  JS.push("slack_validate_field",
+                    value: %{"field" => "name"},
+                    target: @parent_component
+                  )
+                }
                 placeholder={dgettext("dashboard_automation_chat", "Acme Slack Notifications")}
                 required
                 errors={FormValidationHelpers.field_errors(@form_errors, :name)}
                 icon="hero-tag"
               >
                 <:description>
-                  {dgettext("dashboard_automation_chat", "A label shown in your dashboard. Useful if you connect more than one Slack workspace.")}
+                  {dgettext(
+                    "dashboard_automation_chat",
+                    "A label shown in your dashboard. Useful if you connect more than one Slack workspace."
+                  )}
                 </:description>
               </.input>
             <% end %>
@@ -194,7 +204,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                   type="password"
                   label={dgettext("dashboard_automation_chat", "Slack Webhook URL")}
                   value={Map.get(@form_values, "webhook_url", "")}
-                  phx-blur={JS.push("slack_validate_field", value: %{"field" => "webhook_url"}, target: @parent_component)}
+                  phx-blur={
+                    JS.push("slack_validate_field",
+                      value: %{"field" => "webhook_url"},
+                      target: @parent_component
+                    )
+                  }
                   placeholder={webhook_url_placeholder(@mode)}
                   required={@mode == :webhook_url}
                   errors={FormValidationHelpers.field_errors(@form_errors, :webhook_url)}
@@ -202,7 +217,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 >
                   <:description>
                     <%= if @mode == :webhook_url_existing do %>
-                      {dgettext("dashboard_automation_chat", "Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it.")}
+                      {dgettext(
+                        "dashboard_automation_chat",
+                        "Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it."
+                      )}
                     <% else %>
                       {raw(
                         dgettext(
@@ -220,16 +238,23 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                   name="slack[webhook_channel_hint]"
                   label={dgettext("dashboard_automation_chat", "Channel hint (optional)")}
                   value={Map.get(@form_values, "webhook_channel_hint", "")}
-                  phx-blur={JS.push("slack_validate_field", value: %{"field" => "webhook_channel_hint"}, target: @parent_component)}
+                  phx-blur={
+                    JS.push("slack_validate_field",
+                      value: %{"field" => "webhook_channel_hint"},
+                      target: @parent_component
+                    )
+                  }
                   placeholder="#bookings"
                   errors={FormValidationHelpers.field_errors(@form_errors, :webhook_channel_hint)}
                   icon="hero-hashtag"
                 >
                   <:description>
-                    {dgettext("dashboard_automation_chat", "Display-only label shown in your dashboard. It does not change where messages are delivered - that is set by the webhook URL itself.")}
+                    {dgettext(
+                      "dashboard_automation_chat",
+                      "Display-only label shown in your dashboard. It does not change where messages are delivered - that is set by the webhook URL itself."
+                    )}
                   </:description>
                 </.input>
-
               <% @mode in [:oauth_pending, :oauth_existing] -> %>
                 <.channel_picker
                   form_values={@form_values}
@@ -246,9 +271,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         <%!-- Events --%>
         <div class="card-glass">
           <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">{dgettext("dashboard_automation_chat", "Event Subscriptions")}</h3>
+            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
+              {dgettext("dashboard_automation_chat", "Event Subscriptions")}
+            </h3>
             <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-              {dgettext("dashboard_automation_chat", "Select which events should trigger Slack notifications.")}
+              {dgettext(
+                "dashboard_automation_chat",
+                "Select which events should trigger Slack notifications."
+              )}
             </p>
           </div>
 
@@ -260,17 +290,22 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                   name="slack[events][]"
                   value={event.value}
                   checked={event.value in Map.get(@form_values, "events", [])}
-                  phx-click={JS.push("slack_toggle_event", value: %{"event" => event.value}, target: @parent_component)}
+                  phx-click={
+                    JS.push("slack_toggle_event",
+                      value: %{"event" => event.value},
+                      target: @parent_component
+                    )
+                  }
                 />
                 <div class="flex-1">
-                  <div class="font-black text-tymeslot-900"><%= event.label %></div>
-                  <div class="text-token-sm text-tymeslot-600 font-medium"><%= event.description %></div>
+                  <div class="font-black text-tymeslot-900">{event.label}</div>
+                  <div class="text-token-sm text-tymeslot-600 font-medium">{event.description}</div>
                 </div>
               </label>
             <% end %>
           </div>
           <%= for error <- FormValidationHelpers.field_errors(@form_errors, :events) do %>
-            <p class="text-token-sm text-red-600 font-medium mt-3"><%= error %></p>
+            <p class="text-token-sm text-red-600 font-medium mt-3">{error}</p>
           <% end %>
         </div>
 
@@ -291,7 +326,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
             disabled={!@can_submit}
             class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
           >
-            <%= submit_label(@mode) %>
+            {submit_label(@mode)}
           </CoreComponents.loading_button>
         </div>
       </form>
@@ -344,19 +379,22 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         <% @loading? -> %>
           <div class="flex items-center gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50">
             <.spinner class="w-5 h-5 text-turquoise-500" />
-            <span class="text-token-sm text-tymeslot-600 font-medium">{dgettext("dashboard_automation_chat", "Loading channels from Slack...")}</span>
+            <span class="text-token-sm text-tymeslot-600 font-medium">{dgettext(
+              "dashboard_automation_chat",
+              "Loading channels from Slack..."
+            )}</span>
           </div>
-
         <% is_binary(@error) -> %>
           <div class="p-4 rounded-token-xl border-2 border-red-200 bg-red-50 text-token-sm text-red-700 font-medium">
-            <%= @error %>
+            {@error}
           </div>
-
         <% @channels == [] -> %>
           <div class="p-4 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-token-sm text-tymeslot-600 font-medium">
-            {dgettext("dashboard_automation_chat", "No channels available. Invite the Tymeslot bot to at least one channel in Slack, then click Refresh.")}
+            {dgettext(
+              "dashboard_automation_chat",
+              "No channels available. Invite the Tymeslot bot to at least one channel in Slack, then click Refresh."
+            )}
           </div>
-
         <% true -> %>
           <.input
             type="select"
@@ -368,7 +406,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           />
 
           <%!-- Hidden channel_name pairs with the chosen channel_id; submit handler resolves it via the channels list. --%>
-          <input type="hidden" name="slack[channel_name]" value={lookup_channel_name(@channels, Map.get(@form_values, "channel_id"))} />
+          <input
+            type="hidden"
+            name="slack[channel_name]"
+            value={lookup_channel_name(@channels, Map.get(@form_values, "channel_id"))}
+          />
       <% end %>
     </div>
     """

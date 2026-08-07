@@ -31,21 +31,41 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
   @spec month_view(map()) :: Phoenix.LiveView.Rendered.t()
   def month_view(assigns) do
     ~H"""
-    <div id="calendar-month-grid" class={if @view == :month, do: "flex-1 overflow-auto", else: "hidden"}>
+    <div
+      id="calendar-month-grid"
+      class={if @view == :month, do: "flex-1 overflow-auto", else: "hidden"}
+    >
       <%!-- Day-of-week headers --%>
-      <div class="grid border-b border-tymeslot-200 bg-white sticky top-0 z-10"
-        style={if Helpers.show_week_numbers?(assigns), do: "grid-template-columns: 2rem repeat(7, 1fr)", else: "grid-template-columns: repeat(7, 1fr)"}>
-        <div :if={Helpers.show_week_numbers?(assigns)} class="text-center text-token-xs font-semibold text-tymeslot-500 py-1 sm:py-2">{dgettext("dashboard_calendar", "Wk")}</div>
-        <div :for={day_name <- Helpers.day_name_headers(assigns)} class="text-center text-token-xs font-semibold text-tymeslot-600 py-1 sm:py-2 uppercase tracking-wide">
-          <span class="hidden sm:inline"><%= day_name %></span>
-          <span class="sm:hidden"><%= String.first(day_name) %></span>
+      <div
+        class="grid border-b border-tymeslot-200 bg-white sticky top-0 z-10"
+        style={
+          if Helpers.show_week_numbers?(assigns),
+            do: "grid-template-columns: 2rem repeat(7, 1fr)",
+            else: "grid-template-columns: repeat(7, 1fr)"
+        }
+      >
+        <div
+          :if={Helpers.show_week_numbers?(assigns)}
+          class="text-center text-token-xs font-semibold text-tymeslot-500 py-1 sm:py-2"
+        >
+          {dgettext("dashboard_calendar", "Wk")}
+        </div>
+        <div
+          :for={day_name <- Helpers.day_name_headers(assigns)}
+          class="text-center text-token-xs font-semibold text-tymeslot-600 py-1 sm:py-2 uppercase tracking-wide"
+        >
+          <span class="hidden sm:inline">{day_name}</span>
+          <span class="sm:hidden">{String.first(day_name)}</span>
         </div>
       </div>
 
       <%!-- One row per week (keyed on month to retrigger fade on navigation).
             Each week is its own positioning context so multi-day / all-day bars
             can span its day columns. --%>
-      <div id={"month-grid-#{@date.year}-#{@date.month}"} class="animate-fade-in border-l border-t border-tymeslot-200">
+      <div
+        id={"month-grid-#{@date.year}-#{@date.month}"}
+        class="animate-fade-in border-l border-t border-tymeslot-200"
+      >
         <.month_week
           :for={week_days <- Enum.chunk_every(@visible_days, 7)}
           week_days={week_days}
@@ -76,7 +96,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       <div
         :if={Helpers.show_week_numbers?(@assigns_ref)}
         class="w-8 shrink-0 text-token-xs font-medium text-tymeslot-500 flex items-start justify-center pt-1 border-b border-r border-tymeslot-200"
-      ><%= Helpers.week_number(List.first(@week_days)) %></div>
+      >
+        {Helpers.week_number(List.first(@week_days))}
+      </div>
 
       <div class="relative flex-1">
         <%!-- Day cells (define the row height) --%>
@@ -109,7 +131,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
               src="/images/brand/logo.svg"
               alt=""
               class="inline-block w-3 h-3 opacity-70 mr-0.5 shrink-0"
-            /><span class="truncate"><%= seg.event.summary || dgettext("dashboard_calendar", "(No title)") %></span>
+            /><span class="truncate">{seg.event.summary ||
+              dgettext("dashboard_calendar", "(No title)")}</span>
           </div>
         </div>
       </div>
@@ -161,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       }
     >
       <div class={"absolute top-1 left-1 text-token-sm font-semibold #{day_number_class(@is_today, @is_current_month)}"}>
-        <%= @day.day %>
+        {@day.day}
       </div>
 
       <%!-- Desktop: up to 3 single-day event titles --%>
@@ -178,14 +201,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             src="/images/brand/logo.svg"
             alt=""
             class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
-          /><%= event.summary || dgettext("dashboard_calendar", "(No title)") %><span
+          />{event.summary || dgettext("dashboard_calendar", "(No title)")}<span
             :if={EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
-            class={["inline-block w-1.5 h-1.5 rounded-full ml-0.5 align-middle", EventBadges.guest_dot_tone(EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))]}
-            title={EventBadges.guest_badge_title(EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))}
+            class={[
+              "inline-block w-1.5 h-1.5 rounded-full ml-0.5 align-middle",
+              EventBadges.guest_dot_tone(
+                EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)
+              )
+            ]}
+            title={
+              EventBadges.guest_badge_title(
+                EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)
+              )
+            }
           ></span>
         </div>
         <div :if={length(@chips) > 3} class="text-token-xs font-medium text-tymeslot-500 mt-0.5">
-          {dngettext("dashboard_calendar", "+%{count} more", "+%{count} more", length(@chips) - 3, count: length(@chips) - 3)}
+          {dngettext("dashboard_calendar", "+%{count} more", "+%{count} more", length(@chips) - 3,
+            count: length(@chips) - 3
+          )}
         </div>
       </div>
 
@@ -194,15 +228,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
         <div
           :if={List.first(@chips)}
           class={"rounded px-1 text-token-xs font-medium text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@chips))}"}
-        ><%= List.first(@chips).summary || dgettext("dashboard_calendar", "(No title)") %></div>
+        >
+          {List.first(@chips).summary || dgettext("dashboard_calendar", "(No title)")}
+        </div>
         <div
           :if={length(@chips) > 1}
           class="inline-flex items-center gap-0.5 text-token-2xs text-tymeslot-500 leading-none"
         >
-          <span :for={event <- @chips |> Enum.drop(1) |> Enum.take(3)}
+          <span
+            :for={event <- @chips |> Enum.drop(1) |> Enum.take(3)}
             class={"w-1.5 h-1.5 rounded-full #{Helpers.color_for_event(@assigns_ref, event)}"}
           ></span>
-          <span :if={length(@chips) > 4} class="ml-0.5">+<%= length(@chips) - 4 %></span>
+          <span :if={length(@chips) > 4} class="ml-0.5">+{length(@chips) - 4}</span>
         </div>
       </div>
     </div>

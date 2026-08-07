@@ -65,7 +65,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
             </video>
           </div>
         <% assigns[:theme_customization] && get_background_type(assigns[:theme_customization]) in ["gradient", "color", "image"] -> %>
-          <div class="video-background-container" style={get_background_style(assigns[:theme_customization])}>
+          <div
+            class="video-background-container"
+            style={get_background_style(assigns[:theme_customization])}
+          >
           </div>
         <% true -> %>
           <div class="video-background-container"></div>
