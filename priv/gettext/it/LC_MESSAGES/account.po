@@ -11,28 +11,28 @@ msgstr ""
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/account_live/components.ex:346
+#: lib/tymeslot_web/live/account_live/components.ex:353
 #, elixir-autogen, elixir-format
 msgid "%{count} day ago"
 msgid_plural "%{count} days ago"
 msgstr[0] "%{count} giorno fa"
 msgstr[1] "%{count} giorni fa"
 
-#: lib/tymeslot_web/live/account_live/components.ex:342
+#: lib/tymeslot_web/live/account_live/components.ex:349
 #, elixir-autogen, elixir-format
 msgid "%{count} hour ago"
 msgid_plural "%{count} hours ago"
 msgstr[0] "%{count} ora fa"
 msgstr[1] "%{count} ore fa"
 
-#: lib/tymeslot_web/live/account_live/components.ex:338
+#: lib/tymeslot_web/live/account_live/components.ex:345
 #, elixir-autogen, elixir-format
 msgid "%{count} minute ago"
 msgid_plural "%{count} minutes ago"
 msgstr[0] "%{count} minuto fa"
 msgstr[1] "%{count} minuti fa"
 
-#: lib/tymeslot_web/live/account_live/components.ex:303
+#: lib/tymeslot_web/live/account_live/components.ex:307
 #, elixir-autogen, elixir-format
 msgid "A verification email has been sent to"
 msgstr "Un'email di verifica è stata inviata a"
@@ -73,7 +73,7 @@ msgstr "Torna alla Dashboard"
 msgid "Cancel"
 msgstr "Annulla"
 
-#: lib/tymeslot_web/live/account_live/components.ex:316
+#: lib/tymeslot_web/live/account_live/components.ex:323
 #, elixir-autogen, elixir-format
 msgid "Cancel email change"
 msgstr "Annulla la modifica dell'email"
@@ -104,7 +104,7 @@ msgstr "Conferma la tua nuova password"
 msgid "Current Password"
 msgstr "Password attuale"
 
-#: lib/tymeslot_web/live/account_live/components.ex:212
+#: lib/tymeslot_web/live/account_live/components.ex:214
 #, elixir-autogen, elixir-format
 msgid "Current email:"
 msgstr "Email attuale:"
@@ -114,7 +114,7 @@ msgstr "Email attuale:"
 msgid "Email Address"
 msgstr "Indirizzo email"
 
-#: lib/tymeslot_web/live/account_live/components.ex:299
+#: lib/tymeslot_web/live/account_live/components.ex:303
 #, elixir-autogen, elixir-format
 msgid "Email Change Pending"
 msgstr "Modifica dell'email in sospeso"
@@ -135,7 +135,7 @@ msgstr "Inserisci la tua password attuale"
 msgid "Last changed: %{last_changed}"
 msgstr "Ultima modifica: %{last_changed}"
 
-#: lib/tymeslot_web/live/account_live/components.ex:269
+#: lib/tymeslot_web/live/account_live/components.ex:273
 #, elixir-autogen, elixir-format
 msgid "Managed by %{provider}"
 msgstr "Gestito da %{provider}"
@@ -170,12 +170,12 @@ msgstr "L'autenticazione tramite password non è disponibile per l'accesso con %
 msgid "Password authentication is not available for social login accounts"
 msgstr "L'autenticazione tramite password non è disponibile per gli account con accesso social"
 
-#: lib/tymeslot_web/live/account_live/components.ex:217
+#: lib/tymeslot_web/live/account_live/components.ex:220
 #, elixir-autogen, elixir-format
 msgid "Pending change to:"
 msgstr "Modifica in sospeso verso:"
 
-#: lib/tymeslot_web/live/account_live/components.ex:307
+#: lib/tymeslot_web/live/account_live/components.ex:312
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr "Inviata %{time}"
@@ -210,7 +210,7 @@ msgstr "Aggiornamento password in corso"
 msgid "Your password has been changed. Please sign in again with your new password."
 msgstr "La tua password è stata modificata. Accedi di nuovo con la nuova password."
 
-#: lib/tymeslot_web/live/account_live/components.ex:330
+#: lib/tymeslot_web/live/account_live/components.ex:337
 #, elixir-autogen, elixir-format
 msgid "just now"
 msgstr "proprio ora"
@@ -250,12 +250,12 @@ msgstr "Lingua"
 msgid "Language preference saved."
 msgstr "Preferenza della lingua salvata."
 
-#: lib/tymeslot_web/live/account_live/components.ex:169
+#: lib/tymeslot_web/live/account_live/components.ex:171
 #, elixir-autogen, elixir-format
 msgid "Automatic"
 msgstr "Automatica"
 
-#: lib/tymeslot_web/live/account_live/components.ex:162
+#: lib/tymeslot_web/live/account_live/components.ex:163
 #, elixir-autogen, elixir-format
 msgid "Follow your browser's language setting instead of a fixed choice."
 msgstr "Segue la lingua impostata nel browser invece di una scelta fissa."

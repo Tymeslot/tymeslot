@@ -27,7 +27,7 @@ msgstr "Anteprima del tema %{theme_name}"
 msgid "An error occurred. Please refresh the page and try again."
 msgstr "Si è verificato un errore. Ricarica la pagina e riprova."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:212
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:218
 #, elixir-autogen, elixir-format
 msgid "Background Design"
 msgstr "Design dello sfondo"
@@ -37,7 +37,7 @@ msgstr "Design dello sfondo"
 msgid "Choose Your Style"
 msgstr "Scegli il tuo stile"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:215
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:221
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
 msgstr "Scegli uno stile visivo che rispecchia la tua identità professionale."
@@ -48,12 +48,12 @@ msgstr "Scegli uno stile visivo che rispecchia la tua identità professionale."
 msgid "Choose from our collection"
 msgstr "Scegli dalla nostra collezione"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:72
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:77
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Chiudi"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:86
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:91
 #, elixir-autogen, elixir-format
 msgid "Color Palette"
 msgstr "Tavolozza dei colori"
@@ -63,8 +63,8 @@ msgstr "Tavolozza dei colori"
 msgid "Confirm"
 msgstr "Conferma"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:132
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:173
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:137
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:178
 #, elixir-autogen, elixir-format
 msgid "Connect Calendar to Preview"
 msgstr "Collega il calendario per l'anteprima"
@@ -79,77 +79,77 @@ msgstr "Attuale"
 msgid "Current Style"
 msgstr "Stile attuale"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:131
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:136
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex:70
 #, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr "Personalizzato"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:35
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:201
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:206
 #, elixir-autogen, elixir-format
 msgid "Customize Style"
 msgstr "Personalizza lo stile"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:269
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:274
 #, elixir-autogen, elixir-format
 msgid "Failed to update theme"
 msgstr "Impossibile aggiornare il tema"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:277
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:288
 #, elixir-autogen, elixir-format
 msgid "Gradient"
 msgstr "Gradiente"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/colour_picker_widget.ex:63
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/colour_picker_widget.ex:62
 #, elixir-autogen, elixir-format
 msgid "Hex colour value"
 msgstr "Valore colore esadecimale"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/colour_picker_widget.ex:77
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/colour_picker_widget.ex:76
 #, elixir-autogen, elixir-format
 msgid "Hue"
 msgstr "Tonalità"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:283
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:294
 #, elixir-autogen, elixir-format
 msgid "Image"
 msgstr "Immagine"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:277
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:282
 #, elixir-autogen, elixir-format
 msgid "Invalid theme selection"
 msgstr "Selezione del tema non valida"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:153
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:194
 #, elixir-autogen, elixir-format
 msgid "JPG, PNG or WebP. Max 5MB."
 msgstr "JPG, PNG o WebP. Massimo 5 MB."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:61
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:166
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:183
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:171
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:188
 #, elixir-autogen, elixir-format
 msgid "Live Preview"
 msgstr "Anteprima in tempo reale"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:177
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:225
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max 20MB."
 msgstr "MP4 o WebM. Massimo 20 MB."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:216
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:221
 #, elixir-autogen, elixir-format
 msgid "More Styles Coming Soon"
 msgstr "Altri stili in arrivo"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:77
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:101
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:97
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:128
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
 msgstr "Oppure carica il tuo"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:219
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:224
 #, elixir-autogen, elixir-format
 msgid "Our design team is busy crafting new themes to help you express your unique professional style."
 msgstr "Il nostro team di design è al lavoro su nuovi temi per aiutarti a esprimere il tuo stile professionale unico."
@@ -164,12 +164,12 @@ msgstr "Primario"
 msgid "Secondary"
 msgstr "Secondario"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:102
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:132
 #, elixir-autogen, elixir-format
 msgid "Select Image"
 msgstr "Seleziona immagine"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:126
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:163
 #, elixir-autogen, elixir-format
 msgid "Select Video"
 msgstr "Seleziona video"
@@ -184,12 +184,12 @@ msgstr "Seleziona un colore pieno"
 msgid "Select the interface that best represents your personal brand and creates the best experience for your clients."
 msgstr "Seleziona l'interfaccia che rappresenta al meglio il tuo marchio personale e offre la migliore esperienza ai tuoi clienti."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:89
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:94
 #, elixir-autogen, elixir-format
 msgid "Select the primary colors for your booking page interface."
 msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenotazione."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:280
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:291
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex:48
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
@@ -206,7 +206,7 @@ msgstr "Personalizzazione del tema"
 msgid "Theme Preview"
 msgstr "Anteprima del tema"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:259
+#: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:264
 #, elixir-autogen, elixir-format
 msgid "Theme updated to %{theme_name}"
 msgstr "Tema aggiornato a %{theme_name}"
@@ -221,33 +221,33 @@ msgstr "Questa anteprima riflette lo schema di colori e lo sfondo attuali."
 msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr "Troppi tentativi di caricamento. Attendi qualche minuto e riprova."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:148
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:189
 #, elixir-autogen, elixir-format
 msgid "Upload Image"
 msgstr "Carica immagine"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:172
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:220
 #, elixir-autogen, elixir-format
 msgid "Upload Video"
 msgstr "Carica video"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:107
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:131
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:137
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:168
 #, elixir-autogen, elixir-format
 msgid "Upload not available"
 msgstr "Caricamento non disponibile"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:286
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex:297
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr "Video"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:163
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:214
 #, elixir-autogen, elixir-format
 msgid "You have a custom image. Selecting a preset will remove it."
 msgstr "Hai un'immagine personalizzata. Se selezioni un preset, verrà rimossa."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:187
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:245
 #, elixir-autogen, elixir-format
 msgid "You have a custom video. Selecting a preset will remove it."
 msgstr "Hai un video personalizzato. Se selezioni un preset, verrà rimosso."

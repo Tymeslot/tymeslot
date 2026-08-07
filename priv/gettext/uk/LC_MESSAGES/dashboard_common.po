@@ -11,13 +11,13 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:193
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:204
 #: lib/tymeslot_web/helpers/page_titles.ex:18
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr "Обліковий запис"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:139
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:141
 #, elixir-autogen, elixir-format
 msgid "Add a meeting type so guests have something to book"
 msgstr "Додайте тип зустрічі, щоб гості могли її забронювати"
@@ -27,13 +27,13 @@ msgstr "Додайте тип зустрічі, щоб гості могли ї�
 msgid "Analytics"
 msgstr "Аналітика"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:206
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:218
 #: lib/tymeslot_web/helpers/page_titles.ex:31
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr "Автоматизація"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:151
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:154
 #: lib/tymeslot_web/helpers/page_titles.ex:16
 #, elixir-autogen, elixir-format
 msgid "Availability"
@@ -42,7 +42,7 @@ msgstr "Доступність"
 #: lib/tymeslot/integrations/calendar/display_helpers.ex:98
 #: lib/tymeslot/integrations/calendar/display_helpers.ex:146
 #: lib/tymeslot/integrations/calendar/display_helpers.ex:157
-#: lib/tymeslot_web/components/dashboard_layout.ex:179
+#: lib/tymeslot_web/components/dashboard_layout.ex:191
 #: lib/tymeslot_web/helpers/page_titles.ex:23
 #, elixir-autogen, elixir-format
 msgid "Calendar"
@@ -53,7 +53,7 @@ msgstr "Календар"
 msgid "Close sidebar"
 msgstr "Закрити бічну панель"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:174
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:182
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar or video provider to finish setup"
 msgstr "Підключіть календар або сервіс відеозв'язку, щоб завершити налаштування"
@@ -63,12 +63,12 @@ msgstr "Підключіть календар або сервіс відеозв
 msgid "Copy link to clipboard"
 msgstr "Скопіювати посилання в буфер обміну"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:183
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:193
 #, elixir-autogen, elixir-format
 msgid "Distribution"
 msgstr "Розподіл"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:187
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:198
 #: lib/tymeslot_web/helpers/page_titles.ex:34
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
@@ -79,13 +79,13 @@ msgstr "Вбудовування та поширення"
 msgid "General"
 msgstr "Загальні"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:166
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:177
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:172
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:186
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Інтеграції"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:142
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:145
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Типи зустрічей"
@@ -101,33 +101,33 @@ msgstr "Зустрічі"
 msgid "Overview"
 msgstr "Огляд"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:327
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:339
 #, elixir-autogen, elixir-format
 msgid "Pro"
 msgstr "Pro"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:197
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:208
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Профіль"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex:170
+#: lib/tymeslot_web/components/dashboard_layout.ex:179
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:131
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
 msgstr "Планування"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:306
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:318
 #, elixir-autogen, elixir-format
 msgid "Setup recommended"
 msgstr "Рекомендовано налаштувати"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:160
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:165
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "Тема"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex:113
+#: lib/tymeslot_web/components/dashboard_layout.ex:116
 #, elixir-autogen, elixir-format
 msgid "Toggle sidebar"
 msgstr "Перемкнути бічну панель"
@@ -143,27 +143,27 @@ msgstr "Переглянути сторінку"
 msgid "Scheduling link copied to clipboard!"
 msgstr "Посилання для планування скопійовано в буфер обміну!"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:65
+#: lib/tymeslot_web/components/user_dropdown_component.ex:70
 #, elixir-autogen, elixir-format
 msgid "Account Settings"
 msgstr "Налаштування облікового запису"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:73
+#: lib/tymeslot_web/components/user_dropdown_component.ex:78
 #, elixir-autogen, elixir-format
 msgid "Admin Settings"
 msgstr "Налаштування адміністратора"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:81
+#: lib/tymeslot_web/components/user_dropdown_component.ex:86
 #, elixir-autogen, elixir-format
 msgid "Sign Out"
 msgstr "Вийти"
 
-#: lib/tymeslot_web/live/dashboard/component_dispatch.ex:121
+#: lib/tymeslot_web/live/dashboard/component_dispatch.ex:122
 #, elixir-autogen, elixir-format
 msgid "This feature (%{feature_name}) is not available on your current plan."
 msgstr "Ця функція (%{feature_name}) недоступна у вашому поточному тарифі."
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:129
+#: lib/tymeslot_web/components/user_dropdown_component.ex:134
 #, elixir-autogen, elixir-format
 msgid "User"
 msgstr "Користувач"

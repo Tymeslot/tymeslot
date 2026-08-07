@@ -24,17 +24,17 @@ msgstr[2] "%{count} візитів"
 msgid "(direct / unknown)"
 msgstr "(прямий / невідомо)"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:129
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:138
 #, elixir-autogen, elixir-format
 msgid "30 days"
 msgstr "30 днів"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:128
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:133
 #, elixir-autogen, elixir-format
 msgid "7 days"
 msgstr "7 днів"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:130
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:143
 #, elixir-autogen, elixir-format
 msgid "90 days"
 msgstr "90 днів"
@@ -54,25 +54,25 @@ msgstr "Стовпчаста діаграма з кількістю щоденн
 msgid "Booking analytics is not enabled on this installation."
 msgstr "Аналітику бронювань не ввімкнено для цієї інсталяції."
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:160
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:176
 #, elixir-autogen, elixir-format
 msgid "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up."
 msgstr "Збір аналітики бронювань розпочався %{date}. Для попередніх дат немає даних, тому довші періоди виглядатимуть неповними, поки не накопичиться більше історії."
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:46
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:75
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:40
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:50
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:79
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:45
 #, elixir-autogen, elixir-format
 msgid "Bookings"
 msgstr "Бронювання"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:47
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:79
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:51
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:83
 #, elixir-autogen, elixir-format
 msgid "Conversion"
 msgstr "Конверсія"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:42
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:50
 #, elixir-autogen, elixir-format
 msgid "Conversion (est.)"
 msgstr "Конверсія (прибл.)"
@@ -87,12 +87,12 @@ msgstr "Щоденні візити"
 msgid "Daily visits over the selected date range"
 msgstr "Щоденні візити за вибраний період"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:127
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "Date range"
 msgstr "Діапазон дат"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:55
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:59
 #, elixir-autogen, elixir-format
 msgid "Desktop"
 msgstr "Комп'ютери"
@@ -102,62 +102,62 @@ msgstr "Комп'ютери"
 msgid "Devices"
 msgstr "Пристрої"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:54
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:58
 #, elixir-autogen, elixir-format
 msgid "Mobile"
 msgstr "Мобільні"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:34
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:59
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:85
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:38
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:63
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:89
 #: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex:80
 #, elixir-autogen, elixir-format
 msgid "No traffic in this period yet."
 msgstr "За цей період ще немає трафіку."
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:135
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Refresh"
 msgstr "Оновити"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:136
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:152
 #, elixir-autogen, elixir-format
 msgid "Refresh analytics"
 msgstr "Оновити аналітику"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:44
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:48
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr "Джерело"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:56
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:60
 #, elixir-autogen, elixir-format
 msgid "Tablet"
 msgstr "Планшети"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:36
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:40
 #, elixir-autogen, elixir-format
 msgid "Unique visitors"
 msgstr "Унікальні відвідувачі"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:184
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:200
 #, elixir-autogen, elixir-format
 msgid "Unique visitors and conversion are cookieless estimates: each visitor is counted once per day, so totals over a longer range approximate the number of distinct people. Conversion is the share of visitors who went on to book and is indicative, not exact."
 msgstr "Унікальні відвідувачі та конверсія - це приблизні оцінки без використання файлів cookie: кожен відвідувач враховується один раз на день, тому загальні показники за довший період є приблизною кількістю окремих людей. Конверсія - це частка відвідувачів, які здійснили бронювання; цей показник є орієнтовним, а не точним."
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:57
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:61
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr "Невідомо"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live.ex:149
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex:165
 #, elixir-autogen, elixir-format
 msgid "Updated %{time}"
 msgstr "Оновлено %{time}"
 
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:45
-#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:71
-#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:34
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:49
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:75
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex:35
 #, elixir-autogen, elixir-format
 msgid "Visits"
 msgstr "Візити"

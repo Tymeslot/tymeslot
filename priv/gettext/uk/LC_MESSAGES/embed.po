@@ -9,7 +9,7 @@ msgstr ""
 msgid "Booking unavailable"
 msgstr "Бронювання недоступне"
 
-#: lib/tymeslot_web/controllers/embed_blocked_html.ex:51
+#: lib/tymeslot_web/controllers/embed_blocked_html.ex:52
 #, elixir-autogen, elixir-format
 msgid "The organiser hasn’t authorised this website to show their booking page."
 msgstr "Організатор не дозволив цьому вебсайту показувати свою сторінку бронювання."

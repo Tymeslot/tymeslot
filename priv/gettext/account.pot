@@ -11,28 +11,28 @@
 msgid ""
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:346
+#: lib/tymeslot_web/live/account_live/components.ex:353
 #, elixir-autogen, elixir-format
 msgid "%{count} day ago"
 msgid_plural "%{count} days ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:342
+#: lib/tymeslot_web/live/account_live/components.ex:349
 #, elixir-autogen, elixir-format
 msgid "%{count} hour ago"
 msgid_plural "%{count} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:338
+#: lib/tymeslot_web/live/account_live/components.ex:345
 #, elixir-autogen, elixir-format
 msgid "%{count} minute ago"
 msgid_plural "%{count} minutes ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:303
+#: lib/tymeslot_web/live/account_live/components.ex:307
 #, elixir-autogen, elixir-format
 msgid "A verification email has been sent to"
 msgstr ""
@@ -73,7 +73,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:316
+#: lib/tymeslot_web/live/account_live/components.ex:323
 #, elixir-autogen, elixir-format
 msgid "Cancel email change"
 msgstr ""
@@ -104,7 +104,7 @@ msgstr ""
 msgid "Current Password"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:212
+#: lib/tymeslot_web/live/account_live/components.ex:214
 #, elixir-autogen, elixir-format
 msgid "Current email:"
 msgstr ""
@@ -114,7 +114,7 @@ msgstr ""
 msgid "Email Address"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:299
+#: lib/tymeslot_web/live/account_live/components.ex:303
 #, elixir-autogen, elixir-format
 msgid "Email Change Pending"
 msgstr ""
@@ -135,7 +135,7 @@ msgstr ""
 msgid "Last changed: %{last_changed}"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:269
+#: lib/tymeslot_web/live/account_live/components.ex:273
 #, elixir-autogen, elixir-format
 msgid "Managed by %{provider}"
 msgstr ""
@@ -170,12 +170,12 @@ msgstr ""
 msgid "Password authentication is not available for social login accounts"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:217
+#: lib/tymeslot_web/live/account_live/components.ex:220
 #, elixir-autogen, elixir-format
 msgid "Pending change to:"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:307
+#: lib/tymeslot_web/live/account_live/components.ex:312
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr ""
@@ -210,7 +210,7 @@ msgstr ""
 msgid "Your password has been changed. Please sign in again with your new password."
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:330
+#: lib/tymeslot_web/live/account_live/components.ex:337
 #, elixir-autogen, elixir-format
 msgid "just now"
 msgstr ""
@@ -250,12 +250,12 @@ msgstr ""
 msgid "Language preference saved."
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:169
+#: lib/tymeslot_web/live/account_live/components.ex:171
 #, elixir-autogen, elixir-format
 msgid "Automatic"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:162
+#: lib/tymeslot_web/live/account_live/components.ex:163
 #, elixir-autogen, elixir-format
 msgid "Follow your browser's language setting instead of a fixed choice."
 msgstr ""

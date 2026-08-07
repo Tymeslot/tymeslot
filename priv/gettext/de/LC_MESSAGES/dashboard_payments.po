@@ -11,7 +11,7 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:52
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:53
 #, elixir-autogen, elixir-format
 msgid "Already refunded:"
 msgstr "Bereits erstattet:"
@@ -32,7 +32,7 @@ msgid "Attendee"
 msgstr "Teilnehmer"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:61
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:118
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:122
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Abbrechen"
@@ -48,7 +48,7 @@ msgid "Choose a refund type."
 msgstr "Wählen Sie eine Rückerstattungsart."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:16
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:34
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:39
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe"
 msgstr "Stripe verbinden"
@@ -68,7 +68,7 @@ msgstr "Verbinden Sie Stripe, um Zahlungen für Termine einzuziehen. Das Geld ge
 msgid "Connected and ready"
 msgstr "Verbunden und bereit"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:32
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:37
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:57
 #, elixir-autogen, elixir-format
 msgid "Connecting…"
@@ -163,12 +163,12 @@ msgstr "Fehlgeschlagen"
 msgid "Finish connecting Stripe"
 msgstr "Stripe-Verbindung abschließen"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:82
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:86
 #, elixir-autogen, elixir-format
 msgid "Full refund"
 msgstr "Vollständige Rückerstattung"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:127
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:131
 #, elixir-autogen, elixir-format
 msgid "Issue refund"
 msgstr "Rückerstattung veranlassen"
@@ -208,12 +208,12 @@ msgstr "Ursprüngliche Zahlung:"
 msgid "Paid"
 msgstr "Bezahlt"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:100
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:104
 #, elixir-autogen, elixir-format
 msgid "Partial amount"
 msgstr "Teilbetrag"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:93
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:97
 #, elixir-autogen, elixir-format
 msgid "Partial refund"
 msgstr "Teilrückerstattung"
@@ -278,7 +278,7 @@ msgstr "Rückerstattung veranlasst. Der Teilnehmer erhält eine Bestätigungs-E-
 msgid "Refund payment"
 msgstr "Zahlung erstatten"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:73
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:77
 #, elixir-autogen, elixir-format
 msgid "Refund type"
 msgstr "Rückerstattungsart"
@@ -289,7 +289,7 @@ msgstr "Rückerstattungsart"
 msgid "Refunded"
 msgstr "Erstattet"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:125
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:129
 #, elixir-autogen, elixir-format
 msgid "Refunding..."
 msgstr "Rückerstattung läuft…"
@@ -299,7 +299,7 @@ msgstr "Rückerstattung läuft…"
 msgid "Refunds older than 60 days must be processed in your Stripe dashboard."
 msgstr "Rückerstattungen, die älter als 60 Tage sind, müssen in Ihrem Stripe-Dashboard bearbeitet werden."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:56
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:57
 #, elixir-autogen, elixir-format
 msgid "Remaining refundable:"
 msgstr "Verbleibend erstattungsfähig:"
@@ -341,7 +341,7 @@ msgstr "Stripe hat für diese Buchung noch keine Zahlung erfasst. Versuchen Sie 
 msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
 msgstr "Stripe prüft Ihr Konto. Der Zahlungseinzug wird nach der Genehmigung automatisch aktiviert."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:62
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:66
 #, elixir-autogen, elixir-format
 msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
 msgstr "Der Teilnehmer erhält den vollen von Ihnen erstatteten Betrag. Die Plattformgebühr von Tymeslot wird anteilig zurückerstattet; die Stripe-Bearbeitungsgebühren auf die ursprüngliche Zahlung verbleiben bei Ihnen."

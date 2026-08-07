@@ -31,7 +31,7 @@ msgstr "✓ Acknowledged (%{at})"
 msgid "At least 8 characters"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:164
+#: lib/tymeslot_web/components/core_components/flash.ex:202
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
@@ -41,7 +41,7 @@ msgstr ""
 msgid "Browser Not Supported"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex:54
+#: lib/tymeslot_web/components/confirmation_modal.ex:57
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -51,22 +51,22 @@ msgstr ""
 msgid "Change language"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:86
+#: lib/tymeslot_web/components/core_components/flash.ex:119
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/modal.ex:105
+#: lib/tymeslot_web/components/core_components/modal.ex:108
 #, elixir-autogen, elixir-format
 msgid "Close modal"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex:65
+#: lib/tymeslot_web/components/confirmation_modal.ex:68
 #, elixir-autogen, elixir-format
 msgid "Confirm"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:156
+#: lib/tymeslot_web/components/core_components/flash.ex:194
 #, elixir-autogen, elixir-format
 msgid "Connection Lost"
 msgstr ""
@@ -101,7 +101,7 @@ msgstr ""
 msgid "Password must contain:"
 msgstr ""
 
-#: lib/tymeslot_web/components/confirmation_modal.ex:59
+#: lib/tymeslot_web/components/confirmation_modal.ex:62
 #: lib/tymeslot_web/components/core_components/buttons.ex:81
 #, elixir-autogen, elixir-format
 msgid "Processing..."
@@ -138,7 +138,7 @@ msgstr ""
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts/root.html.heex:50
+#: lib/tymeslot_web/components/layouts/root.html.heex:54
 #, elixir-autogen, elixir-format
 msgid "This app requires JavaScript to function. Please enable it in your browser settings."
 msgstr ""
@@ -185,25 +185,25 @@ msgid "Made with %{heart} by the %{team}"
 msgstr ""
 
 #: lib/tymeslot_web/components/site_components.ex:89
-#: lib/tymeslot_web/components/site_components.ex:151
+#: lib/tymeslot_web/components/site_components.ex:157
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
 msgstr ""
 
 #: lib/tymeslot_web/components/site_components.ex:113
-#: lib/tymeslot_web/components/site_components.ex:175
+#: lib/tymeslot_web/components/site_components.ex:181
 #, elixir-autogen, elixir-format
 msgid "Get Started"
 msgstr ""
 
 #: lib/tymeslot_web/components/site_components.ex:104
-#: lib/tymeslot_web/components/site_components.ex:165
+#: lib/tymeslot_web/components/site_components.ex:171
 #, elixir-autogen, elixir-format
 msgid "Login"
 msgstr ""
 
 #: lib/tymeslot_web/components/site_components.ex:97
-#: lib/tymeslot_web/components/site_components.ex:158
+#: lib/tymeslot_web/components/site_components.ex:164
 #, elixir-autogen, elixir-format
 msgid "Logout"
 msgstr ""
@@ -213,22 +213,22 @@ msgstr ""
 msgid "Toggle menu"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:419
+#: lib/tymeslot_web/components/site_components.ex:430
 #, elixir-autogen, elixir-format
 msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:437
+#: lib/tymeslot_web/components/site_components.ex:448
 #, elixir-autogen, elixir-format
 msgid "View on GitHub"
 msgstr ""
 
-#: lib/tymeslot_web/components/site_components.ex:450
+#: lib/tymeslot_web/components/site_components.ex:461
 #, elixir-autogen, elixir-format
 msgid "© %{year} Tymeslot. All rights reserved."
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/containers.ex:156
+#: lib/tymeslot_web/components/core_components/containers.ex:163
 #, elixir-autogen, elixir-format
 msgid "Saving changes..."
 msgstr ""

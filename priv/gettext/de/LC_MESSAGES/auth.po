@@ -37,7 +37,7 @@ msgstr "Konto erfolgreich erstellt. Bitte prüfen Sie Ihre E-Mails für die Anwe
 msgid "Almost There!"
 msgstr "Fast geschafft!"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:160
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:166
 #, elixir-autogen, elixir-format
 msgid "Already have an account?"
 msgstr "Sie haben bereits ein Konto?"
@@ -49,7 +49,7 @@ msgstr "Bei der %{provider}-Authentifizierung ist ein Fehler aufgetreten."
 
 #: lib/tymeslot_web/components/auth/registration/verify_email_component.ex:49
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:116
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:281
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:294
 #, elixir-autogen, elixir-format
 msgid "Back to Login"
 msgstr "Zurück zur Anmeldung"
@@ -74,22 +74,22 @@ msgstr "Registrierung abschließen"
 msgid "Complete Your Registration"
 msgstr "Schließen Sie Ihre Registrierung ab"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:183
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:193
 #, elixir-autogen, elixir-format
 msgid "Confirm New Password"
 msgstr "Neues Passwort bestätigen"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:184
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:194
 #, elixir-autogen, elixir-format
 msgid "Confirm your new password"
 msgstr "Bestätigen Sie Ihr neues Passwort"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:323
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:336
 #, elixir-autogen, elixir-format
 msgid "Contact Support"
 msgstr "Support kontaktieren"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:88
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:94
 #, elixir-autogen, elixir-format
 msgid "Create a password"
 msgstr "Passwort erstellen"
@@ -109,13 +109,13 @@ msgstr "Keine E-Mail erhalten?"
 msgid "Display Name"
 msgstr "Anzeigename"
 
-#: lib/tymeslot_web/components/auth/session/login_component.ex:122
+#: lib/tymeslot_web/components/auth/session/login_component.ex:126
 #, elixir-autogen, elixir-format
 msgid "Don't have an account?"
 msgstr "Sie haben noch kein Konto?"
 
 #: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex:76
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:73
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:75
 #: lib/tymeslot_web/components/auth/session/login_component.ex:58
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:52
 #, elixir-autogen, elixir-format
@@ -127,12 +127,12 @@ msgstr "E-Mail-Adresse"
 msgid "Enter your email and we'll send you instructions to reset your password"
 msgstr "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen Anweisungen zum Zurücksetzen Ihres Passworts"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:165
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:170
 #, elixir-autogen, elixir-format
 msgid "Enter your new password"
 msgstr "Geben Sie Ihr neues Passwort ein"
 
-#: lib/tymeslot_web/components/auth/session/login_component.ex:72
+#: lib/tymeslot_web/components/auth/session/login_component.ex:76
 #, elixir-autogen, elixir-format
 msgid "Enter your password"
 msgstr "Geben Sie Ihr Passwort ein"
@@ -153,17 +153,17 @@ msgstr "Sitzung konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
 msgid "Failed to send verification email. Please try again later."
 msgstr "Verifizierungs-E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut."
 
-#: lib/tymeslot_web/components/auth/session/login_component.ex:90
+#: lib/tymeslot_web/components/auth/session/login_component.ex:94
 #, elixir-autogen, elixir-format
 msgid "Forgot password?"
 msgstr "Passwort vergessen?"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:315
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:328
 #, elixir-autogen, elixir-format
 msgid "Go to Login"
 msgstr "Zur Anmeldung"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:250
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:263
 #, elixir-autogen, elixir-format
 msgid "Invalid Link"
 msgstr "Ungültiger Link"
@@ -183,26 +183,26 @@ msgstr "Ungültiger Verifizierungslink"
 msgid "Join Tymeslot"
 msgstr "Tymeslot beitreten"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:259
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:272
 #, elixir-autogen, elixir-format
 msgid "Link Expired or Invalid"
 msgstr "Link abgelaufen oder ungültig"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:232
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:245
 #: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:34
 #, elixir-autogen, elixir-format
 msgid "Log In"
 msgstr "Anmelden"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:163
-#: lib/tymeslot_web/components/auth/session/login_component.ex:111
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:169
+#: lib/tymeslot_web/components/auth/session/login_component.ex:115
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:88
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr "Anmelden"
 
 #: lib/tymeslot_web/components/auth/session/login_component.ex:42
-#: lib/tymeslot_web/components/auth/session/login_component.ex:134
+#: lib/tymeslot_web/components/auth/session/login_component.ex:138
 #, elixir-autogen, elixir-format
 msgid "Log in to Tymeslot"
 msgstr "Bei Tymeslot anmelden"
@@ -212,7 +212,7 @@ msgstr "Bei Tymeslot anmelden"
 msgid "Logged out successfully."
 msgstr "Erfolgreich abgemeldet."
 
-#: lib/tymeslot_web/components/auth/session/login_component.ex:109
+#: lib/tymeslot_web/components/auth/session/login_component.ex:113
 #, elixir-autogen, elixir-format
 msgid "Logging in..."
 msgstr "Anmeldung läuft…"
@@ -222,12 +222,12 @@ msgstr "Anmeldung läuft…"
 msgid "Missing OAuth provider information. Please try again."
 msgstr "OAuth-Anbieterinformationen fehlen. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:321
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:334
 #, elixir-autogen, elixir-format
 msgid "Need help?"
 msgstr "Brauchen Sie Hilfe?"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:164
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:169
 #, elixir-autogen, elixir-format
 msgid "New Password"
 msgstr "Neues Passwort"
@@ -243,18 +243,18 @@ msgstr "OAuth-Authentifizierung fehlgeschlagen – Anbieter fehlt."
 msgid "Or continue with"
 msgstr "Oder fortfahren mit"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:87
-#: lib/tymeslot_web/components/auth/session/login_component.ex:71
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:93
+#: lib/tymeslot_web/components/auth/session/login_component.ex:75
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Passwort"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:304
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:317
 #, elixir-autogen, elixir-format
 msgid "Password Changed"
 msgstr "Passwort geändert"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:221
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:231
 #, elixir-autogen, elixir-format
 msgid "Password Reset Successfully"
 msgstr "Passwort erfolgreich zurückgesetzt"
@@ -269,7 +269,7 @@ msgstr "Passwort ist erforderlich"
 msgid "Please enter your email and password."
 msgstr "Bitte geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein."
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:118
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:124
 #, elixir-autogen, elixir-format
 msgid "Privacy Policy"
 msgstr "Datenschutzerklärung"
@@ -279,7 +279,7 @@ msgstr "Datenschutzerklärung"
 msgid "Remember your password?"
 msgstr "Erinnern Sie sich an Ihr Passwort?"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:273
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:286
 #, elixir-autogen, elixir-format
 msgid "Request New Link"
 msgstr "Neuen Link anfordern"
@@ -339,29 +339,29 @@ msgstr "Wird gesendet…"
 msgid "Sent to"
 msgstr "Gesendet an"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:196
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:206
 #, elixir-autogen, elixir-format
 msgid "Set New Password"
 msgstr "Neues Passwort festlegen"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:150
-#: lib/tymeslot_web/components/auth/session/login_component.ex:125
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:156
+#: lib/tymeslot_web/components/auth/session/login_component.ex:129
 #, elixir-autogen, elixir-format
 msgid "Sign up"
 msgstr "Registrieren"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:148
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:154
 #, elixir-autogen, elixir-format
 msgid "Signing up..."
 msgstr "Registrierung läuft…"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:35
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:36
 #, elixir-autogen, elixir-format
 msgid "Start scheduling your meetings with ease. Zero friction, total control."
 msgstr "Planen Sie Ihre Termine mühelos. Keine Reibung, volle Kontrolle."
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:215
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:297
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:225
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:310
 #, elixir-autogen, elixir-format
 msgid "Success!"
 msgstr "Geschafft!"
@@ -371,7 +371,7 @@ msgstr "Geschafft!"
 msgid "Successfully signed in with %{provider}."
 msgstr "Erfolgreich mit %{provider} angemeldet."
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:125
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:131
 #, elixir-autogen, elixir-format
 msgid "Terms of Service"
 msgstr "Nutzungsbedingungen"
@@ -381,7 +381,7 @@ msgstr "Nutzungsbedingungen"
 msgid "Thank you for signing up! Let's finish setting up your account."
 msgstr "Danke für Ihre Registrierung! Lassen Sie uns die Einrichtung Ihres Kontos abschließen."
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:262
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:275
 #, elixir-autogen, elixir-format
 msgid "The security link you followed is no longer valid. Please request a new one to continue."
 msgstr "Der Sicherheitslink, dem Sie gefolgt sind, ist nicht mehr gültig. Bitte fordern Sie einen neuen an, um fortzufahren."
@@ -474,7 +474,7 @@ msgid "We've sent password reset instructions to your email address. Please chec
 msgstr "Wir haben Anweisungen zum Zurücksetzen des Passworts an Ihre E-Mail-Adresse gesendet. Bitte prüfen Sie Ihren Posteingang und folgen Sie dem Link, um Ihr Passwort zurückzusetzen."
 
 #: lib/tymeslot_web/components/auth/session/login_component.ex:39
-#: lib/tymeslot_web/components/auth/session/login_component.ex:131
+#: lib/tymeslot_web/components/auth/session/login_component.ex:135
 #, elixir-autogen, elixir-format
 msgid "Welcome Back!"
 msgstr "Willkommen zurück!"
@@ -505,12 +505,12 @@ msgstr "Ihre E-Mail-Adresse wurde erfolgreich verifiziert! Bitte melden Sie sich
 msgid "Your email has been successfully verified! You're now logged in."
 msgstr "Ihre E-Mail-Adresse wurde erfolgreich verifiziert! Sie sind jetzt angemeldet."
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:224
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:234
 #, elixir-autogen, elixir-format
 msgid "Your password has been reset. You can now log in with your new credentials."
 msgstr "Ihr Passwort wurde zurückgesetzt. Sie können sich jetzt mit Ihren neuen Zugangsdaten anmelden."
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:307
+#: lib/tymeslot_web/components/auth/session/password_reset_component.ex:320
 #, elixir-autogen, elixir-format
 msgid "Your password has been successfully updated. You can now log in with your new credentials."
 msgstr "Ihr Passwort wurde erfolgreich aktualisiert. Sie können sich jetzt mit Ihren neuen Zugangsdaten anmelden."
@@ -655,7 +655,7 @@ msgstr "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
 msgid "I accept the %{terms} and %{privacy_policy}"
 msgstr "Ich akzeptiere die %{terms} und die %{privacy_policy}"
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:114
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:120
 #, elixir-autogen, elixir-format
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_policy} and %{terms} apply."
 msgstr "Diese Website ist durch reCAPTCHA geschützt und es gelten die %{privacy_policy} und %{terms} von Google."

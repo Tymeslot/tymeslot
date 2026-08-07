@@ -16,7 +16,7 @@ msgstr ""
 msgid "Are you sure you want to delete your profile picture? This action cannot be undone."
 msgstr "Möchten Sie Ihr Profilbild wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:165
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:181
 #, elixir-autogen, elixir-format
 msgid "Available"
 msgstr "Verfügbar"
@@ -31,7 +31,7 @@ msgstr "Avatar erfolgreich gelöscht"
 msgid "Avatar updated successfully"
 msgstr "Avatar erfolgreich aktualisiert"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:66
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:71
 #, elixir-autogen, elixir-format
 msgid "Basic Information"
 msgstr "Grundlegende Informationen"
@@ -41,7 +41,7 @@ msgstr "Grundlegende Informationen"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:212
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:248
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."
 msgstr "Wählen Sie einen eindeutigen Nutzernamen für Ihre persönliche Buchungsseite."
@@ -57,7 +57,7 @@ msgstr "Eigene URL"
 msgid "Delete Avatar"
 msgstr "Avatar löschen"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:185
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:196
 #, elixir-autogen, elixir-format
 msgid "Delete Photo"
 msgstr "Foto löschen"
@@ -93,22 +93,22 @@ msgstr "Anzeigename konnte nicht aktualisiert werden"
 msgid "Failed to update timezone"
 msgstr "Zeitzone konnte nicht aktualisiert werden"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:176
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:202
 #, elixir-autogen, elixir-format
 msgid "Invalid"
 msgstr "Ungültig"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:195
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:206
 #, elixir-autogen, elixir-format
 msgid "JPG, PNG, GIF or WebP. Max 10MB."
 msgstr "JPG, PNG, GIF oder WebP. Max. 10 MB."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:201
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:237
 #, elixir-autogen, elixir-format
 msgid "Live at:"
 msgstr "Live unter:"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:214
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:230
 #, elixir-autogen, elixir-format
 msgid "Processing..."
 msgstr "Wird verarbeitet…"
@@ -123,12 +123,12 @@ msgstr "Profilbild"
 msgid "Profile Settings"
 msgstr "Profil-Einstellungen"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:188
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:214
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "Wird gespeichert…"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:172
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:198
 #, elixir-autogen, elixir-format
 msgid "Taken"
 msgstr "Vergeben"
@@ -148,18 +148,18 @@ msgstr "Zeitzone"
 msgid "Timezone updated to %{timezone}"
 msgstr "Zeitzone auf %{timezone} aktualisiert"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:190
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:216
 #, elixir-autogen, elixir-format
 msgid "Update URL"
 msgstr "URL aktualisieren"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:190
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:201
 #, elixir-autogen, elixir-format
 msgid "Upload"
 msgstr "Hochladen"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:164
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:170
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:176
 #, elixir-autogen, elixir-format
 msgid "Upload New"
 msgstr "Neues hochladen"
@@ -174,8 +174,8 @@ msgstr "Hochladen fehlgeschlagen"
 msgid "Upload failed: %{reason}"
 msgstr "Hochladen fehlgeschlagen: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:163
-#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:215
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:169
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:231
 #, elixir-autogen, elixir-format
 msgid "Uploading..."
 msgstr "Wird hochgeladen…"
@@ -185,12 +185,12 @@ msgstr "Wird hochgeladen…"
 msgid "Username updated! Your booking page: %{url}"
 msgstr "Nutzername aktualisiert! Ihre Buchungsseite: %{url}"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:143
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:149
 #, elixir-autogen, elixir-format
 msgid "Your Custom URL"
 msgstr "Ihre eigene URL"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:145
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex:151
 #, elixir-autogen, elixir-format
 msgid "yourname"
 msgstr "ihrname"
