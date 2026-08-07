@@ -56,9 +56,9 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
 
       <%= if @day_data do %>
         <div class="space-y-4">
-          <!-- phx-no-format: the HTML plugin collapses the trailing keyword argument
-             onto the message line and the Elixir formatter splits it back out
-             again, so the two never agree on this call. -->
+          <%!-- phx-no-format: the HTML plugin collapses the trailing keyword
+          argument onto the message line and the Elixir formatter splits it
+          back out again, so the two never agree on this call. --%>
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed" phx-no-format>
             {dgettext(
               "dashboard_availability",
