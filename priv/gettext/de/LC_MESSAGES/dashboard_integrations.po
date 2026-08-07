@@ -1029,7 +1029,7 @@ msgstr "Zeitüberschreitung beim Aufruf der URL"
 msgid "Connection validation failed"
 msgstr "Die Überprüfung der Verbindung ist fehlgeschlagen"
 
-#: lib/tymeslot/integrations/video.ex:519
+#: lib/tymeslot/integrations/video.ex:482
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Ihr Konto konnte nicht identifiziert werden. Bitte versuchen Sie es erneut. Falls das Problem weiterhin besteht, entfernen Sie die Integration und fügen Sie sie erneut hinzu."
