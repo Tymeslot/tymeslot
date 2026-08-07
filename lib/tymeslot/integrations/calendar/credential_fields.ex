@@ -12,12 +12,16 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   tightened for one automatically holds for the other. `validate_calendar_url/1`
   is the one that matters most: it blocks loopback, link-local and RFC 1918
   addresses, which is what stops an authenticated user using the connect form to
-  probe the server's own network.
+  probe the server's own network. That block is lifted only by the operator's
+  explicit `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out, read through
+  `Tymeslot.Security.SsrfGuard.allow_private?/0` so this surface, the changeset
+  and the request-time guard cannot drift apart.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Shared.InputValidators
+  alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UniversalSanitizer
   alias Tymeslot.Security.UrlValidation
 
@@ -220,14 +224,20 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   end
 
   # Mirrors the persistence posture in `CalendarIntegrationSchema`, which
-  # validates `:base_url` with `block_private_ips: true`. Discovery/test-connection
+  # validates `:base_url` against the same opt-out. Discovery/test-connection
   # forms must reject internal hosts (loopback, link-local, RFC 1918) so an
   # authenticated user can't probe them server-side any more than they can save
   # such a URL on the integration.
+  #
+  # The block lifts only when the operator sets
+  # `ALLOW_PRIVATE_IPS_FOR_CALENDAR=true`, the same switch the request-time
+  # guard honours. Reading it here is what makes that switch usable at all: a
+  # URL the guard would permit still has to survive this form and the changeset
+  # before it can be saved.
   defp do_validate_calendar_url(url) do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      block_private_ips: true,
+      block_private_ips: not SsrfGuard.allow_private?(),
       https_error_message:
         dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
       private_ip_error_message:
