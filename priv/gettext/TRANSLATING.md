@@ -30,9 +30,7 @@ mix gettext.merge priv/gettext --locale <locale>
 `gettext.merge` must report `0 new, 0 removed` for every domain. Anything else means a
 msgid was edited or lost.
 
-> Running `mix gettext.merge` from `apps/tymeslot/` in the umbrella needs
-> `MIX_DEPS_PATH=../../deps` — this child project sets no `deps_path`, because it is also
-> built standalone for the open-source Core split.
+> Run both commands from this repository's root, where `mix.exs` lives.
 
 ## The rules
 

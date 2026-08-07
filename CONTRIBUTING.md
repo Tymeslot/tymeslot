@@ -37,6 +37,7 @@ We welcome many types of contributions:
 - 🐛 **Bug fixes** - Help us squash bugs and improve stability
 - ✨ **New features** - Add functionality that benefits users
 - 📚 **Documentation** - Improve guides, API docs, and examples
+- 🌍 **Translations** - Bring the whole app (dashboard, booking pages and emails) to a new language, or improve an existing one - start with [priv/gettext/TRANSLATING.md](priv/gettext/TRANSLATING.md)
 - 🧪 **Testing** - Add test coverage and improve test quality
 - 🎨 **Themes** - Create new booking interface themes
 - 🔌 **Integrations** - Add support for new calendar/video providers
@@ -526,9 +527,9 @@ Security-related contributions should:
 ### Documentation
 
 - [README.md](README.md) - Project overview and setup
-- [DESIGN_LANGUAGE.md](DESIGN_LANGUAGE.md) - UI/UX guidelines
 - [docs/THEME_DEVELOPMENT_GUIDE.md](docs/THEME_DEVELOPMENT_GUIDE.md) - Theme creation
-- [DEBUG_ROUTES.md](DEBUG_ROUTES.md) - Debug utilities
+- [priv/gettext/TRANSLATING.md](priv/gettext/TRANSLATING.md) - Translating Tymeslot into your language
+- [docs/ADMIN.md](docs/ADMIN.md) - Self-host administration
 
 ### Communication
 
