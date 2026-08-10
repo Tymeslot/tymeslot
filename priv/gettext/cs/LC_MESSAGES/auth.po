@@ -147,6 +147,7 @@ msgstr "Ověření přes %{provider} se nezdařilo."
 msgid "Failed to create session. Please try again."
 msgstr "Relaci se nepodařilo vytvořit. Zkuste to prosím znovu."
 
+#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/live/auth_live/verification_events.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to send verification email. Please try again later."
@@ -418,6 +419,7 @@ msgstr "Příliš mnoho pokusů o přihlášení. Zkuste to prosím později."
 msgid "Too many registration attempts. Please try again later."
 msgstr "Příliš mnoho pokusů o registraci. Zkuste to prosím později."
 
+#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Too many verification attempts. Please try again later."
@@ -528,6 +530,7 @@ msgstr "zásady ochrany osobních údajů"
 msgid "terms"
 msgstr "podmínky použití"
 
+#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please try again."
@@ -609,6 +612,7 @@ msgid "This email address is already associated with another account. Please use
 msgstr "Tato e-mailová adresa už patří k jinému účtu. Použijte prosím jiný e-mail nebo se přihlaste ke stávajícímu účtu."
 
 #: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
@@ -729,3 +733,331 @@ msgstr "Platnost odkazu vypršela. Požádejte prosím o nový"
 #, elixir-autogen, elixir-format
 msgid "Your password has been reset successfully. Please log in with your new password."
 msgstr "Vaše heslo bylo úspěšně obnoveno. Přihlaste se prosím novým heslem."
+
+#: lib/tymeslot/auth/authentication.ex
+#, elixir-autogen, elixir-format
+msgid "Login successful."
+msgstr "Přihlášení proběhlo úspěšně."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "%{operation} failed: %{reason}"
+msgstr "Chyba (%{operation}): %{reason}"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication failed. Please try again."
+msgstr "Ověření přes %{provider} se nezdařilo. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authorization was denied. Please try again."
+msgstr "Autorizace přes %{provider} byla zamítnuta. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Account created but email verification failed. Please contact support."
+msgstr "Účet byl vytvořen, ale ověření e-mailu se nezdařilo. Kontaktujte prosím podporu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Account created but profile setup failed. Please contact support."
+msgstr "Účet byl vytvořen, ale nastavení profilu se nezdařilo. Kontaktujte prosím podporu."
+
+#: lib/tymeslot/security/account_lockout.ex
+#, elixir-autogen, elixir-format
+msgid "Account locked for %{duration} minutes due to repeated failed attempts"
+msgstr "Účet byl na %{duration} min zablokován kvůli opakovaným neúspěšným pokusům"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "An error occurred. Please try again."
+msgstr "Došlo k chybě. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/password_update.ex
+#, elixir-autogen, elixir-format
+msgid "Current password is incorrect"
+msgstr "Současné heslo není správné"
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Email address is already in use"
+msgstr "Tato e-mailová adresa se již používá"
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Email changed successfully. Please sign in with your new email."
+msgstr "E-mail byl úspěšně změněn. Přihlaste se prosím novým e-mailem."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to authenticate with %{provider}. Please try again."
+msgstr "Ověření přes %{provider} se nezdařilo. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to verify email change"
+msgstr "Změnu e-mailu se nepodařilo ověřit"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "If your email is registered, you will receive password reset instructions."
+msgstr "Pokud je váš e-mail zaregistrovaný, přijdou vám pokyny k obnovení hesla."
+
+#: lib/tymeslot/auth/social_authentication.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email format"
+msgstr "Neplatný formát e-mailu"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password."
+msgstr "Neplatný e-mail nebo heslo."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#: lib/tymeslot/auth/validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid input provided."
+msgstr "Byla zadána neplatná data."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid or expired password reset token."
+msgstr "Token pro obnovení hesla je neplatný nebo jeho platnost vypršela."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid or expired verification link"
+msgstr "Ověřovací odkaz je neplatný nebo jeho platnost vypršela"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid response from %{provider}. Please try again."
+msgstr "Neplatná odpověď od poskytovatele %{provider}. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid verification token. Please request a new verification email."
+msgstr "Neplatný ověřovací token. Požádejte prosím o nový ověřovací e-mail."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "New email must be different from current email"
+msgstr "Nový e-mail se musí lišit od současného"
+
+#: lib/tymeslot/auth/password_update.ex
+#, elixir-autogen, elixir-format
+msgid "New password must be different from current password"
+msgstr "Nové heslo se musí lišit od současného"
+
+#: lib/tymeslot/auth/validation.ex
+#, elixir-autogen, elixir-format
+msgid "Password is too long"
+msgstr "Heslo je příliš dlouhé"
+
+#: lib/tymeslot/auth/password_update.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at least 8 characters long"
+msgstr "Heslo musí mít alespoň 8 znaků"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at least 8 characters long."
+msgstr "Heslo musí mít alespoň 8 znaků."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Password reset failed. Please try again."
+msgstr "Obnovení hesla se nezdařilo. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/password_update.ex
+#, elixir-autogen, elixir-format
+msgid "Passwords do not match"
+msgstr "Hesla se neshodují"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Please enter a valid email address."
+msgstr "Zadejte prosím platnou e-mailovou adresu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before logging in."
+msgstr "Před přihlášením prosím ověřte svou e-mailovou adresu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Registration"
+msgstr "Registrace"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Registration failed. Please try again."
+msgstr "Registrace se nezdařila. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/signup_security.ex
+#, elixir-autogen, elixir-format
+msgid "Security verification failed. Please try again."
+msgstr "Bezpečnostní ověření se nezdařilo. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/signup_security.ex
+#, elixir-autogen, elixir-format
+msgid "Security verification unavailable. Please enable JavaScript and refresh the page, or contact support if the problem persists."
+msgstr "Bezpečnostní ověření není k dispozici. Zapněte prosím JavaScript a načtěte stránku znovu; pokud potíže přetrvávají, kontaktujte podporu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "The link has expired. Please request a new one."
+msgstr "Platnost odkazu vypršela. Požádejte prosím o nový."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "The link is invalid or has expired. Please request a new one."
+msgstr "Odkaz je neplatný nebo jeho platnost vypršela. Požádejte prosím o nový."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "The password couldn't be updated. Please try again with a different password."
+msgstr "Heslo se nepodařilo změnit. Zkuste to prosím znovu s jiným heslem."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This email address is already in use. Please try with a different email."
+msgstr "Tato e-mailová adresa se již používá. Zkuste prosím jiný e-mail."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This email address is already registered. Please use a different email or try logging in."
+msgstr "Tato e-mailová adresa je již zaregistrovaná. Použijte prosím jiný e-mail nebo se přihlaste."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This email is already registered. Please sign in instead."
+msgstr "Tento e-mail je již zaregistrovaný. Přihlaste se prosím."
+
+#: lib/tymeslot/auth/social_authentication.ex
+#, elixir-autogen, elixir-format
+msgid "This email is already registered. Please use a different email address."
+msgstr "Tento e-mail je již zaregistrovaný. Použijte prosím jinou e-mailovou adresu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This email is associated with a social login. Please use your original sign-in method."
+msgstr "Tento e-mail je propojený s přihlášením přes sociální síť. Použijte prosím původní způsob přihlášení."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "This information is already in use. Please try with different details."
+msgstr "Tyto údaje se již používají. Zkuste prosím jiné."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many %{operation} attempts. Please try again in %{minutes} minute(s)."
+msgstr "Příliš mnoho pokusů (%{operation}). Zkuste to prosím znovu za %{minutes} min."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many %{operation} attempts. Please try again in %{seconds} seconds."
+msgstr "Příliš mnoho pokusů (%{operation}). Zkuste to prosím znovu za %{seconds} s."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many %{operation} attempts. Please try again later."
+msgstr "Příliš mnoho pokusů (%{operation}). Zkuste to prosím později."
+
+#: lib/tymeslot/security/account_lockout.ex
+#, elixir-autogen, elixir-format
+msgid "Too many failed attempts. Please wait before trying again"
+msgstr "Příliš mnoho neúspěšných pokusů. Vyčkejte prosím, než to zkusíte znovu"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many login attempts. Please wait before trying again."
+msgstr "Příliš mnoho pokusů o přihlášení. Vyčkejte prosím, než to zkusíte znovu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many password reset attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o obnovení hesla. Zkuste to prosím později."
+
+#: lib/tymeslot/auth/signup_security.ex
+#, elixir-autogen, elixir-format
+msgid "Too many signup attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o registraci. Zkuste to prosím později."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Unable to reset password. Please try again."
+msgstr "Heslo se nepodařilo obnovit. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Unable to send password reset email. Please try again later."
+msgstr "E-mail pro obnovení hesla se nepodařilo odeslat. Zkuste to prosím později."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Verification failed. Please try again."
+msgstr "Ověření se nezdařilo. Zkuste to prosím znovu."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Verification link has expired"
+msgstr "Platnost ověřovacího odkazu vypršela"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "You cannot reset your password because your account is managed by an external authentication provider."
+msgstr "Heslo nelze obnovit, protože váš účet spravuje externí poskytovatel ověření."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Your account has been locked due to too many failed attempts. Please try again later."
+msgstr "Váš účet byl zablokován kvůli příliš mnoha neúspěšným pokusům. Zkuste to prosím později."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Your password has been reset successfully"
+msgstr "Vaše heslo bylo úspěšně obnoveno"
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Your reset token has expired. Please request a new password reset."
+msgstr "Platnost vašeho tokenu vypršela. Požádejte prosím o nové obnovení hesla."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Your verification token has expired. Please request a new verification email."
+msgstr "Platnost vašeho ověřovacího tokenu vypršela. Požádejte prosím o nový ověřovací e-mail."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "authentication"
+msgstr "ověření"
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "login"
+msgstr "přihlášení"
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Email change request cancelled"
+msgstr "Žádost o změnu e-mailu byla zrušena"
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Password reset instructions have been sent to your email."
+msgstr "Pokyny k obnovení hesla byly odeslány na váš e-mail."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Token verified successfully."
+msgstr "Token byl úspěšně ověřen."
+
+#: lib/tymeslot/auth/email_change.ex
+#, elixir-autogen, elixir-format
+msgid "Verification email sent to %{email}"
+msgstr "Ověřovací e-mail byl odeslán na %{email}"

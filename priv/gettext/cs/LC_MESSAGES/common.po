@@ -26,11 +26,6 @@ msgstr "Ano"
 msgid "✓ Acknowledged (%{at})"
 msgstr "✓ Potvrzeno (%{at})"
 
-#: lib/tymeslot_web/components/core_components/forms.ex
-#, elixir-autogen, elixir-format
-msgid "At least 8 characters"
-msgstr "Alespoň 8 znaků"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -226,3 +221,13 @@ msgstr "© %{year} Tymeslot. Všechna práva vyhrazena."
 #, elixir-autogen, elixir-format
 msgid "Saving changes..."
 msgstr "Ukládání změn…"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least %{count} characters"
+msgstr "Alespoň %{count} znaků"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One special character"
+msgstr "Jeden speciální znak"
