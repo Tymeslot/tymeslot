@@ -8,6 +8,8 @@ defmodule Tymeslot.Security.AccountLockout do
   caller crashing — but does NOT survive a BEAM restart, node shutdown, or deploy.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.AccountLockout.TableOwner
 
   require Logger
@@ -52,11 +54,15 @@ defmodule Tymeslot.Security.AccountLockout do
             duration = calculate_lockout_duration(count)
 
             {:error, :account_locked,
-             "Account locked for #{duration} minutes due to repeated failed attempts"}
+             dgettext(
+               "auth",
+               "Account locked for %{duration} minutes due to repeated failed attempts",
+               duration: duration
+             )}
 
           count when count >= 10 ->
             {:error, :account_throttled,
-             "Too many failed attempts. Please wait before trying again"}
+             dgettext("auth", "Too many failed attempts. Please wait before trying again")}
 
           _other ->
             :ok

@@ -1,4 +1,56 @@
 
+[1.8.0]
+* core: Show password rule errors in the user's language
+* core: Honour the classic Zoom write scope when cancelling meetings
+* core: Show authentication and account messages in the user's language
+* core: Correct German salutation capitalisation in email openings
+* core: Report why a new password is rejected on the reset form
+* core: Honour the private-network opt-out when saving a calendar server
+* core: Paint the grid in the colour chosen for each calendar
+* core: Raise contrast of calendar hour labels and grid lines
+* core: Apply the clock preference across every dashboard surface
+* core: Translate the calendar subscription name in the provider picker
+* core: Show two lines of provider descriptions in the integration picker
+* Delete provider video rooms after an integration is disconnected
+* core: Delete provider video rooms after an integration is disconnected
+* core: Translate the calendar colour names
+* core: Paint each calendar colour the colour it is named after
+* core: Show booking page times in the visitor's own language
+* core: Preload the profile before rendering webhook-triggered emails
+* core: Send Zoom meeting cancellations with the delete scope
+* core: Hide the admin menu entry when the admin UI is disabled
+* core: Apply the dashboard language switch across the whole page at once
+* core: Translate dashboard sidebar extension labels
+* core: Drop duration wording from the booking page intro
+* core: Unify terminology across the German, French, Italian and Ukrainian catalogues
+* core: Pluralise the duration and stats-period labels
+* core: Correct verified translation defects across the catalogues
+* core: Stop the booking page stacking duplicate prepositions
+* core: Pluralise the reminder count in appointment emails
+* core: Stop the German admin flashes misattributing a role change
+* core: Warn French users that changing currency clears their prices
+* core: Complete missing Ukrainian translations
+* core: Localise payment timestamps and change summaries in emails
+* core: Use Apple's own German labels in the iCloud setup steps
+* core: Remove duplicated word from OAuth sign-up email errors
+* core: Add Czech as a supported language
+* core: Colour and show each calendar independently in the dashboard
+* Reconcile cancelled meetings holding orphaned video rooms
+* Offer to delete meeting rooms when disconnecting video
+* core: Offer to delete meeting rooms when disconnecting video
+* Record the video provider on meetings
+* core: Let each connected calendar carry its own name and colour
+* core: Let organisers choose a 12-hour or 24-hour clock
+* core: Localise the strings the mail and integration work introduced
+* core: Let hosts cap how many bookings they accept per day, week and month
+* core: Add Ukrainian language support
+* core: Add French and Italian language support
+* core: Send account, auth and calendar emails in the recipient's language
+* core: Add German translations across the app
+* core: Add a language option to embed snippets
+* core: Show the dashboard in each member's chosen language
+
+
 [1.7.0]
 * core: Keep a settled invoice from reverting to unpaid
 * core: Stop CalDAV sync from deleting events the server withheld

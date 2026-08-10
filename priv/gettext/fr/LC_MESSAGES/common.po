@@ -26,11 +26,6 @@ msgstr "Oui"
 msgid "✓ Acknowledged (%{at})"
 msgstr "✓ Confirmé (%{at})"
 
-#: lib/tymeslot_web/components/core_components/forms.ex
-#, elixir-autogen, elixir-format
-msgid "At least 8 characters"
-msgstr "Au moins 8 caractères"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -226,3 +221,13 @@ msgstr "© %{year} Tymeslot. Tous droits réservés."
 #, elixir-autogen, elixir-format
 msgid "Saving changes..."
 msgstr "Enregistrement des modifications..."
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least %{count} characters"
+msgstr "Au moins %{count} caractères"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One special character"
+msgstr "Un caractère spécial"

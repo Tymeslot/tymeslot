@@ -23,15 +23,15 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   conventions, given a bare (unpadded) day number. Shared by `format_date/2`
   and callers that build their own day/month/year pieces (e.g. date ranges).
   Matches `format_date/2`'s per-locale padding: `en`/unknown locales
-  zero-pad the day; `de`/`uk`/`fr`/`it` do not.
+  zero-pad the day; `de`/`cs`/`uk`/`fr`/`it` do not.
   - en: April 05, 2026
-  - de: 5. April 2026
+  - de/cs: 5. April 2026 / 5. dubna 2026
   - uk/fr/it: 5 квітня 2026 (day before month, no period)
   """
   @spec order_date_parts(String.t() | integer(), String.t(), integer(), String.t()) :: String.t()
   def order_date_parts(day, month_name, year, locale) do
     case locale do
-      "de" -> "#{day}. #{month_name} #{year}"
+      loc when loc in ["de", "cs"] -> "#{day}. #{month_name} #{year}"
       loc when loc in ["uk", "fr", "it"] -> "#{day} #{month_name} #{year}"
       _other_locale -> "#{month_name} #{pad_day(day)}, #{year}"
     end
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   without the zero-padded day that `format_date/2` applies (ranges read more
   naturally with bare day numbers, e.g. "April 10 – 12, 2026").
   - en: April 10 – 12, 2026 / April 30 – May 2, 2026
-  - de: 10.–12. April 2026 / 30. April – 2. Mai 2026
+  - de/cs: 10.–12. April 2026 / 30. April – 2. Mai 2026
   - uk/fr/it: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
   """
   @spec format_date_range(Calendar.date(), Calendar.date(), String.t()) :: String.t()
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     end_month = format_month_name(end_date.month, locale)
 
     case locale do
-      "de" ->
+      loc when loc in ["de", "cs"] ->
         day_first_range(start_date, start_month, end_date, end_month, ".")
 
       loc when loc in ["uk", "fr", "it"] ->
@@ -119,6 +119,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full:
         ~w(gennaio febbraio marzo aprile maggio giugno luglio agosto settembre ottobre novembre dicembre),
       short: ~w(gen feb mar apr mag giu lug ago set ott nov dic)
+    },
+    # Czech names a month inside a date in the genitive ("5. dubna 2026"), which
+    # is the only place these are used, so the genitive is what is stored here.
+    "cs" => %{
+      full:
+        ~w(ledna února března dubna května června července srpna září října listopadu prosince),
+      short: ~w(led úno bře dub kvě čvn čvc srp zář říj lis pro)
     }
   }
 
@@ -158,6 +165,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full: ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"],
       short: ["dom", "lun", "mar", "mer", "gio", "ven", "sab"],
       narrow: ["D", "L", "M", "M", "G", "V", "S"]
+    },
+    "cs" => %{
+      full: ["neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota"],
+      short: ["ne", "po", "út", "st", "čt", "pá", "so"],
+      narrow: ["N", "P", "Ú", "S", "Č", "P", "S"]
     }
   }
 
@@ -211,38 +223,85 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
 
   @doc """
-  Formats a number according to locale conventions.
+  Formats a number according to locale conventions, to `decimals` decimal
+  places (two by default).
   - en: 1,234.56
   - de: 1.234,56
   - uk: 1 234,56
   """
-  @spec format_number(number(), String.t()) :: String.t()
-  def format_number(number, locale) do
-    # Default to 2 decimal places for this helper
-    formatted = :erlang.float_to_binary(number / 1.0, [{:decimals, 2}])
+  @spec format_number(number(), String.t(), non_neg_integer()) :: String.t()
+  def format_number(number, locale, decimals \\ 2)
+
+  # `float_to_binary/2` emits no decimal point at all for `decimals: 0`, so
+  # there is no fractional part to separate.
+  def format_number(number, locale, 0) do
+    (number / 1.0) |> :erlang.float_to_binary([{:decimals, 0}]) |> group_digits(locale)
+  end
+
+  def format_number(number, locale, decimals) do
+    formatted = :erlang.float_to_binary(number / 1.0, [{:decimals, decimals}])
     [integer_part, fractional_part] = String.split(formatted, ".")
 
-    # Add thousand separators to integer part
-    integer_part_with_separators =
-      integer_part
-      |> String.to_charlist()
-      |> Enum.reverse()
-      |> Enum.chunk_every(3)
-      |> Enum.join(thousand_separator(locale))
-      |> String.reverse()
-
-    integer_part_with_separators <> decimal_separator(locale) <> fractional_part
+    group_digits(integer_part, locale) <> decimal_separator(locale) <> fractional_part
   end
+
+  @doc """
+  Formats a whole number according to locale grouping conventions, with no
+  decimal part. Use this rather than `format_number/2` for quantities that are
+  meaningless below the unit — whole-currency amounts, counts, durations.
+  - en: 1,500
+  - de: 1.500
+  - uk/cs: 1 500
+  """
+  @spec format_integer(integer(), String.t()) :: String.t()
+  def format_integer(number, locale) when is_integer(number) do
+    number |> Integer.to_string() |> group_digits(locale)
+  end
+
+  @doc """
+  The thousands separator for a locale, exposed so callers that must group
+  digits somewhere this module cannot reach — client-side JS, a template
+  building its own string — stay consistent with `format_integer/2` instead of
+  hardcoding a second copy of the table.
+
+  Note that the space-grouping locales return a *non-breaking* space, so a
+  caller splitting or measuring on `" "` will not find it.
+  """
+  @spec group_separator(String.t()) :: String.t()
+  def group_separator(locale), do: thousand_separator(locale)
+
+  # Inserts the locale's thousands separator into a run of digits, every three
+  # places from the right. The sign is split off first: left in place it would
+  # be chunked like a digit, misplacing the separator whenever the digit count
+  # is a multiple of three ("-123456" grouping to "-,123,456").
+  defp group_digits("-" <> digits, locale), do: "-" <> group_digits(digits, locale)
+
+  defp group_digits(digits, locale) do
+    digits
+    |> String.to_charlist()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.join(thousand_separator(locale))
+    |> String.reverse()
+  end
+
+  # U+00A0. The locales that group with a space need a non-breaking one: a plain
+  # space is a line-break opportunity, so "1 500 Kč" can wrap after the "1" and
+  # read as two separate figures. Written as an escape rather than the literal
+  # character so these clauses cannot be mistaken for `" "` at a glance.
+  @group_space "\u00A0"
 
   defp thousand_separator("de"), do: "."
   defp thousand_separator("it"), do: "."
-  defp thousand_separator("uk"), do: " "
-  defp thousand_separator("fr"), do: " "
+  defp thousand_separator("uk"), do: @group_space
+  defp thousand_separator("fr"), do: @group_space
+  defp thousand_separator("cs"), do: @group_space
   defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","
   defp decimal_separator("it"), do: ","
   defp decimal_separator("uk"), do: ","
   defp decimal_separator("fr"), do: ","
+  defp decimal_separator("cs"), do: ","
   defp decimal_separator(_other_locale), do: "."
 end

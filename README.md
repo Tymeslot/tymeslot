@@ -99,7 +99,7 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 - **Privacy by design** — credentials encrypted at rest, no third-party trackers or analytics pixels, rate-limited public endpoints, HMAC-signed webhooks, CSRF and signed tokens throughout.
 - **Automate everything** — Slack and Telegram notifications, plus `meeting_created`, `meeting_cancelled` and `meeting_rescheduled` webhooks that plug straight into n8n, Zapier, Make or your own backend.
 - **Make it yours** — two booking-page themes (Quill and Rhythm) with dark mode and white-label options.
-- **Speaks your language** — the whole app in English, German, Ukrainian, French and Italian: your dashboard, your booking pages and every email, with dates and times in local convention. Guests get their own language automatically; pick yours in Account settings.
+- **Speaks your language** — the whole app in English, German, Ukrainian, French, Italian and Czech: your dashboard, your booking pages and every email, with dates and times in local convention. Guests get their own language automatically; pick yours in Account settings.
 - **Get paid to meet** — optional paid bookings through [Stripe Connect](#meeting-payments), off by default and fee-free for self-hosters.
 
 ---

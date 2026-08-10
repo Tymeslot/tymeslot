@@ -58,19 +58,33 @@ const PasswordToggle = {
 
   setupValidation() {
     const input = this.input();
-    if (!input || !document.getElementById('req-length')) return;
+    // Scoped to this hook's own container, so the confirm-password field does
+    // not tick the checklist that belongs to the password field above it.
+    const list = this.el.querySelector('#password-requirements');
+    if (!input || !list) return;
+
+    // The rules and their patterns come from the server (PasswordValidator),
+    // so this checklist cannot claim a different set to the one enforced.
+    const rules = Array.from(list.querySelectorAll('[data-password-rule]'))
+      .map((element) => {
+        try {
+          return { element, pattern: new RegExp(element.dataset.passwordPattern) };
+        } catch (error) {
+          console.error('Unusable password rule pattern', element.dataset.passwordPattern, error);
+          return null;
+        }
+      })
+      .filter(Boolean);
+
     input.addEventListener('input', () => {
-      const v = input.value;
-      updateRequirement('length', v.length >= 8);
-      updateRequirement('lowercase', /[a-z]/.test(v));
-      updateRequirement('uppercase', /[A-Z]/.test(v));
-      updateRequirement('number', /[0-9]/.test(v));
+      rules.forEach(({ element, pattern }) =>
+        updateRequirement(element, pattern.test(input.value))
+      );
     });
   },
 };
 
-function updateRequirement(requirement, isValid) {
-  const element = document.getElementById(`req-${requirement}`);
+function updateRequirement(element, isValid) {
   if (!element) return;
   const icon = element.querySelector('svg');
   if (isValid) {

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.{Password, RateLimiter, Token}
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
@@ -271,6 +272,52 @@ defmodule TymeslotWeb.AuthLiveTest do
         })
 
       assert result =~ "Invalid reset token"
+    end
+
+    # Every rejection on this form used to be assigned to :errors and then
+    # dropped on the floor by the template, so a rejected submission looked
+    # exactly like no submission at all. These pin the failure paths to
+    # something the user can actually read.
+    test "a password missing a special character is rejected visibly", %{
+      conn: conn,
+      token: token
+    } do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password/#{token}")
+
+      html =
+        view
+        |> form("#new-password-form", %{
+          "password" => "SomePassword123",
+          "password_confirmation" => "SomePassword123"
+        })
+        |> render_submit()
+
+      assert html =~ "Password must contain at least one special character"
+      refute html =~ "Password Reset Successfully"
+    end
+
+    test "a mismatched confirmation is rejected visibly", %{conn: conn, token: token} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password/#{token}")
+
+      html =
+        view
+        |> form("#new-password-form", %{
+          "password" => "NewSecurePass123!",
+          "password_confirmation" => "DifferentPass456!"
+        })
+        |> render_submit()
+
+      assert html =~ "Password confirmation does not match"
+      refute html =~ "Password Reset Successfully"
+    end
+
+    test "the form states every rule the server enforces", %{conn: conn, token: token} do
+      {:ok, _view, html} = live(conn, ~p"/auth/reset-password/#{token}")
+
+      for rule <- PasswordValidator.rules() do
+        assert html =~ ~s(data-password-rule="#{rule.key}"),
+               "the password checklist omits the enforced #{rule.key} rule"
+      end
     end
   end
 

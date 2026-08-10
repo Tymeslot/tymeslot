@@ -271,5 +271,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   def stripe_locale("de"), do: "de"
   def stripe_locale("fr"), do: "fr"
   def stripe_locale("it"), do: "it"
+  def stripe_locale("cs"), do: "cs"
   def stripe_locale(_other), do: "auto"
 end

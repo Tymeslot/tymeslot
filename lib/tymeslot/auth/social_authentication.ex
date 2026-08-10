@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   Handles social authentication helpers.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
 
   require Logger
@@ -19,13 +21,18 @@ defmodule Tymeslot.Auth.SocialAuthentication do
 
       {:ok, _user} ->
         Logger.warning("Email already registered")
-        {:error, "This email is already registered. Please use a different email address."}
+
+        {:error,
+         dgettext(
+           "auth",
+           "This email is already registered. Please use a different email address."
+         )}
     end
   end
 
   def check_email_availability(other) do
     Logger.warning("Invalid email format", value: inspect(other))
-    {:error, "Invalid email format"}
+    {:error, dgettext("auth", "Invalid email format")}
   end
 
   defp user_queries_module do

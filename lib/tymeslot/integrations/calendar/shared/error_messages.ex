@@ -17,7 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   @typedoc "Coarse buckets a calendar failure falls into."
   @type error_category ::
-          :auth | :network | :config | :not_found | :rate_limit | :timeout | :other
+          :auth | :network | :config | :permission | :rate_limit | :timeout | :unknown
 
   @typedoc "Calendar provider the failure came from."
   @type provider :: atom() | String.t()

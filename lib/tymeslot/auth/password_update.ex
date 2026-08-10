@@ -7,6 +7,8 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   and invalidates all existing sessions.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Ecto.Changeset
 
   alias Tymeslot.Auth.{Session, UserQueries}
@@ -28,7 +30,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
       {:ok, updated_user}
     else
       {:error, :invalid_password} ->
-        {:error, "Current password is incorrect"}
+        {:error, dgettext("auth", "Current password is incorrect")}
 
       {:error, %Changeset{} = changeset} ->
         {:error, format_changeset_error(changeset)}
@@ -50,7 +52,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
 
   defp ensure_not_same_as_old(user, new_password) do
     if Password.verify_password(new_password, user.password_hash) do
-      {:error, "New password must be different from current password"}
+      {:error, dgettext("auth", "New password must be different from current password")}
     else
       :ok
     end
@@ -59,10 +61,10 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   defp validate_new_password(password, password_confirmation) do
     cond do
       password != password_confirmation ->
-        {:error, "Passwords do not match"}
+        {:error, dgettext("auth", "Passwords do not match")}
 
       String.length(password) < 8 ->
-        {:error, "Password must be at least 8 characters long"}
+        {:error, dgettext("auth", "Password must be at least 8 characters long")}
 
       true ->
         :ok

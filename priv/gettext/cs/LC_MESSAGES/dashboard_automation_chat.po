@@ -1,0 +1,709 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{workspace} · #%{channel}"
+msgstr "%{workspace} · #%{channel}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "(private)"
+msgstr "(soukromý)"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "A label shown in your dashboard. Useful if you connect more than one Slack workspace."
+msgstr "Označení zobrazené na vaší nástěnce. Hodí se, pokud propojíte více pracovních prostorů Slack."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Active"
+msgstr "Aktivní"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add Slack via Webhook URL"
+msgstr "Přidat Slack pomocí URL webhooku"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
+#, elixir-autogen, elixir-format
+msgid "Add Telegram Account"
+msgstr "Přidat účet Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
+#, elixir-autogen, elixir-format
+msgid "Add to Slack"
+msgstr "Přidat do aplikace Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
+#, elixir-autogen, elixir-format
+msgid "Add via webhook URL"
+msgstr "Přidat pomocí URL webhooku"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting connection"
+msgstr "Čeká na připojení"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Bot Token"
+msgstr "Token bota"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Button didn't work? Already started the bot before?"
+msgstr "Tlačítko nefungovalo? Byl bot spuštěn už dříve?"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot disconnect in own-bot mode"
+msgstr "V režimu vlastního bota nelze odpojit."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot disconnect this integration"
+msgstr "Tuto integraci nelze odpojit."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reconnect in own-bot mode"
+msgstr "V režimu vlastního bota nelze připojit znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot toggle in current state"
+msgstr "V aktuálním stavu nelze přepnout."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Channel"
+msgstr "Kanál"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Channel hint (optional)"
+msgstr "Označení kanálu (nepovinné)"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Channel needed"
+msgstr "Chybí kanál"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Chat ID"
+msgstr "Chat ID"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Chat: %{chat_id}"
+msgstr "Chat: %{chat_id}"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences."
+msgstr "Kliknutím na tlačítko níže otevřete aplikaci Telegram a propojíte svůj účet. Po připojení nastavíte předvolby oznámení."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Zavřít"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Configure your Telegram notification settings."
+msgstr "Nastavte oznámení pro aplikaci Telegram."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connect"
+msgstr "Připojit"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Slack to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+msgstr "Připojte Slack a dostávejte okamžitá oznámení o rezervaci, zrušení nebo přesunutí schůzek."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Telegram"
+msgstr "Připojit Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
+msgstr "Připojte Telegram a dostávejte okamžitá oznámení o rezervaci, zrušení nebo přesunutí schůzek."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Telegram to start receiving notifications."
+msgstr "Připojte Telegram a začněte dostávat oznámení."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connected"
+msgstr "Připojeno"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not load Slack channels. Try again."
+msgstr "Kanály ze služby Slack se nepodařilo načíst. Zkuste to znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Custom webhook"
+msgstr "Vlastní webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Custom webhook · #%{channel}"
+msgstr "Vlastní webhook · #%{channel}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Smazat"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled"
+msgstr "Vypnuto"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled: %{reason}"
+msgstr "Vypnuto: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect Slack"
+msgstr "Odpojit Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disconnect Telegram"
+msgstr "Odpojit Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Upravit"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Edit Slack Integration"
+msgstr "Upravit integraci Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Edit Telegram Integration"
+msgstr "Upravit integraci Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Event Subscriptions"
+msgstr "Odběry událostí"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create integration"
+msgstr "Integraci se nepodařilo vytvořit."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/modal_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/modal_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to delete"
+msgstr "Smazání se nezdařilo."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to disconnect Slack"
+msgstr "Slack se nepodařilo odpojit."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to generate link. Please try again."
+msgstr "Odkaz se nepodařilo vygenerovat. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to initialize integration. Please try again."
+msgstr "Integraci se nepodařilo inicializovat. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to re-enable"
+msgstr "Opětovné zapnutí se nezdařilo."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to save channel"
+msgstr "Kanál se nepodařilo uložit."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to save integration"
+msgstr "Integraci se nepodařilo uložit."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update integration"
+msgstr "Integraci se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update status"
+msgstr "Stav se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Finish Slack setup"
+msgstr "Dokončit nastavení služby Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Generate New Link"
+msgstr "Vygenerovat nový odkaz"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "How to get your Bot Token & Chat ID"
+msgstr "Jak získat token bota a Chat ID"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration Details"
+msgstr "Podrobnosti integrace"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration Name"
+msgstr "Název integrace"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/modal_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Integration deleted"
+msgstr "Integrace byla smazána."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/modal_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Integration not found"
+msgstr "Integrace nebyla nalezena."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Integration not found. Please try again."
+msgstr "Integrace nebyla nalezena. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Integration re-enabled"
+msgstr "Integrace byla znovu zapnuta."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Integration status updated"
+msgstr "Stav integrace byl aktualizován."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Integration updated successfully"
+msgstr "Integrace byla aktualizována."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Last triggered: %{time}"
+msgstr "Naposledy spuštěno: %{time}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Leave blank to keep current URL"
+msgstr "Ponechte prázdné, chcete-li zachovat stávající URL"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it."
+msgstr "Ponechte prázdné, chcete-li zachovat stávající URL webhooku. Novou vložte jen tehdy, pokud ji chcete nahradit."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Link Expired"
+msgstr "Odkaz vypršel"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Loading channels from Slack..."
+msgstr "Načítání kanálů ze služby Slack…"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Logs"
+msgstr "Protokoly"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Never triggered"
+msgstr "Nikdy nespuštěno"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "No Slack Integrations"
+msgstr "Žádné integrace Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "No Telegram Integrations"
+msgstr "Žádné integrace Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "No channels available. Invite the Tymeslot bot to at least one channel in Slack, then click Refresh."
+msgstr "Nejsou k dispozici žádné kanály. Pozvěte bota Tymeslot alespoň do jednoho kanálu ve službě Slack a poté klikněte na Obnovit."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Open in Telegram"
+msgstr "Otevřít v aplikaci Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paste the Incoming Webhook URL Slack generated for your channel."
+msgstr "Vložte URL příchozího webhooku (Incoming Webhook), kterou pro váš kanál vygenerovala služba Slack."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Pozastaveno"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a channel"
+msgstr "Vybrat kanál"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a channel for Tymeslot to post booking notifications to."
+msgstr "Vyberte kanál, do kterého bude Tymeslot posílat oznámení o rezervacích."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a channel to finish setup."
+msgstr "Vyberte kanál a dokončete tak nastavení."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a channel..."
+msgstr "Vyberte kanál…"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Re-enable"
+msgstr "Znovu zapnout"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Připojit znovu"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh"
+msgstr "Obnovit"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh channel list from Slack"
+msgstr "Obnovit seznam kanálů ze služby Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Uložit"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save channel"
+msgstr "Uložit kanál"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Saving..."
+msgstr "Ukládání…"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Select which events should trigger Slack notifications."
+msgstr "Vyberte, které události mají spouštět oznámení ve službě Slack."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Select which events should trigger Telegram notifications."
+msgstr "Vyberte, které události mají spouštět oznámení v aplikaci Telegram."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Send this command directly in the Telegram bot chat:"
+msgstr "Odešlete tento příkaz přímo v konverzaci s botem v aplikaci Telegram:"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Setting up connection..."
+msgstr "Navazování připojení…"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Slack Webhook URL"
+msgstr "URL webhooku Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack channel disconnected. Pick a new channel to reconnect."
+msgstr "Kanál Slack byl odpojen. Vyberte nový kanál a připojte jej znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack channel saved"
+msgstr "Kanál Slack byl uložen."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack integration created"
+msgstr "Integrace Slack byla vytvořena."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/modal_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack integration deleted"
+msgstr "Integrace Slack byla smazána."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack/form_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack/modal_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack integration not found"
+msgstr "Integrace Slack nebyla nalezena."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack integration re-enabled"
+msgstr "Integrace Slack byla znovu zapnuta."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack integration updated"
+msgstr "Integrace Slack byla aktualizována."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Slack notifications are not enabled on this deployment."
+msgstr "Oznámení ve službě Slack nejsou v této instalaci zapnutá."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "Slack workspace"
+msgstr "Pracovní prostor Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Telegram disconnected"
+msgstr "Telegram byl odpojen."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Telegram integration created"
+msgstr "Integrace Telegram byla vytvořena."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Telegram integration saved"
+msgstr "Integrace Telegram byla uložena."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Test"
+msgstr "Otestovat"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Test & Save"
+msgstr "Otestovat a uložit"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Test failed: %{reason}"
+msgstr "Test se nezdařil: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Test message sent! Check Slack."
+msgstr "Testovací zpráva byla odeslána. Zkontrolujte službu Slack."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Test message sent! Check Telegram."
+msgstr "Testovací zpráva byla odeslána. Zkontrolujte aplikaci Telegram."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "Testing"
+msgstr "Testování"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Testing & Saving..."
+msgstr "Testování a ukládání…"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "The link has expired. Click below to generate a new one."
+msgstr "Platnost odkazu vypršela. Nový vygenerujete kliknutím níže."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Update"
+msgstr "Aktualizovat"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Update the channel and event subscriptions for this Slack workspace."
+msgstr "Upravte kanál a odběry událostí pro tento pracovní prostor Slack."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Update the webhook URL or event subscriptions for this Slack integration."
+msgstr "Upravte URL webhooku nebo odběry událostí pro tuto integraci Slack."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for Telegram connection... (link expires in 10 minutes)"
+msgstr "Čekání na připojení ke službě Telegram… (platnost odkazu vyprší za 10 minut)"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "auto-disabled"
+msgstr "automaticky vypnuto"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#, elixir-autogen, elixir-format
+msgid "webhook URL was revoked in Slack"
+msgstr "URL webhooku byla odvolána ve službě Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Acme Slack Notifications"
+msgstr "Oznámení Slack pro Acme"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "My Telegram Notifications"
+msgstr "Moje oznámení Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "-1001234567890 or @channelname"
+msgstr "-1001234567890 nebo @channelname"
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid Slack callback. Please try again."
+msgstr "Neplatná odpověď ze služby Slack. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Slack callback did not match your session. Please retry."
+msgstr "Odpověď ze služby Slack neodpovídá vaší relaci. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Slack connection expired. Please try again."
+msgstr "Platnost připojení ke službě Slack vypršela. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Message %{bot} on Telegram to create a bot and get its token."
+msgstr "Napište %{bot} v aplikaci Telegram, vytvořte si bota a získejte jeho token."
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API."
+msgstr "Chat ID zjistíte tak, že napíšete %{bot} nebo přidáte svého bota do skupiny a použijete Telegram API."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (%{command}), then click Refresh."
+msgstr "Tymeslot bude do tohoto kanálu posílat oznámení o rezervacích. Veřejné kanály se zobrazí automaticky; u soukromého kanálu pozvěte bota Tymeslot ve službě Slack (%{command}) a poté klikněte na Obnovit."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Display-only label shown in your dashboard. It does not change where messages are delivered - that is set by the webhook URL itself."
+msgstr "Pouze informativní označení zobrazené na vaší nástěnce. Nemění to, kam se zprávy doručují – to určuje samotná URL webhooku."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Slack connected - pick a channel to finish setup."
+msgstr "Slack byl připojen – nastavení dokončíte výběrem kanálu."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created - see the full setup guide on %{guide}."
+msgstr "Tymeslot posílá oznámení na tuto URL. Cílový kanál určuje služba Slack při vytvoření webhooku – kompletní návod k nastavení najdete na %{guide}."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex
+#, elixir-autogen, elixir-format
+msgid "Your Slack Integrations"
+msgstr "Vaše integrace Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex
+#, elixir-autogen, elixir-format
+msgid "Your Telegram Integrations"
+msgstr "Vaše integrace Telegram"

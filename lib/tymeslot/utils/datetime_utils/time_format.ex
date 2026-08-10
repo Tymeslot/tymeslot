@@ -11,9 +11,9 @@ defmodule Tymeslot.Utils.DateTimeUtils.TimeFormat do
       TimeFormat.resolve(preferences.time_format, locale)
 
   A `nil` stored value means the organiser has never touched the setting, so
-  their language decides: English gets a 12-hour clock, German, French, Italian
-  and Ukrainian get a 24-hour one. Once they pick a format in settings, that
-  value is stored and wins regardless of language.
+  their language decides: English gets a 12-hour clock, German, French, Italian,
+  Ukrainian and Czech get a 24-hour one. Once they pick a format in settings,
+  that value is stored and wins regardless of language.
 
   ## Audience
 
@@ -30,7 +30,7 @@ defmodule Tymeslot.Utils.DateTimeUtils.TimeFormat do
 
   # The languages Tymeslot ships that write the time as "14:30". Everything
   # else, including an unknown or missing locale, reads as a 12-hour clock.
-  @twenty_four_hour_locales ~w(de fr it uk)
+  @twenty_four_hour_locales ~w(de fr it uk cs)
 
   @doc "The formats a preference may store, in the order they are offered."
   @spec formats() :: [String.t()]

@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
 
     ConfigTestHelpers.setup_config(:tymeslot,
       telegram_notifications_allowed: true,
+      telegram_shared_bot: false,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
       dashboard_additional_hooks: [],
       feature_placeholder_components: %{}

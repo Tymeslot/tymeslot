@@ -168,7 +168,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   # RFC 5545 §3.2.10 — `LANGUAGE` carries the BCP-47 language tag of the
   # property's human-readable text. The configured locale codes ("en", "de",
-  # "fr", "it", "uk") are already valid BCP-47 primary subtags. We read the
+  # "fr", "it", "uk", "cs") are already valid BCP-47 primary subtags. We read the
   # locale active for this render (set by `generate_ics_with/4`) so it cannot
   # drift from the surrounding email translation.
   defp language_param do

@@ -48,6 +48,7 @@ msgstr "Wird gesendet…"
 msgid "are still associated with this entry"
 msgstr "sind noch mit diesem Eintrag verknüpft"
 
+#: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "can't be blank"

@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.Authentication do
   Handles user authentication for email/password login.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
@@ -95,7 +97,7 @@ defmodule Tymeslot.Auth.Authentication do
         })
 
         RateLimiter.record_auth_attempt(user.email, true)
-        {:ok, user, "Login successful."}
+        {:ok, user, dgettext("auth", "Login successful.")}
 
       true ->
         log_auth_attempt(user, :invalid_password, opts)

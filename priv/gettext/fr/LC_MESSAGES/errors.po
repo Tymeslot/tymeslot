@@ -48,6 +48,7 @@ msgstr "Envoi en cours"
 msgid "are still associated with this entry"
 msgstr "sont toujours associés à cette entrée"
 
+#: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "can't be blank"

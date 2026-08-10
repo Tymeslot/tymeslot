@@ -1321,6 +1321,9 @@ Tymeslot booking pages support internationalization (i18n) with automatic browse
 - 🇬🇧 English (`en`)
 - 🇩🇪 German (`de`)
 - 🇺🇦 Ukrainian (`uk`)
+- 🇫🇷 French (`fr`)
+- 🇮🇹 Italian (`it`)
+- 🇨🇿 Czech (`cs`)
 
 ### Language Switcher Integration
 
