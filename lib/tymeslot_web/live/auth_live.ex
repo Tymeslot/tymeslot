@@ -117,9 +117,6 @@ defmodule TymeslotWeb.AuthLive do
   def handle_event("submit_reset_request", %{"email" => email} = params, socket),
     do: PasswordResetEvents.submit_request(email, params, socket)
 
-  def handle_event("validate_password_reset", params, socket),
-    do: PasswordResetEvents.validate_new_password(params, socket)
-
   def handle_event("submit_password_reset", params, socket),
     do: PasswordResetEvents.submit_new_password(params, socket)
 

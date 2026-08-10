@@ -206,16 +206,6 @@ msgstr ""
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
-msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian and Ukrainian. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
-msgstr ""
-"Увесь застосунок - панель керування, сторінки бронювання та всі листи - "
-"тепер доступний німецькою, французькою, італійською та українською мовами. "
-"Tymeslot автоматично адаптується до мови вашого браузера, або ж ви можете "
-"обрати її самостійно в налаштуваннях облікового запису. Ваші гості також "
-"бачитимуть сторінки бронювання та підтвердження своєю мовою."
-
-#: lib/tymeslot/announcements/catalog.ex
-#, elixir-autogen, elixir-format
 msgid "Tymeslot now speaks your language"
 msgstr "Tymeslot тепер розмовляє вашою мовою"
 
@@ -291,3 +281,13 @@ msgstr "Обмежте кількість бронювань, які ви при
 #, elixir-autogen, elixir-format
 msgid "Set a maximum number of bookings per day, week or month - for a single meeting type, or across your whole account. Once a day reaches its cap it disappears from your booking page, so nobody can book you past the limit you set."
 msgstr "Встановіть максимальну кількість бронювань на день, тиждень або місяць - для окремого типу зустрічі або для всього облікового запису. Коли день досягає свого ліміту, він зникає з вашої сторінки бронювання, тож ніхто не зможе забронювати понад установлений вами ліміт."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
+msgstr ""
+"Увесь застосунок - панель керування, сторінки бронювання та всі листи - "
+"тепер доступний німецькою, французькою, італійською, українською та чеською "
+"мовами. Tymeslot автоматично адаптується до мови вашого браузера, або ж ви "
+"можете обрати її самостійно в налаштуваннях облікового запису. Ваші гості "
+"також бачитимуть сторінки бронювання та підтвердження своєю мовою."

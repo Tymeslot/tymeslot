@@ -252,6 +252,14 @@ msgstr[1] "Stunden"
   feedback is clean declarative: `"Einstellung konnte nicht aktualisiert werden."`
   No filler, no exclamation marks except genuine success.
 - **Transactional email** — polite, clear, human. Greeting `"Hallo %{name},"`.
+  **The salutation ends in a comma, so the body sentence that follows it starts in
+  lowercase** — `"Hallo Luka,"` / `"das passiert den Besten."`, never `"Das passiert
+  den Besten."`. English capitalises here and the msgid always will; German does not.
+  This bites hardest where the greeting and the opening line are separate msgids (the
+  templates built on `Emails.Shared.Greeting`), because the msgid then looks like a
+  standalone sentence. Only words capitalised in their own right keep the capital:
+  nouns, proper names, and the formal `Sie`/`Ihr`/`Ihre`. Where the greeting is part of
+  the same msgid (`"Hallo %{name}, wir haben …"`), the same rule already applies.
   Sign-off `"Best,"` → `"Beste Grüße,"` (no comma after the valediction if it stands
   alone on its line before a name). Apologies courteous: `"Bitte entschuldigen Sie die
   Unannehmlichkeiten."`

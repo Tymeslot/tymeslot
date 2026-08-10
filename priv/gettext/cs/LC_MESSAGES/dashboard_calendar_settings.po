@@ -1,0 +1,305 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{shown} and %{count} more"
+msgid_plural "%{shown} and %{count} more"
+msgstr[0] "%{shown} a %{count} další"
+msgstr[1] "%{shown} a %{count} další"
+msgstr[2] "%{shown} a %{count} dalších"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{successes} refreshed, %{failures} failed: %{detail}"
+msgstr "Obnoveno %{successes}, nezdařilo se %{failures}: %{detail}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex
+#, elixir-autogen, elixir-format
+msgid "A calendar integration with this configuration already exists"
+msgstr "Integrace kalendáře s touto konfigurací už existuje."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Active for Conflict Checking"
+msgstr "Aktivní pro kontrolu konfliktů"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "All calendar refreshes failed."
+msgstr "Obnovení všech kalendářů se nezdařilo."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "All calendars refreshed successfully"
+msgstr "Všechny kalendáře byly obnoveny."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex
+#, elixir-autogen, elixir-format
+msgid "CalDAV servers"
+msgstr "Servery CalDAV"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar Settings"
+msgstr "Nastavení kalendáře"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar integration added successfully"
+msgstr "Integrace kalendáře byla přidána."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar status updated"
+msgstr "Stav kalendáře byl aktualizován."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Configuration form not available for this provider."
+msgstr "Pro tohoto poskytovatele není konfigurační formulář k dispozici."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Připojit kalendář"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar so Tymeslot can read your availability and stop meetings being booked when you're already busy."
+msgstr "Připojte kalendář, aby služba Tymeslot znala vaši dostupnost a nedocházelo k rezervaci schůzek v době, kdy už máte jiný program."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Connection issues"
+msgstr "Problémy s připojením"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Connection test failed: %{reason}"
+msgstr "Test připojení se nezdařil: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Disable feed"
+msgstr "Vypnout kanál"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Enable free/busy feed"
+msgstr "Zapnout kanál volno/obsazeno"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update selection"
+msgstr "Výběr se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update status: %{reason}"
+msgstr "Stav se nepodařilo aktualizovat: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Free/busy feed"
+msgstr "Kanál volno/obsazeno"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Healthy"
+msgstr "V pořádku"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Integration not found"
+msgstr "Integrace nebyla nalezena."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid calendar ID"
+msgstr "Neplatné ID kalendáře"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid request"
+msgstr "Neplatný požadavek"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Manage calendars"
+msgstr "Spravovat kalendáře"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "No calendars connected yet"
+msgstr "Zatím nejsou připojeny žádné kalendáře"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Not a Google Calendar"
+msgstr "Nejedná se o Google Calendar"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Paused"
+msgstr "Pozastaveno"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Paused Calendars"
+msgstr "Pozastavené kalendáře"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr "Připojit znovu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Reconnect integration"
+msgstr "Připojit integraci znovu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh All"
+msgstr "Obnovit vše"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh process failed unexpectedly."
+msgstr "Obnovení neočekávaně selhalo."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Refreshing..."
+msgstr "Obnovování…"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate link"
+msgstr "Vygenerovat nový odkaz"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Remove connection"
+msgstr "Odebrat připojení"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
+msgstr "Sdílejte odkaz jen pro čtení, který jako standardní kanál iCalendar zveřejňuje vaši obsazenost, nikoli podrobnosti o událostech, aby si jiné kalendářové systémy mohly zobrazit vaši dostupnost."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
+#, elixir-autogen, elixir-format
+msgid "Sync your availability to prevent double bookings."
+msgstr "Synchronizujte svou dostupnost, aby nedocházelo k dvojím rezervacím."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "These calendars are currently ignored during conflict checking."
+msgstr "Tyto kalendáře se při kontrole konfliktů aktuálně ignorují."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar integration is no longer available."
+msgstr "Tato integrace kalendáře už není k dispozici."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unsupported provider"
+msgstr "Nepodporovaný poskytovatel"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Upgrade"
+msgstr "Rozšířit"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Upgrade Google Calendar permissions"
+msgstr "Rozšířit oprávnění pro Google Calendar"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "We'll check these calendars to prevent double bookings automatically."
+msgstr "Tyto kalendáře budeme automaticky kontrolovat, aby nedocházelo k dvojím rezervacím."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "books into %{calendar}"
+msgstr "rezervuje do kalendáře %{calendar}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "conflict-checks %{selected} of %{total} calendars"
+msgstr "kontroluje konflikty u %{selected} z %{total} kalendářů"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "synced %{time}"
+msgstr "synchronizováno %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reactivate - another active integration already uses this account"
+msgstr "Nelze znovu aktivovat – tento účet už používá jiná aktivní integrace"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "booking target can no longer accept bookings"
+msgstr "cílový kalendář pro rezervace už rezervace nepřijímá"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "unknown calendar"
+msgstr "neznámý kalendář"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar subscriptions"
+msgstr "Odběry kalendářů"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Other"
+msgstr "Ostatní"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Jen pro čtení"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Please try again."
+msgstr "Došlo k chybě. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar renamed"
+msgstr "Kalendář byl přejmenován."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to rename calendar"
+msgstr "Kalendář se nepodařilo přejmenovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update colour"
+msgstr "Barvu se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Rename, recolour, and choose which calendars sync"
+msgstr "Přejmenujte kalendáře, změňte jejich barvu a vyberte, které se mají synchronizovat"

@@ -19,7 +19,6 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Tymeslot.Auth.AuthActions
-  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AuthLive.SecurityHelper
 
@@ -72,39 +71,6 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
       {:error, :invalid_csrf} -> general_error(socket, csrf_message())
       {:error, :rate_limited, message} -> general_error(socket, message)
       {:error, message} -> general_error(socket, message)
-    end
-  end
-
-  @doc """
-  Validates the new password and its confirmation as they are typed.
-  """
-  @spec validate_new_password(map(), Phoenix.LiveView.Socket.t()) :: reply()
-  def validate_new_password(params, socket) do
-    entered = %{
-      "password" => params["password"],
-      "password_confirmation" => params["password_confirmation"]
-    }
-
-    metadata = SecurityHelper.extract_client_metadata(socket)
-
-    with {:ok, sanitized} <-
-           InputProcessor.validate_form(
-             entered,
-             [{"password", :password}, {"password_confirmation", :password}],
-             metadata: metadata
-           ),
-         :ok <-
-           PasswordValidator.validate_confirmation(
-             sanitized["password"],
-             sanitized["password_confirmation"]
-           ) do
-      {:noreply, form_state(socket, %{}, sanitized)}
-    else
-      {:error, errors} when is_map(errors) ->
-        {:noreply, form_state(socket, errors, entered)}
-
-      {:error, confirmation_error} ->
-        {:noreply, form_state(socket, %{password_confirmation: confirmation_error}, entered)}
     end
   end
 

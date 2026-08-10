@@ -6,6 +6,8 @@ defmodule Tymeslot.Auth.Validation do
   keeping it within the Auth bounded context according to DDD principles.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.InputProcessor
@@ -37,10 +39,10 @@ defmodule Tymeslot.Auth.Validation do
     errors =
       cond do
         is_nil(params["password"]) or params["password"] == "" ->
-          Map.put(email_errors, :password, "can't be blank")
+          Map.put(email_errors, :password, dgettext("errors", "can't be blank"))
 
         byte_size(params["password"]) > 1024 ->
-          Map.put(email_errors, :password, "Password is too long")
+          Map.put(email_errors, :password, dgettext("auth", "Password is too long"))
 
         true ->
           email_errors
@@ -138,5 +140,5 @@ defmodule Tymeslot.Auth.Validation do
     format_validation_errors(errors)
   end
 
-  def format_validation_errors(_input), do: "Invalid input provided."
+  def format_validation_errors(_input), do: dgettext("auth", "Invalid input provided.")
 end

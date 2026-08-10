@@ -5,6 +5,33 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidatorTest do
 
   alias Tymeslot.Security.FieldValidators.PasswordValidator
 
+  describe "rules/0" do
+    # rules/0 is what the on-screen checklist renders from, so a rule that is
+    # enforced but not listed here (or listed but not enforced) is exactly the
+    # drift that let a password pass every visible rule and still be rejected.
+    test "every advertised rule is one validate/2 actually enforces" do
+      valid = "StrongPass123!"
+      assert :ok = PasswordValidator.validate(valid)
+
+      for %{key: key, pattern: pattern} <- PasswordValidator.rules() do
+        assert Regex.match?(Regex.compile!(pattern), valid),
+               "a password validate/2 accepts fails the advertised #{key} rule"
+      end
+    end
+
+    test "a password satisfying every advertised rule is accepted" do
+      # Built to satisfy the rules as stated, not to a hardcoded example, so
+      # this fails if a rule is ever enforced without being advertised.
+      password = "aA1!" <> String.duplicate("x", PasswordValidator.min_length())
+
+      for %{pattern: pattern} <- PasswordValidator.rules() do
+        assert Regex.match?(Regex.compile!(pattern), password)
+      end
+
+      assert :ok = PasswordValidator.validate(password)
+    end
+  end
+
   describe "validate/2" do
     test "returns :ok for valid passwords" do
       assert :ok = PasswordValidator.validate("StrongPass123!")

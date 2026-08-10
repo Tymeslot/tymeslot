@@ -125,7 +125,7 @@ msgstr "Bitte entschuldigen Sie die Unannehmlichkeiten. Ihr aktueller Termin wur
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?"
-msgstr "Ich muss unser anstehendes Treffen leider verschieben. Bitte wählen Sie einen neuen Termin, der Ihnen passt."
+msgstr "ich muss unser anstehendes Treffen leider verschieben. Bitte wählen Sie einen neuen Termin, der Ihnen passt."
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
@@ -135,12 +135,12 @@ msgstr "Ich sende Ihnen %{label} vor unserem Termin eine Erinnerung."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our conversation!"
-msgstr "Ich freue mich auf unser Gespräch!"
+msgstr "ich freue mich auf unser Gespräch!"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
-msgstr "Ich freue mich auf unser Treffen. Der Termin ist fest in meinem Kalender eingetragen und ich werde für Sie bereit sein."
+msgstr "ich freue mich auf unser Treffen. Der Termin ist fest in meinem Kalender eingetragen und ich werde für Sie bereit sein."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
@@ -377,7 +377,7 @@ msgstr "Link:"
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "We're writing to confirm that your appointment has been cancelled."
-msgstr "Hiermit bestätigen wir, dass Ihr Termin abgesagt wurde."
+msgstr "hiermit bestätigen wir, dass Ihr Termin abgesagt wurde."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
@@ -775,12 +775,12 @@ msgstr "Eingeladen"
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "It happens to the best of us! Click the link below to choose a new password and regain access to your account."
-msgstr "Das passiert den Besten! Klicken Sie auf den untenstehenden Link, um ein neues Passwort zu wählen und wieder Zugriff auf Ihr Konto zu erhalten."
+msgstr "das passiert den Besten! Klicken Sie auf den untenstehenden Link, um ein neues Passwort zu wählen und wieder Zugriff auf Ihr Konto zu erhalten."
 
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "It happens to the best of us. Click the button below to choose a new password and pick up where you left off."
-msgstr "Das passiert den Besten. Klicken Sie auf die Schaltfläche unten, um ein neues Passwort zu wählen und dort weiterzumachen, wo Sie aufgehört haben."
+msgstr "das passiert den Besten. Klicken Sie auf die Schaltfläche unten, um ein neues Passwort zu wählen und dort weiterzumachen, wo Sie aufgehört haben."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
@@ -1089,7 +1089,7 @@ msgstr "WAS SIE WISSEN SOLLTEN:"
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address."
-msgstr "Wir freuen uns, Sie an Bord zu haben! Um mit der Terminplanung zu beginnen und Ihren Kalender zu vereinfachen, bestätigen Sie bitte Ihre E-Mail-Adresse."
+msgstr "wir freuen uns, Sie an Bord zu haben! Um mit der Terminplanung zu beginnen und Ihren Kalender zu vereinfachen, bestätigen Sie bitte Ihre E-Mail-Adresse."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
@@ -1478,7 +1478,7 @@ msgstr "Hallo, Ihre Zahlung in Höhe von %{amount} wurde vollständig erstattet.
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
 msgid "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
-msgstr "Es wurde angefordert, die E-Mail-Adresse Ihres Tymeslot-Kontos zu ändern. Wir informieren Sie, damit Sie bestätigen können, dass Sie das waren."
+msgstr "es wurde angefordert, die E-Mail-Adresse Ihres Tymeslot-Kontos zu ändern. Wir informieren Sie, damit Sie bestätigen können, dass Sie das waren."
 
 #: lib/tymeslot/emails/shared/greeting.ex
 #, elixir-autogen, elixir-format
@@ -1488,12 +1488,12 @@ msgstr "Hallo,"
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account email address has been successfully changed."
-msgstr "Die E-Mail-Adresse Ihres Tymeslot-Kontos wurde erfolgreich geändert."
+msgstr "die E-Mail-Adresse Ihres Tymeslot-Kontos wurde erfolgreich geändert."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
-msgstr "Die E-Mail-Adresse Ihres Tymeslot-Kontos wurde erfolgreich geändert. Diese Bestätigung wird an Ihre bisherige Adresse gesendet, damit Sie wissen, dass die Umstellung erfolgt ist."
+msgstr "die E-Mail-Adresse Ihres Tymeslot-Kontos wurde erfolgreich geändert. Diese Bestätigung wird an Ihre bisherige Adresse gesendet, damit Sie wissen, dass die Umstellung erfolgt ist."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -1804,7 +1804,7 @@ msgstr "Aktualisiert: %{title} - %{date}"
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."
-msgstr "Schön, dass Sie hier sind. Nur noch ein kurzer Schritt und Ihr Kalender ist startklar - bitte bestätigen Sie unten Ihre E-Mail-Adresse."
+msgstr "schön, dass Sie hier sind. Nur noch ein kurzer Schritt und Ihr Kalender ist startklar - bitte bestätigen Sie unten Ihre E-Mail-Adresse."
 
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format

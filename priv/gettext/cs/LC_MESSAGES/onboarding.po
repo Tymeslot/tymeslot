@@ -1,0 +1,259 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{current} / %{total}"
+msgstr "%{current} / %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Account settings and log out are here in the top-right."
+msgstr "Nastavení účtu a odhlášení najdete vpravo nahoře."
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr "Zpět"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Common tasks"
+msgstr "Časté úkony"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmation"
+msgstr "Potvrzení"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Date & Time"
+msgstr "Datum a čas"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Podrobnosti"
+
+#: lib/tymeslot_web/components/step_navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Délka"
+
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Finish"
+msgstr "Dokončit"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#, elixir-autogen, elixir-format
+msgid "Got it"
+msgstr "Rozumím"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#, elixir-autogen, elixir-format
+msgid "New feature"
+msgstr "Novinka"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr "Další"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Quick links to set up your profile, availability, and meeting types. Start here."
+msgstr "Rychlé odkazy pro nastavení profilu, dostupnosti a typů schůzek. Začněte tady."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Settings live in the sidebar"
+msgstr "Nastavení najdete v postranním panelu"
+
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Skip"
+msgstr "Přeskočit"
+
+#: lib/tymeslot_web/components/tour_overlay.ex
+#, elixir-autogen, elixir-format
+msgid "Step %{n} of %{total}"
+msgstr "Krok %{n} z %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Take 30 seconds to learn where everything lives."
+msgstr "Věnujte 30 sekund tomu, abyste věděli, kde co najdete."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Two modes"
+msgstr "Dva režimy"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to your Tymeslot dashboard"
+msgstr "Vítejte na nástěnce Tymeslot"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "You're set"
+msgstr "Máte hotovo"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your account"
+msgstr "Váš účet"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
+msgstr "Přepínejte mezi Plánováním (vaše typy schůzek) a Kalendářem (úplný přehled rezervací a synchronizovaných událostí)."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A few more things we've shipped lately:"
+msgstr "Několik dalších novinek z poslední doby:"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "All your integrations in one place"
+msgstr "Všechny integrace na jednom místě"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Ask the right questions up front"
+msgstr "Ptejte se na to podstatné předem"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Booking pages and emails now in German, French, Ukrainian and Italian"
+msgstr "Rezervační stránky a e-maily nyní v němčině, francouzštině, ukrajinštině a italštině"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Collect payment automatically at the moment of booking, with Stripe-powered checkout built right into your booking page."
+msgstr "Vybírejte platby automaticky přímo při rezervaci – pokladna postavená na Stripe je součástí vaší rezervační stránky."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Colour-code your calendar events"
+msgstr "Rozlište události v kalendáři barvami"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Faster, more responsive Quill and Rhythm booking pages"
+msgstr "Rychlejší a svižnější rezervační stránky Quill a Rhythm"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Get paid when people book"
+msgstr "Nechte si zaplatit už při rezervaci"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Invite guests to any booking"
+msgstr "Pozvěte hosty ke kterékoli rezervaci"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Meet on Zoom, automatically"
+msgstr "Schůzky přes Zoom, zcela automaticky"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Plus a host of improvements"
+msgstr "K tomu řada dalších vylepšení"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Read the docs"
+msgstr "Přečíst dokumentaci"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Share private booking links"
+msgstr "Sdílejte soukromé rezervační odkazy"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Slack notifications when a booking is made"
+msgstr "Upozornění v aplikaci Slack při každé nové rezervaci"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Smarter embeds that auto-fit their height, with an optional column layout"
+msgstr "Chytřejší widgety, které si samy přizpůsobí výšku, a volitelné sloupcové rozvržení"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot now speaks your language"
+msgstr "Tymeslot nyní mluví vaším jazykem"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Add custom questions to any meeting type - short text, long answers, dropdowns and more - so you have exactly what you need before each booking."
+msgstr "Přidejte ke kterémukoli typu schůzky vlastní otázky – krátký text, delší odpovědi, rozbalovací seznamy a další – abyste před každou rezervací měli přesně to, co potřebujete."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings can now include additional guests. Each guest gets their own email invitation and can RSVP with a tap, so everyone who needs to be there is on the invite - without anyone booking a second time. Set a guest limit per meeting type to keep group sizes in check."
+msgstr "Rezervace nyní mohou zahrnovat další hosty. Každý host dostane vlastní e-mailovou pozvánku a jedním klepnutím potvrdí účast, takže na pozvánce jsou všichni, kdo mají přijít – a nikdo nemusí rezervovat podruhé. U každého typu schůzky lze nastavit limit hostů a udržet tak velikost skupiny pod kontrolou."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new - all from a single screen instead of hunting through separate settings pages."
+msgstr "Kalendáře, videohovory i platby teď najdete pohromadě v centru integrací. Na první pohled uvidíte, co je připojené a co vyžaduje pozornost, jedním kliknutím připojíte poskytovatele znovu i přidáte něco nového – vše na jediné obrazovce místo hledání v samostatných stránkách nastavení."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Connect your Zoom account and Tymeslot creates a Zoom meeting for every booking - the link is added to the calendar invite and confirmation automatically."
+msgstr "Připojte svůj účet Zoom a Tymeslot vytvoří ke každé rezervaci schůzku v aplikaci Zoom – odkaz se automaticky přidá do kalendářové pozvánky i do potvrzení."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Every meeting type now has its own direct link that takes people straight to booking it - without showing your other meeting types. Mark a type as unlisted to keep it off your public page, and randomise its link any time to make it unguessable or to retire an old one."
+msgstr "Každý typ schůzky má nyní vlastní přímý odkaz, který lidi zavede rovnou k rezervaci – bez zobrazení ostatních typů schůzek. Označte typ jako neveřejný, aby se neobjevil na vaší veřejné stránce, a jeho odkaz kdykoli vygenerujte znovu, aby se nedal uhodnout nebo aby ten starý přestal platit."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Give any event its own colour, right from your dashboard agenda. Colours you set in Tymeslot write back to your connected calendar, and colours already on your Google or CalDAV events show up here too - so your day is colour-coded exactly the way you like it, everywhere you look."
+msgstr "Přidělte kterékoli události vlastní barvu přímo v agendě na nástěnce. Barvy nastavené ve službě Tymeslot se zapíší zpět do připojeného kalendáře a barvy, které už vaše události v Google nebo CalDAV mají, se zobrazí i tady – váš den je tak barevně rozlišený přesně podle vás, ať se podíváte kamkoli."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type - and let people book you."
+msgstr "Vytvořte svůj první typ schůzky a nechte si od lidí rezervovat čas."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Profile, availability, integrations, and automation - all one click away."
+msgstr "Profil, dostupnost, integrace i automatizace – vše na jedno kliknutí."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Cap how many bookings you take"
+msgstr "Omezte, kolik rezervací přijmete"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Set a maximum number of bookings per day, week or month - for a single meeting type, or across your whole account. Once a day reaches its cap it disappears from your booking page, so nobody can book you past the limit you set."
+msgstr "Nastavte maximální počet rezervací na den, týden nebo měsíc – pro jediný typ schůzky, nebo pro celý účet. Jakmile den svého limitu dosáhne, zmizí z vaší rezervační stránky, takže vás nikdo nemůže rezervovat nad nastavený limit."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
+msgstr "Celá aplikace – nástěnka, rezervační stránky i všechny e-maily – je nyní k dispozici v němčině, francouzštině, italštině, ukrajinštině a češtině. Tymeslot se automaticky řídí jazykem vašeho prohlížeče, nebo si jazyk zvolíte sami v nastavení účtu. Vaši pozvaní dostanou rezervační stránky a potvrzení také ve svém jazyce."

@@ -1,0 +1,164 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} visit"
+msgid_plural "%{count} visits"
+msgstr[0] "%{count} návštěva"
+msgstr[1] "%{count} návštěvy"
+msgstr[2] "%{count} návštěv"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "(direct / unknown)"
+msgstr "(přímý / neznámý)"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "30 days"
+msgstr "30 dní"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "7 days"
+msgstr "7 dní"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "90 days"
+msgstr "90 dní"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Analytics"
+msgstr "Statistiky"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Bar chart showing daily visit counts for the selected date range."
+msgstr "Sloupcový graf s počty denních návštěv za zvolené období."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Booking analytics is not enabled on this installation."
+msgstr "Statistiky rezervací nejsou v této instalaci zapnuté."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up."
+msgstr "Sběr statistik rezervací byl zahájen %{date}. Pro dřívější dny nejsou k dispozici žádná data, takže delší období budou vypadat řídce, dokud se nenashromáždí více historie."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr "Rezervace"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Conversion"
+msgstr "Konverze"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Conversion (est.)"
+msgstr "Konverze (odhad)"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Daily visits"
+msgstr "Denní návštěvy"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Daily visits over the selected date range"
+msgstr "Denní návštěvy za zvolené období"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Date range"
+msgstr "Časové období"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop"
+msgstr "Počítač"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Devices"
+msgstr "Zařízení"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Mobile"
+msgstr "Mobil"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "No traffic in this period yet."
+msgstr "V tomto období zatím není žádná návštěvnost."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh"
+msgstr "Obnovit"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh analytics"
+msgstr "Obnovit statistiky"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#, elixir-autogen, elixir-format
+msgid "Source"
+msgstr "Zdroj"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Tablet"
+msgstr "Tablet"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Unique visitors"
+msgstr "Unikátní návštěvníci"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unique visitors and conversion are cookieless estimates: each visitor is counted once per day, so totals over a longer range approximate the number of distinct people. Conversion is the share of visitors who went on to book and is indicative, not exact."
+msgstr "Unikátní návštěvníci a konverze jsou odhady bez použití souborů cookie: každý návštěvník se počítá jednou za den, takže součty za delší období odpovídají přibližnému počtu různých lidí. Konverze je podíl návštěvníků, kteří následně provedli rezervaci, a jde o orientační, nikoli přesnou hodnotu."
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown"
+msgstr "Neznámé"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live.ex
+#, elixir-autogen, elixir-format
+msgid "Updated %{time}"
+msgstr "Aktualizováno %{time}"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex
+#: lib/tymeslot_web/live/dashboard/analytics_live/summary_cards.ex
+#, elixir-autogen, elixir-format
+msgid "Visits"
+msgstr "Návštěvy"
+
+#: lib/tymeslot_web/live/dashboard/analytics_live/visits_chart.ex
+#, elixir-autogen, elixir-format
+msgid "Visits over time"
+msgstr "Návštěvy v čase"
