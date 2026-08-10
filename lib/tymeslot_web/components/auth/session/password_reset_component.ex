@@ -134,7 +134,10 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   @spec new_password_form(map()) :: Phoenix.LiveView.Rendered.t()
   def new_password_form(assigns) do
     # Ensure assigns has all required keys
-    assigns = Map.merge(%{flash: %{}}, assigns)
+    assigns =
+      %{flash: %{}}
+      |> Map.merge(assigns)
+      |> Map.put_new(:errors, %{})
 
     ~H"""
     <.auth_card_layout
@@ -201,6 +204,14 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
               </:trailing_icon>
             </.input>
           </div>
+          <%= if FormValidationHelpers.field_errors(@errors, :general) != [] do %>
+            <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-md" role="alert">
+              <%= for message <- FormValidationHelpers.field_errors(@errors, :general) do %>
+                <p class="text-sm text-red-600">{message}</p>
+              <% end %>
+            </div>
+          <% end %>
+
           <div class="pt-2">
             <.auth_button type="submit">
               {dgettext("auth", "Set New Password")}

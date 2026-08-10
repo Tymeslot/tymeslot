@@ -26,11 +26,6 @@ msgstr "Так"
 msgid "✓ Acknowledged (%{at})"
 msgstr "✓ Підтверджено (%{at})"
 
-#: lib/tymeslot_web/components/core_components/forms.ex
-#, elixir-autogen, elixir-format
-msgid "At least 8 characters"
-msgstr "Щонайменше 8 символів"
-
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
@@ -226,3 +221,13 @@ msgstr "© %{year} Tymeslot. Усі права захищено."
 #, elixir-autogen, elixir-format
 msgid "Saving changes..."
 msgstr "Збереження змін..."
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least %{count} characters"
+msgstr "Щонайменше %{count} символів"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One special character"
+msgstr "Один спеціальний символ"

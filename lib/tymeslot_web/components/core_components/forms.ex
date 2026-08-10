@@ -14,6 +14,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
+
   # ========== UNIFIED INPUT ==========
 
   @doc """
@@ -339,70 +341,53 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   # ========== PASSWORD REQUIREMENTS ==========
 
   @doc """
-  Renders a list of password requirements.
+  Renders the password requirements checklist.
+
+  Driven by `PasswordValidator.rules/0` so the list always states exactly what
+  the server enforces, and each item carries its pattern for the browser-side
+  live ticking (see `assets/js/password_toggle.js`).
   """
   attr :class, :string, default: nil
 
   @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns) do
+    assigns = assign(assigns, :rules, PasswordValidator.rules())
+
     ~H"""
-    <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5">
+    <div id="password-requirements" class={["mt-2 text-xs sm:text-sm space-y-1.5", @class]}>
       <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-token-2xs">
         {dgettext("common", "Password must contain:")}
       </p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-x-4">
-        <ul class="space-y-1">
-          <li id="req-length" class="flex items-center text-tymeslot-600 font-medium">
-            <svg
-              class="w-3.5 h-3.5 mr-1.5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="12" cy="12" r="10" stroke-width="2.5" />
-            </svg>
-            <span class="text-xs">{dgettext("common", "At least 8 characters")}</span>
-          </li>
-          <li id="req-lowercase" class="flex items-center text-tymeslot-600 font-medium">
-            <svg
-              class="w-3.5 h-3.5 mr-1.5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="12" cy="12" r="10" stroke-width="2.5" />
-            </svg>
-            <span class="text-xs">{dgettext("common", "One lowercase letter")}</span>
-          </li>
-        </ul>
-        <ul class="space-y-1">
-          <li id="req-uppercase" class="flex items-center text-tymeslot-600 font-medium">
-            <svg
-              class="w-3.5 h-3.5 mr-1.5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="12" cy="12" r="10" stroke-width="2.5" />
-            </svg>
-            <span class="text-xs">{dgettext("common", "One uppercase letter")}</span>
-          </li>
-          <li id="req-number" class="flex items-center text-tymeslot-600 font-medium">
-            <svg
-              class="w-3.5 h-3.5 mr-1.5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <circle cx="12" cy="12" r="10" stroke-width="2.5" />
-            </svg>
-            <span class="text-xs">{dgettext("common", "One number")}</span>
-          </li>
-        </ul>
-      </div>
+      <ul class="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-2 sm:gap-x-4">
+        <li
+          :for={rule <- @rules}
+          id={"req-#{rule.key}"}
+          data-password-rule={rule.key}
+          data-password-pattern={rule.pattern}
+          class="flex items-center text-tymeslot-600 font-medium"
+        >
+          <svg
+            class="w-3.5 h-3.5 mr-1.5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="12" r="10" stroke-width="2.5" />
+          </svg>
+          <span class="text-xs">{password_rule_label(rule.key)}</span>
+        </li>
+      </ul>
     </div>
     """
   end
+
+  defp password_rule_label(:length),
+    do: dgettext("common", "At least %{count} characters", count: PasswordValidator.min_length())
+
+  defp password_rule_label(:lowercase), do: dgettext("common", "One lowercase letter")
+  defp password_rule_label(:uppercase), do: dgettext("common", "One uppercase letter")
+  defp password_rule_label(:number), do: dgettext("common", "One number")
+  defp password_rule_label(:special), do: dgettext("common", "One special character")
 
   # ========== FORM LAYOUT ==========
 

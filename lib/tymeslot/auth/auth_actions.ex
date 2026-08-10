@@ -126,6 +126,13 @@ defmodule Tymeslot.Auth.AuthActions do
            "Your password has been reset successfully. Please log in with your new password."
          )}
 
+      # The rejected password is the user's own input and they need to know
+      # which rule it broke, so this one keeps its specific message rather
+      # than collapsing to "Invalid input provided". Every other reason is
+      # normalised, since those describe the token, not the password.
+      {:error, :invalid_input, message} ->
+        {:error, message}
+
       {:error, reason, _message} ->
         {:error, normalize_auth_error(reason)}
     end
