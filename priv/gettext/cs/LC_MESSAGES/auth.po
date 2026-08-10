@@ -257,6 +257,7 @@ msgstr "Heslo bylo změněno"
 msgid "Password Reset Successfully"
 msgstr "Heslo bylo obnoveno"
 
+#: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
 msgid "Password is required"
@@ -1061,3 +1062,54 @@ msgstr "Token byl úspěšně ověřen."
 #, elixir-autogen, elixir-format
 msgid "Verification email sent to %{email}"
 msgstr "Ověřovací e-mail byl odeslán na %{email}"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password confirmation does not match"
+msgstr "Potvrzení hesla se neshoduje"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password confirmation is required"
+msgstr "Potvrzení hesla je povinné"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be a text value"
+msgstr "Heslo musí být text"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at least %{count} character long"
+msgid_plural "Password must be at least %{count} characters long"
+msgstr[0] "Heslo musí mít alespoň %{count} znak"
+msgstr[1] "Heslo musí mít alespoň %{count} znaky"
+msgstr[2] "Heslo musí mít alespoň %{count} znaků"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} character long"
+msgid_plural "Password must be at most %{count} characters long"
+msgstr[0] "Heslo smí mít nejvýše %{count} znak"
+msgstr[1] "Heslo smí mít nejvýše %{count} znaky"
+msgstr[2] "Heslo smí mít nejvýše %{count} znaků"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one lowercase letter"
+msgstr "Heslo musí obsahovat alespoň jedno malé písmeno"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one number"
+msgstr "Heslo musí obsahovat alespoň jednu číslici"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one special character"
+msgstr "Heslo musí obsahovat alespoň jeden speciální znak"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one uppercase letter"
+msgstr "Heslo musí obsahovat alespoň jedno velké písmeno"
