@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.PasswordReset do
   Handles password reset functionality for user accounts.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Auth.{
@@ -114,10 +116,12 @@ defmodule Tymeslot.Auth.PasswordReset do
     # retrying job can never deliver an invalidated link.
     with {:ok, updated_user} <- persist_reset_token_and_log(user, token),
          {:ok, _status} <- schedule_reset_email(updated_user, reset_url, token_hash) do
-      {:ok, :email_sent, "Password reset instructions have been sent to your email."}
+      {:ok, :email_sent,
+       dgettext("auth", "Password reset instructions have been sent to your email.")}
     else
       {:error, :token_storage_failed} ->
-        {:error, :server_error, "Unable to send password reset email. Please try again later."}
+        {:error, :server_error,
+         dgettext("auth", "Unable to send password reset email. Please try again later.")}
 
       {:error, reason} ->
         Logger.error("Failed to send password reset email",
@@ -127,7 +131,8 @@ defmodule Tymeslot.Auth.PasswordReset do
           event: :password_reset_email_failed
         )
 
-        {:error, :server_error, "Unable to send password reset email. Please try again later."}
+        {:error, :server_error,
+         dgettext("auth", "Unable to send password reset email. Please try again later.")}
     end
   end
 
@@ -216,7 +221,7 @@ defmodule Tymeslot.Auth.PasswordReset do
           event: :password_reset_invalid_token
         )
 
-        {:error, :invalid_token, "Invalid or expired password reset token."}
+        {:error, :invalid_token, dgettext("auth", "Invalid or expired password reset token.")}
 
       {:ok, user} ->
         # Calculate expiry as reset_sent_at + 2 hours
@@ -224,7 +229,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
         case Token.verify_token(token, expiry) do
           {:ok, _verified_token} ->
-            {:ok, Map.from_struct(user), "Token verified successfully."}
+            {:ok, Map.from_struct(user), dgettext("auth", "Token verified successfully.")}
 
           {:error, :token_expired} ->
             Logger.warning("Password reset token expired",
@@ -234,7 +239,10 @@ defmodule Tymeslot.Auth.PasswordReset do
             )
 
             {:error, :token_expired,
-             "Your reset token has expired. Please request a new password reset."}
+             dgettext(
+               "auth",
+               "Your reset token has expired. Please request a new password reset."
+             )}
         end
     end
   end
@@ -260,7 +268,9 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:ok, updated_user} ->
         AccountLogging.log_password_reset(updated_user, "completed")
         :ok = invalidate_all_sessions(updated_user)
-        {:ok, Map.from_struct(updated_user), "Your password has been reset successfully"}
+
+        {:ok, Map.from_struct(updated_user),
+         dgettext("auth", "Your password has been reset successfully")}
 
       {:error, reason, message} ->
         {:error, reason, message}
@@ -298,7 +308,7 @@ defmodule Tymeslot.Auth.PasswordReset do
           event: :password_reset_invalid_token
         )
 
-        {:error, :invalid_token, "Invalid or expired password reset token."}
+        {:error, :invalid_token, dgettext("auth", "Invalid or expired password reset token.")}
 
       {:ok, user} ->
         expiry = DateTime.add(user.reset_sent_at, 2 * 3600, :second)
@@ -315,7 +325,10 @@ defmodule Tymeslot.Auth.PasswordReset do
             )
 
             {:error, :token_expired,
-             "Your reset token has expired. Please request a new password reset."}
+             dgettext(
+               "auth",
+               "Your reset token has expired. Please request a new password reset."
+             )}
         end
     end
   end
@@ -364,7 +377,10 @@ defmodule Tymeslot.Auth.PasswordReset do
         )
 
         {:error, :invalid_password,
-         "The password couldn't be updated. Please try again with a different password."}
+         dgettext(
+           "auth",
+           "The password couldn't be updated. Please try again with a different password."
+         )}
     end
   end
 

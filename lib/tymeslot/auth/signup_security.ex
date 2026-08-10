@@ -17,6 +17,8 @@ defmodule Tymeslot.Auth.SignupSecurity do
   call once the gate returns `:ok`.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
@@ -88,7 +90,8 @@ defmodule Tymeslot.Auth.SignupSecurity do
         {:error, :rate_limited, reason} -> {:error, :rate_limited, reason}
       end
     else
-      {:error, :rate_limited, "Too many signup attempts. Please try again later."}
+      {:error, :rate_limited,
+       dgettext("auth", "Too many signup attempts. Please try again later.")}
     end
   end
 
@@ -100,11 +103,15 @@ defmodule Tymeslot.Auth.SignupSecurity do
         :ok
 
       {:error, :recaptcha_failed} ->
-        {:error, :recaptcha_failed, "Security verification failed. Please try again."}
+        {:error, :recaptcha_failed,
+         dgettext("auth", "Security verification failed. Please try again.")}
 
       {:error, :recaptcha_script_blocked} ->
         {:error, :recaptcha_script_blocked,
-         "Security verification unavailable. Please enable JavaScript and refresh the page, or contact support if the problem persists."}
+         dgettext(
+           "auth",
+           "Security verification unavailable. Please enable JavaScript and refresh the page, or contact support if the problem persists."
+         )}
     end
   end
 end

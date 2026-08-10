@@ -7,6 +7,8 @@ defmodule Tymeslot.Auth.EmailChange do
   change via a verification link.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Ecto.Changeset
 
   alias Tymeslot.Auth.{Session, UserQueries, UserSessionQueries, UserTokenQueries}
@@ -41,16 +43,17 @@ defmodule Tymeslot.Auth.EmailChange do
           verification_url
         )
 
-      {:ok, updated_user, "Verification email sent to #{new_email}"}
+      {:ok, updated_user,
+       dgettext("auth", "Verification email sent to %{email}", email: new_email)}
     else
       {:error, :invalid_password} ->
-        {:error, "Current password is incorrect"}
+        {:error, dgettext("auth", "Current password is incorrect")}
 
       {:error, :same_email} ->
-        {:error, "New email must be different from current email"}
+        {:error, dgettext("auth", "New email must be different from current email")}
 
       {:error, :taken} ->
-        {:error, "Email address is already in use"}
+        {:error, dgettext("auth", "Email address is already in use")}
 
       {:error, %Changeset{} = changeset} ->
         {:error, format_changeset_error(changeset)}
@@ -83,13 +86,14 @@ defmodule Tymeslot.Auth.EmailChange do
           new_email
         )
 
-      {:ok, result.user, "Email changed successfully. Please sign in with your new email."}
+      {:ok, result.user,
+       dgettext("auth", "Email changed successfully. Please sign in with your new email.")}
     else
       {:error, :not_found} ->
-        {:error, :invalid_token, "Invalid or expired verification link"}
+        {:error, :invalid_token, dgettext("auth", "Invalid or expired verification link")}
 
       {:error, :token_expired} ->
-        {:error, :token_expired, "Verification link has expired"}
+        {:error, :token_expired, dgettext("auth", "Verification link has expired")}
 
       {:error, %Changeset{} = changeset} ->
         {:error, :changeset_error, format_changeset_error(changeset)}
@@ -98,7 +102,7 @@ defmodule Tymeslot.Auth.EmailChange do
         {:error, :unknown, reason}
 
       _unknown_error ->
-        {:error, :unknown, "Failed to verify email change"}
+        {:error, :unknown, dgettext("auth", "Failed to verify email change")}
     end
   end
 
@@ -111,7 +115,7 @@ defmodule Tymeslot.Auth.EmailChange do
     case UserTokenQueries.cancel_email_change(user) do
       {:ok, updated_user} ->
         Logger.info("Email change cancelled", user_id: updated_user.id)
-        {:ok, updated_user, "Email change request cancelled"}
+        {:ok, updated_user, dgettext("auth", "Email change request cancelled")}
 
       {:error, %Changeset{} = changeset} ->
         {:error, format_changeset_error(changeset)}
