@@ -263,6 +263,9 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   digits somewhere this module cannot reach — client-side JS, a template
   building its own string — stay consistent with `format_integer/2` instead of
   hardcoding a second copy of the table.
+
+  Note that the space-grouping locales return a *non-breaking* space, so a
+  caller splitting or measuring on `" "` will not find it.
   """
   @spec group_separator(String.t()) :: String.t()
   def group_separator(locale), do: thousand_separator(locale)
@@ -282,11 +285,17 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     |> String.reverse()
   end
 
+  # U+00A0. The locales that group with a space need a non-breaking one: a plain
+  # space is a line-break opportunity, so "1 500 Kč" can wrap after the "1" and
+  # read as two separate figures. Written as an escape rather than the literal
+  # character so these clauses cannot be mistaken for `" "` at a glance.
+  @group_space "\u00A0"
+
   defp thousand_separator("de"), do: "."
   defp thousand_separator("it"), do: "."
-  defp thousand_separator("uk"), do: " "
-  defp thousand_separator("fr"), do: " "
-  defp thousand_separator("cs"), do: " "
+  defp thousand_separator("uk"), do: @group_space
+  defp thousand_separator("fr"), do: @group_space
+  defp thousand_separator("cs"), do: @group_space
   defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","

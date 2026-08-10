@@ -6,6 +6,10 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
 
   @supported_locales Enum.map(Application.compile_env(:tymeslot, :locales)[:supported], & &1.code)
 
+  # The space-grouping locales group with U+00A0, so a figure cannot wrap
+  # mid-number. Asserting a plain space here would pass against either.
+  @nbsp "\u00A0"
+
   for locale <- @supported_locales do
     describe "#{locale} locale completeness" do
       test "has 12 month names" do
@@ -77,15 +81,17 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
             assert result =~ ",", "Italian should use comma as decimal separator"
 
           "uk" ->
-            assert result =~ " ", "Ukrainian should use space as thousand separator"
+            assert result =~ @nbsp,
+                   "Ukrainian should use a non-breaking space as thousand separator"
+
             assert result =~ ",", "Ukrainian should use comma as decimal separator"
 
           "fr" ->
-            assert result =~ " ", "French should use space as thousand separator"
+            assert result =~ @nbsp, "French should use a non-breaking space as thousand separator"
             assert result =~ ",", "French should use comma as decimal separator"
 
           "cs" ->
-            assert result =~ " ", "Czech should use space as thousand separator"
+            assert result =~ @nbsp, "Czech should use a non-breaking space as thousand separator"
             assert result =~ ",", "Czech should use comma as decimal separator"
         end
       end
