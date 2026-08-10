@@ -67,7 +67,7 @@ msgstr "Přidat otázku"
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
 msgstr "Pro tento typ schůzky můžete přidat až tři e-maily s připomínkou. Doporučujeme používat jen jednu."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/reminder_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
 msgstr "Přidáno: %{label} předem"
@@ -683,6 +683,36 @@ msgstr "Upravte výběr kalendářů"
 #, elixir-autogen, elixir-format
 msgid "or choose a different account."
 msgstr "nebo zvolte jiný účet."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Between 2 and %{max} participants per slot."
+msgstr "2 až %{max} účastníků na termín."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings"
+msgstr "Skupinové rezervace"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Let multiple people book the same time slot"
+msgstr "Umožněte více lidem rezervovat stejný termín"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit"
+msgstr "Limit účastníků"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require payment."
+msgstr "Vypněte skupinové rezervace, chcete-li vyžadovat platbu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to enable group bookings."
+msgstr "Vypněte platby, chcete-li povolit skupinové rezervace."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format

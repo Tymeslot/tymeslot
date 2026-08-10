@@ -1042,11 +1042,13 @@ msgid "Guests"
 msgstr "Hosté"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Hosted by %{name}"
 msgstr "Pořádá %{name}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Chvíli prosím počkejte a zkuste to znovu."
@@ -1062,11 +1064,13 @@ msgid "The invitation link may have expired or already been used. Please contact
 msgstr "Platnost odkazu z pozvánky možná vypršela nebo už byl odkaz použit. Obraťte se prosím na hostitele schůzky."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid"
 msgstr "Odkaz už není platný"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
 msgstr "Příliš mnoho pokusů"
@@ -1075,11 +1079,6 @@ msgstr "Příliš mnoho pokusů"
 #, elixir-autogen, elixir-format
 msgid "We've let %{name} know you can't make it."
 msgstr "Dali jsme hostiteli %{name} vědět, že se nemůžete zúčastnit."
-
-#: lib/tymeslot_web/themes/shared/guest_booking.ex
-#, elixir-autogen, elixir-format
-msgid "You can add up to %{count} guests."
-msgstr "Maximální počet hostů je %{count}."
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
@@ -1272,6 +1271,62 @@ msgstr "Naplánovat schůzku"
 #, elixir-autogen, elixir-format
 msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
 msgstr "Tato rezervační stránka potřebuje k rezervaci schůzek JavaScript. Povolte ho prosím a pokračujte."
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} seat left"
+msgid_plural "%{count} seats left"
+msgstr[0] "%{count} volné místo"
+msgstr[1] "%{count} volná místa"
+msgstr[2] "%{count} volných míst"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel your spot?"
+msgstr "Zrušit vaše místo?"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm to give up your spot in this meeting with %{name}."
+msgstr "Potvrzením se vzdáte svého místa na této schůzce s hostitelem %{name}."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "The link may have expired or already been used. Please contact the meeting host."
+msgstr "Platnost odkazu možná vypršela nebo už byl odkaz použit. Obraťte se prosím na hostitele schůzky."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is too close to its start time. Please contact the host directly."
+msgstr "Do začátku schůzky zbývá příliš málo času. Obraťte se prosím přímo na hostitele."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be cancelled online"
+msgstr "Toto místo už nelze zrušit online"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "We've let %{name} know. A confirmation email is on its way."
+msgstr "Dali jsme hostiteli %{name} vědět. Potvrzovací e-mail je na cestě."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, cancel my spot"
+msgstr "Ano, zrušit mé místo"
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "You can add up to %{count} guest."
+msgid_plural "You can add up to %{count} guests."
+msgstr[0] "Můžete přidat až %{count} hosta."
+msgstr[1] "Můžete přidat až %{count} hosty."
+msgstr[2] "Můžete přidat až %{count} hostů."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has been cancelled"
+msgstr "Vaše místo bylo zrušeno"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
