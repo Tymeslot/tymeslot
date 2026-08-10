@@ -556,6 +556,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
                ZoomProvider.delete_meeting_room("123456789", config)
     end
 
+    test "accepts a delete when a hybrid grant carries classic meeting:write" do
+      # Classic meeting:write authorises deletes on its own; granular scopes
+      # alongside it must not tighten the check to meeting:delete:meeting.
+      config =
+        Map.put(valid_config(), :oauth_scope, "meeting:write meeting:write:meeting user:read")
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = ZoomProvider.delete_meeting_room("123456789", config)
+    end
+
     test "accepts a delete under the classic meeting:write scope" do
       config = Map.put(valid_config(), :oauth_scope, "meeting:write user:read")
 

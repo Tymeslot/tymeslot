@@ -31,12 +31,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
     granular?(stored_scope) or classic?(stored_scope)
   end
 
+  # Classic `meeting:write` authorises deletes on its own, so it satisfies the
+  # check even when granular scopes are also present — a hybrid grant must not
+  # be held to the granular delete scope a classic one already covers.
   def satisfied?(stored_scope, :delete) do
-    if granular?(stored_scope) do
-      String.contains?(stored_scope, "meeting:delete:meeting")
-    else
-      classic?(stored_scope)
-    end
+    String.contains?(stored_scope, "meeting:delete:meeting") or classic?(stored_scope)
   end
 
   @doc """
