@@ -223,27 +223,63 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
 
   @doc """
-  Formats a number according to locale conventions.
+  Formats a number according to locale conventions, to `decimals` decimal
+  places (two by default).
   - en: 1,234.56
   - de: 1.234,56
   - uk: 1 234,56
   """
-  @spec format_number(number(), String.t()) :: String.t()
-  def format_number(number, locale) do
-    # Default to 2 decimal places for this helper
-    formatted = :erlang.float_to_binary(number / 1.0, [{:decimals, 2}])
+  @spec format_number(number(), String.t(), non_neg_integer()) :: String.t()
+  def format_number(number, locale, decimals \\ 2)
+
+  # `float_to_binary/2` emits no decimal point at all for `decimals: 0`, so
+  # there is no fractional part to separate.
+  def format_number(number, locale, 0) do
+    (number / 1.0) |> :erlang.float_to_binary([{:decimals, 0}]) |> group_digits(locale)
+  end
+
+  def format_number(number, locale, decimals) do
+    formatted = :erlang.float_to_binary(number / 1.0, [{:decimals, decimals}])
     [integer_part, fractional_part] = String.split(formatted, ".")
 
-    # Add thousand separators to integer part
-    integer_part_with_separators =
-      integer_part
-      |> String.to_charlist()
-      |> Enum.reverse()
-      |> Enum.chunk_every(3)
-      |> Enum.join(thousand_separator(locale))
-      |> String.reverse()
+    group_digits(integer_part, locale) <> decimal_separator(locale) <> fractional_part
+  end
 
-    integer_part_with_separators <> decimal_separator(locale) <> fractional_part
+  @doc """
+  Formats a whole number according to locale grouping conventions, with no
+  decimal part. Use this rather than `format_number/2` for quantities that are
+  meaningless below the unit — whole-currency amounts, counts, durations.
+  - en: 1,500
+  - de: 1.500
+  - uk/cs: 1 500
+  """
+  @spec format_integer(integer(), String.t()) :: String.t()
+  def format_integer(number, locale) when is_integer(number) do
+    number |> Integer.to_string() |> group_digits(locale)
+  end
+
+  @doc """
+  The thousands separator for a locale, exposed so callers that must group
+  digits somewhere this module cannot reach — client-side JS, a template
+  building its own string — stay consistent with `format_integer/2` instead of
+  hardcoding a second copy of the table.
+  """
+  @spec group_separator(String.t()) :: String.t()
+  def group_separator(locale), do: thousand_separator(locale)
+
+  # Inserts the locale's thousands separator into a run of digits, every three
+  # places from the right. The sign is split off first: left in place it would
+  # be chunked like a digit, misplacing the separator whenever the digit count
+  # is a multiple of three ("-123456" grouping to "-,123,456").
+  defp group_digits("-" <> digits, locale), do: "-" <> group_digits(digits, locale)
+
+  defp group_digits(digits, locale) do
+    digits
+    |> String.to_charlist()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.join(thousand_separator(locale))
+    |> String.reverse()
   end
 
   defp thousand_separator("de"), do: "."
