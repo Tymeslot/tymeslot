@@ -1,0 +1,261 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day ago"
+msgid_plural "%{count} days ago"
+msgstr[0] "před %{count} dnem"
+msgstr[1] "před %{count} dny"
+msgstr[2] "před %{count} dny"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour ago"
+msgid_plural "%{count} hours ago"
+msgstr[0] "před %{count} hodinou"
+msgstr[1] "před %{count} hodinami"
+msgstr[2] "před %{count} hodinami"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute ago"
+msgid_plural "%{count} minutes ago"
+msgstr[0] "před %{count} minutou"
+msgstr[1] "před %{count} minutami"
+msgstr[2] "před %{count} minutami"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "A verification email has been sent to"
+msgstr "Ověřovací e-mail byl odeslán na adresu"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Account Security"
+msgstr "Zabezpečení účtu"
+
+#: lib/tymeslot_web/live/account_live.ex
+#, elixir-autogen, elixir-format
+msgid "Account Settings"
+msgstr "Nastavení účtu"
+
+#: lib/tymeslot_web/live/account_live/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "An unexpected error occurred"
+msgstr "Došlo k neočekávané chybě"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least 8 characters"
+msgstr "Alespoň 8 znaků"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication is managed through %{provider}"
+msgstr "Ověření spravuje %{provider}"
+
+#: lib/tymeslot_web/live/account_live.ex
+#, elixir-autogen, elixir-format
+msgid "Back to Dashboard"
+msgstr "Zpět na nástěnku"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel email change"
+msgstr "Zrušit změnu e-mailu"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Change Email"
+msgstr "Změnit e-mail"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Change Password"
+msgstr "Změnit heslo"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm New Password"
+msgstr "Potvrzení nového hesla"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new password"
+msgstr "Potvrďte své nové heslo"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Current Password"
+msgstr "Současné heslo"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Current email:"
+msgstr "Stávající e-mail:"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Email Address"
+msgstr "E-mailová adresa"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Email Change Pending"
+msgstr "Změna e-mailu čeká na potvrzení"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Email changes are managed through your %{provider} account"
+msgstr "Změny e-mailu se spravují ve vašem účtu %{provider}"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your current password"
+msgstr "Zadejte své současné heslo"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last changed: %{last_changed}"
+msgstr "Naposledy změněno: %{last_changed}"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Managed by %{provider}"
+msgstr "Spravuje %{provider}"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "New Email Address"
+msgstr "Nová e-mailová adresa"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "New Password"
+msgstr "Nové heslo"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "New password must be different from current password"
+msgstr "Nové heslo se musí lišit od současného hesla"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Heslo"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Password authentication is not available for %{provider} login"
+msgstr "Přihlášení heslem není u účtů %{provider} k dispozici"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Password authentication is not available for social login accounts"
+msgstr "Přihlášení heslem není u účtů se sociálním přihlášením k dispozici"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Pending change to:"
+msgstr "Požadovaná změna na:"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{time}"
+msgstr "Odesláno %{time}"
+
+#: lib/tymeslot_web/live/account_live/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please try again later."
+msgstr "Příliš mnoho pokusů. Zkuste to prosím později."
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Update Email"
+msgstr "Aktualizovat e-mail"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Update Password"
+msgstr "Aktualizovat heslo"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Updating Email"
+msgstr "Aktualizace e-mailu"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Updating Password"
+msgstr "Aktualizace hesla"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your password has been changed. Please sign in again with your new password."
+msgstr "Heslo bylo změněno. Přihlaste se prosím znovu novým heslem."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "just now"
+msgstr "právě teď"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "your.new@email.com"
+msgstr "your.new@email.com"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Never"
+msgstr "Nikdy"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Choose the language for your dashboard. Automatic follows your browser's preference."
+msgstr "Zvolte jazyk své nástěnky. Možnost Automaticky se řídí nastavením prohlížeče."
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save language preference."
+msgstr "Nastavení jazyka se nepodařilo uložit."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Interface language"
+msgstr "Jazyk rozhraní"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr "Jazyk"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Language preference saved."
+msgstr "Nastavení jazyka bylo uloženo."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr "Automaticky"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Follow your browser's language setting instead of a fixed choice."
+msgstr "Řídit se nastavením jazyka v prohlížeči místo pevné volby."

@@ -1,0 +1,573 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "%{rate}% success rate"
+msgstr "úspěšnost %{rate} %"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "A unique security token will be automatically generated for this webhook once created. You'll use it to verify requests in your automation tool."
+msgstr "Po vytvoření se pro tento webhook automaticky vygeneruje jedinečný bezpečnostní token. Pomocí něj budete ověřovat požadavky ve svém automatizačním nástroji."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Add actions to process the webhook data"
+msgstr "Přidejte akce, které zpracují data z webhooku"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Add webhook trigger"
+msgstr "Přidejte spouštěč webhooku"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "All webhook requests include a unique security token in the HTTP headers for verification:"
+msgstr "Všechny požadavky webhooku obsahují v hlavičkách HTTP jedinečný bezpečnostní token pro ověření:"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
+msgstr "Opravdu chcete pokračovat? Stávající bezpečnostní token okamžitě přestane platit a všechny integrace, které jej používají, přestanou fungovat."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "At least one event subscription is required."
+msgstr "Je nutné vybrat alespoň jednu událost."
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Attempt %{count}"
+msgstr "Pokus %{count}"
+
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Automation"
+msgstr "Automatizace"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Automation is available on Pro plans."
+msgstr "Automatizace je k dispozici v tarifech Pro."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Available Events"
+msgstr "Dostupné události"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Build automation"
+msgstr "Sestavte automatizaci"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Choose which booking events to monitor"
+msgstr "Vyberte, které události rezervací chcete sledovat"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Zavřít"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Configure in Tymeslot"
+msgstr "Nastavte v aplikaci Tymeslot"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Configure the basic information for your webhook."
+msgstr "Nastavte základní údaje svého webhooku."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Tymeslot to n8n, Zapier, Make, or your custom automation workflows"
+msgstr "Propojte Tymeslot s nástroji n8n, Zapier a Make nebo s vlastními automatizačními postupy"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a Stripe account to use this automation."
+msgstr "Pro použití této automatizace připojte účet Stripe."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy"
+msgstr "Kopírovat"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
+#, elixir-autogen, elixir-format
+msgid "Create Webhook"
+msgstr "Vytvořit webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Create Your First Webhook"
+msgstr "Vytvořit první webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Create a webhook above and paste the URL"
+msgstr "Vytvořte výše webhook a vložte do něj zkopírovanou adresu URL"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Create a workflow"
+msgstr "Vytvořte pracovní postup"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Integration"
+msgstr "Smazat integraci"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Slack Integration?"
+msgstr "Smazat integraci Slack?"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Telegram Integration?"
+msgstr "Smazat integraci Telegram?"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Webhook"
+msgstr "Smazat webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Webhook?"
+msgstr "Smazat webhook?"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled"
+msgstr "Vypnuto"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Edit Webhook"
+msgstr "Upravit webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Enable webhook to test"
+msgstr "Pro otestování nejprve zapněte webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Error: %{message}"
+msgstr "Chyba: %{message}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Event Subscriptions"
+msgstr "Odběry událostí"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Events to Subscribe *"
+msgstr "Události k odběru *"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Failed"
+msgstr "Neúspěšné"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create webhook"
+msgstr "Webhook se nepodařilo vytvořit."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to delete webhook"
+msgstr "Webhook se nepodařilo smazat."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to regenerate token"
+msgstr "Token se nepodařilo znovu vygenerovat."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update webhook"
+msgstr "Webhook se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update webhook status"
+msgstr "Stav webhooku se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Insert a Webhook node and copy its URL"
+msgstr "Vložte uzel Webhook a zkopírujte jeho adresu URL"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Last triggered: %{time}"
+msgstr "Naposledy spuštěno: %{time}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Logs"
+msgstr "Protokoly"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Never"
+msgstr "Nikdy"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Never triggered"
+msgstr "Nikdy nespuštěno"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "No Webhooks Yet"
+msgstr "Zatím žádné webhooky"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "No deliveries yet"
+msgstr "Zatím žádná doručení"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Please fix the validation errors above."
+msgstr "Opravte prosím chyby uvedené výše."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Quick Setup with n8n"
+msgstr "Rychlé nastavení s n8n"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Recent Deliveries"
+msgstr "Poslední doručení"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate"
+msgstr "Vygenerovat znovu"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate Token?"
+msgstr "Vygenerovat token znovu?"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Request timestamp"
+msgstr "Časové razítko požadavku"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Saving..."
+msgstr "Ukládání…"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Security & Authentication"
+msgstr "Zabezpečení a ověřování"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Security Token"
+msgstr "Bezpečnostní token"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Security token"
+msgstr "Bezpečnostní token"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Security token copied to clipboard!"
+msgstr "Bezpečnostní token byl zkopírován do schránky."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Security token regenerated"
+msgstr "Bezpečnostní token byl znovu vygenerován."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Select events"
+msgstr "Vyberte události"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Select which events should trigger this webhook."
+msgstr "Vyberte, které události mají tento webhook spouštět."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
+msgstr "Nastavte webhooky tak, aby při vytvoření, zrušení nebo přesunutí rezervace automaticky spouštěly akce v nástrojích n8n, Zapier nebo ve vašich vlastních nástrojích."
+
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#, elixir-autogen, elixir-format
+msgid "Slack"
+msgstr "Slack"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Start a new workflow in your n8n instance"
+msgstr "Založte nový pracovní postup ve své instanci n8n"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Success"
+msgstr "Úspěšné"
+
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#, elixir-autogen, elixir-format
+msgid "Telegram"
+msgstr "Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Test"
+msgstr "Otestovat"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Test Connection"
+msgstr "Otestovat připojení"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Test calls are not logged"
+msgstr "Testovací volání se nezaznamenávají"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Test connection"
+msgstr "Otestujte připojení"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Test failed: %{reason}"
+msgstr "Test se nezdařil: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Testing"
+msgstr "Testování"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Testing..."
+msgstr "Testování…"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. All delivery logs for this integration will also be deleted."
+msgstr "Tuto akci nelze vzít zpět. Smažou se také všechny protokoly doručení této integrace."
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. All delivery logs for this webhook will also be deleted."
+msgstr "Tuto akci nelze vzít zpět. Smažou se také všechny protokoly doručení tohoto webhooku."
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "This automation feature is available on the Pro plan."
+msgstr "Tato funkce automatizace je k dispozici v tarifu Pro."
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Total"
+msgstr "Celkem"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when a booking time is changed"
+msgstr "Spustí se při změně času rezervace"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when a new booking is successfully created"
+msgstr "Spustí se po úspěšném vytvoření nové rezervace"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when an existing booking is cancelled"
+msgstr "Spustí se při zrušení stávající rezervace"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Unable to perform this action. Please try again."
+msgstr "Tuto akci se nepodařilo provést. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Unable to verify subscription status. Please try again."
+msgstr "Stav předplatného se nepodařilo ověřit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Update Webhook"
+msgstr "Aktualizovat webhook"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Use this in your n8n/Zapier header verification"
+msgstr "Použijte jej při ověřování hlaviček v nástrojích n8n a Zapier"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Verify the token in your automation tool to ensure requests are from Tymeslot."
+msgstr "Ověřte token ve svém automatizačním nástroji, abyste měli jistotu, že požadavky pocházejí ze služby Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Verify the webhook is working correctly"
+msgstr "Ověřte, že webhook funguje správně"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "View Delivery Logs"
+msgstr "Zobrazit protokoly doručení"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook Details"
+msgstr "Podrobnosti webhooku"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook Integration Guide"
+msgstr "Průvodce integrací webhooků"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook Name"
+msgstr "Název webhooku"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook URL"
+msgstr "URL webhooku"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook URL is required."
+msgstr "Je nutné zadat URL webhooku."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook created successfully"
+msgstr "Webhook byl vytvořen."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook deleted successfully"
+msgstr "Webhook byl smazán."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook name is required."
+msgstr "Je nutné zadat název webhooku."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook not found"
+msgstr "Webhook nebyl nalezen."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook status updated"
+msgstr "Stav webhooku byl aktualizován."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook test successful! Check your endpoint."
+msgstr "Test webhooku proběhl úspěšně. Zkontrolujte svůj koncový bod."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook updated successfully"
+msgstr "Webhook byl aktualizován."
+
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex
+#, elixir-autogen, elixir-format
+msgid "Webhooks"
+msgstr "Webhooky"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur. Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations."
+msgstr "Webhooky odesílají vašim automatizačním nástrojům oznámení HTTP POST v reálném čase, kdykoli nastane událost rezervace. Hodí se ke spouštění automatizovaných postupů, odesílání vlastních e-mailů, synchronizaci dat nebo budování integrací."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "What are webhooks?"
+msgstr "Co jsou webhooky?"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
+#, elixir-autogen, elixir-format
+msgid "Your Webhooks"
+msgstr "Vaše webhooky"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "My n8n Automation"
+msgstr "Moje automatizace n8n"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This token is automatically sent in the %{header} header."
+msgstr "Tento token se automaticky odesílá v hlavičce %{header}."
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{date} at %{time}"
+msgstr "%{date} v %{time}"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Last %{days} day"
+msgid_plural "Last %{days} days"
+msgstr[0] "Za poslední %{days} den"
+msgstr[1] "Za poslední %{days} dny"
+msgstr[2] "Za posledních %{days} dní"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#, elixir-autogen, elixir-format
+msgid "Delivery History - %{name}"
+msgstr "Historie doručení – %{name}"

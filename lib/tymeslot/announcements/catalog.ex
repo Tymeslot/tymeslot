@@ -35,8 +35,8 @@ defmodule Tymeslot.Announcements.Catalog do
   @event_colours_published_at ~U[2026-07-06 00:00:00Z]
   @event_colours_expires_at ~U[2026-08-05 00:00:00Z]
 
-  @languages_published_at ~U[2026-07-15 00:00:00Z]
-  @languages_expires_at ~U[2026-08-14 00:00:00Z]
+  @languages_published_at ~U[2026-08-10 00:00:00Z]
+  @languages_expires_at ~U[2026-09-09 00:00:00Z]
 
   @booking_limits_published_at ~U[2026-08-07 00:00:00Z]
   @booking_limits_expires_at ~U[2026-09-06 00:00:00Z]
@@ -86,7 +86,7 @@ defmodule Tymeslot.Announcements.Catalog do
         dgettext(
           "onboarding",
           "The whole app - your dashboard, booking pages and every email - is now available " <>
-            "in German, French, Italian and Ukrainian. Tymeslot follows your browser's " <>
+            "in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's " <>
             "language automatically, or pick one yourself in Account settings. Your invitees " <>
             "get booking pages and confirmations in their own language, too."
         ),

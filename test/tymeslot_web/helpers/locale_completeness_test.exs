@@ -83,6 +83,10 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
           "fr" ->
             assert result =~ " ", "French should use space as thousand separator"
             assert result =~ ",", "French should use comma as decimal separator"
+
+          "cs" ->
+            assert result =~ " ", "Czech should use space as thousand separator"
+            assert result =~ ",", "Czech should use comma as decimal separator"
         end
       end
 

@@ -1,0 +1,228 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "Ne"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Ano"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged (%{at})"
+msgstr "✓ Potvrzeno (%{at})"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least 8 characters"
+msgstr "Alespoň 8 znaků"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr "Probíhá pokus o opětovné připojení"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Browser Not Supported"
+msgstr "Nepodporovaný prohlížeč"
+
+#: lib/tymeslot_web/components/confirmation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: lib/tymeslot_web/components/language_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Change language"
+msgstr "Změnit jazyk"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Zavřít"
+
+#: lib/tymeslot_web/components/core_components/modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close modal"
+msgstr "Zavřít dialog"
+
+#: lib/tymeslot_web/components/confirmation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm"
+msgstr "Potvrdit"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Connection Lost"
+msgstr "Připojení přerušeno"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "JavaScript Disabled"
+msgstr "JavaScript je vypnutý"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Learn About Modern Browsers"
+msgstr "Zjistit více o moderních prohlížečích"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One lowercase letter"
+msgstr "Jedno malé písmeno"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One number"
+msgstr "Jednu číslici"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One uppercase letter"
+msgstr "Jedno velké písmeno"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain:"
+msgstr "Heslo musí obsahovat:"
+
+#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/buttons.ex
+#, elixir-autogen, elixir-format
+msgid "Processing..."
+msgstr "Zpracování…"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh Page"
+msgstr "Obnovit stránku"
+
+#: lib/tymeslot_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "Schedule a Meeting"
+msgstr "Naplánovat schůzku"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search cities, countries, or timezones..."
+msgstr "Hledat města, země nebo časová pásma…"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Select timezone"
+msgstr "Vyberte časové pásmo"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Tabs"
+msgstr "Karty"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
+msgstr "Tato %{context} vyžaduje moderní prohlížeč s podporou modulů ES. Aktualizujte prosím na nejnovější verzi prohlížeče Chrome, Firefox, Safari nebo Edge."
+
+#: lib/tymeslot_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "This app requires JavaScript to function. Please enable it in your browser settings."
+msgstr "Tato aplikace ke svému fungování vyžaduje JavaScript. Zapněte jej prosím v nastavení prohlížeče."
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "This timezone will be used for your availability and scheduling."
+msgstr "Toto časové pásmo se použije pro vaši dostupnost a plánování."
+
+#: lib/tymeslot_web/components/core_components/brand.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot logo"
+msgstr "Logo Tymeslot"
+
+#: lib/tymeslot_web/components/core_components/layout.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot team"
+msgstr "tým Tymeslot"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Your Timezone"
+msgstr "Vaše časové pásmo"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "application"
+msgstr "aplikace"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "local time"
+msgstr "místní čas"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "scheduling page"
+msgstr "stránka pro plánování"
+
+#: lib/tymeslot_web/components/core_components/layout.ex
+#, elixir-autogen, elixir-format
+msgid "Made with %{heart} by the %{team}"
+msgstr "S %{heart} vytvořil %{team}"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr "Nástěnka"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Get Started"
+msgstr "Začít"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr "Přihlásit se"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Logout"
+msgstr "Odhlásit se"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle menu"
+msgstr "Přepnout nabídku"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
+msgstr "Elegantní plánování schůzek ve vašich barvách. Žádné reklamy, žádné sledování."
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "View on GitHub"
+msgstr "Zobrazit na GitHubu"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "© %{year} Tymeslot. All rights reserved."
+msgstr "© %{year} Tymeslot. Všechna práva vyhrazena."
+
+#: lib/tymeslot_web/components/core_components/containers.ex
+#, elixir-autogen, elixir-format
+msgid "Saving changes..."
+msgstr "Ukládání změn…"

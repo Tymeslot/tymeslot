@@ -114,7 +114,14 @@ defmodule TymeslotWeb.Components.FlagHelpers do
     """
   end
 
-  @locale_countries %{"en" => :gbr, "de" => :deu, "uk" => :ukr, "fr" => :fra, "it" => :ita}
+  @locale_countries %{
+    "en" => :gbr,
+    "de" => :deu,
+    "uk" => :ukr,
+    "fr" => :fra,
+    "it" => :ita,
+    "cs" => :cze
+  }
 
   defp locale_to_country_code(locale), do: Map.get(@locale_countries, locale)
 

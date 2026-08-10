@@ -1,0 +1,254 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: Error Messages
+msgid "something_went_wrong"
+msgstr "Došlo k chybě"
+
+msgid "try_again_later"
+msgstr "Zkuste to prosím později"
+
+msgid "invalid_meeting_link"
+msgstr "Neplatný odkaz na schůzku"
+
+msgid "slot_no_longer_available"
+msgstr "Tento termín už není k dispozici"
+
+msgid "name_required"
+msgstr "Zadejte jméno"
+
+msgid "email_required"
+msgstr "Zadejte e-mailovou adresu"
+
+msgid "email_invalid"
+msgstr "Zadejte platnou e-mailovou adresu"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "calendar_setup_required"
+msgstr "Tato rezervační stránka zatím není k dispozici"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "connect_calendar_first"
+msgstr "Pokud jste hostitel, připojte si prosím kalendář na své nástěnce."
+
+#: Status
+msgid "loading"
+msgstr "Načítání…"
+
+msgid "submitting"
+msgstr "Odesílání…"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "are still associated with this entry"
+msgstr "stále patří k tomuto záznamu"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "can't be blank"
+msgstr "je povinná položka"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "does not exist"
+msgstr "neexistuje"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "does not match confirmation"
+msgstr "se neshoduje s potvrzením"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has already been taken"
+msgstr "již existuje"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has an invalid entry"
+msgstr "obsahuje neplatnou hodnotu"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has invalid format"
+msgstr "má neplatný formát"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is invalid"
+msgstr "má neplatnou hodnotu"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is reserved"
+msgstr "je vyhrazená hodnota"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is still associated with this entry"
+msgstr "stále patří k tomuto záznamu"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be accepted"
+msgstr "je nutné přijmout"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be equal to %{number}"
+msgstr "se musí rovnat %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than %{number}"
+msgstr "musí být větší než %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than or equal to %{number}"
+msgstr "musí být větší nebo rovno %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be less than %{number}"
+msgstr "musí být menší než %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be less than or equal to %{number}"
+msgstr "musí být menší nebo rovno %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be not equal to %{number}"
+msgstr "se nesmí rovnat %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be %{count} byte(s)"
+msgid_plural "should be %{count} byte(s)"
+msgstr[0] "musí mít %{count} bajt"
+msgstr[1] "musí mít %{count} bajty"
+msgstr[2] "musí mít %{count} bajtů"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be %{count} character(s)"
+msgid_plural "should be %{count} character(s)"
+msgstr[0] "musí mít %{count} znak"
+msgstr[1] "musí mít %{count} znaky"
+msgstr[2] "musí mít %{count} znaků"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at least %{count} byte(s)"
+msgid_plural "should be at least %{count} byte(s)"
+msgstr[0] "musí mít alespoň %{count} bajt"
+msgstr[1] "musí mít alespoň %{count} bajty"
+msgstr[2] "musí mít alespoň %{count} bajtů"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at least %{count} character(s)"
+msgid_plural "should be at least %{count} character(s)"
+msgstr[0] "musí mít alespoň %{count} znak"
+msgstr[1] "musí mít alespoň %{count} znaky"
+msgstr[2] "musí mít alespoň %{count} znaků"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at most %{count} byte(s)"
+msgid_plural "should be at most %{count} byte(s)"
+msgstr[0] "musí mít nejvýše %{count} bajt"
+msgstr[1] "musí mít nejvýše %{count} bajty"
+msgstr[2] "musí mít nejvýše %{count} bajtů"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at most %{count} character(s)"
+msgid_plural "should be at most %{count} character(s)"
+msgstr[0] "musí mít nejvýše %{count} znak"
+msgstr[1] "musí mít nejvýše %{count} znaky"
+msgstr[2] "musí mít nejvýše %{count} znaků"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have %{count} item(s)"
+msgid_plural "should have %{count} item(s)"
+msgstr[0] "musí obsahovat %{count} položku"
+msgstr[1] "musí obsahovat %{count} položky"
+msgstr[2] "musí obsahovat %{count} položek"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have at least %{count} item(s)"
+msgid_plural "should have at least %{count} item(s)"
+msgstr[0] "musí obsahovat alespoň %{count} položku"
+msgstr[1] "musí obsahovat alespoň %{count} položky"
+msgstr[2] "musí obsahovat alespoň %{count} položek"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have at most %{count} item(s)"
+msgid_plural "should have at most %{count} item(s)"
+msgstr[0] "musí obsahovat nejvýše %{count} položku"
+msgstr[1] "musí obsahovat nejvýše %{count} položky"
+msgstr[2] "musí obsahovat nejvýše %{count} položek"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "violates an exclusion constraint"
+msgstr "porušuje omezení výlučnosti"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "Error 404"
+msgstr "Chyba 404"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "Go to Tymeslot"
+msgstr "Přejít na Tymeslot"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#: lib/tymeslot_web/live/scheduling/organizer_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Page not found"
+msgstr "Stránka nenalezena"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "The link may be broken, or the page may have moved."
+msgstr "Odkaz může být poškozený nebo se stránka přesunula."
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "This page doesn't exist"
+msgstr "Tato stránka neexistuje"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "an integration for this account already exists"
+msgstr "pro tento účet už integrace existuje"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "an integration for this provider already exists"
+msgstr "pro tohoto poskytovatele už integrace existuje"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid colour"
+msgstr "není platná barva"

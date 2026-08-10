@@ -1,0 +1,232 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete your profile picture? This action cannot be undone."
+msgstr "Opravdu chcete smazat svůj profilový obrázek? Tuto akci nelze vzít zpět."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Available"
+msgstr "Volné"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Avatar deleted successfully"
+msgstr "Profilový obrázek byl smazán."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Avatar updated successfully"
+msgstr "Profilový obrázek byl aktualizován."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Basic Information"
+msgstr "Základní informace"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a unique username for your personal booking page."
+msgstr "Zvolte si jedinečné uživatelské jméno pro svou rezervační stránku."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Custom URL"
+msgstr "Vlastní URL"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Avatar"
+msgstr "Smazat profilový obrázek"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Photo"
+msgstr "Smazat fotografii"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Display Name"
+msgstr "Zobrazované jméno"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Display name updated"
+msgstr "Zobrazované jméno bylo aktualizováno."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your full name"
+msgstr "Zadejte celé jméno"
+
+#: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to delete avatar: %{reason}"
+msgstr "Profilový obrázek se nepodařilo smazat: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update display name"
+msgstr "Zobrazované jméno se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update timezone"
+msgstr "Časové pásmo se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid"
+msgstr "Neplatné"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "JPG, PNG, GIF or WebP. Max 10MB."
+msgstr "JPG, PNG, GIF nebo WebP. Max. 10 MB."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Live at:"
+msgstr "Dostupné na:"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Processing..."
+msgstr "Zpracování…"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Profile Picture"
+msgstr "Profilový obrázek"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Profile Settings"
+msgstr "Nastavení profilu"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Saving..."
+msgstr "Ukládání…"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Taken"
+msgstr "Obsazené"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
+msgstr "Toto jméno uvidí návštěvníci, když si u vás rezervují schůzku. Změny se ukládají automaticky."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Timezone"
+msgstr "Časové pásmo"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Timezone updated to %{timezone}"
+msgstr "Časové pásmo bylo změněno na %{timezone}."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Update URL"
+msgstr "Aktualizovat URL"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload"
+msgstr "Nahrát"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload New"
+msgstr "Nahrát novou fotografii"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload failed"
+msgstr "Nahrání se nezdařilo."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Upload failed: %{reason}"
+msgstr "Nahrání se nezdařilo: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
+#, elixir-autogen, elixir-format
+msgid "Uploading..."
+msgstr "Nahrávání…"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Username updated! Your booking page: %{url}"
+msgstr "Uživatelské jméno bylo změněno. Vaše rezervační stránka: %{url}"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your Custom URL"
+msgstr "Vaše vlastní URL"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "yourname"
+msgstr "vasejmeno"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown timezone"
+msgstr "Neznámé časové pásmo"
+
+#: lib/tymeslot/profiles.ex
+#, elixir-autogen, elixir-format
+msgid "Too many username change attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o změnu uživatelského jména. Zkuste to prosím později."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "12h (AM/PM)"
+msgstr "12 h (AM/PM)"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "24h"
+msgstr "24 h"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Controls how times are shown on your dashboard and in the emails you receive. Your booking page follows each visitor's own language."
+msgstr "Určuje, jak se časy zobrazují na vaší nástěnce a v e-mailech, které dostáváte. Vaše rezervační stránka se řídí jazykem každého návštěvníka."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to update time format"
+msgstr "Formát času se nepodařilo aktualizovat."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Time Format"
+msgstr "Formát času"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "Time format updated"
+msgstr "Formát času byl změněn."
