@@ -320,11 +320,6 @@ msgstr "Max"
 msgid "Maximum of 3 reminders allowed"
 msgstr "Maximal 3 Erinnerungen erlaubt"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Type"
-msgstr "Termintyp"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type created"
@@ -455,6 +450,7 @@ msgid "Reminder value must be a positive number"
 msgstr "Erinnerungswert muss eine positive Zahl sein"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Erinnerungen"
@@ -692,7 +688,7 @@ msgstr "Buchungslimits"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr ""
+msgstr "Begrenzen Sie, wie viele Buchungen dieses Typs Sie annehmen. Lassen Sie ein Feld leer, um kein Limit zu setzen."
 "Begrenzen Sie die Anzahl der Buchungen für diesen Termintyp. Lassen Sie ein "
 "Feld leer, wenn es kein Limit geben soll."
 
@@ -715,3 +711,43 @@ msgstr "Pro Monat"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Pro Woche"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Rules"
+msgstr "Buchungsregeln"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Details"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hide from public booking page"
+msgstr "Auf der öffentlichen Buchungsseite ausblenden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Ort"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Location & Calendar"
+msgstr "Ort & Kalender"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Questions"
+msgstr "Fragen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Visibility"
+msgstr "Sichtbarkeit"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "When on, this meeting type is reachable only through its direct link."
+msgstr "Wenn aktiviert, ist dieser Termintyp nur über seinen direkten Link erreichbar."

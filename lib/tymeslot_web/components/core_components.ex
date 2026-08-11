@@ -274,6 +274,23 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @spec tabs(map()) :: Phoenix.LiveView.Rendered.t()
   def tabs(assigns), do: Navigation.tabs(assigns)
 
+  @doc """
+  Renders just the navigation bar of a tabbed interface, without panels.
+
+  For layouts where the panels cannot be slots — e.g. when they must stay
+  inside one `<form>` shared with an untabbed variant. See
+  `TymeslotWeb.Components.CoreComponents.Navigation.tab_bar/1`.
+  """
+  attr :active_tab, :string, required: true
+  attr :target, :any, default: nil
+
+  attr :tabs, :list,
+    required: true,
+    doc: "maps with :id, :label, optional :icon and :error"
+
+  @spec tab_bar(map()) :: Phoenix.LiveView.Rendered.t()
+  def tab_bar(assigns), do: Navigation.tab_bar(assigns)
+
   # ========== DROPDOWN ==========
 
   @doc """

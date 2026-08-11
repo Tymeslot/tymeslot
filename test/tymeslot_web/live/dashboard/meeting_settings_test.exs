@@ -107,6 +107,87 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
   end
 
   # ===========================================================================
+  # Edit form tabs
+  # ===========================================================================
+
+  describe "Edit form tabs" do
+    setup %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, name: "Tabbed Type", duration_minutes: 30)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      %{view: view, meeting_type: meeting_type}
+    end
+
+    test "opens on the Details tab with the other panels hidden", %{view: view} do
+      assert has_element?(view, "[role='tablist']")
+      assert has_element?(view, "#tab-details[aria-selected='true']")
+
+      refute has_element?(view, "#panel-details[hidden]")
+      assert has_element?(view, "#panel-location[hidden]")
+      assert has_element?(view, "#panel-booking[hidden]")
+      assert has_element?(view, "#panel-questions[hidden]")
+      assert has_element?(view, "#panel-reminders[hidden]")
+    end
+
+    test "switching tabs reveals that panel and hides the previous one", %{view: view} do
+      view |> element("#tab-booking") |> render_click()
+
+      assert has_element?(view, "#tab-booking[aria-selected='true']")
+      assert has_element?(view, "#tab-details[aria-selected='false']")
+      refute has_element?(view, "#panel-booking[hidden]")
+      assert has_element?(view, "#panel-details[hidden]")
+    end
+
+    test "an invalid field marks its tab with an error indicator", %{view: view} do
+      view |> element("#tab-reminders") |> render_click()
+
+      # The name input sits in the now-hidden Details panel; an invalid value
+      # must still surface there via the tab indicator.
+      view
+      |> element(~s|input[name="meeting_type[name]"]|)
+      |> render_change(%{"meeting_type" => %{"name" => ""}})
+
+      assert has_element?(view, "#tab-details span", "This tab contains errors")
+      refute has_element?(view, "#tab-reminders span", "This tab contains errors")
+    end
+
+    test "the visibility toggle lives in the Booking Rules panel and persists", %{
+      view: view,
+      meeting_type: meeting_type,
+      user: user
+    } do
+      view |> element("#tab-booking") |> render_click()
+
+      view
+      |> element("#panel-booking [phx-click='toggle_private']")
+      |> render_click()
+
+      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).is_private
+    end
+
+    test "create mode renders all sections stacked without a tab bar", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view |> element("button", "Add Meeting Type") |> render_click()
+
+      refute has_element?(view, "[role='tablist']")
+
+      for panel <- ~w(details location booking questions reminders) do
+        assert has_element?(view, "#panel-#{panel}")
+        refute has_element?(view, "#panel-#{panel}[hidden]")
+      end
+
+      # The visibility switch needs an existing type; it must not render here.
+      refute has_element?(view, "#panel-booking [phx-click='toggle_private']")
+    end
+  end
+
+  # ===========================================================================
   # Auto-saving edits
   # ===========================================================================
 
