@@ -751,3 +751,23 @@ msgstr "Visibilità"
 #, elixir-autogen, elixir-format
 msgid "When on, this meeting type is reachable only through its direct link."
 msgstr "Se attivo, questo tipo di riunione è raggiungibile solo tramite il suo link diretto."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Availability"
+msgstr "Disponibilità"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Choose the hours this meeting type can be booked in. The default schedule applies unless you pick another one."
+msgstr "Scegli gli orari in cui questo tipo di riunione può essere prenotato. Si applica la pianificazione predefinita, a meno che tu non ne scelga un'altra."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Default (%{name})"
+msgstr "Predefinita (%{name})"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule"
+msgstr "Pianificazione"

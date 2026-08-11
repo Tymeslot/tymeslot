@@ -20,14 +20,15 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     :ok = Sandbox.checkout(Repo)
     Sandbox.mode(Repo, {:shared, self()})
 
-    # Create a profile with standard business hours for tests
+    # Create a schedule with standard business hours for tests
     user = insert(:user)
     profile = insert(:profile, user: user)
+    schedule = insert(:availability_schedule, profile: profile, is_default: true)
 
     # Make every day available
     Enum.each(1..7, fn day_of_week ->
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: day_of_week,
         is_available: true,
         start_time: ~T[09:00:00],
@@ -35,12 +36,12 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
       )
     end)
 
-    {:ok, profile: profile}
+    {:ok, schedule: schedule}
   end
 
   @timezones Enum.map(Timezones.all_options(), &elem(&1, 1))
 
-  property "month_availability returns valid map for any timezone pair", %{profile: profile} do
+  property "month_availability returns valid map for any timezone pair", %{schedule: schedule} do
     check all(
             year <- integer(2026..2027),
             month <- integer(1..12),
@@ -52,7 +53,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
         duration_minutes: duration,
         buffer_minutes: 0,
         min_advance_hours: 0,
-        profile_id: profile.id
+        schedule_id: schedule.id
       }
 
       {:ok, availability} =
@@ -79,12 +80,12 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   # The property above only reaches this pair on some seeds. America/Santiago
   # has no midnight on 2026-09-06 (DST gap), and an owner in Asia/Macau pushes
   # availability across that boundary, so pin the case deterministically.
-  test "month_availability spans an attendee midnight that DST skips", %{profile: profile} do
+  test "month_availability spans an attendee midnight that DST skips", %{schedule: schedule} do
     config = %{
       duration_minutes: 30,
       buffer_minutes: 0,
       min_advance_hours: 0,
-      profile_id: profile.id
+      schedule_id: schedule.id
     }
 
     assert {:ok, availability} =
@@ -96,7 +97,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   end
 
   property "available_slots returns valid sorted unique strings for any timezone pair", %{
-    profile: profile
+    schedule: schedule
   } do
     check all(
             owner_tz <- member_of(@timezones),
@@ -107,7 +108,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
         duration_minutes: duration,
         buffer_minutes: 0,
         min_advance_hours: 0,
-        profile_id: profile.id
+        schedule_id: schedule.id
       }
 
       date = Date.add(Date.utc_today(), 14)
@@ -129,12 +130,12 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     end
   end
 
-  test "available_slots handles DST spring forward correctly", %{profile: profile} do
+  test "available_slots handles DST spring forward correctly", %{schedule: schedule} do
     config = %{
       duration_minutes: 30,
       buffer_minutes: 0,
       min_advance_hours: 0,
-      profile_id: profile.id
+      schedule_id: schedule.id
     }
 
     # America/Santiago springs forward at 2026-09-06 00:00, so 00:00-00:59 does
@@ -173,7 +174,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     assert "12:30 AM" in normal_day_slots
   end
 
-  property "today's availability correctly respects min_advance_hours", %{profile: profile} do
+  property "today's availability correctly respects min_advance_hours", %{schedule: schedule} do
     check all(
             advance_hours <- integer(0..72),
             user_tz <- member_of(@timezones)
@@ -188,7 +189,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
           user_tz,
           user_tz,
           [],
-          %{min_advance_hours: advance_hours, profile_id: profile.id}
+          %{min_advance_hours: advance_hours, schedule_id: schedule.id}
         )
 
       # ...

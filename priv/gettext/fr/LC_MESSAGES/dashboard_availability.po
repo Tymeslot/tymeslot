@@ -101,6 +101,8 @@ msgstr "Pauses"
 
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -289,6 +291,7 @@ msgid "Sunday"
 msgstr "Dimanche"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone."
 msgstr "Cette action est irréversible."
@@ -412,3 +415,279 @@ msgstr "L’heure doit être une chaîne de caractères"
 #, elixir-autogen, elixir-format
 msgid "Time must be in HH:MM format (e.g., 09:30)"
 msgstr "L’heure doit être au format HH:MM (p. ex. 09:30)"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} (copy)"
+msgstr "%{name} (copie)"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} (default)"
+msgstr "%{name} (par défaut)"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr "1 jour"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr "1 heure"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 month"
+msgstr "1 mois"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr "1 semaine"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 days"
+msgstr "2 jours"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 months"
+msgstr "2 mois"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 weeks"
+msgstr "2 semaines"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "3 months"
+msgstr "3 mois"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "4 hours"
+msgstr "4 heures"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "6 months"
+msgstr "6 mois"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking set to custom value"
+msgstr "Délai de réservation défini sur une valeur personnalisée"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking window updated to %{days} days"
+msgstr "Délai de réservation mis à jour à %{days} jours"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete %{name}?"
+msgstr "Voulez-vous vraiment supprimer %{name} ?"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Between Appointments"
+msgstr "Marge entre les rendez-vous"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer time set to custom value"
+msgstr "Marge définie sur une valeur personnalisée"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer time updated to %{minutes} minutes"
+msgstr "Marge mise à jour à %{minutes} minutes"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Custom"
+msgstr "Personnalisé"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Default schedule updated"
+msgstr "Planning par défaut mis à jour"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Supprimer"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Schedule"
+msgstr "Supprimer le planning"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Dupliquer"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each meeting type can be booked against one of your schedules."
+msgstr "Chaque type de réunion utilise l'un de vos plannings."
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "For example: Consulting hours"
+msgstr "Par exemple : heures de consultation"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "How Far in Advance Can People Book"
+msgstr "Jusqu’à combien de temps à l’avance peut-on réserver"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Make default"
+msgstr "Définir par défaut"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum number of days into the future that appointments can be booked."
+msgstr "Nombre maximal de jours à l’avance pendant lesquels les rendez-vous peuvent être réservés."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum Booking Notice"
+msgstr "Délai de réservation minimum"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum booking notice updated to %{hours} hours"
+msgstr "Délai de réservation minimum mis à jour à %{hours} heures"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum hours of notice required before an appointment can be booked."
+msgstr "Nombre minimum d’heures de préavis requis avant qu’un rendez-vous puisse être réservé."
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum notice set to custom value"
+msgstr "Préavis minimum défini sur une valeur personnalisée"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "New schedule"
+msgstr "Nouveau planning"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "No buffer"
+msgstr "Aucune marge"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting type uses this schedule. This action cannot be undone."
+msgstr "Aucun type de réunion n'utilise ce planning. Cette action est irréversible."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Rename"
+msgstr "Renommer"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Rename schedule"
+msgstr "Renommer le planning"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Enregistrer"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule"
+msgstr "Planning"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule created"
+msgstr "Planning créé"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule deleted"
+msgstr "Planning supprimé"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated"
+msgstr "Planning dupliqué"
+
+#: lib/tymeslot_web/components/dashboard/availability/schedule_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule name"
+msgstr "Nom du planning"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule renamed"
+msgstr "Planning renommé"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling Preferences"
+msgstr "Préférences de planification"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Please try again."
+msgstr "Une erreur est survenue. Veuillez réessayer."
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
+#, elixir-autogen, elixir-format
+msgid "These meeting types will fall back to your default schedule:"
+msgstr "Ces types de réunion utiliseront votre planning par défaut :"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "These rules apply to every meeting type booked against this schedule."
+msgstr "Ces règles s'appliquent à chaque type de réunion utilisant ce planning."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time to block after each appointment for preparation, travel, or breaks."
+msgstr "Temps à bloquer après chaque rendez-vous pour la préparation, les déplacements ou les pauses."
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your default schedule cannot be deleted. Make another schedule the default first."
+msgstr "Votre planning par défaut ne peut pas être supprimé. Définissez d'abord un autre planning par défaut."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "days"
+msgstr "jours"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "hours"
+msgstr "heures"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "instant"
+msgstr "instantané"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "min"
+msgstr "min"

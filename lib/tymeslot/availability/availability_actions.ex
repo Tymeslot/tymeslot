@@ -5,6 +5,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   without any UI-specific concerns.
   """
 
+  alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.{Breaks, WeeklyAvailabilityQueries, WeeklySchedule}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles.ProfileQueries
@@ -13,23 +14,23 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   # Schedule Management Actions
 
   @doc """
-  Ensures a complete weekly schedule exists for a profile.
+  Ensures a complete weekly schedule exists for a schedule.
   Creates default unavailable days for any missing days.
   """
   @spec ensure_complete_schedule(list(), integer()) :: list()
-  def ensure_complete_schedule(weekly_schedule, profile_id) do
+  def ensure_complete_schedule(weekly_schedule, schedule_id) do
     existing_days = MapSet.new(Enum.map(weekly_schedule, & &1.day_of_week))
 
     # Create any missing days as unavailable
     Enum.each(1..7, fn day ->
       unless day in existing_days do
         {:ok, _day_availability} =
-          WeeklySchedule.create_day_availability(profile_id, day, %{is_available: false})
+          WeeklySchedule.create_day_availability(schedule_id, day, %{is_available: false})
       end
     end)
 
     # Return fully preloaded schedule with breaks
-    WeeklySchedule.get_weekly_schedule(profile_id)
+    WeeklySchedule.get_weekly_schedule(schedule_id)
   end
 
   @doc """
@@ -37,21 +38,20 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   """
   @spec toggle_day_availability(integer(), integer(), boolean()) ::
           {:ok, term()} | {:error, term()}
-  def toggle_day_availability(profile_id, day, current_is_available) do
+  def toggle_day_availability(schedule_id, day, current_is_available) do
     new_available = !current_is_available
 
-    result =
+    with_cache_invalidation(schedule_id, fn ->
       if new_available do
-        WeeklySchedule.upsert_day_availability(profile_id, day, %{
+        WeeklySchedule.upsert_day_availability(schedule_id, day, %{
           is_available: true,
-          start_time: ~T[11:00:00],
-          end_time: ~T[19:30:00]
+          start_time: WeeklyAvailabilityQueries.default_start_time(),
+          end_time: WeeklyAvailabilityQueries.default_end_time()
         })
       else
-        WeeklySchedule.clear_day_settings(profile_id, day)
+        WeeklySchedule.clear_day_settings(schedule_id, day)
       end
-
-    with_cache_invalidation(result, profile_id)
+    end)
   end
 
   @doc """
@@ -59,11 +59,11 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   """
   @spec update_day_hours(integer(), integer(), String.t(), String.t()) ::
           {:ok, term()} | {:error, atom()}
-  def update_day_hours(profile_id, day, start_str, end_str) do
-    result =
+  def update_day_hours(schedule_id, day, start_str, end_str) do
+    with_cache_invalidation(schedule_id, fn ->
       with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
            {:ok, end_time} <- DateTimeUtils.parse_hhmm(end_str) do
-        WeeklySchedule.upsert_day_availability(profile_id, day, %{
+        WeeklySchedule.upsert_day_availability(schedule_id, day, %{
           is_available: true,
           start_time: start_time,
           end_time: end_time
@@ -71,8 +71,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
       else
         _error -> {:error, :invalid_time_format}
       end
-
-    with_cache_invalidation(result, profile_id)
+    end)
   end
 
   # Break Management Actions
@@ -83,7 +82,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   @spec add_break(integer(), String.t(), String.t(), String.t()) ::
           {:ok, term()} | {:error, atom()}
   def add_break(day_availability_id, start_str, end_str, label) do
-    result =
+    with_cache_invalidation_by_availability(day_availability_id, fn ->
       with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
            {:ok, end_time} <- DateTimeUtils.parse_hhmm(end_str) do
         Breaks.add_break(
@@ -95,8 +94,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
       else
         _error -> {:error, :invalid_time_format}
       end
-
-    with_cache_invalidation_by_availability(result, day_availability_id)
+    end)
   end
 
   @doc """
@@ -104,7 +102,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   """
   @spec add_quick_break(integer(), String.t(), integer()) :: {:ok, term()} | {:error, atom()}
   def add_quick_break(day_availability_id, start_str, duration) do
-    result =
+    with_cache_invalidation_by_availability(day_availability_id, fn ->
       case DateTimeUtils.parse_hhmm(start_str) do
         {:ok, start_time} ->
           Breaks.add_quick_break(day_availability_id, start_time, duration)
@@ -112,19 +110,17 @@ defmodule Tymeslot.Availability.AvailabilityActions do
         _error ->
           {:error, :invalid_time_format}
       end
-
-    with_cache_invalidation_by_availability(result, day_availability_id)
+    end)
   end
 
   @doc """
-  Deletes a break, verifying that it belongs to the given profile.
+  Deletes a break, verifying that it belongs to the given schedule.
 
-  Returns `{:error, "Unauthorized"}` if the break belongs to a different profile.
+  Returns `{:error, "Unauthorized"}` if the break belongs to a different schedule.
   """
   @spec delete_break(integer(), integer()) :: {:ok, term()} | {:error, String.t()}
-  def delete_break(break_id, profile_id) do
-    result = Breaks.delete_break(break_id, profile_id)
-    with_cache_invalidation(result, profile_id)
+  def delete_break(break_id, schedule_id) do
+    with_cache_invalidation(schedule_id, fn -> Breaks.delete_break(break_id, schedule_id) end)
   end
 
   # Bulk Operations
@@ -134,9 +130,10 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   """
   @spec copy_day_settings(integer(), integer(), list(integer())) ::
           {:ok, term()} | {:error, String.t()}
-  def copy_day_settings(profile_id, from_day, to_days) do
-    result = WeeklySchedule.copy_day_settings(profile_id, from_day, to_days)
-    with_cache_invalidation(result, profile_id)
+  def copy_day_settings(schedule_id, from_day, to_days) do
+    with_cache_invalidation(schedule_id, fn ->
+      WeeklySchedule.copy_day_settings(schedule_id, from_day, to_days)
+    end)
   end
 
   @doc """
@@ -144,18 +141,20 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   """
   @spec apply_preset(integer(), String.t(), list(integer())) ::
           {:ok, term()} | {:error, String.t()}
-  def apply_preset(profile_id, preset, days) do
-    result = WeeklySchedule.set_preset_schedule(profile_id, preset, days)
-    with_cache_invalidation(result, profile_id)
+  def apply_preset(schedule_id, preset, days) do
+    with_cache_invalidation(schedule_id, fn ->
+      WeeklySchedule.set_preset_schedule(schedule_id, preset, days)
+    end)
   end
 
   @doc """
   Clears all settings for a specific day (sets to unavailable and removes all breaks).
   """
   @spec clear_day_settings(integer(), integer()) :: {:ok, term()} | {:error, term()}
-  def clear_day_settings(profile_id, day) do
-    result = WeeklySchedule.clear_day_settings(profile_id, day)
-    with_cache_invalidation(result, profile_id)
+  def clear_day_settings(schedule_id, day) do
+    with_cache_invalidation(schedule_id, fn ->
+      WeeklySchedule.clear_day_settings(schedule_id, day)
+    end)
   end
 
   # Helper Functions
@@ -199,23 +198,32 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   defp humanize_field(field),
     do: field |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
-  defp with_cache_invalidation({:ok, _data} = result, profile_id) do
-    case ProfileQueries.get_profile(profile_id) do
-      %{user_id: user_id} -> AvailabilityCache.invalidate_for_user(user_id)
-      nil -> :ok
+  defp with_cache_invalidation(schedule_id, fun) do
+    result = fun.()
+    invalidate_for_schedule(schedule_id)
+    result
+  end
+
+  defp with_cache_invalidation_by_availability(weekly_availability_id, fun) do
+    result = fun.()
+
+    case WeeklyAvailabilityQueries.get_weekly_availability(weekly_availability_id) do
+      %{schedule_id: schedule_id} -> invalidate_for_schedule(schedule_id)
+      _other -> :ok
     end
 
     result
   end
 
-  defp with_cache_invalidation(result, _profile_id), do: result
-
-  defp with_cache_invalidation_by_availability({:ok, _data} = result, weekly_availability_id) do
-    case WeeklyAvailabilityQueries.get_weekly_availability(weekly_availability_id) do
-      %{profile_id: profile_id} -> with_cache_invalidation(result, profile_id)
-      nil -> result
+  # The cache is keyed by user, so invalidation walks schedule -> profile -> user.
+  # A missing link is a no-op: failing to invalidate must never fail the edit the
+  # user just made.
+  defp invalidate_for_schedule(schedule_id) do
+    with %{profile_id: profile_id} <- AvailabilityScheduleQueries.get(schedule_id),
+         %{user_id: user_id} <- ProfileQueries.get_profile(profile_id) do
+      AvailabilityCache.invalidate_for_user(user_id)
+    else
+      _other -> :ok
     end
   end
-
-  defp with_cache_invalidation_by_availability(result, _weekly_availability_id), do: result
 end

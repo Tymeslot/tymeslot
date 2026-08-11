@@ -223,7 +223,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         CalendarNavigation.next_week_disabled?(
                           @current_week_start,
                           @user_timezone,
-                          @organizer_profile.advance_booking_days
+                          @booking_window_days
                         )
                       }
                     >

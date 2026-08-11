@@ -3,6 +3,7 @@ defmodule Tymeslot.MeetingTypes do
   Context for managing meeting types.
   """
   alias Tymeslot.BookingPage.Publication
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FormMapper
@@ -102,6 +103,9 @@ defmodule Tymeslot.MeetingTypes do
   def update_meeting_type(meeting_type, attrs, opts \\ []) do
     with {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
       Publication.maybe_publish(updated.user_id)
+      # Offered slots are cached per meeting type, and an edit can change which
+      # availability schedule the type resolves to, so the cached answer must go.
+      AvailabilityCache.invalidate_for_user(updated.user_id)
       {:ok, updated}
     end
   end

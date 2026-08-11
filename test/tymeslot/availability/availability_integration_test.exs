@@ -15,11 +15,15 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
 
   describe "availability calculation end-to-end" do
     test "generates time slots excluding conflicts" do
-      profile = insert(:profile, buffer_minutes: 15)
+      profile = insert(:profile)
+
+      schedule =
+        insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+
       date = next_monday()
 
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: Date.day_of_week(date),
         is_available: true,
         start_time: ~T[09:00:00],
@@ -34,7 +38,7 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
         }
       ]
 
-      config = %{profile_id: profile.id, buffer_minutes: profile.buffer_minutes}
+      config = %{schedule_id: schedule.id, buffer_minutes: schedule.buffer_minutes}
 
       {:ok, slots} =
         Calculate.available_slots(
@@ -67,11 +71,15 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
     end
 
     test "respects buffer time between meetings" do
-      profile = insert(:profile, buffer_minutes: 30)
+      profile = insert(:profile)
+
+      schedule =
+        insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 30)
+
       date = next_monday()
 
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: Date.day_of_week(date),
         is_available: true,
         start_time: ~T[09:00:00],
@@ -86,7 +94,7 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
         }
       ]
 
-      config = %{profile_id: profile.id, buffer_minutes: profile.buffer_minutes}
+      config = %{schedule_id: schedule.id, buffer_minutes: schedule.buffer_minutes}
 
       # A 15-minute duration makes the slot grid finer than the buffer, so the
       # buffer (not the grid) is what decides where bookings resume.
@@ -108,15 +116,16 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
 
     test "handles timezone conversions correctly" do
       profile = insert(:profile, timezone: "Europe/London")
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
 
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: 1,
         start_time: ~T[09:00:00],
         end_time: ~T[17:00:00]
       )
 
-      config = %{profile_id: profile.id, max_advance_booking_days: 7}
+      config = %{schedule_id: schedule.id, max_advance_booking_days: 7}
 
       # Test multiple timezones
       grids =
@@ -135,8 +144,12 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
     end
 
     test "excludes slots with advance booking restrictions" do
-      profile =
-        insert(:profile,
+      profile = insert(:profile)
+
+      schedule =
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
           min_advance_hours: 24,
           advance_booking_days: 30
         )
@@ -146,7 +159,7 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
       # Set availability for today
       if Date.day_of_week(today) in 1..5 do
         insert(:weekly_availability,
-          profile: profile,
+          schedule: schedule,
           day_of_week: Date.day_of_week(today),
           is_available: true,
           start_time: ~T[09:00:00],
@@ -154,9 +167,9 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
         )
 
         config = %{
-          profile_id: profile.id,
-          min_advance_hours: profile.min_advance_hours,
-          max_advance_booking_days: profile.advance_booking_days
+          schedule_id: schedule.id,
+          min_advance_hours: schedule.min_advance_hours,
+          max_advance_booking_days: schedule.advance_booking_days
         }
 
         # Should return no slots for today due to 24 hour minimum advance

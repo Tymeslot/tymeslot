@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
   attr :selected_video_integration_id, :any, default: nil
   attr :selected_calendar_integration_id, :any, default: nil
   attr :selected_target_calendar_id, :any, default: nil
+  attr :selected_availability_schedule_id, :any, default: nil
   attr :reminders, :list, required: true
   attr :custom_fields, :list, required: true
   attr :custom_questions_allowed, :boolean, required: true
@@ -124,6 +125,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
         type="hidden"
         name="meeting_type[target_calendar_id]"
         value={@selected_target_calendar_id}
+      />
+      <input
+        type="hidden"
+        name="meeting_type[availability_schedule_id]"
+        value={@selected_availability_schedule_id}
       />
       <input type="hidden" name="meeting_type[icon]" value={@selected_icon} />
       <input

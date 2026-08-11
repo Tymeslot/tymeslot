@@ -19,7 +19,7 @@ defmodule Tymeslot.Availability.Conflicts do
           optional(:min_advance_hours) => non_neg_integer(),
           optional(:max_advance_booking_days) => pos_integer(),
           optional(:duration_minutes) => pos_integer(),
-          optional(:profile_id) => integer() | nil,
+          optional(:schedule_id) => integer() | nil,
           optional(:limit_checker) => (DateTime.t() -> boolean()) | nil,
           optional(atom()) => term()
         }
@@ -117,7 +117,7 @@ defmodule Tymeslot.Availability.Conflicts do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)
     min_advance_hours = Map.get(config, :min_advance_hours, 3)
     max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
-    profile_id = Map.get(config, :profile_id)
+    schedule_id = Map.get(config, :schedule_id)
 
     # Pre-filter to events within ±2 days of target_date so the inner
     # per-slot Enum.any? scan does not traverse the full multi-week list.
@@ -138,14 +138,14 @@ defmodule Tymeslot.Availability.Conflicts do
     business_hours_windows =
       BusinessHours.windows_for_target_date(
         date,
-        profile_id,
+        schedule_id,
         owner_timezone,
         user_timezone,
         config
       )
 
     Enum.any?(business_hours_windows, fn window ->
-      breaks = BusinessHours.breaks_for_day(window.date, profile_id, config)
+      breaks = BusinessHours.breaks_for_day(window.date, schedule_id, config)
 
       slots =
         TimeSlots.generate_slots_for_range_with_breaks(

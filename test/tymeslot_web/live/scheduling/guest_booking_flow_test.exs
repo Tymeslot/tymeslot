@@ -59,7 +59,13 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
         user: user,
         username: "guestbooker",
         booking_theme: "1",
-        timezone: "America/New_York",
+        timezone: "America/New_York"
+      )
+
+    schedule =
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
         buffer_minutes: 0
@@ -67,7 +73,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
 
     Enum.each(1..7, fn day_of_week ->
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: day_of_week,
         is_available: true,
         start_time: ~T[09:00:00],

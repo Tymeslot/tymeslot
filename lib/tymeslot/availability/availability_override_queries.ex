@@ -1,6 +1,9 @@
 defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   @moduledoc """
   Query interface for availability override-related database operations.
+
+  Overrides hang off an availability schedule, so every lookup here is keyed by
+  `schedule_id` rather than by profile.
   """
   import Ecto.Query, warn: false
   alias Tymeslot.Availability.AvailabilityOverrideSchema
@@ -25,58 +28,23 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   end
 
   @doc """
-  Gets an override by profile and date.
+  Gets an override by schedule and date.
   """
-  @spec get_override_by_profile_and_date(integer(), Date.t()) ::
+  @spec get_override_by_schedule_and_date(integer(), Date.t()) ::
           AvailabilityOverrideSchema.t() | nil
-  def get_override_by_profile_and_date(profile_id, date) do
-    Repo.get_by(AvailabilityOverrideSchema, profile_id: profile_id, date: date)
+  def get_override_by_schedule_and_date(schedule_id, date) do
+    Repo.get_by(AvailabilityOverrideSchema, schedule_id: schedule_id, date: date)
   end
 
   @doc """
-  Tagged-tuple variant: returns {:ok, override} | {:error, :not_found}.
+  Gets overrides for a schedule within a date range.
   """
-  @spec get_override_by_profile_and_date_t(integer(), Date.t()) ::
-          {:ok, AvailabilityOverrideSchema.t()} | {:error, :not_found}
-  def get_override_by_profile_and_date_t(profile_id, date) do
-    case get_override_by_profile_and_date(profile_id, date) do
-      nil -> {:error, :not_found}
-      o -> {:ok, o}
-    end
-  end
-
-  @doc """
-  Gets all overrides for a profile.
-  """
-  @spec get_overrides_by_profile(integer()) :: list(AvailabilityOverrideSchema.t())
-  def get_overrides_by_profile(profile_id) do
-    AvailabilityOverrideSchema
-    |> where([o], o.profile_id == ^profile_id)
-    |> order_by(asc: :date)
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets overrides for a profile within a date range.
-  """
-  @spec get_overrides_by_profile_and_date_range(integer(), Date.t(), Date.t()) ::
+  @spec get_overrides_by_schedule_and_date_range(integer(), Date.t(), Date.t()) ::
           list(AvailabilityOverrideSchema.t())
-  def get_overrides_by_profile_and_date_range(profile_id, start_date, end_date) do
+  def get_overrides_by_schedule_and_date_range(schedule_id, start_date, end_date) do
     AvailabilityOverrideSchema
-    |> where([o], o.profile_id == ^profile_id)
+    |> where([o], o.schedule_id == ^schedule_id)
     |> where([o], o.date >= ^start_date and o.date <= ^end_date)
-    |> order_by(asc: :date)
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets overrides by type for a profile.
-  """
-  @spec get_overrides_by_profile_and_type(integer(), String.t()) ::
-          list(AvailabilityOverrideSchema.t())
-  def get_overrides_by_profile_and_type(profile_id, override_type) do
-    AvailabilityOverrideSchema
-    |> where([o], o.profile_id == ^profile_id and o.override_type == ^override_type)
     |> order_by(asc: :date)
     |> Repo.all()
   end
@@ -110,23 +78,5 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
           {:ok, AvailabilityOverrideSchema.t()} | {:error, Ecto.Changeset.t()}
   def delete_override(%AvailabilityOverrideSchema{} = override) do
     Repo.delete(override)
-  end
-
-  @doc """
-  Deletes all overrides for a profile.
-  """
-  @spec delete_overrides_by_profile(integer()) :: {integer(), nil | [term()]}
-  def delete_overrides_by_profile(profile_id) do
-    Repo.delete_all(where(AvailabilityOverrideSchema, [o], o.profile_id == ^profile_id))
-  end
-
-  @doc """
-  Deletes overrides for a profile before a given date.
-  """
-  @spec delete_overrides_before_date(integer(), Date.t()) :: {integer(), nil | [term()]}
-  def delete_overrides_before_date(profile_id, date) do
-    Repo.delete_all(
-      where(AvailabilityOverrideSchema, [o], o.profile_id == ^profile_id and o.date < ^date)
-    )
   end
 end

@@ -6,18 +6,18 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
 
   import Tymeslot.DashboardTestHelpers
 
-  alias Tymeslot.Availability.{Breaks, WeeklySchedule}
-  alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.Availability.{Breaks, Schedules, WeeklySchedule}
   alias Tymeslot.Infrastructure.AvailabilityCache
 
   setup %{conn: conn} do
     AvailabilityCache.clear_all()
     {:ok, ctx} = setup_dashboard_user(%{conn: conn})
 
-    {:ok, _count} =
-      WeeklyAvailabilityQueries.create_default_weekly_schedule(ctx[:profile].id)
+    # The weekly pattern hangs off the profile's default schedule, which
+    # `create_default/1` seeds with all seven weekdays.
+    {:ok, schedule} = Schedules.create_default(ctx[:profile].id)
 
-    ctx
+    Keyword.put(ctx, :schedule, schedule)
   end
 
   # ===========================================================================
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
   # ===========================================================================
 
   describe "toggling day availability" do
-    test "toggles a workday off", %{conn: conn, profile: profile} do
+    test "toggles a workday off", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -66,11 +66,11 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       html = render(view)
       assert html =~ "Monday availability updated"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert day.is_available == false
     end
 
-    test "toggles a workday off and back on", %{conn: conn, profile: profile} do
+    test "toggles a workday off and back on", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       # Toggle Monday off
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> element("button[phx-click='toggle_day_available'][phx-value-day='1']")
       |> render_click()
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert day.is_available == false
 
       # Toggle Monday back on
@@ -86,11 +86,11 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> element("button[phx-click='toggle_day_available'][phx-value-day='1']")
       |> render_click()
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert day.is_available == true
     end
 
-    test "toggles a weekend day on", %{conn: conn, profile: profile} do
+    test "toggles a weekend day on", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       # Saturday (day 6) starts unavailable
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       html = render(view)
       assert html =~ "Saturday availability updated"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 6)
+      day = WeeklySchedule.get_day_availability(schedule.id, 6)
       assert day.is_available == true
     end
   end
@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
   # ===========================================================================
 
   describe "updating work hours" do
-    test "updates start and end time for a workday", %{conn: conn, profile: profile} do
+    test "updates start and end time for a workday", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       # The form uses phx-change with a hidden "day" input to identify which
@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       html = render(view)
       assert html =~ "Monday hours updated"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert day.start_time == ~T[09:00:00]
       assert day.end_time == ~T[17:00:00]
     end
@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       refute html =~ "phx-submit=\"add_break\""
     end
 
-    test "adds a break and shows it in the list", %{conn: conn, profile: profile} do
+    test "adds a break and shows it in the list", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert html =~ "Break added"
       assert html =~ "Lunch"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       breaks = Breaks.get_breaks_for_day(day.id)
       assert length(breaks) == 1
       [break] = breaks
@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert break.end_time == ~T[13:00:00]
     end
 
-    test "deletes a break via the confirmation modal", %{conn: conn, profile: profile} do
+    test "deletes a break via the confirmation modal", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       # Add a break first
@@ -219,7 +219,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       })
       |> render_submit()
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       [break] = Breaks.get_breaks_for_day(day.id)
 
       # Open delete modal
@@ -242,7 +242,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert breaks == []
     end
 
-    test "adds a break without a label", %{conn: conn, profile: profile} do
+    test "adds a break without a label", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -261,7 +261,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       html = render(view)
       assert html =~ "Break added"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       [break] = Breaks.get_breaks_for_day(day.id)
       # Empty label is normalised to "Break" by the input validation layer
       assert break.label == "Break"
@@ -284,7 +284,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert html =~ "Clear Day Settings"
     end
 
-    test "clears a workday after confirmation", %{conn: conn, profile: profile} do
+    test "clears a workday after confirmation", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -298,11 +298,11 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       html = render(view)
       assert html =~ "settings cleared"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert day.is_available == false
     end
 
-    test "cancelling the clear modal does not clear the day", %{conn: conn, profile: profile} do
+    test "cancelling the clear modal does not clear the day", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -313,7 +313,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> element("#clear-day-modal button", "Cancel")
       |> render_click()
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert day.is_available == true
     end
   end
@@ -323,7 +323,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
   # ===========================================================================
 
   describe "copying day settings" do
-    test "copies settings from Monday to all days", %{conn: conn, profile: profile} do
+    test "copies settings from Monday to all days", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -336,13 +336,13 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert html =~ "Settings copied to"
 
       # Saturday should now be available with Monday's default hours
-      saturday = WeeklySchedule.get_day_availability(profile.id, 6)
+      saturday = WeeklySchedule.get_day_availability(schedule.id, 6)
       assert saturday.is_available == true
       assert saturday.start_time == ~T[11:00:00]
       assert saturday.end_time == ~T[19:30:00]
     end
 
-    test "copies settings from Monday to workdays only", %{conn: conn, profile: profile} do
+    test "copies settings from Monday to workdays only", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -355,13 +355,13 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert html =~ "Settings copied to"
 
       # Tuesday through Friday should have Monday's hours
-      tuesday = WeeklySchedule.get_day_availability(profile.id, 2)
+      tuesday = WeeklySchedule.get_day_availability(schedule.id, 2)
       assert tuesday.is_available == true
       assert tuesday.start_time == ~T[11:00:00]
       assert tuesday.end_time == ~T[19:30:00]
 
       # Weekend should remain unchanged
-      saturday = WeeklySchedule.get_day_availability(profile.id, 6)
+      saturday = WeeklySchedule.get_day_availability(schedule.id, 6)
       assert saturday.is_available == false
     end
   end

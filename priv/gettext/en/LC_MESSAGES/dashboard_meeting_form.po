@@ -749,3 +749,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "When on, this meeting type is reachable only through its direct link."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Availability"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Choose the hours this meeting type can be booked in. The default schedule applies unless you pick another one."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Default (%{name})"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule"
+msgstr ""

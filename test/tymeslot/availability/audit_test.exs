@@ -10,10 +10,11 @@ defmodule Tymeslot.Availability.AuditTest do
   defp setup_bookable_profile(username) do
     user = insert(:user)
     profile = insert(:profile, user: user, username: username, timezone: "Etc/UTC")
+    schedule = insert(:availability_schedule, profile: profile, is_default: true)
 
     Enum.each(1..7, fn day_of_week ->
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: day_of_week,
         is_available: day_of_week in 1..5,
         start_time: ~T[09:00:00],

@@ -243,7 +243,13 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
           user: user,
           booking_theme: "1",
           timezone: timezone,
-          username: "dst-test",
+          username: "dst-test"
+        )
+
+      schedule =
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
           advance_booking_days: 400,
           min_advance_hours: 0,
           buffer_minutes: 0
@@ -261,7 +267,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
       # Set availability for the DST day (always a Sunday, day_of_week 7)
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: dst_day_of_week,
         is_available: true,
         start_time: ~T[01:00:00],
@@ -308,7 +314,13 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             user: user,
             username: "deeplink-#{unquote(meta.name)}",
             booking_theme: unquote(theme_id),
-            timezone: timezone,
+            timezone: timezone
+          )
+
+        schedule =
+          insert(:availability_schedule,
+            profile: profile,
+            is_default: true,
             advance_booking_days: 30,
             min_advance_hours: 0,
             buffer_minutes: 0
@@ -324,7 +336,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
         Enum.each(1..7, fn day_of_week ->
           insert(:weekly_availability,
-            profile: profile,
+            schedule: schedule,
             day_of_week: day_of_week,
             is_available: true,
             start_time: ~T[09:00:00],
@@ -370,7 +382,13 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             user: user,
             username: "deeplink-book-#{unquote(meta.name)}",
             booking_theme: unquote(theme_id),
-            timezone: timezone,
+            timezone: timezone
+          )
+
+        schedule =
+          insert(:availability_schedule,
+            profile: profile,
+            is_default: true,
             advance_booking_days: 30,
             min_advance_hours: 0,
             buffer_minutes: 0
@@ -386,7 +404,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
         Enum.each(1..7, fn day_of_week ->
           insert(:weekly_availability,
-            profile: profile,
+            schedule: schedule,
             day_of_week: day_of_week,
             is_available: true,
             start_time: ~T[09:00:00],
@@ -422,7 +440,13 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             user: user,
             username: "order-#{unquote(meta.name)}",
             booking_theme: unquote(theme_id),
-            timezone: "America/New_York",
+            timezone: "America/New_York"
+          )
+
+        _schedule =
+          insert(:availability_schedule,
+            profile: profile,
+            is_default: true,
             advance_booking_days: 30,
             min_advance_hours: 0,
             buffer_minutes: 0

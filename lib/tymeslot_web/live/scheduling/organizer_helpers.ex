@@ -12,12 +12,15 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   require Logger
 
   alias Phoenix.Component
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Demo
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
 
   import Component, only: [assign: 3]
+
+  @default_booking_window_days 90
 
   @doc """
   Handles username resolution and organizer setup.
@@ -40,6 +43,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, nil)
         |> assign(:organizer_profile, nil)
+        |> assign(:booking_window_days, booking_window_days(nil))
         |> assign(:organizer_user_id, nil)
         |> assign(:meeting_types, [])
         |> assign(:page_title, dgettext("errors", "Page not found"))
@@ -48,9 +52,35 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, context.username)
         |> assign(:organizer_profile, context.profile)
+        |> assign(:booking_window_days, booking_window_days(context.profile))
         |> assign(:organizer_user_id, context.user_id)
         |> assign(:meeting_types, context.meeting_types)
         |> assign(:page_title, context.page_title)
+    end
+  end
+
+  @doc """
+  Resolves the booking window, in days, to show a visitor for an organiser.
+
+  The visitor-facing figure comes from the organiser's default schedule, so the
+  themes never have to reach into the profile for it. A specific meeting type
+  may narrow the window further; the slot engine enforces that separately, and
+  this figure is only the headline the booking page advertises.
+
+  Demo organisers are plain maps supplied by the overlay rather than persisted
+  profiles, so they carry no schedule and are answered by the demo provider.
+  """
+  @spec booking_window_days(map() | nil) :: pos_integer()
+  def booking_window_days(nil), do: @default_booking_window_days
+
+  def booking_window_days(profile) do
+    if Demo.demo_profile?(profile) do
+      Demo.booking_window_days(profile)
+    else
+      case Schedules.get_default(profile.id) do
+        nil -> @default_booking_window_days
+        schedule -> schedule.advance_booking_days
+      end
     end
   end
 

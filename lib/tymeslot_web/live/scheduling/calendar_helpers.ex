@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   """
 
   alias Phoenix.Component
-  alias Tymeslot.Availability.{BusinessHours, Calculate}
+  alias Tymeslot.Availability.{BusinessHours, Calculate, Schedules}
   alias Tymeslot.Demo
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
@@ -39,11 +39,13 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         # Delegate to demo provider for calendar days
         Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
       else
+        schedule = Schedules.resolve_for(nil, organizer_profile)
+
         config = %{
-          profile_id: organizer_profile.id,
-          max_advance_booking_days: organizer_profile.advance_booking_days,
-          min_advance_hours: organizer_profile.min_advance_hours,
-          buffer_minutes: organizer_profile.buffer_minutes,
+          schedule_id: schedule && schedule.id,
+          max_advance_booking_days: policy(schedule, :advance_booking_days),
+          min_advance_hours: policy(schedule, :min_advance_hours),
+          buffer_minutes: policy(schedule, :buffer_minutes),
           owner_timezone: organizer_profile.timezone
         }
 
@@ -101,6 +103,10 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     if organizer_profile do
       today = user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
+      # Resolved once rather than inside the loop: the fallback branch below runs
+      # for all seven days and would otherwise repeat the same lookup each time.
+      schedule = fallback_schedule(organizer_profile, availability_map)
+
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
         date_string = Date.to_string(date)
@@ -114,7 +120,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
               {Map.get(availability_map, date_string, false), false}
 
             true ->
-              {day_available?(date, organizer_profile, today), false}
+              {day_available?(date, schedule, today), false}
           end
 
         %{
@@ -230,10 +236,30 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     end
   end
 
-  defp day_available?(date, organizer_profile, today) do
-    is_weekday = BusinessHours.business_day?(date, organizer_profile.id)
+  # Policy values live on the resolved schedule. A nil schedule means none could
+  # be resolved (a profile mid-creation, or demo data); fall back to the same
+  # defaults the engine applies when the key is absent, so the two agree.
+  @policy_defaults %{advance_booking_days: 90, min_advance_hours: 3, buffer_minutes: 15}
+
+  defp policy(nil, key), do: Map.fetch!(@policy_defaults, key)
+  defp policy(schedule, key), do: Map.fetch!(schedule, key)
+
+  # Only the fallback path needs a schedule; a supplied availability map already
+  # answers the question, so resolving one there would be a pointless query.
+  defp fallback_schedule(_organizer_profile, :loading), do: nil
+
+  defp fallback_schedule(organizer_profile, availability_map) do
+    if is_map(availability_map) do
+      nil
+    else
+      Schedules.resolve_for(nil, organizer_profile)
+    end
+  end
+
+  defp day_available?(date, schedule, today) do
+    is_weekday = BusinessHours.business_day?(date, schedule && schedule.id)
     is_future = Date.compare(date, today) != :lt
-    is_within_limit = Date.diff(date, today) <= organizer_profile.advance_booking_days
+    is_within_limit = Date.diff(date, today) <= policy(schedule, :advance_booking_days)
 
     is_weekday && is_future && is_within_limit
   end

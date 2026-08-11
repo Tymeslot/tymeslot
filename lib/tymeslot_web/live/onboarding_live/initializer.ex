@@ -14,6 +14,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
 
   alias Phoenix.Component
   alias Tymeslot.Auth
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Onboarding
@@ -46,6 +47,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
 
     socket
     |> Component.assign(:profile, profile)
+    |> Component.assign(:availability_schedule, load_default_schedule(profile))
     |> assign_form_data(profile)
     |> Component.assign(:current_step, :welcome)
     |> Component.assign(:step_data, %{})
@@ -104,6 +106,12 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
       nil
     end
   end
+
+  # The buffer, booking window and minimum notice edited by the preference
+  # steps live on the profile's default availability schedule. There is no
+  # profile during the disconnected render, so there is no schedule either.
+  defp load_default_schedule(nil), do: nil
+  defp load_default_schedule(profile), do: Schedules.get_default(profile.id)
 
   defp build_booking_url(nil), do: ""
 

@@ -111,7 +111,13 @@ defmodule TymeslotWeb.PrivateBookingTest do
         user: user,
         username: username,
         booking_theme: "1",
-        timezone: @timezone,
+        timezone: @timezone
+      )
+
+    schedule =
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
         buffer_minutes: 0
@@ -119,7 +125,7 @@ defmodule TymeslotWeb.PrivateBookingTest do
 
     Enum.each(1..7, fn day_of_week ->
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: day_of_week,
         is_available: true,
         start_time: ~T[09:00:00],

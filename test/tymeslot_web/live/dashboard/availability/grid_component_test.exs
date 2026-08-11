@@ -34,6 +34,12 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.GridComponentTest do
 
   setup :setup_dashboard_user
 
+  setup %{profile: profile} do
+    # The weekly pattern hangs off a named schedule; the page edits the
+    # profile's default one.
+    %{schedule: insert(:availability_schedule, profile: profile, is_default: true)}
+  end
+
   defp switch_to_grid(conn) do
     {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
@@ -45,10 +51,10 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.GridComponentTest do
   end
 
   describe "switching to the grid view" do
-    setup %{profile: profile} do
+    setup %{schedule: schedule} do
       Enum.each(1..7, fn day_of_week ->
         insert(:weekly_availability,
-          profile: profile,
+          schedule: schedule,
           day_of_week: day_of_week,
           is_available: day_of_week <= 5,
           start_time: ~T[09:00:00],
@@ -91,12 +97,12 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.GridComponentTest do
   end
 
   describe "days the organiser is unavailable" do
-    setup %{profile: profile} do
+    setup %{schedule: schedule} do
       # Monday on, everything else off — the shape that exercises both the
       # "has a bar" and "has no bar" branches of the row builder in one render.
       Enum.each(1..7, fn day_of_week ->
         insert(:weekly_availability,
-          profile: profile,
+          schedule: schedule,
           day_of_week: day_of_week,
           is_available: day_of_week == 1,
           start_time: ~T[10:00:00],
@@ -129,10 +135,10 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.GridComponentTest do
   end
 
   describe "24-hour time format" do
-    setup %{user: user, profile: profile} do
+    setup %{user: user, schedule: schedule} do
       Enum.each(1..7, fn day_of_week ->
         insert(:weekly_availability,
-          profile: profile,
+          schedule: schedule,
           day_of_week: day_of_week,
           is_available: true,
           start_time: ~T[09:00:00],

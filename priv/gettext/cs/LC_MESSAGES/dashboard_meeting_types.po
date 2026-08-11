@@ -58,7 +58,6 @@ msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessa
 msgstr "Používejte malá písmena, číslice a pomlčky. Volba „Vygenerovat náhodně“ vytvoří odkaz, který nelze uhodnout."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr "%{minutes} min"
@@ -71,85 +70,10 @@ msgstr[0] "+%{count} vlastní otázka"
 msgstr[1] "+%{count} vlastní otázky"
 msgstr[2] "+%{count} vlastních otázek"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 day"
-msgstr "1 den"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 hour"
-msgstr "1 hodina"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 month"
-msgstr "1 měsíc"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 week"
-msgstr "1 týden"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "2 days"
-msgstr "2 dny"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "2 months"
-msgstr "2 měsíce"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "2 weeks"
-msgstr "2 týdny"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "3 months"
-msgstr "3 měsíce"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "4 hours"
-msgstr "4 hodiny"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "6 months"
-msgstr "6 měsíců"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add Meeting Type"
 msgstr "Přidat typ schůzky"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Advance booking set to custom value"
-msgstr "Období pro rezervace nastaveno na vlastní hodnotu."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Advance booking window updated to %{days} days"
-msgstr "Období pro rezervace změněno na %{days} dní."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer Between Appointments"
-msgstr "Časová rezerva mezi schůzkami"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time set to custom value"
-msgstr "Časová rezerva nastavena na vlastní hodnotu."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time updated to %{minutes} minutes"
-msgstr "Časová rezerva změněna na %{minutes} minut."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -160,11 +84,6 @@ msgstr "Kalendář"
 #, elixir-autogen, elixir-format
 msgid "Create meeting types to offer different appointment options"
 msgstr "Vytvořte typy schůzek a nabídněte různé varianty setkání"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Custom"
-msgstr "Vlastní"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -181,70 +100,25 @@ msgstr "Smazat typ schůzky"
 msgid "Edit"
 msgstr "Upravit"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "How Far in Advance Can People Book"
-msgstr "Jak dlouho dopředu lze rezervovat"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "In-person"
 msgstr "Osobně"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Maximum number of days into the future that appointments can be booked."
-msgstr "Maximální počet dní dopředu, na které lze schůzky rezervovat."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Typy schůzek"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum Booking Notice"
-msgstr "Minimální předstih rezervace"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum booking notice updated to %{hours} hours"
-msgstr "Minimální předstih rezervace změněn na %{hours} hodin."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum hours of notice required before an appointment can be booked."
-msgstr "Minimální počet hodin předstihu, který je nutný pro rezervaci schůzky."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum notice set to custom value"
-msgstr "Minimální předstih nastaven na vlastní hodnotu."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "No buffer"
-msgstr "Bez časové rezervy"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting types configured yet"
 msgstr "Zatím nemáte žádné typy schůzek"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Scheduling Preferences"
-msgstr "Předvolby plánování"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will permanently remove this meeting type from your account."
 msgstr "Tuto akci nelze vzít zpět a tento typ schůzky bude z vašeho účtu trvale odstraněn."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Time to block after each appointment for preparation, travel, or breaks."
-msgstr "Čas, který se po každé schůzce zablokuje na přípravu, cestu nebo přestávku."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -256,32 +130,13 @@ msgstr "Přepnout dostupnost: %{name}"
 msgid "Video"
 msgstr "Video"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "days"
-msgstr "dní"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "hours"
-msgstr "hod."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "instant"
-msgstr "okamžitě"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "min"
-msgstr "min"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
 msgstr "Opravdu chcete smazat typ schůzky „%{name}“?"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Limits"
 msgstr "Limity rezervací"

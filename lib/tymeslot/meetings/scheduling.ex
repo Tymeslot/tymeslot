@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   require Logger
 
   alias Ecto.Changeset
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings.BookingLimits
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.MeetingConflictQueries
@@ -66,6 +67,7 @@ defmodule Tymeslot.Meetings.Scheduling do
         start_time,
         end_time,
         organizer_user_id,
+        MapKeys.get(attrs, :meeting_type_id),
         limit_check,
         fn ->
           create_meeting_in_transaction(attrs)
@@ -145,11 +147,12 @@ defmodule Tymeslot.Meetings.Scheduling do
          start_time,
          end_time,
          organizer_user_id,
+         meeting_type_id,
          limit_check,
          operation_fn
        ) do
     {buffered_start, buffered_end} =
-      compute_buffered_window(start_time, end_time, organizer_user_id)
+      compute_buffered_window(start_time, end_time, organizer_user_id, meeting_type_id)
 
     Repo.transaction(fn ->
       with :ok <- enforce_booking_limits(limit_check),
@@ -215,17 +218,20 @@ defmodule Tymeslot.Meetings.Scheduling do
   defp fetch_meeting_type(meeting_type_id, organizer_user_id),
     do: MeetingTypes.get_meeting_type(meeting_type_id, organizer_user_id)
 
-  defp get_buffer_minutes(organizer_user_id) do
-    if organizer_user_id do
-      settings = Profiles.get_profile_settings(organizer_user_id)
-      settings.buffer_minutes
-    else
-      15
-    end
+  # The buffer belongs to the schedule the meeting type is booked against, so it
+  # is read through the same policy resolution the booking page used. A nil
+  # meeting type resolves the organiser's default schedule, which is the right
+  # answer for an ad-hoc block.
+  defp get_buffer_minutes(nil, _meeting_type_id), do: 15
+
+  defp get_buffer_minutes(organizer_user_id, meeting_type_id) do
+    meeting_type = fetch_meeting_type(meeting_type_id, organizer_user_id)
+
+    Policy.scheduling_config(organizer_user_id, meeting_type).buffer_minutes
   end
 
-  defp compute_buffered_window(start_time, end_time, organizer_user_id) do
-    buffer_minutes = get_buffer_minutes(organizer_user_id)
+  defp compute_buffered_window(start_time, end_time, organizer_user_id, meeting_type_id) do
+    buffer_minutes = get_buffer_minutes(organizer_user_id, meeting_type_id)
 
     {
       DateTime.add(start_time, -buffer_minutes, :minute),
@@ -260,7 +266,12 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   defp execute_update_with_conflict_check(meeting, attrs, start_time, end_time, opts) do
     {buffered_start, buffered_end} =
-      compute_buffered_window(start_time, end_time, meeting.organizer_user_id)
+      compute_buffered_window(
+        start_time,
+        end_time,
+        meeting.organizer_user_id,
+        meeting.meeting_type_id
+      )
 
     limit_check =
       build_limit_check(

@@ -17,8 +17,6 @@ defmodule TymeslotWeb.OnboardingValidationTest do
   import Tymeslot.AuthTestHelpers
   import TymeslotWeb.OnboardingTestHelpers
 
-  alias Tymeslot.Repo
-
   setup :verify_on_exit!
 
   setup tags do
@@ -293,12 +291,12 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      # Get profile and verify defaults were used
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      # Defaults from factory: buffer_minutes: 15, advance_booking_days: 90, min_advance_hours: 3
-      assert profile.buffer_minutes == 15
-      assert profile.advance_booking_days == 90
-      assert profile.min_advance_hours == 3
+      # Verify the schedule defaults were used
+      # Schedule defaults: buffer_minutes: 15, advance_booking_days: 90, min_advance_hours: 3
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 15
+      assert schedule.advance_booking_days == 90
+      assert schedule.min_advance_hours == 3
     end
 
     test "buffer_minutes with valid boundary values (0 and 120) are accepted", %{conn: conn} do
@@ -318,8 +316,8 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify value was saved
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes == 0
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 0
     end
 
     test "advance_booking_days with valid minimum boundary (1) is accepted", %{conn: conn} do
@@ -349,8 +347,8 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify minimum boundary value was saved
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.advance_booking_days == 1
+      schedule = default_schedule(user)
+      assert schedule.advance_booking_days == 1
     end
 
     test "min_advance_hours with valid boundary value (168) is accepted", %{conn: conn} do
@@ -379,8 +377,8 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify max boundary value was saved
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.min_advance_hours == 168
+      schedule = default_schedule(user)
+      assert schedule.min_advance_hours == 168
     end
   end
 

@@ -67,11 +67,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   setup :setup_dashboard_user
 
   setup %{user: user, profile: profile} = ctx do
-    # Ensure the profile has a full weekly schedule; list_component
-    # reads it via `weekly_schedule` assigns.
+    # Ensure the profile's default schedule has a full weekly pattern;
+    # list_component reads it via `weekly_schedule` assigns.
+    schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
     Enum.each(1..7, fn day_of_week ->
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: day_of_week,
         is_available: day_of_week <= 5,
         start_time: ~T[09:00:00],
@@ -79,13 +81,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       )
     end)
 
-    Map.merge(ctx, %{user: user, profile: profile})
+    Map.merge(ctx, %{user: user, profile: profile, schedule: schedule})
   end
 
   describe "add_break — end-before-start bypass" do
     @tag :capture_log
     test "start time after end time is rejected and no break row is created",
-         %{conn: conn, profile: profile} do
+         %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -108,7 +110,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       refute html =~ "Impossible Break"
       assert html =~ "End time must be after start time"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert Breaks.get_breaks_for_day(day.id) == []
     end
   end
@@ -116,7 +118,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   describe "add_break — oversized label" do
     @tag :capture_log
     test "label exceeding 50 characters is rejected and no break row is created",
-         %{conn: conn, profile: profile} do
+         %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -141,7 +143,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       refute html =~ oversized_label
       assert html =~ "Break label must be 50 characters or less"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert Breaks.get_breaks_for_day(day.id) == []
     end
   end

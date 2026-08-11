@@ -33,10 +33,10 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
 
   describe "weekly schedule + override + break interactions" do
     test "scenario A: weekly 9-17, override custom 10-14, break 12-13 → slots 10-11:30 and 13-13:30" do
-      {profile, target} = insert_profile_with_weekly_and_break()
+      {schedule, target} = insert_schedule_with_weekly_and_break()
 
       insert(:availability_override,
-        profile: profile,
+        schedule: schedule,
         date: target,
         override_type: "custom_hours",
         start_time: ~T[10:00:00],
@@ -50,7 +50,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 config(profile)
+                 config(schedule)
                )
 
       # Override carves 10:00–14:00. Break 12:00–13:00 removes any slot that
@@ -69,11 +69,11 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     end
 
     test "scenario B: unavailable override zeros the day; flipping to available restores slots with break still applied" do
-      {profile, target} = insert_profile_with_weekly_and_break()
+      {schedule, target} = insert_schedule_with_weekly_and_break()
 
       unavailable_override =
         insert(:availability_override,
-          profile: profile,
+          schedule: schedule,
           date: target,
           override_type: "unavailable"
         )
@@ -85,7 +85,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 config(profile)
+                 config(schedule)
                )
 
       # Flip the override state: delete the unavailable record and insert an
@@ -95,7 +95,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       Repo.delete!(unavailable_override)
 
       insert(:availability_override,
-        profile: profile,
+        schedule: schedule,
         date: target,
         override_type: "available",
         start_time: ~T[09:00:00],
@@ -109,7 +109,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 config(profile)
+                 config(schedule)
                )
 
       assert "9:00 AM" in slots
@@ -125,11 +125,14 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       target = future_weekday_with_dow(2)
       target_dow = Date.day_of_week(target)
 
-      profile = insert(:profile, timezone: "Europe/Berlin", buffer_minutes: 0)
+      profile = insert(:profile, timezone: "Europe/Berlin")
+
+      schedule =
+        insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
 
       weekly =
         insert(:weekly_availability,
-          profile: profile,
+          schedule: schedule,
           day_of_week: target_dow,
           is_available: false
         )
@@ -142,7 +145,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       )
 
       insert(:availability_override,
-        profile: profile,
+        schedule: schedule,
         date: target,
         override_type: "available",
         start_time: ~T[10:00:00],
@@ -156,7 +159,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 config(profile)
+                 config(schedule)
                )
 
       assert "10:00 AM" in slots
@@ -169,10 +172,10 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     end
 
     test "scenario D: an all-day blocking event removes every slot inside a custom-hours override" do
-      {profile, target} = insert_profile_with_weekly_and_break()
+      {schedule, target} = insert_schedule_with_weekly_and_break()
 
       insert(:availability_override,
-        profile: profile,
+        schedule: schedule,
         date: target,
         override_type: "custom_hours",
         start_time: ~T[10:00:00],
@@ -199,7 +202,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [all_day_event],
-                 config(profile)
+                 config(schedule)
                )
     end
 
@@ -210,10 +213,10 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       # and consults the weekly schedule. When the weekly row marks the day
       # unavailable, the result must be an empty slot list — pinning the nil-guard
       # so a regression (e.g. `or` instead of `and`) is caught immediately.
-      {profile, saturday} = insert_profile_with_unavailable_saturday()
+      {schedule, saturday} = insert_schedule_with_unavailable_saturday()
 
       insert(:availability_override,
-        profile: profile,
+        schedule: schedule,
         date: saturday,
         override_type: "available",
         start_time: nil,
@@ -227,25 +230,28 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 config(profile)
+                 config(schedule)
                )
     end
   end
 
   # --- Helpers ---
 
-  # Inserts a Berlin profile with 9-17 weekly availability on the target weekday
+  # Inserts a Berlin schedule with 9-17 weekly availability on the target weekday
   # (a Tuesday at least one day in the future) and a 12-13 lunch break on that
-  # same weekday. Returns `{profile, target_date}`.
-  defp insert_profile_with_weekly_and_break do
+  # same weekday. Returns `{schedule, target_date}`.
+  defp insert_schedule_with_weekly_and_break do
     target = future_weekday_with_dow(2)
     target_dow = Date.day_of_week(target)
 
-    profile = insert(:profile, timezone: "Europe/Berlin", buffer_minutes: 0)
+    profile = insert(:profile, timezone: "Europe/Berlin")
+
+    schedule =
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
 
     weekly =
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: target_dow,
         is_available: true,
         start_time: ~T[09:00:00],
@@ -259,7 +265,7 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
       label: "Lunch"
     )
 
-    {profile, target}
+    {schedule, target}
   end
 
   defp future_weekday_with_dow(target_dow) when target_dow in 1..7 do
@@ -270,27 +276,30 @@ defmodule Tymeslot.Availability.OverridesBreaksInteractionTest do
     Date.add(today, days_ahead)
   end
 
-  # Inserts a Berlin profile with Saturday (dow 6) marked unavailable in the
-  # weekly schedule and no hours. Returns `{profile, next_saturday}`.
-  defp insert_profile_with_unavailable_saturday do
+  # Inserts a Berlin schedule with Saturday (dow 6) marked unavailable in the
+  # weekly schedule and no hours. Returns `{schedule, next_saturday}`.
+  defp insert_schedule_with_unavailable_saturday do
     today = Date.utc_today()
     current_dow = Date.day_of_week(today)
     days_ahead = rem(6 - current_dow + 7, 7)
     days_ahead = if days_ahead == 0, do: 7, else: days_ahead
     saturday = Date.add(today, days_ahead)
 
-    profile = insert(:profile, timezone: "Europe/Berlin", buffer_minutes: 0)
+    profile = insert(:profile, timezone: "Europe/Berlin")
+
+    schedule =
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
 
     insert(:weekly_availability,
-      profile: profile,
+      schedule: schedule,
       day_of_week: 6,
       is_available: false
     )
 
-    {profile, saturday}
+    {schedule, saturday}
   end
 
-  defp config(profile) do
-    %{profile_id: profile.id, buffer_minutes: 0, min_advance_hours: 0}
+  defp config(schedule) do
+    %{schedule_id: schedule.id, buffer_minutes: 0, min_advance_hours: 0}
   end
 end

@@ -1,0 +1,247 @@
+defmodule Tymeslot.Availability.Schedules do
+  @moduledoc """
+  Named availability schedules: the single entry point for creating, editing and
+  resolving the schedule a meeting type is booked against.
+
+  Every profile has exactly one default schedule. A meeting type with no
+  `availability_schedule_id` resolves to that default, so a meeting type is
+  never left without a schedule, including after the schedule it pointed at is
+  deleted, which nilifies the reference at the database level.
+  """
+
+  alias Tymeslot.Availability.AvailabilityBreakQueries
+  alias Tymeslot.Availability.AvailabilityScheduleQueries
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Repo
+
+  @default_schedule_name "Working hours"
+
+  @policy_fields [:buffer_minutes, :min_advance_hours, :advance_booking_days]
+
+  @type schedule :: AvailabilityScheduleSchema.t()
+  @type result :: {:ok, schedule()} | {:error, Ecto.Changeset.t() | atom()}
+
+  @doc """
+  Lists a profile's schedules, default first.
+  """
+  @spec list_for_profile(integer()) :: [schedule()]
+  defdelegate list_for_profile(profile_id), to: AvailabilityScheduleQueries, as: :list_by_profile
+
+  @doc """
+  Fetches a profile's default schedule, or `nil` when the profile has none.
+  """
+  @spec get_default(integer() | nil) :: schedule() | nil
+  defdelegate get_default(profile_id), to: AvailabilityScheduleQueries
+
+  @doc """
+  Fetches one of a profile's schedules by id, scoped so a caller cannot read
+  another account's schedule by guessing an id.
+  """
+  @spec get_for_profile(integer(), integer()) :: schedule() | nil
+  defdelegate get_for_profile(id, profile_id), to: AvailabilityScheduleQueries
+
+  @doc """
+  Creates the profile's default schedule and seeds its seven weekday rows.
+
+  Accepts an optional repo so profile creation can run it inside the surrounding
+  transaction.
+  """
+  @spec create_default(integer(), Ecto.Repo.t()) :: result()
+  def create_default(profile_id, repo \\ Repo) do
+    attrs = %{profile_id: profile_id, name: @default_schedule_name, is_default: true}
+
+    with {:ok, schedule} <- AvailabilityScheduleQueries.insert(attrs, repo),
+         {:ok, _count} <- WeeklyAvailabilityQueries.create_default_weekly_days(schedule.id, repo) do
+      {:ok, schedule}
+    end
+  end
+
+  @doc """
+  Creates an additional (non-default) schedule and seeds its seven weekday rows,
+  so a new schedule is immediately editable rather than half-populated.
+  """
+  @spec create(integer(), map()) :: result()
+  def create(profile_id, attrs) do
+    attrs =
+      attrs
+      |> normalise_attrs()
+      |> Map.merge(%{profile_id: profile_id, is_default: false})
+
+    Repo.transaction(fn ->
+      with {:ok, schedule} <- AvailabilityScheduleQueries.insert(attrs),
+           {:ok, _count} <- WeeklyAvailabilityQueries.create_default_weekly_days(schedule.id) do
+        schedule
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Renames a schedule.
+  """
+  @spec rename(schedule(), String.t()) :: result()
+  def rename(%AvailabilityScheduleSchema{} = schedule, name) do
+    AvailabilityScheduleQueries.update(schedule, %{name: name})
+  end
+
+  @doc """
+  Updates the schedule's buffer, minimum notice and advance booking window.
+  """
+  @spec update_policy(schedule(), map()) :: result()
+  def update_policy(%AvailabilityScheduleSchema{} = schedule, attrs) do
+    AvailabilityScheduleQueries.update_policy(schedule, normalise_attrs(attrs))
+  end
+
+  @doc """
+  Makes `schedule` the profile's default, clearing the flag from the previous one
+  in the same transaction so the partial unique index is never violated.
+  """
+  @spec set_default(schedule()) :: result()
+  def set_default(%AvailabilityScheduleSchema{is_default: true} = schedule), do: {:ok, schedule}
+
+  def set_default(%AvailabilityScheduleSchema{} = schedule) do
+    Repo.transaction(fn ->
+      # Clearing before marking matters: the partial unique index allows only one
+      # default per profile, so the two writes cannot be reordered.
+      AvailabilityScheduleQueries.clear_default(schedule.profile_id)
+      AvailabilityScheduleQueries.mark_default(schedule.id)
+
+      %{schedule | is_default: true}
+    end)
+  end
+
+  @doc """
+  Copies a schedule's weekly pattern, breaks and policy under a new name.
+
+  Date overrides are deliberately not copied: they name specific calendar dates,
+  and carrying a stale exception list into a copy is more often wrong than right.
+  """
+  @spec duplicate(schedule(), String.t()) :: result()
+  def duplicate(%AvailabilityScheduleSchema{} = source, name) do
+    attrs =
+      source
+      |> Map.take(@policy_fields)
+      |> Map.merge(%{profile_id: source.profile_id, name: name, is_default: false})
+
+    Repo.transaction(fn ->
+      case AvailabilityScheduleQueries.insert(attrs) do
+        {:ok, copy} ->
+          copy_weekly_days(source.id, copy.id)
+          copy
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Deletes a schedule.
+
+  The default schedule cannot be deleted; meeting types pointing at any other
+  schedule revert to the default when it goes.
+  """
+  @spec delete(schedule()) :: result()
+  def delete(%AvailabilityScheduleSchema{is_default: true}), do: {:error, :cannot_delete_default}
+
+  def delete(%AvailabilityScheduleSchema{} = schedule) do
+    AvailabilityScheduleQueries.delete(schedule)
+  end
+
+  @doc """
+  Names of the meeting types currently using a schedule, so a delete
+  confirmation can say which ones fall back to the default.
+  """
+  @spec meeting_type_names(integer()) :: [String.t()]
+  defdelegate meeting_type_names(schedule_id), to: AvailabilityScheduleQueries
+
+  @doc """
+  Resolves the schedule a meeting type is booked against: its own when set, the
+  owning profile's default otherwise.
+
+  Returns `nil` only when no meeting type is given, or when the owner has no
+  profile; the engine treats a nil schedule as "use fallback hours".
+  """
+  @spec resolve_for_meeting_type(map() | nil) :: schedule() | nil
+  def resolve_for_meeting_type(nil), do: nil
+
+  def resolve_for_meeting_type(%{availability_schedule_id: id}) when is_integer(id) do
+    AvailabilityScheduleQueries.get(id)
+  end
+
+  def resolve_for_meeting_type(%{user_id: user_id}) when is_integer(user_id) do
+    case ProfileQueries.get_by_user_id(user_id) do
+      {:ok, profile} -> get_default(profile.id)
+      {:error, :not_found} -> nil
+    end
+  end
+
+  def resolve_for_meeting_type(_meeting_type), do: nil
+
+  @doc """
+  Resolves the schedule for a meeting type, falling back to the given profile's
+  default without a second profile lookup.
+
+  This is the variant used by the booking page, where the organiser's profile is
+  already loaded.
+  """
+  @spec resolve_for(map() | nil, map() | nil) :: schedule() | nil
+  def resolve_for(%{availability_schedule_id: id}, _profile) when is_integer(id) do
+    AvailabilityScheduleQueries.get(id)
+  end
+
+  def resolve_for(_meeting_type, %{id: profile_id}) when is_integer(profile_id) do
+    get_default(profile_id)
+  end
+
+  def resolve_for(_meeting_type, _profile), do: nil
+
+  @doc """
+  The name given to a profile's default schedule at creation time.
+  """
+  @spec default_schedule_name() :: String.t()
+  def default_schedule_name, do: @default_schedule_name
+
+  defp copy_weekly_days(source_schedule_id, target_schedule_id) do
+    source_schedule_id
+    |> WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks()
+    |> Enum.each(fn day ->
+      {:ok, copy} =
+        WeeklyAvailabilityQueries.create_weekly_availability(%{
+          schedule_id: target_schedule_id,
+          day_of_week: day.day_of_week,
+          is_available: day.is_available,
+          start_time: day.start_time,
+          end_time: day.end_time
+        })
+
+      copy_breaks(day.breaks, copy.id)
+    end)
+  end
+
+  defp copy_breaks(breaks, weekly_availability_id) when is_list(breaks) do
+    Enum.each(breaks, fn break ->
+      AvailabilityBreakQueries.create_break(%{
+        weekly_availability_id: weekly_availability_id,
+        start_time: break.start_time,
+        end_time: break.end_time,
+        label: break.label,
+        sort_order: break.sort_order
+      })
+    end)
+  end
+
+  defp copy_breaks(_breaks, _weekly_availability_id), do: :ok
+
+  # The UI submits string-keyed params while internal callers use atoms; the
+  # merges above need one consistent key type.
+  defp normalise_attrs(attrs) do
+    Map.new(attrs, fn
+      {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
+      {key, value} -> {key, value}
+    end)
+  end
+end

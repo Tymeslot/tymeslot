@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -42,6 +43,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:selected_video_integration_id, nil)
      |> assign(:selected_calendar_integration_id, nil)
      |> assign(:selected_target_calendar_id, nil)
+     |> assign(:selected_availability_schedule_id, nil)
+     |> assign(:schedules, [])
+     |> assign(:default_schedule_name, Schedules.default_schedule_name())
      |> assign(:available_calendars, [])
      |> assign(:no_writable_calendars, false)
      |> assign(:refreshing_calendars, false)
@@ -207,6 +211,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       )
 
     {:noreply, Autosave.maybe_run(socket)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_availability_schedule", params, socket) do
+    # The select sits inside the meeting-type form, so the event carries the
+    # whole form's params under "meeting_type".
+    schedule_id =
+      params
+      |> Map.get("meeting_type", %{})
+      |> Map.get("availability_schedule_id")
+      |> parse_schedule_id()
+
+    {:noreply,
+     socket
+     |> assign(:selected_availability_schedule_id, schedule_id)
+     |> Autosave.maybe_run()}
   end
 
   @impl Phoenix.LiveComponent
@@ -384,6 +404,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # without closing the overlay — there is no separate "save" action.
     {:noreply, Autosave.maybe_run(socket)}
   end
+
+  # Blank means "follow the profile's default schedule", stored as nil; the
+  # same goes for anything unparseable, since the select only ever offers the
+  # blank default and the profile's own schedule ids.
+  defp parse_schedule_id(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {id, ""} when id > 0 -> id
+      _other -> nil
+    end
+  end
+
+  defp parse_schedule_id(_value), do: nil
 
   # Blank clears the limit; anything unparseable is treated as blank (the
   # number input constrains typing, and the changeset enforces the range).
