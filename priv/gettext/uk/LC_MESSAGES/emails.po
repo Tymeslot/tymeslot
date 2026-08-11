@@ -120,7 +120,7 @@ msgstr "Вітаю, %{name}! Мені потрібно перенести наш
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Перепрошую за незручності. Вашу поточну зустріч скасовано, але я хотів би допомогти вам перенести її на найближчий зручний час."
+msgstr "Перепрошую за незручності. Вашу поточну зустріч скасовано, і я радо допоможу вам перенести її на найближчий зручний час."
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -140,7 +140,7 @@ msgstr "З нетерпінням чекаю на нашу розмову!"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
-msgstr "З нетерпінням чекаю на нашу зустріч. Я вже зарезервував час у календарі та буду готовий до розмови."
+msgstr "З нетерпінням чекаю на нашу зустріч. Я вже зарезервував(-ла) час у календарі та буду готовий(-а) до розмови."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
@@ -443,7 +443,7 @@ msgstr "%{name} запланував(-ла) зустріч з вами."
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "- No reminder emails are scheduled for this appointment"
-msgstr "- Для цієї зустрічі не заплановано нагадувань електронною поштою."
+msgstr "- Для цієї зустрічі не заплановано нагадувань електронною поштою"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -558,7 +558,7 @@ msgstr "Вас запрошено"
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has updated an event you're attending."
-msgstr "%{name} оновив подію, на яку ви записані."
+msgstr "%{name} оновив(-ла) подію, на яку ви записані."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #: lib/tymeslot/emails/templates/event_update_notification.ex
@@ -574,7 +574,7 @@ msgstr "Опис оновлено"
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #, elixir-autogen, elixir-format
 msgid "Event Updated"
-msgstr "Подія оновлена"
+msgstr "Подію оновлено"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -589,7 +589,7 @@ msgstr "Що змінилося"
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
 msgid "A change was requested on your Tymeslot account."
-msgstr "У вашому обліковому записі Tymeslot запитано зміну."
+msgstr "Надійшов запит на зміну у вашому обліковому записі Tymeslot."
 
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
@@ -736,7 +736,7 @@ msgstr "п'ятниця"
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Heads up"
-msgstr "До вашої уваги"
+msgstr "Зверніть увагу"
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -752,7 +752,7 @@ msgstr "Розпочати відеодзвінок"
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Перепрошую за можливі незручності. Вашу поточну зустріч скасовано, і я хотів би допомогти вам перенести її на найближчий зручний час."
+msgstr "Перепрошую за можливі незручності. Вашу поточну зустріч скасовано, і я радо допоможу вам перенести її на найближчий зручний час."
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -777,12 +777,12 @@ msgstr "Запрошено"
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "It happens to the best of us! Click the link below to choose a new password and regain access to your account."
-msgstr "Таке трапляється з найкращими! Натисніть посилання нижче, щоб обрати новий пароль і відновити доступ до свого облікового запису."
+msgstr "Таке трапляється з кожним! Натисніть посилання нижче, щоб обрати новий пароль і відновити доступ до свого облікового запису."
 
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "It happens to the best of us. Click the button below to choose a new password and pick up where you left off."
-msgstr "Таке трапляється з найкращими. Натисніть кнопку нижче, щоб обрати новий пароль і продовжити з того місця, де зупинилися."
+msgstr "Таке трапляється з кожним. Натисніть кнопку нижче, щоб обрати новий пароль і продовжити з того місця, де зупинилися."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
@@ -870,7 +870,7 @@ msgstr "Один клік - і зміну завершено."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Our meeting is coming up"
-msgstr "Наша зустріч незабаром!"
+msgstr "Наша зустріч уже незабаром"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
@@ -895,7 +895,7 @@ msgstr "ДЕТАЛІ ЗАПИТУ:"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Ready to join when it's time?"
-msgstr "Готові приєднатися в потрібний час?"
+msgstr "Готові приєднатися, коли настане час?"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
@@ -1095,7 +1095,7 @@ msgstr "Ми раді вітати вас! Щоб почати плануват�
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
 msgid "We're letting you know in case it wasn't you."
-msgstr "Ми повідомляємо вас на випадок, якщо це були не ви."
+msgstr "Повідомляємо на випадок, якщо це були не ви."
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -1220,7 +1220,7 @@ msgstr "Не очікували цього?"
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
 msgid "Didn't request this?"
-msgstr "Не запитували це?"
+msgstr "Не надсилали цього запиту?"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
@@ -1292,7 +1292,7 @@ msgstr "Сповіщення безпеки"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
-msgstr "Надіслано від"
+msgstr "З турботою від"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #: lib/tymeslot/emails/templates/email_change_notification.ex
@@ -1519,12 +1519,12 @@ msgstr "%{booker} запрошує вас як гостя на цю зустрі
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it"
-msgstr "Не зможу бути"
+msgstr "Не зможу прийти"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
-msgstr "Не зможу бути: %{url}"
+msgstr "Не зможу прийти: %{url}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -1689,7 +1689,7 @@ msgstr "Підтвердьте свою електронну адресу"
 #: lib/tymeslot/emails/email_service/calendar_emails.ex
 #, elixir-autogen, elixir-format
 msgid "⚠️ Calendar Sync Error - Manual Action Required"
-msgstr "⚠️ Помилка синхронізації календаря - потрібна дія вручну"
+msgstr "⚠️ Помилка синхронізації календаря - потрібні дії з вашого боку"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex
 #, elixir-autogen, elixir-format
@@ -1734,7 +1734,7 @@ msgstr[2] "хвилин"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Sync Error - Manual Action Required"
-msgstr "Помилка синхронізації календаря - потрібна дія вручну"
+msgstr "Помилка синхронізації календаря - потрібні дії з вашого боку"
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format

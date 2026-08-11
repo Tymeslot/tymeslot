@@ -684,7 +684,7 @@ msgstr "Інтеграція відеозв'язку"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Video integration added successfully"
-msgstr "Інтеграцію відео успішно додано"
+msgstr "Відеоінтеграцію успішно додано"
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
@@ -716,7 +716,7 @@ msgstr "дані календаря"
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "custom"
-msgstr "користувацький"
+msgstr "власний"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format

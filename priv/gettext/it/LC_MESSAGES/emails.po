@@ -235,7 +235,7 @@ msgstr "Nome:"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Need to change plans?"
-msgstr "Hai bisogno di cambiare i piani?"
+msgstr "Cambio di programma?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -351,7 +351,7 @@ msgstr "Fuso orario:"
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "Type:"
-msgstr "Tipologia:"
+msgstr "Tipo:"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
@@ -541,7 +541,7 @@ msgstr "%{name} ti ha invitato a un evento."
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Invitation - %{title} on %{date}"
-msgstr "Invito a calendario - %{title} il %{date}"
+msgstr "Invito di calendario - %{title} il %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -863,7 +863,7 @@ msgstr "Basta un clic e il passaggio è fatto."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Our meeting is coming up"
-msgstr "Il nostro incontro si avvicina!"
+msgstr "Il nostro incontro si avvicina"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format

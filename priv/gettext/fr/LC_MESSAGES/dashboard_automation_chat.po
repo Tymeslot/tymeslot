@@ -106,7 +106,7 @@ msgstr "Canal"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Channel hint (optional)"
-msgstr "Indice de canal (facultatif)"
+msgstr "Indication de canal (facultatif)"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
 #, elixir-autogen, elixir-format

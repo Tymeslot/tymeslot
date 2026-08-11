@@ -458,7 +458,7 @@ msgstr "- Projděte si související materiály"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "- Set a reminder %{time} before"
-msgstr "- Nastavte si připomínku %{time} předem"
+msgstr "- Nastavte si připomínku: %{time} předem"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format

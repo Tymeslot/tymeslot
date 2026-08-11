@@ -147,7 +147,7 @@ msgstr "Жодного календаря ще не підключено"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Not a Google Calendar"
-msgstr "Це не Google Календар"
+msgstr "Це не Google Calendar"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -227,7 +227,7 @@ msgstr "Розширити"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Upgrade Google Calendar permissions"
-msgstr "Розширити дозволи для Google Календаря"
+msgstr "Розширити дозволи для Google Calendar"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format

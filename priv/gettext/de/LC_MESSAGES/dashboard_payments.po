@@ -340,7 +340,7 @@ msgstr "Stripe prüft Ihr Konto. Der Zahlungseinzug wird nach der Genehmigung au
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
-msgstr "Der Teilnehmer erhält den vollen von Ihnen erstatteten Betrag. Die Plattformgebühr von Tymeslot wird anteilig zurückerstattet; die Stripe-Bearbeitungsgebühren auf die ursprüngliche Zahlung verbleiben bei Ihnen."
+msgstr "Der Teilnehmer erhält den vollen von Ihnen erstatteten Betrag. Die Plattformgebühr von Tymeslot wird anteilig zurückerstattet; die Stripe-Bearbeitungsgebühren für die ursprüngliche Zahlung verbleiben bei Ihnen."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format

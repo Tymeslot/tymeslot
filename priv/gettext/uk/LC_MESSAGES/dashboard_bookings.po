@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
-msgstr "%{going} з %{total} прийдуть"
+msgstr "Прийдуть: %{going} з %{total}"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format

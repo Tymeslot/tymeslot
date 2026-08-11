@@ -1026,7 +1026,7 @@ msgstr "Vaše heslo bylo úspěšně obnoveno"
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your reset token has expired. Please request a new password reset."
-msgstr "Platnost vašeho tokenu vypršela. Požádejte prosím o nové obnovení hesla."
+msgstr "Platnost vašeho tokenu vypršela. Požádejte prosím znovu o obnovení hesla."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format

@@ -144,7 +144,7 @@ msgstr "Plus de styles à venir"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
-msgstr "Ou téléversez le vôtre"
+msgstr "Ou téléversez la vôtre"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format

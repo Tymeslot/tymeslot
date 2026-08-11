@@ -546,7 +546,7 @@ msgstr "%{name} vous a invité(e) à un événement."
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Invitation - %{title} on %{date}"
-msgstr "Invitation au calendrier - %{title} le %{date}"
+msgstr "Invitation : %{title} le %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -592,7 +592,7 @@ msgstr "Une modification a été demandée sur votre compte Tymeslot."
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "A fresh password and you're back in."
-msgstr "Un nouveau mot de passe et vous reprenez le cours des choses."
+msgstr "Un nouveau mot de passe et c’est reparti."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
@@ -786,7 +786,7 @@ msgstr "Cela arrive aux meilleurs d’entre nous. Cliquez sur le bouton ci-desso
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
-msgstr "Rejoignez quand vous êtes prêt"
+msgstr "Rejoignez quand vous êtes prêt(e)"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #: lib/tymeslot/emails/templates/email_change_notification.ex
@@ -868,7 +868,7 @@ msgstr "Un clic et le changement est effectué."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Our meeting is coming up"
-msgstr "Notre réunion approche !"
+msgstr "Notre réunion approche"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
@@ -1290,7 +1290,7 @@ msgstr "Notification de sécurité"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
-msgstr "Envoyé par"
+msgstr "Envoyé avec soin par"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #: lib/tymeslot/emails/templates/email_change_notification.ex
@@ -1657,7 +1657,7 @@ msgstr "Détails de l’erreur"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
-msgstr "Je n’ai pas pu ajouter cette réunion à votre calendrier. Le rendez-vous a bien été confirmé dans Tymeslot et vous avez tous les deux, vous et le participant, reçu un e-mail de confirmation. Vous devrez toutefois l’ajouter manuellement à votre calendrier."
+msgstr "Je n’ai pas pu ajouter cette réunion à votre calendrier. Le rendez-vous a bien été confirmé dans Tymeslot, et vous comme le participant avez reçu un e-mail de confirmation. Vous devrez toutefois l’ajouter manuellement à votre calendrier."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
@@ -1783,7 +1783,7 @@ msgstr "Veuillez ajouter manuellement cette réunion à votre calendrier pour ne
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "The booking is safe - but please add it to your calendar manually."
-msgstr "La réservation est en sécurité - mais veuillez l’ajouter manuellement à votre calendrier."
+msgstr "La réservation est bien enregistrée - mais veuillez l’ajouter manuellement à votre calendrier."
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -1803,7 +1803,7 @@ msgstr "Mise à jour : %{title} - %{date}"
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."
-msgstr "Nous sommes heureux de vous voir ici. Encore une étape rapide et votre calendrier sera prêt - veuillez confirmer votre e-mail ci-dessous."
+msgstr "Nous sommes ravis de vous compter parmi nous. Une dernière étape rapide et votre calendrier sera prêt - veuillez confirmer votre e-mail ci-dessous."
 
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format

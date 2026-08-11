@@ -171,7 +171,7 @@ msgstr "Faites-vous payer dès la réservation"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Invite guests to any booking"
-msgstr "Ajoutez des invités à n'importe quelle réservation"
+msgstr "Ajoutez des invités à n’importe quelle réservation"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -181,7 +181,7 @@ msgstr "Organisez automatiquement vos réunions sur Zoom"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Plus a host of improvements"
-msgstr "Ainsi qu'une multitude d'améliorations"
+msgstr "Ainsi qu’une multitude d’améliorations"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -214,8 +214,8 @@ msgstr "Tymeslot parle désormais votre langue"
 #, elixir-autogen, elixir-format
 msgid "Add custom questions to any meeting type - short text, long answers, dropdowns and more - so you have exactly what you need before each booking."
 msgstr ""
-"Ajoutez des questions personnalisées à n'importe quel type de réunion (texte"
-" court, réponse longue, menu déroulant, etc.) afin d'obtenir toutes les "
+"Ajoutez des questions personnalisées à n’importe quel type de réunion (texte"
+" court, réponse longue, menu déroulant, etc.) afin d’obtenir toutes les "
 "informations nécessaires avant chaque rendez-vous."
 
 #: lib/tymeslot/announcements/catalog.ex
@@ -225,8 +225,8 @@ msgstr ""
 "Les réservations peuvent désormais inclure des invités supplémentaires. "
 "Chaque invité reçoit sa propre invitation par e-mail et peut confirmer sa "
 "présence en un clic. Ainsi, toutes les personnes conviées figurent sur "
-"l'invitation, sans qu'il soit nécessaire d'effectuer une nouvelle "
-"réservation. Définissez une limite d'invités par type de réunion pour "
+"l’invitation, sans qu’il soit nécessaire d’effectuer une nouvelle "
+"réservation. Définissez une limite d’invités par type de réunion pour "
 "contrôler la taille des groupes."
 
 #: lib/tymeslot/announcements/catalog.ex
@@ -234,8 +234,8 @@ msgstr ""
 msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new - all from a single screen instead of hunting through separate settings pages."
 msgstr ""
 "Les calendriers, la visioconférence et les paiements sont désormais "
-"regroupés dans un seul espace dédié aux intégrations. Visualisez d'un coup "
-"d'œil ce qui est connecté et ce qui requiert votre attention, reconnectez un"
+"regroupés dans un seul espace dédié aux intégrations. Visualisez d’un coup "
+"d’œil ce qui est connecté et ce qui requiert votre attention, reconnectez un"
 " fournisseur en un clic et ajoutez de nouveaux services, le tout depuis un "
 "écran unique au lieu de fouiller dans différentes pages de paramètres."
 
@@ -244,7 +244,7 @@ msgstr ""
 msgid "Connect your Zoom account and Tymeslot creates a Zoom meeting for every booking - the link is added to the calendar invite and confirmation automatically."
 msgstr ""
 "Connectez votre compte Zoom et Tymeslot créera une réunion Zoom pour chaque "
-"réservation : le lien s'ajoute automatiquement à l'invitation du calendrier "
+"réservation : le lien s’ajoute automatiquement à l’invitation du calendrier "
 "et à la confirmation."
 
 #: lib/tymeslot/announcements/catalog.ex
@@ -253,7 +253,7 @@ msgid "Every meeting type now has its own direct link that takes people straight
 msgstr ""
 "Chaque type de réunion dispose désormais de son propre lien direct, qui mène"
 " vos contacts droit à la réservation, sans afficher vos autres types de "
-"réunions. Marquez un type comme non répertorié pour le masquer de votre page"
+"réunion. Marquez un type comme non répertorié pour le masquer de votre page"
 " publique, et générez un lien aléatoire à tout moment pour le rendre "
 "introuvable ou pour désactiver un ancien lien."
 
@@ -261,10 +261,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Give any event its own colour, right from your dashboard agenda. Colours you set in Tymeslot write back to your connected calendar, and colours already on your Google or CalDAV events show up here too - so your day is colour-coded exactly the way you like it, everywhere you look."
 msgstr ""
-"Attribuez une couleur spécifique à n'importe quel événement, directement "
-"depuis l'agenda de votre tableau de bord. Les couleurs définies dans "
+"Attribuez une couleur spécifique à n’importe quel événement, directement "
+"depuis l’agenda de votre tableau de bord. Les couleurs définies dans "
 "Tymeslot se synchronisent avec votre calendrier connecté, et celles déjà "
-"présentes sur vos événements Google ou CalDAV s'affichent également ici. "
+"présentes sur vos événements Google ou CalDAV s’affichent également ici. "
 "Ainsi, votre journée est organisée par couleurs exactement comme vous le "
 "souhaitez, où que vous regardiez."
 
@@ -286,15 +286,15 @@ msgstr "Limitez le nombre de réservations que vous acceptez"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Set a maximum number of bookings per day, week or month - for a single meeting type, or across your whole account. Once a day reaches its cap it disappears from your booking page, so nobody can book you past the limit you set."
-msgstr "Définissez un nombre maximal de réservations par jour, semaine ou mois - pour un type de réunion précis ou pour l'ensemble de votre compte. Dès qu'une journée atteint sa limite, elle disparaît de votre page de réservation : personne ne peut donc réserver au-delà de la limite que vous avez fixée."
+msgstr "Définissez un nombre maximal de réservations par jour, semaine ou mois - pour un type de réunion précis ou pour l’ensemble de votre compte. Dès qu’une journée atteint sa limite, elle disparaît de votre page de réservation : personne ne peut donc réserver au-delà de la limite que vous avez fixée."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
 msgstr ""
-"L'ensemble de l'application (votre tableau de bord, vos pages de réservation"
+"L’ensemble de l’application (votre tableau de bord, vos pages de réservation"
 " et chaque e-mail) est désormais disponible en allemand, français, italien, "
-"ukrainien et tchèque. Tymeslot s'adapte automatiquement à la langue de votre"
+"ukrainien et tchèque. Tymeslot s’adapte automatiquement à la langue de votre"
 " navigateur ; vous pouvez également en choisir une autre dans les paramètres"
 " de votre compte. Vos invités reçoivent eux aussi les pages de réservation "
 "et les confirmations dans leur propre langue."

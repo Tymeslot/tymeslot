@@ -953,7 +953,7 @@ msgstr "Warten Sie 60 Sekunden, bevor Sie es erneut versuchen"
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar access has expired. Please reconnect."
-msgstr "Ihr Kalenderzugriff ist abgelaufen. Bitte verbinden Sie ihn erneut."
+msgstr "Ihr Kalenderzugriff ist abgelaufen. Bitte verbinden Sie Ihren Kalender erneut."
 
 #: lib/tymeslot/integrations/calendar/zimbra/provider.ex
 #, elixir-autogen, elixir-format
@@ -998,7 +998,7 @@ msgstr "Der Kalenderserver hat die Anfrage abgelehnt (HTTP %{status})."
 #: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
-msgstr "Dieser Änderung fehlt die Start- oder Endzeit des Termins, daher konnte sie nicht an den Kalenderserver gesendet werden."
+msgstr "Dieser Änderung fehlt die Start- oder Endzeit des Ereignisses, daher konnte sie nicht an den Kalenderserver gesendet werden."
 
 #: lib/tymeslot/integrations/calendar/ics/provider.ex
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex
@@ -1110,7 +1110,7 @@ msgstr "Farbe"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "How this calendar's events are shown in your Tymeslot calendar."
-msgstr "So werden die Termine dieses Kalenders in Ihrem Tymeslot-Kalender angezeigt."
+msgstr "So werden die Ereignisse dieses Kalenders in Ihrem Tymeslot-Kalender angezeigt."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format

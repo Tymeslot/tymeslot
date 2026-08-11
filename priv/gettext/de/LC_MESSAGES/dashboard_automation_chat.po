@@ -600,7 +600,7 @@ msgstr "Wird getestet"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Testing & Saving..."
-msgstr "Testen & Speichern…"
+msgstr "Wird getestet & gespeichert…"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
@@ -661,7 +661,7 @@ msgstr "Ungültiger Slack-Callback. Bitte versuchen Sie es erneut."
 #: lib/tymeslot_web/controllers/slack_oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Slack callback did not match your session. Please retry."
-msgstr "Der Slack-Callback stimmte nicht mit Ihrer Sitzung überein. Bitte versuchen Sie es erneut."
+msgstr "Der Slack-Callback stimmt nicht mit Ihrer Sitzung überein. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot_web/controllers/slack_oauth_controller.ex
 #, elixir-autogen, elixir-format

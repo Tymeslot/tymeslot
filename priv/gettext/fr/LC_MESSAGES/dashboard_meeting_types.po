@@ -304,10 +304,6 @@ msgstr "Limite de réservation mise à jour à %{limit} réservations"
 #, elixir-autogen, elixir-format
 msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
 msgstr "Nombre maximal de réservations que vous acceptez, tous types de réunion confondus. Les jours ayant atteint leur limite disparaissent de votre page de réservation. Laissez un champ vide pour ne pas fixer de limite."
-"Nombre maximum de réservations que vous acceptez pour l'ensemble des types "
-"de réunion. Les jours ayant atteint leur limite n'apparaissent plus sur "
-"votre page de réservation. Laissez un champ vide pour n'imposer aucune "
-"limite."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #, elixir-autogen, elixir-format

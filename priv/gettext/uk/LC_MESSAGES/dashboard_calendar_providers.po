@@ -1031,7 +1031,7 @@ msgstr "URL-адреса фіду"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "My subscribed calendar"
-msgstr "Мій підписаний календар"
+msgstr "Мій календар за підпискою"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
@@ -1056,7 +1056,7 @@ msgstr "Підпишіться на опублікований фід кален
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Subscribing..."
-msgstr "Підписка…"
+msgstr "Підписка..."
 
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format

@@ -64,7 +64,7 @@ msgstr "Скопіювати посилання в буфер обміну"
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Distribution"
-msgstr "Розподіл"
+msgstr "Розповсюдження"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
