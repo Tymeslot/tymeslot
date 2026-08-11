@@ -78,11 +78,6 @@ msgstr "Další"
 msgid "Quick links to set up your profile, availability, and meeting types. Start here."
 msgstr "Rychlé odkazy pro nastavení profilu, dostupnosti a typů schůzek. Začněte tady."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Settings live in the sidebar"
-msgstr "Nastavení najdete v postranním panelu"
-
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Skip"
@@ -117,11 +112,6 @@ msgstr "Máte hotovo"
 #, elixir-autogen, elixir-format
 msgid "Your account"
 msgstr "Váš účet"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
-msgstr "Přepínejte mezi Plánováním (vaše typy schůzek) a Kalendářem (úplný přehled rezervací a synchronizovaných událostí)."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -238,11 +228,6 @@ msgstr "Přidělte kterékoli události vlastní barvu přímo v agendě na ná
 msgid "Go create your first event type - and let people book you."
 msgstr "Vytvořte svůj první typ schůzky a nechte si od lidí rezervovat čas."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Profile, availability, integrations, and automation - all one click away."
-msgstr "Profil, dostupnost, integrace i automatizace – vše na jedno kliknutí."
-
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings you take"
@@ -257,3 +242,18 @@ msgstr "Nastavte maximální počet rezervací na den, týden nebo měsíc – p
 #, elixir-autogen, elixir-format
 msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
 msgstr "Celá aplikace – nástěnka, rezervační stránky i všechny e-maily – je nyní k dispozici v němčině, francouzštině, italštině, ukrajinštině a češtině. Tymeslot se automaticky řídí jazykem vašeho prohlížeče, nebo si jazyk zvolíte sami v nastavení účtu. Vaši pozvaní dostanou rezervační stránky a potvrzení také ve svém jazyce."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Everything else lives here"
+msgstr "Vše ostatní najdete zde"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Meetings, availability, integrations, and your profile - all one click away."
+msgstr "Schůzky, dostupnost, integrace a váš profil - vše na jedno kliknutí."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar is home. Switch to Scheduling to shape what people can book with you."
+msgstr "Váš kalendář je vaše domovská stránka. Přepněte na Plánování a nastavte, co si u vás lidé mohou rezervovat."

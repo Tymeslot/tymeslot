@@ -34,6 +34,8 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
   - `:exchange_fun` - Function to exchange code for tokens
   - `:create_fun` - Function to create/update the integration
   - `:redirect_path` - Path to redirect to after success/failure
+  - `:success_redirect_path` - Optional override for the success redirect only
+    (defaults to `:redirect_path`)
   - `:rate_limit_key` - Key for rate limiting (default: "oauth_callback")
   - `:rate_limit_max` - Maximum attempts allowed (default: 10)
   - `:rate_limit_window` - Rate limit window in ms (default: 60_000)
@@ -53,6 +55,7 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
     exchange_fun = Keyword.fetch!(opts, :exchange_fun)
     create_fun = Keyword.fetch!(opts, :create_fun)
     redirect_path = Keyword.fetch!(opts, :redirect_path)
+    success_redirect_path = Keyword.get(opts, :success_redirect_path, redirect_path)
 
     case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
       :ok ->
@@ -62,7 +65,7 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
           service_name,
           exchange_fun,
           create_fun,
-          redirect_path
+          {redirect_path, success_redirect_path}
         )
 
       {:error, :rate_limited, _message} ->
@@ -125,7 +128,14 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
 
   # Private functions
 
-  defp process_oauth_callback(conn, params, service_name, exchange_fun, create_fun, redirect_path) do
+  defp process_oauth_callback(
+         conn,
+         params,
+         service_name,
+         exchange_fun,
+         create_fun,
+         {redirect_path, success_redirect_path}
+       ) do
     with {:ok, tokens} <- exchange_fun.(params),
          {:ok, result} <- create_fun.(tokens) do
       # Invalidate dashboard cache to reflect the new integration
@@ -140,7 +150,7 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
           service: service_name
         )
       )
-      |> Controller.redirect(to: redirect_path)
+      |> Controller.redirect(to: success_redirect_path)
     else
       {:error, "access_denied"} ->
         service_atom =

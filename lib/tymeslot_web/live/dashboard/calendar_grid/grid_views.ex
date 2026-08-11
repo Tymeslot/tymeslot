@@ -153,8 +153,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                   id={"event-#{event.id}-#{day}"}
                   class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
                   style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
-                  phx-click="show_event"
-                  phx-value-event-id={event.id}
+                  {Helpers.open_event_attrs(event)}
                   phx-target={@myself}
                   role="button"
                   tabindex="0"
@@ -169,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                         )
                     )
                   }
-                  data-draggable="true"
+                  data-draggable={to_string(not Helpers.booking?(event))}
                   data-event-id={event.id}
                   data-event-date={Date.to_iso8601(day)}
                   data-start-minutes={
@@ -203,6 +202,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                       @user_timezone
                     )}
                   </div>
+                  <div
+                    :if={Helpers.booking?(event) && event.attendee_name}
+                    class="opacity-80 truncate"
+                  >
+                    {event.attendee_name}
+                  </div>
                   <img
                     :if={Map.get(event, :created_by_tymeslot)}
                     src="/images/brand/logo.svg"
@@ -214,6 +219,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                   } />
                   <%!-- Enlarged invisible resize hit-target for touch; visual handle revealed on hover --%>
                   <div
+                    :if={not Helpers.booking?(event)}
                     data-resize-handle
                     class="absolute bottom-0 left-0 right-0 h-3 cursor-s-resize touch-none"
                     aria-hidden="true"
@@ -285,17 +291,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
 
   defp overflow_chip(assigns) do
     first_event = List.first(assigns.cluster.events)
-    first_id = first_event && first_event.id
 
-    assigns = assign(assigns, :first_event_id, first_id)
+    assigns =
+      assigns
+      |> assign(:first_event, first_event)
+      |> assign(:open_attrs, first_event && Helpers.open_event_attrs(first_event))
 
     ~H"""
     <button
-      :if={@first_event_id}
+      :if={@first_event}
       id={@key}
       type="button"
-      phx-click="show_event"
-      phx-value-event-id={@first_event_id}
+      {@open_attrs}
       phx-target={@myself}
       class="absolute right-0.5 z-10 px-1.5 py-0.5 rounded-full bg-tymeslot-900/80 hover:bg-tymeslot-900 text-white text-token-xs font-semibold shadow-sm focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       style={"top: #{Helpers.top_rem(@cluster.start_at, @user_timezone)}rem;"}

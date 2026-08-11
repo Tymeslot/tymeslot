@@ -43,18 +43,18 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         body:
           dgettext(
             "onboarding",
-            "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
+            "Your calendar is home. Switch to Scheduling to shape what people can book with you."
           )
       },
       %{
         id: :sidebar_nav,
-        anchor: "sidebar-nav",
+        anchor: "calendar-rail",
         placement: :right,
-        title: dgettext("onboarding", "Settings live in the sidebar"),
+        title: dgettext("onboarding", "Everything else lives here"),
         body:
           dgettext(
             "onboarding",
-            "Profile, availability, integrations, and automation - all one click away."
+            "Meetings, availability, integrations, and your profile - all one click away."
           )
       },
       %{

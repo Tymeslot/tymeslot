@@ -122,6 +122,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <.quick_add myself={@myself} />
           <.view_menu view={@view} show_view_menu={@show_view_menu} myself={@myself} />
           <.calendar_list_dropdown
+            :if={@integrations != []}
             integrations={@integrations}
             integration_colors={@integration_colors}
             calendar_colour_keys={@calendar_colour_keys}
@@ -130,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             show_calendar_list={@show_calendar_list}
             myself={@myself}
           />
-          <.refresh_button syncing={@syncing} myself={@myself} />
+          <.refresh_button :if={@integrations != []} syncing={@syncing} myself={@myself} />
           <button
             phx-click="toggle_shortcuts_help"
             phx-target={@myself}

@@ -35,14 +35,14 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert length(active_links) == 1
 
     [active_link] = active_links
-    assert Floki.attribute(active_link, "href") == ["/dashboard"]
+    assert Floki.attribute(active_link, "href") == ["/dashboard/overview"]
   end
 
   test "renders active link correctly for different actions" do
     # The merged Integrations item is current for the hub action and for every
     # legacy action that redirects into it, so all four highlight the same link.
     action_to_path = %{
-      overview: "/dashboard",
+      overview: "/dashboard/overview",
       settings: "/dashboard/settings",
       availability: "/dashboard/availability",
       meeting_settings: "/dashboard/meeting-settings",

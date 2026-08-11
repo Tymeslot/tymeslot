@@ -55,11 +55,12 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
   end
 
   @doc """
-  Initialises tour assigns for the current action. Only the `:overview`
-  action activates the tour, and only for users who haven't seen it yet.
+  Initialises tour assigns for the current action. Only the `:calendar`
+  action (the dashboard's landing mode) activates the tour, and only for
+  users who haven't seen it yet.
   """
   @spec assign_tour_state(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
-  def assign_tour_state(socket, :overview) do
+  def assign_tour_state(socket, :calendar) do
     user = socket.assigns[:current_user]
 
     if user && !Onboarding.dashboard_tour_seen?(user) do

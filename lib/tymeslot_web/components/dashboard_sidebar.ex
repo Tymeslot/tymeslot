@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           <div>
             <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "General")}</div>
             <div class="space-y-0">
-              <.nav_link patch={~p"/dashboard"} current={@current_action} action={:overview}>
+              <.nav_link patch={~p"/dashboard/overview"} current={@current_action} action={:overview}>
                 <.icon name="hero-home" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Overview")}</span>
               </.nav_link>

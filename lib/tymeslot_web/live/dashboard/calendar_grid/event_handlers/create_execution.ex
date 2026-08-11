@@ -25,6 +25,57 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     end
   end
 
+  # Meeting mode books an ad-hoc Tymeslot meeting instead of writing a bare
+  # provider event. A calendar integration is optional here: the booking is
+  # native, and the provider copy is written back only when one is connected.
+  defp handle_save_event_with(%{mode: :meeting} = creating, socket) do
+    with :ok <- authorize_optional_integration(socket, creating[:integration_id]),
+         {:ok, start_at, end_at} <- resolve_timed_range(creating, socket),
+         :ok <- validate_meeting_fields(creating) do
+      guest_name = String.trim(creating.guest_name)
+
+      title =
+        case String.trim(creating.title || "") do
+          "" ->
+            dgettext("dashboard_calendar_events", "Meeting with %{name}", name: guest_name)
+
+          custom ->
+            custom
+        end
+
+      send(
+        self(),
+        {:execute_create_ad_hoc_meeting,
+         %{
+           title: title,
+           start_time: start_at,
+           end_time: end_at,
+           attendee_name: guest_name,
+           attendee_email: String.trim(creating.guest_email),
+           attendee_timezone: socket.assigns.user_timezone,
+           organizer_user_id: socket.assigns.current_user.id,
+           calendar_integration_id: creating[:integration_id],
+           calendar_id: creating[:calendar_id],
+           video_integration_id: creating[:video_integration_id]
+         }}
+      )
+
+      {:noreply, assign(socket, :saving_event, true)}
+    else
+      {:error, message} when is_binary(message) ->
+        send(self(), {:flash, {:error, message}})
+        {:noreply, socket}
+
+      {:error, :unauthorized} ->
+        send(
+          self(),
+          {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid calendar selected")}}
+        )
+
+        {:noreply, socket}
+    end
+  end
+
   # Authorize the create against the user's own integrations before doing any
   # work. `owned_integration_ids` is the same MapSet that gates move/resize/
   # delete via `EditWorkflow.assert_owns_event/2`; routing creation through it
@@ -218,6 +269,56 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
     {:noreply,
      put_flash(socket, :error, dgettext("dashboard_calendar_events", "Failed to create event"))}
+  end
+
+  # An ad-hoc meeting may be created with no integration at all; when one is
+  # selected it must be the user's own.
+  defp authorize_optional_integration(_socket, nil), do: :ok
+
+  defp authorize_optional_integration(socket, integration_id),
+    do: EditWorkflow.assert_owns_integration(socket, integration_id)
+
+  defp resolve_timed_range(creating, socket) do
+    tz = socket.assigns.user_timezone
+
+    with {:ok, start_date} <- parse_date(creating.date),
+         {:ok, end_date} <- parse_date(creating.end_date),
+         {:ok, start_at} <-
+           to_utc_or_error(start_date, creating.start_hour, creating.start_minute, tz),
+         {:ok, end_at} <- to_utc_or_error(end_date, creating.end_hour, creating.end_minute, tz) do
+      if DateTime.compare(end_at, start_at) == :gt do
+        {:ok, start_at, end_at}
+      else
+        {:error, dgettext("dashboard_calendar_events", "End time must be after start time")}
+      end
+    end
+  end
+
+  defp parse_date(date_str) do
+    case Date.from_iso8601(date_str) do
+      {:ok, date} -> {:ok, date}
+      {:error, _reason} -> {:error, dgettext("dashboard_calendar_events", "Invalid date")}
+    end
+  end
+
+  defp to_utc_or_error(date, hour, minute, tz) do
+    case Shared.to_utc(date, hour, minute, tz) do
+      {:ok, datetime} -> {:ok, datetime}
+      {:error, _reason} -> {:error, dgettext("dashboard_calendar_events", "Invalid time")}
+    end
+  end
+
+  defp validate_meeting_fields(creating) do
+    cond do
+      String.trim(creating.guest_name) == "" ->
+        {:error, dgettext("dashboard_calendar_events", "Guest name is required")}
+
+      not Shared.valid_email?(String.trim(creating.guest_email)) ->
+        {:error, dgettext("dashboard_calendar_events", "A valid guest email is required")}
+
+      true ->
+        :ok
+    end
   end
 
   # All-day events store `start_date`/`end_date` (the cache row leaves

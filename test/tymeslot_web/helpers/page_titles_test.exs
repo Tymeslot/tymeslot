@@ -5,8 +5,12 @@ defmodule TymeslotWeb.Helpers.PageTitlesTest do
 
   alias TymeslotWeb.Helpers.PageTitles
 
-  test ":calendar returns the calendar grid title" do
-    assert PageTitles.dashboard_title(:calendar) == "Calendar - Dashboard"
+  test ":calendar returns the bare dashboard title as the landing mode" do
+    assert PageTitles.dashboard_title(:calendar) == "Dashboard"
+  end
+
+  test ":overview returns the overview section title" do
+    assert PageTitles.dashboard_title(:overview) == "Overview - Dashboard"
   end
 
   test ":calendar_integration returns the integration settings title" do

@@ -407,8 +407,9 @@ export const CalendarCreate = {
   },
 
   _handlePointerDown(e) {
-    // Ignore clicks on existing events, resize handles, buttons
-    if (e.target.closest('[data-draggable="true"]')) return
+    // Ignore clicks on existing events (draggable or not — booking blocks
+    // carry data-draggable="false"), resize handles, buttons
+    if (e.target.closest('[data-draggable]')) return
     if (e.target.closest('[data-resize-handle]')) return
     if (e.target.closest('button')) return
 

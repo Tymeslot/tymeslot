@@ -20,6 +20,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       integration_colors: %{},
       loading: false,
       selected_event: nil,
+      selected_booking: nil,
+      agenda_lens: :all,
       current_time: DateTime.utc_now(),
       hidden_integration_ids: [],
       # Seeded empty so the first static render, which happens before

@@ -7,6 +7,8 @@ defmodule Tymeslot.CalendarGrid do
   display colours to integrations.
   """
 
+  alias Tymeslot.CalendarGrid.BookingEvent
+  alias Tymeslot.CalendarGrid.BookingEvents
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
@@ -54,6 +56,23 @@ defmodule Tymeslot.CalendarGrid do
   def list_events_for_range(integration_ids, start_dt, end_dt, opts \\ []) do
     ProviderCalendarEventQueries.list_for_range(integration_ids, start_dt, end_dt, opts)
   end
+
+  @doc """
+  Returns the user's live bookings overlapping `[start_dt, end_dt)` projected
+  into the grid's event shape, excluding bookings whose provider-synced copy
+  is identified by `synced_event_ids`. See
+  `Tymeslot.CalendarGrid.BookingEvents.list_for_range/4`.
+  """
+  @spec list_booking_events_for_range(pos_integer(), DateTime.t(), DateTime.t(), MapSet.t()) ::
+          [BookingEvent.t()]
+  defdelegate list_booking_events_for_range(
+                user_id,
+                start_dt,
+                end_dt,
+                synced_event_ids \\ MapSet.new()
+              ),
+              to: BookingEvents,
+              as: :list_for_range
 
   # How far ahead the desktop-reminder feed looks. Wide enough to cover the
   # longest reminder lead time (a week) while keeping the payload bounded.

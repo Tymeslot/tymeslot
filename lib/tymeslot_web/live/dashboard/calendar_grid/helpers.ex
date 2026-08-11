@@ -30,6 +30,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate color_dot(assigns, integration), to: EventPositioning
   defdelegate color_for_event(assigns, event), to: EventPositioning
   defdelegate event_display_date(event, timezone), to: EventPositioning
+  defdelegate booking?(event), to: EventPositioning
+  defdelegate open_event_attrs(event), to: EventPositioning
 
   # Time formatting
 

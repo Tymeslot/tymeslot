@@ -256,6 +256,17 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
+  Lists the organiser's live bookings overlapping the `[from, to)` window,
+  ordered by start time. Includes past bookings inside the window; excludes
+  cancelled bookings and slots voided by a pending reschedule request.
+  """
+  @spec list_meetings_in_range_for_organizer(pos_integer(), DateTime.t(), DateTime.t()) ::
+          [MeetingSchema.t()]
+  defdelegate list_meetings_in_range_for_organizer(organizer_user_id, from, to),
+    to: MeetingListQueries,
+    as: :list_for_organizer_in_range
+
+  @doc """
   Lists all past meetings.
   """
   @spec list_past_meetings() :: [MeetingSchema.t()]

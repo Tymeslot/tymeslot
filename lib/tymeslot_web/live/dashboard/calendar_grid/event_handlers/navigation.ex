@@ -65,6 +65,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
 
   def handle_set_view(_params, socket), do: {:noreply, socket}
 
+  @doc "Switches the agenda view's lens between all entries and bookings only."
+  @spec handle_set_agenda_lens(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_set_agenda_lens(%{"lens" => lens}, socket) when lens in ~w(all bookings) do
+    {:noreply, assign(socket, :agenda_lens, String.to_existing_atom(lens))}
+  end
+
+  def handle_set_agenda_lens(_params, socket), do: {:noreply, socket}
+
   @spec handle_navigate_to_day(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_navigate_to_day(%{"date" => date_str}, socket) do

@@ -74,10 +74,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     integration_ids = Enum.map(integrations, & &1.id)
     {start_dt, end_dt} = range_for_view(socket.assigns)
 
-    events =
-      integration_ids
-      |> CalendarGrid.list_events_for_range(start_dt, end_dt)
-      |> filter_events_by_selection(integrations)
+    cached = CalendarGrid.list_events_for_range(integration_ids, start_dt, end_dt)
+
+    # Dedupe against every cached row, not just the selection-visible ones: a
+    # booking whose synced copy the user has hidden must stay hidden, not
+    # reappear through its projection.
+    synced_ids =
+      cached
+      |> Enum.map(& &1.provider_event_id)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    booking_events =
+      CalendarGrid.list_booking_events_for_range(
+        socket.assigns.current_user.id,
+        start_dt,
+        end_dt,
+        synced_ids
+      )
+
+    events = filter_events_by_selection(cached, integrations) ++ booking_events
 
     socket
     |> assign(:events, events)

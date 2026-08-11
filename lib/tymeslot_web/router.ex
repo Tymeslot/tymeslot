@@ -251,7 +251,8 @@ defmodule TymeslotWeb.Router do
 
     live_session :authenticated,
       on_mount: {__MODULE__, :dashboard_hooks} do
-      live "/dashboard", DashboardLive, :overview
+      live "/dashboard", DashboardLive, :calendar
+      live "/dashboard/overview", DashboardLive, :overview
       live "/dashboard/settings", DashboardLive, :settings
       live "/dashboard/availability", DashboardLive, :availability
       live "/dashboard/account", AccountLive

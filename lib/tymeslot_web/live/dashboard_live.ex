@@ -36,6 +36,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.CalendarGridComponent
+  alias TymeslotWeb.Dashboard.CalendarUpNextStrip
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
   alias TymeslotWeb.Dashboard.OnboardingChecklist
@@ -77,7 +78,9 @@ defmodule TymeslotWeb.DashboardLive do
         _no_user -> false
       end
 
-    {:ok, assign(socket, :first_dashboard_visit, first_visit?)}
+    # `:agenda` defaults nil so the calendar's Up-next strip can be guarded on
+    # the dead render, before `load_dashboard_data/1` has run.
+    {:ok, assign(socket, first_dashboard_visit: first_visit?, agenda: nil)}
   end
 
   @impl Phoenix.LiveView
@@ -148,9 +151,10 @@ defmodule TymeslotWeb.DashboardLive do
     reschedule_agenda_tick(socket, action)
   end
 
-  # Keeps a single agenda-refresh timer alive only while the overview is open.
-  # Cancels any prior timer first so repeated visits never stack ticks.
-  defp reschedule_agenda_tick(socket, :overview) do
+  # Keeps a single agenda-refresh timer alive only while a section that shows
+  # the agenda (overview, calendar's Up-next strip) is open. Cancels any prior
+  # timer first so repeated visits never stack ticks.
+  defp reschedule_agenda_tick(socket, action) when action in [:overview, :calendar] do
     if ref = socket.assigns[:agenda_tick_ref], do: Process.cancel_timer(ref)
 
     if connected?(socket) do
@@ -207,31 +211,54 @@ defmodule TymeslotWeb.DashboardLive do
 
       <%!-- Content --%>
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
-        <%= if @should_render_feature do %>
-          <.live_component
-            module={@component_module}
-            id={ComponentDispatch.component_id(@live_action)}
-            current_user={@current_user}
-            first_dashboard_visit={@first_dashboard_visit}
-            profile={Map.get(@component_props, :profile, @profile)}
-            shared_data={Map.get(@component_props, :shared_data, %{})}
-            integration_status={@integration_status}
+        <%= if @live_action == :calendar do %>
+          <div
+            :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+            class="shrink-0 px-3 pt-2 md:px-4"
+          >
+            <OnboardingChecklist.onboarding_checklist
+              variant={:compact}
+              integration_status={@integration_status}
+              current_user={@current_user}
+              profile={@profile}
+            />
+          </div>
+          <CalendarUpNextStrip.up_next_strip
+            :if={@agenda && @agenda.next}
+            entry={@agenda.next}
+            timezone={@agenda.timezone}
             time_format={@time_format}
-            saving={@saving}
-            client_ip={@client_ip}
-            user_agent={@user_agent}
-            live_action={@live_action}
-            params={@params}
-            custom_questions_allowed={@custom_questions_allowed}
-            payments_allowed={@payments_allowed}
-          />
-        <% else %>
-          <ComponentDispatch.feature_placeholder
-            section={@live_action}
-            current_user={@current_user}
-            feature_placeholder_components={@feature_placeholder_components}
           />
         <% end %>
+        <div class={
+          if @live_action == :calendar, do: "flex-1 min-h-0 flex flex-col", else: "contents"
+        }>
+          <%= if @should_render_feature do %>
+            <.live_component
+              module={@component_module}
+              id={ComponentDispatch.component_id(@live_action)}
+              current_user={@current_user}
+              first_dashboard_visit={@first_dashboard_visit}
+              profile={Map.get(@component_props, :profile, @profile)}
+              shared_data={Map.get(@component_props, :shared_data, %{})}
+              integration_status={@integration_status}
+              time_format={@time_format}
+              saving={@saving}
+              client_ip={@client_ip}
+              user_agent={@user_agent}
+              live_action={@live_action}
+              params={@params}
+              custom_questions_allowed={@custom_questions_allowed}
+              payments_allowed={@payments_allowed}
+            />
+          <% else %>
+            <ComponentDispatch.feature_placeholder
+              section={@live_action}
+              current_user={@current_user}
+              feature_placeholder_components={@feature_placeholder_components}
+            />
+          <% end %>
+        </div>
       </div>
     </DashboardLayout.dashboard_layout>
     """
@@ -502,10 +529,11 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  # Rebuilds only the overview agenda on a tick; a stale timer that fires after
-  # the user has navigated elsewhere is a no-op.
-  defp refresh_agenda(%{assigns: %{live_action: :overview}} = socket),
-    do: load_dashboard_data(socket)
+  # Rebuilds only the agenda on a tick; a stale timer that fires after the
+  # user has navigated elsewhere is a no-op.
+  defp refresh_agenda(%{assigns: %{live_action: action}} = socket)
+       when action in [:overview, :calendar],
+       do: load_dashboard_data(socket)
 
   defp refresh_agenda(socket), do: socket
 end

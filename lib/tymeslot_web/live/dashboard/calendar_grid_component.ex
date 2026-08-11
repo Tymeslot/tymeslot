@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias Tymeslot.Meetings
   alias TymeslotWeb.Dashboard.CalendarGrid.ComponentView
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.BookingDetail
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
@@ -185,6 +186,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: apply(InlineEdit, Map.fetch!(@inline_edit_events, event), [params, socket])
 
   @impl Phoenix.LiveComponent
+  def handle_event("show_booking", params, socket),
+    do: BookingDetail.handle_show_booking(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_booking_detail", params, socket),
+    do: BookingDetail.handle_close_booking_detail(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("prev_period", params, socket),
     do: Navigation.handle_prev_period(params, socket)
 
@@ -203,6 +212,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("navigate_to_day", params, socket),
     do: Navigation.handle_navigate_to_day(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("set_agenda_lens", params, socket),
+    do: Navigation.handle_set_agenda_lens(params, socket)
 
   def handle_event(event, params, socket) when event in @mini_month_events,
     do: MiniMonth.handle_event(event, params, socket)
@@ -268,6 +281,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("close_create_form", params, socket),
     do: EventCrud.handle_close_create_form(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("set_create_mode", params, socket),
+    do: EventCrud.handle_set_create_mode(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_guest_name", params, socket),
+    do: EventCrud.handle_update_create_guest_name(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_guest_email", params, socket),
+    do: EventCrud.handle_update_create_guest_email(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("update_create_title", params, socket),
