@@ -19,7 +19,8 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:fallback_availability_fn) => (Date.t() -> term()) | nil,
           optional(:owner_timezone) => String.t(),
           optional(:min_advance_hours) => non_neg_integer(),
-          optional(:limit_checker) => (DateTime.t() -> boolean()) | nil
+          optional(:limit_checker) => (DateTime.t() -> boolean()) | nil,
+          optional(:ignore_event_uids) => MapSet.t(String.t())
         }
 
   @type calendar_day :: %{
@@ -41,7 +42,11 @@ defmodule Tymeslot.Availability.Calculate do
     - user_timezone: Timezone of the user viewing availability
     - owner_timezone: Timezone of the calendar owner
     - events: List of existing events
-    - config: Optional configuration overrides
+    - config: Optional configuration overrides. `config[:ignore_event_uids]`
+      lets a caller disregard specific blocking events for the one slot each
+      occupies (see `Tymeslot.Availability.Conflicts.filter_available_slots/6`
+      and `Tymeslot.Availability.GroupSlots`), without weakening buffer
+      protection around them for every other slot.
 
   ## Returns
     List of available time slot strings

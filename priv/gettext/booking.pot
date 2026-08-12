@@ -1070,6 +1070,7 @@ msgid "This link is no longer valid"
 msgstr ""
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/controllers/seat_controller.ex
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
@@ -1329,4 +1330,54 @@ msgstr ""
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "The host is no longer accepting bookings for this period. Please pick a different day."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Book another time"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel your spot"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my spot"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Link no longer valid"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cannot be cancelled"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has already been cancelled or moved."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group booking, so each participant moves their own spot from their confirmation email."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "This time only has room for %{count} of your guests, so the rest were removed."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a spot at this time. Check your email for your booking confirmation."
 msgstr ""

@@ -116,7 +116,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   end
 
   defp create_meeting_with_first_seat(meeting_attrs, seat_request) do
-    case Scheduling.create_group_meeting_with_conflict_check(meeting_attrs) do
+    # Snapshotted once, at creation, onto the meeting row itself — see
+    # `Tymeslot.Meetings.group?/1`. Not re-read from the meeting type later.
+    attrs = Map.put(meeting_attrs, :capacity, seat_request.max_participants)
+
+    case Scheduling.create_group_meeting_with_conflict_check(attrs) do
       {:ok, meeting} ->
         participant = insert_participant_or_rollback(meeting, seat_request)
         %{meeting: meeting, participant: participant, created_meeting?: true}
@@ -126,10 +130,12 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     end
   end
 
+  # Gates on the meeting's own snapshotted capacity, not the caller's
+  # `seat_request.max_participants` (which is only the correct capacity for
+  # a meeting not yet created — see `create_meeting_with_first_seat/2`). A
+  # meeting's seat count is governed by its own capacity for its whole life.
   defp join_meeting(meeting, seat_request, seats_requested) do
-    seats_taken = Seats.seats_taken(meeting.id)
-
-    if seats_taken + seats_requested > seat_request.max_participants do
+    if seats_requested > Seats.seats_left(meeting, meeting.capacity) do
       Repo.rollback(:slot_full)
     else
       participant = insert_participant_or_rollback(meeting, seat_request)

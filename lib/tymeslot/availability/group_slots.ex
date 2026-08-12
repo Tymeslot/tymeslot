@@ -2,32 +2,31 @@ defmodule Tymeslot.Availability.GroupSlots do
   @moduledoc """
   Seat-aware slot enrichment for group meeting types.
 
-  `Calculate.available_slots/6` stays seat-agnostic and filters against every
-  blocking calendar event, including events belonging to live group meetings
-  of the requested type (identified by `event.uid == meeting.uid`). Keeping
-  those events blocking preserves the buffer protection around a group
-  meeting: adjacent slots that would fail the booking-time conflict check are
-  never shown. This module then:
+  `Calculate.available_slots/6` and `Calculate.range_availability/6` own
+  every timing rule: minimum notice, the booking window, and buffered
+  event-conflict checking. This module never re-derives them; instead it
+  tells `Calculate` which live meetings of this type still have a seat free
+  via `joinable_uids/3` and its `:ignore_event_uids` option, so a slot
+  occupied by one of them is only unblocked *for itself* — every other slot
+  still sees its buffer (see `Tymeslot.Availability.Conflicts`). This module
+  then owns exactly the seat-count fact `Calculate` has no reason to know:
 
-    * adds back "joinable" slots: live meetings of the type with seats left,
-      still inside the notice and booking windows, and not covered by any
-      blocking event other than their own calendar event; and
-    * overlays seat counts on every slot, dropping slots with no seats left
-      (which also hides a just-filled slot whose calendar event has not
-      synced yet).
+    * overlaying seat counts on every slot; and
+    * dropping slots with no seats left (which also hides a just-filled slot
+      whose calendar event has not synced yet).
 
   Slots are returned as `%{time: t, seats_left: n, capacity: c}` where `time`
   is the existing display string (e.g. `"9:00 AM"`); solo meeting types carry
   `seats_left: nil, capacity: nil`.
   """
 
-  alias Tymeslot.Availability.Events
+  alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.Seats
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
+  alias Tymeslot.Utils.DateTimeUtils
 
   @utc "Etc/UTC"
 
@@ -74,8 +73,10 @@ defmodule Tymeslot.Availability.GroupSlots do
 
   A day whose only bookable slot is an existing group meeting with seats
   left is marked unavailable by the base calculation (the meeting's own
-  calendar event blocks it), so it is flipped back to available here.
-  Non-group types return the map unchanged.
+  calendar event blocks it), so it is flipped back to available here by
+  re-running `Calculate.range_availability/6` with that meeting's uid
+  ignored, and taking the union with the given map. Non-group types, and
+  types with no live joinable meeting in range, return the map unchanged.
   """
   @spec overlay_range(
           %{String.t() => boolean()},
@@ -86,114 +87,144 @@ defmodule Tymeslot.Availability.GroupSlots do
         ) :: %{String.t() => boolean()}
   def overlay_range(availability_map, meeting_type, start_date, end_date, context) do
     if group?(meeting_type) do
-      {from_utc, to_utc} = window_utc(start_date, end_date, context.user_timezone)
-      seat_counts = Seats.seat_counts_for_range(meeting_type.id, from_utc, to_utc)
+      {from_utc, to_utc} = utc_window(start_date, end_date, context.user_timezone)
+      ignore_uids = joinable_uids(meeting_type, from_utc, to_utc)
 
-      meeting_type
-      |> joinable_meetings(from_utc, to_utc, seat_counts, context)
-      |> Enum.map(fn {meeting, _seats_left} ->
-        meeting.start_time
-        |> DateTime.shift_zone!(context.user_timezone)
-        |> DateTime.to_date()
-        |> Date.to_string()
-      end)
-      |> Enum.reduce(availability_map, &Map.put(&2, &1, true))
+      if MapSet.size(ignore_uids) == 0 do
+        availability_map
+      else
+        {:ok, joinable_map} =
+          Calculate.range_availability(
+            start_date,
+            end_date,
+            context.owner_timezone,
+            context.user_timezone,
+            context.events,
+            Map.put(context.config, :ignore_event_uids, ignore_uids)
+          )
+
+        Map.merge(availability_map, joinable_map, fn _date, was, now -> was or now end)
+      end
     else
       availability_map
     end
   end
 
+  @doc """
+  Calendar-event ids of the live meetings of `meeting_type` within
+  `[from_utc, to_utc]` that still have a seat free.
+
+  A pure capacity lookup: it says nothing about minimum notice, the booking
+  window, or event conflicts, which remain `Calculate`'s sole concern. Also
+  used by `Tymeslot.Bookings.Create` to drop a group booking's own event
+  from its booking-time conflict check.
+  """
+  @spec joinable_uids(map() | nil, DateTime.t(), DateTime.t()) :: MapSet.t(String.t())
+  def joinable_uids(meeting_type, from_utc, to_utc) do
+    meeting_type
+    |> joinable_meetings(from_utc, to_utc)
+    |> event_uid_set()
+  end
+
+  # A meeting's own calendar event is reported back under its iCal uid by
+  # CalDAV, but under the provider's own event id by Google and Outlook,
+  # which is what `provider_event_id` snapshots at creation time. Both forms
+  # go into the set, so the meeting sheds its own event whichever provider
+  # holds it; matching only on `uid` silently never fires on Google or
+  # Outlook and leaves every joinable group slot blocked.
+  defp event_uid_set(meetings) do
+    meetings
+    |> Enum.flat_map(&[&1.uid, &1.provider_event_id])
+    |> Enum.reject(&is_nil/1)
+    |> MapSet.new()
+  end
+
+  defp joinable_meetings(meeting_type, from_utc, to_utc) do
+    if group?(meeting_type) do
+      seat_counts = Seats.seat_counts_for_range(meeting_type.id, from_utc, to_utc)
+
+      meeting_type
+      |> live_meetings(from_utc, to_utc)
+      |> with_seats_left(seat_counts)
+    else
+      []
+    end
+  end
+
+  defp with_seats_left(meetings, seat_counts),
+    do: Enum.filter(meetings, &(&1.capacity - Map.get(seat_counts, &1.start_time, 0) > 0))
+
   # --- Group day enrichment ---
 
   defp enrich_group_day(slots, meeting_type, date, context) do
-    capacity = meeting_type.max_participants
-    {from_utc, to_utc} = window_utc(date, date, context.user_timezone)
-    seat_counts = Seats.seat_counts_for_range(meeting_type.id, from_utc, to_utc)
+    {from_utc, to_utc} = utc_window(date, date, context.user_timezone)
+    slot_ctx = slot_context(meeting_type, from_utc, to_utc)
 
-    base =
-      Enum.map(slots, fn slot ->
-        seats_taken =
-          Map.get(seat_counts, slot_start_utc(date, slot, context.user_timezone), 0)
-
-        %{time: slot, seats_left: capacity - seats_taken, capacity: capacity}
-      end)
-
-    joinable =
-      meeting_type
-      |> joinable_meetings(from_utc, to_utc, seat_counts, context)
-      |> Enum.map(fn {meeting, seats_left} ->
-        local_start = DateTime.shift_zone!(meeting.start_time, context.user_timezone)
-
-        %{
-          time: TimeSlots.format_datetime_slot(local_start),
-          seats_left: seats_left,
-          capacity: capacity
-        }
-      end)
-
-    (base ++ joinable)
-    |> Enum.uniq_by(& &1.time)
+    (slots ++ joinable_slots(meeting_type, date, context, slot_ctx.ignore_uids))
+    |> Enum.uniq()
+    |> Enum.map(fn slot ->
+      start_time = slot_start_utc(date, slot, context.user_timezone)
+      # An existing meeting keeps its own snapshotted capacity for its whole
+      # life; a slot with no meeting yet takes the type's current value,
+      # which is what a new meeting would be created with.
+      capacity = Map.get(slot_ctx.capacities, start_time, meeting_type.max_participants)
+      seats_taken = Map.get(slot_ctx.seat_counts, start_time, 0)
+      %{time: slot, seats_left: capacity - seats_taken, capacity: capacity}
+    end)
     |> Enum.filter(&(&1.seats_left > 0))
     |> Enum.sort_by(&TimeSlots.parse_time_slot(&1.time), Time)
   end
 
-  # --- Joinable meetings ---
+  defp live_meetings(meeting_type, from_utc, to_utc),
+    do: GroupMeetingQueries.list_live_for_type_in_range(meeting_type.id, from_utc, to_utc)
 
-  # A live group meeting is joinable when seats remain, the booker can still
-  # give the required notice, the slot sits inside the booking window, and no
-  # blocking calendar event other than the meeting's own event covers it.
-  defp joinable_meetings(meeting_type, from_utc, to_utc, seat_counts, context) do
-    %{user_timezone: user_timezone, config: config} = context
-    capacity = meeting_type.max_participants
-    event_pairs = blocking_events_with_uid(context)
-    now = DateTimeUtils.now_in_timezone(user_timezone)
+  # Builds every fact `enrich_group_day/4` needs from a single pass over
+  # `list_live_for_type_in_range/3` plus a single `seat_counts_for_range/3`
+  # call, instead of the two independent queries `joinable_uids/3` would
+  # otherwise repeat.
+  defp slot_context(meeting_type, from_utc, to_utc) do
+    seat_counts = Seats.seat_counts_for_range(meeting_type.id, from_utc, to_utc)
+    live = live_meetings(meeting_type, from_utc, to_utc)
 
-    min_advance_minutes = Map.get(config, :min_advance_hours, 3) * 60
-    max_advance_days = Map.get(config, :max_advance_booking_days, 90)
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
+    ignore_uids =
+      live
+      |> with_seats_left(seat_counts)
+      |> event_uid_set()
 
-    meeting_type.id
-    |> GroupMeetingQueries.list_live_for_type_in_range(from_utc, to_utc)
-    |> Enum.map(fn meeting ->
-      {meeting, capacity - Map.get(seat_counts, meeting.start_time, 0)}
-    end)
-    |> Enum.filter(fn {meeting, seats_left} ->
-      other_events = for {uid, event} <- event_pairs, uid != meeting.uid, do: event
+    %{
+      ignore_uids: ignore_uids,
+      seat_counts: seat_counts,
+      capacities: Map.new(live, &{&1.start_time, &1.capacity})
+    }
+  end
 
-      seats_left > 0 and
-        TimeRange.meets_minimum_notice?(meeting.start_time, now, min_advance_minutes) and
-        TimeRange.within_booking_window?(meeting.start_time, now, max_advance_days) and
-        not TimeRange.has_conflict_with_events?(
-          meeting.start_time,
-          meeting.end_time,
-          other_events,
-          buffer_minutes
+  # Re-runs the day's slot calculation with any joinable-by-seats meeting's
+  # own event ignored, so its slot passes the same notice/window/buffer
+  # checks as everything else instead of a second, hand-rolled copy of them.
+  defp joinable_slots(meeting_type, date, context, ignore_uids) do
+    if MapSet.size(ignore_uids) == 0 do
+      []
+    else
+      config = Map.put(context.config, :ignore_event_uids, ignore_uids)
+
+      {:ok, slots} =
+        Calculate.available_slots(
+          date,
+          meeting_type.duration_minutes,
+          context.user_timezone,
+          context.owner_timezone,
+          context.events,
+          config
         )
-    end)
-  end
 
-  defp blocking_events_with_uid(%{
-         events: events,
-         owner_timezone: owner_timezone,
-         user_timezone: user_timezone
-       }) do
-    events
-    |> Enum.filter(&CalendarEvent.blocking?/1)
-    |> Enum.flat_map(fn event ->
-      case Events.convert_events_to_timezone([event], owner_timezone, user_timezone) do
-        [converted] -> [{event_uid(event), converted}]
-        _other -> []
-      end
-    end)
+      slots
+    end
   end
-
-  defp event_uid(%CalendarEvent{uid: uid}), do: uid
-  defp event_uid(%{} = event), do: Map.get(event, :uid) || Map.get(event, "uid")
 
   defp group?(%MeetingTypeSchema{} = meeting_type), do: MeetingTypeSchema.group?(meeting_type)
   defp group?(_other), do: false
 
-  defp window_utc(start_date, end_date, user_timezone) do
+  defp utc_window(start_date, end_date, user_timezone) do
     from_local = DateTimeUtils.create_datetime_safe(start_date, ~T[00:00:00], user_timezone)
 
     to_local =

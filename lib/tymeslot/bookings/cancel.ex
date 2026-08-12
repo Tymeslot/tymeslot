@@ -80,6 +80,36 @@ defmodule Tymeslot.Bookings.Cancel do
   end
 
   @doc """
+  Runs the side effects of a cancellation whose status flip has already been
+  committed by the caller: calendar event deletion, provider video cleanup,
+  and the cancellation notifications.
+
+  `execute/1` flips the status itself, which is right for a host cancelling a
+  whole meeting. It is wrong for the last participant leaving a group slot:
+  there, the flip must happen inside the seat transaction, under the meeting
+  row lock, or a concurrent booker can join the slot in the window between the
+  seat committing and the meeting being cancelled. `Tymeslot.Bookings.CancelSeat`
+  therefore commits the flip itself and calls this to finish the job.
+  """
+  @spec finalise_cancellation(Meeting.t()) :: :ok
+  def finalise_cancellation(%Meeting{} = meeting) do
+    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+
+    with :ok <- Meetings.cancel_calendar_event(meeting),
+         :ok <- delete_provider_video_room(meeting) do
+      send_cancellation_notifications(meeting)
+    else
+      {:error, reason} ->
+        Logger.error("Failed to finalise cancellation of emptied group meeting",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  @doc """
   Cancels a meeting due to external calendar deletion.
 
   Bypasses policy checks (external deletions may arrive for past meetings)
@@ -233,7 +263,11 @@ defmodule Tymeslot.Bookings.Cancel do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to send cancellation notifications",
+        # A cancellation that notifies nobody is a real defect, not a
+        # routine hiccup, so this is logged loudly. It still does not fail
+        # the cancellation itself: the meeting is already cancelled and
+        # blocking that on email delivery would strand the caller.
+        Logger.error("Failed to send cancellation notifications",
           meeting_id: meeting.id,
           reason: inspect(reason)
         )

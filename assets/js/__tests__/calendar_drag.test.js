@@ -236,6 +236,21 @@ describe('CalendarCreate: drag-to-create span', () => {
     expect(hook.pushEventTo).not.toHaveBeenCalled();
   });
 
+  // A group booking's block is rendered data-draggable="false" so it cannot be
+  // moved. It must still swallow the press: drawing a new event on top of a
+  // slot several people are booked on is exactly what the lock is preventing.
+  test('does not start a drag on a locked event block', () => {
+    const eventBlock = document.createElement('div');
+    eventBlock.setAttribute('data-draggable', 'false');
+    col.appendChild(eventBlock);
+
+    eventBlock.dispatchEvent(mouse('mousedown', 9 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mousemove', 10 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 10 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).not.toHaveBeenCalled();
+  });
+
   test('does not start a drag on a resize handle', () => {
     const handle = document.createElement('div');
     handle.setAttribute('data-resize-handle', '');

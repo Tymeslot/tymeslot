@@ -3,28 +3,40 @@ defmodule Tymeslot.Bookings.CancelSeat do
   Cancels a single participant's seat on a group meeting, from their
   tokenised management link.
 
-  The participant row is cancelled in a transaction; their guests stop
-  counting towards seats (seat maths only counts guests of live
-  participants) and their RSVP links go inert (`Tymeslot.Meetings.Guests`
-  refuses RSVPs for cancelled participants). After commit:
+  The transaction locks the meeting row `FOR UPDATE` before cancelling the
+  participant, so it serialises against `GroupScheduling.book_seat/3`, which
+  takes the same lock. That ordering is what makes "am I the last leaver?" a
+  safe question to ask: without it, two participants cancelling at once each
+  see the other still live and neither cancels the meeting, and a booker can
+  slip onto a slot that is about to be cancelled.
 
-    * last leaver: the whole meeting is cancelled through the existing
-      `Tymeslot.Bookings.Cancel` flow (calendar event deleted, organiser
-      notified there). The leaver still gets their own seat-cancellation
+  Cancelling the participant also stops their guests counting towards seats
+  (seat maths only counts guests of live participants) and makes their RSVP
+  links inert (`Tymeslot.Meetings.Guests` refuses RSVPs for cancelled
+  participants).
+
+  After commit, `Tymeslot.Bookings.SeatRelease.release/1` decides under that
+  same lock whether the slot is now empty:
+
+    * last leaver: the meeting is cancelled there (calendar event deleted,
+      organiser notified). The leaver still gets their own seat-cancellation
       email from here, since they are no longer a live recipient of the
       meeting; the organiser is not emailed twice.
     * seats remain: the host calendar event is refreshed so its participant
       list matches the live participants, and both the participant and the
       organiser are emailed.
 
-  A seat-availability broadcast is published after commit in both cases.
+  A seat-availability broadcast and an availability-cache invalidation are
+  published after commit in both cases.
   """
 
   require Logger
 
   alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.SeatRelease
+  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatBroadcast
@@ -52,18 +64,19 @@ defmodule Tymeslot.Bookings.CancelSeat do
   defp cancel_seat(meeting, participant) do
     transaction_result =
       Repo.transaction(fn ->
-        case ParticipantQueries.cancel(participant) do
-          {:ok, cancelled} ->
-            {cancelled, ParticipantQueries.list_live_for_meeting(meeting.id)}
+        # Serialises with book_seat/3, which locks the same row before it
+        # counts seats, so a booker cannot slip in mid-cancellation.
+        GroupMeetingQueries.lock_for_update(meeting.id)
 
-          {:error, reason} ->
-            Repo.rollback(reason)
+        case ParticipantQueries.cancel(participant) do
+          {:ok, cancelled} -> cancelled
+          {:error, reason} -> Repo.rollback(reason)
         end
       end)
 
     case transaction_result do
-      {:ok, {cancelled, remaining}} ->
-        after_commit(meeting, cancelled, remaining)
+      {:ok, cancelled} ->
+        after_commit(meeting, cancelled)
 
       {:error, reason} ->
         Logger.error("Failed to cancel seat",
@@ -76,34 +89,31 @@ defmodule Tymeslot.Bookings.CancelSeat do
     end
   end
 
-  # Last leaver: the meeting-level Cancel flow deletes the calendar event and
-  # emails the organiser (with no live participants left, its recipient list
-  # is empty, so nobody is double-mailed). The leaver's own confirmation is
-  # sent from here with notify_organizer: false.
-  defp after_commit(meeting, cancelled, []) do
-    SeatBroadcast.broadcast_seat_change(meeting.meeting_type_id)
-    Events.seat_cancelled(meeting, cancelled, notify_organizer: false)
+  # `SeatRelease.release/1` decides under the meeting row lock whether this
+  # was the last seat. The leaver's own confirmation is sent either way; when
+  # the meeting goes with them it carries `notify_organizer: false`, because
+  # the meeting-level cancellation notifies the organiser already.
+  defp after_commit(meeting, cancelled) do
+    publish_seat_change(meeting)
 
-    case Cancel.execute(meeting) do
-      {:ok, _cancelled_meeting} ->
+    case SeatRelease.release(meeting) do
+      {:ok, :meeting_cancelled} ->
+        Events.seat_cancelled(meeting, cancelled, notify_organizer: false)
         {:ok, :meeting_cancelled}
 
-      {:error, reason} ->
-        # The seat itself is cancelled and freed; log the meeting-level
-        # failure but do not fail the participant's action.
-        Logger.error("Failed to cancel emptied group meeting",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        {:ok, :meeting_cancelled}
+      {:ok, :seats_remain} ->
+        CalendarJobs.schedule_job(meeting, "update")
+        Events.seat_cancelled(meeting, cancelled, notify_organizer: true)
+        {:ok, :seat_cancelled}
     end
   end
 
-  defp after_commit(meeting, cancelled, _remaining) do
+  # A freed seat changes both the seat count on the slot and, for the last
+  # leaver, the slot's availability itself. Neither is visible until the
+  # cached availability for the organiser is dropped.
+  defp publish_seat_change(meeting) do
+    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
     SeatBroadcast.broadcast_seat_change(meeting.meeting_type_id)
-    CalendarJobs.schedule_job(meeting, "update")
-    Events.seat_cancelled(meeting, cancelled, notify_organizer: true)
-    {:ok, :seat_cancelled}
+    :ok
   end
 end

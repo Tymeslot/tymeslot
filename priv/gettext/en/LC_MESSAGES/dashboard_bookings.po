@@ -403,10 +403,15 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "%{count}/%{capacity} participants"
+msgid "Participants"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Participants"
-msgstr ""
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} seats taken"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Group booking"
+msgstr "Group booking"

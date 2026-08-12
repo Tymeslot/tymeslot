@@ -11,7 +11,11 @@ defmodule Tymeslot.Availability.Events do
   @doc """
   Converts a list of `CalendarEvent` structs to a specific timezone, returning
   lightweight maps with `start_time` / `end_time` (both `DateTime`) that
-  downstream conflict-checking code can consume directly.
+  downstream conflict-checking code can consume directly. The source event's
+  `uid` is carried through unchanged (falling back to a string-keyed `"uid"`
+  for OAuth fresh-fetch plain maps), so callers can identify and selectively
+  exclude a specific event without a second lookup — see
+  `Tymeslot.Availability.Conflicts`'s `:ignore_event_uids` option.
 
   - **All-day events** (`all_day: true`): dates are anchored to midnight in the
     owner's timezone, then shifted to the target timezone.
@@ -49,7 +53,7 @@ defmodule Tymeslot.Availability.Events do
 
     with {:ok, s} <- shift_safe(start_val, owner_timezone, target_timezone),
          {:ok, e} <- shift_safe(end_val, owner_timezone, target_timezone) do
-      %{start_time: s, end_time: e}
+      %{start_time: s, end_time: e, uid: Map.get(event, :uid) || Map.get(event, "uid")}
     else
       _other -> nil
     end
@@ -58,7 +62,7 @@ defmodule Tymeslot.Availability.Events do
   defp convert_event(%CalendarEvent{all_day: true} = event, owner_timezone, target_timezone) do
     with {:ok, s} <- shift_safe(event.start_date, owner_timezone, target_timezone),
          {:ok, e} <- shift_safe(event.end_date, owner_timezone, target_timezone) do
-      %{start_time: s, end_time: e}
+      %{start_time: s, end_time: e, uid: event.uid}
     else
       _other -> nil
     end
@@ -67,7 +71,7 @@ defmodule Tymeslot.Availability.Events do
   defp convert_event(%CalendarEvent{all_day: false} = event, owner_timezone, target_timezone) do
     with {:ok, s} <- shift_safe(event.start_at, owner_timezone, target_timezone),
          {:ok, e} <- shift_safe(event.end_at, owner_timezone, target_timezone) do
-      %{start_time: s, end_time: e}
+      %{start_time: s, end_time: e, uid: event.uid}
     else
       _other -> nil
     end

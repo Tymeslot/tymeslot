@@ -18,6 +18,10 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
     )
   end
 
+  defp socket_with(assigns) do
+    %Phoenix.LiveView.Socket{assigns: Map.put(assigns, :__changed__, %{})}
+  end
+
   describe "seat_cap/1" do
     test "solo types keep the flat guest cap" do
       assigns = %{meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{max_participants: 1}}
@@ -45,6 +49,37 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
     test "falls back to the flat cap when the selected slot is unknown" do
       assert GuestBooking.seat_cap(group_assigns(4, %{selected_time: "23:45"})) ==
                Guests.max_guests()
+    end
+  end
+
+  describe "assign_seat_cap/1" do
+    # A booker who added guests while the slot was roomy, then lost seats to
+    # other bookers, used to carry all of them into every later slot: the
+    # seat transaction refuses 1 + guests over capacity, so each smaller slot
+    # bounced back as "no longer available" without ever mentioning guests.
+    test "drops the guests a shrunken slot has no room for" do
+      socket = socket_with(group_assigns(2, %{guest_emails: ~w(a@e.com b@e.com c@e.com)}))
+
+      assert %{assigns: assigns} = GuestBooking.assign_seat_cap(socket)
+      assert assigns.max_guests == 1
+      assert assigns.guest_emails == ["a@e.com"]
+      assert assigns.guest_error =~ "room for 1"
+    end
+
+    test "leaves a list that still fits untouched, with no notice" do
+      socket = socket_with(group_assigns(4, %{guest_emails: ~w(a@e.com b@e.com)}))
+
+      assert %{assigns: assigns} = GuestBooking.assign_seat_cap(socket)
+      assert assigns.guest_emails == ~w(a@e.com b@e.com)
+      assert is_nil(assigns.guest_error)
+    end
+
+    test "clears the list entirely when only the booker fits" do
+      socket = socket_with(group_assigns(1, %{guest_emails: ~w(a@e.com)}))
+
+      assert %{assigns: assigns} = GuestBooking.assign_seat_cap(socket)
+      assert assigns.max_guests == 0
+      assert assigns.guest_emails == []
     end
   end
 

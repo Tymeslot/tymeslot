@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def update(%{action: :refresh_guest_summaries}, socket),
-    do: {:ok, assign_guest_rsvp_summaries(socket)}
+    do: {:ok, assign_meeting_overlays(socket)}
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
     socket =
       if just_initialized do
-        assign_guest_rsvp_summaries(socket)
+        assign_meeting_overlays(socket)
       else
         socket
       end
@@ -166,12 +166,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     {:ok, socket}
   end
 
-  # Loads the `meeting_uid => RSVP summary` map for the calendar owner so
-  # Tymeslot-created event blocks can show a guest indicator.
-  defp assign_guest_rsvp_summaries(socket) do
+  # Loads the two uid-keyed maps the grid overlays onto Tymeslot-created event
+  # blocks: the RSVP summary behind the guest indicator, and the meetings a
+  # live seat is held on, which are shown locked because their time belongs to
+  # the booking rather than the calendar. Both are as fresh as the last load —
+  # the lock the drag handler enforces is re-read from the database, so a seat
+  # booked since then is still honoured.
+  defp assign_meeting_overlays(socket) do
     case socket.assigns[:current_user] do
       %{id: user_id} ->
-        assign(socket, :guest_rsvp_summaries, Meetings.guest_rsvp_summaries_for_user(user_id))
+        socket
+        |> assign(:guest_rsvp_summaries, Meetings.guest_rsvp_summaries_for_user(user_id))
+        |> assign(:group_booking_uids, Meetings.group_booking_uids_for_user(user_id))
 
       _other ->
         socket

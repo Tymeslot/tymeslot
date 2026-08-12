@@ -54,19 +54,26 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
-  Schedules the confirmation emails for a single group-booking seat.
+  Schedules a single-seat email job.
 
-  One job per participant; uniqueness on (action, meeting_id, participant_id)
-  makes double-submission idempotent within the 5-minute window.
+  One job per `(action, meeting_id, participant_id)`, uniqued on that triple
+  within a 5-minute window — the shared shape behind every per-seat email
+  action (confirmation, cancellation, reschedule, and the whole-meeting
+  cancellation/reminder/reschedule-request fan-outs), so each recipient
+  retries independently of the others and a different action for the same
+  participant can never collide with this one. `extra_args` carries whatever
+  the action needs beyond the two ids (e.g. `notify_organizer`, the old-event
+  snapshot, or the reminder interval).
   """
-  @spec schedule_seat_confirmation_emails(term(), term()) :: :ok | {:error, String.t()}
-  def schedule_seat_confirmation_emails(meeting_id, participant_id) do
+  @spec schedule_seat_email(String.t(), term(), term(), map()) :: :ok | {:error, String.t()}
+  def schedule_seat_email(action, meeting_id, participant_id, extra_args \\ %{}) do
     result =
-      %{
-        "action" => "send_seat_confirmation_emails",
+      extra_args
+      |> Map.merge(%{
+        "action" => action,
         "meeting_id" => meeting_id,
         "participant_id" => participant_id
-      }
+      })
       |> EmailWorker.new(
         queue: :emails,
         priority: 0,
@@ -80,7 +87,8 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
 
     case result do
       {:ok, _job} ->
-        Logger.info("Seat confirmation email job scheduled",
+        Logger.info("Seat email job scheduled",
+          action: action,
           meeting_id: meeting_id,
           participant_id: participant_id
         )
@@ -91,8 +99,10 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to schedule seat confirmation emails",
+        Logger.error("Failed to schedule seat email",
+          action: action,
           meeting_id: meeting_id,
+          participant_id: participant_id,
           error: Helpers.format_insert_error(reason)
         )
 
@@ -101,49 +111,21 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the confirmation emails for a single group-booking seat.
+  """
+  @spec schedule_seat_confirmation_emails(term(), term()) :: :ok | {:error, String.t()}
+  def schedule_seat_confirmation_emails(meeting_id, participant_id),
+    do: schedule_seat_email("send_seat_confirmation_emails", meeting_id, participant_id)
+
+  @doc """
   Schedules the cancellation emails for a single group-booking seat.
   """
   @spec schedule_seat_cancellation_emails(term(), term(), boolean()) ::
           :ok | {:error, String.t()}
   def schedule_seat_cancellation_emails(meeting_id, participant_id, notify_organizer?) do
-    result =
-      %{
-        "action" => "send_seat_cancellation_emails",
-        "meeting_id" => meeting_id,
-        "participant_id" => participant_id,
-        "notify_organizer" => notify_organizer?
-      }
-      |> EmailWorker.new(
-        queue: :emails,
-        priority: 0,
-        unique: [
-          period: 300,
-          fields: [:args, :queue],
-          keys: [:action, :meeting_id, :participant_id]
-        ]
-      )
-      |> Oban.insert()
-
-    case result do
-      {:ok, _job} ->
-        Logger.info("Seat cancellation email job scheduled",
-          meeting_id: meeting_id,
-          participant_id: participant_id
-        )
-
-        :ok
-
-      {:error, %Changeset{errors: [unique: _details]}} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule seat cancellation emails",
-          meeting_id: meeting_id,
-          error: Helpers.format_insert_error(reason)
-        )
-
-        {:error, "Failed to schedule job"}
-    end
+    schedule_seat_email("send_seat_cancellation_emails", meeting_id, participant_id, %{
+      "notify_organizer" => notify_organizer?
+    })
   end
 
   @doc """
@@ -155,48 +137,51 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   """
   @spec schedule_seat_reschedule_emails(term(), term(), map()) :: :ok | {:error, String.t()}
   def schedule_seat_reschedule_emails(meeting_id, participant_id, old_snapshot) do
-    result =
-      %{
-        "action" => "send_seat_reschedule_emails",
-        "meeting_id" => meeting_id,
-        "participant_id" => participant_id,
-        "old_uid" => old_snapshot.uid,
-        "old_ical_sequence" => old_snapshot.ical_sequence,
-        "old_start_time" => DateTime.to_iso8601(old_snapshot.start_time),
-        "old_end_time" => DateTime.to_iso8601(old_snapshot.end_time)
-      }
-      |> EmailWorker.new(
-        queue: :emails,
-        priority: 0,
-        unique: [
-          period: 300,
-          fields: [:args, :queue],
-          keys: [:action, :meeting_id, :participant_id]
-        ]
-      )
-      |> Oban.insert()
-
-    case result do
-      {:ok, _job} ->
-        Logger.info("Seat reschedule email job scheduled",
-          meeting_id: meeting_id,
-          participant_id: participant_id
-        )
-
-        :ok
-
-      {:error, %Changeset{errors: [unique: _details]}} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule seat reschedule emails",
-          meeting_id: meeting_id,
-          error: Helpers.format_insert_error(reason)
-        )
-
-        {:error, "Failed to schedule job"}
-    end
+    schedule_seat_email("send_seat_reschedule_emails", meeting_id, participant_id, %{
+      "old_uid" => old_snapshot.uid,
+      "old_ical_sequence" => old_snapshot.ical_sequence,
+      "old_start_time" => DateTime.to_iso8601(old_snapshot.start_time),
+      "old_end_time" => DateTime.to_iso8601(old_snapshot.end_time)
+    })
   end
+
+  @doc """
+  Schedules one live participant's copy of a whole-meeting cancellation.
+
+  Dispatched (one call per live participant) from the meeting-level
+  cancellation job instead of sending inline, so a failure on one participant
+  cannot discard the notification to the rest.
+  """
+  @spec schedule_seat_meeting_cancellation_email(term(), term()) :: :ok | {:error, String.t()}
+  def schedule_seat_meeting_cancellation_email(meeting_id, participant_id),
+    do: schedule_seat_email("send_seat_meeting_cancellation", meeting_id, participant_id)
+
+  @doc """
+  Schedules one live participant's reminder.
+
+  Dispatched (one call per live participant) from the meeting-level reminder
+  job instead of sending inline, so a failure on one participant cannot
+  discard the reminder to the rest.
+  """
+  @spec schedule_seat_reminder_email(term(), term(), term(), term()) ::
+          :ok | {:error, String.t()}
+  def schedule_seat_reminder_email(meeting_id, participant_id, reminder_value, reminder_unit) do
+    schedule_seat_email("send_seat_reminder", meeting_id, participant_id, %{
+      "reminder_value" => reminder_value,
+      "reminder_unit" => reminder_unit
+    })
+  end
+
+  @doc """
+  Schedules one live participant's reschedule request.
+
+  Dispatched (one call per live participant) from the meeting-level
+  reschedule-request job instead of sending inline, so a failure on one
+  participant cannot discard the request to the rest.
+  """
+  @spec schedule_seat_reschedule_request(term(), term()) :: :ok | {:error, String.t()}
+  def schedule_seat_reschedule_request(meeting_id, participant_id),
+    do: schedule_seat_email("send_seat_reschedule_request", meeting_id, participant_id)
 
   @doc """
   Schedules cancellation emails to be sent immediately with high priority.

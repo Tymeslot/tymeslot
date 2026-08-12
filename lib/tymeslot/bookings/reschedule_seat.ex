@@ -3,30 +3,38 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   Move-my-seat: reschedules a single participant of a group meeting to a new
   slot of the same meeting type, in one transaction.
 
-  The participant is cancelled on the old meeting and booked as a fresh seat
-  at the new slot via `GroupScheduling.book_seat/2`, carrying over their
-  personal data, answers, and guest emails. A new management token is
-  generated (the token column is unique and the cancelled row keeps the old
-  one); the confirmation email delivers the new links.
+  The participant is booked as a fresh seat at the new slot via
+  `GroupScheduling.book_seat/3`, carrying over their personal data, answers,
+  and guest emails; the old seat is cancelled from inside that same
+  transaction through the `:on_booked` callback, so the move is atomic
+  without nesting a transaction of our own around it. (Nesting it was worse
+  than redundant: `Repo.rollback/1` unwinds to the outermost transaction, so
+  `book_seat/3` never saw its own rollback and its retry of the first-booker
+  race could not run.) A new management token is generated (the token column
+  is unique and the cancelled row keeps the old one); the confirmation email
+  delivers the new links.
 
   On `{:error, :slot_full}` (or a lost race, `:time_conflict`) the
   transaction rolls back, the old seat stands, and `{:error, :slot_taken}`
   is returned so the booking UI's existing bounce-back UX fires unchanged.
+
+  Once the move has committed, `Tymeslot.Bookings.SeatRelease.release/1`
+  cancels the old meeting if the mover was the last one on it.
   """
 
   require Logger
 
   alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Notifications.Events
-  alias Tymeslot.Repo
   alias UUID
 
   @typedoc "New-slot parameters, same shape as `Bookings.Reschedule`."
@@ -58,6 +66,12 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp ensure_live(_participant), do: {:error, :already_cancelled}
 
   defp move_seat(old_meeting, participant, new_times) do
+    # Read off the meeting row itself — snapshotted at creation, so this
+    # still works after the meeting type is edited or deleted (`meetings.
+    # meeting_type_id` is `nilify_all`, which used to leave nothing to read
+    # capacity from). See `Tymeslot.Meetings.group?/1`.
+    max_participants = old_meeting.capacity
+
     old_snapshot = %{
       uid: old_meeting.uid,
       ical_sequence: old_meeting.ical_sequence,
@@ -70,42 +84,43 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       |> GuestQueries.list_for_participant()
       |> Enum.map(& &1.email)
 
-    %{meeting_type_ref: %{max_participants: max_participants}} =
-      Repo.preload(old_meeting, :meeting_type_ref)
+    old_meeting
+    |> slot_attrs(new_times)
+    |> GroupScheduling.book_seat(seat_request(participant, guest_emails, max_participants),
+      on_booked: fn _booking -> ParticipantQueries.cancel(participant) end
+    )
+    |> handle_move(old_meeting, participant, old_snapshot)
+  end
 
-    transaction_result =
-      Repo.transaction(fn ->
-        with {:ok, _cancelled} <- ParticipantQueries.cancel(participant),
-             {:ok, booked} <-
-               GroupScheduling.book_seat(
-                 slot_attrs(old_meeting, new_times),
-                 seat_request(participant, guest_emails, max_participants)
-               ) do
-          {booked, ParticipantQueries.list_live_for_meeting(old_meeting.id)}
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+  defp handle_move({:ok, booked}, old_meeting, _participant, old_snapshot),
+    do: after_commit(old_meeting, old_snapshot, booked)
 
-    case transaction_result do
-      {:ok, {booked, old_remaining}} ->
-        after_commit(old_meeting, old_snapshot, booked, old_remaining)
+  defp handle_move({:error, reason}, old_meeting, participant, _old_snapshot)
+       when reason in [:slot_full, :time_conflict],
+       do: log_and_bounce(old_meeting, participant, reason, :slot_taken)
 
-      {:error, :slot_full} ->
-        {:error, :slot_taken}
-
-      {:error, :time_conflict} ->
-        {:error, :slot_taken}
-
-      {:error, reason} ->
-        Logger.error("Failed to reschedule seat",
-          meeting_id: old_meeting.id,
-          participant_id: participant.id,
-          reason: inspect(reason)
-        )
-
-        {:error, :failed_to_update_meeting}
+  defp handle_move({:error, %Ecto.Changeset{} = changeset}, old_meeting, participant, _snapshot) do
+    # The first-booker race exhausted book_seat/3's retry: the target slot
+    # was created by someone else in the meantime, which is the same story
+    # for the mover as a full slot.
+    if GroupScheduling.lost_first_booker_race?(changeset) do
+      log_and_bounce(old_meeting, participant, changeset, :slot_taken)
+    else
+      log_and_bounce(old_meeting, participant, changeset, :failed_to_update_meeting)
     end
+  end
+
+  defp handle_move({:error, reason}, old_meeting, participant, _old_snapshot),
+    do: log_and_bounce(old_meeting, participant, reason, :failed_to_update_meeting)
+
+  defp log_and_bounce(old_meeting, participant, reason, error) do
+    Logger.error("Failed to reschedule seat",
+      meeting_id: old_meeting.id,
+      participant_id: participant.id,
+      reason: inspect(reason)
+    )
+
+    {:error, error}
   end
 
   # Builds the meeting-creation attrs Section B's book_seat/3 passes to
@@ -145,12 +160,14 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     }
   end
 
-  defp after_commit(old_meeting, old_snapshot, booked, old_remaining) do
+  defp after_commit(old_meeting, old_snapshot, booked) do
     # Both slots belong to the same meeting type, so one broadcast covers
-    # the freed seat and the taken seat alike.
+    # the freed seat and the taken seat alike; the cache holds availability
+    # per organiser, and both slots are theirs.
+    AvailabilityCache.invalidate_for_user(old_meeting.organizer_user_id)
     SeatBroadcast.broadcast_seat_change(old_meeting.meeting_type_id)
 
-    handle_old_meeting(old_meeting, old_remaining)
+    release_old_meeting(old_meeting)
 
     CalendarJobs.schedule_job(
       booked.meeting,
@@ -162,27 +179,15 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     {:ok, booked}
   end
 
-  # The move emptied the old meeting: cancel it through the meeting-level
-  # flow (calendar event deleted, organiser notified of the cancellation in
-  # addition to the reschedule notification — deliberate, both facts are
-  # true and each email carries its own ICS).
-  defp handle_old_meeting(old_meeting, []) do
-    case Cancel.execute(old_meeting) do
-      {:ok, _cancelled} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to cancel emptied group meeting after seat reschedule",
-          meeting_id: old_meeting.id,
-          reason: inspect(reason)
-        )
-
-        :ok
+  # If the move emptied the old meeting it is cancelled (calendar event
+  # deleted, organiser notified of the cancellation in addition to the
+  # reschedule notification — deliberate, both facts are true and each email
+  # carries its own ICS). Otherwise the old event is refreshed so its
+  # attendee list drops the mover.
+  defp release_old_meeting(old_meeting) do
+    case SeatRelease.release(old_meeting) do
+      {:ok, :meeting_cancelled} -> :ok
+      {:ok, :seats_remain} -> CalendarJobs.schedule_job(old_meeting, "update")
     end
-  end
-
-  defp handle_old_meeting(old_meeting, _remaining) do
-    CalendarJobs.schedule_job(old_meeting, "update")
-    :ok
   end
 end

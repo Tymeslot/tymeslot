@@ -404,10 +404,15 @@ msgstr "Це бронювання було оплачено. Виберіть с
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "%{count}/%{capacity} participants"
-msgstr "%{count}/%{capacity} учасників"
+msgid "Participants"
+msgstr "Учасники"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Participants"
-msgstr "Учасники"
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} місць зайнято"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Group booking"
+msgstr "Групове бронювання"

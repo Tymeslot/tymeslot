@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListPanels
@@ -130,7 +129,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         <div class="flex-1">
           <div class="flex items-center gap-3 flex-wrap mb-6">
             <h4 class="text-token-2xl font-black text-tymeslot-900 tracking-tight group-hover/card:text-turquoise-700 transition-colors">
-              {@meeting.attendee_name}
+              {meeting_title(@meeting)}
             </h4>
             <span
               :if={@meeting.attendee_company}
@@ -144,9 +143,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               class="inline-flex items-center gap-1.5 px-3 py-1 bg-turquoise-50 text-turquoise-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-turquoise-100 shadow-sm"
             >
               <CoreComponents.icon name="hero-users" class="w-3.5 h-3.5" />
-              {dgettext("dashboard_bookings", "%{count}/%{capacity} participants",
-                count: length(participant_list(@meeting)),
-                capacity: @meeting.meeting_type_ref.max_participants
+              {dgettext("dashboard_bookings", "%{count}/%{capacity} seats taken",
+                count: seats_taken(@meeting),
+                capacity: @meeting.capacity
               )}
             </span>
             <span
@@ -183,7 +182,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               </div>
             </div>
 
-            <div class="flex items-center gap-4">
+            <%!-- A group slot has no single attendee: every booker is listed
+                 in the participants panel below, so the label would otherwise
+                 head an empty value. --%>
+            <div :if={@meeting.attendee_email} class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-token-2xl bg-blue-50 flex items-center justify-center shadow-sm border border-blue-100 transition-transform group-hover/card:scale-110">
                 <CoreComponents.icon name="hero-envelope" class="w-6 h-6 text-blue-600" />
               </div>
@@ -510,13 +512,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp guest_list(%{guests: guests}) when is_list(guests), do: guests
   defp guest_list(_meeting), do: []
 
-  # A meeting is a group meeting when its (preloaded) type allows more than
-  # one participant. Falls through for solo types, meetings without a type,
-  # and callers that did not preload the association.
-  defp group_meeting?(%{meeting_type_ref: %MeetingTypeSchema{} = type}),
-    do: MeetingTypeSchema.group?(type)
-
-  defp group_meeting?(_meeting), do: false
+  defp group_meeting?(meeting), do: Meetings.group?(meeting)
 
   # The is_list guard doubles as a NotLoaded guard for callers that render
   # meeting_card without the participants preload.
@@ -524,6 +520,22 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     do: participants
 
   defp participant_list(_meeting), do: []
+
+  # Seats, not headcount. A booker who brings a guest occupies two of the
+  # slot's seats, which is what the public booking page counts down and what
+  # the organiser needs to read here — a card saying "1/4" beside a slot
+  # advertising "2 seats left" is two answers to the same question.
+  defp seats_taken(meeting),
+    do: length(participant_list(meeting)) + length(guest_list(meeting))
+
+  # The title of a group card: the shared slot has no single attendee, so it
+  # is named after what was booked rather than left blank. `title` is a
+  # required field on every meeting, snapshotted at creation like `capacity`
+  # (see `MeetingSchema.group?/1`), so it survives the meeting type being
+  # edited or deleted.
+  defp meeting_title(%{attendee_name: name}) when is_binary(name) and name != "", do: name
+  defp meeting_title(%{title: title}) when is_binary(title) and title != "", do: title
+  defp meeting_title(_meeting), do: dgettext("dashboard_bookings", "Group booking")
 
   defp person_initial(%{name: name}) when is_binary(name) and name != "",
     do: name |> String.first() |> String.upcase()

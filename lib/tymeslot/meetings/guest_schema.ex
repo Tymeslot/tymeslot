@@ -68,8 +68,16 @@ defmodule Tymeslot.Meetings.GuestSchema do
     |> validate_inclusion(:status, @valid_statuses)
     |> ensure_rsvp_token()
     |> unique_constraint(:rsvp_token)
+    # Two indexes, one rule per booking shape: a solo booking cannot invite an
+    # address twice (its guests carry no participant), and on a group slot each
+    # booker cannot invite an address twice — but two bookers inviting the same
+    # colleague is fine, and used to fail the second booking outright.
     |> unique_constraint([:meeting_id, :email],
-      name: :meeting_guests_meeting_id_email_index,
+      name: :meeting_guests_meeting_id_email_solo_index,
+      message: "has already been added"
+    )
+    |> unique_constraint([:meeting_id, :participant_id, :email],
+      name: :meeting_guests_participant_id_email_index,
       message: "has already been added"
     )
     |> foreign_key_constraint(:meeting_id)

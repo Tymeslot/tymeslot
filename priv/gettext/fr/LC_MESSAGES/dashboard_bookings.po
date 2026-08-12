@@ -403,10 +403,15 @@ msgstr "Cette réservation a été payée. Choisissez comment gérer le rembours
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "%{count}/%{capacity} participants"
-msgstr "%{count}/%{capacity} participants"
+msgid "Participants"
+msgstr "Participants"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Participants"
-msgstr "Participants"
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} places prises"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Group booking"
+msgstr "Réservation de groupe"

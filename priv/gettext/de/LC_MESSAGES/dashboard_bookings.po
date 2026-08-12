@@ -403,10 +403,15 @@ msgstr "Diese Buchung wurde bezahlt. Wählen Sie, wie mit der Rückerstattung ve
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "%{count}/%{capacity} participants"
-msgstr "%{count}/%{capacity} Teilnehmer"
+msgid "Participants"
+msgstr "Teilnehmer"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
-msgid "Participants"
-msgstr "Teilnehmer"
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} Plätze belegt"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Group booking"
+msgstr "Gruppenbuchung"

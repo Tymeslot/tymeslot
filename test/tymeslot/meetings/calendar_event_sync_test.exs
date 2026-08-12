@@ -12,8 +12,10 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.CalendarEventSync
+  alias Tymeslot.Meetings.GroupConversion
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantQueries
   alias TymeslotWeb.Themes.Core.MeetingManagement
 
   setup :verify_on_exit!
@@ -60,6 +62,35 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert :ok = CalendarEventSync.create(meeting.id, 2)
     end
 
+    test "persists the mapping for a group meeting, which carries no attendee" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          calendar_integration_id: integration.id,
+          calendar_path: "primary",
+          capacity: 4,
+          attendee_name: nil,
+          attendee_email: nil
+        )
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, %{id: "google-group-event"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: integration.id, calendar_path: "primary"}}
+      end)
+
+      assert :ok = CalendarEventSync.create(meeting.id, 1)
+
+      updated_meeting = Repo.get(MeetingSchema, meeting.id)
+      assert updated_meeting.calendar_integration_id == integration.id
+      assert updated_meeting.provider_event_id == "google-group-event"
+    end
+
     test "returns {:error, :meeting_not_found} for a non-existent meeting" do
       assert {:error, :meeting_not_found} = CalendarEventSync.create(UUID.generate(), 1)
     end
@@ -81,6 +112,48 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn _meeting, _reason -> :ok end)
 
       assert {:error, "Fatal server error"} = CalendarEventSync.create(meeting.id, 5)
+    end
+
+    test "a meeting converted from solo to group lists every live participant, not just the original attendee" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+      meeting_type = insert(:meeting_type, user: user, max_participants: 1)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: meeting_type,
+          calendar_integration_id: integration.id,
+          calendar_path: "primary",
+          attendee_name: "Solo Booker",
+          attendee_email: "solo@example.com"
+        )
+
+      # Drives the meeting through the real conversion path rather than
+      # hand-building a row that carries both shapes.
+      assert {:ok, 1} = GroupConversion.backfill(meeting_type.id, 4)
+
+      {:ok, _joiner} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "Later Joiner",
+          email: "joiner@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _ctx ->
+        assert event_data.description =~ "Attendees (2):"
+        assert event_data.description =~ "Solo Booker <solo@example.com>"
+        assert event_data.description =~ "Later Joiner <joiner@example.com>"
+        {:ok, "remote-uid-converted"}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: integration.id, calendar_path: "primary"}}
+      end)
+
+      assert :ok = CalendarEventSync.create(meeting.id, 1)
     end
   end
 

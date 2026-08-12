@@ -68,4 +68,20 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
         default_booking_form_data()
     end
   end
+
+  @doc """
+  True when a seat-management token still identifies a live seat.
+
+  The token rides in the picker URL as `reschedule_seat_token`, which browser
+  history keeps long after the seat has been moved or given up. A dead token
+  left in the assigns routes every later submission through the seat-move
+  path, where it can only fail — so the booking page checks it once and
+  forgets it if it is spent, letting the visitor simply book afresh.
+  """
+  @spec live_seat_token?(String.t() | nil) :: boolean()
+  def live_seat_token?(seat_token) when is_binary(seat_token) do
+    match?({:ok, _seat}, Meetings.fetch_live_seat(seat_token))
+  end
+
+  def live_seat_token?(_missing), do: false
 end

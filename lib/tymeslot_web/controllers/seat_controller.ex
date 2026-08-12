@@ -10,9 +10,11 @@ defmodule TymeslotWeb.SeatController do
   """
 
   use TymeslotWeb, :controller
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
 
@@ -23,10 +25,15 @@ defmodule TymeslotWeb.SeatController do
   @spec cancel_confirm(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def cancel_confirm(conn, %{"token" => token}) do
     with :ok <- rate_limit(conn),
-         {:ok, participant, meeting} <- load_live_seat(token) do
+         {:ok, %{participant: participant, meeting: meeting}} <- Meetings.fetch_live_seat(token) do
       conn
-      |> put_layout(html: false)
-      |> render(:cancel_confirm, participant: participant, meeting: meeting, token: token)
+      |> seat_page(dgettext("booking", "Cancel your spot"))
+      |> render(:cancel_confirm,
+        participant: participant,
+        meeting: meeting,
+        token: token,
+        keep_path: booking_page_path(meeting)
+      )
     else
       {:error, :rate_limited} -> render_error(conn, :too_many_requests)
       _other -> render_error(conn, :not_found)
@@ -43,8 +50,12 @@ defmodule TymeslotWeb.SeatController do
          {:ok, participant, meeting} <- load_seat(token),
          {:ok, _outcome} <- Meetings.cancel_seat(token) do
       conn
-      |> put_layout(html: false)
-      |> render(:cancelled, participant: participant, meeting: meeting)
+      |> seat_page(dgettext("booking", "Spot cancelled"))
+      |> render(:cancelled,
+        participant: participant,
+        meeting: meeting,
+        booking_path: booking_page_path(meeting)
+      )
     else
       {:error, :rate_limited} ->
         render_error(conn, :too_many_requests)
@@ -56,7 +67,7 @@ defmodule TymeslotWeb.SeatController do
       {:error, reason} when is_binary(reason) ->
         # Policy refusals (e.g. too close to start time) render a dedicated page.
         conn
-        |> put_layout(html: false)
+        |> seat_page(dgettext("booking", "Spot cannot be cancelled"))
         |> render(:not_allowed)
 
       _other ->
@@ -71,7 +82,7 @@ defmodule TymeslotWeb.SeatController do
   @spec reschedule(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def reschedule(conn, %{"token" => token}) do
     with :ok <- rate_limit(conn),
-         {:ok, _participant, meeting} <- load_live_seat(token),
+         {:ok, %{meeting: meeting}} <- Meetings.fetch_live_seat(token),
          {:ok, path} <- picker_path(meeting) do
       redirect(conn, to: path <> "?" <> URI.encode_query(%{"reschedule_seat_token" => token}))
     else
@@ -96,35 +107,48 @@ defmodule TymeslotWeb.SeatController do
     end
   end
 
-  defp load_live_seat(token) do
-    with {:ok, participant, meeting} <- load_seat(token),
-         nil <- participant.cancelled_at,
-         false <- meeting.status == "cancelled" do
-      {:ok, participant, meeting}
-    else
-      {:error, reason} -> {:error, reason}
-      _cancelled -> {:error, :not_found}
-    end
-  end
-
   defp show_already_cancelled(conn, token) do
     case load_seat(token) do
       {:ok, participant, meeting} ->
         conn
-        |> put_layout(html: false)
-        |> render(:cancelled, participant: participant, meeting: meeting)
+        |> seat_page(dgettext("booking", "Spot cancelled"))
+        |> render(:cancelled,
+          participant: participant,
+          meeting: meeting,
+          booking_path: booking_page_path(meeting)
+        )
 
       _other ->
         render_error(conn, :not_found)
     end
   end
 
+  # These pages render without the app layout, so the browser tab takes its
+  # name from `page_title` alone — without one every seat page reads
+  # "Schedule a Meeting", which is not what the visitor is doing here.
+  defp seat_page(conn, title) do
+    conn
+    |> assign(:page_title, title)
+    |> put_layout(html: false)
+  end
+
+  # Somewhere to go that is not "close the tab": the host's booking page,
+  # where the visitor can pick another time or simply see what they had.
+  defp booking_page_path(%{organizer_user_id: user_id}) when is_integer(user_id) do
+    case Profiles.get_profile_by_user_id(user_id) do
+      {:ok, %{username: username}} when is_binary(username) and username != "" -> "/#{username}"
+      _missing -> nil
+    end
+  end
+
+  defp booking_page_path(_meeting), do: nil
+
   defp picker_path(%{organizer_user_id: user_id, meeting_type_id: meeting_type_id})
        when is_integer(user_id) do
     with {:ok, %{username: username}} when is_binary(username) and username != "" <-
            Profiles.get_profile_by_user_id(user_id),
          %{} = meeting_type <- MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
-      {:ok, "/#{username}/#{meeting_type_identifier(meeting_type)}"}
+      {:ok, "/#{username}/#{Slugs.effective_slug(meeting_type)}"}
     else
       _missing -> {:error, :not_found}
     end
@@ -132,23 +156,17 @@ defmodule TymeslotWeb.SeatController do
 
   defp picker_path(_meeting), do: {:error, :not_found}
 
-  # The booking picker route accepts either a custom slug or the legacy
-  # duration-based identifier ("30min") — mirrors
-  # `ThemeFlow.resolve_meeting_type_for_duration/2`, which resolves the same
-  # fallback the other way round.
-  defp meeting_type_identifier(%{slug: slug}) when is_binary(slug) and slug != "", do: slug
-  defp meeting_type_identifier(%{duration_minutes: duration}), do: "#{duration}min"
+  defp render_error(conn, :too_many_requests) do
+    conn
+    |> put_status(:too_many_requests)
+    |> seat_page(dgettext("booking", "Too many attempts"))
+    |> render(:too_many_requests)
+  end
 
   defp render_error(conn, http_status) do
-    template =
-      case http_status do
-        :too_many_requests -> :too_many_requests
-        _other -> :invalid
-      end
-
     conn
     |> put_status(http_status)
-    |> put_layout(html: false)
-    |> render(template)
+    |> seat_page(dgettext("booking", "Link no longer valid"))
+    |> render(:invalid)
   end
 end

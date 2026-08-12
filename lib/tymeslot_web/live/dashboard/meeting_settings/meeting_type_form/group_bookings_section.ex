@@ -69,8 +69,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
           name="meeting_type[max_participants_input]"
           label={dgettext("dashboard_meeting_form", "Participant limit")}
           value={@max_participants}
-          min="2"
-          max={Constraints.max_participants_range().last}
+          min={Constraints.group_participants_range().first}
+          max={Constraints.group_participants_range().last}
           step="1"
           phx-change="change_max_participants"
           phx-debounce="500"
@@ -81,8 +81,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
           }
         />
         <p class="mt-1 text-token-sm text-tymeslot-600">
-          {dgettext("dashboard_meeting_form", "Between 2 and %{max} participants per slot.",
-            max: Constraints.max_participants_range().last
+          {dgettext("dashboard_meeting_form", "Between %{min} and %{max} participants per slot.",
+            min: Constraints.group_participants_range().first,
+            max: Constraints.group_participants_range().last
           )}
         </p>
       </div>

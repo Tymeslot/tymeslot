@@ -4,12 +4,14 @@ defmodule Tymeslot.MeetingTypes do
   """
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.Slugs
+  alias Tymeslot.Repo
   require Logger
 
   @doc """
@@ -100,11 +102,42 @@ defmodule Tymeslot.MeetingTypes do
   @spec update_meeting_type(Ecto.Schema.t(), map(), keyword()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def update_meeting_type(meeting_type, attrs, opts \\ []) do
-    with {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
-      Publication.maybe_publish(updated.user_id)
-      {:ok, updated}
+    case Repo.transaction(fn -> do_update_meeting_type(meeting_type, attrs, opts) end) do
+      {:ok, updated} ->
+        Publication.maybe_publish(updated.user_id)
+        {:ok, updated}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
+
+  # The conversion job is enqueued inside the same transaction as the update
+  # itself, so it can never fire for an update that ends up rolling back.
+  defp do_update_meeting_type(meeting_type, attrs, opts) do
+    with {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts),
+         :ok <- maybe_convert_to_group(meeting_type, updated) do
+      updated
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  # Switching a type to group bookings leaves its existing solo bookings in
+  # the wrong shape for seat maths and notifications; give them participant
+  # rows before anyone can book alongside them. Only the 1 -> many crossing
+  # matters: raising an already-group limit changes nothing structural.
+  # The actual conversion runs off the request path — see
+  # `Tymeslot.Meetings.convert_type_to_group/2`.
+  defp maybe_convert_to_group(%{max_participants: before}, %{max_participants: now} = updated)
+       when before <= 1 and now > 1 do
+    case Meetings.convert_type_to_group(updated.id, now) do
+      {:ok, _job} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp maybe_convert_to_group(_before, _updated), do: :ok
 
   @doc """
   Toggles the active status of a meeting type without validating video integration.

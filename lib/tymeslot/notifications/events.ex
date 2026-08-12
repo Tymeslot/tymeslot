@@ -6,6 +6,7 @@ defmodule Tymeslot.Notifications.Events do
 
   require Logger
 
+  alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Slack.Dispatcher, as: SlackDispatcher
   alias Tymeslot.Telegram.Dispatcher, as: TelegramDispatcher
@@ -36,22 +37,40 @@ defmodule Tymeslot.Notifications.Events do
 
   Every seat schedules its own confirmation email job (participant plus a
   per-seat organiser notification). `created_meeting?` marks the first seat:
-  reminder jobs are meeting-level, so they are scheduled exactly once here,
-  and the integration dispatchers (webhooks, Telegram, Slack) fire once with
-  their existing one-event-per-meeting semantics.
-  """
-  @spec seat_booked(term(), term(), boolean()) :: {:ok, term()} | {:error, term()}
-  def seat_booked(meeting, participant, created_meeting?) do
-    result = Orchestrator.schedule_seat_confirmation(meeting, participant)
+  reminder jobs are meeting-level, so they are scheduled exactly once here.
 
-    if created_meeting? do
-      schedule_reminders(meeting)
-      Dispatcher.dispatch(:meeting_created, meeting)
-      TelegramDispatcher.dispatch(:meeting_created, meeting)
-      SlackDispatcher.dispatch(:meeting_created, meeting)
-    end
+  The integration dispatchers fire per seat, not per slot, because a booking
+  is a person: a host's webhook, Telegram or Slack automation needs to hear
+  about the fifth booker as much as the first. Each carries that seat's
+  participant, since the shared meeting row has no attendee of its own.
+
+  Options:
+    * `:defer_emails?` — the caller has scheduled video-room creation and the
+      room worker will release this seat's confirmation once the join link
+      exists, so scheduling it here would only send a linkless duplicate.
+  """
+  @spec seat_booked(term(), term(), boolean(), keyword()) :: {:ok, term()} | {:error, term()}
+  def seat_booked(meeting, participant, created_meeting?, opts \\ []) do
+    result =
+      if Keyword.get(opts, :defer_emails?, false) do
+        {:ok, :deferred_to_video_room}
+      else
+        Orchestrator.schedule_seat_confirmation(meeting, participant)
+      end
+
+    if created_meeting?, do: schedule_reminders(meeting)
+
+    dispatch_seat_integrations(meeting, participant)
 
     result
+  end
+
+  defp dispatch_seat_integrations(meeting, participant) do
+    seat_meeting = Recipient.meeting_as_seen_by(meeting, participant)
+
+    Dispatcher.dispatch(:meeting_created, seat_meeting)
+    TelegramDispatcher.dispatch(:meeting_created, seat_meeting)
+    SlackDispatcher.dispatch(:meeting_created, seat_meeting)
   end
 
   @doc """
@@ -174,7 +193,12 @@ defmodule Tymeslot.Notifications.Events do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to schedule reminder jobs",
+        # The legitimate "nothing to schedule" case (meeting starts too soon
+        # for any configured reminder) is `{:ok, :reminder_not_scheduled}`,
+        # matched above, not an error. Anything reaching here is a real
+        # defect that silently deprives a meeting of its reminders, so it is
+        # logged loudly rather than as a routine warning.
+        Logger.error("Failed to schedule reminder jobs",
           meeting_id: meeting.id,
           reason: inspect(reason)
         )

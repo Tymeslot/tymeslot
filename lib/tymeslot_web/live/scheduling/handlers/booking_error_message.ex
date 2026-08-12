@@ -74,6 +74,24 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     dgettext("booking", "This meeting could not be found. Please refresh and try again.")
   end
 
+  def message(:already_booked) do
+    dgettext(
+      "booking",
+      "You already have a spot at this time. Check your email for your booking confirmation."
+    )
+  end
+
+  def message(:already_cancelled) do
+    dgettext("booking", "This booking has already been cancelled or moved.")
+  end
+
+  def message(:group_meeting_not_reschedulable) do
+    dgettext(
+      "booking",
+      "This is a group booking, so each participant moves their own spot from their confirmation email."
+    )
+  end
+
   # Intentional passthrough, not dead code: reschedule shares its domain
   # validation with cancel (`Policy.can_reschedule_meeting?/1`,
   # `Validation`), which still returns binaries directly — atomizing

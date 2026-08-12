@@ -4,6 +4,7 @@ defmodule Tymeslot.Notifications.Recipients do
   Pure functions for recipient determination and notification targeting.
   """
 
+  alias Tymeslot.Meetings
   alias Tymeslot.Profiles
 
   @typep participant :: %{
@@ -48,16 +49,16 @@ defmodule Tymeslot.Notifications.Recipients do
 
     case notification_type do
       :confirmation ->
-        {:both, base_recipients}
+        recipients_for(meeting, base_recipients)
 
       :reminder ->
-        {:both, base_recipients}
+        recipients_for(meeting, base_recipients)
 
       :cancellation ->
-        {:both, base_recipients}
+        recipients_for(meeting, base_recipients)
 
       :reschedule ->
-        {:both, base_recipients}
+        recipients_for(meeting, base_recipients)
 
       :video_room_created ->
         {:both, base_recipients}
@@ -67,6 +68,20 @@ defmodule Tymeslot.Notifications.Recipients do
 
       _unknown_type ->
         {:both, base_recipients}
+    end
+  end
+
+  # A group meeting's row carries no attendee of its own — `attendee_email`,
+  # `attendee_name` and `attendee_timezone` are nullable precisely because
+  # group attendees live on `meeting_participants`, not on the meeting row.
+  # The organizer is still a real recipient; the meeting-row "attendee" is
+  # not, so validation must not demand fields that cannot exist. Participants
+  # are resolved and emailed downstream via `Meetings.recipients/1`.
+  defp recipients_for(meeting, base_recipients) do
+    if Meetings.group?(meeting) do
+      {:organizer_only, base_recipients}
+    else
+      {:both, base_recipients}
     end
   end
 

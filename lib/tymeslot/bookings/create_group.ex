@@ -11,14 +11,16 @@ defmodule Tymeslot.Bookings.CreateGroup do
   """
 
   alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.Bookings.Create
+  alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Workers.VideoRoomWorker
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -47,8 +49,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   and each booker becomes a `meeting_participants` record rather than the
   meeting's sole attendee.
   """
-  @spec create(map(), map()) ::
-          {:ok, map()} | {:error, Tymeslot.Bookings.Errors.classified_error()}
+  @spec create(map(), map()) :: {:ok, map()} | {:error, Errors.classified_error()}
   def create(meeting_attrs, booking_data) do
     %{meeting_type: meeting_type} = booking_data
 
@@ -63,9 +64,13 @@ defmodule Tymeslot.Bookings.CreateGroup do
   defp map_result(
          {:ok, %{meeting: meeting, participant: participant, created_meeting?: created?}}
        ) do
-    Create.emit_booking_created()
+    Telemetry.booking_created()
     publish_seat_change(meeting)
-    Events.seat_booked(meeting, participant, created?)
+
+    Events.seat_booked(meeting, participant, created?,
+      defer_emails?: schedule_video_room(meeting, created?)
+    )
+
     {:ok, meeting}
   end
 
@@ -75,17 +80,40 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # and surfaces the raw changeset. Its `organizer_user_id` error is worded
   # for an organiser double-booking themselves, which a group booker must
   # never see, so this collapses to the same `:slot_taken` outcome as every
-  # other lost-race case; any other changeset failure is an unexpected
-  # validation error.
+  # other lost-race case. A duplicate seat is worth naming: the booker has
+  # this slot already, most likely from a second tab, and "try again" is the
+  # wrong advice.
   defp map_result({:error, %Ecto.Changeset{} = changeset}) do
-    if GroupScheduling.lost_first_booker_race?(changeset) do
-      {:error, :slot_taken}
-    else
-      {:error, :booking_failed}
+    cond do
+      GroupScheduling.lost_first_booker_race?(changeset) -> {:error, :slot_taken}
+      duplicate_seat?(changeset) -> {:error, :already_booked}
+      true -> {:error, :booking_failed}
     end
   end
 
-  defp map_result({:error, reason}), do: {:error, Create.classify_error(reason)}
+  defp map_result({:error, reason}), do: {:error, Errors.classify_error(reason)}
+
+  defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(errors, fn {_field, {_message, opts}} ->
+      to_string(opts[:constraint_name] || "") == "meeting_participants_live_email_index"
+    end)
+  end
+
+  # The first seat on a slot with an API-created video provider owns the room:
+  # it schedules creation and lets `VideoRoomWorker` release the confirmation
+  # emails once the join link exists, exactly as the solo path does. Later
+  # seats find the room already there (or on its way), so their emails go out
+  # immediately and still carry the link when it lands in time.
+  #
+  # Returns whether this seat's confirmation is now the video worker's job.
+  # A failure to schedule only means the emails go without a link — never
+  # that the seat is lost.
+  defp schedule_video_room(meeting, true = _created_meeting?) do
+    Policy.auto_creates_video_room?(meeting) and
+      VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id) == :ok
+  end
+
+  defp schedule_video_room(_meeting, _joined_existing_slot), do: false
 
   defp group_meeting_attrs(meeting_attrs, meeting_type) do
     meeting_attrs

@@ -9,8 +9,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
-  alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Utils.MapKeys
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Endpoint
@@ -34,13 +32,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   them, scheduling-aware CalDAV servers (Zimbra, Nextcloud/Sabre, Apple
   iCloud) inject their own ORGANIZER and fire the iTIP pipeline, which
   duplicates the invitation email Tymeslot already sends.
+
+  Accepts an `:attendees` option (a list of `%{name:, email:}`-shaped
+  entries, defaulting to `[]`) used to list group-meeting participants in
+  the description. The builder is pure: it never loads the list itself, so
+  callers looping over many meetings (calendar sync) must fetch it once per
+  meeting and pass it in.
   """
-  @spec build_event_data(map()) :: map()
-  def build_event_data(meeting) do
+  @spec build_event_data(map(), keyword()) :: map()
+  def build_event_data(meeting, opts \\ []) do
     %{
       uid: meeting.uid,
       summary: meeting.title,
-      description: build_event_description(meeting),
+      description: build_event_description(meeting, opts),
       start_time: meeting.start_time,
       end_time: meeting.end_time,
       timezone: meeting.attendee_timezone,
@@ -95,11 +99,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   Custom question answers are appended directly after the attendee message
   so the organiser sees what was asked at booking time alongside the rest
   of the attendee's input, without having to open the email or dashboard.
+
+  Takes the same `:attendees` option as `build_event_data/2`.
   """
-  @spec build_event_description(map()) :: String.t()
-  def build_event_description(meeting) do
+  @spec build_event_description(map(), keyword()) :: String.t()
+  def build_event_description(meeting, opts \\ []) do
     parts = [
-      attendee_identity_line(meeting),
+      attendee_identity_line(meeting, Keyword.get(opts, :attendees, [])),
       meeting.description,
       if(meeting.attendee_message, do: "\n\nMessage from attendee:\n#{meeting.attendee_message}"),
       custom_answers_section(meeting),
@@ -166,7 +172,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     end
   end
 
-  defp attendee_identity_line(%{attendee_email: email} = meeting)
+  # A group meeting's `:attendees` list takes priority over the meeting row's
+  # own `attendee_*` fields. A meeting converted from solo to group (see
+  # `Tymeslot.Meetings.GroupConversion`) still carries a populated
+  # `attendee_email`, so checking that field first would silently drop every
+  # joiner and print only the original booker. The caller passed in through
+  # the `:attendees` option so the organiser can see who is booked from
+  # inside their calendar app. The description is rebuilt on every "update"
+  # sync, so as long as the caller re-fetches the list, seat changes keep it
+  # current — this module never loads it itself.
+  defp attendee_identity_line(_meeting, attendees) when attendees != [] do
+    "Attendees (#{length(attendees)}):\n" <>
+      Enum.map_join(attendees, "\n", &participant_line/1) <> "\n\n"
+  end
+
+  defp attendee_identity_line(%{attendee_email: email} = meeting, _attendees)
        when is_binary(email) and email != "" do
     case Map.get(meeting, :attendee_name) do
       name when is_binary(name) and name != "" -> "Attendee: #{name} <#{email}>\n\n"
@@ -174,23 +194,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     end
   end
 
-  # Group meetings carry no attendee_* fields; list the live participants so
-  # the organiser can see who is booked from inside their calendar app. The
-  # event description is rebuilt on every "update" sync, so seat changes keep
-  # this list current. Plain maps (used by some sync paths and tests) fall
-  # through to the nil clause unchanged.
-  defp attendee_identity_line(%MeetingSchema{} = meeting) do
-    case Meetings.recipients(meeting) do
-      [] ->
-        nil
-
-      recipients ->
-        "Attendees (#{length(recipients)}):\n" <>
-          Enum.map_join(recipients, "\n", &participant_line/1) <> "\n\n"
-    end
-  end
-
-  defp attendee_identity_line(_meeting), do: nil
+  defp attendee_identity_line(_meeting, _attendees), do: nil
 
   defp participant_line(%{name: name, email: email}) when is_binary(name) and name != "",
     do: "#{name} <#{email}>"

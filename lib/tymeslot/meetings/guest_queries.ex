@@ -68,6 +68,26 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   @doc """
+  Hands a meeting's unowned guests to a participant.
+
+  Guests booked while a meeting type was still solo carry no `participant_id`,
+  so seat maths — which counts guests through their participant — counts them
+  for nothing. `Tymeslot.Meetings.GroupConversion` calls this when it converts
+  the attendee into a participant, so their guests come along.
+
+  Returns the number of guests adopted.
+  """
+  @spec adopt_unowned_guests(binary(), binary()) :: non_neg_integer()
+  def adopt_unowned_guests(meeting_id, participant_id) do
+    {adopted, _returning} =
+      Guest
+      |> where([g], g.meeting_id == ^meeting_id and is_nil(g.participant_id))
+      |> Repo.update_all(set: [participant_id: participant_id])
+
+    adopted
+  end
+
+  @doc """
   Lists the guests belonging to one participant whose confirmation email has
   not yet been sent.
   """

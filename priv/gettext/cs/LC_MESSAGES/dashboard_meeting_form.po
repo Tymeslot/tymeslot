@@ -686,11 +686,6 @@ msgstr "nebo zvolte jiný účet."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
-msgid "Between 2 and %{max} participants per slot."
-msgstr "2 až %{max} účastníků na termín."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
 msgid "Group bookings"
 msgstr "Skupinové rezervace"
 
@@ -743,3 +738,8 @@ msgstr "Za měsíc"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Za týden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Between %{min} and %{max} participants per slot."
+msgstr "Mezi %{min} a %{max} účastníky na termín."

@@ -12,12 +12,16 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
 
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatBroadcast
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
+  alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.VideoRoomWorker
 
   setup do
     # The booking path asks the calendar module for the meeting type's
@@ -131,6 +135,73 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
 
     assert_receive {:seat_update, ^type_id}
     assert AvailabilityCache.get_or_compute(cache_key, fn -> :recomputed end) == :recomputed
+  end
+
+  describe "video rooms" do
+    setup ctx do
+      integration = insert(:video_integration, user: ctx.user, provider: "mirotalk")
+
+      {:ok, meeting_type} =
+        MeetingTypes.update_meeting_type(ctx.meeting_type, %{
+          allow_video: true,
+          video_integration_id: integration.id
+        })
+
+      %{meeting_type: meeting_type}
+    end
+
+    # A group meeting with a video provider used to get no room at all: the
+    # group branch ran before the branch that schedules one, so every
+    # participant was sent an invite with nowhere to join.
+    test "the first seat schedules the room and lets the worker release the emails", ctx do
+      assert {:ok, meeting} = execute(ctx, "one@example.com")
+
+      assert_enqueued(
+        worker: VideoRoomWorker,
+        args: %{"meeting_id" => meeting.id, "send_emails" => true}
+      )
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_seat_confirmation_emails", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "a later seat emails immediately and schedules no second room", ctx do
+      {:ok, meeting} = execute(ctx, "one@example.com")
+
+      assert {:ok, %{id: joined_id}} = execute(ctx, "two@example.com")
+      assert joined_id == meeting.id
+
+      assert [_only_one] =
+               Enum.filter(
+                 all_enqueued(worker: VideoRoomWorker),
+                 &(&1.args["meeting_id"] == meeting.id)
+               )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_seat_confirmation_emails", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "the room worker's email hand-off reaches every seat, not a missing attendee", ctx do
+      {:ok, meeting} = execute(ctx, "one@example.com")
+      {:ok, _joined} = execute(ctx, "two@example.com")
+
+      Meetings.schedule_email_notifications(meeting)
+
+      for participant <- ParticipantQueries.list_live_for_meeting(meeting.id) do
+        assert_enqueued(
+          worker: EmailWorker,
+          args: %{
+            "action" => "send_seat_confirmation_emails",
+            "meeting_id" => meeting.id,
+            "participant_id" => participant.id
+          }
+        )
+      end
+    end
   end
 
   test "a failed group booking broadcasts nothing", ctx do

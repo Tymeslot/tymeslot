@@ -297,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       ) do
     metadata = Helpers.get_security_metadata(socket)
 
-    case InputValidation.validate_field(:max_participants, value, metadata) do
+    case InputValidation.validate_field(:group_participants, value, metadata) do
       {:ok, sanitized} ->
         {:noreply,
          socket

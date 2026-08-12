@@ -23,6 +23,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           duration: integer() | nil,
           location: String.t() | nil,
           meeting_type: String.t() | nil,
+          capacity: pos_integer(),
           organizer_name: String.t() | nil,
           organizer_email: String.t() | nil,
           organizer_title: String.t() | nil,
@@ -97,6 +98,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:duration, :integer)
     field(:location, :string)
     field(:meeting_type, :string)
+
+    # Seats this slot was booked with, snapshotted once at creation (like
+    # `title`/`organizer_name`) rather than re-read from the meeting type.
+    # A solo meeting is always `1`. `Tymeslot.Meetings.group?/1` is the one
+    # place that turns this into a group/solo predicate — see its @doc.
+    field(:capacity, :integer, default: 1)
 
     # Organizer details
     field(:organizer_name, :string)
@@ -230,6 +237,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :location,
     :meeting_type,
     :meeting_type_id,
+    :capacity,
     :organizer_title,
     :organizer_user_id,
     :calendar_integration_id,
@@ -287,7 +295,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :start_time,
     :end_time,
     :organizer_name,
-    :organizer_email
+    :organizer_email,
+    :capacity
   ]
 
   @valid_statuses [
@@ -300,8 +309,20 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     "expired"
   ]
 
-  @doc false
+  @doc """
+  Changeset for a solo meeting, and for updates to any meeting.
+
+  An already-persisted group meeting carries no attendee (its bookers live
+  in `meeting_participants`), so updating one must not demand the attendee
+  fields: it dispatches on the same `capacity > 1` predicate as
+  `Tymeslot.Meetings.group?/1`. `group_changeset/2` is not usable here,
+  because it also forces `status` back to `"confirmed"`.
+  """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(%__MODULE__{capacity: capacity} = meeting, attrs) when capacity > 1 do
+    base_changeset(meeting, attrs, @group_required_fields)
+  end
+
   def changeset(meeting, attrs) do
     base_changeset(meeting, attrs, @required_fields)
   end
@@ -354,6 +375,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_inclusion(:attendee_locale, supported_locale_codes(),
       message: "is not a supported locale"
     )
+    |> validate_number(:capacity, greater_than: 0)
     |> TimeOrder.validate_time_order(:start_time, :end_time)
     |> validate_length(:utm_source, max: 255)
     |> validate_length(:utm_medium, max: 255)
@@ -396,6 +418,18 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   """
   @spec valid_statuses() :: [String.t()]
   def valid_statuses, do: @valid_statuses
+
+  @doc """
+  Whether the meeting was booked with room for more than one seat.
+
+  The single owner of this predicate: `capacity` is snapshotted onto the
+  row at creation and never re-derived from live participant counts or the
+  meeting type, so the answer never flips later. Use
+  `Tymeslot.MeetingTypes.MeetingTypeSchema.group?/1` instead where no
+  meeting row exists yet.
+  """
+  @spec group?(t()) :: boolean
+  def group?(%__MODULE__{capacity: capacity}), do: capacity > 1
 
   @doc """
   Checks if a meeting is in the future

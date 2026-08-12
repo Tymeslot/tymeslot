@@ -1070,6 +1070,7 @@ msgid "This link is no longer valid"
 msgstr "Dieser Link ist nicht mehr gültig"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/controllers/seat_controller.ex
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
@@ -1332,3 +1333,53 @@ msgid "The host is no longer accepting bookings for this period. Please pick a d
 msgstr ""
 "Der Gastgeber nimmt für diesen Zeitraum keine Buchungen mehr an. Bitte "
 "wählen Sie einen anderen Tag."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Book another time"
+msgstr "Andere Zeit buchen"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel your spot"
+msgstr "Ihren Platz stornieren"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my spot"
+msgstr "Meinen Platz behalten"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Link no longer valid"
+msgstr "Link nicht mehr gültig"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cancelled"
+msgstr "Platz storniert"
+
+#: lib/tymeslot_web/controllers/seat_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Spot cannot be cancelled"
+msgstr "Platz kann nicht storniert werden"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has already been cancelled or moved."
+msgstr "Diese Buchung wurde bereits storniert oder verschoben."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This is a group booking, so each participant moves their own spot from their confirmation email."
+msgstr "Dies ist eine Gruppenbuchung: Jede Teilnehmerin und jeder Teilnehmer verschiebt den eigenen Platz über die Bestätigungs-E-Mail."
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "This time only has room for %{count} of your guests, so the rest were removed."
+msgstr "Zu dieser Zeit ist nur Platz für %{count} Ihrer Gäste, die übrigen wurden entfernt."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a spot at this time. Check your email for your booking confirmation."
+msgstr "Sie haben zu dieser Zeit bereits einen Platz. Ihre Buchungsbestätigung finden Sie in Ihren E-Mails."

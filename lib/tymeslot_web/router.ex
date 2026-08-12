@@ -160,7 +160,7 @@ defmodule TymeslotWeb.Router do
 
     # Public group-booking seat management from the tokenised email link.
     # Same two-step pattern as guest RSVP: GET confirms, POST mutates.
-    # The reschedule link redirects into the booking picker (Section E, task E5).
+    # The reschedule link redirects into the public booking picker.
     get "/seat/:token/cancel", SeatController, :cancel_confirm
     post "/seat/:token/cancel", SeatController, :cancel_submit
     get "/seat/:token/reschedule", SeatController, :reschedule

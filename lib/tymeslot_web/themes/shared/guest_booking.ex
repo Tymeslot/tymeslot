@@ -99,14 +99,41 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   end
 
   @doc """
-  Recomputes the `:max_guests` assign from the seats left on the selected slot.
+  Recomputes the `:max_guests` assign from the seats left on the selected slot,
+  trimming any guests the new slot has no room for.
 
   Call whenever the booker commits to a slot (booking-step entry) and after a
   live seat refresh — the cap must always reflect the seats the booker can
   actually still claim beyond their own.
+
+  The trim matters as much as the cap. A booker who added three guests while
+  five seats were free, and then lost seats to other bookers, would otherwise
+  carry all three into every later slot: the seat transaction refuses
+  `1 + guests` over capacity, so every slot small enough would bounce back as
+  "no longer available" without ever mentioning guests. Dropping the guests
+  that no longer fit — newest first, since the earliest invited are the ones
+  the booker chose first — keeps the list honest and the error truthful.
   """
   @spec assign_seat_cap(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def assign_seat_cap(socket), do: assign(socket, :max_guests, seat_cap(socket.assigns))
+  def assign_seat_cap(socket) do
+    cap = seat_cap(socket.assigns)
+    kept = Enum.take(socket.assigns[:guest_emails] || [], cap)
+
+    socket
+    |> assign(:max_guests, cap)
+    |> assign(:guest_emails, kept)
+    |> assign(:guest_error, trim_notice(socket.assigns[:guest_emails] || [], kept))
+  end
+
+  defp trim_notice(before, kept) when length(before) > length(kept) do
+    dgettext(
+      "booking",
+      "This time only has room for %{count} of your guests, so the rest were removed.",
+      count: length(kept)
+    )
+  end
+
+  defp trim_notice(_before, _kept), do: nil
 
   @doc """
   Effective guest cap: `min(Guests.max_guests(), seats_left - 1)` for group

@@ -780,7 +780,6 @@ msgstr "Titel"
 msgid "Toggle this help"
 msgstr "Diese Hilfe umschalten"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/drag_drop.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
@@ -967,3 +966,13 @@ msgstr "Google Calendar hat das Ereignis gespeichert, aber keinen Meet-Link zur�
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Ihr Kalender muss erneut verbunden werden. Bitte verbinden Sie ihn auf der Seite „Integrationen“ erneut."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Several people are booked on this slot, so its time is fixed here. Ask them to rebook from the meeting to move it."
+msgstr "Mehrere Personen sind auf diesem Zeitfenster gebucht, daher ist die Zeit hier fest. Bitten Sie sie, über den Termin neu zu buchen, um ihn zu verschieben."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This slot is booked by several people, so its time is fixed here. Ask them to rebook from the meeting instead."
+msgstr "Dieses Zeitfenster ist von mehreren Personen gebucht, daher ist die Zeit hier fest. Bitten Sie sie stattdessen, über den Termin neu zu buchen."

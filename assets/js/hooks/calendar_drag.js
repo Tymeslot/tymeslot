@@ -407,8 +407,11 @@ export const CalendarCreate = {
   },
 
   _handlePointerDown(e) {
-    // Ignore clicks on existing events, resize handles, buttons
-    if (e.target.closest('[data-draggable="true"]')) return
+    // Ignore clicks on existing events, resize handles, buttons. Matched on
+    // the attribute rather than its value: a seat-locked event carries
+    // data-draggable="false", and pressing on one must not start drawing a
+    // new event on top of it.
+    if (e.target.closest('[data-draggable]')) return
     if (e.target.closest('[data-resize-handle]')) return
     if (e.target.closest('button')) return
 

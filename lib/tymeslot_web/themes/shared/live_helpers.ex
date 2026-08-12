@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias Tymeslot.Analytics
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
+  alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
@@ -195,18 +196,27 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec handle_param_updates(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_param_updates(socket, params) do
+    seat_token = live_seat_token(params["reschedule_seat_token"])
+
     socket
     |> maybe_assign_from_params(:duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_date, params["date"])
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
-    |> maybe_assign_from_params(:reschedule_seat_token, params["reschedule_seat_token"])
+    |> maybe_assign_from_params(:reschedule_seat_token, seat_token)
     |> assign(
       :is_rescheduling,
-      params["reschedule_meeting_uid"] != nil or params["reschedule_seat_token"] != nil
+      params["reschedule_meeting_uid"] != nil or seat_token != nil
     )
     |> handle_confirmation_params(params)
+  end
+
+  # A spent token in the URL (history, a bookmarked reschedule link, a seat
+  # already moved) must not turn every later submission into a doomed seat
+  # move. Dropping it here lets the visitor book normally instead.
+  defp live_seat_token(token) do
+    if ThemeFlow.live_seat_token?(token), do: token
   end
 
   defp handle_confirmation_params(socket, params) do
@@ -473,7 +483,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if connected?(socket) && group_type?(meeting_type) &&
          socket.assigns[:group_seats_subscribed_id] != meeting_type.id do
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "group_seats:#{meeting_type.id}")
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatBroadcast.topic(meeting_type.id))
       assign(socket, :group_seats_subscribed_id, meeting_type.id)
     else
       socket

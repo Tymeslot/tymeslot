@@ -686,11 +686,6 @@ msgstr "ou choisissez un autre compte."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
-msgid "Between 2 and %{max} participants per slot."
-msgstr "Entre 2 et %{max} participants par créneau."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
 msgid "Group bookings"
 msgstr "Réservations de groupe"
 
@@ -745,3 +740,8 @@ msgstr "Par mois"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Par semaine"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Between %{min} and %{max} participants per slot."
+msgstr "Entre %{min} et %{max} participants par créneau."

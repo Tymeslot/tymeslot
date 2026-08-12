@@ -686,11 +686,6 @@ msgstr "або виберіть інший обліковий запис."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
-msgid "Between 2 and %{max} participants per slot."
-msgstr "Від 2 до %{max} учасників на слот."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
 msgid "Group bookings"
 msgstr "Групові бронювання"
 
@@ -745,3 +740,8 @@ msgstr "На місяць"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "На тиждень"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Between %{min} and %{max} participants per slot."
+msgstr "Від %{min} до %{max} учасників на слот."

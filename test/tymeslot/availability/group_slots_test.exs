@@ -12,6 +12,8 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.GroupSlots
   alias Tymeslot.Meetings.GroupScheduling
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.MeetingTypes
 
   @timezone "Etc/UTC"
 
@@ -94,6 +96,28 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
 
     assert Enum.all?(enriched, &(&1.capacity == 3 and &1.seats_left == 3))
     assert Enum.map(enriched, & &1.time) == slots
+  end
+
+  test "a partially filled meeting is joinable when the provider reports its own event id",
+       ctx do
+    start_time = slot_start(ctx.date, ~T[11:00:00])
+    %{meeting: meeting} = book_seat!(ctx, start_time, "one@example.com")
+
+    # Google and Outlook list events under their own event id, not under the
+    # meeting's iCal uid, so a set built from `uid` alone never matches and
+    # leaves every joinable slot blocked.
+    {:ok, meeting} =
+      MeetingQueries.update_meeting(meeting, %{provider_event_id: "google-event-abc"})
+
+    events = [%{uid: "google-event-abc", start_time: start_time, end_time: meeting.end_time}]
+
+    slots = base_slots(ctx.date, events, ctx.config)
+    refute "11:00 AM" in slots
+
+    enriched =
+      GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, context(events, ctx.config))
+
+    assert %{seats_left: 2, capacity: 3} = Enum.find(enriched, &(&1.time == "11:00 AM"))
   end
 
   test "a partially filled meeting is joinable while buffer-adjacent slots stay blocked",
@@ -185,6 +209,25 @@ defmodule Tymeslot.Availability.GroupSlotsTest do
       GroupSlots.enrich_day_slots(slots, ctx.meeting_type, ctx.date, context(events, ctx.config))
 
     refute Enum.any?(enriched, &(&1.time == "11:00 AM"))
+  end
+
+  test "lowering the type's max_participants does not change an existing booked slot's capacity",
+       ctx do
+    start_time = slot_start(ctx.date, ~T[11:00:00])
+    %{meeting: meeting} = book_seat!(ctx, start_time, "one@example.com")
+    events = [own_event(meeting)]
+    slots = base_slots(ctx.date, events, ctx.config)
+
+    {:ok, lowered_type} =
+      MeetingTypes.update_meeting_type(ctx.meeting_type, %{max_participants: 2})
+
+    enriched =
+      GroupSlots.enrich_day_slots(slots, lowered_type, ctx.date, context(events, ctx.config))
+
+    # The meeting was created with capacity 3 (the type's value at the
+    # time); it keeps that capacity for its whole life even though the
+    # type's live value is now lower than the seats already taken.
+    assert %{capacity: 3, seats_left: 2} = Enum.find(enriched, &(&1.time == "11:00 AM"))
   end
 
   test "overlay_range flips a day back to available when a joinable meeting exists", ctx do

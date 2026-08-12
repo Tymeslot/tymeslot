@@ -25,6 +25,7 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
   alias Phoenix.PubSub
   alias Tymeslot.Bookings.{Cancel, CancelSeat, Create}
   alias Tymeslot.EmailServiceMock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -135,10 +136,56 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
     assert {:error, :already_cancelled} = CancelSeat.execute(leaver.management_token)
   end
 
+  # A freed seat changes what the booking page may offer, and availability is
+  # cached per organiser. Without the invalidation the slot kept reading as
+  # full (or stayed hidden entirely, for the last leaver) until the cache
+  # aged out, however loudly the seat broadcast said otherwise.
+  test "cancelling a seat drops the organiser's cached availability",
+       %{meeting: meeting, leaver: leaver} do
+    cache_key =
+      AvailabilityCache.availability_range_key(
+        meeting.organizer_user_id,
+        Date.utc_today(),
+        Date.add(Date.utc_today(), 41),
+        "Etc/UTC",
+        30
+      )
+
+    AvailabilityCache.put(cache_key, {:ok, %{"seeded" => true}})
+
+    assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
+
+    assert AvailabilityCache.get_or_compute(cache_key, fn -> :recomputed end) == :recomputed
+  end
+
+  # Whoever asks second must see the other's work. Without a row lock both
+  # leavers count the other as still live, so neither cancels the meeting and
+  # a confirmed slot survives with nobody on it — still holding the
+  # organiser's calendar and still firing reminders.
+  test "two people leaving one after the other still cancel the meeting",
+       %{meeting: meeting, leaver: leaver, stayer: stayer} do
+    assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
+    assert {:ok, :meeting_cancelled} = CancelSeat.execute(stayer.management_token)
+
+    assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
+    assert ParticipantQueries.count_live_for_meeting(meeting.id) == 0
+  end
+
   test "organiser cancel-all emails every live participant and voids guest RSVPs",
-       %{meeting: meeting} do
+       %{meeting: meeting, leaver: leaver, stayer: stayer} do
     assert {:ok, cancelled_meeting} = Cancel.execute(meeting)
     assert cancelled_meeting.status == "cancelled"
+
+    # Regression coverage for the enqueue path itself, not just the handler:
+    # a group meeting has no meeting-row attendee, and the notification
+    # layer used to reject it before ever calling `schedule_cancellation_emails/1`.
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_cancellation_emails",
+        "meeting_id" => meeting.id
+      }
+    )
 
     expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn organizer_email, details ->
       assert organizer_email == "organizer@example.com"
@@ -146,17 +193,54 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
       {:ok, "sent"}
     end)
 
-    expect(EmailServiceMock, :send_cancellation_email_to_attendee, 2, fn attendee_email,
-                                                                         details ->
-      assert attendee_email in ["leaver@example.com", "stayer@example.com"]
-      assert details.attendee_name in ["Leaver", "Stayer"]
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_cancellation_emails",
+               "meeting_id" => meeting.id
+             })
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_seat_meeting_cancellation",
+        "meeting_id" => meeting.id,
+        "participant_id" => leaver.id
+      }
+    )
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_seat_meeting_cancellation",
+        "meeting_id" => meeting.id,
+        "participant_id" => stayer.id
+      }
+    )
+
+    expect(EmailServiceMock, :send_cancellation_email_to_attendee, fn attendee_email, details ->
+      assert attendee_email == "leaver@example.com"
+      assert details.attendee_name == "Leaver"
       {:ok, "sent"}
     end)
 
     assert :ok =
              perform_job(EmailWorker, %{
-               "action" => "send_cancellation_emails",
-               "meeting_id" => meeting.id
+               "action" => "send_seat_meeting_cancellation",
+               "meeting_id" => meeting.id,
+               "participant_id" => leaver.id
+             })
+
+    expect(EmailServiceMock, :send_cancellation_email_to_attendee, fn attendee_email, details ->
+      assert attendee_email == "stayer@example.com"
+      assert details.attendee_name == "Stayer"
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_meeting_cancellation",
+               "meeting_id" => meeting.id,
+               "participant_id" => stayer.id
              })
 
     # Guest RSVP links on a cancelled meeting are inert.

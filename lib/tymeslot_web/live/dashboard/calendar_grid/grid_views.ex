@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   attr :sync_completed, :integer, required: true
   attr :date, :any, required: true
   attr :guest_rsvp_summaries, :map, default: %{}
+  attr :group_booking_uids, :any, default: nil
   attr :myself, :any, required: true
 
   @spec week_day_view(map()) :: Phoenix.LiveView.Rendered.t()
@@ -169,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                         )
                     )
                   }
-                  data-draggable="true"
+                  data-draggable={to_string(not EventBadges.seat_locked?(@group_booking_uids, event))}
                   data-event-id={event.id}
                   data-event-date={Date.to_iso8601(day)}
                   data-start-minutes={
@@ -212,8 +213,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                   <EventBadges.event_guest_badge summary={
                     EventBadges.guest_summary_for_event(@guest_rsvp_summaries, event)
                   } />
+                  <EventBadges.seat_lock_badge locked={
+                    EventBadges.seat_locked?(@group_booking_uids, event)
+                  } />
                   <%!-- Enlarged invisible resize hit-target for touch; visual handle revealed on hover --%>
                   <div
+                    :if={not EventBadges.seat_locked?(@group_booking_uids, event)}
                     data-resize-handle
                     class="absolute bottom-0 left-0 right-0 h-3 cursor-s-resize touch-none"
                     aria-hidden="true"

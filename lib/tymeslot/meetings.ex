@@ -15,12 +15,16 @@ defmodule Tymeslot.Meetings do
     ExternalCalendarChanges,
     Guests,
     Listing,
+    MeetingAccess,
     MeetingCalendarQueries,
     MeetingListQueries,
     MeetingQueries,
     MeetingSchema,
     MeetingState,
+    ParticipantQueries,
+    ParticipantSchema,
     Recipient,
+    SeatLookup,
     VideoRooms
   }
 
@@ -108,11 +112,43 @@ defmodule Tymeslot.Meetings do
     to: Tymeslot.Meetings.GuestQueries,
     as: :rsvp_summaries_for_user
 
+  @doc "Returns the `uid`s of a user's meetings that are group bookings."
+  defdelegate group_booking_uids_for_user(user_id),
+    to: Tymeslot.Meetings.MeetingQueries
+
+  @doc "Whether the meeting behind a calendar event's `uid` is a group booking."
+  defdelegate group_booking_uid?(uid), to: Tymeslot.Meetings.MeetingQueries
+
+  @doc "Whether `meeting` was booked with room for more than one seat."
+  defdelegate group?(meeting), to: MeetingSchema
+
+  @doc "Enqueues background conversion of a meeting type's bookings into group seats. See `Tymeslot.Workers.GroupConversionWorker`."
+  @spec convert_type_to_group(integer(), pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  defdelegate convert_type_to_group(meeting_type_id, capacity),
+    to: Tymeslot.Workers.GroupConversionWorker,
+    as: :enqueue
+
   @doc """
   Schedules email notifications for a meeting via Oban.
+
+  A group meeting has no attendee of its own, so its confirmations are
+  per-seat: one job per live participant, each idempotent on
+  `(meeting_id, participant_id)`. That matters here because this is the hand
+  the `VideoRoomWorker` plays once the join link exists, and seats booked
+  while the room was being created have already scheduled their own.
   """
   @spec schedule_email_notifications(Ecto.Schema.t()) :: :ok | {:error, any()}
   def schedule_email_notifications(meeting) do
+    if group?(meeting) do
+      meeting.id
+      |> ParticipantQueries.list_live_for_meeting()
+      |> Enum.each(&schedule_seat_notifications(meeting, &1))
+    else
+      schedule_meeting_notifications(meeting)
+    end
+  end
+
+  defp schedule_meeting_notifications(meeting) do
     case Orchestrator.schedule_meeting_notifications(meeting) do
       {:ok, _result} ->
         Logger.info("Meeting notifications scheduled", meeting_id: meeting.id)
@@ -120,6 +156,23 @@ defmodule Tymeslot.Meetings do
       {:error, reason} ->
         Logger.warning("Failed to schedule meeting notifications",
           meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+    end
+  end
+
+  defp schedule_seat_notifications(meeting, participant) do
+    case Orchestrator.schedule_seat_confirmation(meeting, participant) do
+      {:ok, _result} ->
+        Logger.info("Seat notifications scheduled",
+          meeting_id: meeting.id,
+          participant_id: participant.id
+        )
+
+      {:error, reason} ->
+        Logger.warning("Failed to schedule seat notifications",
+          meeting_id: meeting.id,
+          participant_id: participant.id,
           reason: inspect(reason)
         )
     end
@@ -144,6 +197,20 @@ defmodule Tymeslot.Meetings do
   defdelegate recipients(meeting), to: Recipient, as: :for_meeting
 
   @doc """
+  The attendees to list on a synced calendar event.
+
+  Solo meetings return `[]`: the event already carries its one attendee via
+  the meeting's own `attendee_*` fields. Group meetings — including meetings
+  converted from solo to group, where the original booker's `attendee_*`
+  columns are still populated alongside their new participant row — return
+  `recipients/1`, which is deduplicated so a converted booker is listed once.
+  """
+  @spec attendees_for_calendar(MeetingSchema.t()) :: [Recipient.t()]
+  def attendees_for_calendar(meeting) do
+    if group?(meeting), do: recipients(meeting), else: []
+  end
+
+  @doc """
   Returns the meeting as the given recipient sees it, with `attendee_*`
   fields and management URLs overlaid for participant recipients.
   """
@@ -166,6 +233,12 @@ defmodule Tymeslot.Meetings do
   @spec cancel_seat(String.t()) ::
           {:ok, :seat_cancelled | :meeting_cancelled} | {:error, term()}
   def cancel_seat(management_token), do: CancelSeat.execute(management_token)
+
+  @doc "Loads a live group-booking seat by its management token. See `Tymeslot.Meetings.SeatLookup`."
+  @spec fetch_live_seat(String.t()) ::
+          {:ok, %{participant: ParticipantSchema.t(), meeting: MeetingSchema.t()}}
+          | {:error, :not_found | :already_cancelled}
+  defdelegate fetch_live_seat(token), to: SeatLookup
 
   @doc """
   Works out which refund a host's cancellation choice implies.
@@ -375,12 +448,7 @@ defmodule Tymeslot.Meetings do
   Gets a single meeting by ID.
   """
   @spec get_meeting(String.t() | integer()) :: {:ok, MeetingSchema.t()} | {:error, :not_found}
-  def get_meeting(id) do
-    case MeetingQueries.get_meeting(id) do
-      {:ok, meeting} -> {:ok, meeting}
-      _other -> {:error, :not_found}
-    end
-  end
+  defdelegate get_meeting(id), to: MeetingAccess
 
   @doc """
   Gets a single meeting by ID for a specific user.
@@ -390,22 +458,13 @@ defmodule Tymeslot.Meetings do
   """
   @spec get_meeting_for_user(String.t() | integer(), String.t()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
-  def get_meeting_for_user(id, user_email) do
-    with {:ok, meeting} <- MeetingQueries.get_meeting(id),
-         true <- meeting.organizer_email == user_email or meeting.attendee_email == user_email do
-      {:ok, meeting}
-    else
-      _other -> {:error, :not_found}
-    end
-  end
+  defdelegate get_meeting_for_user(id, user_email), to: MeetingAccess
 
   @doc """
   Gets a single meeting by its unique identifier (UID).
   """
   @spec get_meeting_by_uid(String.t()) :: {:ok, MeetingSchema.t()} | {:error, :not_found}
-  def get_meeting_by_uid(uid) do
-    MeetingQueries.get_meeting_by_uid(uid)
-  end
+  defdelegate get_meeting_by_uid(uid), to: MeetingAccess
 
   @doc """
   Gets a single meeting by UID for a specific user.
@@ -415,14 +474,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec get_meeting_by_uid_for_user(String.t(), String.t()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
-  def get_meeting_by_uid_for_user(uid, user_email) do
-    with {:ok, meeting} <- MeetingQueries.get_meeting_by_uid(uid),
-         true <- meeting.organizer_email == user_email or meeting.attendee_email == user_email do
-      {:ok, meeting}
-    else
-      _other -> {:error, :not_found}
-    end
-  end
+  defdelegate get_meeting_by_uid_for_user(uid, user_email), to: MeetingAccess
 
   @doc """
   Fetches a meeting by UID only if the given `organizer_user_id` owns it.
@@ -436,9 +488,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
-  def get_meeting_by_uid_for_organizer(uid, organizer_user_id) do
-    MeetingQueries.get_meeting_by_uid_for_organizer(uid, organizer_user_id)
-  end
+  defdelegate get_meeting_by_uid_for_organizer(uid, organizer_user_id), to: MeetingAccess
 
   @doc """
   Exports a single meeting as iCalendar (`.ics`) content, scoped to its
@@ -486,14 +536,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec update_meeting_for_user(MeetingSchema.t(), map(), String.t()) ::
           {:ok, MeetingSchema.t()} | {:error, :unauthorized | Ecto.Changeset.t()}
-  def update_meeting_for_user(%MeetingSchema{} = meeting, attrs, user_email)
-      when is_binary(user_email) do
-    if meeting.organizer_email == user_email do
-      MeetingQueries.update_meeting(meeting, attrs)
-    else
-      {:error, :unauthorized}
-    end
-  end
+  defdelegate update_meeting_for_user(meeting, attrs, user_email), to: MeetingAccess
 
   @doc """
   Deletes a meeting for a specific user.
@@ -502,29 +545,14 @@ defmodule Tymeslot.Meetings do
   """
   @spec delete_meeting_for_user(MeetingSchema.t(), String.t()) ::
           {:ok, MeetingSchema.t()} | {:error, :unauthorized | Ecto.Changeset.t()}
-  def delete_meeting_for_user(%MeetingSchema{} = meeting, user_email)
-      when is_binary(user_email) do
-    if meeting.organizer_email == user_email do
-      MeetingQueries.delete_meeting(meeting)
-    else
-      {:error, :unauthorized}
-    end
-  end
+  defdelegate delete_meeting_for_user(meeting, user_email), to: MeetingAccess
 
   @doc """
   Gets a single meeting by ID.
   Raises if not found.
   """
   @spec get_meeting!(String.t()) :: MeetingSchema.t()
-  def get_meeting!(id) do
-    case MeetingQueries.get_meeting(id) do
-      {:ok, meeting} ->
-        meeting
-
-      {:error, :not_found} ->
-        raise Ecto.NoResultsError, queryable: MeetingSchema
-    end
-  end
+  defdelegate get_meeting!(id), to: MeetingAccess
 
   @doc """
   Dismisses the calendar sync status banner for a meeting by recording the current timestamp.

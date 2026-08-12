@@ -8,6 +8,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.ReminderUtils
@@ -18,6 +19,28 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   @spec from_meeting(map(), map() | nil) :: Tymeslot.Emails.EmailService.appointment_details()
   def from_meeting(meeting, reminder_interval \\ nil) do
+    build(meeting, reminder_interval)
+  end
+
+  @doc """
+  Appointment details as `recipient` sees them.
+
+  For a `:participant` recipient this overlays their own name, email, phone,
+  company, message, timezone, locale, custom-field answers, and tokenised
+  seat URLs onto a *plain map* copy of the meeting before the payload is
+  built — never onto a `%MeetingSchema{}`, so nothing downstream can mistake
+  the overlay for a persisted row. `:attendee` recipients see the meeting
+  unchanged. See `Recipient.meeting_view/2`.
+  """
+  @spec from_meeting(map(), Recipient.t(), map() | nil) ::
+          Tymeslot.Emails.EmailService.appointment_details()
+  def from_meeting(meeting, %Recipient{} = recipient, reminder_interval) do
+    meeting
+    |> Recipient.meeting_view(recipient)
+    |> build(reminder_interval)
+  end
+
+  defp build(meeting, reminder_interval) do
     attendee_locale = Map.get(meeting, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, attendee_locale, fn ->

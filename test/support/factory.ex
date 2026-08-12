@@ -109,6 +109,11 @@ defmodule Tymeslot.Factory do
     build(:meeting, status: "pending")
   end
 
+  @spec group_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
+  def group_meeting_factory do
+    build(:meeting, capacity: 2)
+  end
+
   @spec participant_factory() :: Tymeslot.Meetings.ParticipantSchema.t()
   def participant_factory do
     %ParticipantSchema{

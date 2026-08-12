@@ -8,6 +8,7 @@ defmodule TymeslotWeb.SeatControllerTest do
 
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -54,7 +55,7 @@ defmodule TymeslotWeb.SeatControllerTest do
       |> ParticipantQueries.list_live_for_meeting()
       |> Enum.find(&(&1.email == "leaver@example.com"))
 
-    %{leaver: leaver}
+    %{leaver: leaver, meeting_type: meeting_type}
   end
 
   describe "GET /seat/:token/cancel — confirmation landing page (no mutation)" do
@@ -104,6 +105,25 @@ defmodule TymeslotWeb.SeatControllerTest do
       conn = get(conn, ~p"/seat/nope-not-a-token/reschedule")
 
       assert html_response(conn, 404) =~ "no longer valid"
+    end
+
+    # The picker resolves a meeting type by its effective slug, derived from
+    # the name whenever no custom slug is set — which is the default. Sending
+    # a duration-shaped identifier instead ("30min") resolved to nothing, so
+    # every emailed reschedule link died on "Invalid meeting type".
+    test "redirects to a path the booking picker actually resolves",
+         %{conn: conn, leaver: leaver, meeting_type: meeting_type} do
+      assert is_nil(meeting_type.slug), "this test is about the no-custom-slug default"
+
+      conn = get(conn, ~p"/seat/#{leaver.management_token}/reschedule")
+      target = redirected_to(conn)
+
+      assert target =~ "/test-organizer/#{Slugs.effective_slug(meeting_type)}?"
+
+      assert conn
+             |> recycle()
+             |> get(target)
+             |> html_response(200)
     end
   end
 end

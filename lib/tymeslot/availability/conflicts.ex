@@ -21,6 +21,7 @@ defmodule Tymeslot.Availability.Conflicts do
           optional(:duration_minutes) => pos_integer(),
           optional(:profile_id) => integer() | nil,
           optional(:limit_checker) => (DateTime.t() -> boolean()) | nil,
+          optional(:ignore_event_uids) => MapSet.t(String.t()),
           optional(atom()) => term()
         }
 
@@ -29,6 +30,14 @@ defmodule Tymeslot.Availability.Conflicts do
 
   Events must already be filtered to blocking-only and converted to the user's
   timezone as maps with `start_time` / `end_time` (both `DateTime`).
+
+  `config[:ignore_event_uids]`, when present, is a `MapSet` of event uids that
+  must not block *their own* slot — i.e. an event is only disregarded for the
+  one candidate slot whose start instant matches that event's start. Every
+  other slot still sees it as blocking, so buffer protection around it is
+  unaffected. This lets a live group meeting's own calendar event stop
+  hiding the slot it occupies without losing its effect on neighbouring
+  slots; see `Tymeslot.Availability.GroupSlots`.
   """
   @spec filter_available_slots(
           [String.t()],
@@ -42,6 +51,7 @@ defmodule Tymeslot.Availability.Conflicts do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)
     min_advance_hours = Map.get(config, :min_advance_hours, 3)
     max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+    ignore_event_uids = Map.get(config, :ignore_event_uids, MapSet.new())
 
     current_time = DateTimeUtils.now_in_timezone(timezone)
 
@@ -56,9 +66,32 @@ defmodule Tymeslot.Availability.Conflicts do
         min_advance_hours,
         max_advance_booking_days
       ) and
-        not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffer_minutes) and
+        not TimeRange.has_conflict_with_events?(
+          slot_start,
+          slot_end,
+          events_for_slot(events, slot_start, ignore_event_uids),
+          buffer_minutes
+        ) and
         not limit_blocked?(config, slot_start)
     end)
+  end
+
+  # Drops the blocking event that both carries an ignored uid and starts at
+  # exactly this slot's instant — a slot can only shed "its own" event, never
+  # another one sharing an ignored uid but a different start time.
+  defp events_for_slot(events, slot_start, ignore_event_uids) do
+    if MapSet.size(ignore_event_uids) == 0 do
+      events
+    else
+      Enum.reject(events, &own_event_at?(&1, slot_start, ignore_event_uids))
+    end
+  end
+
+  defp own_event_at?(event, slot_start, ignore_event_uids) do
+    uid = Map.get(event, :uid)
+
+    not is_nil(uid) and MapSet.member?(ignore_event_uids, uid) and
+      DateTime.compare(event.start_time, slot_start) == :eq
   end
 
   # Booking limits are checked per slot (not per day) because the absolute
@@ -114,26 +147,8 @@ defmodule Tymeslot.Availability.Conflicts do
         config \\ %{}
       ) do
     duration_minutes = config |> Map.get(:duration_minutes, 30) |> max(1) |> min(1440)
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-    min_advance_hours = Map.get(config, :min_advance_hours, 3)
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
     profile_id = Map.get(config, :profile_id)
-
-    # Pre-filter to events within ±2 days of target_date so the inner
-    # per-slot Enum.any? scan does not traverse the full multi-week list.
-    # Date comparison is used (rather than DateTime) to avoid constructing
-    # new DateTimes with the user timezone, which can fail for unknown zones.
-    date_lower = Date.add(date, -2)
-    date_upper = Date.add(date, 2)
-
-    nearby_events =
-      Enum.filter(events_in_user_tz, fn event ->
-        event_start_date = DateTime.to_date(event.start_time)
-        event_end_date = DateTime.to_date(event.end_time)
-
-        Date.compare(event_end_date, date_lower) != :lt and
-          Date.compare(event_start_date, date_upper) != :gt
-      end)
+    nearby_events = events_near_date(events_in_user_tz, date)
 
     business_hours_windows =
       BusinessHours.windows_for_target_date(
@@ -147,30 +162,54 @@ defmodule Tymeslot.Availability.Conflicts do
     Enum.any?(business_hours_windows, fn window ->
       breaks = BusinessHours.breaks_for_day(window.date, profile_id, config)
 
-      slots =
-        TimeSlots.generate_slots_for_range_with_breaks(
-          window.start_dt,
-          window.end_dt,
-          duration_minutes,
-          date,
-          breaks
-        )
-
-      Enum.any?(slots, fn slot ->
-        slot_time = TimeSlots.parse_time_slot(slot)
-        slot_start = DateTimeUtils.create_datetime_safe(date, slot_time, user_timezone)
-        slot_end = DateTime.add(slot_start, duration_minutes, :minute)
-
-        TimeRange.meets_minimum_notice?(slot_start, now, min_advance_hours * 60) and
-          TimeRange.within_booking_window?(slot_start, now, max_advance_booking_days) and
-          not TimeRange.has_conflict_with_events?(
-            slot_start,
-            slot_end,
-            nearby_events,
-            buffer_minutes
-          ) and
-          not limit_blocked?(config, slot_start)
-      end)
+      window.start_dt
+      |> TimeSlots.generate_slots_for_range_with_breaks(
+        window.end_dt,
+        duration_minutes,
+        date,
+        breaks
+      )
+      |> Enum.any?(
+        &slot_bookable?(&1, date, user_timezone, duration_minutes, now, nearby_events, config)
+      )
     end)
+  end
+
+  # Narrows to events within ±2 days of target_date so the per-slot scan
+  # inside `slot_bookable?/7` does not traverse the full multi-week list.
+  # Date comparison is used (rather than DateTime) to avoid constructing new
+  # DateTimes with the user timezone, which can fail for unknown zones.
+  defp events_near_date(events_in_user_tz, date) do
+    date_lower = Date.add(date, -2)
+    date_upper = Date.add(date, 2)
+
+    Enum.filter(events_in_user_tz, fn event ->
+      event_start_date = DateTime.to_date(event.start_time)
+      event_end_date = DateTime.to_date(event.end_time)
+
+      Date.compare(event_end_date, date_lower) != :lt and
+        Date.compare(event_start_date, date_upper) != :gt
+    end)
+  end
+
+  defp slot_bookable?(slot, date, user_timezone, duration_minutes, now, nearby_events, config) do
+    buffer_minutes = Map.get(config, :buffer_minutes, 15)
+    min_advance_hours = Map.get(config, :min_advance_hours, 3)
+    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+    ignore_event_uids = Map.get(config, :ignore_event_uids, MapSet.new())
+
+    slot_time = TimeSlots.parse_time_slot(slot)
+    slot_start = DateTimeUtils.create_datetime_safe(date, slot_time, user_timezone)
+    slot_end = DateTime.add(slot_start, duration_minutes, :minute)
+
+    TimeRange.meets_minimum_notice?(slot_start, now, min_advance_hours * 60) and
+      TimeRange.within_booking_window?(slot_start, now, max_advance_booking_days) and
+      not TimeRange.has_conflict_with_events?(
+        slot_start,
+        slot_end,
+        events_for_slot(nearby_events, slot_start, ignore_event_uids),
+        buffer_minutes
+      ) and
+      not limit_blocked?(config, slot_start)
   end
 end

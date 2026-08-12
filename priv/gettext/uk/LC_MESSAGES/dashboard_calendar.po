@@ -350,3 +350,8 @@ msgstr "Колір для %{calendar}"
 #, elixir-autogen, elixir-format
 msgid "Default colour"
 msgstr "Типовий колір"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
+#, elixir-autogen, elixir-format
+msgid "Several people are booked on this slot, so its time is fixed here. Open the booking and ask them to rebook to move it."
+msgstr "На цей слот записано кілька людей, тому час тут незмінний. Відкрийте бронювання та попросіть їх забронювати заново, щоб перенести його."

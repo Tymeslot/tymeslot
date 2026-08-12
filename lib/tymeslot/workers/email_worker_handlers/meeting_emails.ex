@@ -158,9 +158,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_cancellation_emails_for_meeting(meeting) do
     Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
 
-    case Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant)) do
-      [] -> send_solo_cancellation_emails(meeting)
-      participants -> GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
+    if Meetings.group?(meeting) do
+      participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
+      GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
+    else
+      send_solo_cancellation_emails(meeting)
     end
   end
 
@@ -205,8 +207,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # retries, a partial failure discards so the retry cannot duplicate the
   # email that already went out — mirroring the cancellation-email semantics.
   defp send_seat_confirmation_emails(meeting, recipient) do
-    seat_meeting = Meetings.meeting_as_seen_by(meeting, recipient)
-    details = AppointmentBuilder.from_meeting(seat_meeting)
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
     email_service = Config.email_service_module()
 
     organizer_result =
@@ -232,12 +233,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # that participant's calendar copy only.
   defp send_seat_cancellation_emails(meeting, participant, notify_organizer?) do
     recipient = Recipient.from_participant(participant)
-
-    details =
-      meeting
-      |> Meetings.meeting_as_seen_by(recipient)
-      |> AppointmentBuilder.from_meeting()
-
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
     email_service = Config.email_service_module()
 
     attendee_result =
@@ -277,12 +273,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   defp send_seat_reschedule_emails(meeting, participant, old_event) do
     recipient = Recipient.from_participant(participant)
-
-    details =
-      meeting
-      |> Meetings.meeting_as_seen_by(recipient)
-      |> AppointmentBuilder.from_meeting()
-
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
     email_service = Config.email_service_module()
 
     attendee_result =
@@ -458,28 +449,47 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     |> Map.put(:guest_decline_url, urls.decline_url)
   end
 
+  # Group reminders are dispatched (one per-seat job per live participant,
+  # plus the organiser reminder sent inline) rather than sent inline here, so
+  # there is no per-recipient success/failure pair to feed
+  # `process_email_results/4`. `reminders_sent` is instead marked as soon as
+  # dispatch succeeds — actual per-recipient delivery is now Oban's job to
+  # retry, not this job's.
   defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
     Logger.info("Sending reminder emails", meeting_id: meeting.id, uid: meeting.uid)
 
-    case Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant)) do
-      [] ->
-        send_solo_reminder_emails(meeting, reminder_value, reminder_unit)
+    if Meetings.group?(meeting) do
+      participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
 
-      participants ->
-        {organizer_result, attendee_result} =
-          GroupMeetingEmails.send_group_reminder_emails(
-            meeting,
-            participants,
-            reminder_value,
-            reminder_unit
-          )
+      case GroupMeetingEmails.send_group_reminder_emails(
+             meeting,
+             participants,
+             reminder_value,
+             reminder_unit
+           ) do
+        :ok ->
+          with :ok <-
+                 update_email_sent_flags(
+                   meeting,
+                   {:reminder, reminder_value, reminder_unit},
+                   true,
+                   true
+                 ) do
+            Logger.info("Reminder emails dispatched",
+              meeting_id: meeting.id,
+              reminder_value: reminder_value,
+              reminder_unit: reminder_unit,
+              participant_count: length(participants)
+            )
 
-        process_email_results(
-          meeting,
-          organizer_result,
-          attendee_result,
-          {:reminder, reminder_value, reminder_unit}
-        )
+            :ok
+          end
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    else
+      send_solo_reminder_emails(meeting, reminder_value, reminder_unit)
     end
   end
 
@@ -503,23 +513,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_reschedule_request_email(meeting) do
     Logger.info("Sending reschedule request email", meeting_id: meeting.id, uid: meeting.uid)
 
-    case Config.email_service_module().send_reschedule_request(meeting) do
-      {:ok, _result} ->
-        Logger.info("Reschedule request email sent successfully",
-          meeting_id: meeting.id,
-          to: meeting.attendee_email
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to send reschedule request email",
-          meeting_id: meeting.id,
-          to: meeting.attendee_email,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
+    if Meetings.group?(meeting) do
+      participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
+      GroupMeetingEmails.send_group_reschedule_requests(meeting, participants)
+    else
+      GroupMeetingEmails.send_solo_reschedule_request(meeting)
     end
   end
 

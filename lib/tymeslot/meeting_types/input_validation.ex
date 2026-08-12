@@ -82,8 +82,16 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   def validate_field(:reminder_config, value, metadata),
     do: ReminderValidation.validate_reminder_config(value, metadata)
 
+  # The canonical param, which the form serialises as "1" for a solo type.
   def validate_field(:max_participants, value, metadata),
-    do: validate_max_participants(value, metadata)
+    do: validate_max_participants(value, metadata, Constraints.max_participants_range())
+
+  # The visible participant-limit input, which only exists while group
+  # bookings are switched on. Its floor is 2: a limit of 1 is the toggle
+  # being off, and accepting it here would store a solo type behind an
+  # enabled toggle, stranding any bookings already taken on the slot.
+  def validate_field(:group_participants, value, metadata),
+    do: validate_max_participants(value, metadata, Constraints.group_participants_range())
 
   def validate_field(_other_field, _value, _metadata),
     do: {:error, %{base: "Invalid field"}}
@@ -406,9 +414,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   defp max_participants_validation(_params), do: []
 
-  defp validate_max_participants(value, metadata) when is_binary(value) do
-    range = Constraints.max_participants_range()
-
+  defp validate_max_participants(value, metadata, range) when is_binary(value) do
     case validate_numeric_setting(
            value,
            range.first,
@@ -422,7 +428,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_max_participants(_invalid, _metadata),
+  defp validate_max_participants(_invalid, _metadata, _range),
     do: {:error, %{max_participants: "Participant limit must be a number"}}
 
   defp validate_numeric_range(value_str, min, max, field_name) do

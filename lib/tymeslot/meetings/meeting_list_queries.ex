@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema
@@ -77,6 +78,21 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     from(p in ParticipantSchema,
       where: is_nil(p.cancelled_at),
       order_by: [asc: p.inserted_at]
+    )
+  end
+
+  # Guests whose booker is still on the meeting. A participant who cancels
+  # their seat leaves their guest rows behind — deliberately, since the rows
+  # record who was invited — but those guests no longer hold seats and their
+  # RSVP links are inert, so showing them on the organiser's card would count
+  # people who are not coming. Guests of a solo booking carry no participant
+  # and are always live.
+  defp live_guests_preload do
+    from(g in GuestSchema,
+      left_join: p in ParticipantSchema,
+      on: p.id == g.participant_id,
+      where: is_nil(g.participant_id) or is_nil(p.cancelled_at),
+      order_by: [asc: g.inserted_at]
     )
   end
 
@@ -403,7 +419,10 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> order_by_start_desc_id_desc()
     |> cursor_after(after_start, after_id)
     |> apply_limit(limit)
-    |> preload([:guests, :meeting_type_ref, participants: ^live_participants_preload()])
+    |> preload(
+      guests: ^live_guests_preload(),
+      participants: ^live_participants_preload()
+    )
     |> Repo.all()
   end
 end

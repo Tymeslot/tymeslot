@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   Tags a cache row for offline retry.
 
   `event_data` is the map produced by
-  `Tymeslot.Integrations.Calendar.CalendarEventBuilder.build_event_data/1`
+  `Tymeslot.Integrations.Calendar.CalendarEventBuilder.build_event_data/2`
   and carries the fields `OfflineQueue` will need to reconstruct the
   CalDAV write: `summary`, `start_time`, `end_time`, `location`, `timezone`.
 

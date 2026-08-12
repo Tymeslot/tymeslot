@@ -388,5 +388,49 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
       refute Map.has_key?(sanitized, "max_participants")
     end
+
+    # The canonical param is how the form says "this type is solo", so 1 is
+    # a legitimate value here even though the group input rejects it.
+    test "accepts a canonical max_participants of 1 for a solo type" do
+      params = %{
+        "name" => "Solo Chat",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal",
+        "max_participants" => "1"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["max_participants"] == "1"
+    end
+  end
+
+  describe "validate_field/3 for the group participant limit" do
+    # The visible input only exists while group bookings are switched on, so
+    # 1 is not a small group — it is the toggle being off. Accepting it there
+    # silently stored a solo type behind an enabled toggle, stranding any
+    # bookings already taken on the slot.
+    test "rejects a limit of 1" do
+      assert {:error, %{max_participants: message}} =
+               InputValidation.validate_field(:group_participants, "1", %{})
+
+      assert message =~ "at least 2"
+    end
+
+    test "accepts the smallest real group" do
+      assert {:ok, "2"} = InputValidation.validate_field(:group_participants, "2", %{})
+    end
+
+    test "still rejects values above the maximum" do
+      assert {:error, %{max_participants: _message}} =
+               InputValidation.validate_field(:group_participants, "1000", %{})
+    end
+
+    test "rejects a non-numeric limit" do
+      assert {:error, %{max_participants: message}} =
+               InputValidation.validate_field(:group_participants, "abc", %{})
+
+      assert message =~ "valid number"
+    end
   end
 end

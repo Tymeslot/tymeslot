@@ -76,6 +76,38 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  The `uid`s of the organiser's meetings that are group bookings
+  (`capacity > 1`).
+
+  Keyed by `uid` rather than id because the consumer is the calendar grid,
+  which knows provider events, and a Tymeslot booking's provider event
+  carries the meeting's `uid`.
+  """
+  @spec group_booking_uids_for_user(integer()) :: MapSet.t(String.t())
+  def group_booking_uids_for_user(user_id) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^user_id and m.capacity > 1)
+    |> select([m], m.uid)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
+  Whether the meeting behind `uid` is a group booking (`capacity > 1`).
+
+  The authoritative form of `group_booking_uids_for_user/1`, for guards that
+  must not act on a set assigned when the page was loaded.
+  """
+  @spec group_booking_uid?(term()) :: boolean()
+  def group_booking_uid?(uid) when is_binary(uid) do
+    Meeting
+    |> where([m], m.uid == ^uid and m.capacity > 1)
+    |> Repo.exists?()
+  end
+
+  def group_booking_uid?(_uid), do: false
+
+  @doc """
   Fetches a meeting by UID only if the given `organizer_user_id` owns it.
 
   Returns `{:ok, meeting}` when a matching meeting is found.

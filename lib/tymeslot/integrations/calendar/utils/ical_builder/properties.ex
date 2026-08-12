@@ -226,7 +226,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # We emit `CONTACT` instead (RFC 5545 §3.8.4.2), which carries the same
   # name/email but is not part of the iTIP scheduling model. The attendee
   # identity is also folded into the event DESCRIPTION (see
-  # `CalendarEventBuilder.build_event_description/1`) so it remains visible
+  # `CalendarEventBuilder.build_event_description/2`) so it remains visible
   # in calendar clients that don't render CONTACT.
   @spec build_attendee_lines(map()) :: String.t() | nil
   def build_attendee_lines(%{attendees: attendees})

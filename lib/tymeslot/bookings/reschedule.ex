@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Notifications.Events
@@ -104,7 +105,29 @@ defmodule Tymeslot.Bookings.Reschedule do
   end
 
   defp validate_can_reschedule(meeting) do
-    Policy.can_reschedule_meeting?(meeting)
+    with :ok <- Policy.can_reschedule_meeting?(meeting) do
+      refuse_group_meeting(meeting)
+    end
+  end
+
+  # A group slot is shared, so moving the meeting row would move everybody on
+  # it without asking, and the notification would go to an attendee that a
+  # group meeting does not have. Participants move their own seat through
+  # `Tymeslot.Bookings.RescheduleSeat`; a host who wants the whole slot moved
+  # sends a reschedule request, which now reaches every participant.
+  #
+  # Decided from the meeting's own `capacity` snapshot, not from who
+  # currently holds a seat: a group slot stays a group slot even while
+  # temporarily empty (the last participant leaving cancels the meeting
+  # outright — see `Tymeslot.Bookings.SeatRelease` — so a live group meeting
+  # with zero live participants should not occur, but must not silently
+  # become reschedulable if it ever does).
+  defp refuse_group_meeting(meeting) do
+    if Meetings.group?(meeting) do
+      {:error, :group_meeting_not_reschedulable}
+    else
+      :ok
+    end
   end
 
   defp update_meeting(meeting, attrs) do

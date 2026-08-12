@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Policy do
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -265,6 +266,53 @@ defmodule Tymeslot.Bookings.Policy do
   @spec guests_allowed?(map()) :: boolean()
   def guests_allowed?(%{meeting_type: %{allow_guests: true}}), do: true
   def guests_allowed?(_booking_data), do: false
+
+  @doc """
+  True when the meeting's video provider creates its room through an API, so
+  the confirmation emails are worth holding until the join link exists.
+
+  Shared by the solo/paid booking path (`Tymeslot.Bookings.Create`) and the
+  group-booking path (`Tymeslot.Bookings.CreateGroup`), which faces the same
+  question for the first seat on a slot.
+  """
+  @spec auto_creates_video_room?(map()) :: boolean()
+  def auto_creates_video_room?(meeting) do
+    case video_provider_for(meeting) do
+      {:ok, provider} -> provider in [:mirotalk, :google_meet, :teams, :custom]
+      _other -> false
+    end
+  end
+
+  defp video_provider_for(meeting) do
+    integration_result =
+      case meeting.video_integration_id do
+        nil -> {:error, :not_found}
+        id -> Video.fetch_integration_for_user(id, meeting.organizer_user_id)
+      end
+
+    case integration_result do
+      {:ok, integration} ->
+        # Convert stored provider string (e.g., "google_meet") to atom if known
+        provider =
+          case VideoProviderConfig.parse_known(integration.provider) do
+            {:ok, provider} ->
+              provider
+
+            {:error, :unknown} ->
+              Logger.warning("Video integration has an unrecognised provider",
+                video_integration_id: meeting.video_integration_id,
+                provider: integration.provider
+              )
+
+              :none
+          end
+
+        {:ok, provider}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
 
   @doc """
   Determines if a calendar check failure should block booking.

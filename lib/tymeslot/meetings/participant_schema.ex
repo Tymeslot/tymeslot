@@ -90,6 +90,13 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     |> validate_inclusion(:locale, supported_locale_codes(), message: "is not a supported locale")
     |> ensure_management_token()
     |> unique_constraint(:management_token)
+    # One live seat per address per slot. Without it, submitting the booking
+    # form from two tabs quietly consumes two seats and issues two management
+    # tokens, so cancelling "the" booking only frees half of it.
+    |> unique_constraint([:meeting_id, :email],
+      name: :meeting_participants_live_email_index,
+      message: "already has a spot at this time"
+    )
     |> foreign_key_constraint(:meeting_id)
   end
 

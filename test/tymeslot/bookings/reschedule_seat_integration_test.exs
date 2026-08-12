@@ -26,8 +26,10 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
   alias Tymeslot.Bookings.{Create, RescheduleSeat}
   alias Tymeslot.EmailServiceMock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
@@ -163,5 +165,117 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
              ParticipantQueries.list_live_for_meeting(old_meeting.id)
 
     assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
+  end
+
+  test "a move drops the organiser's cached availability for both slots",
+       %{user: user, mover: mover} do
+    cache_key =
+      AvailabilityCache.availability_range_key(
+        user.id,
+        Date.utc_today(),
+        Date.add(Date.utc_today(), 41),
+        "Etc/UTC",
+        30
+      )
+
+    AvailabilityCache.put(cache_key, {:ok, %{"seeded" => true}})
+
+    assert {:ok, _booked} = RescheduleSeat.execute(mover.management_token, new_slot_params())
+
+    assert AvailabilityCache.get_or_compute(cache_key, fn -> :recomputed end) == :recomputed
+  end
+
+  test "a seat left behind on the old slot keeps that meeting alive",
+       %{base_params: base_params, old_meeting: old_meeting, mover: mover} do
+    old_params = Map.merge(base_params, %{date: Date.add(Date.utc_today(), 2), time: "14:00"})
+    {:ok, _joined} = Create.execute(old_params, %{"name" => "Stayer", "email" => "s@example.com"})
+
+    assert {:ok, _booked} = RescheduleSeat.execute(mover.management_token, new_slot_params())
+
+    assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
+
+    assert [%{email: "s@example.com"}] =
+             ParticipantQueries.list_live_for_meeting(old_meeting.id)
+
+    assert_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "update", "meeting_id" => old_meeting.id}
+    )
+  end
+
+  # A meeting's seat count is governed by its own snapshotted capacity for
+  # its whole life, not by whatever `max_participants` the caller happens to
+  # be carrying — see `GroupScheduling.join_meeting/3`. Rescheduling a seat
+  # out of a big slot into a smaller existing one used to fill the target to
+  # the *old* slot's capacity.
+  test "rescheduling into a smaller existing slot is capped by that slot's own capacity",
+       %{user: user, meeting_type: meeting_type} do
+    {:ok, meeting_type} = MeetingTypes.update_meeting_type(meeting_type, %{max_participants: 10})
+
+    big_params = %{
+      date: Date.add(Date.utc_today(), 6),
+      time: "09:00",
+      duration: "30min",
+      user_timezone: "America/New_York",
+      organizer_user_id: user.id,
+      meeting_type_id: meeting_type.id
+    }
+
+    {:ok, big_meeting} =
+      Create.execute(big_params, %{"name" => "Mover", "email" => "mover-big@example.com"})
+
+    mover =
+      big_meeting.id
+      |> ParticipantQueries.list_live_for_meeting()
+      |> Enum.find(&(&1.email == "mover-big@example.com"))
+
+    {:ok, meeting_type} = MeetingTypes.update_meeting_type(meeting_type, %{max_participants: 2})
+
+    small_params = %{
+      date: Date.add(Date.utc_today(), 7),
+      time: "11:00",
+      duration: "30min",
+      user_timezone: "America/New_York",
+      organizer_user_id: user.id,
+      meeting_type_id: meeting_type.id
+    }
+
+    {:ok, small_meeting} =
+      Create.execute(small_params, %{"name" => "A", "email" => "a-small@example.com"})
+
+    {:ok, _b} = Create.execute(small_params, %{"name" => "B", "email" => "b-small@example.com"})
+
+    assert small_meeting.capacity == 2
+
+    new_params = %{
+      date: Date.to_iso8601(Date.add(Date.utc_today(), 7)),
+      time: "11:00",
+      duration: "30min",
+      user_timezone: "America/New_York"
+    }
+
+    assert {:error, :slot_taken} = RescheduleSeat.execute(mover.management_token, new_params)
+
+    # Atomicity: the old seat still stands, and the (already full) target
+    # meeting was not overfilled to the old slot's capacity of 10.
+    assert [%{email: "mover-big@example.com"}] =
+             ParticipantQueries.list_live_for_meeting(big_meeting.id)
+
+    assert length(ParticipantQueries.list_live_for_meeting(small_meeting.id)) == 2
+  end
+
+  # `meetings.meeting_type_id` is nilify_all, so deleting a type leaves live
+  # meetings pointing at nothing. Capacity used to be read live off that
+  # association (a MatchError there once took the booking LiveView down with
+  # it); it is now snapshotted onto the meeting row at creation, so a deleted
+  # meeting type no longer affects an in-flight seat move at all.
+  test "a deleted meeting type does not block moving an already-booked seat",
+       %{meeting_type: meeting_type, old_meeting: old_meeting, mover: mover} do
+    {:ok, _deleted} = MeetingTypes.delete_meeting_type(meeting_type)
+
+    assert {:ok, %{meeting: new_meeting}} =
+             RescheduleSeat.execute(mover.management_token, new_slot_params())
+
+    assert new_meeting.capacity == old_meeting.capacity
   end
 end

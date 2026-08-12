@@ -36,6 +36,18 @@ defmodule Tymeslot.Validation.Constraints do
   @spec max_participants_range() :: Range.t()
   def max_participants_range, do: 1..999
 
+  @doc """
+  The participant limit a *group* meeting type may carry.
+
+  `max_participants_range/0` starts at 1 because that is how a solo meeting
+  type is stored. A type with group bookings switched on is a different
+  question: 1 seat is not a small group, it is the toggle being off, so the
+  form must reject it rather than silently store a solo type behind an
+  enabled toggle.
+  """
+  @spec group_participants_range() :: Range.t()
+  def group_participants_range, do: 2..max_participants_range().last
+
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
 

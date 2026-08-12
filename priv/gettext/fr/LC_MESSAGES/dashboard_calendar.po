@@ -346,3 +346,8 @@ msgstr "Couleur pour %{calendar}"
 #, elixir-autogen, elixir-format
 msgid "Default colour"
 msgstr "Couleur par défaut"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
+#, elixir-autogen, elixir-format
+msgid "Several people are booked on this slot, so its time is fixed here. Open the booking and ask them to rebook to move it."
+msgstr "Plusieurs personnes sont inscrites sur ce créneau, son horaire est donc fixe ici. Ouvrez la réservation et demandez-leur de réserver à nouveau pour le déplacer."

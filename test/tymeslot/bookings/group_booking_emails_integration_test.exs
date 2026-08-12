@@ -146,22 +146,32 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     )
   end
 
-  test "reminder job sends one reminder per live participant plus one organiser reminder",
+  test "reminder job dispatches one independently-retryable job per live participant, each delivering that participant's reminder, plus one organiser reminder sent inline",
        %{meeting_params: meeting_params} do
     meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
+    first_id = participant_id!(meeting.id, "first@example.com")
+
     _same = book_seat!(meeting_params, "Second Booker", "second@example.com")
+    second_id = participant_id!(meeting.id, "second@example.com")
+
+    # Regression coverage for the enqueue path itself, not just the handler:
+    # the first seat's booking is what schedules the meeting-level reminder
+    # job. A group meeting has no meeting-row attendee, and the notification
+    # layer used to reject it before this job was ever enqueued.
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_reminder_emails",
+        "meeting_id" => meeting.id,
+        "reminder_value" => 30,
+        "reminder_unit" => "minutes"
+      }
+    )
 
     expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn organizer_email,
                                                                          details ->
       assert organizer_email == "organizer@example.com"
       assert details.attendee_name == "2 participants"
-      {:ok, "sent"}
-    end)
-
-    expect(EmailServiceMock, :send_appointment_reminder_to_attendee, 2, fn attendee_email,
-                                                                           details ->
-      assert attendee_email in ["first@example.com", "second@example.com"]
-      assert details.attendee_name in ["First Booker", "Second Booker"]
       {:ok, "sent"}
     end)
 
@@ -171,6 +181,130 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
                "meeting_id" => meeting.id,
                "reminder_value" => 30,
                "reminder_unit" => "minutes"
+             })
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_seat_reminder",
+        "meeting_id" => meeting.id,
+        "participant_id" => first_id,
+        "reminder_value" => 30,
+        "reminder_unit" => "minutes"
+      }
+    )
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_seat_reminder",
+        "meeting_id" => meeting.id,
+        "participant_id" => second_id,
+        "reminder_value" => 30,
+        "reminder_unit" => "minutes"
+      }
+    )
+
+    expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn attendee_email, details ->
+      assert attendee_email == "first@example.com"
+      assert details.attendee_name == "First Booker"
+      refute inspect(details) =~ "second@example.com"
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_reminder",
+               "meeting_id" => meeting.id,
+               "participant_id" => first_id,
+               "reminder_value" => 30,
+               "reminder_unit" => "minutes"
+             })
+
+    expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn attendee_email, details ->
+      assert attendee_email == "second@example.com"
+      assert details.attendee_name == "Second Booker"
+      refute inspect(details) =~ "first@example.com"
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_reminder",
+               "meeting_id" => meeting.id,
+               "participant_id" => second_id,
+               "reminder_value" => 30,
+               "reminder_unit" => "minutes"
+             })
+  end
+
+  # The host asking to move a group meeting voids the slot for everybody on
+  # it. The email went to `meeting.attendee_email`, which a group meeting does
+  # not have, so every participant silently lost their spot instead.
+  test "a reschedule request dispatches one independently-retryable job per live participant, each delivering with that participant's own seat links",
+       %{meeting_params: meeting_params} do
+    meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
+    first_id = participant_id!(meeting.id, "first@example.com")
+
+    _same = book_seat!(meeting_params, "Second Booker", "second@example.com")
+    second_id = participant_id!(meeting.id, "second@example.com")
+
+    tokens_by_id =
+      meeting.id
+      |> ParticipantQueries.list_live_for_meeting()
+      |> Map.new(&{&1.id, &1.management_token})
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_reschedule_request",
+               "meeting_id" => meeting.id
+             })
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_seat_reschedule_request",
+        "meeting_id" => meeting.id,
+        "participant_id" => first_id
+      }
+    )
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_seat_reschedule_request",
+        "meeting_id" => meeting.id,
+        "participant_id" => second_id
+      }
+    )
+
+    expect(EmailServiceMock, :send_reschedule_request, fn seat_meeting ->
+      assert seat_meeting.attendee_email == "first@example.com"
+      assert seat_meeting.attendee_name == "First Booker"
+      # Their own seat link, not the whole meeting's.
+      assert String.contains?(seat_meeting.reschedule_url, tokens_by_id[first_id])
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_reschedule_request",
+               "meeting_id" => meeting.id,
+               "participant_id" => first_id
+             })
+
+    expect(EmailServiceMock, :send_reschedule_request, fn seat_meeting ->
+      assert seat_meeting.attendee_email == "second@example.com"
+      assert seat_meeting.attendee_name == "Second Booker"
+      assert String.contains?(seat_meeting.reschedule_url, tokens_by_id[second_id])
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_reschedule_request",
+               "meeting_id" => meeting.id,
+               "participant_id" => second_id
              })
   end
 end

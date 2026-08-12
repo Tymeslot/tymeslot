@@ -13,6 +13,7 @@ defmodule TymeslotWeb.SeatHTML do
   attr :participant, :map, required: true
   attr :meeting, :map, required: true
   attr :token, :string, required: true
+  attr :keep_path, :string, default: nil
 
   @spec cancel_confirm(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_confirm(assigns) do
@@ -43,6 +44,16 @@ defmodule TymeslotWeb.SeatHTML do
           {dgettext("booking", "Yes, cancel my spot")}
         </button>
       </form>
+
+      <%!-- An escape hatch: arriving here by accident should not leave
+           closing the tab as the only way out. --%>
+      <a
+        :if={@keep_path}
+        href={@keep_path}
+        class="mt-4 inline-block text-token-sm font-semibold text-tymeslot-500 hover:text-turquoise-600"
+      >
+        {dgettext("booking", "Keep my spot")}
+      </a>
     </.seat_shell>
     """
   end
@@ -50,6 +61,7 @@ defmodule TymeslotWeb.SeatHTML do
   @doc "Shown after the participant's seat has been cancelled."
   attr :participant, :map, required: true
   attr :meeting, :map, required: true
+  attr :booking_path, :string, default: nil
 
   @spec cancelled(map()) :: Phoenix.LiveView.Rendered.t()
   def cancelled(assigns) do
@@ -70,6 +82,14 @@ defmodule TymeslotWeb.SeatHTML do
       </p>
 
       <.meeting_card meeting={@meeting} timezone={@participant.timezone} />
+
+      <a
+        :if={@booking_path}
+        href={@booking_path}
+        class="mt-6 inline-block text-token-sm font-semibold text-turquoise-600 hover:text-turquoise-700"
+      >
+        {dgettext("booking", "Book another time")}
+      </a>
     </.seat_shell>
     """
   end

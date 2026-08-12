@@ -28,6 +28,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
   require Logger
@@ -85,7 +86,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           provider_identifier: calendar_event_identifier(meeting)
         )
 
-        event_data = CalendarEventBuilder.build_event_data(meeting)
+        event_data =
+          CalendarEventBuilder.build_event_data(meeting,
+            attendees: Meetings.attendees_for_calendar(meeting)
+          )
+
         update_or_create_calendar_event(meeting, event_data)
 
       {:error, :not_found} ->
@@ -228,7 +233,10 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
     Logger.info("Creating calendar event", meeting_id: meeting_id, uid: meeting.uid)
 
-    event_data = CalendarEventBuilder.build_event_data(meeting)
+    event_data =
+      CalendarEventBuilder.build_event_data(meeting,
+        attendees: Meetings.attendees_for_calendar(meeting)
+      )
 
     # Use the meeting context to create in the correct calendar
     case calendar_module().create_event(event_data, meeting) do

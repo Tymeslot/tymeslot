@@ -6,17 +6,15 @@ defmodule Tymeslot.Bookings.Create do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Availability.{GroupSlots, TimeSlots}
   alias Tymeslot.Bookings.{BuildParams, CalendarJobs, CreateGroup, Errors, Policy, Validation}
   alias Tymeslot.Bookings.Create.PaidBooking
+  alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.BookingLimits.Checker
-  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
@@ -77,7 +75,7 @@ defmodule Tymeslot.Bookings.Create do
          {:ok, :validated} <- validate_booking(booking_data, opts) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
     else
-      {:error, reason} -> {:error, classify_error(reason)}
+      {:error, reason} -> {:error, Errors.classify_error(reason)}
     end
   end
 
@@ -104,14 +102,14 @@ defmodule Tymeslot.Bookings.Create do
 
         {:error, :slot_unavailable} ->
           # Fail fast for better UX
-          {:error, classify_error(:slot_unavailable)}
+          {:error, Errors.classify_error(:slot_unavailable)}
 
         {:error, _reason} ->
           # Calendar check failed, but continue with atomic booking
           execute_internal(booking_data, form_data, opts)
       end
     else
-      {:error, reason} -> {:error, classify_error(reason)}
+      {:error, reason} -> {:error, Errors.classify_error(reason)}
     end
   end
 
@@ -322,18 +320,17 @@ defmodule Tymeslot.Bookings.Create do
   # For group meeting types, the live meeting's own calendar event must not
   # fail the booking-time conflict check: joining an existing group meeting
   # adds no new organiser busy time. Only the event whose uid matches the
-  # live meeting at exactly this start time is removed; every other blocking
-  # event (other meetings, external calendars) still refuses the booking,
-  # keeping validation consistent with the seat-aware display. Full slots are
-  # refused later by the seat transaction (`:slot_full` -> `:slot_taken`).
+  # live, joinable (seats still free) meeting at exactly this start time is
+  # removed; every other blocking event (other meetings, external calendars)
+  # still refuses the booking, keeping validation consistent with the
+  # seat-aware display. `GroupSlots.joinable_uids/3` is the single place that
+  # decides "joinable" for both the display and this check, so the two can't
+  # drift. A meeting that's already full is left blocking here, and the seat
+  # transaction refuses it too (`:slot_full` -> `:slot_taken`).
   defp drop_own_group_event(events, booking_data) do
     case Map.get(booking_data, :meeting_type) do
       %MeetingTypeSchema{} = meeting_type ->
-        if MeetingTypeSchema.group?(meeting_type) do
-          reject_joinable_meeting_event(events, meeting_type, booking_data.start_datetime)
-        else
-          events
-        end
+        reject_joinable_meeting_event(events, meeting_type, booking_data.start_datetime)
 
       _other ->
         events
@@ -346,10 +343,8 @@ defmodule Tymeslot.Bookings.Create do
       |> DateTime.shift_zone!("Etc/UTC")
       |> DateTime.truncate(:second)
 
-    case GroupMeetingQueries.get_live_at(meeting_type.id, start_utc) do
-      nil -> events
-      %{uid: uid} -> Enum.reject(events, &(Map.get(&1, :uid) == uid))
-    end
+    ignore_uids = GroupSlots.joinable_uids(meeting_type, start_utc, start_utc)
+    Enum.reject(events, &MapSet.member?(ignore_uids, Map.get(&1, :uid)))
   end
 
   defp execute_internal(booking_data, _form_data, opts) do
@@ -358,7 +353,7 @@ defmodule Tymeslot.Bookings.Create do
         create_meeting_and_all_side_effects_atomically(booking_data, opts)
 
       {:error, reason} ->
-        {:error, classify_error(reason)}
+        {:error, Errors.classify_error(reason)}
     end
   end
 
@@ -373,8 +368,8 @@ defmodule Tymeslot.Bookings.Create do
         PaidBooking.create(meeting_attrs, booking_data,
           create_meeting: &create_meeting/1,
           create_guests: &create_guests/2,
-          classify_error: &classify_error/1,
-          on_created: &emit_booking_created/0
+          classify_error: &Errors.classify_error/1,
+          on_created: &Telemetry.booking_created/0
         )
 
       true ->
@@ -457,63 +452,11 @@ defmodule Tymeslot.Bookings.Create do
 
   defp map_transaction_result({:ok, meeting}) do
     AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-    emit_booking_created()
+    Telemetry.booking_created()
     {:ok, meeting}
   end
 
-  defp map_transaction_result({:error, reason}), do: {:error, classify_error(reason)}
-
-  # Classifies every failure reason into a semantic atom rather than a
-  # display string, so callers can dispatch on the error's identity (e.g.
-  # bounce the booker back to the schedule step on `:slot_taken`) without
-  # depending on copy text. The web layer owns rendering these atoms to
-  # user-facing messages. `:time_conflict` and `:slot_unavailable` both
-  # describe the same lost-race outcome and collapse to `:slot_taken`;
-  # `:host_not_found`/`:host_missing` and `:meeting_type_not_found`/
-  # `:meeting_type_missing` are likewise distinct upstream reasons that
-  # share one user-facing meaning, so they collapse to a single atom each.
-  # Reasons that already arrive as arbitrary changeset/validation text pass
-  # through unchanged (`is_binary/1` clause).
-  # A table rather than a clause ladder: every entry is the same behaviour over
-  # varying data, so the mapping is the whole content. `:availability_unverifiable`
-  # collapses to `:slot_taken` because we could not read the organiser's full busy
-  # set and so cannot prove the slot is free — the booker gets the same "pick
-  # another slot" outcome as a genuine clash, and the distinction survives in the
-  # logs rather than the copy.
-  @error_classifications %{
-    meeting_type_inactive: :meeting_type_inactive,
-    meeting_type_not_found: :meeting_type_not_found,
-    meeting_type_missing: :meeting_type_not_found,
-    time_conflict: :slot_taken,
-    slot_unavailable: :slot_taken,
-    availability_unverifiable: :slot_taken,
-    booking_limit_reached: :booking_limit_reached,
-    organizer_required: :organizer_required,
-    validation_error: :booking_failed,
-    payments_unavailable: :payments_unavailable,
-    host_not_found: :host_not_found,
-    host_missing: :host_not_found
-  }
-
-  # Public (not `defp`) so `Tymeslot.Bookings.CreateGroup` — split out to keep
-  # this module under the large-module line limit — can classify the reasons
-  # it shares with the solo/paid paths (e.g. `:time_conflict`) through the
-  # same vocabulary rather than a second copy of this mapping.
-  @doc false
-  @spec classify_error(term()) :: Errors.classified_error() | String.t()
-  def classify_error(reason) when is_map_key(@error_classifications, reason),
-    do: Map.fetch!(@error_classifications, reason)
-
-  def classify_error({:custom_field_errors, _errors}), do: :custom_field_errors
-  def classify_error({:checkout_failed, _reason}), do: :checkout_failed
-  def classify_error(reason) when is_binary(reason), do: reason
-  def classify_error(_other), do: :booking_failed
-
-  @doc false
-  @spec emit_booking_created() :: :ok
-  def emit_booking_created do
-    :telemetry.execute([:tymeslot, :booking, :created], %{count: 1}, %{})
-  end
+  defp map_transaction_result({:error, reason}), do: {:error, Errors.classify_error(reason)}
 
   defp handle_post_creation_effects(meeting, opts) do
     # Calendar job was scheduled atomically with meeting creation
@@ -530,13 +473,11 @@ defmodule Tymeslot.Bookings.Create do
       # Auto-detect: if the meeting has a specific video provider configured that supports
       # API-based room creation, create the video room before sending emails so the email
       # includes the join link.
-      case video_provider_for(meeting) do
-        {:ok, provider} when provider in [:mirotalk, :google_meet, :teams, :custom] ->
-          schedule_video_room_with_emails(meeting)
-
-        _other ->
-          # No supported auto-create provider (none/unknown/etc.)
-          schedule_email_notifications(meeting)
+      if Policy.auto_creates_video_room?(meeting) do
+        schedule_video_room_with_emails(meeting)
+      else
+        # No supported auto-create provider (none/unknown/etc.)
+        schedule_email_notifications(meeting)
       end
     end
   end
@@ -567,37 +508,6 @@ defmodule Tymeslot.Bookings.Create do
         )
 
         :ok
-    end
-  end
-
-  defp video_provider_for(meeting) do
-    integration_result =
-      case meeting.video_integration_id do
-        nil -> {:error, :not_found}
-        id -> Video.fetch_integration_for_user(id, meeting.organizer_user_id)
-      end
-
-    case integration_result do
-      {:ok, integration} ->
-        # Convert stored provider string (e.g., "google_meet") to atom if known
-        provider =
-          case VideoProviderConfig.parse_known(integration.provider) do
-            {:ok, provider} ->
-              provider
-
-            {:error, :unknown} ->
-              Logger.warning("Video integration has an unrecognised provider",
-                video_integration_id: meeting.video_integration_id,
-                provider: integration.provider
-              )
-
-              :none
-          end
-
-        {:ok, provider}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
     end
   end
 end

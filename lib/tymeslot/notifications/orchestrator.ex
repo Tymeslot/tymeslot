@@ -8,6 +8,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Meetings
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
 
@@ -82,7 +83,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     timing = SchedulingRules.reminder_email_timing()
 
     with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content) do
+         :ok <- ContentBuilder.validate_content(content, Meetings.group?(meeting)) do
       {result, scheduled_any?} = schedule_reminders(meeting, reminders, timing)
 
       case {result, scheduled_any?} do

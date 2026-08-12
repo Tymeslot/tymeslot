@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.RetryHelpers
@@ -144,7 +145,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
     with {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
          action_atom when action_atom in [:create, :update, :delete] <- action_to_atom(action) do
-      event_data = CalendarEventBuilder.build_event_data(meeting)
+      event_data =
+        CalendarEventBuilder.build_event_data(meeting,
+          attendees: Meetings.attendees_for_calendar(meeting)
+        )
+
       QueueWiring.tag(meeting, action_atom, event_data)
     else
       _other -> :ok

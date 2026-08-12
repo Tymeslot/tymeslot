@@ -136,6 +136,38 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
       assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 3
     end
 
+    test "joining gates on the target meeting's own capacity, not the caller's seat request",
+         ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      {:ok, %{meeting: meeting}} =
+        GroupScheduling.book_seat(attrs, seat_request("one@example.com"))
+
+      {:ok, _second} =
+        GroupScheduling.book_seat(
+          meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time),
+          seat_request("two@example.com")
+        )
+
+      {:ok, _third} =
+        GroupScheduling.book_seat(
+          meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time),
+          seat_request("three@example.com")
+        )
+
+      # The meeting is now full at its own snapshotted capacity (3). A
+      # caller passing a higher max_participants — as if the type's live
+      # value had since been raised — must still be rejected: the meeting's
+      # own capacity governs its whole life, not the caller's number.
+      assert {:error, :slot_full} =
+               GroupScheduling.book_seat(
+                 meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time),
+                 seat_request("four@example.com", max_participants: 10)
+               )
+
+      assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 3
+    end
+
     test "guests consume seats", ctx do
       attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
 
@@ -199,6 +231,78 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
                GroupScheduling.book_seat(attrs, seat_request("racer@example.com"))
 
       assert changeset.errors[:organizer_user_id]
+    end
+  end
+
+  describe "book_seat/2 — one seat per person" do
+    # Two tabs, one booker: the seat used to be taken twice, issuing two
+    # management tokens so that cancelling "the" booking freed half of it.
+    test "refuses a second live seat for the same address", ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      assert {:ok, _first} = GroupScheduling.book_seat(attrs, seat_request("twice@example.com"))
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               GroupScheduling.book_seat(
+                 Map.delete(attrs, :status),
+                 seat_request("twice@example.com")
+               )
+
+      assert {"already has a spot at this time", _opts} = changeset.errors[:meeting_id]
+      assert length(ParticipantQueries.list_live_for_meeting(hd(Repo.all(MeetingSchema)).id)) == 1
+    end
+
+    test "matches addresses regardless of case", ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      assert {:ok, _first} = GroupScheduling.book_seat(attrs, seat_request("Mixed@Example.com"))
+
+      assert {:error, %Ecto.Changeset{}} =
+               GroupScheduling.book_seat(
+                 Map.delete(attrs, :status),
+                 seat_request("mixed@example.com")
+               )
+    end
+
+    test "lets someone rebook after giving up their seat", ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      assert {:ok, %{participant: participant}} =
+               GroupScheduling.book_seat(attrs, seat_request("again@example.com"))
+
+      {:ok, _cancelled} = ParticipantQueries.cancel(participant)
+
+      assert {:ok, _rebooked} =
+               GroupScheduling.book_seat(
+                 Map.delete(attrs, :status),
+                 seat_request("again@example.com")
+               )
+    end
+
+    # A group slot is one shared meeting row, so the old (meeting, email)
+    # guest index made "my colleague was already invited by someone else" a
+    # hard failure of the whole booking.
+    test "lets two bookers invite the same guest", ctx do
+      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+
+      # Four seats: two bookers, each bringing the same colleague.
+      assert {:ok, _first} =
+               GroupScheduling.book_seat(
+                 attrs,
+                 seat_request("one@example.com",
+                   guest_emails: ["shared@example.com"],
+                   max_participants: 4
+                 )
+               )
+
+      assert {:ok, _second} =
+               GroupScheduling.book_seat(
+                 Map.delete(attrs, :status),
+                 seat_request("two@example.com",
+                   guest_emails: ["shared@example.com"],
+                   max_participants: 4
+                 )
+               )
     end
   end
 end

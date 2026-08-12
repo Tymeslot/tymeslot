@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       owned_integration_ids: MapSet.new(),
       visible_events: [],
       guest_rsvp_summaries: %{},
+      group_booking_uids: MapSet.new(),
       visible_days: [],
       user_timezone: "UTC",
       timezone_display: "UTC",

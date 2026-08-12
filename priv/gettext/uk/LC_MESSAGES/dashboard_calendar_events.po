@@ -791,7 +791,6 @@ msgstr "Назва"
 msgid "Toggle this help"
 msgstr "Показати/сховати цю довідку"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/drag_drop.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
@@ -980,3 +979,13 @@ msgstr "Google Calendar зберіг подію, але не повернув п
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Ваш календар потрібно перепідключити. Зробіть це на сторінці «Інтеграції»."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Several people are booked on this slot, so its time is fixed here. Ask them to rebook from the meeting to move it."
+msgstr "На цей слот записано кілька людей, тому час тут незмінний. Попросіть їх забронювати заново із зустрічі, щоб перенести його."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This slot is booked by several people, so its time is fixed here. Ask them to rebook from the meeting instead."
+msgstr "Цей слот забронювали кілька людей, тому час тут незмінний. Натомість попросіть їх забронювати заново із зустрічі."

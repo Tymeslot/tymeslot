@@ -5,6 +5,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
 
   alias Tymeslot.Workers.EmailWorkerHandlers.AdminEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.AuthEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
 
@@ -17,8 +18,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_seat_confirmation_emails" => {MeetingEmails, :handle_seat_confirmation_emails},
     "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails},
     "send_seat_cancellation_emails" => {MeetingEmails, :handle_seat_cancellation_emails},
+    "send_seat_meeting_cancellation" =>
+      {GroupMeetingEmails, :handle_seat_meeting_cancellation_emails},
     "send_seat_reschedule_emails" => {MeetingEmails, :handle_seat_reschedule_emails},
+    "send_seat_reschedule_request" => {GroupMeetingEmails, :handle_seat_reschedule_request},
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
+    "send_seat_reminder" => {GroupMeetingEmails, :handle_seat_reminder_emails},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
     "send_email_change_confirmations" => {AuthEmails, :handle_email_change_confirmations},
     "send_email_verification" => {AuthEmails, :handle_email_verification},
