@@ -160,6 +160,50 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
              "rescheduling must move the existing meeting, not book a duplicate"
     end
 
+    # Issue #76: the reschedule notification payload didn't fit the email
+    # template it was rendered by, so the send raised, the raise reached this
+    # LiveView, and the booker got the theme error boundary — "Theme Error" —
+    # instead of a confirmation, on a reschedule that had already succeeded.
+    # Every other test here mocks the email service away, which is exactly what
+    # kept the templates from ever running; this one uses the real service.
+    @tag :capture_log
+    test "renders the confirmation screen rather than the theme error boundary", %{
+      conn: conn,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting,
+      original_start: original_start
+    } do
+      original_service = Application.get_env(:tymeslot, :email_service_module)
+      Application.put_env(:tymeslot, :email_service_module, Tymeslot.Emails.EmailService)
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :email_service_module, original_service)
+      end)
+
+      view =
+        navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => ""
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn ->
+        Repo.get!(MeetingSchema, meeting.id).start_time != original_start
+      end)
+
+      rendered = render(view)
+
+      refute rendered =~ "Theme Error"
+      assert rendered =~ ~s(data-testid="confirmation-heading")
+    end
+
     @tag :capture_log
     test "clears reminder tracking so reminders re-pin to the new time", %{
       conn: conn,

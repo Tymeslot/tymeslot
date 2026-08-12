@@ -255,4 +255,4 @@ msgstr "Automatique"
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Follow your browser's language setting instead of a fixed choice."
-msgstr "Suit la langue configurée dans votre navigateur plutôt qu'un choix fixe."
+msgstr "Suit la langue configurée dans votre navigateur plutôt qu’un choix fixe."

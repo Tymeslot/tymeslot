@@ -14,12 +14,12 @@ msgstr ""
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} authentication failed - missing authorization code or security token."
-msgstr "Помилка автентифікації через %{provider} - відсутній код авторизації або маркер безпеки."
+msgstr "Помилка автентифікації через %{provider} - відсутній код авторизації або токен безпеки."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "%{provider} authentication is not available"
-msgstr "Автентифікація через %{provider} недоступна."
+msgstr "Автентифікація через %{provider} недоступна"
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -91,7 +91,7 @@ msgstr "Звернутися до служби підтримки"
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Create a password"
-msgstr "Створити пароль"
+msgstr "Створіть пароль"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -124,7 +124,7 @@ msgstr "Електронна пошта"
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your email and we'll send you instructions to reset your password"
-msgstr "Введіть свою електронну пошту, і ми надішлемо вам інструкції для скидання пароля."
+msgstr "Введіть свою електронну пошту, і ми надішлемо вам інструкції для скидання пароля"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -171,7 +171,7 @@ msgstr "Недійсне посилання"
 #: lib/tymeslot_web/live/auth_live/password_reset_events.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid reset token"
-msgstr "Недійсний маркер скидання"
+msgstr "Недійсний токен скидання"
 
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
@@ -181,7 +181,7 @@ msgstr "Недійсне посилання для підтвердження"
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
-msgstr "Приєднатися до Tymeslot"
+msgstr "Зареєструватися в Tymeslot"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -550,7 +550,7 @@ msgstr "Створіть надійний новий пароль для сво�
 #: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Create a Tymeslot account and start sharing your availability in minutes. No credit card required."
-msgstr "Створіть обліковий запис Tymeslot і почніть ділитися своїм розкладом уже за кілька хвилин. Кредитна картка не потрібна."
+msgstr "Створіть обліковий запис Tymeslot і почніть ділитися своєю доступністю вже за кілька хвилин. Кредитна картка не потрібна."
 
 #: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
 #, elixir-autogen, elixir-format
@@ -605,7 +605,7 @@ msgstr "Помилка реєстрації через некоректні да
 #: lib/tymeslot_web/live/auth_live/page_meta_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
-msgstr "Увійдіть до свого облікового запису Tymeslot, щоб керувати посиланнями для планування, вільним часом і бронюваннями."
+msgstr "Увійдіть до свого облікового запису Tymeslot, щоб керувати посиланнями для планування, доступністю та бронюваннями."
 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
@@ -693,7 +693,7 @@ msgstr "Введено некоректні дані"
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired token"
-msgstr "Недійсний або застарілий токен"
+msgstr "Недійсний або прострочений токен"
 
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
@@ -728,7 +728,7 @@ msgstr "Ця електронна адреса вже зареєстрована
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "This link has expired. Please request a new one"
-msgstr "Термін дії цього посилання минув. Запросіть нове"
+msgstr "Термін дії цього посилання минув. Запитайте нове"
 
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
@@ -1026,7 +1026,7 @@ msgstr "Ваш пароль успішно скинуто"
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your reset token has expired. Please request a new password reset."
-msgstr "Термін дії токена скидання минув. Запитайте нове скидання пароля."
+msgstr "Термін дії токена скидання минув. Запитайте нове посилання для скидання пароля."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format

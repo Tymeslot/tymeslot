@@ -65,7 +65,7 @@ msgstr "Додати запитання"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
-msgstr "Додайте до трьох електронних листів із нагадуванням про цю зустріч. Рекомендуємо використовувати лише один."
+msgstr "Додайте до трьох електронних листів із нагадуванням для цього типу зустрічі. Рекомендуємо використовувати лише один."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
@@ -354,7 +354,7 @@ msgstr "Вибір із кількох варіантів"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
-msgstr "Ім’я"
+msgstr "Назва"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -540,7 +540,7 @@ msgstr "Повідомлення, яке потрібно прочитати т�
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "The question shown to the booker."
-msgstr "Запитання, яке побачить клієнт."
+msgstr "Запитання, яке відображається під час бронювання."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
 #, elixir-autogen, elixir-format
@@ -689,8 +689,6 @@ msgstr "Ліміти бронювань"
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
 msgstr "Обмежте, скільки бронювань цього типу ви приймаєте. Залиште поле порожнім, щоб не встановлювати ліміт."
-"Обмежте кількість бронювань цього типу, які ви приймаєте. Залиште поле "
-"порожнім, якщо обмеження не потрібні."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format

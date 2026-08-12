@@ -84,7 +84,7 @@ msgstr "Direkter Link"
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Disable All Embedding"
-msgstr "Alles Einbetten deaktivieren"
+msgstr "Jegliches Einbetten deaktivieren"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
@@ -289,7 +289,7 @@ msgstr "Testen Sie Ihr Buchungs-Widget in Aktion"
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex
 #, elixir-autogen, elixir-format
 msgid "Use Disable Embedding"
-msgstr "Einbetten deaktivieren verwenden"
+msgstr "Verwenden Sie „Jegliches Einbetten deaktivieren“"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format

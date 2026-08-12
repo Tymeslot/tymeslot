@@ -8,7 +8,8 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   alias Tymeslot.Emails.Templates.{
     AppointmentCancellation,
     AppointmentConfirmation,
-    AppointmentReminder
+    AppointmentReminder,
+    AppointmentRescheduled
   }
 
   @doc """
@@ -76,6 +77,68 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
       )
 
     Logger.info("Appointment confirmations sent",
+      organizer_sent: match?({:ok, _}, organizer_result),
+      attendee_sent: match?({:ok, _}, attendee_result)
+    )
+
+    {organizer_result, attendee_result}
+  end
+
+  @doc """
+  Sends a reschedule notice to the organizer.
+  """
+  @spec send_reschedule_email_to_organizer(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) ::
+          {:ok, any()} | {:error, any()}
+  def send_reschedule_email_to_organizer(organizer_email, appointment_details) do
+    Delivery.deliver(
+      AppointmentRescheduled.render(:organizer, organizer_email, appointment_details)
+    )
+  end
+
+  @doc """
+  Sends a reschedule notice to the attendee.
+  """
+  @spec send_reschedule_email_to_attendee(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) ::
+          {:ok, any()} | {:error, any()}
+  def send_reschedule_email_to_attendee(attendee_email, appointment_details) do
+    Delivery.deliver(
+      AppointmentRescheduled.render(:attendee, attendee_email, appointment_details)
+    )
+  end
+
+  @doc """
+  Sends reschedule notices to both organizer and attendee.
+
+  The payload must be built by
+  `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`, which
+  carries the previous slot alongside the new one.
+  """
+  @spec send_reschedule_emails(Tymeslot.Emails.EmailService.appointment_details()) ::
+          {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
+  def send_reschedule_emails(appointment_details) do
+    Logger.info("Sending reschedule notices",
+      title: appointment_details[:title]
+    )
+
+    organizer_result =
+      send_reschedule_email_to_organizer(
+        appointment_details.organizer_email,
+        appointment_details
+      )
+
+    attendee_result =
+      send_reschedule_email_to_attendee(
+        appointment_details.attendee_email,
+        appointment_details
+      )
+
+    Logger.info("Reschedule notices sent",
       organizer_sent: match?({:ok, _}, organizer_result),
       attendee_sent: match?({:ok, _}, attendee_result)
     )

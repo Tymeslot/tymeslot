@@ -69,7 +69,7 @@ msgstr "Token bota"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Button didn't work? Already started the bot before?"
-msgstr "Tlačítko nefungovalo? Byl bot spuštěn už dříve?"
+msgstr "Tlačítko nefungovalo? Už jste bota dříve spustili?"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
@@ -80,7 +80,7 @@ msgstr "Zrušit"
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot disconnect in own-bot mode"
-msgstr "V režimu vlastního bota nelze odpojit."
+msgstr "V režimu vlastního bota nelze integraci odpojit."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -90,13 +90,13 @@ msgstr "Tuto integraci nelze odpojit."
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reconnect in own-bot mode"
-msgstr "V režimu vlastního bota nelze připojit znovu."
+msgstr "V režimu vlastního bota nelze integraci znovu připojit."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot toggle in current state"
-msgstr "V aktuálním stavu nelze přepnout."
+msgstr "V aktuálním stavu nelze integraci přepnout."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
@@ -505,7 +505,7 @@ msgstr "URL webhooku Slack"
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Slack channel disconnected. Pick a new channel to reconnect."
-msgstr "Kanál Slack byl odpojen. Vyberte nový kanál a připojte jej znovu."
+msgstr "Kanál Slack byl odpojen. Vyberte nový kanál a obnovte připojení."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
 #, elixir-autogen, elixir-format

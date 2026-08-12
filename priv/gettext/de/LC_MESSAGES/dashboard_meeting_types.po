@@ -158,11 +158,7 @@ msgstr "Buchungslimit auf %{limit} Buchungen aktualisiert"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #, elixir-autogen, elixir-format
 msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
-msgstr "Maximale Anzahl an Buchungen, die Sie über alle Termintypen hinweg annehmen. Tage, die ihr Limit erreicht haben, verschwinden von Ihrer Buchungsseite. Lassen Sie ein Feld leer für kein Limit."
-"Maximale Anzahl an Buchungen, die Sie über alle Termintypen hinweg "
-"akzeptieren. Tage, an denen das Limit erreicht ist, werden auf Ihrer "
-"Buchungsseite ausgeblendet. Lassen Sie das Feld leer, wenn es kein Limit "
-"geben soll."
+msgstr "Maximale Anzahl an Buchungen, die Sie über alle Termintypen hinweg annehmen. Tage, an denen das Limit erreicht ist, werden auf Ihrer Buchungsseite ausgeblendet. Lassen Sie ein Feld leer, wenn es kein Limit geben soll."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #, elixir-autogen, elixir-format

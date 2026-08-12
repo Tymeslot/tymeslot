@@ -116,7 +116,7 @@ msgstr "Alle Einstellungen löschen"
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Clear Day"
-msgstr "Tag leeren"
+msgstr "Tag zurücksetzen"
 
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
 #, elixir-autogen, elixir-format
@@ -268,7 +268,7 @@ msgstr "Samstag"
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Settings copied to %{day_names}"
-msgstr "Einstellungen nach %{day_names} kopiert"
+msgstr "Einstellungen auf %{day_names} übertragen"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
@@ -359,7 +359,7 @@ msgstr "Sie fügen Pausen zu schnell hinzu. Bitte warten Sie einen Moment."
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g. Lunch"
-msgstr "z. B. Mittagessen"
+msgstr "z. B. Mittagspause"
 
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
 #, elixir-autogen, elixir-format

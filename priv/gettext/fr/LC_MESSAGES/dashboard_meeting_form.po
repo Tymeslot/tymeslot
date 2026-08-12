@@ -688,9 +688,7 @@ msgstr "Limites de réservation"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr "Limitez le nombre de réservations de ce type que vous acceptez. Laissez un champ vide pour aucune limite."
-"Limitez le nombre de réservations acceptées pour ce type de réunion. Laissez"
-" le champ vide pour ne fixer aucune limite."
+msgstr "Limitez le nombre de réservations acceptées pour ce type de réunion. Laissez un champ vide pour ne pas fixer de limite."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format

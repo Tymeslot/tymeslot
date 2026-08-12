@@ -545,7 +545,7 @@ msgstr "Ricollega integrazione"
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Review"
-msgstr "Rivedi"
+msgstr "Controlla"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -618,7 +618,7 @@ msgstr "L'URL completo in cui è ospitata la tua istanza MiroTalk P2P"
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will remove all associated %{data}."
-msgstr "Questa azione non può essere annullata e rimuoverà tutti i %{data} associati."
+msgstr "Questa azione non può essere annullata e rimuoverà tutti i dati associati (%{data})."
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -930,7 +930,7 @@ msgstr "La chiave API deve essere testo"
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Access forbidden - API key may lack required permissions"
-msgstr "Accesso vietato: la chiave API potrebbe non avere i permessi necessari"
+msgstr "Accesso negato: la chiave API potrebbe non avere i permessi necessari"
 
 #: lib/tymeslot/integrations/shared/reauth_handling.ex
 #, elixir-autogen, elixir-format
@@ -1251,7 +1251,7 @@ msgstr "✓ Connessione a MiroTalk verificata: %{message}"
 #: lib/tymeslot/integrations/shared/reauth_handling.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
-msgstr "Il feed del calendario ha rifiutato il link salvato. Probabilmente è stato revocato o reimpostato — abbonati di nuovo con un nuovo URL."
+msgstr "Il feed del calendario ha rifiutato il link salvato. Probabilmente è stato revocato o reimpostato — sottoscrivi di nuovo il feed con un nuovo URL."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format

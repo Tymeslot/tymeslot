@@ -484,7 +484,7 @@ msgstr "6 mesi"
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Advance booking set to custom value"
-msgstr "Prenotazione anticipata impostata su un valore personalizzato"
+msgstr "Finestra di prenotazione anticipata impostata su un valore personalizzato"
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format

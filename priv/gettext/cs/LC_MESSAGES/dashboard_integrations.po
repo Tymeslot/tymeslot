@@ -335,7 +335,7 @@ msgstr "Dokončete připojení služby Stripe, abyste mohli přijímat platby."
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
 #, elixir-autogen, elixir-format
 msgid "Found 'meeting_id' without brackets - use {{meeting_id}}"
-msgstr "Nalezeno 'meeting_id' bez závorek – použijte {{meeting_id}}"
+msgstr "Nalezeno „meeting_id“ bez závorek – použijte {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
 #, elixir-autogen, elixir-format
@@ -1178,7 +1178,7 @@ msgstr "Platnost tokenu vypršela"
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "URL resolves to a private or loopback address"
-msgstr "URL odkazuje na privátní nebo smyčkovou adresu"
+msgstr "URL odkazuje na privátní adresu nebo adresu zpětné smyčky"
 
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format

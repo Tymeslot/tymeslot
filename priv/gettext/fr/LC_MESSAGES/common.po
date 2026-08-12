@@ -200,7 +200,7 @@ msgstr "Déconnexion"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle menu"
-msgstr "Basculer le menu"
+msgstr "Ouvrir ou fermer le menu"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

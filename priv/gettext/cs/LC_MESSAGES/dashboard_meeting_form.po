@@ -65,7 +65,7 @@ msgstr "Přidat otázku"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
-msgstr "Pro tento typ schůzky můžete přidat až tři e-maily s připomínkou. Doporučujeme používat jen jednu."
+msgstr "Pro tento typ schůzky můžete přidat až tři e-maily s připomínkou. Doporučujeme používat jen jeden."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
@@ -85,7 +85,7 @@ msgstr "Došlo k chybě"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
 msgid "Ask bookers extra questions during the booking flow."
-msgstr "Zeptejte se na doplňující otázky v průběhu rezervace."
+msgstr "Položte doplňující otázky v průběhu rezervace."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -648,12 +648,12 @@ msgstr "Žádný z kalendářů, které jste pro tento účet vybrali, nemůže
 #: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a calendar account"
-msgstr "Vyberte účet kalendáře"
+msgstr "Vyberte prosím účet kalendáře"
 
 #: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a target calendar"
-msgstr "Vyberte cílový kalendář"
+msgstr "Vyberte prosím cílový kalendář"
 
 #: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
