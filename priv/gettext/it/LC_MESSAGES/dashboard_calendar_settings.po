@@ -31,7 +31,7 @@ msgstr "Esiste già un'integrazione di calendario con questa configurazione"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Active for Conflict Checking"
-msgstr "Attivo per il controllo dei conflitti"
+msgstr "Attivi per il controllo dei conflitti"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -176,7 +176,7 @@ msgstr "Aggiorna tutti"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Refresh process failed unexpectedly."
-msgstr "Il processo di aggiornamento non è riuscito in modo imprevisto."
+msgstr "Il processo di aggiornamento si è interrotto in modo imprevisto."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -236,7 +236,7 @@ msgstr "Controlleremo questi calendari per evitare automaticamente le doppie pre
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "books into %{calendar}"
-msgstr "prenota in %{calendar}"
+msgstr "salva le prenotazioni in %{calendar}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format

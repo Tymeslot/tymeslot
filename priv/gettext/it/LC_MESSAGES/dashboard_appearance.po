@@ -174,7 +174,7 @@ msgstr "Seleziona video"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Select a solid color"
-msgstr "Seleziona un colore pieno"
+msgstr "Seleziona una tinta unita"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -190,7 +190,7 @@ msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenota
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/color_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Solid Color"
-msgstr "Colore pieno"
+msgstr "Tinta unita"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex
 #, elixir-autogen, elixir-format
@@ -257,7 +257,7 @@ msgstr "Design glass morphism con eleganti effetti di trasparenza e un flusso di
 #: lib/tymeslot_web/themes/rhythm/theme.ex
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Design moderno a scorrimento con sfondo video e un flusso di prenotazione in 4 diapositive."
+msgstr "Design moderno a scorrimento con sfondo video e un flusso di prenotazione in 4 slide."
 
 #: lib/tymeslot/theme_customizations.ex
 #, elixir-autogen, elixir-format

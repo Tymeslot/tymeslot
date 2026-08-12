@@ -236,4 +236,4 @@ msgstr "une intégration pour ce fournisseur existe déjà"
 #: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
-msgstr "n'est pas une couleur valide"
+msgstr "n’est pas une couleur valide"

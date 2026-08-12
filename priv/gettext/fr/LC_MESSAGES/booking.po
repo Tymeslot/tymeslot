@@ -213,7 +213,7 @@ msgstr "Réservations ouvertes jusqu’à %{advance}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar is loading slowly"
-msgstr "Le calendrier charge lentement"
+msgstr "Le calendrier se charge lentement"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
@@ -405,7 +405,7 @@ msgstr "Maintenir la réunion"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Late Night"
-msgstr "Nuit tardive"
+msgstr "Nuit"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -594,7 +594,7 @@ msgstr "Question %{n} sur %{m}"
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Ready to pick a new time? Let's find one that works better for you."
-msgstr "Prêt à choisir un nouvel horaire ? Trouvons le créneau qui vous convient le mieux."
+msgstr "Envie de choisir un nouvel horaire ? Trouvons le créneau qui vous convient le mieux."
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
@@ -744,7 +744,7 @@ msgstr "Cette date est complète"
 #: lib/tymeslot_web/themes/shared/security_fields.ex
 #, elixir-autogen, elixir-format
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
-msgstr "Ce site est protégé par reCAPTCHA et les %{privacy_link} et les %{terms_link} de Google s’appliquent."
+msgstr "Ce site est protégé par reCAPTCHA. La %{privacy_link} et les %{terms_link} de Google s’appliquent."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -987,7 +987,7 @@ msgstr "Vous pouvez venir finalement ?"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Accept instead"
-msgstr "Accepter finalement"
+msgstr "Accepter l’invitation"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
@@ -1022,7 +1022,7 @@ msgstr "Confirmez pour prévenir %{name} de votre présence."
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Decline instead"
-msgstr "Refuser finalement"
+msgstr "Refuser l’invitation"
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
@@ -1104,7 +1104,7 @@ msgstr "Vous participez !"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "You've declined"
-msgstr "Vous avez décliné"
+msgstr "Vous avez refusé"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
@@ -1139,7 +1139,7 @@ msgstr "Session de prévisualisation expirée. Rechargez la page pour continuer.
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{date}"
-msgstr "%{weekday}, %{date}"
+msgstr "%{weekday} %{date}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex

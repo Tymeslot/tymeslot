@@ -189,7 +189,7 @@ msgstr "Ваша власна URL-адреса"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "yourname"
-msgstr "vashe_imya"
+msgstr "vashe_imia"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
 #, elixir-autogen, elixir-format
@@ -214,7 +214,7 @@ msgstr "24-год."
 #: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Controls how times are shown on your dashboard and in the emails you receive. Your booking page follows each visitor's own language."
-msgstr "Визначає, як показується час на вашій панелі та в листах, які ви отримуєте. Ваша сторінка бронювання враховує мову кожного відвідувача."
+msgstr "Визначає, як показується час на вашій панелі керування та в листах, які ви отримуєте. Ваша сторінка бронювання враховує мову кожного відвідувача."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex
 #, elixir-autogen, elixir-format

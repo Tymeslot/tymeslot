@@ -157,7 +157,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       meeting = insert(:meeting, attendee_locale: "de")
       email = RescheduleRequest.render(meeting)
 
-      assert email.subject =~ "Verschiebungsanfrage"
+      assert email.subject =~ "Anfrage zur Terminverschiebung"
       refute email.subject =~ "Reschedule Request"
       assert email.text_body =~ "Anfrage zur Terminverschiebung"
     end

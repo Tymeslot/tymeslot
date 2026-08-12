@@ -262,7 +262,7 @@ msgstr "Rimborsa"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount must be greater than zero and within the remaining balance."
-msgstr "L'importo del rimborso deve essere maggiore di zero ed entro il saldo residuo."
+msgstr "L'importo del rimborso deve essere maggiore di zero e non superare il saldo residuo."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format

@@ -200,12 +200,12 @@ msgstr "Esci"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle menu"
-msgstr "Attiva/disattiva menu"
+msgstr "Apri/chiudi il menu"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
-msgstr "Pianificazione di appuntamenti elegante e in linea con il tuo brand. Senza pubblicità né tracciamento."
+msgstr "Pianificazione di riunioni elegante e in linea con il tuo brand. Senza pubblicità né tracciamento."
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
@@ -231,3 +231,8 @@ msgstr "Almeno %{count} caratteri"
 #, elixir-autogen, elixir-format
 msgid "One special character"
 msgstr "Un carattere speciale"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "This tab contains errors"
+msgstr "Questa scheda contiene errori"

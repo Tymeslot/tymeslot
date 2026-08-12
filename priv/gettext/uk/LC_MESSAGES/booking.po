@@ -208,7 +208,7 @@ msgstr "Бронювання успішно надіслано! Незабаро
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings available up to %{advance}"
-msgstr "Бронювання доступне до %{advance}"
+msgstr "Бронювання доступне щонайбільше за %{advance}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -358,7 +358,7 @@ msgstr "Перейти до календаря"
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Great! Your meeting is still scheduled as planned."
-msgstr "Чудово! Вашу зустріч все ще заплановано, як і раніше."
+msgstr "Чудово! Ваша зустріч відбудеться, як заплановано."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
@@ -448,7 +448,7 @@ msgstr "Зустріч скасовано"
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Confirmed"
-msgstr "Зустріч підтверджена"
+msgstr "Зустріч підтверджено"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex

@@ -406,7 +406,7 @@ msgstr "Пошук…"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss setup checklist"
-msgstr "Сховати контрольний список налаштувань"
+msgstr "Сховати контрольний список налаштування"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -567,7 +567,7 @@ msgstr "Рекомендовано"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Review"
-msgstr "Перевірка"
+msgstr "Переглянути"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -617,7 +617,7 @@ msgstr "Контрольний список налаштування"
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex
 #, elixir-autogen, elixir-format
 msgid "Share this link so people can book time with you. Choose something short and memorable."
-msgstr "Поділіться цим посиланням, щоб люди могли записатися до вас. Виберіть щось коротке та таке, що легко запам'ятовується."
+msgstr "Поділіться цим посиланням, щоб люди могли записатися до вас. Виберіть щось коротке, що легко запам'ятати."
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -743,7 +743,7 @@ msgstr "Із часом попередження %{notice} ніхто не зм�
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With no buffer, the next available slot starts as soon as a meeting ends."
-msgstr "Без буферного часу наступний доступний слот починається відразу після завершення попередньої зустрічі."
+msgstr "Якщо перерви немає, наступний доступний слот починається відразу після завершення попередньої зустрічі."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
@@ -829,7 +829,7 @@ msgstr "Дні для завчасного бронювання"
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Buffer minutes"
-msgstr "Буферний час (у хвилинах)"
+msgstr "Перерва (у хвилинах)"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex
 #, elixir-autogen, elixir-format

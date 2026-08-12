@@ -27,10 +27,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   @spec icon_picker(map()) :: Phoenix.LiveView.Rendered.t()
   def icon_picker(assigns) do
     ~H"""
-    <div>
-      <label class="label">
-        {dgettext("dashboard_meeting_form", "Icon")}
-      </label>
+    <section class="space-y-2">
+      <div class="flex items-center gap-2">
+        <Icons.icon name="hero-face-smile" class="w-5 h-5 text-turquoise-500" />
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
+          {dgettext("dashboard_meeting_form", "Icon")}
+        </h3>
+      </div>
       <div class="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-14 lg:grid-cols-16 gap-1">
         <%= for {icon_value, icon_name} <- MeetingTypeSchema.valid_icons_with_names() do %>
           <button
@@ -87,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :icon) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
       <% end %>
-    </div>
+    </section>
     """
   end
 
@@ -104,10 +107,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   @spec meeting_mode_section(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_mode_section(assigns) do
     ~H"""
-    <div>
-      <label class="label">
-        {dgettext("dashboard_meeting_form", "Meeting Type")}
-      </label>
+    <section class="space-y-3">
+      <div class="flex items-center gap-2">
+        <Icons.icon name="hero-map-pin" class="w-5 h-5 text-turquoise-500" />
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
+          {dgettext("dashboard_meeting_form", "Location")}
+        </h3>
+      </div>
       <div class="flex items-center space-x-4">
         <button
           type="button"
@@ -191,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
           <% end %>
         </div>
       <% end %>
-    </div>
+    </section>
     """
   end
 
@@ -211,11 +217,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   @spec booking_destination_section(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_destination_section(assigns) do
     ~H"""
-    <div class="pt-4 border-t border-tymeslot-100">
-      <label class="label">
-        {dgettext("dashboard_meeting_form", "Booking Destination")}
-      </label>
-      <p class="text-token-sm text-tymeslot-600 mb-4">
+    <section class="pt-4 border-t border-tymeslot-100">
+      <div class="flex items-center gap-2">
+        <Icons.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
+          {dgettext("dashboard_meeting_form", "Booking Destination")}
+        </h3>
+      </div>
+      <p class="mt-2 text-token-sm text-tymeslot-600 mb-4">
         {dgettext(
           "dashboard_meeting_form",
           "Choose where new bookings for this meeting type should be created."
@@ -368,7 +377,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
           </div>
         <% end %>
       </div>
-    </div>
+    </section>
     """
   end
 end

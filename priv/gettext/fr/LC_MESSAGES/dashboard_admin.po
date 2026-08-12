@@ -460,7 +460,7 @@ msgstr "Accès administrateur requis."
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr "Impossible de désactiver l’authentification par mot de passe tant qu’au moins un administrateur se connecte par e-mail et mot de passe : cela le bloquerait hors de son compte. Rétrogradez ces administrateurs ou faites-les d’abord basculer vers une connexion OAuth."
+msgstr "Impossible de désactiver l’authentification par mot de passe tant qu’au moins un administrateur se connecte par e-mail et mot de passe : il ne pourrait plus accéder à son compte. Rétrogradez ces administrateurs ou faites-les d’abord basculer vers une connexion OAuth."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format

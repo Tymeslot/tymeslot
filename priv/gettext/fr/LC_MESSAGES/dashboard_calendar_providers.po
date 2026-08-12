@@ -1030,7 +1030,7 @@ msgstr "URL du flux"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "My subscribed calendar"
-msgstr "Mon calendrier abonné"
+msgstr "Mon calendrier avec abonnement"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
@@ -1110,7 +1110,7 @@ msgstr "Couleur"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "How this calendar's events are shown in your Tymeslot calendar."
-msgstr "Comment les événements de ce calendrier s'affichent dans votre calendrier Tymeslot."
+msgstr "Comment les événements de ce calendrier s’affichent dans votre calendrier Tymeslot."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format

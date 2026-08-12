@@ -106,7 +106,7 @@ msgstr "Due modalità"
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
-msgstr "Benvenuto nella tua Dashboard Tymeslot"
+msgstr "Benvenuto nella tua dashboard di Tymeslot"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -121,7 +121,7 @@ msgstr "Il tuo account"
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
-msgstr "Passa tra Pianificazione (i tuoi tipi di evento) e Calendario (una vista completa delle tue prenotazioni ed eventi sincronizzati)."
+msgstr "Alterna tra Pianificazione (i tuoi tipi di evento) e Calendario (una vista completa delle tue prenotazioni e degli eventi sincronizzati)."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -269,7 +269,7 @@ msgstr ""
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Go create your first event type - and let people book you."
-msgstr "Vai a creare il tuo primo tipo di evento - e fatti prenotare."
+msgstr "Crea il tuo primo tipo di evento e fatti prenotare."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format

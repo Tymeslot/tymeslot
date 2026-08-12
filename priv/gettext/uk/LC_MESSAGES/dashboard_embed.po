@@ -209,7 +209,7 @@ msgstr "Модальне вікно"
 #: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Previewing: %{type} Mode"
-msgstr "Попередній перегляд: Режим %{type}"
+msgstr "Попередній перегляд: режим %{type}"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
 #, elixir-autogen, elixir-format

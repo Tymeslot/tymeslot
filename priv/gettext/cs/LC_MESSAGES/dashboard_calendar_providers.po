@@ -64,7 +64,7 @@ msgstr "Název integrace"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Integration not found"
-msgstr "Integrace nebyla nalezena."
+msgstr "Integrace nebyla nalezena"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
@@ -223,7 +223,7 @@ msgstr "Adresa serveru"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Session expired. Please start the reconnect process again."
-msgstr "Platnost relace vypršela. Spusťte prosím opětovné připojení znovu."
+msgstr "Platnost relace vypršela. Spusťte prosím opětovné připojení od začátku."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex
 #, elixir-autogen, elixir-format
@@ -387,7 +387,7 @@ msgstr "Ukázkový poskytovatel pro domovskou stránku"
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
 msgid "Lightweight self-hosted calendar server"
-msgstr "Nenáročný kalendářový server pro provoz na vlastním serveru"
+msgstr "Nenáročný kalendářový server, který si provozujete sami"
 
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex
 #, elixir-autogen, elixir-format
@@ -1066,7 +1066,7 @@ msgstr "Tato adresa nevrátila kanál kalendáře. Ujistěte se, že odkazuje na
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "That URL points at a blocked address and cannot be reached."
-msgstr "Tato adresa odkazuje na blokovanou adresu a nelze ji načíst."
+msgstr "Tento odkaz vede na blokovanou adresu a nelze jej načíst."
 
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
@@ -1086,12 +1086,12 @@ msgstr "Kanál kalendáře se vrátil prázdný, ale v mezipaměti jsou stále
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed redirected too many times."
-msgstr "Kanál kalendáře přesměroval příliš mnohokrát."
+msgstr "Kanál kalendáře byl přesměrován příliš mnohokrát."
 
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed rejected the link. It may have been revoked or reset."
-msgstr "Kanál kalendáře odkaz odmítl. Mohl být zneplatněn nebo obnoven."
+msgstr "Kanál kalendáře odkaz odmítl. Mohl být zneplatněn nebo resetován."
 
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format

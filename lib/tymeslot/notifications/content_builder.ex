@@ -5,6 +5,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   """
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
@@ -121,19 +122,30 @@ defmodule Tymeslot.Notifications.ContentBuilder do
 
   @doc """
   Builds reschedule details for email notifications.
+
+  Unlike the other builders here, this payload is rendered by an email template
+  rather than handed to a worker that rebuilds it, so the base comes from
+  `Emails.AppointmentBuilder` — the shape every template is written against.
+  Building it from `build_appointment_details/1` instead omits keys the
+  templates read (`:reminders_summary`, `:location_type`, `:booking_payment`,
+  and a `:date` that is a `Date` rather than a `DateTime`), which crashes the
+  render mid-reschedule and takes the webhook dispatch down with it.
   """
   @spec build_reschedule_details(%{atom() => term()}, %{atom() => term()}) :: %{atom() => term()}
   def build_reschedule_details(updated_meeting, original_meeting) do
     organizer_timezone = Recipients.get_organizer_timezone(updated_meeting)
 
-    base_details = build_appointment_details(updated_meeting)
+    base_details = AppointmentBuilder.from_meeting(updated_meeting)
+    attendee_timezone = base_details.attendee_timezone
 
     Map.merge(base_details, %{
       # Original meeting details for comparison
-      original_date: original_meeting.start_time,
+      original_date: DateTime.to_date(original_meeting.start_time),
       original_start_time: original_meeting.start_time,
       original_start_time_owner_tz:
         convert_to_timezone(original_meeting.start_time, organizer_timezone),
+      original_start_time_attendee_tz:
+        convert_to_timezone(original_meeting.start_time, attendee_timezone),
       original_end_time: original_meeting.end_time,
 
       # Reschedule context

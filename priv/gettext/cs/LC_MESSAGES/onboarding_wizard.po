@@ -235,7 +235,7 @@ msgstr "Období pro rezervace"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Breathing room between appointments so you never feel rushed."
-msgstr "Prostor nadechnout se mezi schůzkami, abyste nikdy nespěchali."
+msgstr "Prostor k nadechnutí mezi schůzkami, abyste nikdy nemuseli spěchat."
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -597,7 +597,7 @@ msgstr "Adresa serveru je povinná"
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
 msgid "Set the accent colour that ties your page together."
-msgstr "Nastavte doplňkovou barvu, která vaši stránku sjednotí."
+msgstr "Nastavte akcentní barvu, která vaši stránku sjednotí."
 
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex
 #, elixir-autogen, elixir-format

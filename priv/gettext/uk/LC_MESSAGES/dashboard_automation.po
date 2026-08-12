@@ -368,7 +368,7 @@ msgstr "Перевірити з'єднання"
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Test calls are not logged"
-msgstr "Тестові виклики не зберігаються в логах"
+msgstr "Тестові виклики не зберігаються в журналах"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format

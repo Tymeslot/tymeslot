@@ -101,7 +101,7 @@ msgstr "Ось огляд ваших налаштувань розкладу т�
 #: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #, elixir-autogen, elixir-format
 msgid "In progress"
-msgstr "У процесі"
+msgstr "Триває"
 
 #: lib/tymeslot_web/live/dashboard_live.ex
 #, elixir-autogen, elixir-format
@@ -184,7 +184,7 @@ msgstr "Переглянути календар"
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "View details for %{title}"
-msgstr "Переглянути деталі для %{title}"
+msgstr "Переглянути деталі %{title}"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format

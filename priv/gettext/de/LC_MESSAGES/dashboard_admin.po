@@ -41,7 +41,7 @@ msgstr "Aktionen"
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
 msgid "Admin"
-msgstr "Administration"
+msgstr "Admin"
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
@@ -405,7 +405,7 @@ msgstr "E-Mail-Adresse, die Admin-Benachrichtigungen erhält, wenn der obige Sch
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
-msgstr "Betriebsbenachrichtigungen (Webhook-Fehler, Probleme mit der Integrationsintegrität, Fehler bei Hintergrundaufgaben) per E-Mail an den Empfänger für Admin-Benachrichtigungen senden. Erfordert, dass unten eine Empfängeradresse festgelegt ist."
+msgstr "Betriebsbenachrichtigungen (Webhook-Fehler, Probleme mit dem Zustand von Integrationen, Fehler bei Hintergrundaufgaben) per E-Mail an den Empfänger für Admin-Benachrichtigungen senden. Erfordert, dass unten eine Empfängeradresse festgelegt ist."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -465,7 +465,7 @@ msgstr "Die Passwort-Authentifizierung kann nicht deaktiviert werden, solange si
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
-msgstr "Datenschutzfreundliche Analyse für Buchungsseiten dieser Instanz erfassen: Seitenaufrufe, Zugriffsquelle (UTM/Referrer) und Conversion. Zählt eindeutige Besucher mit einem täglich rotierenden, cookielosen Fingerabdruck - es wird keine rohe IP gespeichert. Standardmäßig deaktiviert; prüfen Sie Ihre Datenschutzerklärung, bevor Sie sie aktivieren."
+msgstr "Datenschutzfreundliche Analyse für Buchungsseiten dieser Instanz erfassen: Seitenaufrufe, Zugriffsquelle (UTM/Referrer) und Conversion. Zählt eindeutige Besucher mit einem täglich rotierenden, cookielosen Fingerabdruck - IP-Adressen werden nicht im Klartext gespeichert. Standardmäßig deaktiviert; prüfen Sie Ihre Datenschutzerklärung, bevor Sie sie aktivieren."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format

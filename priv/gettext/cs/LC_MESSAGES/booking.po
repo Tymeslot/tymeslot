@@ -246,7 +246,7 @@ msgstr "Kliknutím naplánujete schůzku"
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Complete your payment in the new tab"
-msgstr "Dokončete platbu v nové záložce"
+msgstr "Dokončete platbu na nové kartě"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -291,7 +291,7 @@ msgstr "prosince"
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Did the new tab not open?"
-msgstr "Nová záložka se neotevřela?"
+msgstr "Nová karta se neotevřela?"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
@@ -415,7 +415,7 @@ msgstr "Napište, co chcete probrat…"
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
-msgstr "Pojďme se potkat!"
+msgstr "Pojďme se sejít!"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
@@ -560,7 +560,7 @@ msgstr "Vyplňte prosím všechna povinná pole"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date to see available times"
-msgstr "Vyberte prosím datum, abyste viděli volné termíny."
+msgstr "Vyberte prosím datum, abyste viděli volné termíny"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
@@ -806,7 +806,7 @@ msgstr "Těšíme se na vás v domluvený čas."
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
-msgstr "Stripe Checkout jsme otevřeli v nové záložce prohlížeče. Jakmile bude platba potvrzena, tato stránka se automaticky aktualizuje."
+msgstr "Stripe Checkout jsme otevřeli na nové kartě prohlížeče. Jakmile bude platba potvrzena, tato stránka se automaticky aktualizuje."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format

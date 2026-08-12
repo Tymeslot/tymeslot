@@ -170,7 +170,7 @@ msgstr "L'autenticazione tramite password non è disponibile per gli account con
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Pending change to:"
-msgstr "Modifica in sospeso verso:"
+msgstr "Nuovo indirizzo in sospeso:"
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format

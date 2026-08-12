@@ -278,8 +278,8 @@ msgstr "Sincronizza i calendari dal tuo account mailbox.org"
 #, elixir-autogen, elixir-format
 msgid "Syncing %{selected} of %{count} calendar"
 msgid_plural "Syncing %{selected} of %{count} calendars"
-msgstr[0] "Sincronizzazione di %{selected} di %{count} calendario"
-msgstr[1] "Sincronizzazione di %{selected} di %{count} calendari"
+msgstr[0] "Sincronizzazione: %{selected} di %{count} calendario"
+msgstr[1] "Sincronizzazione: %{selected} di %{count} calendari"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
@@ -993,12 +993,12 @@ msgstr "mailbox.org richiede HTTPS"
 #: lib/tymeslot/integrations/calendar/caldav/errors.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar server refused the request (HTTP %{status})."
-msgstr "Il server del calendario ha rifiutato la richiesta (HTTP %{status})."
+msgstr "Il server di calendario ha rifiutato la richiesta (HTTP %{status})."
 
 #: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
 #, elixir-autogen, elixir-format
 msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
-msgstr "A questa modifica manca l’ora di inizio o di fine dell’evento, quindi non è stato possibile inviarla al server del calendario."
+msgstr "A questa modifica manca l’ora di inizio o di fine dell’evento, quindi non è stato possibile inviarla al server di calendario."
 
 #: lib/tymeslot/integrations/calendar/ics/provider.ex
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex
@@ -1030,12 +1030,12 @@ msgstr "URL del feed"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "My subscribed calendar"
-msgstr "Il mio calendario abbonato"
+msgstr "Il mio calendario in abbonamento"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Paste the feed link your calendar gives you when you publish a calendar: Google's secret address in iCal format, Outlook's published calendar link, or any .ics URL. We check it for busy time only, and never write to it."
-msgstr "Incolla il link del feed che il tuo calendario ti fornisce quando pubblichi un calendario: l’indirizzo segreto in formato iCal di Google, il link del calendario pubblicato di Outlook o qualsiasi URL .ics. Lo controlliamo solo per gli orari occupati e non ci scriviamo mai."
+msgstr "Incolla il link del feed che il tuo calendario ti fornisce quando pubblichi un calendario: l’indirizzo segreto in formato iCal di Google, il link del calendario pubblicato di Outlook o qualsiasi URL .ics. Lo controlliamo solo per gli orari occupati e non ci scriviamo mai nulla."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
@@ -1080,7 +1080,7 @@ msgstr "L’URL del feed di calendario ha restituito 404. Controlla che il link 
 #: lib/tymeslot/workers/sync_ics_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed came back empty, but the cache still holds previously synced events. Keeping the cache in place and retrying rather than emptying your diary."
-msgstr "Il feed del calendario è tornato vuoto, ma la cache contiene ancora eventi sincronizzati in precedenza. La cache viene mantenuta e il tentativo verrà ripetuto invece di svuotare la tua agenda."
+msgstr "Il feed del calendario è risultato vuoto, ma la cache contiene ancora eventi sincronizzati in precedenza. La cache viene mantenuta e il tentativo verrà ripetuto invece di svuotare la tua agenda."
 
 #: lib/tymeslot/integrations/calendar/ics/feed.ex
 #, elixir-autogen, elixir-format

@@ -230,7 +230,7 @@ msgstr "Finestra di prenotazione"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "Breathing room between appointments so you never feel rushed."
-msgstr "Un po' di respiro tra un appuntamento e l'altro, così non ti senti mai di fretta."
+msgstr "Un po' di respiro tra un appuntamento e l'altro, così non ti senti mai sotto pressione."
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -411,7 +411,7 @@ msgstr "Fatto"
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Earliest booking: %{hours}h from now"
-msgstr "Prima prenotazione: tra %{hours}h da adesso"
+msgstr "Prima prenotazione disponibile: tra %{hours}h"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -431,7 +431,7 @@ msgstr "Google Calendar"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "How far into the future clients can schedule with you."
-msgstr "Con quanto anticipo nel futuro i clienti possono fissare un appuntamento con te."
+msgstr "Con quanto anticipo i clienti possono fissare un appuntamento con te."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex
 #, elixir-autogen, elixir-format
@@ -637,7 +637,7 @@ msgstr "Saltare la configurazione?"
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Something went wrong while contacting the calendar server. Please try again."
-msgstr "Si è verificato un problema durante il contatto con il server del calendario. Riprova."
+msgstr "Si è verificato un problema durante la comunicazione con il server del calendario. Riprova."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format
@@ -733,7 +733,7 @@ msgstr "Benvenuto in Tymeslot! Il tuo account è ora configurato."
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With %{notice} of notice, nobody can book a slot that starts sooner than %{notice} from now."
-msgstr "Con %{notice} di preavviso, nessuno può prenotare una fascia oraria che inizia prima di %{notice} da adesso."
+msgstr "Con %{notice} di preavviso, nessuno può prenotare una fascia oraria che inizia a meno di %{notice} da adesso."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
@@ -864,7 +864,7 @@ msgstr "Chi visita la tua pagina oggi può prenotare al massimo con %{period} di
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is built around your calendar. Once it's connected, we read your real availability so you're never double-booked and write every new booking back automatically - that's what makes Tymeslot worthwhile."
-msgstr "Tymeslot è costruito attorno al tuo calendario. Una volta collegato, leggiamo la tua reale disponibilità così non avrai mai doppie prenotazioni e riscriviamo automaticamente ogni nuova prenotazione: è questo che rende Tymeslot davvero utile."
+msgstr "Tymeslot è costruito attorno al tuo calendario. Una volta collegato, leggiamo la tua reale disponibilità così non avrai mai doppie prenotazioni, e scriviamo automaticamente ogni nuova prenotazione nel tuo calendario: è questo che rende Tymeslot davvero utile."
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format

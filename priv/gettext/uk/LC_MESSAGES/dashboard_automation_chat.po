@@ -676,7 +676,7 @@ msgstr "Напишіть %{bot} у Telegram, щоб створити бота т
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API."
-msgstr "Щоб дізнатися свій Chat ID, напишіть %{bot} або додайте свого бота до групи й скористайтеся API Telegram."
+msgstr "Щоб дізнатися свій ID чату, напишіть %{bot} або додайте свого бота до групи й скористайтеся API Telegram."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format

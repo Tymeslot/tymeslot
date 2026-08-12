@@ -129,7 +129,7 @@ msgstr "Salvataggio in corso..."
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Taken"
-msgstr "Occupato"
+msgstr "Già in uso"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format

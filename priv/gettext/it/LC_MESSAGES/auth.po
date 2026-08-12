@@ -181,7 +181,7 @@ msgstr "Link di verifica non valido"
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
-msgstr "Iscriviti a Tymeslot"
+msgstr "Registrati su Tymeslot"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -657,7 +657,7 @@ msgstr "Questo sito è protetto da reCAPTCHA e si applicano l'%{privacy_policy} 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "An account with that email address already exists. Please log in instead."
-msgstr "Esiste già un account con quell'indirizzo email. Accedi invece."
+msgstr "Esiste già un account con quell'indirizzo email. Accedi invece di registrarti."
 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format

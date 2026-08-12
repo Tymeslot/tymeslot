@@ -104,7 +104,7 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
       # Over-ride the default stub with a strict expectation so the
       # email channel counts as "observed" alongside the three Oban
       # queues.
-      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details ->
+      expect(EmailServiceMock, :send_reschedule_emails, 1, fn _details ->
         {{:ok, :ok}, {:ok, :ok}}
       end)
 
@@ -136,7 +136,7 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
       Repo.delete_all(WebhookSchema)
       Repo.delete_all(TelegramIntegrationSchema)
 
-      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details ->
+      expect(EmailServiceMock, :send_reschedule_emails, 1, fn _details ->
         {{:ok, :ok}, {:ok, :ok}}
       end)
 

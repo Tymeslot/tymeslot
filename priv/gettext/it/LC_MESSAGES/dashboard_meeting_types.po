@@ -40,7 +40,7 @@ msgstr "Indirizzo del link"
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Randomise"
-msgstr "Rendi casuale"
+msgstr "Genera link casuale"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
@@ -50,12 +50,12 @@ msgstr "Salva link"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Unlisted"
-msgstr "Non elencato"
+msgstr "Non in elenco"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
-msgstr "Usa lettere minuscole, numeri e trattini. Rendi casuale genera un link impossibile da indovinare."
+msgstr "Usa lettere minuscole, numeri e trattini. Con \"Genera link casuale\" ottieni un link impossibile da indovinare."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
@@ -128,7 +128,7 @@ msgstr "Aggiungi tipo di riunione"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Advance booking set to custom value"
-msgstr "Prenotazione anticipata impostata su un valore personalizzato"
+msgstr "Finestra di prenotazione anticipata impostata su un valore personalizzato"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -304,9 +304,6 @@ msgstr "Limite di prenotazione aggiornato a %{limit} prenotazioni"
 #, elixir-autogen, elixir-format
 msgid "Maximum number of bookings you accept across all meeting types. Days at their cap disappear from your booking page. Leave a field empty for no limit."
 msgstr "Numero massimo di prenotazioni che accetti tra tutti i tipi di riunione. I giorni che raggiungono il limite scompaiono dalla tua pagina di prenotazione. Lascia un campo vuoto per non impostare alcun limite."
-"Numero massimo di prenotazioni accettate per tutti i tipi di riunione. I "
-"giorni che raggiungono il limite non saranno più visibili sulla pagina di "
-"prenotazione. Lascia il campo vuoto per non impostare alcun limite."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #, elixir-autogen, elixir-format

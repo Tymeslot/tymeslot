@@ -256,7 +256,7 @@ msgstr "Heute"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle calendars"
-msgstr "Kalender umschalten"
+msgstr "Kalender ein-/ausblenden"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format

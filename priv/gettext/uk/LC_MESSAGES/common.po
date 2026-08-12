@@ -200,7 +200,7 @@ msgstr "Вийти"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle menu"
-msgstr "Перемкнути меню"
+msgstr "Відкрити або закрити меню"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
@@ -231,3 +231,8 @@ msgstr "Щонайменше %{count} символів"
 #, elixir-autogen, elixir-format
 msgid "One special character"
 msgstr "Один спеціальний символ"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "This tab contains errors"
+msgstr "Ця вкладка містить помилки"

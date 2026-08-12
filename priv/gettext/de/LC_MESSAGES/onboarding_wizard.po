@@ -461,7 +461,7 @@ msgstr "Los geht's"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
 msgid "Make your booking page yours"
-msgstr "Machen Sie Ihre Buchungsseite zu Ihrer eigenen"
+msgstr "Gestalten Sie Ihre Buchungsseite nach Ihren Vorstellungen"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex
 #, elixir-autogen, elixir-format
@@ -592,7 +592,7 @@ msgstr "Server-URL ist erforderlich"
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex
 #, elixir-autogen, elixir-format
 msgid "Set the accent colour that ties your page together."
-msgstr "Legen Sie die Akzentfarbe fest, die Ihre Seite zusammenhält."
+msgstr "Legen Sie die Akzentfarbe fest, die das Gesamtbild Ihrer Seite abrundet."
 
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex
 #, elixir-autogen, elixir-format
@@ -733,7 +733,7 @@ msgstr "Willkommen bei Tymeslot! Ihr Konto ist jetzt eingerichtet."
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With %{notice} of notice, nobody can book a slot that starts sooner than %{notice} from now."
-msgstr "Mit %{notice} Vorlauf kann niemand ein Zeitfenster buchen, das früher als %{notice} ab jetzt beginnt."
+msgstr "Mit %{notice} Vorlauf kann niemand ein Zeitfenster buchen, das in weniger als %{notice} beginnt."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
@@ -743,7 +743,7 @@ msgstr "Ohne Puffer beginnt das nächste verfügbare Zeitfenster, sobald ein Ter
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex
 #, elixir-autogen, elixir-format
 msgid "With no minimum notice, someone can book a slot that starts any time from now."
-msgstr "Ohne Mindestvorlauf kann jemand ein Zeitfenster buchen, das zu jeder Zeit ab jetzt beginnt."
+msgstr "Ohne Mindestvorlauf kann jemand auch ein Zeitfenster buchen, das sofort beginnt."
 
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex
 #, elixir-autogen, elixir-format

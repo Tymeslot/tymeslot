@@ -196,7 +196,7 @@ msgstr "Verbindung entfernen"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
-msgstr "Teilen Sie einen schreibgeschützten Link, der als standardisierter iCalendar-Feed veröffentlicht, wann Sie beschäftigt sind (nicht die Termindetails), sodass andere Kalendersysteme Ihre Verfügbarkeit einblenden können."
+msgstr "Teilen Sie einen schreibgeschützten Link, der als standardisierter iCalendar-Feed veröffentlicht, wann Sie beschäftigt sind (nicht die Ereignisdetails), sodass andere Kalendersysteme Ihre Verfügbarkeit einblenden können."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
 #, elixir-autogen, elixir-format

@@ -14,6 +14,22 @@ defmodule Tymeslot.Notifications.EventsTest do
 
   setup :verify_on_exit!
 
+  # Stands in for an email pipeline that raises rather than returning
+  # `{:error, _}` — the shape a template mismatch takes.
+  defmodule RaisingWorker do
+    @spec schedule_confirmation_emails(term()) :: no_return()
+    def schedule_confirmation_emails(_meeting_id), do: raise("email pipeline down")
+
+    @spec schedule_cancellation_emails(term()) :: no_return()
+    def schedule_cancellation_emails(_meeting_id), do: raise("email pipeline down")
+
+    @spec cancel_reminder_emails(term()) :: :ok
+    def cancel_reminder_emails(_meeting_id), do: :ok
+
+    @spec schedule_reminder_emails(term(), term(), term(), term()) :: :ok
+    def schedule_reminder_emails(_meeting_id, _value, _unit, _schedule_at), do: :ok
+  end
+
   describe "should_trigger_notifications?/2" do
     test "returns true for confirmed meetings on creation" do
       assert Events.should_trigger_notifications?(:meeting_created, %{status: "confirmed"})
@@ -193,6 +209,98 @@ defmodule Tymeslot.Notifications.EventsTest do
         args: %{
           "integration_id" => slack_integration.id,
           "event_type" => "meeting.rescheduled",
+          "meeting_id" => meeting.id
+        }
+      )
+    end
+  end
+
+  # Issue #76: the email step renders templates in-process, so a payload the
+  # templates don't fit raises instead of returning `{:error, _}`. That
+  # exception used to escape before the webhook, Telegram and Slack dispatches
+  # sequenced after it, silently costing a reschedule every downstream channel.
+  describe "a raising email step" do
+    setup do
+      setup_config(:tymeslot,
+        feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+        slack_notifications_allowed: true,
+        telegram_notifications_allowed: true,
+        environment: :test
+      )
+
+      original_worker = Application.get_env(:tymeslot, :email_worker_module)
+      Application.put_env(:tymeslot, :email_worker_module, RaisingWorker)
+
+      on_exit(fn ->
+        case original_worker do
+          nil -> Application.delete_env(:tymeslot, :email_worker_module)
+          worker -> Application.put_env(:tymeslot, :email_worker_module, worker)
+        end
+      end)
+
+      user = insert(:user)
+
+      telegram_integration =
+        insert(:telegram_integration,
+          user: user,
+          events: ["meeting.created", "meeting.cancelled", "meeting.rescheduled"],
+          is_active: true
+        )
+
+      meeting = insert(:meeting, organizer_user_id: user.id, status: "confirmed")
+
+      %{meeting: meeting, telegram_integration: telegram_integration}
+    end
+
+    test "meeting_rescheduled/2 still dispatches Telegram and reports the failure", %{
+      meeting: meeting,
+      telegram_integration: telegram_integration
+    } do
+      stub(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn _details ->
+        raise KeyError, key: :reminders_summary, term: %{}
+      end)
+
+      assert {:error, {:notifications_failed, %KeyError{}}} =
+               Events.meeting_rescheduled(meeting, meeting)
+
+      assert_enqueued(
+        worker: TelegramWorker,
+        args: %{
+          "integration_id" => telegram_integration.id,
+          "event_type" => "meeting.rescheduled",
+          "meeting_id" => meeting.id
+        }
+      )
+    end
+
+    test "meeting_created/1 still dispatches Telegram and reports the failure", %{
+      meeting: meeting,
+      telegram_integration: telegram_integration
+    } do
+      assert {:error, {:notifications_failed, %RuntimeError{}}} = Events.meeting_created(meeting)
+
+      assert_enqueued(
+        worker: TelegramWorker,
+        args: %{
+          "integration_id" => telegram_integration.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        }
+      )
+    end
+
+    test "meeting_cancelled/1 still dispatches Telegram and reports the failure", %{
+      meeting: meeting,
+      telegram_integration: telegram_integration
+    } do
+      assert {:error, {:notifications_failed, %RuntimeError{}}} =
+               Events.meeting_cancelled(meeting)
+
+      assert_enqueued(
+        worker: TelegramWorker,
+        args: %{
+          "integration_id" => telegram_integration.id,
+          "event_type" => "meeting.cancelled",
           "meeting_id" => meeting.id
         }
       )

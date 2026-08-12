@@ -111,7 +111,7 @@ msgstr "Ласкаво просимо до вашої панелі керува�
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "You're set"
-msgstr "Все готово"
+msgstr "Усе готово"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -160,7 +160,7 @@ msgstr "Кольорові позначки для подій у календа�
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Faster, more responsive Quill and Rhythm booking pages"
-msgstr "Швидші та адаптивніші сторінки бронювання з темами Quill і Rhythm"
+msgstr "Швидші та жвавіші сторінки бронювання з темами Quill і Rhythm"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -201,8 +201,8 @@ msgstr "Сповіщення у Slack про нові бронювання"
 #, elixir-autogen, elixir-format
 msgid "Smarter embeds that auto-fit their height, with an optional column layout"
 msgstr ""
-"Розумні віджети, що автоматично підлаштовуються за висотою, з опціональним "
-"колонковим макетом"
+"Розумніші вбудовані віджети, які самі підлаштовують висоту, з колонковим "
+"макетом на вибір"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -231,7 +231,7 @@ msgstr ""
 msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new - all from a single screen instead of hunting through separate settings pages."
 msgstr ""
 "Календарі, відеодзвінки та платежі тепер зібрані в єдиному центрі "
-"інтеграцій. Одразу бачте, що підключено, а що потребує уваги, "
+"інтеграцій. Ви одразу бачите, що підключено, а що потребує уваги: "
 "перепідключайте сервіси в один клік і додавайте нові - усе на одному екрані,"
 " без потреби шукати в різних розділах налаштувань."
 
@@ -260,7 +260,7 @@ msgstr ""
 "Надавайте подіям власні кольори прямо з розкладу на панелі керування. "
 "Кольори, які ви встановлюєте в Tymeslot, синхронізуються з підключеним "
 "календарем, а кольори з подій Google або CalDAV відображаються і тут. Ваш "
-"день матиме саме той вигляд, який вам подобається, на всіх пристроях."
+"день матиме саме той вигляд, який вам подобається, хоч би де ви його переглядали."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format

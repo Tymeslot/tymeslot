@@ -23,16 +23,16 @@ defmodule Tymeslot.Notifications.OrchestratorLifecycleTest do
   end
 
   defmodule SuccessEmailService do
-    @spec send_appointment_confirmations(map()) :: {{:ok, term()}, {:ok, term()}}
-    def send_appointment_confirmations(content) do
+    @spec send_reschedule_emails(map()) :: {{:ok, term()}, {:ok, term()}}
+    def send_reschedule_emails(content) do
       send(self(), {:reschedule_emails_sent, content})
       {{:ok, :organizer_email}, {:ok, :attendee_email}}
     end
   end
 
   defmodule PartialFailureEmailService do
-    @spec send_appointment_confirmations(map()) :: {{:ok, term()}, {:error, term()}}
-    def send_appointment_confirmations(content) do
+    @spec send_reschedule_emails(map()) :: {{:ok, term()}, {:error, term()}}
+    def send_reschedule_emails(content) do
       send(self(), {:reschedule_emails_partial, content})
       {{:ok, :organizer_email}, {:error, :smtp_down}}
     end
@@ -119,7 +119,7 @@ defmodule Tymeslot.Notifications.OrchestratorLifecycleTest do
           end_time: ~U[2026-06-02 15:00:00Z]
       }
 
-      assert {:ok, :confirmations_sent} =
+      assert {:ok, :reschedules_sent} =
                Orchestrator.send_reschedule_notifications(updated, original)
 
       assert_received {:reschedule_emails_sent, content}
@@ -134,7 +134,7 @@ defmodule Tymeslot.Notifications.OrchestratorLifecycleTest do
       Application.put_env(:tymeslot, :email_service_module, PartialFailureEmailService)
       meeting = meeting_for_lifecycle()
 
-      assert {:ok, :confirmations_partially_sent} =
+      assert {:ok, :reschedules_partially_sent} =
                Orchestrator.send_reschedule_notifications(meeting, meeting)
 
       assert_received {:reschedule_emails_partial, _content}

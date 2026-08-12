@@ -24,7 +24,7 @@ msgstr "Částka"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Amount exceeds the remaining refundable balance."
-msgstr "Částka překračuje zbývající částku k vrácení."
+msgstr "Částka překračuje zbývající zůstatek k vrácení."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
@@ -394,4 +394,4 @@ msgstr "Vrátit platbu účastníkovi %{attendee} za typ schůzky %{meeting_type
 #: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
-msgstr "Změna měny nastaví u všech placených typů schůzek cenu zdarma – stávající ceny jsou uložené v původní měně a jinak by se účtovaly v nové."
+msgstr "Změna měny vynuluje cenu u všech placených typů schůzek – stávající ceny jsou uložené v původní měně a jinak by se účtovaly v nové."
