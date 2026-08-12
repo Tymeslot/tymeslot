@@ -104,7 +104,7 @@ msgstr "JPG, PNG, GIF ou WebP. 10 Mo maximum."
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Live at:"
-msgstr "En ligne à :"
+msgstr "En ligne sur :"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format

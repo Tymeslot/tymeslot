@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
-msgstr "%{going} su %{total} partecipano"
+msgstr "Partecipanti: %{going} su %{total}"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -24,7 +24,7 @@ msgstr "Risposte personalizzate"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Declined"
-msgstr "Rifiutato"
+msgstr "Ha rifiutato"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -75,7 +75,7 @@ msgstr "Annulla senza rimborso."
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
-msgstr "Annullato"
+msgstr "Annullata"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -90,7 +90,7 @@ msgstr "Modifica gli orari della riunione"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Completed"
-msgstr "Completato"
+msgstr "Completata"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -115,7 +115,7 @@ msgstr "Ignora"
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
-msgstr "Inserisci un importo di rimborso parziale valido."
+msgstr "Inserisci un importo valido per il rimborso parziale."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
@@ -155,7 +155,7 @@ msgstr "Partecipa alla riunione"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Join Video"
-msgstr "Partecipa al video"
+msgstr "Partecipa alla videochiamata"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -285,7 +285,7 @@ msgstr "Richiesta di riprogrammazione inviata a %{attendee_name}"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduled"
-msgstr "Programmato"
+msgstr "Programmata"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
@@ -305,7 +305,7 @@ msgstr "Invio in corso..."
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee keeps no money. Use only if the attendee already agreed."
-msgstr "Il partecipante non trattiene alcun importo. Usa questa opzione solo se il partecipante è già d'accordo."
+msgstr "Il partecipante non riceve alcun rimborso. Usa questa opzione solo se il partecipante è già d'accordo."
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
@@ -320,7 +320,7 @@ msgstr "Potrà scegliere un nuovo orario dalla tua disponibilità"
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. The attendee will be notified of the cancellation."
-msgstr "Questa azione non può essere annullata. Il partecipante verrà informato dell'annullamento."
+msgstr "Questa azione è irreversibile. Il partecipante verrà informato dell'annullamento."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format

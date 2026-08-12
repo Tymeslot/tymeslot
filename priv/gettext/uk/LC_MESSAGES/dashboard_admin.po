@@ -345,7 +345,7 @@ msgstr "Вас було понижено з адміністратора."
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
-msgstr "Ви втратите доступ до адміністративних налаштувань та керування користувачами і будете повернуті до вашої панелі керування."
+msgstr "Ви втратите доступ до адміністративних налаштувань та керування користувачами, і вас буде повернуто до панелі керування."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
@@ -395,7 +395,7 @@ msgstr "Дозволити новим користувачам реєструв�
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
-msgstr "Неможливо вимкнути цей провайдер входу, оскільки це єдиний робочий спосіб авторизації для адміністраторів. Спочатку ввімкніть автентифікацію за паролем або інший провайдер єдиного входу (SSO)."
+msgstr "Неможливо вимкнути цей провайдер входу, оскільки це єдиний робочий спосіб входу для адміністраторів. Спочатку ввімкніть автентифікацію за паролем або інший провайдер єдиного входу (SSO)."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -405,7 +405,7 @@ msgstr "Адреса електронної пошти, на яку надход
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
-msgstr "Надсилати операційні сповіщення (збої вебхуків, проблеми з інтеграціями, помилки фонових завдань) на електронну пошту отримувача адміністративних сповіщень. Потребує вказання адреси отримувача нижче."
+msgstr "Надсилати операційні сповіщення (збої вебхуків, проблеми з інтеграціями, помилки фонових завдань) на електронну пошту отримувача адміністративних сповіщень. Адресу отримувача потрібно вказати нижче."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -440,7 +440,7 @@ msgstr "Показувати кнопку «Продовжити з Google» п�
 #: lib/tymeslot_web/hooks/ensure_admin_hook.ex
 #, elixir-autogen, elixir-format
 msgid "Your admin access has been revoked."
-msgstr "Ваші права адміністратора скасовано."
+msgstr "Ваші права адміністратора відкликано."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format

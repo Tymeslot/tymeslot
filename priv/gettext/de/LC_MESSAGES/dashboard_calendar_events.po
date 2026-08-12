@@ -778,7 +778,7 @@ msgstr "Titel"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle this help"
-msgstr "Diese Hilfe umschalten"
+msgstr "Diese Hilfe ein-/ausblenden"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/drag_drop.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex

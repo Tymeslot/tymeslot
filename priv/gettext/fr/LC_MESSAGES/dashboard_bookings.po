@@ -305,7 +305,7 @@ msgstr "Envoi en cours..."
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee keeps no money. Use only if the attendee already agreed."
-msgstr "Le participant ne conserve aucune somme. À utiliser uniquement si le participant a déjà donné son accord."
+msgstr "Le participant ne récupère aucune somme. À utiliser uniquement s’il a déjà donné son accord."
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format

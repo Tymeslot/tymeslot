@@ -984,12 +984,12 @@ msgstr "+ Aggiungi ospiti"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Able to make it after all?"
-msgstr "Riesci a esserci, alla fine?"
+msgstr "Alla fine riesci a esserci?"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Accept instead"
-msgstr "Accetta invece"
+msgstr "Accetta l'invito"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
@@ -1009,7 +1009,7 @@ msgstr "Conferma presenza"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm decline"
-msgstr "Conferma l'assenza"
+msgstr "Conferma assenza"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
@@ -1024,7 +1024,7 @@ msgstr "Conferma per far sapere a %{name} che parteciperai."
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Decline instead"
-msgstr "Rifiuta invece"
+msgstr "Rifiuta l'invito"
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
@@ -1126,12 +1126,12 @@ msgstr "Chiudi"
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Book a meeting with %{name}. Pick a time that works for you."
-msgstr "Prenota una riunione con %{name}. Scegli un orario che ti è comodo."
+msgstr "Prenota una riunione con %{name}. Scegli l'orario che preferisci."
 
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a time that works for you and book a meeting in seconds."
-msgstr "Scegli un orario che ti è comodo e prenota una riunione in pochi secondi."
+msgstr "Scegli l'orario che preferisci e prenota una riunione in pochi secondi."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format

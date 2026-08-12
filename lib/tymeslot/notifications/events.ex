@@ -17,7 +17,10 @@ defmodule Tymeslot.Notifications.Events do
   @spec meeting_created(term()) :: {:ok, term()} | {:error, term()}
   def meeting_created(meeting) do
     # Send email notifications
-    result = Orchestrator.schedule_meeting_notifications(meeting)
+    result =
+      send_notifications(:meeting_created, meeting, fn ->
+        Orchestrator.schedule_meeting_notifications(meeting)
+      end)
 
     # Dispatch webhooks (don't fail if webhooks fail)
     Dispatcher.dispatch(:meeting_created, meeting)
@@ -37,7 +40,10 @@ defmodule Tymeslot.Notifications.Events do
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}
   def meeting_cancelled(meeting) do
     # Send email notifications
-    result = Orchestrator.send_cancellation_notifications(meeting)
+    result =
+      send_notifications(:meeting_cancelled, meeting, fn ->
+        Orchestrator.send_cancellation_notifications(meeting)
+      end)
 
     # Cancel pending reminders — a cancellation event already tells us the
     # slot is void, so call the canceller directly. Failures are logged but
@@ -62,7 +68,10 @@ defmodule Tymeslot.Notifications.Events do
   @spec meeting_rescheduled(term(), term()) :: {:ok, term()} | {:error, term()}
   def meeting_rescheduled(updated_meeting, original_meeting) do
     # Send email notifications
-    result = Orchestrator.send_reschedule_notifications(updated_meeting, original_meeting)
+    result =
+      send_notifications(:meeting_rescheduled, updated_meeting, fn ->
+        Orchestrator.send_reschedule_notifications(updated_meeting, original_meeting)
+      end)
 
     # Re-pin reminders to the new meeting time. This replaces reminder jobs
     # still aimed at the old time and recreates the ones deleted when an
@@ -94,6 +103,27 @@ defmodule Tymeslot.Notifications.Events do
   @spec reschedule_requested(term()) :: :ok | {:error, term()}
   def reschedule_requested(meeting) do
     cancel_reminders_strict(meeting)
+  end
+
+  # The email step is the only one of these dispatches that renders templates
+  # in-process, so a payload the templates don't fit raises instead of
+  # returning `{:error, _}`. Everything sequenced after it — reminder jobs,
+  # webhooks, Telegram, Slack — is best-effort by design, and an escaping
+  # exception used to skip all of them while the meeting change itself stood
+  # (issue #76: a reschedule that never dispatched `meeting.rescheduled`).
+  # Contain it here so one failed channel cannot silence the others; the caller
+  # still learns the emails failed through the error tuple it already handles.
+  defp send_notifications(event, meeting, fun) do
+    fun.()
+  rescue
+    exception ->
+      Logger.error("Notification emails failed",
+        event: event,
+        meeting_id: Map.get(meeting, :id),
+        error: Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, {:notifications_failed, exception}}
   end
 
   defp cancel_reminders_strict(meeting) do

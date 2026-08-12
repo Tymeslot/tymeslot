@@ -181,7 +181,7 @@ msgstr "Lien de vérification invalide"
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
-msgstr "Rejoignez Tymeslot"
+msgstr "Créez votre compte Tymeslot"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -433,7 +433,7 @@ msgstr "Réessayer"
 #: lib/tymeslot_web/live/auth_live/verification_events.ex
 #, elixir-autogen, elixir-format
 msgid "Unable to resend verification email. Please try signing up again."
-msgstr "Impossible de renvoyer l’e-mail de vérification. Veuillez vous réinscrire."
+msgstr "Impossible de renvoyer l’e-mail de vérification. Veuillez recommencer l’inscription."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -757,12 +757,12 @@ msgstr "L’autorisation %{provider} a été refusée. Veuillez réessayer."
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Account created but email verification failed. Please contact support."
-msgstr "Compte créé, mais la vérification de l’e-mail a échoué. Veuillez contacter l’assistance."
+msgstr "Compte créé, mais la vérification de l’e-mail a échoué. Veuillez contacter le support."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Account created but profile setup failed. Please contact support."
-msgstr "Compte créé, mais la configuration du profil a échoué. Veuillez contacter l’assistance."
+msgstr "Compte créé, mais la configuration du profil a échoué. Veuillez contacter le support."
 
 #: lib/tymeslot/security/account_lockout.ex
 #, elixir-autogen, elixir-format
@@ -905,7 +905,7 @@ msgstr "La vérification de sécurité a échoué. Veuillez réessayer."
 #: lib/tymeslot/auth/signup_security.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification unavailable. Please enable JavaScript and refresh the page, or contact support if the problem persists."
-msgstr "Vérification de sécurité indisponible. Veuillez activer JavaScript et actualiser la page, ou contacter l’assistance si le problème persiste."
+msgstr "Vérification de sécurité indisponible. Veuillez activer JavaScript et actualiser la page, ou contacter le support si le problème persiste."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format

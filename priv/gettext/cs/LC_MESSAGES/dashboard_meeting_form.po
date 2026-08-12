@@ -65,7 +65,7 @@ msgstr "Přidat otázku"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
-msgstr "Pro tento typ schůzky můžete přidat až tři e-maily s připomínkou. Doporučujeme používat jen jednu."
+msgstr "Pro tento typ schůzky můžete přidat až tři e-maily s připomínkou. Doporučujeme používat jen jeden."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
@@ -85,7 +85,7 @@ msgstr "Došlo k chybě"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
 msgid "Ask bookers extra questions during the booking flow."
-msgstr "Zeptejte se na doplňující otázky v průběhu rezervace."
+msgstr "Položte doplňující otázky v průběhu rezervace."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -320,11 +320,6 @@ msgstr "Max."
 msgid "Maximum of 3 reminders allowed"
 msgstr "Nastavit lze nejvýše 3 připomínky"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Type"
-msgstr "Typ schůzky"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type created"
@@ -455,6 +450,7 @@ msgid "Reminder value must be a positive number"
 msgstr "Hodnota připomínky musí být kladné číslo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Připomínky"
@@ -652,12 +648,12 @@ msgstr "Žádný z kalendářů, které jste pro tento účet vybrali, nemůže
 #: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a calendar account"
-msgstr "Vyberte účet kalendáře"
+msgstr "Vyberte prosím účet kalendáře"
 
 #: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a target calendar"
-msgstr "Vyberte cílový kalendář"
+msgstr "Vyberte prosím cílový kalendář"
 
 #: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
@@ -713,3 +709,43 @@ msgstr "Za měsíc"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Za týden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Rules"
+msgstr "Pravidla rezervace"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Podrobnosti"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hide from public booking page"
+msgstr "Skrýt z veřejné rezervační stránky"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Místo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Location & Calendar"
+msgstr "Místo a kalendář"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Questions"
+msgstr "Otázky"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Visibility"
+msgstr "Viditelnost"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "When on, this meeting type is reachable only through its direct link."
+msgstr "Když je zapnuto, je tento typ schůzky dostupný jen přes svůj přímý odkaz."

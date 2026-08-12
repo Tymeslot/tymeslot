@@ -231,3 +231,8 @@ msgstr "Mindestens %{count} Zeichen"
 #, elixir-autogen, elixir-format
 msgid "One special character"
 msgstr "Ein Sonderzeichen"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "This tab contains errors"
+msgstr "Dieser Tab enthält Fehler"

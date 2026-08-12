@@ -18,11 +18,6 @@ msgstr "Усі, хто має це посилання, зможуть забро
 
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Booking link & visibility"
-msgstr "Посилання для бронювання та видимість"
-
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Booking link copied!"
 msgstr "Посилання для бронювання скопійовано!"
 
@@ -51,11 +46,6 @@ msgstr "Пряме посилання для бронювання"
 msgid "Failed to update visibility"
 msgstr "Не вдалося оновити видимість"
 
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Hide from public booking page"
-msgstr "Приховати з публічної сторінки бронювання"
-
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type not found"
@@ -70,11 +60,6 @@ msgstr "Це посилання вже зайнято. Виберіть інше
 #, elixir-autogen, elixir-format
 msgid "Visibility updated"
 msgstr "Видимість оновлено"
-
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "When on, this meeting type is reachable only through its direct link."
-msgstr "Якщо ввімкнено, цей тип зустрічі буде доступний лише за прямим посиланням."
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -699,7 +684,7 @@ msgstr "Інтеграція відеозв'язку"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Video integration added successfully"
-msgstr "Інтеграцію відео успішно додано"
+msgstr "Відеоінтеграцію успішно додано"
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
@@ -731,7 +716,7 @@ msgstr "дані календаря"
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "custom"
-msgstr "користувацький"
+msgstr "власний"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format

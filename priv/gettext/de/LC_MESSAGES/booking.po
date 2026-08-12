@@ -208,7 +208,7 @@ msgstr "Buchung erfolgreich übermittelt! Sie erhalten in Kürze eine Bestätigu
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings available up to %{advance}"
-msgstr "Buchbar bis %{advance}"
+msgstr "Termine sind %{advance} buchbar"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -369,7 +369,7 @@ msgstr "Hallo! Ich bin %{name}."
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/note.ex
 #, elixir-autogen, elixir-format
 msgid "I acknowledge the above"
-msgstr "Ich bestätige die obigen Angaben"
+msgstr "Ich nehme das Obenstehende zur Kenntnis"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
@@ -486,7 +486,7 @@ msgstr "Vormittag"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Need to make changes? Check your email for reschedule options"
-msgstr "Möchten Sie etwas ändern? In Ihrer E-Mail finden Sie Optionen zum Verschieben."
+msgstr "Möchten Sie etwas ändern? In Ihrer E-Mail finden Sie Optionen zum Verschieben"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
@@ -740,7 +740,7 @@ msgstr "Vielen Dank, Ihre Buchung für %{date} ist bestätigt."
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "This date is fully booked"
-msgstr "Dieser Tag ist leider ausgebucht"
+msgstr "Dieser Tag ist ausgebucht"
 
 #: lib/tymeslot_web/themes/shared/security_fields.ex
 #, elixir-autogen, elixir-format
@@ -958,7 +958,7 @@ msgstr "Termin verschieben"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "same day only"
-msgstr "Nur am selben Tag"
+msgstr "nur am selben Tag"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
@@ -1046,7 +1046,7 @@ msgstr "Gäste"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Hosted by %{name}"
-msgstr "Veranstaltet von %{name}"
+msgstr "Gastgeber: %{name}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
@@ -1116,7 +1116,7 @@ msgstr "Ihre Antwort wurde an %{name} gesendet."
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
-msgstr "gast@example.com"
+msgstr "gast@beispiel.de"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
@@ -1172,7 +1172,7 @@ msgstr "Der Gastgeber konnte nicht gefunden werden. Bitte laden Sie die Seite ne
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Organizer is required for booking"
-msgstr "Für die Buchung ist ein Organisator erforderlich."
+msgstr "Für die Buchung ist ein Organisator erforderlich"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format

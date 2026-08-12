@@ -65,7 +65,7 @@ msgstr "Додати запитання"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
-msgstr "Додайте до трьох електронних листів із нагадуванням про цю зустріч. Рекомендуємо використовувати лише один."
+msgstr "Додайте до трьох електронних листів із нагадуванням для цього типу зустрічі. Рекомендуємо використовувати лише один."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
@@ -320,11 +320,6 @@ msgstr "Макс."
 msgid "Maximum of 3 reminders allowed"
 msgstr "Дозволено не більше 3 нагадувань"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Type"
-msgstr "Тип зустрічі"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type created"
@@ -359,7 +354,7 @@ msgstr "Вибір із кількох варіантів"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
-msgstr "Ім’я"
+msgstr "Назва"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -455,6 +450,7 @@ msgid "Reminder value must be a positive number"
 msgstr "Час нагадування має бути додатним числом"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Нагадування"
@@ -544,7 +540,7 @@ msgstr "Повідомлення, яке потрібно прочитати т�
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "The question shown to the booker."
-msgstr "Запитання, яке побачить клієнт."
+msgstr "Запитання, яке відображається під час бронювання."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
 #, elixir-autogen, elixir-format
@@ -692,9 +688,7 @@ msgstr "Ліміти бронювань"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr ""
-"Обмежте кількість бронювань цього типу, які ви приймаєте. Залиште поле "
-"порожнім, якщо обмеження не потрібні."
+msgstr "Обмежте, скільки бронювань цього типу ви приймаєте. Залиште поле порожнім, щоб не встановлювати ліміт."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
@@ -715,3 +709,43 @@ msgstr "На місяць"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "На тиждень"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Rules"
+msgstr "Правила бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Деталі"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hide from public booking page"
+msgstr "Приховати з публічної сторінки бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Місце"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Location & Calendar"
+msgstr "Місце та календар"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Questions"
+msgstr "Запитання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Visibility"
+msgstr "Видимість"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "When on, this meeting type is reachable only through its direct link."
+msgstr "Якщо ввімкнено, цей тип зустрічі буде доступний лише за прямим посиланням."

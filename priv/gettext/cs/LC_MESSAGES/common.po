@@ -231,3 +231,8 @@ msgstr "Alespoň %{count} znaků"
 #, elixir-autogen, elixir-format
 msgid "One special character"
 msgstr "Jeden speciální znak"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "This tab contains errors"
+msgstr "Tato karta obsahuje chyby"

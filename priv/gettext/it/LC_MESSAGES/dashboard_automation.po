@@ -191,7 +191,7 @@ msgstr "Sottoscrizioni agli eventi"
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Events to Subscribe *"
-msgstr "Eventi a cui sottoscriversi *"
+msgstr "Eventi da sottoscrivere *"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format

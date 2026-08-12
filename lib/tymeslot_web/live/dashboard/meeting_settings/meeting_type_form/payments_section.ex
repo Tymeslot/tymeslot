@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
     <div class="space-y-3">
       <div class="flex items-center gap-2">
         <.icon name="hero-banknotes" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-700">
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
           {dgettext("dashboard_meeting_form", "Payments")}
         </h3>
       </div>

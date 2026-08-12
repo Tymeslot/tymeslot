@@ -65,6 +65,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:allow_guests, false)
      |> assign(:show_as_free, false)
      |> assign(:booking_limits, Init.get_booking_limits(nil))
+     |> assign(:active_tab, "details")
      |> assign(:__initialized__, false)}
   end
 
@@ -92,6 +93,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def render(assigns), do: FormView.form(assigns)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("switch_tab", %{"tab" => tab}, socket)
+      when tab in ~w(details location booking questions reminders) do
+    {:noreply, assign(socket, :active_tab, tab)}
+  end
 
   @impl Phoenix.LiveComponent
   def handle_event("validate_meeting_type", %{"meeting_type" => params}, socket) do

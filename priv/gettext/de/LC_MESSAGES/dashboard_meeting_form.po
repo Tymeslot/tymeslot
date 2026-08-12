@@ -228,7 +228,7 @@ msgstr "Frühestes Datum, das Buchende wählen können."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Earliest time the booker may choose."
-msgstr "Früheste Zeit, die Buchende wählen können."
+msgstr "Früheste Uhrzeit, die Buchende wählen können."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
@@ -298,7 +298,7 @@ msgstr "Spätestes Datum, das Buchende wählen können."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Latest time the booker may choose."
-msgstr "Späteste Zeit, die Buchende wählen können."
+msgstr "Späteste Uhrzeit, die Buchende wählen können."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
@@ -319,11 +319,6 @@ msgstr "Max"
 #, elixir-autogen, elixir-format
 msgid "Maximum of 3 reminders allowed"
 msgstr "Maximal 3 Erinnerungen erlaubt"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Type"
-msgstr "Termintyp"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
 #, elixir-autogen, elixir-format
@@ -455,6 +450,7 @@ msgid "Reminder value must be a positive number"
 msgstr "Erinnerungswert muss eine positive Zahl sein"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Erinnerungen"
@@ -534,7 +530,7 @@ msgstr "Buchende müssen diese Frage beantworten, bevor sie fortfahren können."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/show_as_free_section.ex
 #, elixir-autogen, elixir-format
 msgid "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
-msgstr "Das Ereignis wird trotzdem erstellt, aber als freie Zeit markiert, sodass es keine anderen Buchungen blockiert und für Personen, die Ihre Verfügbarkeit sehen können, nicht als belegt erscheint."
+msgstr "Der Termin wird trotzdem erstellt, aber als freie Zeit markiert, sodass er keine anderen Buchungen blockiert und für Personen, die Ihre Verfügbarkeit sehen können, nicht als belegt erscheint."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -555,7 +551,7 @@ msgstr "Diese Erinnerung existiert bereits"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Time"
-msgstr "Zeit"
+msgstr "Uhrzeit"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -622,7 +618,7 @@ msgstr "erforderlich"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
-msgstr "Verbinden Sie Stripe auf der Seite %{payments_link}, um für diesen Termintyp Gebühren zu erheben."
+msgstr "Verbinden Sie Stripe auf der Seite %{payments_link}, um Zahlungen für diesen Termintyp einzuziehen."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -692,9 +688,7 @@ msgstr "Buchungslimits"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr ""
-"Begrenzen Sie die Anzahl der Buchungen für diesen Termintyp. Lassen Sie ein "
-"Feld leer, wenn es kein Limit geben soll."
+msgstr "Begrenzen Sie die Anzahl der Buchungen für diesen Termintyp. Lassen Sie ein Feld leer, wenn es kein Limit geben soll."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
@@ -715,3 +709,43 @@ msgstr "Pro Monat"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Pro Woche"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Rules"
+msgstr "Buchungsregeln"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Details"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hide from public booking page"
+msgstr "Auf der öffentlichen Buchungsseite ausblenden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Ort"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Location & Calendar"
+msgstr "Ort & Kalender"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Questions"
+msgstr "Fragen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Visibility"
+msgstr "Sichtbarkeit"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "When on, this meeting type is reachable only through its direct link."
+msgstr "Wenn aktiviert, ist dieser Termintyp nur über seinen direkten Link erreichbar."

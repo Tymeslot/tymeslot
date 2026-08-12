@@ -1,4 +1,10 @@
 
+[1.8.1]
+* core: Send reschedule emails and webhooks when an attendee moves a booking
+* core: Correct translations across all five locale catalogues
+* core: Reorganise the meeting type editor into tabs
+
+
 [1.8.0]
 * core: Show password rule errors in the user's language
 * core: Honour the classic Zoom write scope when cancelling meetings

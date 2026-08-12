@@ -70,7 +70,7 @@ msgstr "Aggiungi fino a tre email di promemoria per questo tipo di riunione. Con
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
-msgstr "Aggiunto %{label} prima"
+msgstr "Promemoria aggiunto: %{label} prima"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
@@ -90,7 +90,7 @@ msgstr "Poni domande aggiuntive a chi prenota durante la procedura di prenotazio
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Body text"
-msgstr "Testo del corpo"
+msgstr "Contenuto"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -146,7 +146,7 @@ msgstr "Collega un calendario"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Controls how the booker enters their answer."
-msgstr "Controlla come chi prenota inserisce la propria risposta."
+msgstr "Determina come chi prenota inserisce la propria risposta."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
@@ -320,11 +320,6 @@ msgstr "Max"
 msgid "Maximum of 3 reminders allowed"
 msgstr "Sono consentiti al massimo 3 promemoria"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Type"
-msgstr "Tipo di riunione"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type created"
@@ -455,6 +450,7 @@ msgid "Reminder value must be a positive number"
 msgstr "Il valore del promemoria deve essere un numero positivo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Promemoria"
@@ -622,7 +618,7 @@ msgstr "obbligatorio"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
-msgstr "Collega Stripe nella pagina %{payments_link} per far pagare questo tipo di riunione."
+msgstr "Collega Stripe nella pagina %{payments_link} per richiedere il pagamento di questo tipo di riunione."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -692,9 +688,7 @@ msgstr "Limiti di prenotazione"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr ""
-"Imposta un limite al numero di prenotazioni che accetti per questo tipo di "
-"riunione. Lascia il campo vuoto per non avere limiti."
+msgstr "Limita il numero di prenotazioni che accetti per questo tipo di riunione. Lascia un campo vuoto per non impostare limiti."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
@@ -714,4 +708,44 @@ msgstr "Al mese"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
 msgid "Per week"
-msgstr "A settimana"
+msgstr "Alla settimana"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Rules"
+msgstr "Regole di prenotazione"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Dettagli"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hide from public booking page"
+msgstr "Nascondi dalla pagina di prenotazione pubblica"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Luogo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Location & Calendar"
+msgstr "Luogo e calendario"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Questions"
+msgstr "Domande"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Visibility"
+msgstr "Visibilità"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "When on, this meeting type is reachable only through its direct link."
+msgstr "Se attivo, questo tipo di riunione è raggiungibile solo tramite il suo link diretto."

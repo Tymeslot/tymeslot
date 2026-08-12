@@ -37,75 +37,41 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
           data-action={if @editing_type, do: "edit-#{@editing_type.id}", else: "new"}
           class="space-y-8"
         >
-          <div class="flex items-start justify-between bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
-            <.section_header
-              level={2}
-              icon="hero-squares-2x2"
-              title={
-                if @editing_type,
-                  do: dgettext("dashboard_integrations", "Edit Meeting Type"),
-                  else: dgettext("dashboard_integrations", "Add Meeting Type")
-              }
-            />
-            <button
-              phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
-              phx-target={@myself}
-              class="shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
-              title={dgettext("dashboard_integrations", "Close")}
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div class="card-glass">
-            <.live_component
-              module={MeetingTypeForm}
-              id={
-                if @editing_type,
-                  do: "meeting-type-form-edit-#{@editing_type.id}",
-                  else: "meeting-type-form-new"
-              }
-              type={@editing_type}
-              is_edit={!!@editing_type}
-              video_integrations={@video_integrations}
-              calendar_integrations={@calendar_integrations}
-              parent_myself={@myself}
-              saving={@saving}
-              current_user={@current_user}
-              client_ip={@client_ip}
-              user_agent={@user_agent}
-              form_errors={@form_errors}
-              custom_questions_allowed={@custom_questions_allowed}
-            />
-          </div>
-
-          <%!-- Booking link & visibility (existing types only; needs a username) --%>
-          <div
-            :if={@editing_type && booking_base_url(@profile)}
-            class="card-glass space-y-6"
-          >
-            <div class="flex items-center gap-2">
-              <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
-              <h3 class="font-semibold text-tymeslot-700 text-token-lg">
-                {dgettext("dashboard_integrations", "Booking link & visibility")}
-              </h3>
+          <div class="bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm space-y-4">
+            <div class="flex items-start justify-between">
+              <.section_header
+                level={2}
+                icon="hero-squares-2x2"
+                title={
+                  if @editing_type,
+                    do: dgettext("dashboard_integrations", "Edit Meeting Type"),
+                    else: dgettext("dashboard_integrations", "Add Meeting Type")
+                }
+              />
+              <button
+                phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
+                phx-target={@myself}
+                class="shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
+                title={dgettext("dashboard_integrations", "Close")}
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2.5"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
             </div>
 
-            <div class="space-y-2">
-              <label class="block font-medium text-tymeslot-700 text-token-sm">
-                {dgettext("dashboard_integrations", "Direct booking link")}
-              </label>
+            <%!-- Direct booking link, always at hand while editing (needs a username) --%>
+            <div :if={@editing_type && booking_base_url(@profile)} class="space-y-2">
               <div class="flex flex-wrap items-center gap-2">
                 <input
                   type="text"
                   readonly
+                  aria-label={dgettext("dashboard_integrations", "Direct booking link")}
                   value={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
                   class="font-mono text-token-sm flex-1 min-w-[12rem] px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
                 />
@@ -135,41 +101,28 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 )}
               </p>
             </div>
+          </div>
 
-            <div class="flex items-center justify-between gap-4 pt-2 border-t-2 border-tymeslot-50">
-              <div>
-                <p class="font-medium text-tymeslot-700">
-                  {dgettext("dashboard_integrations", "Hide from public booking page")}
-                </p>
-                <p class="text-token-sm text-tymeslot-500">
-                  {dgettext(
-                    "dashboard_integrations",
-                    "When on, this meeting type is reachable only through its direct link."
-                  )}
-                </p>
-              </div>
-              <button
-                type="button"
-                phx-click="toggle_private"
-                phx-value-id={@editing_type.id}
-                phx-target={@myself}
-                role="switch"
-                aria-checked={@editing_type.is_private}
-                aria-label={dgettext("dashboard_integrations", "Hide from public booking page")}
-                class={[
-                  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-turquoise-500 focus:ring-offset-2",
-                  if(@editing_type.is_private,
-                    do: "bg-turquoise-500 border-turquoise-500",
-                    else: "bg-tymeslot-300 border-tymeslot-300"
-                  )
-                ]}
-              >
-                <span class={[
-                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                  if(@editing_type.is_private, do: "translate-x-4", else: "translate-x-0")
-                ]} />
-              </button>
-            </div>
+          <div class={if @editing_type, do: nil, else: "card-glass"}>
+            <.live_component
+              module={MeetingTypeForm}
+              id={
+                if @editing_type,
+                  do: "meeting-type-form-edit-#{@editing_type.id}",
+                  else: "meeting-type-form-new"
+              }
+              type={@editing_type}
+              is_edit={!!@editing_type}
+              video_integrations={@video_integrations}
+              calendar_integrations={@calendar_integrations}
+              parent_myself={@myself}
+              saving={@saving}
+              current_user={@current_user}
+              client_ip={@client_ip}
+              user_agent={@user_agent}
+              form_errors={@form_errors}
+              custom_questions_allowed={@custom_questions_allowed}
+            />
           </div>
 
           <BookingLinkModal.booking_link_modal

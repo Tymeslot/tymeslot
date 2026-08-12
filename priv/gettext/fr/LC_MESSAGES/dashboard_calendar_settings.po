@@ -21,7 +21,7 @@ msgstr[1] "%{shown} et %{count} de plus"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{successes} refreshed, %{failures} failed: %{detail}"
-msgstr "%{successes} actualisés, %{failures} échoués : %{detail}"
+msgstr "%{successes} actualisés, %{failures} en échec : %{detail}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex
 #, elixir-autogen, elixir-format

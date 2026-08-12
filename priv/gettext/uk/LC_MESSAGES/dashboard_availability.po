@@ -202,7 +202,7 @@ msgstr "Некоректний формат часу"
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Label"
-msgstr "Мітка"
+msgstr "Назва"
 
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -397,12 +397,12 @@ msgstr "Час завершення має бути після часу поча
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid day selection format"
-msgstr "Неправильний формат вибору днів"
+msgstr "Некоректний формат вибору днів"
 
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format
 msgid "No valid days selected"
-msgstr "Не вибрано жодного дійсного дня"
+msgstr "Не вибрано жодного коректного дня"
 
 #: lib/tymeslot/availability/input_validation.ex
 #, elixir-autogen, elixir-format

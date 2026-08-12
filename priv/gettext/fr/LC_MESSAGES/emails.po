@@ -49,6 +49,7 @@ msgid "Cancel"
 msgstr "Annuler"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Appointment"
 msgstr "Annuler le rendez-vous"
@@ -107,6 +108,7 @@ msgstr "E-mail :"
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
@@ -161,6 +163,7 @@ msgstr "Rejoindre la réunion"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join Video Meeting"
 msgstr "Rejoindre la visioconférence"
@@ -180,6 +183,7 @@ msgid "Location:"
 msgstr "Lieu :"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Looking forward to meeting you!"
 msgstr "Au plaisir de vous rencontrer !"
@@ -218,6 +222,7 @@ msgstr "Réunion annulée - %{date} avec %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
 msgstr "Réunion avec %{name}"
@@ -243,6 +248,7 @@ msgid "Need to change plans?"
 msgstr "Un changement de programme ?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Need to make changes?"
 msgstr "Des modifications à apporter ?"
@@ -283,12 +289,14 @@ msgid "Reminder: Our meeting is %{time_until}"
 msgstr "Rappel : Notre réunion est dans %{time_until}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders Scheduled"
 msgstr "Rappels programmés"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
@@ -546,7 +554,7 @@ msgstr "%{name} vous a invité(e) à un événement."
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Invitation - %{title} on %{date}"
-msgstr "Invitation au calendrier - %{title} le %{date}"
+msgstr "Invitation : %{title} le %{date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -592,7 +600,7 @@ msgstr "Une modification a été demandée sur votre compte Tymeslot."
 #: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "A fresh password and you're back in."
-msgstr "Un nouveau mot de passe et vous reprenez le cours des choses."
+msgstr "Un nouveau mot de passe et c’est reparti."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
 #, elixir-autogen, elixir-format
@@ -743,6 +751,7 @@ msgstr "Bonjour %{name}, je dois reporter notre prochaine réunion."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Host video call"
 msgstr "Animer l’appel vidéo"
@@ -786,7 +795,7 @@ msgstr "Cela arrive aux meilleurs d’entre nous. Cliquez sur le bouton ci-desso
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
-msgstr "Rejoignez quand vous êtes prêt"
+msgstr "Rejoignez quand vous êtes prêt(e)"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #: lib/tymeslot/emails/templates/email_change_notification.ex
@@ -868,7 +877,7 @@ msgstr "Un clic et le changement est effectué."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Our meeting is coming up"
-msgstr "Notre réunion approche !"
+msgstr "Notre réunion approche"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
@@ -935,6 +944,7 @@ msgstr "Définir un nouveau mot de passe :"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Start Meeting"
 msgstr "Démarrer la réunion"
@@ -1291,7 +1301,7 @@ msgstr "Notification de sécurité"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
-msgstr "Envoyé par"
+msgstr "Envoyé avec soin par"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #: lib/tymeslot/emails/templates/email_change_notification.ex
@@ -1658,7 +1668,7 @@ msgstr "Détails de l’erreur"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
-msgstr "Je n’ai pas pu ajouter cette réunion à votre calendrier. Le rendez-vous a bien été confirmé dans Tymeslot et vous avez tous les deux, vous et le participant, reçu un e-mail de confirmation. Vous devrez toutefois l’ajouter manuellement à votre calendrier."
+msgstr "Je n’ai pas pu ajouter cette réunion à votre calendrier. Le rendez-vous a bien été confirmé dans Tymeslot, et vous comme le participant avez reçu un e-mail de confirmation. Vous devrez toutefois l’ajouter manuellement à votre calendrier."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
@@ -1784,7 +1794,7 @@ msgstr "Veuillez ajouter manuellement cette réunion à votre calendrier pour ne
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "The booking is safe - but please add it to your calendar manually."
-msgstr "La réservation est en sécurité - mais veuillez l’ajouter manuellement à votre calendrier."
+msgstr "La réservation est bien enregistrée - mais veuillez l’ajouter manuellement à votre calendrier."
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -1804,7 +1814,7 @@ msgstr "Mise à jour : %{title} - %{date}"
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."
-msgstr "Nous sommes heureux de vous voir ici. Encore une étape rapide et votre calendrier sera prêt - veuillez confirmer votre e-mail ci-dessous."
+msgstr "Nous sommes ravis de vous compter parmi nous. Une dernière étape rapide et votre calendrier sera prêt - veuillez confirmer votre e-mail ci-dessous."
 
 #: lib/tymeslot/emails/templates/email_verification.ex
 #, elixir-autogen, elixir-format
@@ -1960,3 +1970,72 @@ msgstr "Le vote pour %{title} est clos"
 #, elixir-autogen, elixir-format
 msgid "Your vote is needed"
 msgstr "Votre vote est attendu"
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has moved your meeting."
+msgstr "%{name} a déplacé votre rendez-vous."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Does the new time not work?"
+msgstr "Le nouvel horaire ne vous convient pas ?"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - our appointment has been moved. Here's the new time, and my calendar is already updated."
+msgstr "Bonjour %{name} - notre rendez-vous a été déplacé. Voici le nouvel horaire, mon agenda est déjà à jour."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled"
+msgstr "Rendez-vous déplacé"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled - %{date} with %{name}"
+msgstr "Rendez-vous déplacé - %{date} avec %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting rescheduled"
+msgstr "Rendez-vous déplacé"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "NEW MEETING DETAILS:"
+msgstr "NOUVEAUX DÉTAILS DU RENDEZ-VOUS :"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Our appointment has been moved. Here's the new time, and my calendar is already updated."
+msgstr "Notre rendez-vous a été déplacé. Voici le nouvel horaire, mon agenda est déjà à jour."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Previously scheduled for"
+msgstr "Initialement prévu le"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Rescheduled"
+msgstr "Déplacé"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Rescheduled: %{name} - %{date}"
+msgstr "Déplacé : %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Same link, new time"
+msgstr "Même lien, nouvel horaire"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The attendee has been notified of the new time."
+msgstr "Le participant a été informé du nouvel horaire."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your meeting has moved."
+msgstr "Votre rendez-vous a été déplacé."

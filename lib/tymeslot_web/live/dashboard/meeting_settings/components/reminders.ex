@@ -25,10 +25,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
   @spec reminders_section(map()) :: Phoenix.LiveView.Rendered.t()
   def reminders_section(assigns) do
     ~H"""
-    <div>
-      <label class="label">
-        {dgettext("dashboard_meeting_form", "Reminders")}
-      </label>
+    <section class="space-y-2">
+      <div class="flex items-center gap-2">
+        <.icon name="hero-bell" class="w-5 h-5 text-turquoise-500" />
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
+          {dgettext("dashboard_meeting_form", "Reminders")}
+        </h3>
+      </div>
       <p class="text-token-sm text-tymeslot-600">
         {dgettext(
           "dashboard_meeting_form",
@@ -175,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :reminder_config) do %>
         <p class="form-error mt-2">{Helpers.format_errors(error)}</p>
       <% end %>
-    </div>
+    </section>
     """
   end
 end

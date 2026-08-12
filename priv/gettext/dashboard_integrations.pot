@@ -18,11 +18,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
-msgid "Booking link & visibility"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
 msgid "Booking link copied!"
 msgstr ""
 
@@ -51,11 +46,6 @@ msgstr ""
 msgid "Failed to update visibility"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "Hide from public booking page"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type not found"
@@ -69,11 +59,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Visibility updated"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
-#, elixir-autogen, elixir-format
-msgid "When on, this meeting type is reachable only through its direct link."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex

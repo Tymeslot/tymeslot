@@ -85,8 +85,8 @@ msgstr "(Bez názvu)"
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] "+%{count} dalších"
-msgstr[1] "+%{count} dalších"
+msgstr[0] "+%{count} další"
+msgstr[1] "+%{count} další"
 msgstr[2] "+%{count} dalších"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
