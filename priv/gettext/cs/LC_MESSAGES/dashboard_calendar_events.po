@@ -50,8 +50,8 @@ msgstr "(Bez názvu)"
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] "+%{count} dalších"
-msgstr[1] "+%{count} dalších"
+msgstr[0] "+%{count} další"
+msgstr[1] "+%{count} další"
 msgstr[2] "+%{count} dalších"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
@@ -696,14 +696,14 @@ msgstr "So"
 #, elixir-autogen, elixir-format
 msgid "Send cancellation to %{count} attendee?"
 msgid_plural "Send cancellation to %{count} attendees?"
-msgstr[0] "Odeslat zrušení %{count} účastníkovi?"
-msgstr[1] "Odeslat zrušení %{count} účastníkům?"
-msgstr[2] "Odeslat zrušení %{count} účastníkům?"
+msgstr[0] "Odeslat oznámení o zrušení %{count} účastníkovi?"
+msgstr[1] "Odeslat oznámení o zrušení %{count} účastníkům?"
+msgstr[2] "Odeslat oznámení o zrušení %{count} účastníkům?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Send cancellation?"
-msgstr "Odeslat zrušení?"
+msgstr "Odeslat oznámení o zrušení?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
@@ -954,12 +954,12 @@ msgstr "Opravdu chcete smazat %{title}?"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Create failed - queued to retry on next sync"
-msgstr "Vytvoření se nezdařilo – opakujeme je při příští synchronizaci"
+msgstr "Vytvoření se nezdařilo – zkusíme to znovu při příští synchronizaci"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #, elixir-autogen, elixir-format
 msgid "Delete failed - queued to retry on next sync"
-msgstr "Smazání se nezdařilo – opakujeme je při příští synchronizaci"
+msgstr "Smazání se nezdařilo – zkusíme to znovu při příští synchronizaci"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
@@ -979,7 +979,7 @@ msgstr "Google Calendar událost uložil, ale nevrátil odkaz na Meet – zkuste
 #: lib/tymeslot/calendar_grid/event_creation.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
-msgstr "Váš kalendář je potřeba připojit znovu. Připojte jej prosím znovu na stránce Integrace."
+msgstr "Váš kalendář je potřeba připojit znovu. Připojte jej prosím na stránce Integrace."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format

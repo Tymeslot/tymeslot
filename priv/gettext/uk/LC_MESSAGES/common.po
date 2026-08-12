@@ -200,7 +200,7 @@ msgstr "Вийти"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle menu"
-msgstr "Перемкнути меню"
+msgstr "Відкрити або закрити меню"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

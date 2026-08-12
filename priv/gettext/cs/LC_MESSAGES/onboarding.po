@@ -206,7 +206,7 @@ msgstr "Rezervace nyní mohou zahrnovat další hosty. Každý host dostane vlas
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new - all from a single screen instead of hunting through separate settings pages."
-msgstr "Kalendáře, videohovory i platby teď najdete pohromadě v centru integrací. Na první pohled uvidíte, co je připojené a co vyžaduje pozornost, jedním kliknutím připojíte poskytovatele znovu i přidáte něco nového – vše na jediné obrazovce místo hledání v samostatných stránkách nastavení."
+msgstr "Kalendáře, videohovory i platby teď najdete pohromadě v centru integrací. Na první pohled uvidíte, co je připojené a co vyžaduje pozornost, jedním kliknutím připojíte poskytovatele znovu i přidáte něco nového – vše na jediné obrazovce místo hledání na samostatných stránkách nastavení."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format

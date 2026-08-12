@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
-msgstr "Toute personne disposant de ce lien peut réserver ce type de réunion directement, sans voir vos autres types de réunions."
+msgstr "Toute personne disposant de ce lien peut réserver ce type de réunion directement, sans voir vos autres types de réunion."
 
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
@@ -310,7 +310,7 @@ msgstr "Échec de la reconnexion. Veuillez réessayer."
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to reorder meeting types"
-msgstr "Échec de la réorganisation des types de réunions"
+msgstr "Échec de la réorganisation des types de réunion"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -423,7 +423,7 @@ msgstr "Statut du type de réunion mis à jour"
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting types reordered"
-msgstr "Types de réunions réorganisés"
+msgstr "Types de réunion réorganisés"
 
 #: lib/tymeslot/integrations/video/providers/teams_provider.ex
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
@@ -763,7 +763,7 @@ msgstr "Échec du démarrage de l’authentification %{service}."
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Custom Video"
-msgstr "Ma vidéo personnalisée"
+msgstr "Mon lien vidéo personnalisé"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
 #, elixir-autogen, elixir-format
@@ -1263,4 +1263,4 @@ msgstr[1] "%{count} réservations à venir utilisent encore cette intégration. 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
-msgstr "Supprimer également leurs salles de réunion. Les participants qui possèdent déjà le lien de connexion ne pourront plus s'en servir."
+msgstr "Supprimer également leurs salles de réunion. Les participants qui possèdent déjà le lien de connexion ne pourront plus s’en servir."

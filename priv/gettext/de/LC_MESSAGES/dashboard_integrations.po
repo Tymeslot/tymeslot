@@ -788,7 +788,7 @@ msgstr "benutzerdefinierter Link"
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "rooms created automatically"
-msgstr "Räume automatisch erstellt"
+msgstr "Räume werden automatisch erstellt"
 
 #: lib/tymeslot_web/components/integrations/providers/generic_provider_form_component.ex
 #, elixir-autogen, elixir-format
@@ -1006,7 +1006,7 @@ msgstr "Ihre Kontoidentität konnte nicht überprüft werden. Bitte versuchen Si
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Custom meeting URL is required"
-msgstr "Eine eigene Meeting-URL ist erforderlich"
+msgstr "Eine benutzerdefinierte Meeting-URL ist erforderlich"
 
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
@@ -1191,7 +1191,7 @@ msgstr "Unbekannt"
 #: lib/tymeslot/integrations/video/input_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown video provider"
-msgstr "Unbekannter Videoanbieter"
+msgstr "Unbekannter Video-Anbieter"
 
 #: lib/tymeslot/integrations/shared/oauth/account_match.ex
 #, elixir-autogen, elixir-format
@@ -1231,7 +1231,7 @@ msgstr "in %{duration}"
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
 msgid "✓ Custom provider configured - %{message}"
-msgstr "✓ Eigener Anbieter konfiguriert - %{message}"
+msgstr "✓ Benutzerdefinierter Anbieter konfiguriert - %{message}"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1257,8 +1257,8 @@ msgstr "Der Kalender-Feed hat den gespeicherten Link abgelehnt. Er wurde vermutl
 #, elixir-autogen, elixir-format
 msgid "%{count} upcoming booking still uses this integration. Its meeting room keeps working unless you delete it here."
 msgid_plural "%{count} upcoming bookings still use this integration. Their meeting rooms keep working unless you delete them here."
-msgstr[0] "%{count} anstehende Buchung nutzt diese Integration noch. Ihr Meetingraum bleibt bestehen, sofern Sie ihn nicht hier löschen."
-msgstr[1] "%{count} anstehende Buchungen nutzen diese Integration noch. Ihre Meetingräume bleiben bestehen, sofern Sie sie nicht hier löschen."
+msgstr[0] "%{count} anstehende Buchung nutzt diese Integration noch. Der zugehörige Meetingraum funktioniert weiterhin, sofern Sie ihn nicht hier löschen."
+msgstr[1] "%{count} anstehende Buchungen nutzen diese Integration noch. Deren Meetingräume funktionieren weiterhin, sofern Sie sie nicht hier löschen."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format

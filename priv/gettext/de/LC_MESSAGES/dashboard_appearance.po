@@ -65,7 +65,7 @@ msgstr "Bestätigen"
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Calendar to Preview"
-msgstr "Kalender verbinden für Vorschau"
+msgstr "Für die Vorschau Kalender verbinden"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/current_indicator.ex
 #, elixir-autogen, elixir-format
@@ -149,7 +149,7 @@ msgstr "Oder eigenes hochladen"
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Unser Design-Team arbeitet mit Hochdruck an neuen Designs, damit Sie Ihren einzigartigen professionellen Stil ausdrücken können."
+msgstr "Unser Design-Team arbeitet bereits an neuen Designs, damit Sie Ihren einzigartigen professionellen Stil ausdrücken können."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -257,7 +257,7 @@ msgstr "Glasmorphismus-Design mit eleganten Transparenzeffekten und einem 4-stuf
 #: lib/tymeslot_web/themes/rhythm/theme.ex
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design with video background and a 4-slide booking flow."
-msgstr "Modernes gleitendes Design mit Videohintergrund und einem 4-Folien-Buchungsablauf."
+msgstr "Modernes Design mit gleitenden Übergängen, Videohintergrund und einem Buchungsablauf in 4 Slides."
 
 #: lib/tymeslot/theme_customizations.ex
 #, elixir-autogen, elixir-format

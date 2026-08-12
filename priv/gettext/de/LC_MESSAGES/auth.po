@@ -30,7 +30,7 @@ msgstr "%{provider}-Authentifizierung erfolgreich, aber die Sitzung konnte nicht
 #: lib/tymeslot_web/live/auth_live/signup_events.ex
 #, elixir-autogen, elixir-format
 msgid "Account created successfully. Please check your email for verification instructions."
-msgstr "Konto erfolgreich erstellt. Bitte prüfen Sie Ihre E-Mails für die Anweisungen zur Verifizierung."
+msgstr "Konto erfolgreich erstellt. Bitte prüfen Sie Ihre E-Mails; dort finden Sie Anweisungen zur Verifizierung."
 
 #: lib/tymeslot_web/components/auth/registration/verify_email_component.ex
 #, elixir-autogen, elixir-format
@@ -181,7 +181,7 @@ msgstr "Ungültiger Verifizierungslink"
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
-msgstr "Tymeslot beitreten"
+msgstr "Bei Tymeslot registrieren"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -945,7 +945,7 @@ msgstr "Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine a
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "This email is associated with a social login. Please use your original sign-in method."
-msgstr "Diese E-Mail-Adresse ist mit einer Social-Login-Anmeldung verknüpft. Bitte verwenden Sie Ihre ursprüngliche Anmeldemethode."
+msgstr "Diese E-Mail-Adresse ist mit einem Social-Login verknüpft. Bitte verwenden Sie Ihre ursprüngliche Anmeldemethode."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -1025,7 +1025,7 @@ msgstr "Ihr Passwort wurde erfolgreich zurückgesetzt"
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your reset token has expired. Please request a new password reset."
-msgstr "Ihr Token zum Zurücksetzen ist abgelaufen. Bitte fordern Sie ein neues Zurücksetzen des Passworts an."
+msgstr "Ihr Token zum Zurücksetzen ist abgelaufen. Bitte fordern Sie das Zurücksetzen des Passworts erneut an."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format

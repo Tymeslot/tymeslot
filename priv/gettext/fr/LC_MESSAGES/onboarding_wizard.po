@@ -753,7 +753,7 @@ msgstr "Sans calendrier connecté, vous devrez gérer les conflits vous-même. V
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
 msgid "You're all set!"
-msgstr "Vous êtes prêt !"
+msgstr "Tout est prêt !"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex
 #, elixir-autogen, elixir-format
@@ -869,7 +869,7 @@ msgstr "Tymeslot est conçu autour de votre calendrier. Une fois connecté, nous
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format
 msgid "You're all set - %{link} is live"
-msgstr "Vous êtes prêt : %{link} est en ligne"
+msgstr "Tout est prêt : %{link} est en ligne"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex
 #, elixir-autogen, elixir-format

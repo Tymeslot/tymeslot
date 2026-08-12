@@ -15,8 +15,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{count} attendee hasn't been invited yet. Discard?"
 msgid_plural "%{count} attendees haven't been invited yet. Discard?"
-msgstr[0] "%{count} partecipante non è ancora stato invitato. Ignorare?"
-msgstr[1] "%{count} partecipanti non sono ancora stati invitati. Ignorare?"
+msgstr[0] "%{count} partecipante non è ancora stato invitato. Scartare?"
+msgstr[1] "%{count} partecipanti non sono ancora stati invitati. Scartare?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
 #, elixir-autogen, elixir-format
@@ -304,7 +304,7 @@ msgstr "Promemoria desktop"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Discard"
-msgstr "Ignora"
+msgstr "Scarta"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format

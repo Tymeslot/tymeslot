@@ -101,7 +101,7 @@ msgstr "Due modalità"
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
-msgstr "Benvenuto nella tua Dashboard Tymeslot"
+msgstr "Benvenuto nella tua dashboard di Tymeslot"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -259,7 +259,7 @@ msgstr ""
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Go create your first event type - and let people book you."
-msgstr "Vai a creare il tuo primo tipo di evento - e fatti prenotare."
+msgstr "Crea il tuo primo tipo di evento e fatti prenotare."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format

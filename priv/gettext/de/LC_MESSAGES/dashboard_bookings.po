@@ -145,7 +145,7 @@ msgstr "Vollständige Rückerstattung."
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "I understand the attendee will not receive a refund."
-msgstr "Ich verstehe, dass der Teilnehmer keine Rückerstattung erhält."
+msgstr "Mir ist bewusst, dass der Teilnehmer keine Rückerstattung erhält."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -255,7 +255,7 @@ msgstr "Echtzeit-Aktualisierungen"
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
-msgstr "Der Rückerstattungsbetrag übersteigt das verbleibende erstattungsfähige Guthaben."
+msgstr "Der Rückerstattungsbetrag übersteigt den verbleibenden erstattungsfähigen Betrag."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -265,7 +265,7 @@ msgstr "Nur einen Teil des Buchungsbetrags erstatten."
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds the remaining balance (%{amount})."
-msgstr "Erstattet das verbleibende Guthaben (%{amount})."
+msgstr "Erstattet den Restbetrag (%{amount})."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -305,7 +305,7 @@ msgstr "Wird gesendet…"
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee keeps no money. Use only if the attendee already agreed."
-msgstr "Der Teilnehmer behält kein Geld. Nur verwenden, wenn der Teilnehmer bereits zugestimmt hat."
+msgstr "Der Teilnehmer erhält kein Geld zurück. Nur verwenden, wenn der Teilnehmer bereits zugestimmt hat."
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
@@ -335,7 +335,7 @@ msgstr "Das Ereignis dieses Termins wurde in Ihrem externen Kalender verschoben.
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the attendee."
-msgstr "Bestätigen Sie das Kontrollkästchen, um ohne Rückerstattung an den Teilnehmer abzusagen."
+msgstr "Aktivieren Sie das Kontrollkästchen, um ohne Rückerstattung an den Teilnehmer abzusagen."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -360,7 +360,7 @@ msgstr "Mit automatischen Benachrichtigungen"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have any cancelled appointments to show."
-msgstr "Sie haben keine abgesagten Termine anzuzeigen."
+msgstr "Es gibt keine abgesagten Termine anzuzeigen."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format

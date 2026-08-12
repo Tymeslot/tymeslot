@@ -15,9 +15,9 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{count} attendee hasn't been invited yet. Discard?"
 msgid_plural "%{count} attendees haven't been invited yet. Discard?"
-msgstr[0] "%{count} учасник ще не отримав запрошення. Скасувати?"
-msgstr[1] "%{count} учасники ще не отримали запрошення. Скасувати?"
-msgstr[2] "%{count} учасників ще не отримали запрошення. Скасувати?"
+msgstr[0] "%{count} учасник ще не отримав запрошення. Відхилити?"
+msgstr[1] "%{count} учасники ще не отримали запрошення. Відхилити?"
+msgstr[2] "%{count} учасників ще не отримали запрошення. Відхилити?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
 #, elixir-autogen, elixir-format
@@ -169,7 +169,7 @@ msgstr "Учасники"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Attendees will be notified of pending changes."
-msgstr "Учасників буде сповіщено про очікувані зміни."
+msgstr "Учасників буде сповіщено про внесені зміни."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #, elixir-autogen, elixir-format
@@ -464,7 +464,7 @@ msgstr "Запросити учасників (необов'язково)"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Jump to today"
-msgstr "Перейти до сьогодні"
+msgstr "Перейти до сьогоднішнього дня"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
@@ -569,7 +569,7 @@ msgstr "У визначену дату"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Pending notification cancelled."
-msgstr "Очікуване сповіщення скасовано."
+msgstr "Заплановане сповіщення скасовано."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
 #, elixir-autogen, elixir-format
