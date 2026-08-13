@@ -1385,3 +1385,58 @@ msgstr "Non è stato possibile collegare questo calendario."
 #, elixir-autogen, elixir-format
 msgid "This provider always writes to its primary calendar."
 msgstr "Questo provider scrive sempre nel suo calendario principale."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was changed on the target calendar."
+msgstr "Nel calendario di destinazione non è stato modificato nulla."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Recently resolved differences"
+msgstr "Differenze risolte di recente"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh"
+msgstr "Aggiorna"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The busy block could not be written to the target calendar."
+msgstr "Non è stato possibile scrivere il blocco occupato nel calendario di destinazione."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The busy block was edited on the target calendar."
+msgstr "Il blocco occupato è stato modificato nel calendario di destinazione."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The busy block was removed."
+msgstr "Il blocco occupato è stato rimosso."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The difference was resolved automatically."
+msgstr "La differenza è stata risolta automaticamente."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The original event and its busy block both changed."
+msgstr "Sono cambiati sia l'evento originale sia il suo blocco occupato."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The original event was deleted while the placeholder was edited."
+msgstr "L'evento originale è stato eliminato mentre il segnaposto veniva modificato."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The original event was kept."
+msgstr "È stato mantenuto l'evento originale."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The two calendars differed."
+msgstr "I due calendari differivano."

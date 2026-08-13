@@ -30,6 +30,27 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   Writes go through `Tymeslot.Integrations.Calendar.SyncLink`, never through a
   query module: the query modules are not user-scoped and a link names two
   forgeable integration ids. See that module's moduledoc.
+
+  ## Why the conflict log is on this page at all
+
+  Mirroring resolves divergences without asking: a placeholder edited on the
+  target is overwritten, and a source deleted while its placeholder was edited
+  takes the placeholder with it. Both are the right answers and both destroy
+  work, so an organiser who does not see them recorded has no way to tell a
+  resolution from a bug — the placeholder simply reverts, or vanishes, and the
+  only remaining hypothesis is that mirroring is broken.
+
+  The history is rendered inline under each link rather than behind a click, for
+  the same reason the links themselves are: the panel is where mirroring is
+  reasoned about, and a log nobody opens is a log nobody reads.
+  `ConflictHistory.recent_for_user/2` answers for every link at once and is
+  scoped by owner in SQL, so the listing costs one query however many links
+  there are.
+
+  The refresh button re-reads *one* link by an id that arrives from the browser,
+  so it goes through `ConflictHistory.for_link/3`, which checks ownership. A
+  forged id answers `{:error, :not_found}` and the panel is left exactly as it
+  was.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -38,6 +59,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.SyncLink
+  alias Tymeslot.Integrations.Calendar.SyncLink.ConflictHistory
   alias Tymeslot.Security.RateLimiter
 
   @impl Phoenix.LiveComponent
@@ -45,6 +67,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
     {:ok,
      socket
      |> assign(:links, [])
+     |> assign(:conflicts, %{})
      |> assign(:form_values, %{})
      |> assign(:form_error, nil)}
   end
@@ -52,10 +75,12 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket = assign(socket, assigns)
+    user_id = socket.assigns.current_user.id
 
     {:ok,
      socket
-     |> assign(:links, SyncLink.list_links(socket.assigns.current_user.id))
+     |> assign(:links, SyncLink.list_links(user_id))
+     |> assign(:conflicts, ConflictHistory.recent_for_user(user_id))
      |> assign_new(:form_values, fn -> %{} end)
      |> assign_new(:form_error, fn -> nil end)}
   end
@@ -84,6 +109,25 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
       {:noreply, refresh(socket, user_id)}
     else
       _refused -> {:noreply, refresh(socket, user_id)}
+    end
+  end
+
+  # A read, not a write, so no rate-limit bucket: it costs one indexed query
+  # against rows the organiser already has rendered. The id comes off the wire,
+  # so `ConflictHistory.for_link/3` checks the ownership the query module cannot.
+  def handle_event("show_sync_link_conflicts", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    case ConflictHistory.for_link(user_id, cast_id(id)) do
+      {:ok, conflicts} ->
+        {:noreply,
+         assign(socket, :conflicts, Map.put(socket.assigns.conflicts, cast_id(id), conflicts))}
+
+      # Someone else's link, or none at all. The panel is left as it stands
+      # rather than cleared, which would tell a prober that the id was real
+      # enough to have had an effect.
+      {:error, :not_found} ->
+        {:noreply, socket}
     end
   end
 
@@ -126,7 +170,10 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   # them. `dashboard_live.ex` catches this and re-renders the hub.
   defp refresh(socket, user_id) do
     send(self(), {:integration_updated, :calendar})
-    assign(socket, :links, SyncLink.list_links(user_id))
+
+    socket
+    |> assign(:links, SyncLink.list_links(user_id))
+    |> assign(:conflicts, ConflictHistory.recent_for_user(user_id))
   end
 
   defp currently_enabled?(links, id) do
@@ -258,44 +305,81 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
           <li
             :for={link <- @links}
             id={"sync-link-#{link.id}"}
-            class="flex flex-wrap items-center justify-between gap-4 rounded-token-lg border border-tymeslot-200 bg-white p-4"
+            class="space-y-4 rounded-token-lg border border-tymeslot-200 bg-white p-4"
           >
-            <div class="min-w-0">
-              <p class="text-token-sm font-semibold text-tymeslot-900">
-                {dgettext("dashboard_integrations", "%{source} to %{target}",
-                  source: link.source_integration.name,
-                  target: link.target_integration.name
-                )}
-              </p>
-              <p class="text-token-xs text-tymeslot-500">
-                {privacy_tier_label(link.privacy_tier)}
-                <span :if={not link.enabled} class="ml-2 font-semibold text-amber-600">
-                  {dgettext("dashboard_integrations", "Paused")}
-                </span>
-              </p>
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-token-sm font-semibold text-tymeslot-900">
+                  {dgettext("dashboard_integrations", "%{source} to %{target}",
+                    source: link.source_integration.name,
+                    target: link.target_integration.name
+                  )}
+                </p>
+                <p class="text-token-xs text-tymeslot-500">
+                  {privacy_tier_label(link.privacy_tier)}
+                  <span :if={not link.enabled} class="ml-2 font-semibold text-amber-600">
+                    {dgettext("dashboard_integrations", "Paused")}
+                  </span>
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  phx-click="toggle_sync_link"
+                  phx-value-id={link.id}
+                  phx-target={@myself}
+                  class="rounded-token-md border border-tymeslot-200 px-3 py-1.5 text-token-xs font-semibold text-tymeslot-700 hover:bg-tymeslot-50"
+                >
+                  {(link.enabled && dgettext("dashboard_integrations", "Pause")) ||
+                    dgettext("dashboard_integrations", "Resume")}
+                </button>
+                <button
+                  type="button"
+                  phx-click="delete_sync_link"
+                  phx-value-id={link.id}
+                  phx-target={@myself}
+                  class="rounded-token-md border border-red-200 px-3 py-1.5 text-token-xs font-semibold text-red-700 hover:bg-red-50"
+                >
+                  {dgettext("dashboard_integrations", "Remove")}
+                </button>
+              </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                phx-click="toggle_sync_link"
-                phx-value-id={link.id}
-                phx-target={@myself}
-                class="rounded-token-md border border-tymeslot-200 px-3 py-1.5 text-token-xs font-semibold text-tymeslot-700 hover:bg-tymeslot-50"
-              >
-                {(link.enabled && dgettext("dashboard_integrations", "Pause")) ||
-                  dgettext("dashboard_integrations", "Resume")}
-              </button>
-              <button
-                type="button"
-                phx-click="delete_sync_link"
-                phx-value-id={link.id}
-                phx-target={@myself}
-                class="rounded-token-md border border-red-200 px-3 py-1.5 text-token-xs font-semibold text-red-700 hover:bg-red-50"
-              >
-                {dgettext("dashboard_integrations", "Remove")}
-              </button>
-            </div>
+            <%!-- Rendered only where there is a history. A link that has never
+                  diverged has nothing to explain, and an empty box under every
+                  link reads as a feature that failed to load. --%>
+            <section
+              :if={conflicts_for(@conflicts, link) != []}
+              id={"sync-link-conflicts-#{link.id}"}
+              class="space-y-2 border-t border-tymeslot-100 pt-3"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <h3 class="text-token-xs font-semibold uppercase tracking-wide text-tymeslot-500">
+                  {dgettext("dashboard_integrations", "Recently resolved differences")}
+                </h3>
+                <button
+                  type="button"
+                  phx-click="show_sync_link_conflicts"
+                  phx-value-id={link.id}
+                  phx-target={@myself}
+                  class="text-token-xs font-semibold text-tymeslot-600 hover:text-tymeslot-900"
+                >
+                  {dgettext("dashboard_integrations", "Refresh")}
+                </button>
+              </div>
+
+              <ul class="space-y-2">
+                <li
+                  :for={conflict <- conflicts_for(@conflicts, link)}
+                  class="text-token-xs text-tymeslot-600"
+                >
+                  <p class="font-semibold text-tymeslot-800">{conflict_kind_label(conflict.kind)}</p>
+                  <p>{conflict_resolution_label(conflict.resolution)}</p>
+                  <p class="break-all font-mono text-tymeslot-400">{conflict.source_uid}</p>
+                </li>
+              </ul>
+            </section>
           </li>
         </ul>
       </section>
@@ -372,6 +456,57 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
     </div>
     """
   end
+
+  defp conflicts_for(conflicts, link), do: Map.get(conflicts, link.id, [])
+
+  # What happened, in the organiser's terms rather than the schema's. The stored
+  # value is a code the engine writes; "mirror_edited" on a page means nothing to
+  # someone who has never read the engine.
+  defp conflict_kind_label("mirror_edited"),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "The busy block was edited on the target calendar."
+      )
+
+  defp conflict_kind_label("both_changed"),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "The original event and its busy block both changed."
+      )
+
+  defp conflict_kind_label("delete_race"),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "The original event was deleted while the placeholder was edited."
+      )
+
+  defp conflict_kind_label("write_failed"),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "The busy block could not be written to the target calendar."
+      )
+
+  # A kind this version does not know how to name is still shown, because the
+  # row's date and event are useful on their own and a silently dropped entry
+  # would make the history lie about how many there were.
+  defp conflict_kind_label(_kind),
+    do: dgettext("dashboard_integrations", "The two calendars differed.")
+
+  defp conflict_resolution_label("source_won"),
+    do: dgettext("dashboard_integrations", "The original event was kept.")
+
+  defp conflict_resolution_label("deletion_won"),
+    do: dgettext("dashboard_integrations", "The busy block was removed.")
+
+  defp conflict_resolution_label("skipped"),
+    do: dgettext("dashboard_integrations", "Nothing was changed on the target calendar.")
+
+  defp conflict_resolution_label(_resolution),
+    do: dgettext("dashboard_integrations", "The difference was resolved automatically.")
 
   defp privacy_tier_label("busy_only"),
     do: dgettext("dashboard_integrations", "Shown as busy, with no detail")

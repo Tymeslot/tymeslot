@@ -9,9 +9,15 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   3. Slack delivery logs (60 days retention)
   4. Telegram delivery logs (60 days retention)
   5. Analytics page-view events (90 days retention)
+  6. Calendar sync conflict records (90 days retention)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
+
+  The conflict audit joins this worker rather than getting one of its own: it is
+  an append-only log pruned on an age, which is exactly the shape every entry
+  here already has, and a second worker would mean a second schedule and a
+  second place to look when a table is found growing.
   """
 
   use Oban.Worker,
@@ -22,6 +28,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   require Logger
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookQueries
@@ -66,6 +73,17 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       config_key: :analytics_event_days,
       default_days: 90,
       prune: &Analytics.prune_events/1
+    },
+    # Long enough to outlive the question it answers. An organiser notices a
+    # busy block that reverted or vanished days or weeks after the sync that did
+    # it, and a shorter window would delete the explanation before anyone came
+    # looking for it.
+    %{
+      name: "calendar sync conflict",
+      args_key: "sync_conflict_retention_days",
+      config_key: :sync_conflict_days,
+      default_days: 90,
+      prune: &CalendarSyncConflictQueries.prune_older_than/1
     }
   ]
 

@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Integrations.Calendar.CalendarSyncConflictSchema
   alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
@@ -275,6 +276,61 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
 
       assert :ok = perform_job(DataRetentionWorker, %{"analytics_event_retention_days" => 30})
       refute Repo.get(EventSchema, event.id)
+    end
+  end
+
+  describe "perform/1 - calendar sync conflict cleanup" do
+    defp insert_conflict(link, occurred_at) do
+      insert(:calendar_sync_conflict, sync_link_id: link.id, occurred_at: occurred_at)
+    end
+
+    test "removes conflicts older than 90 days, keeps recent ones" do
+      link = insert(:calendar_sync_link)
+
+      old = insert_conflict(link, DateTime.add(DateTime.utc_now(), -91, :day))
+      recent = insert_conflict(link, DateTime.add(DateTime.utc_now(), -30, :day))
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.get(CalendarSyncConflictSchema, old.id)
+      assert Repo.get(CalendarSyncConflictSchema, recent.id)
+    end
+
+    test "prunes on when the divergence happened, not on when it was recorded" do
+      link = insert(:calendar_sync_link)
+
+      # A reconciliation sweep discovers divergences long after they occurred and
+      # stamps `occurred_at` with the real time, so the two columns can be months
+      # apart. Pruning on `inserted_at` would keep an ancient conflict alive for
+      # a further 90 days purely because a sweep was late to notice it.
+      late_discovery =
+        insert(:calendar_sync_conflict,
+          sync_link_id: link.id,
+          occurred_at: DateTime.add(DateTime.utc_now(), -120, :day)
+        )
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.get(CalendarSyncConflictSchema, late_discovery.id)
+    end
+
+    test "respects the sync_conflict_retention_days argument" do
+      link = insert(:calendar_sync_link)
+      conflict = insert_conflict(link, DateTime.add(DateTime.utc_now(), -45, :day))
+
+      assert :ok = perform_job(DataRetentionWorker, %{"sync_conflict_retention_days" => 30})
+      refute Repo.get(CalendarSyncConflictSchema, conflict.id)
+    end
+
+    test "treats a zero or negative window as a guard rather than an instruction" do
+      link = insert(:calendar_sync_link)
+      conflict = insert_conflict(link, DateTime.add(DateTime.utc_now(), -400, :day))
+
+      assert :ok = perform_job(DataRetentionWorker, %{"sync_conflict_retention_days" => 0})
+      assert Repo.get(CalendarSyncConflictSchema, conflict.id)
+
+      assert :ok = perform_job(DataRetentionWorker, %{"sync_conflict_retention_days" => -1})
+      assert Repo.get(CalendarSyncConflictSchema, conflict.id)
     end
   end
 end

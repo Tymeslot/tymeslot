@@ -325,4 +325,109 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       assert length(SyncLink.list_links(user.id)) == 1
     end
   end
+
+  describe "the conflict log" do
+    setup %{user: user} do
+      source = google(user, "Work Google")
+      target = google(user, "Personal Google")
+
+      {:ok, link} =
+        SyncLink.create_link(user.id, %{
+          "source_integration_id" => source.id,
+          "target_integration_id" => target.id
+        })
+
+      {:ok, link: link}
+    end
+
+    test "says so when a link has resolved nothing", %{conn: conn, link: link} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      # A link with a clean history must not render an empty panel that reads
+      # as a missing feature.
+      refute has_element?(view, "#sync-link-conflicts-#{link.id}")
+    end
+
+    test "names every resolution it has made for a link", %{conn: conn, link: link} do
+      insert(:calendar_sync_conflict,
+        sync_link_id: link.id,
+        source_uid: "board-meeting-uid",
+        kind: "mirror_edited",
+        resolution: "source_won"
+      )
+
+      insert(:calendar_sync_conflict,
+        sync_link_id: link.id,
+        source_uid: "standup-uid",
+        kind: "delete_race",
+        resolution: "deletion_won"
+      )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      assert has_element?(view, "#sync-link-conflicts-#{link.id}")
+
+      # Storing the resolution is not the feature; telling the organiser what
+      # happened to their event is. Both the plain-language reason and the event
+      # it happened to have to reach the page.
+      assert html =~ "edited on the target calendar"
+      assert html =~ "board-meeting-uid"
+      assert html =~ "deleted while the placeholder was edited"
+      assert html =~ "standup-uid"
+    end
+
+    test "explains a write that never landed", %{conn: conn, link: link} do
+      insert(:calendar_sync_conflict,
+        sync_link_id: link.id,
+        source_uid: "quarterly-review-uid",
+        kind: "write_failed",
+        resolution: "skipped",
+        detail: %{"error" => "forbidden", "operation" => "update"}
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      assert html =~ "could not be written to the target calendar"
+      assert html =~ "quarterly-review-uid"
+    end
+
+    test "never shows another organiser's history, however the id arrives", ctx do
+      %{conn: conn, link: link} = ctx
+
+      stranger = insert(:user)
+      stranger_source = insert(:calendar_integration, user: stranger, provider: "google")
+      stranger_target = insert(:calendar_integration, user: stranger, provider: "google")
+
+      {:ok, theirs} =
+        SyncLink.create_link(stranger.id, %{
+          "source_integration_id" => stranger_source.id,
+          "target_integration_id" => stranger_target.id
+        })
+
+      insert(:calendar_sync_conflict,
+        sync_link_id: theirs.id,
+        source_uid: "their-private-event-uid",
+        kind: "mirror_edited"
+      )
+
+      insert(:calendar_sync_conflict,
+        sync_link_id: link.id,
+        source_uid: "my-own-event-uid",
+        kind: "mirror_edited"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      # The history names event UIDs and the times two calendars diverged. The
+      # stranger's link id is never rendered here, so it can only arrive forged
+      # — pushed at the component's own event on their own link's control.
+      html =
+        view
+        |> element("button[phx-click='show_sync_link_conflicts']")
+        |> render_click(%{"id" => to_string(theirs.id)})
+
+      refute html =~ "their-private-event-uid"
+      assert render(view) =~ "my-own-event-uid"
+    end
+  end
 end

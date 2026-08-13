@@ -47,6 +47,31 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   would strand a busy block on the organiser's calendar that nothing owns and
   nothing will ever clean up. A delete that fails leaves the row behind in
   `pending_delete`, which is exactly the state the reconcile sweep looks for.
+
+  ## Conflicts, and why they are recorded here
+
+  A mirror is not independently editable: whatever the organiser does to a
+  placeholder on the target, the source overwrites it on the next pass, and a
+  source deleted while its placeholder was edited takes the placeholder with it.
+  Both are defensible resolutions, and both destroy work without saying so —
+  which is why each leaves a row in `calendar_sync_conflicts`. The evidence for
+  the decision (the etags compared, the timestamps, the provider error) exists
+  only inside the branch that made it, so it is recorded there rather than
+  reconstructed afterwards from state that has since been overwritten.
+
+  `SyncLink.ConflictLog` owns the classification; this module owns when to ask
+  it. The split matters because the same evidence is read on three paths —
+  update, delete, and terminal failure — and three independent readings of it is
+  how one divergence ends up appended twice under two names.
+
+  ## The attempt count
+
+  `write_failed` is the one conflict that turns on something the domain cannot
+  see: whether Oban will try again. A retryable error is a write still in
+  flight, not a resolution, and recording each attempt would fill the history
+  with rows for writes that succeeded seconds later. So the caller passes its
+  attempt number — exactly as `Meetings.CalendarEventSync` takes one, for the
+  same purpose — and only the final attempt records a failure.
   """
 
   require Logger
@@ -55,12 +80,26 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.SyncLink.ConflictLog
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
 
   @uid_prefix "tymeslot-mirror-"
 
+  # Matches `SyncLinkWriteBackWorker`'s `max_attempts`. A caller passing no
+  # attempt is not running under Oban — a sweep, a console, a test — and has no
+  # retry pending, so its failure is terminal where it stands.
+  @final_attempt 5
+
   @typedoc "What the worker maps straight onto Oban's return vocabulary."
   @type result :: :ok | {:error, term()} | {:discard, term()}
+
+  @typedoc """
+  `:attempt` is the caller's Oban attempt number. It decides only whether a
+  provider failure is recorded as a resolved conflict or left alone as a write
+  still being retried.
+  """
+  @type opts :: [attempt: pos_integer()]
 
   @doc """
   Creates or updates the placeholder for one source event on this link's target.
@@ -75,15 +114,19 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   a mirror set this module would have to fetch itself would make it two gates
   that can disagree.
   """
-  @spec mirror(CalendarSyncLinkSchema.t(), map(), integer()) :: result()
-  def mirror(%CalendarSyncLinkSchema{} = link, source_event, user_id)
-      when is_integer(user_id) do
+  @spec mirror(CalendarSyncLinkSchema.t(), map(), integer(), opts()) :: result()
+  def mirror(%CalendarSyncLinkSchema{} = link, source_event, user_id, opts \\ [])
+      when is_integer(user_id) and is_list(opts) do
     source_uid = source_event.uid
     target_uid = target_uid_for(link.id, source_uid)
+    final? = final_attempt?(opts)
 
     case CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, source_uid) do
-      {:ok, mirror} -> update_mirror(link, mirror, source_event, target_uid, user_id)
-      {:error, :not_found} -> create_mirror(link, source_event, target_uid, user_id)
+      {:ok, mirror} ->
+        update_mirror(link, mirror, source_event, target_uid, user_id, final?)
+
+      {:error, :not_found} ->
+        create_mirror(link, source_event, target_uid, user_id, final?)
     end
   end
 
@@ -96,12 +139,12 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   exists, and "there is nothing to withdraw" is the same outcome as having
   withdrawn it.
   """
-  @spec unmirror(CalendarSyncLinkSchema.t(), String.t(), integer()) :: result()
-  def unmirror(%CalendarSyncLinkSchema{} = link, source_uid, user_id)
-      when is_binary(source_uid) and is_integer(user_id) do
+  @spec unmirror(CalendarSyncLinkSchema.t(), String.t(), integer(), opts()) :: result()
+  def unmirror(%CalendarSyncLinkSchema{} = link, source_uid, user_id, opts \\ [])
+      when is_binary(source_uid) and is_integer(user_id) and is_list(opts) do
     case CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, source_uid) do
       {:error, :not_found} -> :ok
-      {:ok, mirror} -> delete_mirror(link, mirror, user_id)
+      {:ok, mirror} -> delete_mirror(link, mirror, user_id, final_attempt?(opts))
     end
   end
 
@@ -129,7 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
 
   # --- Create ---
 
-  defp create_mirror(link, source_event, target_uid, user_id) do
+  defp create_mirror(link, source_event, target_uid, user_id, final?) do
     payload = payload_for(link, source_event, target_uid)
 
     case CalendarEvents.create_event(payload, {link.target_integration_id, user_id}) do
@@ -137,6 +180,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         persist_or_compensate(link, source_event, target_uid, created, user_id)
 
       {:error, reason} ->
+        record_write_failure(link, source_event.uid, :create, reason, final?)
         {:error, reason}
     end
   end
@@ -150,6 +194,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
       target_integration_id: link.target_integration_id,
       target_uid: target_uid,
       target_provider_event_id: provider_event_id(created),
+      target_etag: observed_target_etag(link.target_integration_id, target_uid),
       source_updated_at: Map.get(source_event, :provider_updated_at),
       source_etag: Map.get(source_event, :etag),
       last_synced_at: DateTime.utc_now(),
@@ -198,14 +243,24 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
 
   # --- Update ---
 
-  defp update_mirror(link, mirror, source_event, target_uid, user_id) do
+  defp update_mirror(link, mirror, source_event, target_uid, user_id, final?) do
     payload = payload_for(link, source_event, target_uid)
 
     case CalendarEvents.update_event(target_uid, payload, {link.target_integration_id, user_id}) do
       :ok ->
+        # Recorded only once the overwrite has actually landed. A conflict is a
+        # resolution, and a write that failed resolved nothing — logging before
+        # the call would append a row per retry for a divergence still
+        # outstanding, and the retry that finally succeeds would append one
+        # more. The evidence survives the write either way: the placeholder's
+        # cached state is a projection of the target's own sync, which this
+        # write does not touch.
+        ConflictLog.record_overwrite(mirror, source_event)
+
         mark(mirror, %{
           state: "active",
           last_synced_at: DateTime.utc_now(),
+          target_etag: observed_target_etag(link.target_integration_id, target_uid),
           source_updated_at: Map.get(source_event, :provider_updated_at),
           source_etag: Map.get(source_event, :etag)
         })
@@ -217,21 +272,65 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         # only the row records that. Marking it here is what lets the reconcile
         # sweep find it after Oban has exhausted its attempts.
         mark(mirror, %{state: "failed"})
+        record_write_failure(link, mirror.source_uid, :update, reason, final?)
         {:error, reason}
     end
   end
 
   # --- Delete ---
 
-  defp delete_mirror(link, mirror, user_id) do
+  defp delete_mirror(link, mirror, user_id, final?) do
+    mirror = consume_delete_race(mirror)
+
     case CalendarEvents.delete_event(mirror.target_uid, {link.target_integration_id, user_id}) do
-      :ok -> drop_mapping(mirror)
+      :ok ->
+        drop_mapping(mirror)
+
       # Already gone on the provider. The mapping is the only thing left, and
       # keeping it would make the sweep retry a delete that can never succeed.
-      {:error, :not_found} -> drop_mapping(mirror)
-      {:error, reason} -> mark_pending_delete(mirror, reason)
+      {:error, :not_found} ->
+        drop_mapping(mirror)
+
+      {:error, reason} ->
+        record_write_failure(link, mirror.source_uid, :delete, reason, final?)
+        mark_pending_delete(mirror, reason)
     end
   end
+
+  # The race is recorded before the provider delete, because a delete that fails
+  # leaves the mapping in `pending_delete` for the sweep to retry — and the
+  # evidence, the placeholder's cached etag, is still there for the retry to
+  # find. Recording it on the first pass and then clearing the baseline it was
+  # read from is what makes one race one row: the retry has nothing left to
+  # compare, and there was never a second race to describe.
+  defp consume_delete_race(mirror) do
+    case ConflictLog.record_delete_race(mirror) do
+      :recorded -> mark(mirror, %{target_etag: nil})
+      :nothing_to_record -> mirror
+    end
+  end
+
+  # The etag the target's own sync currently holds for the placeholder, taken as
+  # the baseline a later direct edit is measured against. Read from the cache
+  # rather than from the write's response because no provider returns one
+  # uniformly there — CalDAV echoes the payload it PUT, Google and Outlook their
+  # own event body — while the target's inbound sync stores an etag for every
+  # event it fetches, this one included.
+  defp observed_target_etag(target_integration_id, target_uid) do
+    case ProviderCalendarEventQueries.get_by_uid(target_integration_id, target_uid) do
+      {:ok, %{etag: etag}} -> etag
+      {:error, :not_found} -> nil
+    end
+  end
+
+  # Only the last attempt records a failure; see the moduledoc. A caller that
+  # names no attempt has no retry pending and is treated as final.
+  defp final_attempt?(opts), do: Keyword.get(opts, :attempt, @final_attempt) >= @final_attempt
+
+  defp record_write_failure(_link, _source_uid, _operation, _reason, false), do: :ok
+
+  defp record_write_failure(link, source_uid, operation, reason, true),
+    do: ConflictLog.record_write_failure(link.id, source_uid, operation, reason)
 
   defp drop_mapping(mirror) do
     case CalendarSyncMirrorQueries.delete(mirror) do

@@ -1393,3 +1393,58 @@ msgstr "Tento kalendář se nepodařilo propojit."
 #, elixir-autogen, elixir-format
 msgid "This provider always writes to its primary calendar."
 msgstr "Tento poskytovatel vždy zapisuje do svého hlavního kalendáře."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was changed on the target calendar."
+msgstr "V cílovém kalendáři se nic nezměnilo."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Recently resolved differences"
+msgstr "Nedávno vyřešené rozdíly"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh"
+msgstr "Obnovit"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The busy block could not be written to the target calendar."
+msgstr "Blok zaneprázdnění se nepodařilo zapsat do cílového kalendáře."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The busy block was edited on the target calendar."
+msgstr "Blok zaneprázdnění byl upraven v cílovém kalendáři."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The busy block was removed."
+msgstr "Blok zaneprázdnění byl odstraněn."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The difference was resolved automatically."
+msgstr "Rozdíl byl vyřešen automaticky."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The original event and its busy block both changed."
+msgstr "Změnila se původní událost i její blok zaneprázdnění."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The original event was deleted while the placeholder was edited."
+msgstr "Původní událost byla smazána, zatímco se zástupný blok upravoval."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The original event was kept."
+msgstr "Byla zachována původní událost."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The two calendars differed."
+msgstr "Oba kalendáře se lišily."

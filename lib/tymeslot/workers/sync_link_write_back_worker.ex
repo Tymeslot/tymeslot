@@ -43,6 +43,26 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   Everything else — a rate limit, an expired token, a timeout — is an
   `{:error, reason}` that Oban retries with backoff.
 
+  ## Why the last failed attempt marks the target unhealthy
+
+  A mirror write is best-effort by construction: it never fails the inbound
+  sync that triggered it, and the reconcile sweep retries quietly. That is the
+  right design and it has one consequence — a target calendar that refuses
+  every write is completely silent to the organiser. The busy blocks simply
+  stop appearing, and the first they hear of it is a double booking.
+
+  The scheduled health probe cannot catch it either, because the probe is a
+  *read*. An integration whose token was granted read-only, or whose calendar
+  was made read-only downstream, passes every probe and fails every write. So a
+  failure only the write path can observe is reported by the write path, into
+  the health-check domain that already exists and already drives the hub badge
+  — no second store, and no second breaker on top of
+  `CalendarCircuitBreaker`.
+
+  Only the *final* attempt marks. Everything before it is a blip that Oban's
+  retry ladder exists to absorb, and marking on the first one would raise the
+  badge for every timeout on every event.
+
   ## Eligibility is re-checked here
 
   The enqueue site already asked. Asking again is not redundancy: a job can sit
@@ -104,9 +124,10 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
+  alias Tymeslot.Integrations.HealthCheck
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args, attempt: attempt, max_attempts: max_attempts}) do
     %{
       "sync_link_id" => sync_link_id,
       "source_uid" => source_uid,
@@ -114,22 +135,39 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
     } = args
 
     case CalendarSyncLinkQueries.get(sync_link_id) do
-      {:ok, link} -> dispatch(link, source_uid, operation)
-      {:error, :not_found} -> {:discard, :link_not_found}
+      {:ok, link} ->
+        link
+        |> dispatch(source_uid, operation, attempt)
+        |> surface_exhausted_failure(link, attempt, max_attempts)
+
+      {:error, :not_found} ->
+        {:discard, :link_not_found}
     end
   end
+
+  # The last attempt of a failing write is the only signal the organiser will
+  # ever get that their target calendar is refusing mirrors — see the moduledoc.
+  # A discard is deliberately excluded: it means the write was never attempted,
+  # which says nothing about the target's health.
+  defp surface_exhausted_failure({:error, _reason} = outcome, link, attempt, max_attempts)
+       when attempt >= max_attempts do
+    HealthCheck.mark_write_failure(:calendar, link.target_integration_id, link.user_id)
+    outcome
+  end
+
+  defp surface_exhausted_failure(outcome, _link, _attempt, _max_attempts), do: outcome
 
   # A paused link writes nothing, in either direction. Matched before the target
   # is even looked at: whether the target could receive a write is irrelevant
   # once the organiser has said not to send one.
-  defp dispatch(%CalendarSyncLinkSchema{enabled: false}, _source_uid, _operation),
+  defp dispatch(%CalendarSyncLinkSchema{enabled: false}, _source_uid, _operation, _attempt),
     do: {:discard, :link_disabled}
 
-  defp dispatch(%CalendarSyncLinkSchema{} = link, source_uid, operation) do
+  defp dispatch(%CalendarSyncLinkSchema{} = link, source_uid, operation, attempt) do
     if read_only_target?(link) do
       {:discard, :target_is_read_only}
     else
-      run(link, source_uid, operation)
+      run(link, source_uid, operation, attempt)
     end
   end
 
@@ -143,34 +181,42 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
 
   defp read_only_target?(_link), do: true
 
-  defp run(link, source_uid, "delete"), do: Engine.unmirror(link, source_uid, link.user_id)
+  # The attempt travels into the domain for one decision only: whether a
+  # provider failure is the end of the road, and so a conflict worth recording,
+  # or a write Oban is about to try again. That is the worker's knowledge — it
+  # owns the *when* — and the engine cannot obtain it any other way.
+  defp run(link, source_uid, "delete", attempt),
+    do: Engine.unmirror(link, source_uid, link.user_id, attempt: attempt)
 
-  defp run(link, source_uid, "upsert") do
+  defp run(link, source_uid, "upsert", attempt) do
     case ProviderCalendarEventQueries.get_by_uid(link.source_integration_id, source_uid) do
-      {:ok, event} -> upsert(link, event, source_uid)
+      {:ok, event} ->
+        upsert(link, event, source_uid, attempt)
+
       # The source has vanished from the cache. If it left a placeholder behind,
       # that placeholder is now blocking time for an event that no longer
       # exists, so it is withdrawn rather than left; if it did not, there is
       # nothing this job can ever do.
-      {:error, :not_found} -> unmirror_or_discard(link, source_uid, :source_not_cached)
+      {:error, :not_found} ->
+        unmirror_or_discard(link, source_uid, :source_not_cached, attempt)
     end
   end
 
-  defp upsert(link, event, source_uid) do
+  defp upsert(link, event, source_uid, attempt) do
     if Eligibility.mirror_source?(event, mirror_set(link)) do
-      Engine.mirror(link, event, link.user_id)
+      Engine.mirror(link, event, link.user_id, attempt: attempt)
     else
       # Ineligible now, but it may have been eligible when the placeholder was
       # written — a cancelled meeting, an event switched to free, or an event
       # this link's counterpart has since mirrored onto the source calendar.
       # Whatever the reason, the placeholder must stop blocking time.
-      unmirror_or_discard(link, source_uid, :not_an_eligible_source)
+      unmirror_or_discard(link, source_uid, :not_an_eligible_source, attempt)
     end
   end
 
-  defp unmirror_or_discard(link, source_uid, reason) do
+  defp unmirror_or_discard(link, source_uid, reason, attempt) do
     case CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, source_uid) do
-      {:ok, _mirror} -> Engine.unmirror(link, source_uid, link.user_id)
+      {:ok, _mirror} -> Engine.unmirror(link, source_uid, link.user_id, attempt: attempt)
       {:error, :not_found} -> {:discard, reason}
     end
   end
