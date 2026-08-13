@@ -203,6 +203,34 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Returns, as a `MapSet`, which of the given UIDs the cache currently holds for
+  this integration — with no date range applied at all.
+
+  The reconcile sweep's second question, and the reason it is separate from
+  `list_uids_in_range/5`. That function answers "what is on the calendar in the
+  window I am reconciling"; this one answers "does this event still exist",
+  which is a different question and must not be conflated with the first. A
+  mirror mapping for a meeting three years out has a source that is alive and
+  well but outside any sensible re-diff window, and reading its absence from
+  that window as a deletion would tear the mirror down.
+
+  Returns a set rather than a list because the caller's use is a membership
+  test per mapping row.
+  """
+  @spec existing_uids(integer(), [String.t()]) :: MapSet.t(String.t())
+  def existing_uids(_calendar_integration_id, []), do: MapSet.new()
+
+  def existing_uids(calendar_integration_id, uids)
+      when is_integer(calendar_integration_id) and is_list(uids) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.uid in ^uids)
+    |> select([e], e.uid)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
   Returns the most recent `synced_at` among the given UIDs, or `nil` when no
   row matches.
 

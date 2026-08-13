@@ -145,6 +145,87 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.SyncHookTest do
     end
   end
 
+  describe "post_commit_reconciliation/2 fan-out" do
+    test "one source event on three links produces three jobs",
+         %{source: source, link: first} = ctx do
+      {_second_target, second} = extra_target_link(ctx)
+      {_third_target, third} = extra_target_link(ctx)
+
+      :ok = Sync.post_commit_reconciliation(source, [event(source)])
+
+      jobs = all_enqueued(worker: SyncLinkWriteBackWorker)
+
+      assert MapSet.new(jobs, &{&1.args["sync_link_id"], &1.args["source_uid"]}) ==
+               MapSet.new([
+                 {first.id, "source-uid-1"},
+                 {second.id, "source-uid-1"},
+                 {third.id, "source-uid-1"}
+               ])
+    end
+
+    test "fan-out stops at the links that are enabled", %{source: source, link: first} = ctx do
+      {_second_target, second} = extra_target_link(ctx)
+      {:ok, _paused} = CalendarSyncLinkQueries.update(second, %{enabled: false})
+
+      :ok = Sync.post_commit_reconciliation(source, [event(source)])
+
+      assert [job] = all_enqueued(worker: SyncLinkWriteBackWorker)
+      assert job.args["sync_link_id"] == first.id
+    end
+  end
+
+  describe "post_commit_reconciliation/2 paired-link convergence" do
+    # Loop prevention — a mirror never spawning a mirror — is asserted above.
+    # This is the other half of a bidirectional pair's correctness, and it is a
+    # different claim: with both rows in place, a genuine change on *either*
+    # calendar still reaches the other. A loop-prevention rule that is too eager
+    # passes every test in that block and fails every test in this one.
+    test "a change on the source reaches the target", %{source: source, link: forward} = ctx do
+      _reverse = reverse_link(ctx)
+
+      :ok = Sync.post_commit_reconciliation(source, [event(source, %{uid: "on-source"})])
+
+      assert [job] = all_enqueued(worker: SyncLinkWriteBackWorker)
+      assert job.args["sync_link_id"] == forward.id
+      assert job.args["source_uid"] == "on-source"
+    end
+
+    test "a change on the target reaches the source", %{target: target} = ctx do
+      reverse = reverse_link(ctx)
+
+      :ok =
+        Sync.post_commit_reconciliation(target, [
+          event(target, %{uid: "on-target", provider_event_id: "target-pid-9"})
+        ])
+
+      assert [job] = all_enqueued(worker: SyncLinkWriteBackWorker)
+      assert job.args["sync_link_id"] == reverse.id
+      assert job.args["source_uid"] == "on-target"
+    end
+
+    test "both directions converge in the same sync round",
+         %{source: source, target: target} =
+           ctx do
+      forward = ctx.link
+      reverse = reverse_link(ctx)
+
+      :ok = Sync.post_commit_reconciliation(source, [event(source, %{uid: "on-source"})])
+
+      :ok =
+        Sync.post_commit_reconciliation(target, [
+          event(target, %{uid: "on-target", provider_event_id: "target-pid-9"})
+        ])
+
+      jobs = all_enqueued(worker: SyncLinkWriteBackWorker)
+
+      assert MapSet.new(jobs, &{&1.args["sync_link_id"], &1.args["source_uid"]}) ==
+               MapSet.new([
+                 {forward.id, "on-source"},
+                 {reverse.id, "on-target"}
+               ])
+    end
+  end
+
   describe "post_commit_reconciliation/2 skips ineligible sources" do
     test "a recurring event enqueues nothing", %{source: source} do
       :ok =

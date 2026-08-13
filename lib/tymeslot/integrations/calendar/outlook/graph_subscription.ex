@@ -52,6 +52,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   so subsequent sweeps can fetch incremental changes.
 
   Works on every deployment — no webhook URL required.
+
+  Bypasses `Sync.post_commit_reconciliation/2`, and so enqueues no cross-calendar
+  mirror write-backs. That is deliberate and costs nothing here: this is a
+  first-run baseline for an integration that by definition has no sync links
+  pointing at it yet, since a link cannot be configured against a calendar
+  before it connects. Whatever this writes is reconciled by the first
+  `Tymeslot.Workers.SyncLinkReconcileSweepWorker` pass after a link is created,
+  which is also the first moment mirroring means anything for it.
   """
   @spec bootstrap_sync(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}

@@ -211,6 +211,38 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueriesTest do
     end
   end
 
+  describe "list_due_for_reconcile/1" do
+    test "returns a link that has never been reconciled", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+
+      assert Enum.map(CalendarSyncLinkQueries.list_due_for_reconcile(1800), & &1.id) == [link.id]
+    end
+
+    test "excludes a link reconciled inside the interval", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+
+      {:ok, _fresh} =
+        CalendarSyncLinkQueries.update(link, %{last_reconciled_at: DateTime.utc_now(:microsecond)})
+
+      assert CalendarSyncLinkQueries.list_due_for_reconcile(1800) == []
+    end
+
+    test "includes a link whose last reconcile has aged past the interval", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+      stale = DateTime.add(DateTime.utc_now(:microsecond), -3600, :second)
+      {:ok, _stale} = CalendarSyncLinkQueries.update(link, %{last_reconciled_at: stale})
+
+      assert Enum.map(CalendarSyncLinkQueries.list_due_for_reconcile(1800), & &1.id) == [link.id]
+    end
+
+    test "excludes a disabled link however overdue it is", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+      {:ok, _paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})
+
+      assert CalendarSyncLinkQueries.list_due_for_reconcile(1800) == []
+    end
+  end
+
   describe "change/2" do
     test "returns a changeset the form can render", ctx do
       assert %Ecto.Changeset{} =

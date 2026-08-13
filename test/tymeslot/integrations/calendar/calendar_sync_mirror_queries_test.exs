@@ -146,6 +146,30 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueriesTest do
     end
   end
 
+  describe "list_for_link/1" do
+    test "returns every mapping the link holds, in any state", %{link: link} do
+      active = mirror_for_link(link, source_uid: "src-active", state: "active")
+      pending = mirror_for_link(link, source_uid: "src-pending", state: "pending_delete")
+      failed = mirror_for_link(link, source_uid: "src-failed", state: "failed")
+
+      ids = MapSet.new(CalendarSyncMirrorQueries.list_for_link(link.id), & &1.id)
+
+      assert ids == MapSet.new([active.id, pending.id, failed.id])
+    end
+
+    test "does not return another link's mappings", %{link: link} do
+      other = insert(:calendar_sync_link)
+      mirror_for_link(other, source_uid: "elsewhere")
+      mine = mirror_for_link(link, source_uid: "mine")
+
+      assert Enum.map(CalendarSyncMirrorQueries.list_for_link(link.id), & &1.id) == [mine.id]
+    end
+
+    test "returns an empty list for a link with no mappings", %{link: link} do
+      assert CalendarSyncMirrorQueries.list_for_link(link.id) == []
+    end
+  end
+
   describe "delete/1" do
     test "drops the mapping once the provider has confirmed the placeholder is gone", %{
       link: link

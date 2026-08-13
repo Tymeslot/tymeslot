@@ -120,6 +120,10 @@ config :tymeslot, Oban,
        {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
        # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
        {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
+       # Run every 30 min, off the :00/:15/:30/:45 slots above so the two
+       # calendar sweeps do not open their fan-outs into the same provider
+       # quota window; re-diffs mirror state for links that are due
+       {"20,50 * * * *", Tymeslot.Workers.SyncLinkReconcileSweepWorker},
        # Run daily at 03:30 UTC to prune old/inactive calendar event cache
        {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
        # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff

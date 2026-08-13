@@ -78,6 +78,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   end
 
   @doc """
+  Every mapping this link holds, in whatever state.
+
+  The reconcile sweep's half of the diff. `pending_delete` and `failed` rows are
+  returned alongside `active` ones on purpose: those are precisely the mappings
+  whose last write did not land, and a sweep that could not see them would leave
+  a half-torn-down placeholder on the target forever.
+  """
+  @spec list_for_link(integer()) :: [CalendarSyncMirrorSchema.t()]
+  def list_for_link(sync_link_id) when is_integer(sync_link_id) do
+    CalendarSyncMirrorSchema
+    |> where([m], m.sync_link_id == ^sync_link_id)
+    |> order_by([m], asc: m.id)
+    |> Repo.all()
+  end
+
+  @doc """
   Records a placeholder the engine has just written onto a target.
 
   Returning the changeset error rather than raising is what makes orphan

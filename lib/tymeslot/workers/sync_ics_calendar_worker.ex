@@ -125,6 +125,21 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
         # rewrites linked meetings whose times moved externally, which a
         # read-only mirror of someone else's calendar has no business doing.
         # The cache invalidation and grid broadcast are still wanted.
+        #
+        # Skipping the hook also skips its mirror write-back enqueue, and that
+        # half is a deliberate trade rather than a consequence. A subscription
+        # is read-only, so it can only ever be a mirror *source* — the case
+        # where mirroring is the whole point — but `full_refresh_for_integration/2`
+        # replaces the feed's events wholesale and cannot say which of them
+        # changed. Enqueueing from here would mean a write-back per event in the
+        # feed, on every refresh, half an hour apart, forever: a standing load
+        # proportional to feed size rather than to change, spent against the
+        # same provider quota the user-visible paths need. Mirrors sourced from
+        # a subscription are therefore reconciled by
+        # `Tymeslot.Workers.SyncLinkReconcileSweepWorker`, at a cost of up to 30
+        # minutes' extra staleness — on a feed the publisher regenerates on its
+        # own schedule, and which the fallback sweep already refuses to poll
+        # more often than every 30 minutes for the same reason.
         Sync.invalidate_cache_for_user(integration)
         SyncBroadcast.broadcast_cache_update(integration.user_id, Enum.map(events, & &1.uid))
 

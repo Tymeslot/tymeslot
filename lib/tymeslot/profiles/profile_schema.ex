@@ -93,6 +93,13 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     |> validate_embed_domains()
     |> validate_booking_limits(:profiles)
     |> unique_constraint(:username)
+    # Promoting a calendar to primary reads the candidates and then writes the
+    # chosen one, so a calendar deleted between those two steps is still named
+    # by the write. Without this the violation is raised as an
+    # `Ecto.ConstraintError` rather than returned, and the callers that already
+    # handle a failed promotion — `Calendar.Deletion.promote_next_or_clear/2`
+    # falling back to `:unchanged` — never get the chance to.
+    |> foreign_key_constraint(:primary_calendar_integration_id)
   end
 
   @doc """

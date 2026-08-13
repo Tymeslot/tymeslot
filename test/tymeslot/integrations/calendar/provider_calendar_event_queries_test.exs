@@ -464,4 +464,59 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
       assert length(ProviderCalendarEventQueries.search(user.id, "repeat", limit: 2)) == 2
     end
   end
+
+  describe "existing_uids/2" do
+    setup do
+      user = insert(:user)
+      %{integration: insert(:calendar_integration, user: user)}
+    end
+
+    test "returns the subset of UIDs the cache holds", %{integration: integration} do
+      insert(:provider_calendar_event, calendar_integration: integration, uid: "here-1")
+      insert(:provider_calendar_event, calendar_integration: integration, uid: "here-2")
+
+      assert ProviderCalendarEventQueries.existing_uids(integration.id, [
+               "here-1",
+               "here-2",
+               "gone"
+             ]) == MapSet.new(["here-1", "here-2"])
+    end
+
+    # The point of the function. The reconcile sweep uses it to distinguish a
+    # source that was deleted from one that merely sits outside the window it
+    # re-diffs, so a date filter here would defeat it entirely and take every
+    # far-future mirror down with it.
+    test "ignores how far outside any sync window the event sits", %{integration: integration} do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "decade-out",
+        start_at: ~U[2040-01-01 09:00:00Z],
+        end_at: ~U[2040-01-01 10:00:00Z]
+      )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "decade-past",
+        start_at: ~U[2010-01-01 09:00:00Z],
+        end_at: ~U[2010-01-01 10:00:00Z]
+      )
+
+      assert ProviderCalendarEventQueries.existing_uids(integration.id, [
+               "decade-out",
+               "decade-past"
+             ]) == MapSet.new(["decade-out", "decade-past"])
+    end
+
+    test "is scoped to the integration asked for", %{integration: integration} do
+      other = insert(:calendar_integration)
+      insert(:provider_calendar_event, calendar_integration: other, uid: "elsewhere")
+
+      assert ProviderCalendarEventQueries.existing_uids(integration.id, ["elsewhere"]) ==
+               MapSet.new()
+    end
+
+    test "returns an empty set for no UIDs", %{integration: integration} do
+      assert ProviderCalendarEventQueries.existing_uids(integration.id, []) == MapSet.new()
+    end
+  end
 end

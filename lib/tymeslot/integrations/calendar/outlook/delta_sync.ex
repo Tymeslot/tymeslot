@@ -120,6 +120,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     :error
   end
 
+  # No mirror write-back is enqueued here, and the omission is deliberate.
+  # Unlike the ICS refresh, this path *does* know which events changed, so the
+  # cost objection that rules a hook out there does not apply — but the delta's
+  # two halves already take different routes, with `removed` going through
+  # `Sync.reconcile_deletions/2` and `changed` landing straight in the cache.
+  # Hooking only the changed half would leave one delta reaching the mirror by
+  # two mechanisms that have to be kept in step on every future edit to either.
+  # Mirroring is therefore left to
+  # `Tymeslot.Workers.SyncLinkReconcileSweepWorker`, which re-derives the same
+  # answer from state; this remains the strongest of the three bypass sites for
+  # a later hook, and the delay until then is bounded by that sweep.
   defp apply_delta(integration, events, new_delta_link) do
     {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
     cache_attrs = build_cache_attrs_batch(changed, integration.id)

@@ -63,6 +63,35 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
   def list_enabled_for_source(_source_integration_id), do: []
 
   @doc """
+  Every enabled link whose last reconciliation is older than `max_age_seconds`,
+  or which has never been reconciled.
+
+  The reconcile sweep's selection, and deliberately not the same question as
+  "every enabled link". A sweep that re-enqueued every link on every run would
+  make the cadence of the cron entry the cadence of the work, so a link already
+  reconciled a minute ago by a manual trigger or by a previous run that
+  overlapped would be re-diffed anyway. Filtering on `last_reconciled_at` makes
+  the interval a property of the link rather than of the schedule.
+
+  `nil` sorts as due. A link created between two sweeps has never been
+  reconciled and is exactly the one whose mirrors are most likely to be
+  missing.
+
+  No preloads: the sweep enqueues jobs keyed on `id` and never looks at either
+  integration, so loading two per link would fetch rows nothing reads.
+  """
+  @spec list_due_for_reconcile(non_neg_integer()) :: [CalendarSyncLinkSchema.t()]
+  def list_due_for_reconcile(max_age_seconds) when is_integer(max_age_seconds) do
+    cutoff = DateTime.add(DateTime.utc_now(), -max_age_seconds, :second)
+
+    CalendarSyncLinkSchema
+    |> where([l], l.enabled == true)
+    |> where([l], is_nil(l.last_reconciled_at) or l.last_reconciled_at < ^cutoff)
+    |> order_by([l], asc: l.id)
+    |> Repo.all()
+  end
+
+  @doc """
   One link by id, with both integrations preloaded.
 
   Answers `{:error, :not_found}` for a missing row and for an id that is not an
