@@ -1040,3 +1040,8 @@ msgstr "Co vytvořit"
 #, elixir-autogen, elixir-format
 msgid "You cannot add yourself as a guest. Use a different email address."
 msgstr "Nemůžete přidat sami sebe jako hosta. Použijte jinou e-mailovou adresu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
+msgid "before the event"
+msgstr "před událostí"

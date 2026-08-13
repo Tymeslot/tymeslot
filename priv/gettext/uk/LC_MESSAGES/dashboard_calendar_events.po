@@ -1041,3 +1041,8 @@ msgstr "Що створити"
 msgid "You cannot add yourself as a guest. Use a different email address."
 msgstr "Ви не можете додати себе як гостя. Використайте іншу адресу електронної "
 "пошти."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
+msgid "before the event"
+msgstr "перед подією"

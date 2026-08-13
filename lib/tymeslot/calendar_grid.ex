@@ -50,11 +50,16 @@ defmodule Tymeslot.CalendarGrid do
   Queries the event cache for events overlapping the [start_dt, end_dt] window.
   Accepts a `:limit` option (default: unbounded) — see
   `ProviderCalendarEventQueries.list_for_range/4`.
+
+  Reminders are normalised to the canonical `%{method:, minutes_before:}` shape,
+  so callers can read `minutes_before` regardless of how the row was stored.
   """
   @spec list_events_for_range([integer()], DateTime.t(), DateTime.t(), keyword()) ::
           [ProviderCalendarEventSchema.t()]
   def list_events_for_range(integration_ids, start_dt, end_dt, opts \\ []) do
-    ProviderCalendarEventQueries.list_for_range(integration_ids, start_dt, end_dt, opts)
+    integration_ids
+    |> ProviderCalendarEventQueries.list_for_range(start_dt, end_dt, opts)
+    |> Enum.map(&normalise_event_reminders/1)
   end
 
   @doc """
@@ -97,9 +102,13 @@ defmodule Tymeslot.CalendarGrid do
     |> Enum.reject(&(&1.reminders == []))
   end
 
-  defp normalise_event_reminders(event) do
-    %{event | reminders: Enum.map(event.reminders, &Reminder.normalise/1)}
-  end
+  # The reminders column is nullable, so a row written without one loads as nil
+  # rather than an empty list.
+  defp normalise_event_reminders(%{reminders: nil} = event),
+    do: %{event | reminders: []}
+
+  defp normalise_event_reminders(event),
+    do: %{event | reminders: Enum.map(event.reminders, &Reminder.normalise/1)}
 
   @doc """
   Searches the user's cached calendar events by a free-text term.
