@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
   alias TymeslotWeb.Dashboard.CalendarGrid.Header
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.BookingDetailModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState
+  alias TymeslotWeb.Dashboard.OnboardingChecklist
 
   @doc "Renders the calendar grid: desktop-reminder hook, toolbar, views, and the modal stack."
   @spec grid(map()) :: Phoenix.LiveView.Rendered.t()
@@ -46,8 +48,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
         hidden
       >
       </div>
-      <EmptyState.no_calendars_banner :if={@_initialized && @integrations == []} />
-      <div :if={@_initialized && @integrations != []} class="flex-1 flex flex-col min-h-0">
+      <div :if={@_initialized} class="flex-1 flex flex-col min-h-0">
+        <%!-- The setup checklist already carries "Connect a calendar" as its
+              first step, so the banner only appears once the checklist is gone. --%>
+        <EmptyState.connect_calendar_banner :if={
+          @integrations == [] and
+            not OnboardingChecklist.visible?(@current_user, @integration_status)
+        } />
         <Header.toolbar
           view={@view}
           date={@date}
@@ -113,6 +120,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           calendar_colors={@calendar_colors}
           user_timezone={@user_timezone}
           preferences={@preferences}
+          agenda_lens={@agenda_lens}
           myself={@myself}
         />
         <CreateEventModal.create_event_modal
@@ -153,6 +161,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           pending_attendees={@pending_attendees}
           video_integrations={@video_integrations}
           pending_notification={@pending_notification}
+        />
+        <BookingDetailModal.booking_detail_modal
+          :if={@selected_booking}
+          booking={@selected_booking}
+          user_timezone={@user_timezone}
+          time_format={Helpers.time_format(assigns)}
+          myself={@myself}
         />
         <NotifyPromptModal.notify_prompt_modal
           :if={@notify_prompt}

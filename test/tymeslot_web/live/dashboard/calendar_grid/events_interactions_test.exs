@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       })
 
       {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ "Hidden Event"
+      assert grid_html(html) =~ "Hidden Event"
 
       # Open calendar list panel first so the toggle element is rendered
       lv |> element("button", "Calendars") |> render_click()
@@ -135,7 +135,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         )
         |> render_click()
 
-      refute html =~ "Hidden Event"
+      # Scoped to the grid on purpose. Hiding a calendar is a filter over this
+      # view, not a statement that the event is off your schedule: the Up-next
+      # strip above the grid runs off `Agenda`, which reads the account's active
+      # integrations and ignores per-view visibility, so it still names the
+      # event. A page-wide refute would be asserting the opposite.
+      refute grid_html(html) =~ "Hidden Event"
+    end
+
+    defp grid_html(html) do
+      html |> Floki.parse_document!() |> Floki.find("#calendar-grid") |> Floki.raw_html()
     end
   end
 

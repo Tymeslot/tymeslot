@@ -78,11 +78,6 @@ msgstr "Suivant"
 msgid "Quick links to set up your profile, availability, and meeting types. Start here."
 msgstr "Liens rapides pour configurer votre profil, vos disponibilités et vos types de réunion. Commencez ici."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Settings live in the sidebar"
-msgstr "Les paramètres se trouvent dans la barre latérale"
-
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Skip"
@@ -100,11 +95,6 @@ msgstr "Prenez 30 secondes pour découvrir où se trouve chaque chose."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Two modes"
-msgstr "Deux modes"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
 msgstr "Bienvenue sur votre tableau de bord Tymeslot"
 
@@ -117,11 +107,6 @@ msgstr "Tout est prêt"
 #, elixir-autogen, elixir-format
 msgid "Your account"
 msgstr "Votre compte"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
-msgstr "Basculez entre Planification (vos types d’événement) et Calendrier (une vue complète de vos réservations et événements synchronisés)."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -273,11 +258,6 @@ msgstr ""
 msgid "Go create your first event type - and let people book you."
 msgstr "Allez créer votre premier type d’événement - et laissez les autres réserver avec vous."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Profile, availability, integrations, and automation - all one click away."
-msgstr "Profil, disponibilités, intégrations et automatisation - tout à un clic."
-
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings you take"
@@ -298,3 +278,15 @@ msgstr ""
 " navigateur ; vous pouvez également en choisir une autre dans les paramètres"
 " de votre compte. Vos invités reçoivent eux aussi les pages de réservation "
 "et les confirmations dans leur propre langue."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Everything lives here"
+msgstr "Tout se trouve ici"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
+msgstr ""
+"Votre calendrier est la page d'accueil. Vos rendez-vous, vos disponibilités, "
+"vos intégrations et votre profil sont à un clic."

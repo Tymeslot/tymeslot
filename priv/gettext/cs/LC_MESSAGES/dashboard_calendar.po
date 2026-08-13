@@ -138,11 +138,6 @@ msgstr "Kalendáře"
 msgid "Connect a calendar"
 msgstr "Připojit kalendář"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
-#, elixir-autogen, elixir-format
-msgid "Connect at least one calendar to see your events here."
-msgstr "Připojte alespoň jeden kalendář, abyste zde viděli své události."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -195,11 +190,6 @@ msgstr "Žádné nadcházející události"
 #, elixir-autogen, elixir-format
 msgid "Nothing scheduled in the next 30 days. Events you add or sync will appear here."
 msgstr "V následujících 30 dnech nemáte nic naplánováno. Události, které přidáte nebo synchronizujete, se zobrazí zde."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
-#, elixir-autogen, elixir-format
-msgid "Nothing to see here"
-msgstr "Zde není nic k zobrazení"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
 #, elixir-autogen, elixir-format
@@ -350,3 +340,53 @@ msgstr "Barva pro kalendář %{calendar}"
 #, elixir-autogen, elixir-format
 msgid "Default colour"
 msgstr "Výchozí barva"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "All"
+msgstr "Vše"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your Tymeslot page"
+msgstr "Zarezervováno přes vaši stránku Tymeslot"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr "Rezervace"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Bring your calendar into Tymeslot"
+msgstr "Přeneste svůj kalendář do Tymeslotu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "Filter agenda"
+msgstr "Filtrovat agendu"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr "Připojit se ke schůzce"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Manage in Meetings"
+msgstr "Spravovat v sekci Schůzky"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "Meetings booked through your Tymeslot page will appear here."
+msgstr "Schůzky zarezervované přes vaši stránku Tymeslot se zobrazí zde."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming bookings"
+msgstr "Žádné nadcházející rezervace"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
+msgstr "Vaše rezervace se zde již zobrazují. Připojte kalendář, abyste viděli i ostatní události a předešli dvojitým rezervacím."

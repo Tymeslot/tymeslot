@@ -43,6 +43,24 @@ defmodule Tymeslot.Timezones do
   defdelegate utc_offset(timezone_id), to: Formatting
   defdelegate format_utc_offset(seconds), to: Formatting
 
+  @fallback "Etc/UTC"
+
+  @doc """
+  The zone to render in when the user's own is unknown, missing, or invalid.
+
+  Use this instead of spelling a literal at the call site. The dashboard used to
+  carry three: `"UTC"`, `"Etc/UTC"`, and a `nil` that reached `format/1` — which
+  matters because they do not render alike, so the same account could be shown
+  a different zone depending on which surface it was looking at.
+
+  ## Examples
+
+      iex> Tymeslot.Timezones.fallback()
+      "Etc/UTC"
+  """
+  @spec fallback() :: String.t()
+  def fallback, do: @fallback
+
   @doc """
   Validates a timezone string at the LiveView edge, returning it unchanged if valid
   or `"Etc/UTC"` if invalid.
@@ -72,7 +90,7 @@ defmodule Tymeslot.Timezones do
         Keyword.merge([timezone: timezone], metadata)
       )
 
-      "Etc/UTC"
+      @fallback
     end
   end
 end

@@ -134,11 +134,6 @@ msgstr ""
 msgid "Connect a calendar"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
-#, elixir-autogen, elixir-format
-msgid "Connect at least one calendar to see your events here."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex
 #, elixir-autogen, elixir-format
@@ -190,11 +185,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing scheduled in the next 30 days. Events you add or sync will appear here."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
-#, elixir-autogen, elixir-format
-msgid "Nothing to see here"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
@@ -345,4 +335,54 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/colour_swatches.ex
 #, elixir-autogen, elixir-format
 msgid "Default colour"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "All"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through your Tymeslot page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Bring your calendar into Tymeslot"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "Filter agenda"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Join meeting"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Manage in Meetings"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "Meetings booked through your Tymeslot page will appear here."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming bookings"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
+#, elixir-autogen, elixir-format
+msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr ""

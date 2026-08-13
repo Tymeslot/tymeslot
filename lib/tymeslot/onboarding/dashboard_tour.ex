@@ -36,25 +36,14 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         body: dgettext("onboarding", "Take 30 seconds to learn where everything lives.")
       },
       %{
-        id: :mode_tabs,
-        anchor: "mode-tabs",
-        placement: :bottom,
-        title: dgettext("onboarding", "Two modes"),
-        body:
-          dgettext(
-            "onboarding",
-            "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
-          )
-      },
-      %{
         id: :sidebar_nav,
         anchor: "sidebar-nav",
         placement: :right,
-        title: dgettext("onboarding", "Settings live in the sidebar"),
+        title: dgettext("onboarding", "Everything lives here"),
         body:
           dgettext(
             "onboarding",
-            "Profile, availability, integrations, and automation - all one click away."
+            "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
           )
       },
       %{

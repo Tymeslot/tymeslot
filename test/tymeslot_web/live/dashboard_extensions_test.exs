@@ -55,7 +55,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [])
       Application.put_env(:tymeslot, :dashboard_action_components, %{})
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # Standard navigation items should be present
       assert html =~ "Overview"
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [])
       Application.put_env(:tymeslot, :dashboard_action_components, %{})
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # Extension items should not be present
       refute html =~ "Test Extension"
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
 
     test "renders extension navigation items in sidebar", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # Extension items should be present
       assert html =~ "Test Extension"
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
 
     test "extension navigation items have correct paths", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # Check that links have correct hrefs (Phoenix renders navigate as data-phx-link="redirect")
       assert html =~ "/dashboard/test-extension"
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         end
       end
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
       # Verify sidebar is rendered
       assert has_element?(view, "aside#dashboard-sidebar")
@@ -192,7 +192,8 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       alias TymeslotWeb.Helpers.PageTitles
 
       # Standard actions should not be affected
-      assert PageTitles.dashboard_title(:overview) == "Dashboard"
+      assert PageTitles.dashboard_title(:overview) == "Overview - Dashboard"
+      assert PageTitles.dashboard_title(:calendar) == "Dashboard"
       assert PageTitles.dashboard_title(:settings) == "Settings - Dashboard"
       assert PageTitles.dashboard_title(:availability) == "Availability - Dashboard"
     end
@@ -214,7 +215,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
 
     test "renders icon component for extension", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # The icon should be rendered - we can't check the exact SVG path
       # but we can verify the extension nav item exists
@@ -234,7 +235,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         }
       ])
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # Dashboard must still render — no FunctionClauseError from <.icon>
       assert html =~ "Overview"
@@ -252,7 +253,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         }
       ])
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Overview"
       refute html =~ "Bad Nil Icon"
@@ -289,7 +290,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
 
     test "renders extensions in the order they are configured", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # All extensions should be present
       assert html =~ "First Extension"
@@ -322,14 +323,14 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
 
     test "sidebar mobile menu includes extensions", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # The extension should be in the sidebar (which is used for both mobile and desktop)
       assert html =~ "Integrated Feature"
     end
 
     test "extensions appear in Account section of sidebar", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       # Check that extension appears after the Account section marker
       # The sidebar code places extensions in the Account section

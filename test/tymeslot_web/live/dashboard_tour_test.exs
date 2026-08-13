@@ -45,11 +45,11 @@ defmodule TymeslotWeb.DashboardTourTest do
       refute has_element?(view, "#dashboard-tour")
     end
 
-    test "does not render the tour on /dashboard/calendar even for fresh users", %{conn: conn} do
+    test "does not render the tour on /dashboard/overview even for fresh users", %{conn: conn} do
       user = insert_fresh_dashboard_user(dashboard_tour_seen_at: nil)
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
       refute has_element?(view, "#dashboard-tour")
     end
