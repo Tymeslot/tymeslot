@@ -30,7 +30,6 @@ defmodule TymeslotWeb.DashboardLive do
 
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Onboarding
-  alias Tymeslot.Onboarding.DashboardTour
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
@@ -203,7 +202,7 @@ defmodule TymeslotWeb.DashboardLive do
         :if={@tour_active}
         module={TourOverlay}
         id="dashboard-tour-overlay"
-        step={DashboardTour.step_at(@tour_step_index)}
+        step={Enum.at(@tour_steps, @tour_step_index)}
         step_index={@tour_step_index}
         total_steps={@tour_total_steps}
       />
