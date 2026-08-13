@@ -12,6 +12,9 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarSyncConflictSchema
+  alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -202,6 +205,81 @@ defmodule Tymeslot.Factory do
       last_notified_state: %{},
       video_link: nil,
       calendar_integration: build(:calendar_integration)
+    }
+  end
+
+  # A link's two integrations must share an owner: a link across two users is a
+  # shape the context refuses, so a factory producing it by default would make
+  # every test set up a state that cannot exist in production.
+  #
+  # The user and both integrations are *inserted* here rather than built. Three
+  # belongs_to paths reach the same user struct, and ExMachina would insert an
+  # unpersisted one down each of them, so the second path fails on the users
+  # email unique index. Inserting first gives all three paths one persisted row
+  # to point at.
+  @spec calendar_sync_link_factory() ::
+          Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema.t()
+  def calendar_sync_link_factory do
+    user = insert(:user)
+
+    %CalendarSyncLinkSchema{
+      user_id: user.id,
+      source_integration_id: insert(:calendar_integration, user: user, provider: "google").id,
+      target_integration_id: insert(:calendar_integration, user: user, provider: "google").id,
+      target_calendar_id: nil,
+      privacy_tier: "busy_only",
+      enabled: true
+    }
+  end
+
+  @spec calendar_sync_mirror_factory() ::
+          Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema.t()
+  def calendar_sync_mirror_factory do
+    link = insert(:calendar_sync_link)
+
+    %CalendarSyncMirrorSchema{
+      sync_link_id: link.id,
+      source_uid: sequence(:mirror_source_uid, &"source-uid-#{&1}"),
+      target_integration_id: link.target_integration_id,
+      target_uid: sequence(:mirror_target_uid, &"tymeslot-mirror-#{&1}"),
+      target_provider_event_id: sequence(:mirror_event_id, &"provider-event-#{&1}"),
+      last_synced_at: DateTime.utc_now(:microsecond),
+      state: "active"
+    }
+  end
+
+  @doc """
+  Builds a mirror attached to an existing link.
+
+  A mirror's `target_integration_id` is denormalised from its link, so the two
+  are not independently overridable: passing `sync_link_id:` to the factory
+  alone leaves the mirror pointing at the target of the *other* link the
+  factory built for itself, and the grid's backward lookup then silently finds
+  nothing. This helper is the only correct way to attach a mirror to a link a
+  test already holds.
+  """
+  @spec mirror_for_link(Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema.t(), keyword()) ::
+          Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema.t()
+  def mirror_for_link(%CalendarSyncLinkSchema{} = link, overrides \\ []) do
+    attrs =
+      Keyword.merge(
+        [sync_link_id: link.id, target_integration_id: link.target_integration_id],
+        overrides
+      )
+
+    insert(:calendar_sync_mirror, attrs)
+  end
+
+  @spec calendar_sync_conflict_factory() ::
+          Tymeslot.Integrations.Calendar.CalendarSyncConflictSchema.t()
+  def calendar_sync_conflict_factory do
+    %CalendarSyncConflictSchema{
+      sync_link_id: insert(:calendar_sync_link).id,
+      source_uid: sequence(:conflict_source_uid, &"source-uid-#{&1}"),
+      kind: "both_changed",
+      resolution: "source_won",
+      detail: %{},
+      occurred_at: DateTime.utc_now(:microsecond)
     }
   end
 
