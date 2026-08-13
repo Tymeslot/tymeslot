@@ -417,7 +417,7 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
-    do: CalendarEventHandlers.handle_calendar_events_updated(socket)
+    do: socket |> CalendarEventHandlers.handle_calendar_events_updated() |> rebuild_agenda()
 
   def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket),
     do: CalendarEventHandlers.handle_calendar_sync_complete(socket)
@@ -429,10 +429,10 @@ defmodule TymeslotWeb.DashboardLive do
     do: CalendarEventHandlers.handle_reset_calendar_sync(socket)
 
   def handle_info({:event_update_result, result}, socket),
-    do: CalendarEventHandlers.handle_event_update_result(result, socket)
+    do: result |> CalendarEventHandlers.handle_event_update_result(socket) |> rebuild_agenda()
 
   def handle_info({:event_move_result, result}, socket),
-    do: CalendarEventHandlers.handle_event_move_result(result, socket)
+    do: result |> CalendarEventHandlers.handle_event_move_result(socket) |> rebuild_agenda()
 
   def handle_info({:video_sync_result, event_id, result}, socket),
     do: CalendarEventHandlers.handle_video_sync_result(event_id, result, socket)
@@ -441,19 +441,22 @@ defmodule TymeslotWeb.DashboardLive do
     do: CalendarEventHandlers.handle_execute_create_event(payload, socket)
 
   def handle_info({:create_event_result, result}, socket),
-    do: CalendarEventHandlers.handle_create_event_result(result, socket)
+    do: result |> CalendarEventHandlers.handle_create_event_result(socket) |> rebuild_agenda()
 
   def handle_info({:execute_create_ad_hoc_meeting, params}, socket),
     do: CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(params, socket)
 
   def handle_info({:create_ad_hoc_meeting_result, result}, socket),
-    do: CalendarEventHandlers.handle_create_ad_hoc_meeting_result(result, socket)
+    do:
+      result
+      |> CalendarEventHandlers.handle_create_ad_hoc_meeting_result(socket)
+      |> rebuild_agenda()
 
   def handle_info({:execute_delete_event, payload}, socket),
     do: CalendarEventHandlers.handle_execute_delete_event(payload, socket)
 
   def handle_info({:delete_event_result, result}, socket),
-    do: CalendarEventHandlers.handle_delete_event_result(result, socket)
+    do: result |> CalendarEventHandlers.handle_delete_event_result(socket) |> rebuild_agenda()
 
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -536,4 +539,14 @@ defmodule TymeslotWeb.DashboardLive do
        do: load_dashboard_data(socket)
 
   defp refresh_agenda(socket), do: socket
+
+  # The Up-next strip and the overview agenda run their own query rather than
+  # reading the grid's events, so a mutation the grid applies to itself leaves
+  # them showing the old answer until the next tick — an event deleted from the
+  # grid stayed advertised above it for up to a minute. Wrapped around every
+  # result that can add, move, or remove an entry, including the failure paths:
+  # a rebuild costs one read and is a no-op off the two agenda-bearing actions,
+  # which is cheaper than reasoning per-handler about which outcomes changed
+  # what.
+  defp rebuild_agenda({:noreply, socket}), do: {:noreply, refresh_agenda(socket)}
 end

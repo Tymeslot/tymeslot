@@ -98,6 +98,35 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
 
       refute html =~ "data-testid=\"up-next-strip\""
     end
+
+    test "drops an event from the strip as soon as it is deleted", %{conn: conn, user: user} do
+      # The strip runs its own query rather than reading the grid's events, so a
+      # deletion that empties the grid used to leave the strip advertising the
+      # event until the next 60s agenda tick.
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      start_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          summary: "Dentist",
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 1800, :second),
+          all_day: false
+        )
+
+      {:ok, lv, html} = live(conn, ~p"/dashboard")
+      assert strip_html(html) =~ "Dentist"
+
+      send(
+        lv.pid,
+        {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
+      )
+
+      :sys.get_state(lv.pid)
+
+      refute strip_html(render(lv)) =~ "Dentist"
+    end
   end
 
   describe "timezone in the calendar header" do
@@ -148,6 +177,13 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       refute html2 =~ "data-tour=\"quick-actions\""
       _user = user
     end
+  end
+
+  defp strip_html(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(~s{[data-testid="up-next-strip"]})
+    |> Floki.raw_html()
   end
 
   # The header renders the zone twice, once for the desktop row and once for the
