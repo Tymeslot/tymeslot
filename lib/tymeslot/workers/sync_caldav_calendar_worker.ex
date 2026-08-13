@@ -77,7 +77,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    flag(
+    CalendarManagement.flag_for_reconnection(
       integration,
       dgettext(
         "dashboard_calendar_providers",
@@ -95,7 +95,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    flag(
+    CalendarManagement.flag_for_reconnection(
       integration,
       dgettext(
         "dashboard_calendar_providers",
@@ -116,6 +116,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     {:discard, "CalDAV deletion circuit breaker refused a suspicious bulk deletion"}
   end
 
+  # A 5xx is the remote failing, not the request being wrong, so it stays
+  # retryable in `Base` — but the retry that matters is the next *cycle*, not
+  # the next attempt. The three attempts span under a minute, far too short for
+  # a broken server to recover, and a server that 5xxs persistently (as
+  # Infomaniak's did for a whole day) exhausts them every cycle and raises a
+  # permanent-failure admin alert each time about an outage no operator here
+  # can fix. Discard and let the scheduled sync retry minutes later; the health
+  # check is what surfaces a remote that never comes back.
+  defp handle_sync_result({:error, :server_error}, _integration) do
+    {:discard, "CalDAV server returned a server error; the next scheduled sync will retry"}
+  end
+
   # A 4xx the transport layer does not model (415, 405, 400…) is the server
   # refusing the request itself: the remaining attempts re-send the same bytes
   # for the same refusal, then page an operator about a server-side condition
@@ -126,15 +138,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       {:discard, "CalDAV server refused the sync request: #{CalDAVErrors.describe_error(reason)}"}
     else
       result
-    end
-  end
-
-  # A failed flag write is worth retrying: without it the dashboard never tells
-  # the owner why their calendar stopped syncing.
-  defp flag(integration, message, discard_reason) do
-    case CalendarManagement.mark_needs_reauth(integration, message) do
-      {:ok, _updated} -> {:discard, discard_reason}
-      {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
     end
   end
 end
