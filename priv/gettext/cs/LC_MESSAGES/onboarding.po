@@ -27,11 +27,6 @@ msgstr "Nastavení účtu a odhlášení najdete vpravo nahoře."
 msgid "Back"
 msgstr "Zpět"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Common tasks"
-msgstr "Časté úkony"
-
 #: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmation"
@@ -72,11 +67,6 @@ msgstr "Novinka"
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Další"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Quick links to set up your profile, availability, and meeting types. Start here."
-msgstr "Rychlé odkazy pro nastavení profilu, dostupnosti a typů schůzek. Začněte tady."
 
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
@@ -249,3 +239,15 @@ msgid "Your calendar is home. Meetings, availability, integrations, and your pro
 msgstr ""
 "Váš kalendář je výchozí stránka. Schůzky, dostupnost, integrace i váš profil "
 "máte na jedno kliknutí."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Open it to connect a calendar, customise your booking page, and share your link. It disappears once every step is done."
+msgstr ""
+"Otevřete jej, chcete-li připojit kalendář, přizpůsobit rezervační stránku a "
+"sdílet svůj odkaz. Zmizí, jakmile dokončíte všechny kroky."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your setup checklist"
+msgstr "Váš kontrolní seznam nastavení"

@@ -27,11 +27,6 @@ msgstr "Le impostazioni dell'account e il logout si trovano qui in alto a destra
 msgid "Back"
 msgstr "Indietro"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Common tasks"
-msgstr "Attività comuni"
-
 #: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmation"
@@ -72,11 +67,6 @@ msgstr "Nuova funzione"
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Avanti"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Quick links to set up your profile, availability, and meeting types. Start here."
-msgstr "Collegamenti rapidi per configurare il profilo, la disponibilità e i tipi di riunione. Inizia da qui."
 
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
@@ -287,3 +277,16 @@ msgid "Your calendar is home. Meetings, availability, integrations, and your pro
 msgstr ""
 "Il tuo calendario è la pagina iniziale. Riunioni, disponibilità, "
 "integrazioni e il tuo profilo sono a un clic di distanza."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Open it to connect a calendar, customise your booking page, and share your link. It disappears once every step is done."
+msgstr ""
+"Aprila per collegare un calendario, personalizzare la tua pagina di "
+"prenotazione e condividere il tuo link. Scompare quando tutti i passaggi "
+"sono completati."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your setup checklist"
+msgstr "La tua lista di configurazione"

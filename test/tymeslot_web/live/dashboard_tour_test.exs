@@ -55,6 +55,23 @@ defmodule TymeslotWeb.DashboardTourTest do
     end
   end
 
+  describe "step anchors" do
+    test "every anchored step has a matching data-tour target on the dashboard",
+         %{conn: conn} do
+      user = insert_fresh_dashboard_user(dashboard_tour_seen_at: nil)
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/dashboard")
+
+      for %{id: id, anchor: anchor} <- DashboardTour.steps(), not is_nil(anchor) do
+        # A missing anchor is invisible at runtime: the hook times out and
+        # pushes `tour:skip-step`, so the step silently vanishes from the tour.
+        assert has_element?(view, ~s([data-tour="#{anchor}"])),
+               "step #{inspect(id)} anchors #{inspect(anchor)}, " <>
+                 "which nothing on /dashboard renders"
+      end
+    end
+  end
+
   describe "step navigation" do
     setup %{conn: conn} do
       user = insert_fresh_dashboard_user(dashboard_tour_seen_at: nil)

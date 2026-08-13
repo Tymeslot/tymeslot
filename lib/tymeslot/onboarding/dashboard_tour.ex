@@ -46,15 +46,18 @@ defmodule Tymeslot.Onboarding.DashboardTour do
             "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
           )
       },
+      # `:bottom`, not `:top`: on the calendar this strip is pinned just under
+      # the header, so a tooltip placed above it would run off the top of the
+      # viewport - the hook positions from the anchor rect without clamping.
       %{
         id: :quick_actions,
         anchor: "quick-actions",
-        placement: :top,
-        title: dgettext("onboarding", "Common tasks"),
+        placement: :bottom,
+        title: dgettext("onboarding", "Your setup checklist"),
         body:
           dgettext(
             "onboarding",
-            "Quick links to set up your profile, availability, and meeting types. Start here."
+            "Open it to connect a calendar, customise your booking page, and share your link. It disappears once every step is done."
           )
       },
       %{
