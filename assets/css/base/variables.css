@@ -308,12 +308,6 @@
   --color-calendar-grape: #a855f7;      /* purple */
   --color-calendar-graphite: #71717a;   /* neutral — darker than the unmatched fallback */
 
-  /* Mode Tab Bar */
-  --mode-tab-active-from: #0d9488;
-  --mode-tab-active-to: #0891b2;
-  --mode-tab-inactive-text: #64748b;
-  --mode-tab-hover-bg: rgba(204, 251, 241, 0.5);
-
   /* Dropdown Component */
   --dropdown-bg: var(--color-bg-primary);
   --dropdown-border: var(--color-border-default);

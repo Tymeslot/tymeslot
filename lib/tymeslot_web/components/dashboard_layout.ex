@@ -43,30 +43,19 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
       <%!-- Top Navigation --%>
       <div class="shrink-0">
-        <.top_navigation
-          current_user={@current_user}
-          profile={@profile}
-          show_sidebar_toggle={mode(@current_action) == :scheduling}
-        />
+        <.top_navigation current_user={@current_user} profile={@profile} />
       </div>
-
-      <%!-- Mode Tab Bar --%>
-      <.mode_tabs current_action={@current_action} />
 
       <%!-- Main Layout Area --%>
       <div class="flex lg:gap-8 flex-1 overflow-hidden min-h-0">
-        <%= if mode(@current_action) == :scheduling do %>
-          <DashboardSidebar.sidebar
-            current_action={@current_action}
-            integration_status={@integration_status}
-            profile={@profile}
-            automations_allowed={@automations_allowed}
-            analytics_allowed={@analytics_allowed}
-            sidebar_extensions={@sidebar_extensions}
-          />
-        <% else %>
-          <.calendar_rail />
-        <% end %>
+        <DashboardSidebar.sidebar
+          current_action={@current_action}
+          integration_status={@integration_status}
+          profile={@profile}
+          automations_allowed={@automations_allowed}
+          analytics_allowed={@analytics_allowed}
+          sidebar_extensions={@sidebar_extensions}
+        />
 
         <%!-- Main Content Area --%>
         <div
@@ -156,111 +145,6 @@ defmodule TymeslotWeb.Components.DashboardLayout do
         </div>
       </nav>
     </div>
-    """
-  end
-
-  attr :current_action, :atom, required: true
-
-  @spec mode_tabs(map()) :: Phoenix.LiveView.Rendered.t()
-  defp mode_tabs(assigns) do
-    ~H"""
-    <div class="mode-tab-bar" data-testid="mode-tab-bar" data-tour="mode-tabs">
-      <div class="flex items-stretch w-full gap-2">
-        <.link
-          patch={~p"/dashboard"}
-          class={[
-            "mode-tab flex-1 justify-center",
-            if(mode(@current_action) == :calendar, do: "mode-tab--active", else: "mode-tab--inactive")
-          ]}
-          data-testid="mode-tab-calendar"
-        >
-          <.icon name="hero-calendar-days" class="w-4 h-4" />
-          {dgettext("dashboard_common", "Calendar")}
-        </.link>
-
-        <.link
-          patch={~p"/dashboard/overview"}
-          class={[
-            "mode-tab flex-1 justify-center",
-            if(mode(@current_action) == :scheduling,
-              do: "mode-tab--active",
-              else: "mode-tab--inactive"
-            )
-          ]}
-          data-testid="mode-tab-scheduling"
-        >
-          <.icon name="hero-squares-2x2" class="w-4 h-4" />
-          {dgettext("dashboard_common", "Scheduling")}
-        </.link>
-      </div>
-    </div>
-    """
-  end
-
-  defp mode(:calendar), do: :calendar
-  defp mode(_tab), do: :scheduling
-
-  # Slim icon rail shown in calendar mode: the calendar keeps its full-width
-  # grid, but the rest of the dashboard stays one click away rather than
-  # hidden behind the mode switch. Desktop only — on mobile the mode tabs
-  # already carry the navigation.
-  @spec calendar_rail(map()) :: Phoenix.LiveView.Rendered.t()
-  defp calendar_rail(assigns) do
-    ~H"""
-    <nav
-      class="hidden lg:flex flex-col items-center gap-1 pl-2 py-2 shrink-0"
-      data-tour="calendar-rail"
-      data-testid="calendar-rail"
-      aria-label={dgettext("dashboard_common", "Dashboard sections")}
-    >
-      <.rail_link
-        patch={~p"/dashboard/overview"}
-        icon="hero-home"
-        label={dgettext("dashboard_common", "Overview")}
-      />
-      <.rail_link
-        patch={~p"/dashboard/meetings"}
-        icon="hero-clock"
-        label={dgettext("dashboard_common", "Meetings")}
-      />
-      <.rail_link
-        patch={~p"/dashboard/meeting-settings"}
-        icon="hero-squares-2x2"
-        label={dgettext("dashboard_common", "Meeting Types")}
-      />
-      <.rail_link
-        patch={~p"/dashboard/availability"}
-        icon="hero-adjustments-horizontal"
-        label={dgettext("dashboard_common", "Availability")}
-      />
-      <.rail_link
-        patch={~p"/dashboard/integrations"}
-        icon="hero-puzzle-piece"
-        label={dgettext("dashboard_common", "Integrations")}
-      />
-      <.rail_link
-        patch={~p"/dashboard/settings"}
-        icon="hero-user"
-        label={dgettext("dashboard_common", "Profile")}
-      />
-    </nav>
-    """
-  end
-
-  attr :patch, :string, required: true
-  attr :icon, :string, required: true
-  attr :label, :string, required: true
-
-  defp rail_link(assigns) do
-    ~H"""
-    <.link
-      patch={@patch}
-      class="flex items-center justify-center w-10 h-10 rounded-token-lg text-tymeslot-500 hover:text-turquoise-600 hover:bg-turquoise-50 transition-colors focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-      title={@label}
-      aria-label={@label}
-    >
-      <.icon name={@icon} class="w-5 h-5" />
-    </.link>
     """
   end
 end

@@ -95,11 +95,6 @@ msgstr "Take 30 seconds to learn where everything lives."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Two modes"
-msgstr "Two modes"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
 msgstr "Welcome to your Tymeslot dashboard"
 
@@ -245,15 +240,10 @@ msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Everything else lives here"
+msgid "Everything lives here"
 msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Meetings, availability, integrations, and your profile - all one click away."
-msgstr ""
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Your calendar is home. Switch to Scheduling to shape what people can book with you."
+msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
 msgstr ""

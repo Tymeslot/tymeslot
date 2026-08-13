@@ -11,7 +11,7 @@ defmodule Tymeslot.Onboarding.DashboardTourTest do
     test "returns a non-empty list of step maps" do
       steps = DashboardTour.steps()
 
-      assert length(steps) == 6
+      assert length(steps) == 5
       assert %{id: :welcome} = List.first(steps)
       assert %{id: :done} = List.last(steps)
     end

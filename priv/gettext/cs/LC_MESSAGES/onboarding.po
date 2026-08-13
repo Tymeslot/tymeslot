@@ -95,11 +95,6 @@ msgstr "Věnujte 30 sekund tomu, abyste věděli, kde co najdete."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Two modes"
-msgstr "Dva režimy"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
 msgstr "Vítejte na nástěnce Tymeslot"
 
@@ -245,15 +240,12 @@ msgstr "Celá aplikace – nástěnka, rezervační stránky i všechny e-maily
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Everything else lives here"
-msgstr "Vše ostatní najdete zde"
+msgid "Everything lives here"
+msgstr "Vše najdete zde"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Meetings, availability, integrations, and your profile - all one click away."
-msgstr "Schůzky, dostupnost, integrace a váš profil - vše na jedno kliknutí."
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Your calendar is home. Switch to Scheduling to shape what people can book with you."
-msgstr "Váš kalendář je vaše domovská stránka. Přepněte na Plánování a nastavte, co si u vás lidé mohou rezervovat."
+msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
+msgstr ""
+"Váš kalendář je výchozí stránka. Schůzky, dostupnost, integrace i váš profil "
+"máte na jedno kliknutí."

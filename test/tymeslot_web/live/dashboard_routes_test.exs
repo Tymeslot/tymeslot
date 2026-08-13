@@ -234,46 +234,62 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
   end
 
-  describe "mode tab bar" do
+  describe "sidebar navigation" do
     setup %{conn: conn} do
       {:ok, setup_authenticated_user(conn)}
     end
 
-    test "renders mode tab bar on scheduling pages", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
-      assert html =~ "mode-tab-bar"
-    end
-
-    test "renders mode tab bar on calendar page", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ "mode-tab-bar"
-    end
-
-    test "sidebar is present in scheduling mode", %{conn: conn} do
+    test "sidebar is present on scheduling pages", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
       assert html =~ "dashboard-sidebar"
     end
 
-    test "sidebar is absent in calendar mode", %{conn: conn} do
+    test "sidebar is present on the calendar page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
-      refute html =~ "dashboard-sidebar"
+      assert html =~ "dashboard-sidebar"
     end
 
-    test "scheduling tab is active on non-calendar pages", %{conn: conn} do
+    test "the same sidebar renders on every dashboard page", %{conn: conn} do
+      # The calendar used to swap the sidebar for a slim icon rail, so moving
+      # between the two reflowed the whole layout. Both must now carry the
+      # identical set of nav destinations.
+      {:ok, _view, calendar_html} = live(conn, ~p"/dashboard")
+      {:ok, _view, overview_html} = live(conn, ~p"/dashboard/overview")
+
+      assert sidebar_hrefs(calendar_html) == sidebar_hrefs(overview_html)
+    end
+
+    test "the Calendar item is active on the dashboard landing page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      assert "dashboard-nav-link--active" in nav_link_classes(html, "/dashboard")
+    end
+
+    test "the Overview item is active on the overview page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
-      doc = Floki.parse_document!(html)
-      [scheduling_tab] = Floki.find(doc, "[data-testid='mode-tab-scheduling']")
-      classes = scheduling_tab |> Floki.attribute("class") |> List.first() |> String.split()
-      assert "mode-tab--active" in classes
+      assert "dashboard-nav-link--active" in nav_link_classes(html, "/dashboard/overview")
     end
 
-    test "calendar tab is active on the dashboard landing page", %{conn: conn} do
+    test "the mode tab bar is gone", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
-      doc = Floki.parse_document!(html)
-      [calendar_tab] = Floki.find(doc, "[data-testid='mode-tab-calendar']")
-      classes = calendar_tab |> Floki.attribute("class") |> List.first() |> String.split()
-      assert "mode-tab--active" in classes
+      refute html =~ "mode-tab-bar"
+      refute html =~ "calendar-rail"
     end
+  end
+
+  defp sidebar_hrefs(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#dashboard-sidebar a")
+    |> Enum.flat_map(&Floki.attribute(&1, "href"))
+  end
+
+  defp nav_link_classes(html, href) do
+    [link] =
+      html
+      |> Floki.parse_document!()
+      |> Floki.find("#dashboard-sidebar a[href='#{href}']")
+
+    link |> Floki.attribute("class") |> List.first() |> String.split()
   end
 
   describe "overview - nil full name" do
