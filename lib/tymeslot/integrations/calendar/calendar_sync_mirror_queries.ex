@@ -94,6 +94,30 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   end
 
   @doc """
+  Moves every mapping this link holds into `pending_delete`, in one statement.
+
+  The first step of tearing a link down, and it runs *before* the provider is
+  asked to remove anything. If the process dies between the transition and the
+  last provider delete, the rows left behind are already in the state the
+  reconcile sweep looks for, so the teardown resumes rather than stalling with
+  rows that still claim to be `active`.
+
+  One `UPDATE` rather than a row at a time: a link with a year of history can
+  hold thousands of mappings, and the transition carries no per-row decision.
+
+  Returns the number of rows moved.
+  """
+  @spec mark_pending_delete_for_link(integer()) :: non_neg_integer()
+  def mark_pending_delete_for_link(sync_link_id) when is_integer(sync_link_id) do
+    {count, _returned} =
+      CalendarSyncMirrorSchema
+      |> where([m], m.sync_link_id == ^sync_link_id)
+      |> Repo.update_all(set: [state: "pending_delete", updated_at: DateTime.utc_now()])
+
+    count
+  end
+
+  @doc """
   Records a placeholder the engine has just written onto a target.
 
   Returning the changeset error rather than raising is what makes orphan

@@ -44,6 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
+  alias Tymeslot.Integrations.Calendar.SyncLink.Teardown
 
   @type result ::
           {:ok, CalendarSyncLinkSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
@@ -112,13 +113,26 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
     do: update_link(user_id, link_id, %{"enabled" => enabled})
 
   @doc """
-  Removes a link, and with it the mapping rows recording where its mirrors were
-  written. See `CalendarSyncLinkQueries.delete/1`: the placeholders themselves
-  are not withdrawn by this.
+  Removes a link, withdrawing every placeholder it wrote before the row that
+  names them goes.
+
+  The order is not an optimisation, it is the whole operation.
+  `on_delete: :delete_all` takes the mapping rows with the link, and those rows
+  hold the only record of which event on the target calendar is a mirror — so
+  deleting the link first leaves busy blocks on the organiser's other calendar
+  that nothing owns and nothing will ever remove. `SyncLink.Teardown` documents
+  the sequence.
+
+  A placeholder that cannot be withdrawn therefore *keeps the link*. The link
+  is left disabled with its mapping in `pending_delete`, which is the state the
+  reconcile sweep retries, and the error surfaces so the dashboard can say the
+  removal did not complete. The alternative — deleting anyway — is precisely
+  the orphan this refuses to create.
   """
-  @spec delete_link(integer(), integer() | any()) :: result()
+  @spec delete_link(integer(), integer() | any()) :: result() | {:error, term()}
   def delete_link(user_id, link_id) when is_integer(user_id) do
-    with {:ok, link} <- owned_link(user_id, link_id) do
+    with {:ok, link} <- owned_link(user_id, link_id),
+         :ok <- Teardown.tear_down_link(link, user_id) do
       CalendarSyncLinkQueries.delete(link)
     end
   end

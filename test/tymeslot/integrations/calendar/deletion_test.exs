@@ -2,13 +2,19 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
+  import Mox
   import Tymeslot.Factory
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+
+  setup :verify_on_exit!
 
   defp insert_subscription(user) do
     insert(:calendar_integration,
@@ -257,6 +263,111 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
 
       assert {:error, :not_found} =
                CalendarManagement.get_calendar_integration(integration2.id, user.id)
+    end
+  end
+
+  describe "delete_with_primary_reassignment/2 — mirror teardown" do
+    setup do
+      user = insert(:user)
+      insert(:profile, user: user)
+      source = insert(:calendar_integration, user: user, provider: "google")
+      target = insert(:calendar_integration, user: user, provider: "google")
+
+      link =
+        insert(:calendar_sync_link,
+          user_id: user.id,
+          source_integration_id: source.id,
+          target_integration_id: target.id
+        )
+
+      %{user: user, source: source, target: target, link: link}
+    end
+
+    test "withdraws the placeholders living on the integration being disconnected", %{
+      user: user,
+      target: target,
+      link: link
+    } do
+      mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, _user_id} ->
+        # Before the delete transaction opens: the integration must still be
+        # there, since the provider call is made in its name.
+        assert Repo.get(CalendarIntegrationSchema, target.id)
+        send(test_pid, {:withdrawn, uid, integration_id})
+        :ok
+      end)
+
+      assert {:ok, _outcome} = Deletion.delete_with_primary_reassignment(user.id, target.id)
+
+      assert_received {:withdrawn, "mirror-uid-1", integration_id}
+      assert integration_id == target.id
+      refute Repo.get(CalendarSyncMirrorSchema, mirror.id)
+      refute Repo.get(CalendarIntegrationSchema, target.id)
+    end
+
+    test "withdraws the placeholders the disconnected integration caused elsewhere", %{
+      user: user,
+      source: source,
+      target: target,
+      link: link
+    } do
+      mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
+      test_pid = self()
+
+      # The SOURCE is going. Its placeholders sit on the target, which is
+      # staying connected — nothing else would ever remove them.
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, _user_id} ->
+        send(test_pid, {:withdrawn, uid, integration_id})
+        :ok
+      end)
+
+      assert {:ok, _outcome} = Deletion.delete_with_primary_reassignment(user.id, source.id)
+
+      assert_received {:withdrawn, "mirror-uid-1", integration_id}
+      assert integration_id == target.id
+      refute Repo.get(CalendarSyncMirrorSchema, mirror.id)
+    end
+
+    test "aborts the disconnect when a placeholder cannot be withdrawn", %{
+      user: user,
+      target: target,
+      link: link
+    } do
+      mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+        {:error, :service_unavailable}
+      end)
+
+      assert {:error, :service_unavailable} =
+               Deletion.delete_with_primary_reassignment(user.id, target.id)
+
+      # Deleting the integration would cascade the link and its mapping away,
+      # stranding the busy block with nothing naming it.
+      assert Repo.get(CalendarIntegrationSchema, target.id)
+      assert %{state: "pending_delete"} = Repo.get(CalendarSyncMirrorSchema, mirror.id)
+    end
+
+    test "an integration with no links is disconnected without a provider call", %{user: user} do
+      lone = insert(:calendar_integration, user: user, provider: "google")
+
+      assert {:ok, _outcome} = Deletion.delete_with_primary_reassignment(user.id, lone.id)
+      refute Repo.get(CalendarIntegrationSchema, lone.id)
+    end
+
+    test "refuses a stranger's integration before touching any placeholder", %{link: link} do
+      stranger = insert(:user)
+      mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
+
+      assert {:error, :not_found} =
+               Deletion.delete_with_primary_reassignment(
+                 stranger.id,
+                 link.target_integration_id
+               )
+
+      assert Repo.get(CalendarSyncMirrorSchema, mirror.id)
     end
   end
 end

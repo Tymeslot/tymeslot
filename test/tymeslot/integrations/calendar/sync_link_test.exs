@@ -14,9 +14,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
   @moduletag :sync_links
   @moduletag :integrations
 
+  import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.SyncLink
+  alias Tymeslot.Repo
+
+  setup :verify_on_exit!
 
   setup do
     user = insert(:user)
@@ -238,6 +243,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
   end
 
   describe "delete_link/2" do
+    # A link that never mirrored anything has nothing to withdraw, so this also
+    # pins that the teardown reaches for no provider at all: `verify_on_exit!`
+    # turns any call into a failure.
     test "removes the organiser's own link", ctx do
       {:ok, link} = SyncLink.create_link(ctx.user.id, attrs(ctx))
 
@@ -251,6 +259,46 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
 
       assert {:error, :not_found} = SyncLink.delete_link(stranger.id, link.id)
       assert [_still_there] = SyncLink.list_links(ctx.user.id)
+    end
+
+    test "withdraws every placeholder from the provider before dropping the row", ctx do
+      {:ok, link} = SyncLink.create_link(ctx.user.id, attrs(ctx))
+      mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, user_id} ->
+        # The link and its mapping row must both still exist while the provider
+        # is asked: the row is what carries the uid being deleted.
+        assert Repo.get(CalendarSyncMirrorSchema, mirror.id)
+        send(test_pid, {:withdrawn, uid, integration_id, user_id})
+        :ok
+      end)
+
+      assert {:ok, _deleted} = SyncLink.delete_link(ctx.user.id, link.id)
+
+      assert_received {:withdrawn, "mirror-uid-1", target_id, user_id}
+      assert target_id == ctx.target.id
+      assert user_id == ctx.user.id
+
+      assert SyncLink.list_links(ctx.user.id) == []
+      refute Repo.get(CalendarSyncMirrorSchema, mirror.id)
+    end
+
+    test "keeps the link when a placeholder cannot be withdrawn", ctx do
+      {:ok, link} = SyncLink.create_link(ctx.user.id, attrs(ctx))
+      mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+        {:error, :service_unavailable}
+      end)
+
+      assert {:error, :service_unavailable} = SyncLink.delete_link(ctx.user.id, link.id)
+
+      # Dropping the link would cascade the mapping away and strand the busy
+      # block on the target with nothing naming it.
+      assert [survivor] = SyncLink.list_links(ctx.user.id)
+      refute survivor.enabled
+      assert %{state: "pending_delete"} = Repo.get(CalendarSyncMirrorSchema, mirror.id)
     end
   end
 end

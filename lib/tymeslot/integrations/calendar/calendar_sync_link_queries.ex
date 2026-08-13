@@ -63,6 +63,32 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
   def list_enabled_for_source(_source_integration_id), do: []
 
   @doc """
+  Every link naming this integration at either end, enabled or not.
+
+  The teardown question, and deliberately not `list_enabled_for_source/1`'s.
+  Disconnecting a calendar has to withdraw the placeholders on it *and* the
+  placeholders it caused on other calendars, and a paused link's mirrors are
+  still sitting on a provider — pausing leaves them in place by design. So this
+  filters on neither direction nor `enabled`: a filter here would be a
+  placeholder nobody ever removes.
+
+  No preloads. The caller withdraws mirrors keyed on `target_integration_id`,
+  which the mirror row carries itself.
+  """
+  @spec list_for_integration(integer()) :: [CalendarSyncLinkSchema.t()]
+  def list_for_integration(integration_id) when is_integer(integration_id) do
+    CalendarSyncLinkSchema
+    |> where(
+      [l],
+      l.source_integration_id == ^integration_id or l.target_integration_id == ^integration_id
+    )
+    |> order_by([l], asc: l.id)
+    |> Repo.all()
+  end
+
+  def list_for_integration(_integration_id), do: []
+
+  @doc """
   Every enabled link whose last reconciliation is older than `max_age_seconds`,
   or which has never been reconciled.
 

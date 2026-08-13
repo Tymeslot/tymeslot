@@ -194,6 +194,54 @@ defmodule Tymeslot.Integrations.HealthCheck do
   end
 
   @doc """
+  Records that an integration has failed a write outright — every retry
+  exhausted, not a single attempt that may yet succeed.
+
+  The scheduled probe is a *read*: it asks whether the credentials still answer.
+  An integration can pass that and still refuse every write, because the token
+  was granted read-only, the calendar was made read-only downstream, or the
+  provider is rejecting the payload. Nothing in the probe ladder can see it, so
+  a failure that only writes can observe has to say so itself, or the organiser
+  learns of it from a double booking.
+
+  Marked `unhealthy` directly rather than incremented towards the failure
+  threshold: the caller has already exhausted a retry ladder, and the threshold
+  exists to distinguish a blip from a fault — a distinction the caller has just
+  made. `consecutive_hard_failures` is left alone deliberately, so this cannot
+  trip the auto-pause worker on its own; a write failure is a reason to warn
+  the organiser, not to disconnect the calendar underneath them.
+
+  `became_unhealthy_at` is set only when the row is not already unhealthy, so a
+  run of failures does not keep pushing the 48-hour notification clock forward
+  and suppress the notification entirely.
+
+  The row is seeded through `get_or_init/3` if the integration has never been
+  probed — hence the `user_id`, which the row is keyed on for the dashboard's
+  per-organiser queries. Without the seed the mark would silently do nothing on
+  exactly the integrations most likely to be broken: the ones connected between
+  two scheduled sweeps.
+  """
+  @spec mark_write_failure(integration_type(), integer(), integer()) :: :ok
+  def mark_write_failure(type, integration_id, user_id) do
+    already_unhealthy? =
+      case IntegrationHealthStateQueries.get_or_init(type, integration_id, user_id) do
+        {:ok, %{status: "unhealthy"}} -> true
+        _otherwise -> false
+      end
+
+    fields = [status: "unhealthy", successes: 0, last_error_class: "hard"]
+
+    fields =
+      if already_unhealthy?,
+        do: fields,
+        else: Keyword.put(fields, :became_unhealthy_at, DateTime.utc_now())
+
+    IntegrationHealthStateQueries.update_fields(type, integration_id, fields)
+
+    :ok
+  end
+
+  @doc """
   Resets the health state row after a successful sync.
 
   A real sync is the strongest possible health signal — it actually exercised
