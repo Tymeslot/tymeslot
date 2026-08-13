@@ -25,8 +25,10 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
   import Tymeslot.Factory
   import Tymeslot.SyncLinkTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
   alias Tymeslot.Workers.SyncLinkWriteBackWorker
@@ -176,6 +178,72 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
         assert uid == target_uid
         :ok
       end)
+
+      assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+
+      assert {:error, :not_found} ==
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+    end
+
+    test "a transparent source with no placeholder yet never gets one", %{
+      source: source,
+      link: link
+    } do
+      cached_event(source, transparency: "transparent")
+
+      # No provider expectation at all: `verify_on_exit!` fails the test if the
+      # worker reaches for the target. A transparent event does not consume the
+      # organiser's time, so a placeholder for it would block a slot that is
+      # genuinely free.
+      assert {:discard, :not_an_eligible_source} ==
+               perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+
+      assert {:error, :not_found} ==
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+    end
+
+    test "transparency beats the privacy tier, including full_passthrough", %{
+      source: source,
+      link: link
+    } do
+      cached_event(source, transparency: "transparent")
+
+      for tier <- ["busy_only", "generic_label", "full_passthrough"] do
+        {:ok, tiered} =
+          CalendarSyncLinkQueries.update(link, %{
+            privacy_tier: tier,
+            generic_label: "Personal commitment"
+          })
+
+        assert {:discard, :not_an_eligible_source} ==
+                 perform_job(SyncLinkWriteBackWorker, args(tiered, "source-uid-1", "upsert"))
+
+        assert {:error, :not_found} ==
+                 CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+      end
+    end
+
+    test "a placeholder written at one tier is withdrawn when its source turns transparent",
+         %{source: source, link: link} do
+      {:ok, link} = CalendarSyncLinkQueries.update(link, %{privacy_tier: "full_passthrough"})
+      cached_event(source, summary: "Quarterly review with the board")
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.summary == "Quarterly review with the board"
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+
+      assert {:ok, _mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      {:ok, event} = ProviderCalendarEventQueries.get_by_uid(source.id, "source-uid-1")
+
+      {:ok, _transparent} =
+        Repo.update(Changeset.change(event, transparency: "transparent"))
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> :ok end)
 
       assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
 

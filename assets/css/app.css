@@ -89,6 +89,10 @@
    the four only resolved because unrelated templates happened to use the same
    shades. Listed here so the bar owns its own colours. */
 @source inline("bg-green-500 bg-amber-400 bg-red-400 bg-tymeslot-200");
+/* Cross-calendar clash marker on a grid event: built by interpolation in
+   `calendar_grid/grid_views.ex`, and an outline rather than a ring so it does
+   not fight the focus ring that element already carries. */
+@source inline("outline outline-2 outline-dashed outline-white/90 -outline-offset-2");
 
 @theme {
   /* --- Brand + extended palette (formerly theme.extend.colors) --- */

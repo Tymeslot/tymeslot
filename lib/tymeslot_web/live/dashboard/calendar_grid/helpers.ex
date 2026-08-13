@@ -76,6 +76,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate overflow_events_for_day(assigns, date), to: OverlapLayout
   defdelegate layout_for_day(assigns, date), to: OverlapLayout
   defdelegate overlap_layout(events), to: OverlapLayout
+  defdelegate cross_integration_overlap_ids(events), to: OverlapLayout
+  defdelegate cross_integration_overlap_ids_for_day(assigns, date), to: OverlapLayout
 
   # Month-grid multi-day / all-day bar layout
 

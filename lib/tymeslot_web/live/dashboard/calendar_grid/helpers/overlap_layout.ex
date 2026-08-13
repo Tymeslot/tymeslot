@@ -19,17 +19,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
 
   @spec layout_for_day(map(), Date.t()) :: {list(), list()}
   def layout_for_day(assigns, date) do
+    assigns |> timed_events_for_day(date) |> overlap_layout()
+  end
+
+  @doc """
+  Ids of the events in one day column that clash with an event on a different
+  calendar integration.
+
+  Computed from the day's clamped events, the same list the column layout is
+  built from, so the marker and the columns can never disagree about which
+  events share a day. Clamping matters: an event running past midnight competes
+  with the next morning only for the part of it that lands in that column, and
+  the untrimmed times would report a clash in a column where nothing is drawn
+  overlapping.
+  """
+  @spec cross_integration_overlap_ids_for_day(map(), Date.t()) :: MapSet.t()
+  def cross_integration_overlap_ids_for_day(assigns, date) do
+    assigns |> timed_events_for_day(date) |> cross_integration_overlap_ids()
+  end
+
+  # The timed events landing in one day column, clamped to it and sorted by
+  # start time — the shared input of the column layout and the clash marker.
+  defp timed_events_for_day(assigns, date) do
     tz = assigns.user_timezone
 
-    events =
-      assigns.visible_events
-      |> Enum.filter(fn e ->
-        not e.all_day and event_spans_day?(e, date, tz)
-      end)
-      |> Enum.map(&clamp_event_to_day(&1, date, tz))
-      |> Enum.sort_by(& &1.start_at)
-
-    overlap_layout(events)
+    assigns.visible_events
+    |> Enum.filter(fn e ->
+      not e.all_day and event_spans_day?(e, date, tz)
+    end)
+    |> Enum.map(&clamp_event_to_day(&1, date, tz))
+    |> Enum.sort_by(& &1.start_at)
   end
 
   @doc """
@@ -72,6 +91,58 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
       end
 
     {visible_tuples, overflow_events}
+  end
+
+  @doc """
+  Returns the ids of events that overlap an event from a *different* calendar
+  integration.
+
+  This is not the same question as the column layout above answers. A
+  `total_cols` greater than 1 says an event shares a cluster with something, but
+  a cluster is transitive: A overlaps B and B overlaps C puts all three in one
+  cluster and gives all three the same column count, even when A and C never
+  touch. Marking on the column count would flag an event whose only real
+  neighbour sits on its own calendar. The pairing therefore has to be decided
+  pairwise, which is what this does.
+
+  The sweep relies on the caller's list being sorted by `start_at`, which
+  `layout_for_day/2` already does. For each event it walks forward only while
+  the next event begins before this one ends, so a day of back-to-back
+  appointments costs one comparison each and only a genuine pile-up costs more.
+
+  A shared boundary is not an overlap: an event ending exactly when the next
+  begins does not compete for the organiser's time, and the column layout above
+  already reuses the column in that case. The two must agree, or an organiser
+  whose calendar is merely full would see every consecutive pair flagged.
+  """
+  @spec cross_integration_overlap_ids(list()) :: MapSet.t()
+  def cross_integration_overlap_ids(events) do
+    events
+    |> pairs_overlapping_in_time()
+    |> Enum.reduce(MapSet.new(), fn {a, b}, marked ->
+      if a.calendar_integration_id == b.calendar_integration_id do
+        marked
+      else
+        marked |> MapSet.put(a.id) |> MapSet.put(b.id)
+      end
+    end)
+  end
+
+  # Every pair of events whose times genuinely intersect, from a list already
+  # sorted by `start_at`. `Enum.take_while/2` stops at the first event starting
+  # at or after `a`'s end; because the list is sorted, nothing after it can
+  # overlap `a` either.
+  defp pairs_overlapping_in_time(events) do
+    events
+    |> Stream.unfold(fn
+      [] -> nil
+      [event | rest] -> {{event, rest}, rest}
+    end)
+    |> Enum.flat_map(fn {event, later} ->
+      later
+      |> Enum.take_while(&(DateTime.compare(&1.start_at, event.end_at) == :lt))
+      |> Enum.map(&{event, &1})
+    end)
   end
 
   @doc """

@@ -300,4 +300,153 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
       assert :ok == Engine.unmirror(link, "never-mirrored", user.id)
     end
   end
+
+  describe "mirror/3 — privacy tiers" do
+    setup %{link: link} do
+      %{
+        tiered: fn attrs ->
+          %{link | privacy_tier: attrs[:privacy_tier], generic_label: attrs[:generic_label]}
+        end
+      }
+    end
+
+    test "busy_only writes the placeholder title", %{
+      user: user,
+      source: source,
+      link: link,
+      tiered: tiered
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.summary == "Busy"
+        refute Map.has_key?(event_data, :description)
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok ==
+               Engine.mirror(
+                 tiered.(privacy_tier: "busy_only", generic_label: nil),
+                 source_event(source, %{summary: "Board meeting", description: "Agenda"}),
+                 user.id
+               )
+
+      assert {:ok, _mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+    end
+
+    test "generic_label writes the organiser's label", %{
+      user: user,
+      source: source,
+      tiered: tiered
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.summary == "Personal commitment"
+        refute Map.has_key?(event_data, :description)
+        refute inspect(event_data) =~ "Board meeting"
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok ==
+               Engine.mirror(
+                 tiered.(privacy_tier: "generic_label", generic_label: "Personal commitment"),
+                 source_event(source, %{summary: "Board meeting", description: "Agenda"}),
+                 user.id
+               )
+    end
+
+    test "full_passthrough copies title, description and location", %{
+      user: user,
+      source: source,
+      tiered: tiered
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.summary == "Board meeting"
+        assert event_data.description == "Agenda"
+        assert event_data.location == "Room 4"
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok ==
+               Engine.mirror(
+                 tiered.(privacy_tier: "full_passthrough", generic_label: nil),
+                 source_event(source, %{
+                   summary: "Board meeting",
+                   description: "Agenda",
+                   location: "Room 4"
+                 }),
+                 user.id
+               )
+    end
+
+    test "a private source is rendered busy_only even on full_passthrough", %{
+      user: user,
+      source: source,
+      tiered: tiered
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.summary == "Busy"
+        refute Map.has_key?(event_data, :description)
+        refute inspect(event_data) =~ "Board meeting"
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok ==
+               Engine.mirror(
+                 tiered.(privacy_tier: "full_passthrough", generic_label: nil),
+                 source_event(source, %{
+                   summary: "Board meeting",
+                   description: "Agenda",
+                   visibility: :private
+                 }),
+                 user.id
+               )
+    end
+
+    test "no tier sends attendees to the provider", %{user: user, source: source, tiered: tiered} do
+      for {tier, label} <- [
+            {"busy_only", nil},
+            {"generic_label", "Personal commitment"},
+            {"full_passthrough", nil}
+          ] do
+        expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+          refute Map.has_key?(event_data, :attendees)
+          refute inspect(event_data) =~ "colleague@example.com"
+          {:ok, %{provider_event_id: "target-pid-1"}}
+        end)
+
+        event =
+          source_event(source, %{
+            uid: "attendee-uid-#{tier}",
+            summary: "Board meeting",
+            attendees: [%{email: "colleague@example.com", name: "A Colleague"}]
+          })
+
+        assert :ok ==
+                 Engine.mirror(tiered.(privacy_tier: tier, generic_label: label), event, user.id)
+      end
+    end
+
+    test "the tier is applied on update as well as on create", %{
+      user: user,
+      source: source,
+      link: link,
+      tiered: tiered
+    } do
+      mirror_for_link(link,
+        source_uid: "source-uid-1",
+        target_uid: Engine.target_uid_for(link.id, "source-uid-1")
+      )
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, event_data, _context ->
+        assert event_data.summary == "Personal commitment"
+        :ok
+      end)
+
+      assert :ok ==
+               Engine.mirror(
+                 tiered.(privacy_tier: "generic_label", generic_label: "Personal commitment"),
+                 source_event(source, %{summary: "Board meeting"}),
+                 user.id
+               )
+    end
+  end
 end

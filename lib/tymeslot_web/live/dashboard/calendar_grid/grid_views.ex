@@ -45,9 +45,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
     day_layouts =
       Map.new(assigns.visible_days, fn day -> {day, Helpers.layout_for_day(assigns, day)} end)
 
+    day_clashes =
+      Map.new(assigns.visible_days, fn day ->
+        {day, Helpers.cross_integration_overlap_ids_for_day(assigns, day)}
+      end)
+
     assigns =
       assigns
       |> assign(:col_count, Helpers.col_count(assigns))
+      |> assign(:day_clashes, day_clashes)
       |> assign(:is_timed, assigns.view in @timed_views)
       |> assign(
         :today_visible?,
@@ -151,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                 <div
                   :for={{event, col_idx, total_cols} <- elem(Map.get(@day_layouts, day, {[], []}), 0)}
                   id={"event-#{event.id}-#{day}"}
-                  class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
+                  class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)} #{clash_marker_class(@day_clashes, day, event)}"}
                   style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
                   {Helpers.open_event_attrs(event)}
                   phx-target={@myself}
@@ -166,7 +172,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                           Helpers.time_format(assigns),
                           @user_timezone
                         )
-                    )
+                    ) <> clash_label_suffix(@day_clashes, day, event)
                   }
                   data-draggable={to_string(not Helpers.booking?(event))}
                   data-event-id={event.id}
@@ -279,6 +285,51 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       </div>
     </div>
     """
+  end
+
+  # ---------- Cross-calendar clash marker ----------
+
+  # An outline, never a colour. Colour on this element is already spoken for:
+  # `color_for_event/2` resolves it through a four-level precedence and it is
+  # how an organiser tells which calendar an event came from, so repainting a
+  # clashing event would delete the very signal that makes the clash worth
+  # noticing. The marker is therefore additive — it lands beside the
+  # `bg-calendar-*` class rather than in place of it.
+  #
+  # `outline-*` rather than `ring-*` deliberately. The element already carries
+  # `focus:ring-2 focus:ring-turquoise-400`, and a ring here would be the same
+  # CSS property as that focus ring: keyboard-focusing a clashing event would
+  # swap one meaning for the other, and whichever utility Tailwind emitted last
+  # would win. An outline is a separate property, so the two stack and a focused
+  # clashing event still reads as both.
+  #
+  # A negative outline offset keeps the outline inside the block. Drawn outside
+  # it would overlap the neighbouring column — which in a clash is the very
+  # event being clashed with — and read as though it enclosed both.
+  @clash_marker "outline outline-2 outline-dashed outline-white/90 -outline-offset-2"
+
+  defp clash_marker_class(day_clashes, day, event) do
+    if clashing?(day_clashes, day, event), do: @clash_marker, else: ""
+  end
+
+  # A dashed outline says nothing to a screen reader, so the same fact is
+  # appended to the label the event already exposes. Appended rather than folded
+  # into the "%{event}, %{time}" msgid: that msgid is shared with the agenda
+  # view, where the marker does not apply, and giving it a third interpolation
+  # would oblige every locale to restate the time format to say a thing the
+  # agenda never says.
+  defp clash_label_suffix(day_clashes, day, event) do
+    if clashing?(day_clashes, day, event) do
+      ", " <> dgettext("dashboard_calendar", "overlaps an event on another calendar")
+    else
+      ""
+    end
+  end
+
+  defp clashing?(day_clashes, day, event) do
+    day_clashes
+    |> Map.get(day, MapSet.new())
+    |> MapSet.member?(event.id)
   end
 
   # ---------- Overflow chip (3+ overlapping events) ----------

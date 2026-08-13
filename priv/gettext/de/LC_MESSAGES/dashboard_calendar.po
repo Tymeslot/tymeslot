@@ -386,3 +386,8 @@ msgstr "Keine anstehenden Buchungen"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Ihre Buchungen werden hier bereits angezeigt. Verbinden Sie einen Kalender, um auch Ihre übrigen Ereignisse zu sehen und Doppelbuchungen zu vermeiden."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
+#, elixir-autogen, elixir-format
+msgid "overlaps an event on another calendar"
+msgstr "überschneidet sich mit einem Ereignis in einem anderen Kalender"

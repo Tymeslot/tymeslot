@@ -64,6 +64,40 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   update, delete, and terminal failure — and three independent readings of it is
   how one divergence ends up appended twice under two names.
 
+  ## The mirror colour, and why it is a second call
+
+  A link may carry a `mirror_colour`, so the organiser can see at a glance which
+  of their calendars a busy block came from. It is applied as a separate,
+  colour-only patch after the placeholder has been written, not as a field on
+  the write itself, for two independent reasons.
+
+  The first is the provider surface. `patch_event_colour/4` exists only on
+  `Google.GoogleCalendarApi`; it is not part of the shared `Provider` behaviour
+  and cannot be dispatched polymorphically, so there is no colour field to put
+  on a payload that three provider families share. Every other target answers
+  `{:discard, :provider_has_no_event_colour}` from `colour_target/1` — the same
+  shape, and the same reason, as `ColourWriteBackWorker`'s
+  `%{provider: "outlook"}` head — and no request is made at all. Reusing the
+  existing `colour_only: true` route means the call goes through
+  `CalendarCircuitBreaker` exactly as every other Google request does, rather
+  than opening a second breaker over the same API.
+
+  The second is what a failure may cost. Once the placeholder is on the target
+  it is blocking the time it exists to block, which is the entire feature; the
+  colour is decoration on top. If a failed patch propagated, the engine would
+  return an error, Oban would retry the whole mirror, and the retry would
+  re-send the placeholder — provider quota and a redundant write — to fix
+  nothing but a hue. So the patch swallows its own failure, logs it at warning,
+  and returns the write's result unchanged. The next mirror write for that
+  source repaints, because the patch is idempotent and unconditional rather
+  than diffed against a stored colour: there is no column recording what colour
+  the placeholder currently carries, and inventing one to save a request that
+  costs a single PATCH would be bookkeeping that can itself fall out of step.
+
+  The patch is deliberately reached only after a *successful* write. A failed
+  create has no event to colour, and a failed update leaves a placeholder whose
+  state is already being retried.
+
   ## The attempt count
 
   `write_failed` is the one conflict that turns on something the domain cannot
@@ -177,7 +211,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
 
     case CalendarEvents.create_event(payload, {link.target_integration_id, user_id}) do
       {:ok, created} ->
-        persist_or_compensate(link, source_event, target_uid, created, user_id)
+        result = persist_or_compensate(link, source_event, target_uid, created, user_id)
+        paint(result, link, target_uid, provider_event_id(created), user_id)
 
       {:error, reason} ->
         record_write_failure(link, source_event.uid, :create, reason, final?)
@@ -265,7 +300,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
           source_etag: Map.get(source_event, :etag)
         })
 
-        :ok
+        paint(:ok, link, target_uid, mirror.target_provider_event_id, user_id)
 
       {:error, reason} ->
         # The placeholder on the target is now out of step with its source, and
@@ -363,6 +398,91 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
     end
   end
 
+  # --- Colour ---
+
+  @doc """
+  Whether this link's placeholders can be painted, and with what.
+
+  `{:ok, colour}` only when the link carries a colour *and* its target is a
+  provider with a per-event colour to set. Everything else is a discard naming
+  the reason, in the same vocabulary the rest of the sync path uses — a colour
+  that can never be applied is not a failure to retry.
+
+  Google is the only provider with a per-event colour reachable from here:
+  `patch_event_colour/4` lives on `Google.GoogleCalendarApi` alone and is not
+  part of the shared `Provider` behaviour. The CalDAV family does have a `COLOR`
+  property, but the colour-only path patches the event's *cached* `raw_ical`,
+  which for a placeholder Tymeslot has only just written does not exist in the
+  target's cache yet — so a patch there would have nothing to patch.
+  """
+  @spec colour_target(CalendarSyncLinkSchema.t()) :: {:ok, String.t()} | {:discard, atom()}
+  def colour_target(%CalendarSyncLinkSchema{mirror_colour: colour})
+      when not is_binary(colour) or colour == "",
+      do: {:discard, :no_mirror_colour}
+
+  def colour_target(%CalendarSyncLinkSchema{
+        mirror_colour: colour,
+        target_integration: %{provider: "google"}
+      }),
+      do: {:ok, colour}
+
+  # A link whose target association was never loaded cannot be asked what
+  # provider it points at. Named separately from the unsupported-provider case
+  # because the two are different bugs: this one is a caller that skipped
+  # `CalendarSyncLinkQueries.get/1`, and reporting it as "this provider has no
+  # colour" would send whoever investigates to the wrong place. Both decline to
+  # paint — an unpainted placeholder is the safe failure, since the block is
+  # already on the target doing its job.
+  def colour_target(%CalendarSyncLinkSchema{target_integration: %Ecto.Association.NotLoaded{}}),
+    do: {:discard, :target_integration_not_loaded}
+
+  # Every other target: Outlook has no per-event colour at all, an ICS
+  # subscription cannot be written to, and CalDAV has nothing cached to patch.
+  # Matched as a function head rather than decided inside the write, so the
+  # unsupported case costs no request.
+  def colour_target(%CalendarSyncLinkSchema{}), do: {:discard, :provider_has_no_event_colour}
+
+  # Best-effort by construction — see the moduledoc. `result` is returned
+  # unchanged whatever happens here, including when the write it follows did not
+  # succeed and there is nothing on the target to paint.
+  defp paint(:ok, link, target_uid, provider_event_id, user_id) do
+    case colour_target(link) do
+      {:ok, colour} -> patch_colour(link, target_uid, provider_event_id, colour, user_id)
+      {:discard, _reason} -> :ok
+    end
+
+    :ok
+  end
+
+  defp paint(result, _link, _target_uid, _provider_event_id, _user_id), do: result
+
+  defp patch_colour(link, target_uid, provider_event_id, colour, user_id) do
+    event_data = %{
+      colour_only: true,
+      colour: colour,
+      provider_event_id: provider_event_id
+    }
+
+    case CalendarEvents.update_event(
+           target_uid,
+           event_data,
+           {link.target_integration_id, user_id}
+         ) do
+      :ok ->
+        :ok
+
+      other ->
+        Logger.warning("Mirror colour patch failed; the placeholder keeps the target's default",
+          sync_link_id: link.id,
+          target_integration_id: link.target_integration_id,
+          target_uid: target_uid,
+          reason: inspect(other)
+        )
+
+        :ok
+    end
+  end
+
   # --- Payload ---
 
   # The privacy tier decides the content; the link decides where it lands.
@@ -371,7 +491,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # `target_calendar_id` for a CalDAV target rather than storing a preference
   # the write cannot honour.
   defp payload_for(link, source_event, target_uid) do
-    payload = MirrorPayload.build(source_event, target_uid)
+    payload = MirrorPayload.build(source_event, target_uid, link)
 
     case link.target_calendar_id do
       nil -> payload

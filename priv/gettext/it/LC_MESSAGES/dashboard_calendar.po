@@ -386,3 +386,8 @@ msgstr "Nessuna prenotazione in programma"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Le tue prenotazioni sono già visibili qui. Collega un calendario per vedere gli altri tuoi eventi ed evitare doppie prenotazioni."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
+#, elixir-autogen, elixir-format
+msgid "overlaps an event on another calendar"
+msgstr "si sovrappone a un evento di un altro calendario"

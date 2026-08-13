@@ -390,3 +390,8 @@ msgstr "Žádné nadcházející rezervace"
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
 msgstr "Vaše rezervace se zde již zobrazují. Připojte kalendář, abyste viděli i ostatní události a předešli dvojitým rezervacím."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex
+#, elixir-autogen, elixir-format
+msgid "overlaps an event on another calendar"
+msgstr "překrývá se s událostí v jiném kalendáři"

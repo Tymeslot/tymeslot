@@ -21,9 +21,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorPayloadTest do
   @moduletag :sync_links
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
 
   @target_uid "tymeslot-mirror-abc123"
+
+  defp link(attrs), do: struct!(%CalendarSyncLinkSchema{privacy_tier: "busy_only"}, attrs)
 
   defp timed_event(attrs \\ %{}) do
     CalendarEvent.new!(
@@ -145,7 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorPayloadTest do
 
   describe "build/2 — cache rows" do
     test "reads the same fields off a ProviderCalendarEventSchema row" do
-      row = %Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema{
+      row = %ProviderCalendarEventSchema{
         uid: "source-uid",
         calendar_integration_id: 7,
         summary: "Annual leave",
@@ -161,6 +165,301 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorPayloadTest do
       assert payload.all_day == true
       assert payload.start_time == ~D[2026-07-03]
       assert payload.summary == "Busy"
+    end
+  end
+
+  describe "build/3 — busy_only tier" do
+    test "matches build/2 exactly, so the default tier has one rendering" do
+      source = timed_event()
+
+      assert MirrorPayload.build(source, @target_uid, link(%{privacy_tier: "busy_only"})) ==
+               MirrorPayload.build(source, @target_uid)
+    end
+
+    test "carries the placeholder title and no source detail" do
+      payload =
+        MirrorPayload.build(timed_event(), @target_uid, link(%{privacy_tier: "busy_only"}))
+
+      assert payload.summary == "Busy"
+      refute Map.has_key?(payload, :description)
+      refute Map.has_key?(payload, :location)
+    end
+
+    test "an all-day source keeps its date-valued timing" do
+      payload =
+        MirrorPayload.build(all_day_event(), @target_uid, link(%{privacy_tier: "busy_only"}))
+
+      assert payload.all_day == true
+      assert payload.start_time == ~D[2026-07-03]
+      assert payload.end_time == ~D[2026-07-04]
+    end
+  end
+
+  describe "build/3 — generic_label tier" do
+    test "the organiser's label is the title, and nothing else is copied" do
+      payload =
+        MirrorPayload.build(
+          timed_event(),
+          @target_uid,
+          link(%{privacy_tier: "generic_label", generic_label: "Personal commitment"})
+        )
+
+      assert payload.summary == "Personal commitment"
+      refute Map.has_key?(payload, :description)
+      refute Map.has_key?(payload, :location)
+
+      encoded = inspect(payload)
+      refute encoded =~ "Quarterly review"
+      refute encoded =~ "redundancies"
+      refute encoded =~ "Example Street"
+    end
+
+    test "a nil label falls back to busy_only rather than writing an empty title" do
+      payload =
+        MirrorPayload.build(
+          timed_event(),
+          @target_uid,
+          link(%{privacy_tier: "generic_label", generic_label: nil})
+        )
+
+      assert payload.summary == "Busy"
+    end
+
+    test "a blank label falls back to busy_only" do
+      for blank <- ["", "   ", "\t\n"] do
+        payload =
+          MirrorPayload.build(
+            timed_event(),
+            @target_uid,
+            link(%{privacy_tier: "generic_label", generic_label: blank})
+          )
+
+        assert payload.summary == "Busy"
+      end
+    end
+
+    test "the label is trimmed, so trailing whitespace never reaches the provider" do
+      payload =
+        MirrorPayload.build(
+          timed_event(),
+          @target_uid,
+          link(%{privacy_tier: "generic_label", generic_label: "  Away  "})
+        )
+
+      assert payload.summary == "Away"
+    end
+
+    test "an all-day source still gets date-valued timing" do
+      payload =
+        MirrorPayload.build(
+          all_day_event(),
+          @target_uid,
+          link(%{privacy_tier: "generic_label", generic_label: "Out of office"})
+        )
+
+      assert payload.summary == "Out of office"
+      assert payload.all_day == true
+      assert payload.start_time == ~D[2026-07-03]
+      assert payload.end_time == ~D[2026-07-04]
+      refute inspect(payload) =~ "Annual leave"
+    end
+  end
+
+  describe "build/3 — full_passthrough tier" do
+    test "copies title, description and location" do
+      payload =
+        MirrorPayload.build(timed_event(), @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+      assert payload.summary == "Quarterly review with the board"
+      assert payload.description == "Agenda attached, discuss the redundancies"
+      assert payload.location == "Room 4, 12 Example Street"
+    end
+
+    test "a source with no description or location omits the keys entirely" do
+      source = timed_event(%{description: nil, location: nil})
+
+      payload =
+        MirrorPayload.build(source, @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+      assert payload.summary == "Quarterly review with the board"
+      refute Map.has_key?(payload, :description)
+      refute Map.has_key?(payload, :location)
+    end
+
+    test "a source with no summary falls back to the placeholder title" do
+      source = timed_event(%{summary: nil})
+
+      payload =
+        MirrorPayload.build(source, @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+      assert payload.summary == "Busy"
+    end
+
+    test "the placeholder stays opaque, so it still blocks time" do
+      payload =
+        MirrorPayload.build(timed_event(), @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+      assert payload.transparency == :opaque
+      assert payload.status == :confirmed
+    end
+
+    test "an all-day source keeps its date-valued timing" do
+      payload =
+        MirrorPayload.build(
+          all_day_event(),
+          @target_uid,
+          link(%{privacy_tier: "full_passthrough"})
+        )
+
+      assert payload.summary == "Annual leave"
+      assert payload.all_day == true
+      assert payload.start_time == ~D[2026-07-03]
+      assert payload.end_time == ~D[2026-07-04]
+    end
+  end
+
+  describe "attendees and conferencing, at every tier" do
+    @tiers [
+      %{privacy_tier: "busy_only"},
+      %{privacy_tier: "generic_label", generic_label: "Personal commitment"},
+      %{privacy_tier: "full_passthrough"}
+    ]
+
+    test "no tier ever copies attendees or conferencing data" do
+      source =
+        timed_event(%{
+          attendees: [
+            %{email: "colleague@example.com", name: "A Colleague"},
+            %{email: "board@example.com", name: "The Board"}
+          ],
+          organiser: "organiser@example.com",
+          links: ["https://meet.example.com/secret-room"],
+          provider_metadata: %{"hangoutLink" => "https://meet.example.com/secret-room"}
+        })
+
+      for tier <- @tiers do
+        payload = MirrorPayload.build(source, @target_uid, link(tier))
+
+        refute Map.has_key?(payload, :attendees)
+        refute Map.has_key?(payload, :attendee_email)
+        refute Map.has_key?(payload, :attendee_name)
+        refute Map.has_key?(payload, :conference_url)
+        refute Map.has_key?(payload, :conference_data)
+        refute Map.has_key?(payload, :organizer)
+        refute Map.has_key?(payload, :organiser)
+
+        encoded = inspect(payload)
+        refute encoded =~ "colleague@example.com"
+        refute encoded =~ "board@example.com"
+        refute encoded =~ "A Colleague"
+        refute encoded =~ "meet.example.com"
+      end
+    end
+
+    test "the payload's keys are a fixed, reviewable set at every tier" do
+      allowed =
+        MapSet.new([
+          :uid,
+          :summary,
+          :description,
+          :location,
+          :transparency,
+          :status,
+          :all_day,
+          :start_time,
+          :end_time,
+          :timezone
+        ])
+
+      for tier <- @tiers do
+        payload = MirrorPayload.build(timed_event(), @target_uid, link(tier))
+        extra = payload |> Map.keys() |> MapSet.new() |> MapSet.difference(allowed)
+
+        assert MapSet.size(extra) == 0,
+               "unexpected key(s) in the #{tier.privacy_tier} payload: #{inspect(MapSet.to_list(extra))}"
+      end
+    end
+  end
+
+  describe "the visibility override" do
+    test "a private source never passes its title, even on full_passthrough" do
+      source = timed_event(%{visibility: :private})
+
+      payload =
+        MirrorPayload.build(source, @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+      assert payload.summary == "Busy"
+      refute Map.has_key?(payload, :description)
+      refute Map.has_key?(payload, :location)
+      refute inspect(payload) =~ "Quarterly review"
+      refute inspect(payload) =~ "redundancies"
+    end
+
+    test "a confidential source degrades the same way" do
+      source = timed_event(%{visibility: :confidential})
+
+      payload =
+        MirrorPayload.build(source, @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+      assert payload.summary == "Busy"
+      refute Map.has_key?(payload, :description)
+    end
+
+    test "the string forms a cache row carries are honoured too" do
+      for visibility <- ["private", "confidential"] do
+        row = %ProviderCalendarEventSchema{
+          uid: "source-uid",
+          calendar_integration_id: 7,
+          summary: "Quarterly review with the board",
+          description: "Agenda attached",
+          location: "Room 4",
+          visibility: visibility,
+          all_day: false,
+          start_at: ~U[2026-07-03 09:30:00Z],
+          end_at: ~U[2026-07-03 10:45:00Z]
+        }
+
+        payload = MirrorPayload.build(row, @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+        assert payload.summary == "Busy"
+        refute inspect(payload) =~ "Quarterly review"
+      end
+    end
+
+    test "it beats generic_label too, so no organiser label labels a private event" do
+      source = timed_event(%{visibility: :private})
+
+      payload =
+        MirrorPayload.build(
+          source,
+          @target_uid,
+          link(%{privacy_tier: "generic_label", generic_label: "Personal commitment"})
+        )
+
+      assert payload.summary == "Busy"
+    end
+
+    test "a public or unset source is unaffected" do
+      for visibility <- [:public, nil] do
+        source = timed_event(%{visibility: visibility})
+
+        payload =
+          MirrorPayload.build(source, @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+        assert payload.summary == "Quarterly review with the board"
+      end
+    end
+
+    test "an all-day private source keeps its date timing while losing its title" do
+      source = all_day_event(%{visibility: :private})
+
+      payload =
+        MirrorPayload.build(source, @target_uid, link(%{privacy_tier: "full_passthrough"}))
+
+      assert payload.summary == "Busy"
+      assert payload.all_day == true
+      assert payload.start_time == ~D[2026-07-03]
+      refute inspect(payload) =~ "Annual leave"
     end
   end
 end
