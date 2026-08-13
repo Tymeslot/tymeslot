@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   attr :mini_month_cursor, :any, default: nil
   attr :syncing, :boolean, required: true
   attr :timezone_display, :string, required: true
-  attr :timezone_country_code, :string
+  attr :timezone_country_code, :atom
   attr :preferences, :any
   attr :search_term, :string, default: ""
   attr :search_results, :list, default: []

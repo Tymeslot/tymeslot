@@ -13,7 +13,10 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Plug.Test
+  alias Tymeslot.Profiles
+  alias Tymeslot.Repo
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -23,55 +26,37 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
     {:ok, conn: conn, user: user}
   end
 
-  describe "calendar as the landing mode" do
-    test "/dashboard renders the calendar grid with the calendar tab active", %{conn: conn} do
+  describe "calendar as the landing page" do
+    test "/dashboard renders the calendar grid with the Calendar item active", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
 
       assert html =~ "calendar-grid"
-      assert html =~ ~s(data-testid="mode-tab-calendar")
 
-      # The calendar tab is the active mode tab.
       assert [{"a", attrs, _children}] =
                html
                |> Floki.parse_document!()
-               |> Floki.find(~s{[data-testid="mode-tab-calendar"]})
+               |> Floki.find(~s{#dashboard-sidebar a[href="/dashboard"]})
 
       assert {"class", class} = List.keyfind(attrs, "class", 0)
-      assert class =~ "mode-tab--active"
+      assert class =~ "dashboard-nav-link--active"
     end
 
-    test "the scheduling mode tab links to the overview", %{conn: conn} do
+    test "the calendar keeps the standard sidebar rather than a rail", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
 
-      assert [{"a", attrs, _children}] =
-               html
-               |> Floki.parse_document!()
-               |> Floki.find(~s{[data-testid="mode-tab-scheduling"]})
-
-      assert {"href", "/dashboard/overview"} = List.keyfind(attrs, "href", 0)
+      assert html =~ ~s(id="dashboard-sidebar")
+      refute html =~ ~s(data-testid="calendar-rail")
+      refute html =~ "mode-tab-bar"
     end
 
-    test "/dashboard/overview still renders the overview", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/dashboard/overview")
-
-      assert html =~ "Overview"
-      assert html =~ "Your day"
-    end
-  end
-
-  describe "slim navigation rail" do
-    test "renders in calendar mode with links to the scheduling sections", %{conn: conn} do
+    test "the sidebar reaches every scheduling section from the calendar", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
 
-      assert html =~ ~s(data-testid="calendar-rail")
-      assert html =~ ~s(data-tour="calendar-rail")
-
-      rail =
+      hrefs =
         html
         |> Floki.parse_document!()
-        |> Floki.find(~s{[data-testid="calendar-rail"] a})
-
-      hrefs = Enum.map(rail, fn {"a", attrs, _c} -> :proplists.get_value("href", attrs) end)
+        |> Floki.find("#dashboard-sidebar a")
+        |> Enum.flat_map(&Floki.attribute(&1, "href"))
 
       assert "/dashboard/overview" in hrefs
       assert "/dashboard/meetings" in hrefs
@@ -79,10 +64,11 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       assert "/dashboard/integrations" in hrefs
     end
 
-    test "does not render in scheduling mode", %{conn: conn} do
+    test "/dashboard/overview still renders the overview", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/dashboard/overview")
 
-      refute html =~ ~s(data-testid="calendar-rail")
+      assert html =~ "Overview"
+      assert html =~ "Your day"
     end
   end
 
@@ -114,6 +100,37 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
     end
   end
 
+  describe "timezone in the calendar header" do
+    setup %{user: user} do
+      user.id |> Profiles.get_profile() |> Profiles.update_timezone("Europe/Kyiv")
+
+      :ok
+    end
+
+    test "shows the profile zone", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/dashboard")
+
+      assert header_timezone(html) == "Kyiv, Ukraine"
+    end
+  end
+
+  describe "timezone for a profile that has none" do
+    setup %{user: user} do
+      user.id
+      |> Profiles.get_profile()
+      |> Changeset.change(timezone: nil)
+      |> Repo.update!()
+
+      :ok
+    end
+
+    test "falls back to UTC rather than rendering an empty zone", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/dashboard")
+
+      assert header_timezone(html) == "UTC"
+    end
+  end
+
   describe "setup checklist on the calendar" do
     test "shows while setup is incomplete and hides once dismissed", %{conn: conn, user: user} do
       {:ok, lv, html} = live(conn, ~p"/dashboard")
@@ -131,5 +148,16 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       refute html2 =~ "data-tour=\"quick-actions\""
       _user = user
     end
+  end
+
+  # The header renders the zone twice, once for the desktop row and once for the
+  # mobile one; both read the same assign, so the first is representative.
+  defp header_timezone(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(~s{[data-testid="timezone-display"]})
+    |> Enum.take(1)
+    |> Floki.text()
+    |> String.trim()
   end
 end
