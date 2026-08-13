@@ -77,7 +77,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    flag(
+    CalendarManagement.flag_for_reconnection(
       integration,
       dgettext(
         "dashboard_calendar_providers",
@@ -95,7 +95,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    flag(
+    CalendarManagement.flag_for_reconnection(
       integration,
       dgettext(
         "dashboard_calendar_providers",
@@ -126,15 +126,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       {:discard, "CalDAV server refused the sync request: #{CalDAVErrors.describe_error(reason)}"}
     else
       result
-    end
-  end
-
-  # A failed flag write is worth retrying: without it the dashboard never tells
-  # the owner why their calendar stopped syncing.
-  defp flag(integration, message, discard_reason) do
-    case CalendarManagement.mark_needs_reauth(integration, message) do
-      {:ok, _updated} -> {:discard, discard_reason}
-      {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
     end
   end
 end

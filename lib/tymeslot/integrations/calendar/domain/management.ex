@@ -239,6 +239,29 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   end
 
   @doc """
+  Flags an integration for reconnection and returns the Oban value a worker
+  should return, for failures only the owner can resolve: a deleted booking
+  calendar, or credentials the provider now rejects.
+
+  `message` is the translated explanation shown on the dashboard;
+  `discard_reason` is the operator-facing reason recorded on the job.
+
+  Discarding rather than returning `{:error, _}` is the point. Retrying re-asks
+  a question already answered, and an exhausted retry chain raises a
+  permanent-failure admin alert about a condition no operator can fix.
+  A failed *flag write* is worth retrying, though: without it the dashboard
+  never tells the owner why their calendar stopped syncing.
+  """
+  @spec flag_for_reconnection(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+          {:discard, String.t()} | {:error, String.t()}
+  def flag_for_reconnection(%CalendarIntegrationSchema{} = integration, message, discard_reason) do
+    case mark_needs_reauth(integration, message) do
+      {:ok, _updated} -> {:discard, discard_reason}
+      {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
+    end
+  end
+
+  @doc """
   Fetches a calendar integration by ID, collapsing the
   `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
   after silently flagging the integration for reauthentication.
