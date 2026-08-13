@@ -72,6 +72,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       assert render(lv) =~ "A valid guest email is required"
     end
 
+    test "saving with the organiser's own address is rejected", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_guest_name", %{"value" => "Ada Lovelace"})
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_guest_email", %{"value" => user.email})
+
+      lv |> element("#calendar-grid") |> render_hook("save_event", %{})
+      html = render(lv)
+
+      assert html =~ "You cannot add yourself as a guest"
+      # Modal stays open so the address can be corrected.
+      assert html =~ ~s(id="create-event-modal")
+      refute html =~ "Creating..."
+    end
+
+    test "the self-booking check ignores case", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_guest_name", %{"value" => "Ada Lovelace"})
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_guest_email", %{"value" => String.upcase(user.email)})
+
+      lv |> element("#calendar-grid") |> render_hook("save_event", %{})
+
+      assert render(lv) =~ "You cannot add yourself as a guest"
+    end
+
     test "a valid meeting save enters the creating state", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_create_form(lv)

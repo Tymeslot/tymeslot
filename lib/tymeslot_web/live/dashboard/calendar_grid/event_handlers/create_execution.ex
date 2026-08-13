@@ -31,33 +31,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   defp handle_save_event_with(%{mode: :meeting} = creating, socket) do
     with :ok <- authorize_optional_integration(socket, creating[:integration_id]),
          {:ok, start_at, end_at} <- resolve_timed_range(creating, socket),
-         :ok <- validate_meeting_fields(creating) do
-      guest_name = String.trim(creating.guest_name)
-
-      title =
-        case String.trim(creating.title || "") do
-          "" ->
-            dgettext("dashboard_calendar_events", "Meeting with %{name}", name: guest_name)
-
-          custom ->
-            custom
-        end
-
+         :ok <- validate_meeting_fields(creating, socket.assigns.current_user.email) do
       send(
         self(),
-        {:execute_create_ad_hoc_meeting,
-         %{
-           title: title,
-           start_time: start_at,
-           end_time: end_at,
-           attendee_name: guest_name,
-           attendee_email: String.trim(creating.guest_email),
-           attendee_timezone: socket.assigns.user_timezone,
-           organizer_user_id: socket.assigns.current_user.id,
-           calendar_integration_id: creating[:integration_id],
-           calendar_id: creating[:calendar_id],
-           video_integration_id: creating[:video_integration_id]
-         }}
+        {:execute_create_ad_hoc_meeting, ad_hoc_params(creating, socket, start_at, end_at)}
       )
 
       {:noreply, assign(socket, :saving_event, true)}
@@ -105,6 +82,32 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
             {:noreply, socket}
         end
     end
+  end
+
+  # Builds the payload the async ad-hoc booking path consumes. An untitled
+  # meeting falls back to naming the guest, which is what the organiser will
+  # recognise it by on the grid.
+  defp ad_hoc_params(creating, socket, start_at, end_at) do
+    guest_name = String.trim(creating.guest_name)
+
+    title =
+      case String.trim(creating.title || "") do
+        "" -> dgettext("dashboard_calendar_events", "Meeting with %{name}", name: guest_name)
+        custom -> custom
+      end
+
+    %{
+      title: title,
+      start_time: start_at,
+      end_time: end_at,
+      attendee_name: guest_name,
+      attendee_email: String.trim(creating.guest_email),
+      attendee_timezone: socket.assigns.user_timezone,
+      organizer_user_id: socket.assigns.current_user.id,
+      calendar_integration_id: creating[:integration_id],
+      calendar_id: creating[:calendar_id],
+      video_integration_id: creating[:video_integration_id]
+    }
   end
 
   # All-day events round-trip start/end as Dates (and `all_day: true`) so the
@@ -308,18 +311,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     end
   end
 
-  defp validate_meeting_fields(creating) do
+  # The self-booking rule is enforced authoritatively by `Bookings.CreateAdHoc`,
+  # which compares against the stored organiser address. Repeating it here buys
+  # a translated message on the form rather than a flash after the round trip.
+  defp validate_meeting_fields(creating, organizer_email) do
+    guest_email = String.trim(creating.guest_email)
+
     cond do
       String.trim(creating.guest_name) == "" ->
         {:error, dgettext("dashboard_calendar_events", "Guest name is required")}
 
-      not Shared.valid_email?(String.trim(creating.guest_email)) ->
+      not Shared.valid_email?(guest_email) ->
         {:error, dgettext("dashboard_calendar_events", "A valid guest email is required")}
+
+      same_address?(guest_email, organizer_email) ->
+        {:error,
+         dgettext(
+           "dashboard_calendar_events",
+           "You cannot add yourself as a guest. Use a different email address."
+         )}
 
       true ->
         :ok
     end
   end
+
+  defp same_address?(guest_email, organizer_email) when is_binary(organizer_email) do
+    String.downcase(guest_email) == organizer_email |> String.trim() |> String.downcase()
+  end
+
+  defp same_address?(_guest_email, _organizer_email), do: false
 
   # All-day events store `start_date`/`end_date` (the cache row leaves
   # `start_at`/`end_at` null); timed events store `start_at`/`end_at`.
