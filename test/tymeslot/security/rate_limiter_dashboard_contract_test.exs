@@ -29,7 +29,8 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
       &RateLimiter.check_meeting_type_write_rate_limit/1,
       &RateLimiter.check_avatar_upload_rate_limit/1,
       &RateLimiter.check_dashboard_cancel_rate_limit/1,
-      &RateLimiter.check_dashboard_reschedule_rate_limit/1
+      &RateLimiter.check_dashboard_reschedule_rate_limit/1,
+      &RateLimiter.check_sync_link_write_rate_limit/1
     ]
 
     test "rejects nil user_id" do
@@ -82,7 +83,9 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
         {11_906, &RateLimiter.check_meeting_type_write_rate_limit/1, 60, "meeting_type_write"},
         {11_907, &RateLimiter.check_avatar_upload_rate_limit/1, 20, "avatar_upload"},
         {11_908, &RateLimiter.check_dashboard_cancel_rate_limit/1, 20, "dashboard_cancel"},
-        {11_909, &RateLimiter.check_dashboard_reschedule_rate_limit/1, 20, "dashboard_reschedule"}
+        {11_909, &RateLimiter.check_dashboard_reschedule_rate_limit/1, 20,
+         "dashboard_reschedule"},
+        {11_911, &RateLimiter.check_sync_link_write_rate_limit/1, 60, "sync_link_write"}
       ]
 
       for {user_id, fun, limit, bucket_prefix} <- cases do

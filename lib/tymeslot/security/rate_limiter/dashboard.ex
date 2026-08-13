@@ -116,6 +116,33 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
   def check_calendar_visibility(user_id),
     do: Helpers.invalid_user_id("calendar visibility", user_id)
 
+  @doc """
+  Rate limit configuring cross-calendar sync links from the dashboard.
+
+  Its own bucket rather than the integration-write one, because the two meter
+  different things. An integration write moves credentials or reaches a
+  provider; a sync-link write touches one row Tymeslot owns and reaches nothing
+  outside it — the mirroring itself happens later, in a worker, on its own
+  schedule. But it is a settings change made deliberately, not a swatch clicked
+  while comparing colours, so it does not want the appearance budget either.
+  60 in half an hour covers rebuilding an entire set of links in one sitting.
+
+  Returns `:ok` if allowed, `{:error, :rate_limited, message}` if exceeded.
+  """
+  @spec check_sync_link_write(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_sync_link_write(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "sync_link_write:#{user_id}",
+      60,
+      1_800_000,
+      "sync link write",
+      to_string(user_id)
+    )
+  end
+
+  def check_sync_link_write(user_id), do: Helpers.invalid_user_id("sync link write", user_id)
+
   @spec check_meeting_type_write(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_meeting_type_write(user_id) when is_integer(user_id) and user_id > 0 do

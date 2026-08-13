@@ -512,10 +512,11 @@ msgstr "OAuth"
 msgid "Outlook Calendar connected successfully!"
 msgstr "Outlook Calendar collegato con successo!"
 
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Paused"
-msgstr "In pausa"
+msgstr "Sospeso"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
@@ -1258,3 +1259,129 @@ msgstr[1] "%{count} prenotazioni future usano ancora questa integrazione. Le lor
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr "Elimina anche le loro stanze riunioni. Chi ha già il link di partecipazione scoprirà che non funziona più."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{source} to %{target}"
+msgstr "Da %{source} a %{target}"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Active links"
+msgstr "Collegamenti attivi"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add a link"
+msgstr "Aggiungi un collegamento"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Busy only"
+msgstr "Solo occupato"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar sync"
+msgstr "Sincronizzazione calendari"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a calendar"
+msgstr "Scegli un calendario"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a second calendar before setting up mirroring."
+msgstr "Collega un secondo calendario prima di configurare la duplicazione."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create link"
+msgstr "Crea collegamento"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Default calendar"
+msgstr "Calendario predefinito"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Full details"
+msgstr "Dettagli completi"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Generic label"
+msgstr "Etichetta generica"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Mirror events from"
+msgstr "Duplica gli eventi da"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Mirror one calendar's events onto another as busy placeholders, so tools booking against the second calendar see the time as taken."
+msgstr "Duplica gli eventi di un calendario su un altro come segnaposto occupati, così gli strumenti che prenotano sul secondo calendario vedono l'orario come occupato."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Onto"
+msgstr "Su"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pause"
+msgstr "Sospendi"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr "Rimuovi"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Resume"
+msgstr "Riprendi"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Show as"
+msgstr "Mostra come"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as busy"
+msgstr "Mostrato come occupato"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as busy, with no detail"
+msgstr "Mostrato come occupato, senza dettagli"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown with a generic label"
+msgstr "Mostrato con un'etichetta generica"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown with the original title"
+msgstr "Mostrato con il titolo originale"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Target calendar"
+msgstr "Calendario di destinazione"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "That calendar could not be linked."
+msgstr "Non è stato possibile collegare questo calendario."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This provider always writes to its primary calendar."
+msgstr "Questo provider scrive sempre nel suo calendario principale."

@@ -391,6 +391,21 @@ defmodule Tymeslot.Security.RateLimiter do
     do: Dashboard.check_calendar_visibility(user_id)
 
   @doc """
+  Rate limit creating, editing, pausing and deleting cross-calendar sync links.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Its own budget rather than the integration-write one: configuring a link
+  writes a single row Tymeslot owns and reaches no provider, so the
+  credential-sized limit is the wrong shape for it.
+
+  Limit: 60 writes per 30 minutes per user.
+  """
+  @spec check_sync_link_write_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_sync_link_write_rate_limit(user_id),
+    do: Dashboard.check_sync_link_write(user_id)
+
+  @doc """
   Rate limit meeting type write operations (create, update, toggle, delete, reorder) from the dashboard.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Dashboard.PaymentsSettingsComponent
+  alias TymeslotWeb.Dashboard.SyncLinksSettingsComponent
   alias TymeslotWeb.Dashboard.VideoSettingsComponent
 
   @impl Phoenix.LiveComponent
@@ -87,6 +88,15 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
         label: dgettext("dashboard_integrations", "Video"),
         count: count_badge(videos),
         status: worst_status(for i <- attention, i.tab == :video, do: i)
+      },
+      # No count: the badge counts *connections*, and a sync link is a
+      # relationship between two of them, so a number here would read as a
+      # third kind of connected thing.
+      %{
+        id: :sync_links,
+        label: dgettext("dashboard_integrations", "Calendar sync"),
+        count: nil,
+        status: :ok
       }
     ] ++ payments_tab(payments_allowed?, attention)
   end
@@ -216,8 +226,10 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   # otherwise it falls back to calendars rather than rendering a gated tab.
   defp parse_tab(%{"tab" => "payments"}, false), do: :calendars
 
+  # A tab id missing from this list does not error, it silently renders
+  # Calendars — so every tab added to `build_tabs/4` must be added here too.
   defp parse_tab(%{"tab" => tab}, _payments_allowed?)
-       when tab in ~w(calendars video payments),
+       when tab in ~w(calendars video payments sync_links),
        do: String.to_existing_atom(tab)
 
   defp parse_tab(_params, _payments_allowed?), do: :calendars
@@ -271,6 +283,13 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
           user_agent={@user_agent}
           integrations={@videos}
           health_states={@health_states.video}
+        />
+        <.live_component
+          :if={@active_tab == :sync_links}
+          module={SyncLinksSettingsComponent}
+          id="sync-links-settings"
+          current_user={@current_user}
+          integrations={@calendars}
         />
         <.live_component
           :if={@active_tab == :payments}

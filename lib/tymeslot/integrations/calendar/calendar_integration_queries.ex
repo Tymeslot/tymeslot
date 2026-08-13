@@ -429,6 +429,36 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   def owned_by?(_id, _user_id), do: false
 
   @doc """
+  This integration's provider, if it belongs to this user.
+
+  The ownership check and the provider read in one query, for callers that need
+  both — configuring a sync link has to know the acting user owns the target
+  *and* what the target is, because the target's provider decides whether it can
+  receive mirrors at all and whether a calendar id means anything to it.
+
+  Deliberately not `get_for_user/2`: that decrypts credentials and can answer
+  `{:error, :requires_reencryption}`, and neither has any bearing on whether a
+  link may be configured. Selecting the one column keeps the credentials out of
+  memory entirely rather than decrypting them and discarding the result.
+  """
+  @spec provider_for_owner(integer() | any(), integer() | any()) ::
+          {:ok, String.t()} | {:error, :not_found}
+  def provider_for_owner(id, user_id) when is_integer(id) and is_integer(user_id) do
+    provider =
+      CalendarIntegrationSchema
+      |> where([c], c.id == ^id and c.user_id == ^user_id)
+      |> select([c], c.provider)
+      |> Repo.one()
+
+    case provider do
+      nil -> {:error, :not_found}
+      provider -> {:ok, provider}
+    end
+  end
+
+  def provider_for_owner(_id, _user_id), do: {:error, :not_found}
+
+  @doc """
   Counts calendar integrations for a user.
   """
   @spec count_for_user(integer()) :: non_neg_integer()
