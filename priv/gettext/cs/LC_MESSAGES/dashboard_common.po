@@ -33,7 +33,6 @@ msgstr "Statistiky"
 msgid "Automation"
 msgstr "Automatizace"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -41,7 +40,7 @@ msgid "Availability"
 msgstr "Dostupnost"
 
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
-#: lib/tymeslot_web/components/dashboard_layout.ex
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Kalendář"
@@ -50,11 +49,6 @@ msgstr "Kalendář"
 #, elixir-autogen, elixir-format
 msgid "Close sidebar"
 msgstr "Zavřít postranní panel"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Connect a calendar or video provider to finish setup"
-msgstr "Dokončete nastavení připojením poskytovatele kalendáře nebo videa"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -77,26 +71,22 @@ msgstr "Vložení a sdílení"
 msgid "General"
 msgstr "Obecné"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr "Integrace"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Typy schůzek"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings"
 msgstr "Schůzky"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -108,13 +98,11 @@ msgstr "Přehled"
 msgid "Pro"
 msgstr "Pro"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Profil"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
@@ -235,7 +223,17 @@ msgstr "Videointegrace"
 msgid "Calendar subscription"
 msgstr "Odběr kalendáře"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
-msgid "Dashboard sections"
-msgstr "Sekce dashboardu"
+msgid "Connect a calendar and a video provider to finish setup"
+msgstr "Dokončete nastavení připojením kalendáře a poskytovatele videa"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to finish setup"
+msgstr "Dokončete nastavení připojením kalendáře"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a video provider to finish setup"
+msgstr "Dokončete nastavení připojením poskytovatele videa"
