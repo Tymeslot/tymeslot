@@ -219,9 +219,26 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
+      # `opts` carries the calendar the caller means, and it has to survive this
+      # hop. A mirror is written to its link's `target_calendar_id`, so a delete
+      # that fell back to the integration's default booking calendar asked the
+      # wrong calendar to remove it and got a 404 — which every caller reads as
+      # "already gone", dropping the mapping row that was the only record of
+      # where the placeholder actually is.
+      #
+      # A provider opts into the targeted form by exporting
+      # `call_delete_event/3`; one that does not keeps the two-arity contract
+      # untouched, so this stays additive rather than a widening of the shared
+      # `call_delete_event/2` callback that every OAuth provider implements.
       @impl Tymeslot.Integrations.Calendar.Provider
-      def delete_event(integration, event_id, _opts) do
-        OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id) end)
+      def delete_event(integration, event_id, opts) do
+        OAuthBase.handle_api_call(fn ->
+          if function_exported?(__MODULE__, :call_delete_event, 3) do
+            call_delete_event(integration, event_id, opts)
+          else
+            call_delete_event(integration, event_id)
+          end
+        end)
       end
 
       @impl Tymeslot.Integrations.Calendar.Provider

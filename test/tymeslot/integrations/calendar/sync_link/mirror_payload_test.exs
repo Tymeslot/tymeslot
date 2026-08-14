@@ -381,6 +381,78 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorPayloadTest do
     end
   end
 
+  describe "the series options" do
+    test "the exception lines travel beside the rule" do
+      payload =
+        MirrorPayload.build(timed_event(), @target_uid, link(%{}),
+          recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+          recurrence_exception_lines: [
+            "EXDATE;TZID=Europe/Tallinn:20261013T090000"
+          ]
+        )
+
+      assert payload.recurrence_rule == "RRULE:FREQ=WEEKLY;BYDAY=TU"
+
+      assert payload.recurrence_exception_lines == [
+               "EXDATE;TZID=Europe/Tallinn:20261013T090000"
+             ]
+    end
+
+    # The option is additive: a caller naming only the rule — every caller
+    # before exception lines existed — gets exactly the payload it always did.
+    test "a rule alone produces no exception key" do
+      payload =
+        MirrorPayload.build(timed_event(), @target_uid, link(%{}),
+          recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU"
+        )
+
+      assert payload.recurrence_rule == "RRULE:FREQ=WEEKLY;BYDAY=TU"
+      refute Map.has_key?(payload, :recurrence_exception_lines)
+    end
+
+    # An empty list is absent rather than present-and-empty, for the same
+    # reason `put_present/3` drops a nil description: a key whose value says
+    # nothing is a key the mapper has to decide about.
+    test "an empty exception list is omitted rather than carried" do
+      payload =
+        MirrorPayload.build(timed_event(), @target_uid, link(%{}),
+          recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+          recurrence_exception_lines: []
+        )
+
+      refute Map.has_key?(payload, :recurrence_exception_lines)
+    end
+
+    test "a non-recurring placeholder carries neither key" do
+      payload = MirrorPayload.build(timed_event(), @target_uid, link(%{}))
+
+      refute Map.has_key?(payload, :recurrence_rule)
+      refute Map.has_key?(payload, :recurrence_exception_lines)
+    end
+
+    # The exceptions are a property of the timing, like the rule and the
+    # opacity, so no tier suppresses them — a `busy_only` block that kept
+    # blocking a cancelled occurrence would be wrong rather than private.
+    test "every tier carries them, including a private source degraded to Busy" do
+      for tier <- ["busy_only", "generic_label", "full_passthrough"] do
+        payload =
+          MirrorPayload.build(
+            timed_event(%{visibility: :private}),
+            @target_uid,
+            link(%{privacy_tier: tier, generic_label: "Personal commitment"}),
+            recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+            recurrence_exception_lines: ["EXDATE;TZID=Europe/Tallinn:20261013T090000"]
+          )
+
+        assert payload.summary == "Busy"
+
+        assert payload.recurrence_exception_lines == [
+                 "EXDATE;TZID=Europe/Tallinn:20261013T090000"
+               ]
+      end
+    end
+  end
+
   describe "the visibility override" do
     test "a private source never passes its title, even on full_passthrough" do
       source = timed_event(%{visibility: :private})

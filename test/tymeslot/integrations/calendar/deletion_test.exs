@@ -291,7 +291,7 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
       test_pid = self()
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, _user_id} ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, _user_id}, _opts ->
         # Before the delete transaction opens: the integration must still be
         # there, since the provider call is made in its name.
         assert Repo.get(CalendarIntegrationSchema, target.id)
@@ -318,7 +318,7 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
 
       # The SOURCE is going. Its placeholders sit on the target, which is
       # staying connected — nothing else would ever remove them.
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, _user_id} ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, _user_id}, _opts ->
         send(test_pid, {:withdrawn, uid, integration_id})
         :ok
       end)
@@ -337,7 +337,7 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
     } do
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 

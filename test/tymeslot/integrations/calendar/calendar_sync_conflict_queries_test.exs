@@ -95,4 +95,93 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictQueriesTest do
       assert length(CalendarSyncConflictQueries.list_for_link(link.id, limit: 2)) == 2
     end
   end
+
+  describe "list_for_links/2" do
+    test "caps each link's history independently", %{link: link} do
+      other_link = insert(:calendar_sync_link)
+
+      for index <- 1..4 do
+        insert(:calendar_sync_conflict, sync_link_id: link.id, source_uid: "mine-#{index}")
+
+        insert(:calendar_sync_conflict,
+          sync_link_id: other_link.id,
+          source_uid: "theirs-#{index}"
+        )
+      end
+
+      histories = CalendarSyncConflictQueries.list_for_links([link.id, other_link.id], limit: 2)
+
+      # Per link, not overall: two links asking for two each get two each. An
+      # overall LIMIT would answer four rows in total and could hand them all to
+      # one link, leaving the other's section empty on a dashboard that has
+      # conflicts to show.
+      assert length(Map.fetch!(histories, link.id)) == 2
+      assert length(Map.fetch!(histories, other_link.id)) == 2
+    end
+
+    test "keeps each link's newest rows", %{link: link} do
+      now = DateTime.utc_now(:microsecond)
+
+      for {uid, offset} <- [{"oldest", -7200}, {"middle", -3600}, {"newest", 0}] do
+        insert(:calendar_sync_conflict,
+          sync_link_id: link.id,
+          source_uid: uid,
+          occurred_at: DateTime.add(now, offset, :second)
+        )
+      end
+
+      histories = CalendarSyncConflictQueries.list_for_links([link.id], limit: 2)
+
+      assert Enum.map(Map.fetch!(histories, link.id), & &1.source_uid) == ["newest", "middle"]
+    end
+
+    test "omits a link with no history", %{link: link} do
+      quiet_link = insert(:calendar_sync_link)
+      insert(:calendar_sync_conflict, sync_link_id: link.id)
+
+      histories = CalendarSyncConflictQueries.list_for_links([link.id, quiet_link.id])
+
+      assert Map.has_key?(histories, link.id)
+      refute Map.has_key?(histories, quiet_link.id)
+    end
+
+    # The cap is what bounds the read, so it has to bound what Postgres returns
+    # rather than what the caller keeps. Applied with `Enum.take` after an
+    # unbounded `Repo.all()`, a 90-day retention window means every conflict row
+    # for every link is loaded and sorted on each dashboard render, and the
+    # assertions above all still pass. Counting the rows the adapter actually
+    # handed back is the only thing that catches it.
+    test "does not load the rows it is going to discard", %{link: link} do
+      for index <- 1..20 do
+        insert(:calendar_sync_conflict, sync_link_id: link.id, source_uid: "src-#{index}")
+      end
+
+      test_pid = self()
+      handler_id = "conflict-limit-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :repo, :query],
+        fn _event, _measurements, metadata, _config ->
+          case metadata do
+            %{source: "calendar_sync_conflicts", result: {:ok, %{num_rows: rows}}} ->
+              send(test_pid, {:rows_read, rows})
+
+            _other_query ->
+              :ok
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      histories = CalendarSyncConflictQueries.list_for_links([link.id], limit: 3)
+
+      assert length(Map.fetch!(histories, link.id)) == 3
+
+      assert_received {:rows_read, rows_read}
+      assert rows_read == 3
+    end
+  end
 end

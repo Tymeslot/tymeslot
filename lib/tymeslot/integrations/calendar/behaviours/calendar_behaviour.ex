@@ -39,6 +39,20 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
               | nil
             ) ::
               :ok | {:error, any()}
+  # The targeted form. `:calendar_id` names the calendar the event lives on,
+  # which for anything written to a non-default calendar is the only calendar
+  # the delete can succeed against — the two-arity form resolves to the
+  # integration's default booking calendar and 404s on such an event.
+  @callback delete_event(
+              binary(),
+              pos_integer()
+              | MeetingSchema.t()
+              | MeetingTypeSchema.t()
+              | {pos_integer(), pos_integer()}
+              | nil,
+              keyword()
+            ) ::
+              :ok | {:error, any()}
   @callback get_booking_integration_info(pos_integer() | MeetingTypeSchema.t()) ::
               {:ok,
                %{

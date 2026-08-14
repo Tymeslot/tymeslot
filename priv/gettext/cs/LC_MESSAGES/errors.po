@@ -253,3 +253,28 @@ msgstr "pro tohoto poskytovatele už integrace existuje"
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
 msgstr "není platná barva"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot mirror a calendar onto itself"
+msgstr "nemůže zrcadlit kalendář sám do sebe"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "has already been linked"
+msgstr "je již propojeno"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is a read-only subscription and cannot receive mirrored events"
+msgstr "je odběr pouze pro čtení a nemůže přijímat zrcadlené události"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is needed to title the placeholder"
+msgstr "je potřeba jako název zástupného bloku"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a palette colour"
+msgstr "není barva z palety"

@@ -227,13 +227,30 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.SyncHookTest do
   end
 
   describe "post_commit_reconciliation/2 skips ineligible sources" do
-    test "a recurring event enqueues nothing", %{source: source} do
+    # Recurrence is the one scoping rule this gate cannot apply, and the reason
+    # is structural rather than a relaxation: whether a recurring source may be
+    # mirrored depends on the *target*, and this filter runs once for a batch
+    # shared across every link out of the calendar. So the job is enqueued for
+    # each link and the worker — which holds one link and can ask its target —
+    # decides. A Google target mirrors the series; an Outlook one discards, or
+    # withdraws a placeholder that has gone stale.
+    test "a recurring event enqueues: only the worker knows the link's target", %{
+      source: source,
+      link: link
+    } do
       :ok =
         Sync.post_commit_reconciliation(source, [
           event(source, %{recurrence_rule: "FREQ=WEEKLY;COUNT=4"})
         ])
 
-      refute_enqueued(worker: SyncLinkWriteBackWorker)
+      assert_enqueued(
+        worker: SyncLinkWriteBackWorker,
+        args: %{
+          "sync_link_id" => link.id,
+          "source_uid" => "source-uid-1",
+          "operation" => "upsert"
+        }
+      )
     end
 
     # An event that stops blocking time is not the same as one that was never
@@ -270,6 +287,113 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.SyncHookTest do
           "operation" => "upsert"
         }
       )
+    end
+  end
+
+  describe "reconcile_deletions/3 withdraws the mirror" do
+    # The deletion counterpart of the enqueue above, and the half that was
+    # missing: a source event vanishing from its calendar left its placeholder
+    # standing on the target until the reconcile sweep noticed, up to half an
+    # hour later. `reconcile_deletions/3` is the one primitive every provider's
+    # deletion path funnels through — Google's cancelled events, Outlook's
+    # delta `@removed`, CalDAV's absent uids — so hooking it here covers all of
+    # them at once rather than three times over.
+    test "a deleted source event enqueues a delete for its link", %{
+      source: source,
+      link: link
+    } do
+      :ok =
+        Sync.reconcile_deletions(source, [
+          %{provider_event_id: "source-pid-1", uid: "source-uid-1"}
+        ])
+
+      assert_enqueued(
+        worker: SyncLinkWriteBackWorker,
+        args: %{
+          "sync_link_id" => link.id,
+          "source_uid" => "source-uid-1",
+          "operation" => "delete"
+        }
+      )
+    end
+
+    test "each enabled link gets its own withdrawal", %{source: source, link: first} = ctx do
+      {_second_target, second} = extra_target_link(ctx)
+
+      :ok =
+        Sync.reconcile_deletions(source, [
+          %{provider_event_id: "source-pid-1", uid: "source-uid-1"}
+        ])
+
+      jobs = all_enqueued(worker: SyncLinkWriteBackWorker)
+
+      assert MapSet.new(jobs, &{&1.args["sync_link_id"], &1.args["operation"]}) ==
+               MapSet.new([{first.id, "delete"}, {second.id, "delete"}])
+    end
+
+    test "a paused link is not asked to withdraw", %{source: source, link: link} do
+      {:ok, _paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})
+
+      :ok =
+        Sync.reconcile_deletions(source, [
+          %{provider_event_id: "source-pid-1", uid: "source-uid-1"}
+        ])
+
+      refute_enqueued(worker: SyncLinkWriteBackWorker)
+    end
+
+    test "a deletion on a calendar that is nobody's source enqueues nothing", %{target: target} do
+      :ok =
+        Sync.reconcile_deletions(target, [
+          %{provider_event_id: "target-pid-1", uid: "target-uid-1"}
+        ])
+
+      refute_enqueued(worker: SyncLinkWriteBackWorker)
+    end
+
+    # A source that was never mirrored has no mapping row, and the enqueue does
+    # not check for one — the engine's `unmirror/3` answers `:ok` for exactly
+    # this case. The job is cheap and the alternative, a lookup per deleted
+    # event on every sync, is not.
+    test "a source that was never mirrored still enqueues cleanly", %{
+      source: source,
+      link: link
+    } do
+      assert :ok ==
+               Sync.reconcile_deletions(source, [
+                 %{provider_event_id: "never-seen-pid", uid: "never-mirrored-uid"}
+               ])
+
+      assert_enqueued(
+        worker: SyncLinkWriteBackWorker,
+        args: %{
+          "sync_link_id" => link.id,
+          "source_uid" => "never-mirrored-uid",
+          "operation" => "delete"
+        }
+      )
+    end
+
+    # Outlook's delta reports a removal with no iCalUID at all. There is no
+    # source uid to withdraw by, so nothing can be enqueued — and guessing one
+    # from the provider id would address a placeholder that was never written
+    # under that name.
+    test "a deletion carrying no uid enqueues nothing", %{source: source} do
+      :ok = Sync.reconcile_deletions(source, [%{provider_event_id: "source-pid-1", uid: nil}])
+
+      refute_enqueued(worker: SyncLinkWriteBackWorker)
+    end
+
+    test "no provider call is made from the deletion path", %{source: source} do
+      # No Mox expectation is set: verify_on_exit! fails the test if the
+      # deletion path reaches a provider instead of enqueueing. A slow target
+      # must never sit inside an inbound sync of a different calendar.
+      :ok =
+        Sync.reconcile_deletions(source, [
+          %{provider_event_id: "source-pid-1", uid: "source-uid-1"}
+        ])
+
+      assert_enqueued(worker: SyncLinkWriteBackWorker)
     end
   end
 end

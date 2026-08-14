@@ -123,6 +123,11 @@ defmodule Tymeslot.Dev.Calendar do
     :ok
   end
 
+  # The debug store is a single flat set of events with no per-calendar
+  # partition, so there is no calendar for `:calendar_id` to select between.
+  @impl true
+  def delete_event(uid, context, _opts), do: delete_event(uid, context)
+
   @impl true
   def get_booking_integration_info(_context), do: {:error, :no_integration}
 

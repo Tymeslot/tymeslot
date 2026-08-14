@@ -14,18 +14,24 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIGetEventTest do
   module is already at Credo's 650-line ceiling, and the reason these tests
   exist is specific enough to be worth finding by filename.
   """
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
 
   @moduletag :integrations
 
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
 
+  # `get_event/3` runs its request inside `CalendarCircuitBreaker`, which
+  # executes the function in the breaker's own GenServer process. Mox
+  # expectations are process-scoped, so that process has to be allowed to use
+  # the mock or every call here answers `UnexpectedCallError` — the same setup
+  # `calendar_api_test.exs` uses for `bootstrap_sync/1`, for the same reason.
   setup do
     user = insert(:user)
 
@@ -36,6 +42,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIGetEventTest do
         access_token_encrypted: Encryption.encrypt("valid_token"),
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
       )
+
+    Mox.allow(Tymeslot.HTTPClientMock, self(), Process.whereis(:calendar_breaker_google))
+
+    # The breaker is a singleton shared by every Google test in the suite, and an
+    # open one answers `{:error, :circuit_open}` without making the request these
+    # expectations wait for. Resetting handles a breaker left open by whatever
+    # ran before; `async: false` handles the rest, because a concurrent test
+    # driving Google to its failure threshold would otherwise reopen it between
+    # this line and the request under test.
+    CalendarCircuitBreaker.reset(:google)
 
     %{integration: integration}
   end

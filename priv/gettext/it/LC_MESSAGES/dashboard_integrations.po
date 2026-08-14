@@ -1363,11 +1363,6 @@ msgstr "Mostrato come occupato, senza dettagli"
 
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Shown with a generic label"
-msgstr "Mostrato con un'etichetta generica"
-
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Shown with the original title"
 msgstr "Mostrato con il titolo originale"
 
@@ -1440,3 +1435,63 @@ msgstr "È stato mantenuto l'evento originale."
 #, elixir-autogen, elixir-format
 msgid "The two calendars differed."
 msgstr "I due calendari differivano."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The repeating busy block did not reflect cancelled occurrences at the time."
+msgstr "Il blocco occupato ricorrente non teneva conto delle occorrenze annullate in quel momento."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "One occurrence of this repeating event was moved. The busy block still sits at its original time, and no busy block covers its new time — so that slot can be double-booked."
+msgstr "Un’occorrenza di questo evento ricorrente è stata spostata. Il blocco occupato resta all’orario originale e nessun blocco occupato copre il nuovo orario — quella fascia può quindi essere prenotata due volte."
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Personal commitment"
+msgstr "Impegno personale"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Placeholder title"
+msgstr "Titolo del segnaposto"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as \"%{label}\""
+msgstr "Mostrato come «%{label}»"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as busy, until a placeholder title is set"
+msgstr "Mostrato come occupato, finché non viene impostato un titolo del segnaposto"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The chosen calendar"
+msgstr "Il calendario scelto"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The colour"
+msgstr "Il colore"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The label"
+msgstr "L'etichetta"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The source calendar"
+msgstr "Il calendario di origine"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "The target calendar"
+msgstr "Il calendario di destinazione"
+
+#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link"
+msgstr "Questo collegamento"

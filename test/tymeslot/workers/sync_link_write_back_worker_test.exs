@@ -21,6 +21,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
   @moduletag :workers
   @moduletag :sync_links
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.Factory
   import Tymeslot.SyncLinkTestHelpers
@@ -158,11 +159,117 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
                perform_job(SyncLinkWriteBackWorker, args(reverse, mirror_uid, "upsert"))
     end
 
-    test "a recurring source is refused", %{source: source, link: link} do
-      cached_event(source, recurrence_rule: "FREQ=WEEKLY;COUNT=4")
+    test "a recurring source is refused when the target cannot expand a series", %{
+      user: user,
+      source: source
+    } do
+      outlook_target = insert(:calendar_integration, user: user, provider: "outlook")
+
+      link =
+        insert(:calendar_sync_link,
+          user_id: user.id,
+          source_integration_id: source.id,
+          target_integration_id: outlook_target.id
+        )
+
+      cached_event(source,
+        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
+        recurring_event_id: "master_abc123"
+      )
+
+      # No provider expectation of any kind, and that is the assertion: the
+      # refusal must come before the master fetch as well as before the write.
+      # Paying for a Google request to discover that Outlook cannot take the
+      # answer would be a round trip per recurring event per sync, for nothing.
+      assert {:discard, :not_an_eligible_source} ==
+               perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+    end
+
+    test "and for a CalDAV target", %{user: user, source: source} do
+      caldav_target = insert(:calendar_integration, user: user, provider: "nextcloud")
+
+      link =
+        insert(:calendar_sync_link,
+          user_id: user.id,
+          source_integration_id: source.id,
+          target_integration_id: caldav_target.id
+        )
+
+      cached_event(source,
+        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
+        recurring_event_id: "master_abc123"
+      )
 
       assert {:discard, :not_an_eligible_source} ==
                perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+    end
+
+    test "a recurring source IS mirrored when the target expands a series", %{
+      source: source,
+      link: link
+    } do
+      cached_event(source,
+        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
+        recurring_event_id: "master_abc123"
+      )
+
+      expect(GoogleCalendarAPIMock, :get_event, fn _integration, _calendar_id, event_id ->
+        assert event_id == "master_abc123"
+        {:ok, %{"recurrence" => ["RRULE:FREQ=WEEKLY;COUNT=52"]}}
+      end)
+
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        send(test_pid, {:payload, event_data})
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+
+      assert_received {:payload, payload}
+      assert payload.recurrence_rule == "RRULE:FREQ=WEEKLY;COUNT=52"
+
+      assert {:ok, _mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+    end
+
+    # The withdrawal half of the enqueue-then-refuse routing. A source that has
+    # become recurring on a link whose target cannot take one leaves a
+    # placeholder describing a single occurrence, which must come down rather
+    # than sit there blocking a slot the organiser now recurs through. This is
+    # why the worker routes the refusal through `unmirror_or_discard/4` instead
+    # of discarding outright.
+    test "a source that became recurring has its stale placeholder withdrawn", %{
+      user: user,
+      source: source
+    } do
+      outlook_target = insert(:calendar_integration, user: user, provider: "outlook")
+
+      link =
+        insert(:calendar_sync_link,
+          user_id: user.id,
+          source_integration_id: source.id,
+          target_integration_id: outlook_target.id
+        )
+
+      cached_event(source,
+        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
+        recurring_event_id: "master_abc123"
+      )
+
+      target_uid = Engine.target_uid_for(link.id, "source-uid-1")
+      mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context, _opts ->
+        assert uid == target_uid
+        :ok
+      end)
+
+      assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+
+      assert {:error, :not_found} ==
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
     end
 
     test "a source that turned transparent has its placeholder withdrawn", %{
@@ -174,7 +281,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       target_uid = Engine.target_uid_for(link.id, "source-uid-1")
       mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context, _opts ->
         assert uid == target_uid
         :ok
       end)
@@ -243,7 +350,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       {:ok, _transparent} =
         Repo.update(Changeset.change(event, transparency: "transparent"))
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
 
@@ -257,7 +364,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       target_uid = Engine.target_uid_for(link.id, "source-uid-1")
       mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context, _opts ->
         assert uid == target_uid
         :ok
       end)
@@ -283,7 +390,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       target_uid = Engine.target_uid_for(link.id, "source-uid-1")
       mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "delete"))
     end
@@ -342,6 +449,34 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       :ok = WriteBack.enqueue(link.id, "source-uid-2", :upsert)
 
       assert length(all_enqueued(worker: SyncLinkWriteBackWorker)) == 2
+    end
+
+    test "a running job's args are left alone", %{link: link} do
+      # Replacing a *pending* job's args is the point of `replace`: the newer
+      # intent should win before anything runs. Replacing an *executing* one is
+      # a different thing — `perform/1` has already read its args, so the
+      # rewrite changes nothing it will do while making the job's record
+      # disagree with what it is actually performing.
+      #
+      # The write that arrives mid-run is dropped by uniqueness rather than
+      # deferred, which is the accepted trade: `:executing` has to stay in the
+      # window or two jobs could run concurrently for one event, and
+      # `SyncLinkReconcileWorker` re-derives a lost delete on the next sweep.
+      :ok = WriteBack.enqueue(link.id, "source-uid-1", :upsert)
+
+      [running] = all_enqueued(worker: SyncLinkWriteBackWorker)
+
+      {1, _returned} =
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^running.id),
+          set: [state: "executing", attempted_at: DateTime.utc_now()]
+        )
+
+      :ok = WriteBack.enqueue(link.id, "source-uid-1", :delete)
+
+      executing = Repo.one(from(j in Oban.Job, where: j.id == ^running.id))
+
+      assert executing.state == "executing"
+      assert executing.args["operation"] == "upsert"
     end
   end
 end

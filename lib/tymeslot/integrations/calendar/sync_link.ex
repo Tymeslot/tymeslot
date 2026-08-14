@@ -109,8 +109,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   not be resumable.
   """
   @spec toggle_enabled(integer(), integer() | any(), boolean()) :: result()
-  def toggle_enabled(user_id, link_id, enabled) when is_boolean(enabled),
-    do: update_link(user_id, link_id, %{"enabled" => enabled})
+  def toggle_enabled(user_id, link_id, enabled) when is_boolean(enabled) do
+    with {:ok, link} <- owned_link(user_id, link_id) do
+      link
+      |> CalendarSyncLinkSchema.enabled_changeset(enabled)
+      |> CalendarSyncLinkQueries.update_changeset()
+    end
+  end
 
   @doc """
   Removes a link, withdrawing every placeholder it wrote before the row that

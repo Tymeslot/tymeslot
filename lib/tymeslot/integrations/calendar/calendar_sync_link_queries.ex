@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
   import Ecto.Query
 
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Repo
 
   @preloads [:source_integration, :target_integration]
@@ -48,15 +49,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
   importantly, so that "paused means no writes" is enforced at the one place the
   sync path looks for work rather than at each of the places that act on it.
 
-  No preloads. The caller enqueues jobs keyed on `id`, so loading two
-  integrations per link would fetch rows nothing reads, on a path that runs
-  after every sync of every calendar.
+  The target integration is preloaded, and only that one. The enqueue itself
+  needs nothing but `id`, but it is no longer the only consumer of this list:
+  `SyncLink.MovedOccurrence` asks each link's target whether it can hold a
+  series at all, and a link whose target is `NotLoaded` cannot be asked and is
+  skipped — silently reporting nothing rather than reporting wrongly. One
+  preload on a list already loaded once per sync is cheaper than the query per
+  link the alternative costs. The source is deliberately left off: it is the
+  integration the caller already holds.
   """
   @spec list_enabled_for_source(integer()) :: [CalendarSyncLinkSchema.t()]
   def list_enabled_for_source(source_integration_id) when is_integer(source_integration_id) do
     CalendarSyncLinkSchema
     |> where([l], l.source_integration_id == ^source_integration_id and l.enabled == true)
     |> order_by([l], asc: l.id)
+    |> preload(:target_integration)
     |> Repo.all()
   end
 
@@ -103,6 +110,17 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
   reconciled and is exactly the one whose mirrors are most likely to be
   missing.
 
+  A **disabled** link is included when it still holds mappings in
+  `pending_delete`, and that exception is load-bearing rather than tidy.
+  Teardown disables the link before withdrawing its placeholders, so a provider
+  that refuses the delete leaves exactly that combination: a disabled link whose
+  busy blocks are still on someone's calendar. Filtering on `enabled` alone
+  removed those links from the retry mechanism their own teardown depends on —
+  the orphan the teardown exists to prevent, reached through its recovery path,
+  and reachable from link removal, calendar disconnect and account deletion
+  alike. An ordinarily paused link has no `pending_delete` rows and is still
+  skipped, which is what pausing means.
+
   No preloads: the sweep enqueues jobs keyed on `id` and never looks at either
   integration, so loading two per link would fetch rows nothing reads.
   """
@@ -110,8 +128,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
   def list_due_for_reconcile(max_age_seconds) when is_integer(max_age_seconds) do
     cutoff = DateTime.add(DateTime.utc_now(), -max_age_seconds, :second)
 
-    CalendarSyncLinkSchema
-    |> where([l], l.enabled == true)
+    pending_delete =
+      from(m in CalendarSyncMirrorSchema,
+        where: m.sync_link_id == parent_as(:link).id and m.state == "pending_delete"
+      )
+
+    from(l in CalendarSyncLinkSchema, as: :link)
+    |> where([l], l.enabled == true or exists(subquery(pending_delete)))
     |> where([l], is_nil(l.last_reconciled_at) or l.last_reconciled_at < ^cutoff)
     |> order_by([l], asc: l.id)
     |> Repo.all()
@@ -146,6 +169,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
     |> CalendarSyncLinkSchema.changeset(attrs)
     |> Repo.insert()
   end
+
+  @doc """
+  Persists a changeset the caller has already built.
+
+  The context builds a focused changeset for a write that must not re-validate
+  the whole row — pausing a link, in particular. Keeping the `Repo` call here
+  means that path still goes through the query module rather than reaching for
+  `Repo` itself.
+  """
+  @spec update_changeset(Ecto.Changeset.t()) ::
+          {:ok, CalendarSyncLinkSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_changeset(%Ecto.Changeset{} = changeset), do: Repo.update(changeset)
 
   @spec update(CalendarSyncLinkSchema.t(), map()) ::
           {:ok, CalendarSyncLinkSchema.t()} | {:error, Ecto.Changeset.t()}

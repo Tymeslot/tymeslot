@@ -22,9 +22,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
   import Tymeslot.Factory
   import Tymeslot.SyncLinkTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
 
   setup :verify_on_exit!
@@ -101,6 +103,21 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
         attrs
       )
     )
+  end
+
+  # The placeholder row as the target's next inbound sync rewrites it. An
+  # update rather than an insert, because the cache is unique on
+  # `{calendar_integration_id, uid}` — a sync refreshes the row it already has.
+  defp resync_placeholder(target, link, attrs) do
+    {:ok, cached} =
+      ProviderCalendarEventQueries.get_by_uid(
+        target.id,
+        Engine.target_uid_for(link.id, "source-uid-1")
+      )
+
+    cached
+    |> Changeset.change(Map.new(attrs))
+    |> Repo.update!()
   end
 
   # The same placeholder after somebody edited it on the target: a different
@@ -347,7 +364,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
 
       synced_mirror(link, source_updated_at: @before_sync)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 
@@ -384,7 +401,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
         {:ok, %{provider_event_id: "orphan-pid"}}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context, _opts ->
         send(test_pid, {:compensated, uid})
         :ok
       end)
@@ -409,7 +426,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
       synced_mirror(link, source_updated_at: @before_sync)
       edited_placeholder(target, link)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert :ok == Engine.unmirror(link, "source-uid-1", user.id)
 
@@ -429,7 +446,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
       synced_mirror(link, source_updated_at: @before_sync)
       cached_placeholder(target, link)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert :ok == Engine.unmirror(link, "source-uid-1", user.id)
 
@@ -449,14 +466,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
       # row still carries the etag that showed it had been edited. One race is
       # one event, however many attempts it takes to finish, and this is the
       # double-log the design has to prevent.
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 
       assert {:error, :service_unavailable} ==
                Engine.unmirror(link, "source-uid-1", user.id, attempt: 1)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert :ok == Engine.unmirror(link, "source-uid-1", user.id, attempt: 2)
 
@@ -471,7 +488,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
       synced_mirror(link, source_updated_at: @before_sync)
       edited_placeholder(target, link)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 
@@ -512,6 +529,54 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
 
       assert [conflict] = conflicts(link)
       assert conflict.kind == "mirror_edited"
+    end
+
+    test "the engine's own write is not reported as a hand edit once the target syncs", ctx do
+      %{user: user, source: source, target: target, link: link} = ctx
+
+      # No divergence to begin with: the placeholder is exactly as it was
+      # written, and the mirror's baseline matches it.
+      synced_mirror(link, source_updated_at: @before_sync, source_etag: "source-etag-1")
+      cached_placeholder(target, link, etag: "etag-as-written", provider_updated_at: @synced_at)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context -> :ok end)
+
+      assert :ok ==
+               Engine.mirror(
+                 link,
+                 source_event(source, %{provider_updated_at: @after_sync}),
+                 user.id
+               )
+
+      # The write lands, and the target's own inbound sync catches up
+      # afterwards — which is the only moment the placeholder's new etag can
+      # reach our cache at all. Its `provider_updated_at` is when the *provider*
+      # applied our write, so it is necessarily later than the moment we
+      # recorded the baseline.
+      #
+      # That ordering is the whole difficulty. The baseline recorded at write
+      # time must already describe the event as written; reading it from a cache
+      # that has not re-synced stores the *pre*-write etag, and the next pass
+      # then compares the engine's own change against it, finds a later
+      # timestamp, and calls the engine a stranger.
+      {:ok, written} =
+        CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      resync_placeholder(target, link,
+        etag: "etag-after-our-write",
+        provider_updated_at: DateTime.add(written.last_synced_at, 5, :second)
+      )
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context -> :ok end)
+
+      assert :ok ==
+               Engine.mirror(
+                 link,
+                 source_event(source, %{provider_updated_at: @after_sync}),
+                 user.id
+               )
+
+      assert [] == conflicts(link)
     end
   end
 end

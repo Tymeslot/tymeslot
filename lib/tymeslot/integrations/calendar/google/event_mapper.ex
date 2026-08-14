@@ -197,18 +197,43 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     }
   end
 
-  # Google expects `recurrence` as a list of RRULE strings, each prefixed with
-  # `RRULE:`. The canonical `recurrence_rule` field may or may not already carry
-  # that prefix (the Google normaliser keeps it on read; CalDAV stores it bare),
-  # so any existing prefix is stripped before re-adding exactly one. Omitted
-  # entirely when no rule is present.
+  # Google's `recurrence` is a list of whole iCalendar property lines — an
+  # RRULE, and then any number of EXDATE, RDATE or EXRULE lines — not a list of
+  # rules. The RRULE comes first, and the exception lines follow it.
+  #
+  # The rule's prefix is normalised because its sources disagree: the Google
+  # normaliser keeps `RRULE:` on read, CalDAV and the grid's recurrence editor
+  # store the bare body, so any existing prefix is stripped before re-adding
+  # exactly one. The exception lines get no such treatment, and that asymmetry
+  # is deliberate. There is no bare form of them in this codebase: the only
+  # producer is `SyncLink.RecurringSeries`, which filters the master's own
+  # `recurrence` list by an `EXDATE` prefix and keeps each line verbatim. A line
+  # therefore arrives already prefixed and already carrying whichever `TZID` or
+  # `VALUE=DATE` parameter the master wrote — parameters that sit between the
+  # name and the colon, so a `strip and re-add "EXDATE:"` would either be a
+  # no-op or would corrupt the line by discarding its timezone. Passing them
+  # through is what keeps a cancelled occurrence cancelled at the right instant.
+  #
+  # Additive by construction: the key is written only when a rule is present,
+  # and an event carrying no exception lines — every booking event, and every
+  # event the calendar grid creates — produces the same one-element list it did
+  # before exception lines existed. Lines without a rule describe exclusions
+  # from a series that is not there, and are dropped with the rest.
   defp maybe_add_recurrence(base_data, event_data) do
     case get_field_value(event_data, :recurrence_rule) do
       rrule when is_binary(rrule) and rrule != "" ->
-        Map.put(base_data, "recurrence", ["RRULE:#{RRule.strip_prefix(rrule)}"])
+        lines = ["RRULE:#{RRule.strip_prefix(rrule)}" | exception_lines(event_data)]
+        Map.put(base_data, "recurrence", lines)
 
       _none ->
         base_data
+    end
+  end
+
+  defp exception_lines(event_data) do
+    case get_field_value(event_data, :recurrence_exception_lines) do
+      lines when is_list(lines) -> Enum.filter(lines, &(is_binary(&1) and &1 != ""))
+      _none -> []
     end
   end
 

@@ -246,3 +246,28 @@ msgstr "інтеграція для цього провайдера вже іс�
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
 msgstr "не є дійсним кольором"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot mirror a calendar onto itself"
+msgstr "не може дзеркалити календар сам у себе"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "has already been linked"
+msgstr "вже пов'язано"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is a read-only subscription and cannot receive mirrored events"
+msgstr "це передплата лише для читання, вона не може отримувати дзеркальні події"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is needed to title the placeholder"
+msgstr "потрібна, щоб назвати позначку зайнятості"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a palette colour"
+msgstr "не є кольором з палітри"

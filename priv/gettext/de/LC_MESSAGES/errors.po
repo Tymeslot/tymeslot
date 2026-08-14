@@ -237,3 +237,28 @@ msgstr "für diesen Anbieter existiert bereits eine Integration"
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
 msgstr "ist keine gültige Farbe"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot mirror a calendar onto itself"
+msgstr "kann einen Kalender nicht auf sich selbst spiegeln"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "has already been linked"
+msgstr "ist bereits verknüpft"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is a read-only subscription and cannot receive mirrored events"
+msgstr "ist ein schreibgeschütztes Abonnement und kann keine gespiegelten Ereignisse empfangen"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is needed to title the placeholder"
+msgstr "wird als Titel des Platzhalters benötigt"
+
+#: lib/tymeslot/integrations/calendar/calendar_sync_link_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a palette colour"
+msgstr "ist keine Farbe aus der Palette"

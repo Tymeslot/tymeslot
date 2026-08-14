@@ -318,5 +318,15 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   defp cacheable?({:error, _reason}, opts), do: Keyword.get(opts, :cache_errors, true)
+
+  # The three-element form too, because that is the shape the calendar provider
+  # APIs actually answer with (`{:error, :rate_limited, "..."}` — see any
+  # `api_error()` typespec under `Integrations.Calendar`). Matching only the
+  # two-element form made `cache_errors: false` silently do nothing for every
+  # one of them: the error fell through to the catch-all below and was stored
+  # like a success, so one provider hiccup became a whole TTL of cached failure
+  # for callers that had explicitly asked for the opposite.
+  defp cacheable?({:error, _reason, _message}, opts), do: Keyword.get(opts, :cache_errors, true)
+
   defp cacheable?(_value, _opts), do: true
 end

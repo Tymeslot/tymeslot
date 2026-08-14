@@ -160,8 +160,20 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Teardown do
     end
   end
 
+  # The calendar comes from the *link*, not the mirror row: the row records
+  # which integration holds the placeholder, but a link may write to a
+  # secondary calendar on that integration, and only the link knows which. A
+  # delete addressed at the integration's default booking calendar instead
+  # answers 404 for such a placeholder — read below as "already gone", dropping
+  # the row and stranding the busy block permanently.
   defp withdraw(%CalendarSyncMirrorSchema{} = mirror, link, user_id) do
-    case CalendarEvents.delete_event(mirror.target_uid, {mirror.target_integration_id, user_id}) do
+    opts = target_calendar_opts(link)
+
+    case CalendarEvents.delete_event(
+           mirror.target_uid,
+           {mirror.target_integration_id, user_id},
+           opts
+         ) do
       :ok ->
         drop(mirror)
 
@@ -201,6 +213,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Teardown do
         :ok
     end
   end
+
+  # A link with no `target_calendar_id` writes to the target's default booking
+  # calendar, which is where the two-arity delete already goes — so the empty
+  # list is the correct instruction, not a missing one.
+  defp target_calendar_opts(%CalendarSyncLinkSchema{target_calendar_id: nil}), do: []
+
+  defp target_calendar_opts(%CalendarSyncLinkSchema{target_calendar_id: calendar_id}),
+    do: [calendar_id: calendar_id]
 
   defp first_error({:error, _reason} = already, _next), do: already
   defp first_error(:ok, next), do: next

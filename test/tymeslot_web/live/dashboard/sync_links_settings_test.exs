@@ -20,8 +20,10 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.SyncLink
+  alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
@@ -176,6 +178,61 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       assert SyncLink.list_links(user.id) == []
     end
 
+    # The panel is translated; the changeset's messages have to be too, or a
+    # non-English organiser reads an English sentence inside an otherwise
+    # German page and cannot tell whether it came from Tymeslot or from their
+    # calendar provider. Two halves fail independently: the schema must carry
+    # an extracted msgid rather than a bare English literal, and the component
+    # must route it through the "errors" domain instead of assigning it raw.
+    test "refuses that link in the organiser's own language", ctx do
+      %{conn: conn, user: user, source: source} = ctx
+
+      # Set on the user rather than with `put_locale/2` in the test process:
+      # the dashboard's `AppLocaleHook` resolves the locale itself on mount,
+      # from the signed-in organiser's saved interface language, so this is the
+      # path a German organiser actually arrives by.
+      {:ok, user} = UserQueries.update_user_locale(user, "de")
+
+      ics =
+        insert(:calendar_integration,
+          user: user,
+          provider: "ics_url",
+          name: "Team Feed",
+          is_active: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      html =
+        view
+        |> element("#sync-link-form")
+        |> render_submit(%{
+          "sync_link" => %{
+            "source_integration_id" => to_string(source.id),
+            "target_integration_id" => to_string(ics.id)
+          }
+        })
+
+      # Asserted against the catalogue rather than a literal, so the assertion
+      # cannot drift from the translation that ships. Looked up in an explicit
+      # German scope: the locale the view resolved lives in the view's process,
+      # not this one.
+      translated =
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+          Gettext.dgettext(
+            TymeslotWeb.Gettext,
+            "errors",
+            "is a read-only subscription and cannot receive mirrored events"
+          )
+        end)
+
+      refute translated == "is a read-only subscription and cannot receive mirrored events",
+             "the German catalogue has no translation for the read-only target message"
+
+      assert html =~ translated
+      refute html =~ "read-only subscription"
+    end
+
     test "never offers a read-only subscription as a target", ctx do
       %{conn: conn, user: user} = ctx
 
@@ -193,6 +250,122 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       # do — but never a target.
       assert has_element?(view, "#sync-link-source option[value='#{ics.id}']")
       refute has_element?(view, "#sync-link-target option[value='#{ics.id}']")
+    end
+  end
+
+  describe "the generic-label tier" do
+    setup %{user: user} do
+      source = google(user, "Work Google")
+      target = google(user, "Personal Google")
+
+      {:ok, source: source, target: target}
+    end
+
+    defp choose_tier(view, source, target, tier, extra \\ %{}) do
+      params =
+        Map.merge(
+          %{
+            "source_integration_id" => to_string(source.id),
+            "target_integration_id" => to_string(target.id),
+            "privacy_tier" => tier
+          },
+          extra
+        )
+
+      form(view, "#sync-link-form", %{"sync_link" => params})
+    end
+
+    test "offers a label input only once that tier is chosen", ctx do
+      %{conn: conn, source: source, target: target} = ctx
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      # The default tier writes an opaque placeholder, which has no label to
+      # ask for.
+      refute html =~ ~s(name="sync_link[generic_label]")
+
+      html = view |> choose_tier(source, target, "busy_only") |> render_change()
+      refute html =~ ~s(name="sync_link[generic_label]")
+
+      html = view |> choose_tier(source, target, "generic_label") |> render_change()
+      assert html =~ ~s(name="sync_link[generic_label]")
+
+      # Nor for the tier that copies the source's own title.
+      html = view |> choose_tier(source, target, "full_passthrough") |> render_change()
+      refute html =~ ~s(name="sync_link[generic_label]")
+    end
+
+    test "carries the typed label all the way onto the placeholder", ctx do
+      %{conn: conn, user: user, source: source, target: target} = ctx
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      view |> choose_tier(source, target, "generic_label") |> render_change()
+
+      html =
+        view
+        |> choose_tier(source, target, "generic_label", %{
+          "generic_label" => "Personal commitment"
+        })
+        |> render_submit()
+
+      assert [link] = SyncLink.list_links(user.id)
+      assert link.privacy_tier == "generic_label"
+      assert link.generic_label == "Personal commitment"
+
+      # Storing the label is not the feature: the placeholder carrying it is.
+      # The payload is what a tool reading the target calendar actually sees,
+      # and before this was wired it read "Busy" while the panel claimed a
+      # generic label.
+      source_event = %{
+        summary: "Board meeting",
+        start_at: ~U[2026-03-02 09:00:00Z],
+        end_at: ~U[2026-03-02 10:00:00Z],
+        all_day: false
+      }
+
+      payload = MirrorPayload.build(source_event, "target-uid", link)
+      assert payload.summary == "Personal commitment"
+
+      # And the panel says so rather than describing a tier it did not store.
+      assert html =~ "Personal commitment"
+    end
+
+    # The payload degrades a blank label to "Busy". That is the right last line
+    # for a row written before this input existed, but it is the wrong answer
+    # for a form: the panel would go on saying "Shown with a generic label"
+    # over a placeholder that reads "Busy", which is the same false claim the
+    # tier shipped with. So the form refuses instead of quietly degrading.
+    test "refuses to store that tier without a label", ctx do
+      %{conn: conn, user: user, source: source, target: target} = ctx
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      view |> choose_tier(source, target, "generic_label") |> render_change()
+
+      html =
+        view
+        |> choose_tier(source, target, "generic_label", %{"generic_label" => "   "})
+        |> render_submit()
+
+      assert SyncLink.list_links(user.id) == []
+      assert html =~ "label"
+
+      # The typed values survive the refusal, so the organiser fixes one field
+      # rather than filling the form in again.
+      assert html =~ ~s(name="sync_link[generic_label]")
+    end
+
+    test "leaves the other tiers free of that requirement", ctx do
+      %{conn: conn, user: user, source: source, target: target} = ctx
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      view |> choose_tier(source, target, "busy_only") |> render_submit()
+
+      assert [link] = SyncLink.list_links(user.id)
+      assert link.privacy_tier == "busy_only"
+      assert is_nil(link.generic_label)
     end
   end
 

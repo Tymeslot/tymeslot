@@ -34,11 +34,34 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
     never reaches the provider at all.
   - `:source_not_cached` — the source event is gone from the cache and there is
     no mapping to withdraw either. Nothing to mirror and nothing to clean up.
-  - `:not_an_eligible_source` — the event fails `Eligibility.mirror_source?/2`:
-    it is itself a mirror, recurring, transparent, or cancelled. The one nuance
-    is that an event which *became* ineligible after having been mirrored is not
-    a discard — its placeholder is withdrawn first, because a source that has
-    turned transparent or been cancelled must stop blocking time on the target.
+  - `:not_an_eligible_source` — the event fails `Eligibility.mirror_source?/3`:
+    it is itself a mirror, transparent, cancelled, or a recurring series on a
+    link whose target cannot expand one. The one nuance is that an event which
+    *became* ineligible after having been mirrored is not a discard — its
+    placeholder is withdrawn first, because a source that has turned
+    transparent or been cancelled must stop blocking time on the target.
+
+  ## Why a recurring source on an unsupported target takes that same route
+
+  Since `Eligibility.worth_enqueueing?/2` stopped refusing recurrence, a
+  recurring event on a calendar with three links is enqueued for all three, and
+  the ones whose targets cannot expand a series arrive here to be turned away.
+  They are routed through `unmirror_or_discard/4` rather than discarded
+  outright, and the difference is not academic.
+
+  A discard is right only when nothing needs undoing, and here something can:
+  the same source may already carry a placeholder on that very target, written
+  while it was still a single event and now describing an occurrence that no
+  longer stands alone. Discarding would leave that block sitting on the
+  organiser's calendar until the reconcile sweep happened to look. Asking the
+  mapping table first costs one indexed lookup, withdraws the stale placeholder
+  when there is one, and discards as `:not_an_eligible_source` when there is
+  not — which is the ordinary case and still terminal, because no number of
+  retries will make an Outlook target expand an RRULE.
+
+  The route is the one a cancelled event already takes, and deliberately so:
+  "this source may no longer have a placeholder here" is one question, and
+  answering it in one place is what keeps the two answers from drifting.
 
   Everything else — a rate limit, an expired token, a timeout — is an
   `{:error, reason}` that Oban retries with backoff.
@@ -73,9 +96,33 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   mirror, which is the loop this feature has to be free of.
 
   `unique` is keyed on `[:sync_link_id, :source_uid]` — not on the operation —
-  with `replace: [:args]` at the enqueue site, so an upsert followed by a delete
-  for the same event leaves one job carrying the delete rather than two racing
-  to decide whether the placeholder survives.
+  and the enqueue site replaces the args of a job that has not started, so an
+  upsert followed by a delete for the same event leaves one job carrying the
+  delete rather than two racing to decide whether the placeholder survives.
+
+  The uniqueness window is Oban's `:incomplete` group, which includes
+  `:executing`, and the replace at the enqueue site names only the states where
+  a job has *not* started. That pairing is deliberate, and the reasoning is
+  worth keeping because both halves look wrong alone.
+
+  A bare `replace: [:args]` expands across every state — `Oban.Job.put_replace/3`
+  maps the fields over `states()` — so it rewrites a running job's args after
+  `perform/1` has already read them. The write that arrives is then neither
+  deferred nor applied; it is lost. Naming the pending states instead leaves the
+  running job alone.
+
+  Dropping `:executing` from uniqueness so the new write becomes its own job
+  looks like the better fix and is not: Oban warns that an incomplete window
+  missing `:executing` breaks uniqueness, and it is right — two jobs for one
+  event could then run concurrently, racing to decide whether the placeholder
+  survives, which is the thing uniqueness is here to prevent.
+
+  What remains is a write raised while another is executing being dropped rather
+  than deferred. That is a latency cost and not a lasting one:
+  `SyncLinkReconcileWorker` re-derives the same decision from the mapping rows
+  and the cache, so a delete lost this way is re-enqueued on the next sweep. A
+  placeholder outliving its event by one sweep is the accepted trade against two
+  writers on one placeholder.
   """
   use Oban.Worker,
     queue: :calendar_events,
@@ -206,16 +253,26 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   end
 
   defp upsert(link, event, source_uid, attempt) do
-    if Eligibility.mirror_source?(event, mirror_set(link)) do
+    if Eligibility.mirror_source?(event, mirror_set(link), target_provider(link)) do
       Engine.mirror(link, event, link.user_id, attempt: attempt)
     else
       # Ineligible now, but it may have been eligible when the placeholder was
-      # written — a cancelled meeting, an event switched to free, or an event
-      # this link's counterpart has since mirrored onto the source calendar.
-      # Whatever the reason, the placeholder must stop blocking time.
+      # written — a cancelled meeting, an event switched to free, an event this
+      # link's counterpart has since mirrored onto the source calendar, or a
+      # recurring series on a link whose target cannot expand one. Whatever the
+      # reason, the placeholder must stop blocking time.
       unmirror_or_discard(link, source_uid, :not_an_eligible_source, attempt)
     end
   end
+
+  # The link's target provider, which `Eligibility` needs for exactly one
+  # decision: whether a recurring source may be mirrored here. Preloaded by
+  # `CalendarSyncLinkQueries.get/1`; `nil` for a link whose association could
+  # not be loaded, which `Capability` answers as an unrecognised provider and so
+  # refuses a series — the same conservative direction `read_only_target?/1`
+  # takes for the same shape.
+  defp target_provider(%{target_integration: %{provider: provider}}), do: provider
+  defp target_provider(_link), do: nil
 
   defp unmirror_or_discard(link, source_uid, reason, attempt) do
     case CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, source_uid) do

@@ -15,8 +15,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
   @moduletag :integrations
 
   import Mox
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.SyncLink
   alias Tymeslot.Repo
@@ -224,6 +226,26 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
   end
 
   describe "toggle_enabled/3" do
+    test "pauses a link whose stored attributes no longer satisfy the changeset", ctx do
+      # A row written before `generic_label` became required at its tier — the
+      # panel has a dedicated label for exactly these, so the feature is
+      # designed for their existence. Routing the pause through the full
+      # changeset made it fail on a field the write never touches, and the
+      # component discarded the refusal, so the button did nothing and said
+      # nothing. Pausing has to be about `enabled` and nothing else: it is the
+      # control an organiser reaches for precisely when a link is misbehaving.
+      {:ok, link} = SyncLink.create_link(ctx.user.id, attrs(ctx))
+
+      {1, _no_returning} =
+        Repo.update_all(
+          from(l in CalendarSyncLinkSchema, where: l.id == ^link.id),
+          set: [privacy_tier: "generic_label", generic_label: nil]
+        )
+
+      assert {:ok, paused} = SyncLink.toggle_enabled(ctx.user.id, link.id, false)
+      refute paused.enabled
+    end
+
     test "pauses and resumes a link", ctx do
       {:ok, link} = SyncLink.create_link(ctx.user.id, attrs(ctx))
 
@@ -266,7 +288,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
       test_pid = self()
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, user_id} ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, {integration_id, user_id}, _opts ->
         # The link and its mapping row must both still exist while the provider
         # is asked: the row is what carries the uid being deleted.
         assert Repo.get(CalendarSyncMirrorSchema, mirror.id)
@@ -288,7 +310,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
       {:ok, link} = SyncLink.create_link(ctx.user.id, attrs(ctx))
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 

@@ -38,13 +38,24 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.WriteBack do
   @doc """
   Enqueues one mirror write.
 
-  `replace: [:args]` matters here for the same reason it does on the colour
+  Replacing the args matters here for the same reason it does on the colour
   write-back, and one case more. `unique` alone keeps the *first* pending job
   and drops the newer enqueue, so an event edited twice before the queue drains
   would mirror the first edit and silently discard the second. Worse, an event
   edited and then deleted would keep the upsert and drop the delete, leaving a
   placeholder on the target for an event that no longer exists. Replacing the
   args means the pending job always carries the latest intent.
+
+  The replace is named per state rather than given bare, and the omission is the
+  point. A bare `replace: [:args]` expands across *every* state Oban knows —
+  `Oban.Job.put_replace/3` maps the fields over `states()` — including
+  `:executing`. A job already running has read its args; rewriting the row
+  changes nothing it will do, so the newer intent is not deferred but lost. A
+  delete arriving while the upsert runs would vanish into it, the placeholder
+  would be written for an event that no longer exists, and no pending job would
+  remain to correct it. Naming only the states where a job has not yet started
+  leaves the delete to be inserted as its own job, which runs once the upsert
+  finishes.
   """
   @spec enqueue(integer(), String.t(), operation()) :: :ok
   def enqueue(sync_link_id, source_uid, operation)
@@ -54,7 +65,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.WriteBack do
       "source_uid" => source_uid,
       "operation" => Atom.to_string(operation)
     }
-    |> SyncLinkWriteBackWorker.new(replace: [:args])
+    |> SyncLinkWriteBackWorker.new(
+      replace: [
+        available: [:args],
+        scheduled: [:args],
+        retryable: [:args]
+      ]
+    )
     |> Oban.insert()
     |> log_enqueue_error(sync_link_id, source_uid)
 

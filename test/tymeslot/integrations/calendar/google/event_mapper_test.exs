@@ -517,4 +517,100 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
       refute Map.has_key?(result, "recurrence")
     end
   end
+
+  # This mapper is shared: booking events, the calendar grid's manual create and
+  # edit paths, and sync-link placeholders all reach it. Only the last of those
+  # has exception lines to send, so every assertion here is paired with one that
+  # the output for the other callers is byte-identical to what it was before
+  # exceptions existed — a one-element list holding the RRULE alone.
+  describe "format_event_data/1 — recurrence exception lines" do
+    test "emits the exception lines after the RRULE, in the order given" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 10:15:00Z],
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=TU",
+        recurrence_exception_lines: [
+          "EXDATE;TZID=Europe/Tallinn:20261013T090000",
+          "EXDATE;TZID=Europe/Tallinn:20261020T090000"
+        ]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["recurrence"] == [
+               "RRULE:FREQ=WEEKLY;BYDAY=TU",
+               "EXDATE;TZID=Europe/Tallinn:20261013T090000",
+               "EXDATE;TZID=Europe/Tallinn:20261020T090000"
+             ]
+    end
+
+    # The regression guard the shared callers depend on. A booking event and a
+    # grid-created recurring event carry no exception lines, and their payload
+    # must be exactly what it was before this key existed.
+    test "an event with no exception lines produces the one-element list unchanged" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 10:15:00Z],
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE,FR"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"]
+    end
+
+    test "an empty exception list is the same as none at all" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 10:15:00Z],
+        recurrence_rule: "FREQ=DAILY",
+        recurrence_exception_lines: []
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["recurrence"] == ["RRULE:FREQ=DAILY"]
+    end
+
+    # Exception lines without a rule describe nothing: EXDATEs exclude
+    # occurrences of a series, and there is no series. Emitting them alone would
+    # hand Google a `recurrence` list it would reject or, worse, silently accept
+    # as turning a one-off into something else.
+    test "exception lines without a rule emit no recurrence key at all" do
+      event_data = %{
+        summary: "Once",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        recurrence_exception_lines: ["EXDATE;TZID=Europe/Tallinn:20261013T090000"]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "recurrence")
+    end
+
+    # `RecurringSeries` keeps the master's EXDATE lines verbatim, so they arrive
+    # already prefixed and already carrying their own TZID or VALUE parameters.
+    # Unlike the RRULE, whose prefix varies by source, there is no bare form to
+    # normalise — a line is passed through as the master wrote it.
+    test "a verbatim master line is passed through untouched" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 10:15:00Z],
+        recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+        recurrence_exception_lines: ["EXDATE;VALUE=DATE:20261013,20261020"]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["recurrence"] == [
+               "RRULE:FREQ=WEEKLY;BYDAY=TU",
+               "EXDATE;VALUE=DATE:20261013,20261020"
+             ]
+    end
+  end
 end

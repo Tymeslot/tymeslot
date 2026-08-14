@@ -180,8 +180,21 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   @spec call_delete_event(CalendarIntegrationSchema.t(), String.t()) ::
           {:ok, term()} | {:error, atom(), String.t()}
-  def call_delete_event(integration, event_id) do
-    calendar_id = integration.default_booking_calendar_id || "primary"
+  def call_delete_event(integration, event_id), do: call_delete_event(integration, event_id, [])
+
+  @doc """
+  Deletes an event, honouring a caller-supplied `:calendar_id`.
+
+  The same resolution `call_create_event/2` uses, and it has to be: an event
+  created on a secondary calendar can only be deleted from that same calendar.
+  Falling back to the default booking calendar addresses a calendar the event
+  was never on, and Google answers 404 — indistinguishable, to the caller, from
+  the event having genuinely been removed.
+  """
+  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
+          {:ok, term()} | {:error, atom(), String.t()}
+  def call_delete_event(integration, event_id, opts) do
+    calendar_id = opts[:calendar_id] || integration.default_booking_calendar_id || "primary"
     api_module().delete_event(integration, calendar_id, event_id)
   end
 

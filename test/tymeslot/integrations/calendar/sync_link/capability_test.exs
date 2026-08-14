@@ -37,7 +37,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.CapabilityTest do
                 mirror_target: true,
                 target_calendar_choice: true,
                 per_event_colour: true,
-                recurrence: false
+                recurrence: true
               }},
              {:outlook,
               %{
@@ -132,13 +132,17 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.CapabilityTest do
   end
 
   describe "supports?/2 — :recurrence in this stage" do
-    # Deliberately false for everyone, Google included: the row exists so the
-    # next stage flips one cell rather than introducing the concept alongside
-    # the feature. A test that only checked "Google is false" would pass for
-    # the wrong reason once Google is enabled, so the claim asserted is the
-    # stronger one — nobody has it yet.
-    test "no provider supports recurrence yet" do
-      for provider <- ProviderConfig.provider_constraint_list() do
+    # Google alone, and the claim asserted is the exclusive one rather than
+    # "Google is true". A recurring source is mirrored as a single recurring
+    # placeholder the target expands itself, so a provider whose cell flips
+    # without that expansion being verified would receive a series it renders
+    # as one block at the wrong date — the exact failure this stage removed for
+    # Google. Enabling anyone else has to break this test and bring evidence.
+    test "google supports recurrence and no other provider does" do
+      assert Capability.supports?(:google, :recurrence)
+      assert Capability.supports?("google", :recurrence)
+
+      for provider <- ProviderConfig.provider_constraint_list(), provider != "google" do
         refute Capability.supports?(provider, :recurrence),
                "#{provider} unexpectedly claims :recurrence support"
       end

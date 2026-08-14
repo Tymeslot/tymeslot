@@ -42,7 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
       first = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
       second = mirror_for_link(link, source_uid: "src-2", target_uid: "mirror-uid-2")
 
-      expect(Tymeslot.CalendarMock, :delete_event, 2, fn uid, context ->
+      expect(Tymeslot.CalendarMock, :delete_event, 2, fn uid, context, _opts ->
         # The row must still be there when the provider is asked: it is what
         # carries the uid being deleted.
         assert Repo.get_by(CalendarSyncMirrorSchema, target_uid: uid),
@@ -72,7 +72,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
 
       mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:ok, reloaded} = CalendarSyncLinkQueries.get(link.id)
         send(test_pid, {:enabled_during_teardown, reloaded.enabled})
         :ok
@@ -89,7 +89,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
     } do
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 
@@ -106,8 +106,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
       fine = mirror_for_link(link, source_uid: "src-2", target_uid: "succeeds")
 
       expect(Tymeslot.CalendarMock, :delete_event, 2, fn
-        "fails", _context -> {:error, :service_unavailable}
-        "succeeds", _context -> :ok
+        "fails", _context, _opts -> {:error, :service_unavailable}
+        "succeeds", _context, _opts -> :ok
       end)
 
       assert {:error, :service_unavailable} == Teardown.tear_down_link(link, user.id)
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
     } do
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :not_found}
       end)
 
@@ -148,7 +148,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
     } do
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn "mirror-uid-1", {integration_id, _user} ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn "mirror-uid-1",
+                                                      {integration_id, _user},
+                                                      _opts ->
         assert integration_id == target.id
         :ok
       end)
@@ -170,7 +172,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
 
       # Disconnecting the SOURCE leaves nothing to keep the placeholder in step
       # with, so it must go from the target calendar it was written onto.
-      expect(Tymeslot.CalendarMock, :delete_event, fn "mirror-uid-1", {integration_id, _user} ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn "mirror-uid-1",
+                                                      {integration_id, _user},
+                                                      _opts ->
         assert integration_id == target.id
         :ok
       end)
@@ -193,7 +197,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
       outbound = mirror_for_link(link, source_uid: "src-1", target_uid: "outbound-uid")
       inbound = mirror_for_link(reverse, source_uid: "src-2", target_uid: "inbound-uid")
 
-      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts -> :ok end)
 
       assert :ok == Teardown.tear_down_for_integration(source.id, user.id)
 
@@ -222,7 +226,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
       first = mirror_for_link(link, source_uid: "src-1", target_uid: "uid-a")
       second = mirror_for_link(other_link, source_uid: "src-1", target_uid: "uid-b")
 
-      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts -> :ok end)
 
       assert :ok == Teardown.tear_down_for_user(user.id)
 
@@ -236,7 +240,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
     } do
       mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "uid-a")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 

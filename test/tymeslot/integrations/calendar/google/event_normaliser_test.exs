@@ -279,4 +279,103 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
       assert event.colour == nil
     end
   end
+
+  # Google records a moved occurrence as its own exception instance carrying
+  # `originalStartTime` — where the occurrence used to sit. Without it, the
+  # instance is indistinguishable from an ordinary one, because the master's
+  # RRULE is untouched by a move and no EXDATE is added.
+  describe "originalStartTime on a moved occurrence" do
+    defp instance(attrs) do
+      Map.merge(
+        %{
+          "iCalUID" => "weekly@google.com",
+          "id" => "master_abc_20261215T090000Z",
+          "summary" => "Weekly standup",
+          "recurringEventId" => "master_abc"
+        },
+        attrs
+      )
+    end
+
+    test "captures a timed move, shifted to UTC like the start it is compared against" do
+      raw = [
+        instance(%{
+          "start" => %{"dateTime" => "2026-12-15T11:00:00+02:00"},
+          "end" => %{"dateTime" => "2026-12-15T11:30:00+02:00"},
+          "originalStartTime" => %{"dateTime" => "2026-12-15T09:00:00+02:00"}
+        })
+      ]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.original_start_at == ~U[2026-12-15 07:00:00Z]
+      assert event.start_at == ~U[2026-12-15 09:00:00Z]
+    end
+
+    test "captures an all-day move as a Date, matching the start_date it is compared against" do
+      raw = [
+        instance(%{
+          "start" => %{"date" => "2026-12-16"},
+          "end" => %{"date" => "2026-12-17"},
+          "originalStartTime" => %{"date" => "2026-12-15"}
+        })
+      ]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.original_start_at == ~D[2026-12-15]
+      assert event.start_date == ~D[2026-12-16]
+    end
+
+    test "leaves an ordinary instance of a series nil" do
+      raw = [
+        instance(%{
+          "start" => %{"dateTime" => "2026-12-15T09:00:00Z"},
+          "end" => %{"dateTime" => "2026-12-15T09:30:00Z"}
+        })
+      ]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.original_start_at == nil
+      assert event.recurring_event_id == "master_abc"
+    end
+
+    test "leaves a non-recurring event nil" do
+      raw = [
+        %{
+          "iCalUID" => "one-off@google.com",
+          "id" => "one-off",
+          "summary" => "Lunch",
+          "start" => %{"dateTime" => "2026-12-15T12:00:00Z"},
+          "end" => %{"dateTime" => "2026-12-15T13:00:00Z"}
+        }
+      ]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.original_start_at == nil
+    end
+
+    # A malformed value must not cost the event, let alone the sync job it runs
+    # inside. `parse_timing/1` falls back rather than raising on the same input,
+    # and the marker is strictly less important than the times themselves.
+    test "leaves a malformed value nil without dropping the event" do
+      for bad <- [
+            %{"dateTime" => "not-a-timestamp"},
+            %{"date" => "2026-13-45"},
+            %{"dateTime" => 1_234_567_890},
+            %{"timeZone" => "Europe/Tallinn"},
+            "2026-12-15T09:00:00Z"
+          ] do
+        raw = [
+          instance(%{
+            "start" => %{"dateTime" => "2026-12-15T11:00:00Z"},
+            "end" => %{"dateTime" => "2026-12-15T11:30:00Z"},
+            "originalStartTime" => bad
+          })
+        ]
+
+        assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+        assert event.original_start_at == nil, "expected nil for #{inspect(bad)}"
+        assert event.start_at == ~U[2026-12-15 11:00:00Z]
+      end
+    end
+  end
 end

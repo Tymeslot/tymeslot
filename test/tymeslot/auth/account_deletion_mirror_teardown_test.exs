@@ -79,7 +79,7 @@ defmodule Tymeslot.Auth.AccountDeletionMirrorTeardownTest do
     second = mirror_for_link(link, source_uid: "src-2", target_uid: "uid-b")
     test_pid = self()
 
-    expect(Tymeslot.CalendarMock, :delete_event, 2, fn uid, {integration_id, user_id} ->
+    expect(Tymeslot.CalendarMock, :delete_event, 2, fn uid, {integration_id, user_id}, _opts ->
       # The user must still exist while the provider is being asked: the call
       # is made in their name, against credentials their row still owns.
       assert Repo.get(UserSchema, user_id)
@@ -105,7 +105,7 @@ defmodule Tymeslot.Auth.AccountDeletionMirrorTeardownTest do
   } do
     mirror = mirror_for_link(link, source_uid: "src-1", target_uid: "uid-a")
 
-    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
       {:error, :service_unavailable}
     end)
 
@@ -127,7 +127,7 @@ defmodule Tymeslot.Auth.AccountDeletionMirrorTeardownTest do
     Application.put_env(:tymeslot, :account_deletion_hook, RecordingHook)
 
     mirror_for_link(link, source_uid: "src-1", target_uid: "uid-a")
-    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> :ok end)
+    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
     assert {:ok, _deleted} = Auth.delete_account(user)
 

@@ -54,7 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Capability do
   | `:mirror_target` | yes | yes | yes | no |
   | `:target_calendar_choice` | yes | yes | no | no |
   | `:per_event_colour` | yes | no | no | no |
-  | `:recurrence` | no | no | no | no |
+  | `:recurrence` | yes | no | no | no |
 
   `:mirror_target` is false for ICS alone: a subscription is a published feed
   and `Ics.Provider.create_event/2` answers `{:error, :read_only}`, so a link
@@ -70,24 +70,35 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Capability do
   `Google.GoogleCalendarApi` and is not part of the shared `Provider` behaviour,
   so there is no polymorphic call to make for anyone else.
 
-  ## The recurrence row is a starting position, not a finding
+  ## The recurrence row, and why only Google is in it
 
-  `:recurrence` is false for **every** provider here, Google included, and
-  nothing consults it yet — `Eligibility.recurring?/1` still refuses a recurring
-  source outright, deliberately and unchanged. The row exists now so that
-  enabling recurrence later flips one cell in this table rather than
-  introducing the concept along with the feature.
+  `:recurrence` says a target can be handed a whole series as **one** event and
+  will expand it itself. Google can: `EventMapper.maybe_add_recurrence/2` emits
+  `"recurrence" => ["RRULE:..."]`, so one recurring source becomes one recurring
+  placeholder and one mirror row rather than one write per occurrence.
 
-  Google's cell is false only because the series master cannot yet be fetched:
-  under `singleEvents=true` the cached row is an *instance* whose RRULE cannot
-  be trusted, and `GoogleCalendarApi` has no single-event GET to read the master
-  with. That is the next stage's work, not a claim about Google.
+  Google's cell was false in the previous stage for one missing piece rather
+  than a doubt about Google. Under `singleEvents=true` the cached row is an
+  expanded *instance*, and `upsert_batch/1` keeps the last of them — so the
+  cached `recurrence_rule` describes whatever the final occurrence carried, not
+  the series. Trusting it would place a single busy block at the last
+  occurrence's date. `CalendarAPI.get_event/3` now fetches the series master
+  through the cached `recurring_event_id`, and `SyncLink.RecurringSeries` reads
+  the authoritative rule off it, which is what makes the cell true.
 
-  Outlook and CalDAV are false as a **starting position rather than a verified
-  finding**. Outlook has a structured `recurrence` object rather than an RRULE
-  and there is already a `RecurrenceConverter` for the inbound direction;
-  CalDAV takes an RRULE natively. Both are plausible later. Neither is claimed
-  here, and this table is where that claim gets made when someone verifies it.
+  This capability is what the **target** must have; the master lookup is what
+  the **source** side needs. Both being Google-only today is a coincidence of
+  this stage rather than one fact: a Google source could feed any target whose
+  cell were true, and the source-side lookup dispatches on the source's own
+  provider.
+
+  Outlook and CalDAV remain false as a **starting position rather than a
+  verified finding**. Outlook has a structured `recurrence` object rather than
+  an RRULE and there is already a `RecurrenceConverter` for the inbound
+  direction; CalDAV takes an RRULE natively. Both are plausible. Neither is
+  claimed here, and this table is where that claim gets made when someone
+  verifies it — a cell flipped without that evidence produces exactly the wrong
+  single block this stage removed.
   """
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -101,8 +112,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Capability do
     so the organiser's choice of which calendar to write to means something.
   - `:per_event_colour` — has a per-event colour reachable from the mirror
     path.
-  - `:recurrence` — can be handed a recurring series as one event. False for
-    everyone today; see the moduledoc.
+  - `:recurrence` — can be handed a recurring series as one event and will
+    expand it itself. Google alone; see the moduledoc.
   """
   @type feature :: :mirror_target | :target_calendar_choice | :per_event_colour | :recurrence
 
@@ -127,6 +138,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Capability do
       iex> Capability.supports?("google", :per_event_colour)
       true
       iex> Capability.supports?(:google, :recurrence)
+      true
+      iex> Capability.supports?(:outlook, :recurrence)
       false
   """
   @spec supports?(String.t() | atom() | any(), feature()) :: boolean()
@@ -138,9 +151,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Capability do
 
   def supports?(provider, :per_event_colour), do: provider in [:google, "google"]
 
-  # False for everyone in this stage, on purpose — see the moduledoc. The clause
-  # exists so the next stage changes one cell rather than adding a concept.
-  def supports?(_provider, :recurrence), do: false
+  # Google alone — see the moduledoc. Matched on the provider itself rather than
+  # derived from `:mirror_target`, because "can receive a write at all" and "will
+  # expand a series it is handed" are independent: every CalDAV target answers
+  # the first and none of them has been verified for the second.
+  def supports?(provider, :recurrence), do: provider in [:google, "google"]
 
   # `parse_known/1` rather than `parse/1`, so the answer does not turn on a
   # runtime toggle. A link is configured once and written to for years; a

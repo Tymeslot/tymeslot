@@ -106,7 +106,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackHealthTest do
     test "a failed withdrawal marks the target too", %{target: target, link: link} do
       mirror_for_link(link, source_uid: "source-uid-1", target_uid: "mirror-uid-1")
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :invalid_grant}
       end)
 

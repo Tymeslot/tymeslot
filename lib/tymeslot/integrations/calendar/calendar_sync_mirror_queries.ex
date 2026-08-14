@@ -118,6 +118,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   end
 
   @doc """
+  The mappings a teardown left behind on this link.
+
+  A `pending_delete` row is a placeholder the organiser has asked to be rid of
+  and the provider would not remove. It is the one thing still worth doing for a
+  link that is otherwise disabled, so the reconcile worker asks for exactly
+  these rather than diffing a link nobody wants written to.
+  """
+  @spec list_pending_delete_for_link(integer()) :: [CalendarSyncMirrorSchema.t()]
+  def list_pending_delete_for_link(sync_link_id) when is_integer(sync_link_id) do
+    CalendarSyncMirrorSchema
+    |> where([m], m.sync_link_id == ^sync_link_id and m.state == "pending_delete")
+    |> order_by([m], asc: m.id)
+    |> Repo.all()
+  end
+
+  @doc """
   Records a placeholder the engine has just written onto a target.
 
   Returning the changeset error rather than raising is what makes orphan

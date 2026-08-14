@@ -193,6 +193,25 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   end
 
   @doc """
+  Deletes an event from a named calendar.
+
+  `:calendar_id` is the one option that changes *where* the delete lands, and a
+  caller holding an event on a calendar other than the integration's default
+  booking calendar must pass it: the two-arity form resolves to that default,
+  which for such an event is the wrong calendar and answers 404. Kept as a
+  separate arity so every existing two-arity caller is untouched.
+  """
+  @spec delete_event(
+          String.t(),
+          pos_integer() | MeetingSchema.t() | {pos_integer(), pos_integer()} | nil,
+          keyword()
+        ) ::
+          :ok | {:error, term()}
+  def delete_event(uid, context, opts) when is_list(opts) do
+    behaviour_module().delete_event(uid, context, opts)
+  end
+
+  @doc """
   Get a single event by UID.
   """
   @spec get_event(String.t(), user_id() | nil) :: {:ok, map()} | {:error, :not_found | term()}

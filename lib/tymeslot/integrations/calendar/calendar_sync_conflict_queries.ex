@@ -36,6 +36,42 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries do
   end
 
   @doc """
+  The most recent conflict of one kind for one source on one link.
+
+  Exists for the kinds whose condition *persists* rather than describing a
+  moment — `occurrence_moved`, today. A moved occurrence stays moved: the
+  placeholder goes on expanding it at its original time until the organiser
+  moves it back or correction is built, so every sync of that calendar sees the
+  same divergence again. Without this the log would gain a row per sync for a
+  finding the organiser was told about once, and its row count — which is the
+  measure the kind exists to produce — would read as a frequency it is not.
+
+  `{:error, :not_found}` means nothing of that kind has been recorded for this
+  source, which the caller reads as "report it".
+
+  Scoped to `source_uid` as well as the link, because the question is always
+  about one event's history: another series' moves say nothing about this one's.
+  """
+  @spec last_of_kind(integer(), String.t(), String.t()) ::
+          {:ok, CalendarSyncConflictSchema.t()} | {:error, :not_found}
+  def last_of_kind(sync_link_id, source_uid, kind)
+      when is_integer(sync_link_id) and is_binary(source_uid) and is_binary(kind) do
+    latest =
+      CalendarSyncConflictSchema
+      |> where([c], c.sync_link_id == ^sync_link_id)
+      |> where([c], c.source_uid == ^source_uid)
+      |> where([c], c.kind == ^kind)
+      |> order_by([c], desc: c.occurred_at, desc: c.id)
+      |> limit(1)
+      |> Repo.one()
+
+    case latest do
+      nil -> {:error, :not_found}
+      conflict -> {:ok, conflict}
+    end
+  end
+
+  @doc """
   One link's conflict history, newest first.
 
   Ordered and capped rather than returned whole: the dashboard shows a recent
@@ -67,11 +103,17 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries do
   link: the panel renders an organiser's links together, and asking per row is
   the n+1 the link queries' preloads already exist to avoid.
 
-  The cap is applied per link after grouping rather than in SQL. A per-link
-  `LIMIT` needs a lateral join or a window function, and what it would save is
-  not worth it here — the cap exists to bound what a socket assign holds, not
-  what Postgres reads, and the rows are already narrowed to one organiser's
-  links by the ids the caller passes.
+  The cap is per link and applied in SQL, by numbering each link's rows in a
+  window partitioned on `sync_link_id` and keeping the first `limit` of each.
+  A plain `LIMIT` would be the wrong shape: it caps the result overall, so one
+  busy link could fill the whole allowance and leave a quieter one's section
+  blank on a dashboard that has divergences to show it.
+
+  The window is what the cap has to be, not merely a faster way to reach the
+  same answer. Narrowing to one organiser's links bounds nothing — retention
+  keeps 90 days, and grouping in Elixir after an unbounded `Repo.all()` loads
+  and sorts every one of those rows on every dashboard render to then discard
+  all but a handful per link.
 
   Links with no history are absent rather than present with an empty list, so a
   caller can render a section for exactly the keys it finds.
@@ -86,12 +128,27 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries do
   def list_for_links(sync_link_ids, opts) when is_list(sync_link_ids) do
     limit = Keyword.get(opts, :limit, @default_limit)
 
+    ranked =
+      CalendarSyncConflictSchema
+      |> where([c], c.sync_link_id in ^sync_link_ids)
+      |> select([c], %{
+        id: c.id,
+        rank:
+          over(row_number(),
+            partition_by: c.sync_link_id,
+            order_by: [desc: c.occurred_at, desc: c.id]
+          )
+      })
+
+    # Re-joined to the table rather than selecting every column through the
+    # window: the subquery carries only the ids that survive the cap, and the
+    # outer query loads whole schema structs for exactly those, so the caller
+    # still gets the rows it would have got before.
     CalendarSyncConflictSchema
-    |> where([c], c.sync_link_id in ^sync_link_ids)
+    |> join(:inner, [c], r in subquery(ranked), on: r.id == c.id and r.rank <= ^limit)
     |> order_by([c], desc: c.occurred_at, desc: c.id)
     |> Repo.all()
     |> Enum.group_by(& &1.sync_link_id)
-    |> Map.new(fn {sync_link_id, conflicts} -> {sync_link_id, Enum.take(conflicts, limit)} end)
   end
 
   @doc """

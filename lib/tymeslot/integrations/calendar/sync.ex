@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
+  alias Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
   alias Tymeslot.Meetings
 
@@ -126,13 +127,20 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   @doc """
   Side effects that must run after the cache upsert transaction commits:
   invalidating the availability cache, the PubSub broadcast, the
-  linked-meeting time-change reconciliation, and enqueueing cross-calendar
-  mirror write-backs.
+  linked-meeting time-change reconciliation, enqueueing cross-calendar mirror
+  write-backs, and reporting any moved occurrence of a mirrored series.
 
   Safe to call outside any transaction. Idempotent — availability cache
   invalidation, a PubSub re-broadcast, time-change reconciliation and a
   write-back enqueue (which collapses onto any pending job for the same event)
-  are all safe to repeat.
+  are all safe to repeat, and the moved-occurrence report compares against what
+  it last recorded rather than appending per call.
+
+  `calendar_events` is the **uncollapsed** batch: the dedup that reduces a
+  recurring series to one cache row happens inside `upsert_batch/1`, which has
+  already run by the time this is called. That makes this the only place a
+  per-instance property of a series can still be read, and
+  `SyncLink.MovedOccurrence` is the one thing that needs it.
   """
   @spec post_commit_reconciliation(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) :: :ok
   def post_commit_reconciliation(_integration, []), do: :ok
@@ -153,7 +161,17 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       Meetings.list_meetings_by_provider_event_ids(integration.id, provider_event_ids)
 
     Enum.each(calendar_events, &maybe_reconcile_time_change(integration, &1, meetings_by_id))
-    enqueue_mirror_write_backs(integration, calendar_events)
+
+    # One lookup, two consumers. Both ask the same question — which enabled
+    # links mirror out of this calendar — and both are asked after every sync of
+    # every calendar, so issuing it twice would double a query for an answer
+    # that cannot change in between. The enqueue needs the links to fan jobs
+    # out across; the moved-occurrence report needs them to decide whether any
+    # move here has a consequence at all.
+    links = CalendarSyncLinkQueries.list_enabled_for_source(integration.id)
+
+    enqueue_mirror_write_backs(integration, calendar_events, links)
+    MovedOccurrence.report(calendar_events, links)
     :ok
   end
 
@@ -167,20 +185,16 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   # It is the loop-prevention input: an event on this calendar that is itself a
   # placeholder must not spawn another, and asking per event would issue a query
   # per synced event on every sync of every calendar.
-  defp enqueue_mirror_write_backs(integration, calendar_events) do
-    case CalendarSyncLinkQueries.list_enabled_for_source(integration.id) do
-      [] ->
-        :ok
+  defp enqueue_mirror_write_backs(_integration, _calendar_events, []), do: :ok
 
-      links ->
-        mirrors = CalendarSyncMirrorQueries.mirror_uids_for_integrations([integration.id])
+  defp enqueue_mirror_write_backs(integration, calendar_events, links) do
+    mirrors = CalendarSyncMirrorQueries.mirror_uids_for_integrations([integration.id])
 
-        calendar_events
-        |> Enum.filter(&Eligibility.worth_enqueueing?(&1, mirrors))
-        |> Enum.each(fn event ->
-          Enum.each(links, &WriteBack.enqueue(&1.id, event.uid, :upsert))
-        end)
-    end
+    calendar_events
+    |> Enum.filter(&Eligibility.worth_enqueueing?(&1, mirrors))
+    |> Enum.each(fn event ->
+      Enum.each(links, &WriteBack.enqueue(&1.id, event.uid, :upsert))
+    end)
   end
 
   defp maybe_reconcile_time_change(
@@ -274,7 +288,48 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       end
     end)
 
+    enqueue_mirror_withdrawals(integration, refs)
+
     :ok
+  end
+
+  # The deletion counterpart of `enqueue_mirror_write_backs/3`, and the same
+  # rule applies: enqueue only, never a provider call. A source event vanishing
+  # has to withdraw the placeholder it caused on every calendar it was mirrored
+  # to, and doing that inline would put the *target's* latency inside the
+  # *source's* sync — a target that is slow or down could then stall an inbound
+  # sync it has nothing to do with. The Oban job absorbs that instead.
+  #
+  # It lives here rather than in `post_commit_reconciliation/2` because that
+  # function is the upsert path and a deletion never reaches it: every
+  # provider's deletion route — Google's cancelled events, Outlook's delta
+  # `@removed`, CalDAV's absent uids — funnels through this one primitive, so
+  # hooking it here covers all of them rather than three call sites that have
+  # to be kept in step. It is safe to enqueue from: no caller runs this inside
+  # a `Repo.transaction`. The CalDAV reconciler, the only path that wraps its
+  # cache writes in one, deliberately calls this *after* the commit.
+  #
+  # The link lookup is one query for the whole batch, not one per ref, and is
+  # skipped entirely for a calendar that is nobody's source — which is the
+  # common case.
+  defp enqueue_mirror_withdrawals(integration, refs) do
+    case CalendarSyncLinkQueries.list_enabled_for_source(integration.id) do
+      [] ->
+        :ok
+
+      links ->
+        # Only a uid can name a placeholder: the mirror's `source_uid` is the
+        # source event's uid, and the deterministic target uid is derived from
+        # it. Outlook's delta reports some removals with no iCalUID at all, and
+        # there is nothing to withdraw by in that case — the reconcile sweep
+        # remains the backstop.
+        refs
+        |> Enum.map(&Map.get(&1, :uid))
+        |> Enum.filter(&is_binary/1)
+        |> Enum.each(fn uid ->
+          Enum.each(links, &WriteBack.enqueue(&1.id, uid, :delete))
+        end)
+    end
   end
 
   defp delete_cached_event(integration_id, _provider_event_id, uid) when is_binary(uid) do

@@ -35,7 +35,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     |> assign(:preferences, prefs)
     |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
     |> assign(:video_integrations, video_integrations)
-    |> assign_mirror_uids(integrations)
     |> assign_calendar_appearances(user_id)
     |> check_staleness()
   end
@@ -48,11 +47,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   the organiser's own grid would double-draw every synchronised event beside its
   source, which is noise rather than information.
 
-  Loaded here, with the other visibility assigns, rather than in
-  `precompute_derived/1`: the answer depends only on which integrations are on
-  screen, and `precompute_derived/1` runs on every navigation, every inline
-  edit and every live cache update. Querying there would put a database round
-  trip in front of each of them.
+  Called from `load_events/1` rather than only from `load_integrations/1`, and
+  the coupling is the point: this set is a filter over the events that call
+  just fetched, so anything that reloads the events without reloading it hands
+  the filter a stale answer. That is not hypothetical — "Refresh calendars"
+  reloads events alone, which is precisely when a sync has just written the
+  placeholders the set is meant to know about, and the organiser watched their
+  own mirrors appear beside their sources.
+
+  Not moved into `precompute_derived/1`, which is the other candidate home:
+  that runs on every inline edit, every drag, and every live cache update, none
+  of which change the mirror set, and each would gain a database round trip.
+  `load_events/1` is already going to the database for the events themselves,
+  so this rides alongside as one further indexed lookup on
+  `calendar_sync_mirrors_target_uid_index`.
 
   The set is keyed on `{integration_id, uid}` from the mirrors table, never on
   `created_by_tymeslot`. That flag means "Tymeslot wrote this", which is equally
@@ -128,6 +136,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
     socket
     |> assign(:events, events)
+    |> assign_mirror_uids(integrations)
     |> precompute_derived()
   end
 

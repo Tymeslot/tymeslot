@@ -44,6 +44,25 @@ defmodule Tymeslot.Workers.SyncLinkReconcileSweepWorkerTest do
       assert swept_link_ids() == MapSet.new([link.id])
     end
 
+    test "still sweeps a disabled link whose teardown left placeholders behind" do
+      # Teardown disables the link *before* withdrawing, so a provider that
+      # refused the delete leaves exactly this: disabled, with mappings in
+      # `pending_delete` naming busy blocks still on someone's calendar.
+      # Filtering those links out removed them from the retry their own teardown
+      # depends on, stranding the orphan teardown exists to prevent.
+      %{link: link} = linked_pair()
+      {:ok, paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})
+
+      mirror_for_link(paused, source_uid: "left-behind", state: "pending_delete")
+
+      assert :ok = perform_job(SyncLinkReconcileSweepWorker, %{})
+
+      # Membership rather than equality: the fixture's own enabled link is due
+      # on its own account, and this is about the disabled one being reachable
+      # at all.
+      assert paused.id in swept_link_ids()
+    end
+
     test "skips a disabled link" do
       %{link: link} = linked_pair()
       {:ok, _paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})

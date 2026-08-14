@@ -145,7 +145,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         {:ok, %{provider_event_id: "orphan-pid"}}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, context, _opts ->
         send(test_pid, {:compensated, uid, context})
         :ok
       end)
@@ -172,7 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         {:ok, %{provider_event_id: "orphan-pid"}}
       end)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 
@@ -246,7 +246,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
       target_uid = Engine.target_uid_for(link.id, "source-uid-1")
       mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn uid, context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, context, _opts ->
         assert uid == target_uid
         assert context == {target.id, user.id}
         :ok
@@ -267,7 +267,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         target_uid: Engine.target_uid_for(link.id, "source-uid-1")
       )
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> {:error, :not_found} end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :not_found}
+      end)
 
       assert :ok == Engine.unmirror(link, "source-uid-1", user.id)
 
@@ -284,11 +286,77 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         target_uid: Engine.target_uid_for(link.id, "source-uid-1")
       )
 
-      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
         {:error, :service_unavailable}
       end)
 
       assert {:error, :service_unavailable} == Engine.unmirror(link, "source-uid-1", user.id)
+
+      assert {:ok, mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      assert mirror.state == "pending_delete"
+    end
+
+    test "a placeholder deleted on the target is written again, not abandoned", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      # The organiser sees an unexplained "Busy" block on their second calendar
+      # and deletes it. The source event is untouched, so the next pass still
+      # believes a placeholder exists and updates it — against an event the
+      # provider no longer has.
+      #
+      # Abandoning it there is the worst outcome available: the slot is bookable
+      # for the rest of the event's life while Tymeslot's own mapping insists it
+      # is covered, and nothing reads the state that records the failure. The
+      # source is still the truth, so the placeholder is recreated — the same
+      # update→create-on-404 recovery `Meetings.CalendarEventSync` performs.
+      mirror_for_link(link,
+        source_uid: "source-uid-1",
+        target_uid: Engine.target_uid_for(link.id, "source-uid-1"),
+        target_provider_event_id: "gone-from-the-target"
+      )
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
+        {:error, :not_found}
+      end)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        {:ok, %{provider_event_id: "recreated-pid"}}
+      end)
+
+      assert :ok == Engine.mirror(link, source_event(source), user.id)
+
+      assert {:ok, mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      assert mirror.state == "active"
+      assert mirror.target_provider_event_id == "recreated-pid"
+    end
+
+    test "a mirror being torn down is not rewritten by an ordinary sync", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      # The state a failed teardown leaves behind: a link removed or a calendar
+      # disconnected, whose provider delete did not land, with the sweep already
+      # retrying it. The source event is untouched, so the push path still
+      # enqueues an upsert for it.
+      mirror_for_link(link,
+        source_uid: "source-uid-1",
+        target_uid: Engine.target_uid_for(link.id, "source-uid-1"),
+        state: "pending_delete"
+      )
+
+      # No expectation set: reaching the provider at all fails this through
+      # verify_on_exit!. Rewriting the placeholder would undo a withdrawal that
+      # is still in progress, and the two paths would then fight — the sweep
+      # deleting while the push path rewrites.
+      assert {:discard, :mirror_pending_delete} ==
+               Engine.mirror(link, source_event(source), user.id)
 
       assert {:ok, mirror} =
                CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")

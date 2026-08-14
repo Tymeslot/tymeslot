@@ -146,15 +146,22 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   @spec call_delete_event(CalendarIntegrationSchema.t(), String.t()) ::
           :ok | {:error, atom(), String.t()}
-  def call_delete_event(integration, event_id) do
-    # Use the default booking calendar if set
-    calendar_id = integration.default_booking_calendar_id
+  def call_delete_event(integration, event_id), do: call_delete_event(integration, event_id, [])
 
-    if calendar_id do
-      api_module().delete_event(integration, calendar_id, event_id)
-    else
-      # Fallback to default API method for backward compatibility
-      api_module().delete_event(integration, event_id)
+  @doc """
+  Deletes an event, honouring a caller-supplied `:calendar_id`.
+
+  Outlook honours `:calendar_id` on create, so it can hold an event on a
+  calendar other than the default booking one — and such an event can only be
+  deleted from the calendar it lives on. The no-calendar fallback is kept for
+  integrations that never resolved a booking calendar at all.
+  """
+  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
+          :ok | {:error, atom(), String.t()}
+  def call_delete_event(integration, event_id, opts) do
+    case opts[:calendar_id] || integration.default_booking_calendar_id do
+      nil -> api_module().delete_event(integration, event_id)
+      calendar_id -> api_module().delete_event(integration, calendar_id, event_id)
     end
   end
 

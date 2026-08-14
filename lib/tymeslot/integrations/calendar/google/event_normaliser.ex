@@ -4,6 +4,21 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
 
   Handles field mapping, datetime parsing, visibility/transparency/status inference,
   attendee normalisation, recurrence rules, and Tymeslot-origin fingerprint detection.
+
+  ## `originalStartTime`, and why it is read at all
+
+  Moving one occurrence of a series does not edit the series. Google leaves the
+  master's RRULE untouched, adds no EXDATE, and instead returns a separate
+  exception instance with its own `id`, a `recurringEventId` pointing at the
+  master, and an `originalStartTime` recording where the occurrence used to be.
+  The master therefore cannot reveal a move — only the instance stream can, and
+  only through that one field.
+
+  Without it a moved instance is indistinguishable from an ordinary one, since
+  both carry a `recurringEventId` and a start time the rule may or may not
+  predict. It is mapped to `original_start_at`, which lives on the in-flight
+  struct and never reaches the cache; `CalendarEvent`'s moduledoc has the
+  reasoning, and `SyncLink.MovedOccurrence` is what reads it.
   """
 
   require Logger
@@ -65,6 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
         reminders: map_reminders(raw["reminders"]),
         colour: EventColour.from_google_color_id(raw["colorId"]),
         etag: raw["etag"],
+        original_start_at: parse_original_start(raw["originalStartTime"]),
         recurrence_rule: map_recurrence_rule(raw["recurrence"]),
         provider_metadata: Map.put(raw, "recurringEventId", raw["recurringEventId"]),
         created_by_tymeslot:
@@ -156,6 +172,34 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
   end
 
   defp parse_timing(_other), do: %{all_day: false, start_at: nil, end_at: nil}
+
+  # `parse_timing/1` above matches the start/end *pair* and answers with the
+  # whole timing map, so it cannot be reused for a lone value — hence this
+  # smaller twin. It shares that function's two rules, and for the same reasons:
+  # the `dateTime` branch shifts to UTC so the result is directly comparable
+  # with `start_at`, which is stored that way, and a `date` stays a `Date` so an
+  # all-day move is comparable with `start_date`.
+  #
+  # Every unparseable shape answers `nil` rather than raising. This runs inside
+  # a sync job over a whole calendar, and a marker that is strictly an
+  # observation must never be the reason an event — or the batch around it — is
+  # lost. Nil reads as "not known to have moved", which is the honest reading of
+  # a value that could not be understood.
+  defp parse_original_start(%{"dateTime" => value}) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, at, _offset} -> DateTime.shift_zone!(at, "Etc/UTC")
+      _error -> nil
+    end
+  end
+
+  defp parse_original_start(%{"date" => value}) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> date
+      _error -> nil
+    end
+  end
+
+  defp parse_original_start(_absent), do: nil
 
   defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}}) do
     case Timezones.sanitize(tz) do

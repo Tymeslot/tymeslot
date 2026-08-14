@@ -134,14 +134,35 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
       # Paused means no writes in either direction, and that includes the ones
       # this sweep would have produced. Matched before any work is done: a
       # disabled link's drift is not drift, it is the organiser's instruction.
-      {:ok, %CalendarSyncLinkSchema{enabled: false}} ->
-        {:discard, :link_disabled}
+      #
+      # Except when it is still holding placeholders down. Teardown disables the
+      # link *before* withdrawing them, so a provider that refused the delete
+      # leaves a disabled link whose busy blocks are still on someone's
+      # calendar — and discarding there would strand them for good, which is the
+      # orphan teardown exists to prevent. Those withdrawals are finished here;
+      # nothing else is, so a paused link still writes no new placeholder.
+      {:ok, %CalendarSyncLinkSchema{enabled: false} = link} ->
+        finish_withdrawals(link)
 
       {:ok, link} ->
         reconcile(link)
 
       {:error, :not_found} ->
         {:discard, :link_not_found}
+    end
+  end
+
+  # Only the teardown's unfinished business, never a fresh write. A mapping in
+  # `pending_delete` names a placeholder the organiser has already asked to be
+  # rid of; anything else on a paused link is left exactly as it is.
+  defp finish_withdrawals(link) do
+    case CalendarSyncMirrorQueries.list_pending_delete_for_link(link.id) do
+      [] ->
+        {:discard, :link_disabled}
+
+      mirrors ->
+        Enum.each(mirrors, &WriteBack.enqueue(link.id, &1.source_uid, :delete))
+        :ok
     end
   end
 
@@ -172,11 +193,20 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
 
     sources =
       events
-      |> Enum.filter(&Eligibility.mirror_source?(&1, mirrors))
+      |> Enum.filter(&Eligibility.mirror_source?(&1, mirrors, target_provider(link)))
       |> Map.new(&{&1.uid, &1})
 
     {MapSet.new(events, & &1.uid), sources}
   end
+
+  # Named for `Eligibility`, which needs it for one decision: whether a
+  # recurring source may be mirrored onto this link's target. Preloaded by
+  # `CalendarSyncLinkQueries.get/1`. A link whose association could not be
+  # loaded yields `nil`, which `Capability` treats as an unrecognised provider
+  # and so refuses a series — the same direction the write-back worker takes,
+  # and the one that leaves a wrong placeholder off the calendar.
+  defp target_provider(%{target_integration: %{provider: provider}}), do: provider
+  defp target_provider(_link), do: nil
 
   defp enqueue_missing_and_stale(link, sources, mappings) do
     by_uid = Map.new(mappings, &{&1.source_uid, &1})

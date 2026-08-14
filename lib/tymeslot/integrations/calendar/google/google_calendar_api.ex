@@ -239,7 +239,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
           {:ok, map()} | api_error()
   def get_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id) do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request(:get, "/calendars/#{calendar_id}/events/#{event_id}", token)
+      # Through the breaker, like every other Google request. This one is the
+      # easiest to leave out and the worst to: it is the series-master fetch,
+      # issued once per recurring source per link, so a calendar with fifty
+      # series on three links asks for a hundred and fifty masters in a sweep.
+      # Unwrapped, a 403 rate limit means the next sweep re-issues all of them
+      # at full rate against the quota that is already exhausted.
+      result =
+        CalendarCircuitBreaker.call(:google, fn ->
+          make_request(:get, "/calendars/#{calendar_id}/events/#{event_id}", token)
+        end)
+
+      # The breaker reports whether the *call* happened, so a request that
+      # completed and answered an error arrives wrapped as `{:ok, {:error, …}}`.
+      # Unwrapped here, as every other breaker-wrapped call in this module does,
+      # so callers keep seeing the provider's own answer rather than having to
+      # know a breaker is in the way.
+      case result do
+        {:ok, {:error, _reason, _message} = error} -> error
+        {:ok, {:error, _reason} = error} -> error
+        other -> other
+      end
     end)
   end
 
