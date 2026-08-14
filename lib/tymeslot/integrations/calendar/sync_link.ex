@@ -78,6 +78,60 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   end
 
   @doc """
+  Saves a whole grid of source→target cells at once.
+
+  The link matrix presents every ordered pair of the organiser's calendars
+  together, so a save is a diff against what is already configured rather than
+  a series of creates: cells newly ticked become links, cells cleared become
+  deletions, and — the rule the rest of this function exists to protect — cells
+  that did not move are not touched at all.
+
+  That last one is not an optimisation. Recreating an unchanged link means
+  deleting it first, and `delete_link/2` withdraws every placeholder it has
+  written from the provider on its way out. A save that rebuilt the whole grid
+  would therefore tear down and rewrite every mirror in the set, turning a
+  no-op into a burst of provider writes and leaving the organiser's other
+  calendars briefly empty of the busy blocks that are the entire point.
+
+  ## Why this is not a transaction
+
+  Every cell is validated before any cell is written, so an invalid pair
+  rejects the save whole rather than applying half of it. That check could not
+  be a `Repo.transaction` even if it were convenient: deletion runs
+  `Teardown.tear_down_link/2`, which deletes placeholders from Google, Outlook
+  or a CalDAV server, and holding a database transaction open across those
+  calls would tie up a pool connection for the length of a provider's
+  latency — the failure the sync path is carefully built to avoid.
+
+  Validation covers what the caller can forge: both ends of every pair must
+  belong to the acting user, and no cell may name one calendar twice. What it
+  cannot pre-empt is a provider refusing a withdrawal mid-save; a partial
+  result is reported honestly rather than rolled back, because the placeholders
+  already removed cannot be restored by a database rollback.
+
+  Cells are `{source_integration_id, target_integration_id}` tuples. Anything
+  already linked but absent from the list is deleted, which is what makes
+  clearing a row of the grid work.
+  """
+  @spec apply_matrix(integer(), [{integer(), integer()}]) ::
+          {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
+          | {:error, :not_found | :self_link | term()}
+  def apply_matrix(user_id, cells) when is_integer(user_id) and is_list(cells) do
+    desired = MapSet.new(cells)
+
+    with :ok <- validate_cells(user_id, desired) do
+      existing = existing_cells(user_id)
+
+      to_create = MapSet.difference(desired, MapSet.new(Map.keys(existing)))
+      to_delete = for {pair, link} <- existing, not MapSet.member?(desired, pair), do: link
+
+      with {:ok, created} <- create_cells(user_id, to_create) do
+        delete_cells(user_id, to_delete, created)
+      end
+    end
+  end
+
+  @doc """
   Edits an existing link.
 
   The target may move, so ownership is re-verified against the target the
@@ -154,6 +208,64 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   # `provider_for_owner/2` rather than `owned_by?/2` because the same query
   # answers ownership and yields the provider the changeset needs; the source
   # is only ever an ownership question, so it uses the cheaper predicate.
+  # Every id in the grid, checked once. A cell names two calendars and the same
+  # calendar appears in many cells, so the ids are collapsed to a set first —
+  # a 5×5 grid is 20 cells but only 5 distinct ownership questions.
+  defp validate_cells(user_id, desired) do
+    cond do
+      Enum.any?(desired, fn {source_id, target_id} -> source_id == target_id end) ->
+        {:error, :self_link}
+
+      not all_owned?(user_id, desired) ->
+        {:error, :not_found}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp all_owned?(user_id, desired) do
+    desired
+    |> Enum.flat_map(fn {source_id, target_id} -> [source_id, target_id] end)
+    |> MapSet.new()
+    |> Enum.all?(&CalendarIntegrationQueries.owned_by?(&1, user_id))
+  end
+
+  # Keyed by the pair so the diff is a set operation, and carrying the link
+  # itself so a deletion does not need a second lookup to find the row.
+  defp existing_cells(user_id) do
+    user_id
+    |> CalendarSyncLinkQueries.list_for_user()
+    |> Map.new(&{{&1.source_integration_id, &1.target_integration_id}, &1})
+  end
+
+  defp create_cells(user_id, to_create) do
+    Enum.reduce_while(to_create, {:ok, 0}, fn {source_id, target_id}, {:ok, count} ->
+      attrs = %{
+        "source_integration_id" => source_id,
+        "target_integration_id" => target_id
+      }
+
+      case create_link(user_id, attrs) do
+        {:ok, _link} -> {:cont, {:ok, count + 1}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  # Reports what was created even when a deletion fails: the creations already
+  # happened, and a caller told only about the error would redraw a grid that
+  # disagrees with the database.
+  defp delete_cells(user_id, to_delete, created) do
+    Enum.reduce_while(to_delete, {:ok, %{created: created, deleted: 0}}, fn link,
+                                                                            {:ok, summary} ->
+      case delete_link(user_id, link.id) do
+        {:ok, _link} -> {:cont, {:ok, %{summary | deleted: summary.deleted + 1}}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
   defp with_owned_pair(user_id, source_id, target_id, fun) do
     with true <- CalendarIntegrationQueries.owned_by?(source_id, user_id),
          {:ok, target_provider} <-

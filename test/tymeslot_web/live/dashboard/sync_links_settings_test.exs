@@ -9,6 +9,11 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
   the Calendars panel is *not* what came back — is the only thing that catches
   it. Storing a link is likewise not the feature: the panel showing it is, so
   every write assertion here reads the rendered output.
+
+  Creating a link is covered by `SyncLinksGridCreationTest`, split out to keep
+  this module under the line limit the analyser enforces. What remains here is
+  what happens to a link once it exists: the settings panel behind a selected
+  cell, pausing, deleting and the conflict log.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -20,11 +25,8 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.SyncLink
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
-  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
   setup :setup_dashboard_user
@@ -44,6 +46,14 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       is_active: true,
       calendar_list: calendars
     )
+  end
+
+  # The dot under a ticked cell is what opens that link's settings; there is no
+  # standalone form any more, so every per-link assertion starts here.
+  defp select_cell(view, link) do
+    view
+    |> element(~s([phx-click="select_sync_cell"][phx-value-id="#{link.id}"]))
+    |> render_click()
   end
 
   describe "tab wiring" do
@@ -93,225 +103,71 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
     end
   end
 
-  describe "creating a link through the form" do
-    setup %{user: user} do
-      source = google(user, "Work Google")
-
-      target =
-        google(user, "Personal Google", [
-          %{"id" => "personal@gmail.com", "name" => "Personal", "selected" => true}
-        ])
-
-      {:ok, source: source, target: target}
-    end
-
-    test "renders the new link and reaches no provider", ctx do
-      %{conn: conn, user: user, source: source, target: target} = ctx
-
-      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      refute has_element?(view, "#sync-link-form ~ * li[id^='sync-link-']")
-
-      # Choosing the target is what reveals its calendars, so the form is
-      # driven the way a browser drives it: change, then submit.
-      view
-      |> form("#sync-link-form", %{
-        "sync_link" => %{
-          "source_integration_id" => to_string(source.id),
-          "target_integration_id" => to_string(target.id)
-        }
-      })
-      |> render_change()
-
-      html =
-        view
-        |> form("#sync-link-form", %{
-          "sync_link" => %{
-            "source_integration_id" => to_string(source.id),
-            "target_integration_id" => to_string(target.id),
-            "target_calendar_id" => "personal@gmail.com"
-          }
-        })
-        |> render_submit()
-
-      # The panel repaints with the stored link, naming both ends.
-      assert html =~ "Work Google"
-      assert html =~ "Personal Google"
-
-      assert [link] = SyncLink.list_links(user.id)
-      assert link.source_integration_id == source.id
-      assert link.target_integration_id == target.id
-      assert link.target_calendar_id == "personal@gmail.com"
-
-      # Nothing was written to a calendar: mirroring is the engine's job, on
-      # its own schedule, and configuring a link must not touch a provider. No
-      # mirror row exists, so no placeholder was ever created.
-      assert Repo.aggregate(CalendarSyncMirrorSchema, :count) == 0
-    end
-
-    test "refuses a link onto a read-only subscription, however the id arrives", ctx do
-      %{conn: conn, user: user, source: source} = ctx
-
-      ics =
-        insert(:calendar_integration,
-          user: user,
-          provider: "ics_url",
-          name: "Team Feed",
-          is_active: true
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      # The picker never offers it, so this id can only arrive forged: pushed
-      # at the component's own event rather than chosen in the form.
-      html =
-        view
-        |> element("#sync-link-form")
-        |> render_submit(%{
-          "sync_link" => %{
-            "source_integration_id" => to_string(source.id),
-            "target_integration_id" => to_string(ics.id)
-          }
-        })
-
-      assert html =~ "read-only subscription"
-      assert SyncLink.list_links(user.id) == []
-    end
-
-    # The panel is translated; the changeset's messages have to be too, or a
-    # non-English organiser reads an English sentence inside an otherwise
-    # German page and cannot tell whether it came from Tymeslot or from their
-    # calendar provider. Two halves fail independently: the schema must carry
-    # an extracted msgid rather than a bare English literal, and the component
-    # must route it through the "errors" domain instead of assigning it raw.
-    test "refuses that link in the organiser's own language", ctx do
-      %{conn: conn, user: user, source: source} = ctx
-
-      # Set on the user rather than with `put_locale/2` in the test process:
-      # the dashboard's `AppLocaleHook` resolves the locale itself on mount,
-      # from the signed-in organiser's saved interface language, so this is the
-      # path a German organiser actually arrives by.
-      {:ok, user} = UserQueries.update_user_locale(user, "de")
-
-      ics =
-        insert(:calendar_integration,
-          user: user,
-          provider: "ics_url",
-          name: "Team Feed",
-          is_active: true
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      html =
-        view
-        |> element("#sync-link-form")
-        |> render_submit(%{
-          "sync_link" => %{
-            "source_integration_id" => to_string(source.id),
-            "target_integration_id" => to_string(ics.id)
-          }
-        })
-
-      # Asserted against the catalogue rather than a literal, so the assertion
-      # cannot drift from the translation that ships. Looked up in an explicit
-      # German scope: the locale the view resolved lives in the view's process,
-      # not this one.
-      translated =
-        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
-          Gettext.dgettext(
-            TymeslotWeb.Gettext,
-            "errors",
-            "is a read-only subscription and cannot receive mirrored events"
-          )
-        end)
-
-      refute translated == "is a read-only subscription and cannot receive mirrored events",
-             "the German catalogue has no translation for the read-only target message"
-
-      assert html =~ translated
-      refute html =~ "read-only subscription"
-    end
-
-    test "never offers a read-only subscription as a target", ctx do
-      %{conn: conn, user: user} = ctx
-
-      ics =
-        insert(:calendar_integration,
-          user: user,
-          provider: "ics_url",
-          name: "Team Feed",
-          is_active: true
-        )
-
-      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      # A source it may be — reading a feed is the one thing every provider can
-      # do — but never a target.
-      assert has_element?(view, "#sync-link-source option[value='#{ics.id}']")
-      refute has_element?(view, "#sync-link-target option[value='#{ics.id}']")
-    end
-  end
-
   describe "the generic-label tier" do
     setup %{user: user} do
       source = google(user, "Work Google")
       target = google(user, "Personal Google")
 
-      {:ok, source: source, target: target}
+      # Created straight through the context rather than by ticking the cell:
+      # grid creation has its own module, and what is under test here is the
+      # settings panel that opens once a link exists.
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{source.id, target.id}])
+      [link] = SyncLink.list_links(user.id)
+
+      {:ok, source: source, target: target, link: link}
     end
 
-    defp choose_tier(view, source, target, tier, extra \\ %{}) do
-      params =
-        Map.merge(
-          %{
-            "source_integration_id" => to_string(source.id),
-            "target_integration_id" => to_string(target.id),
-            "privacy_tier" => tier
-          },
-          extra
-        )
+    defp choose_tier(view, tier, extra \\ %{}) do
+      params = Map.merge(%{"privacy_tier" => tier}, extra)
 
-      form(view, "#sync-link-form", %{"sync_link" => params})
+      view
+      |> element("#sync-link-settings-form")
+      |> render_change(%{"sync_link" => params})
     end
 
     test "offers a label input only once that tier is chosen", ctx do
-      %{conn: conn, source: source, target: target} = ctx
+      %{conn: conn, link: link} = ctx
 
-      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      html = select_cell(view, link)
 
       # The default tier writes an opaque placeholder, which has no label to
       # ask for.
       refute html =~ ~s(name="sync_link[generic_label]")
 
-      html = view |> choose_tier(source, target, "busy_only") |> render_change()
+      html = choose_tier(view, "busy_only")
       refute html =~ ~s(name="sync_link[generic_label]")
 
-      html = view |> choose_tier(source, target, "generic_label") |> render_change()
+      html = choose_tier(view, "generic_label")
       assert html =~ ~s(name="sync_link[generic_label]")
 
       # Nor for the tier that copies the source's own title.
-      html = view |> choose_tier(source, target, "full_passthrough") |> render_change()
+      html = choose_tier(view, "full_passthrough")
       refute html =~ ~s(name="sync_link[generic_label]")
     end
 
     test "carries the typed label all the way onto the placeholder", ctx do
-      %{conn: conn, user: user, source: source, target: target} = ctx
+      %{conn: conn, user: user, link: link} = ctx
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      view |> choose_tier(source, target, "generic_label") |> render_change()
+      select_cell(view, link)
+      choose_tier(view, "generic_label")
 
       html =
         view
-        |> choose_tier(source, target, "generic_label", %{
-          "generic_label" => "Personal commitment"
+        |> element("#sync-link-settings-form")
+        |> render_submit(%{
+          "sync_link" => %{
+            "privacy_tier" => "generic_label",
+            "generic_label" => "Personal commitment"
+          }
         })
-        |> render_submit()
 
-      assert [link] = SyncLink.list_links(user.id)
-      assert link.privacy_tier == "generic_label"
-      assert link.generic_label == "Personal commitment"
+      assert [saved] = SyncLink.list_links(user.id)
+      assert saved.privacy_tier == "generic_label"
+      assert saved.generic_label == "Personal commitment"
 
       # Storing the label is not the feature: the placeholder carrying it is.
       # The payload is what a tool reading the target calendar actually sees,
@@ -324,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
         all_day: false
       }
 
-      payload = MirrorPayload.build(source_event, "target-uid", link)
+      payload = MirrorPayload.build(source_event, "target-uid", saved)
       assert payload.summary == "Personal commitment"
 
       # And the panel says so rather than describing a tier it did not store.
@@ -333,22 +189,28 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
 
     # The payload degrades a blank label to "Busy". That is the right last line
     # for a row written before this input existed, but it is the wrong answer
-    # for a form: the panel would go on saying "Shown with a generic label"
-    # over a placeholder that reads "Busy", which is the same false claim the
-    # tier shipped with. So the form refuses instead of quietly degrading.
+    # for a settings form: the panel would go on saying "Shown with a generic
+    # label" over a placeholder that reads "Busy", which is the same false
+    # claim the tier shipped with. So the form refuses instead of quietly
+    # degrading, and the link keeps the tier it already had.
     test "refuses to store that tier without a label", ctx do
-      %{conn: conn, user: user, source: source, target: target} = ctx
+      %{conn: conn, user: user, link: link} = ctx
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      view |> choose_tier(source, target, "generic_label") |> render_change()
+      select_cell(view, link)
+      choose_tier(view, "generic_label")
 
       html =
         view
-        |> choose_tier(source, target, "generic_label", %{"generic_label" => "   "})
-        |> render_submit()
+        |> element("#sync-link-settings-form")
+        |> render_submit(%{
+          "sync_link" => %{"privacy_tier" => "generic_label", "generic_label" => "   "}
+        })
 
-      assert SyncLink.list_links(user.id) == []
+      assert [unchanged] = SyncLink.list_links(user.id)
+      assert unchanged.privacy_tier == "busy_only"
+      assert is_nil(unchanged.generic_label)
       assert html =~ "label"
 
       # The typed values survive the refusal, so the organiser fixes one field
@@ -357,20 +219,25 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
     end
 
     test "leaves the other tiers free of that requirement", ctx do
-      %{conn: conn, user: user, source: source, target: target} = ctx
+      %{conn: conn, user: user, link: link} = ctx
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      view |> choose_tier(source, target, "busy_only") |> render_submit()
+      select_cell(view, link)
 
-      assert [link] = SyncLink.list_links(user.id)
-      assert link.privacy_tier == "busy_only"
-      assert is_nil(link.generic_label)
+      view
+      |> element("#sync-link-settings-form")
+      |> render_submit(%{"sync_link" => %{"privacy_tier" => "busy_only"}})
+
+      assert [saved] = SyncLink.list_links(user.id)
+      assert saved.privacy_tier == "busy_only"
+      assert is_nil(saved.generic_label)
     end
   end
 
   describe "the target calendar picker" do
-    test "is offered once the chosen target honours a calendar id", %{conn: conn, user: user} do
+    test "is offered once the selected link's target honours a calendar id", ctx do
+      %{conn: conn, user: user} = ctx
       source = google(user, "Work Google")
 
       target =
@@ -378,29 +245,24 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
           %{"id" => "personal@gmail.com", "name" => "Personal", "selected" => true}
         ])
 
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{source.id, target.id}])
+      [link] = SyncLink.list_links(user.id)
+
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      # Nothing to pick from until a target is named.
+      # Nothing to pick from until a link is selected: the pair is what decides
+      # whose calendars are on offer.
       refute html =~ ~s(name="sync_link[target_calendar_id]")
 
-      html =
-        view
-        |> form("#sync-link-form", %{
-          "sync_link" => %{
-            "source_integration_id" => to_string(source.id),
-            "target_integration_id" => to_string(target.id)
-          }
-        })
-        |> render_change()
+      html = select_cell(view, link)
 
       assert html =~ ~s(name="sync_link[target_calendar_id]")
+      assert html =~ ~s(id="sync-link-settings-calendar")
       assert html =~ "Personal"
     end
 
-    test "is hidden once the chosen target is CalDAV, which ignores it", %{
-      conn: conn,
-      user: user
-    } do
+    test "is hidden once the selected link's target is CalDAV, which ignores it", ctx do
+      %{conn: conn, user: user} = ctx
       source = google(user, "Work Google")
 
       caldav =
@@ -412,17 +274,12 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
           calendar_list: [%{"id" => "home", "name" => "Home", "selected" => true}]
         )
 
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{source.id, caldav.id}])
+      [link] = SyncLink.list_links(user.id)
+
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      html =
-        view
-        |> form("#sync-link-form", %{
-          "sync_link" => %{
-            "source_integration_id" => to_string(source.id),
-            "target_integration_id" => to_string(caldav.id)
-          }
-        })
-        |> render_change()
+      html = select_cell(view, link)
 
       # `caldav_based?/1` is atom-only and answers false for the DB string, so
       # a picker gated on it would stay visible here and record a choice the
@@ -468,9 +325,22 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       |> render_click()
 
       # The row is gone from the panel; the two calendars themselves are not,
-      # so they must still be offered by the form.
+      # so the grid must still offer them — as a row to mirror from and as a
+      # column to mirror onto — ready to be linked again.
       refute has_element?(view, "#sync-link-#{link.id}")
-      assert has_element?(view, "#sync-link-target option", "Personal Google")
+
+      assert has_element?(
+               view,
+               ~s(#sync-link-matrix-form tbody th[scope="row"]),
+               "Personal Google"
+             )
+
+      assert has_element?(
+               view,
+               ~s(#sync-link-matrix-form thead th[scope="col"]),
+               "Personal Google"
+             )
+
       assert SyncLink.list_links(user.id) == []
     end
 

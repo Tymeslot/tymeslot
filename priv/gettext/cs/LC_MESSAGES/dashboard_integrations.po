@@ -167,6 +167,7 @@ msgstr "Kalendáře"
 msgid "Cancel"
 msgstr "Zrušit"
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
@@ -1268,6 +1269,7 @@ msgstr[2] "Tuto integraci stále používá %{count} nadcházejících rezervac�
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr "Smazat i jejich místnosti pro schůzky. Účastníkům, kteří už mají odkaz pro připojení, přestane fungovat."
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{source} to %{target}"
@@ -1277,11 +1279,6 @@ msgstr "%{source} do %{target}"
 #, elixir-autogen, elixir-format
 msgid "Active links"
 msgstr "Aktivní propojení"
-
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Add a link"
-msgstr "Přidat propojení"
 
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -1296,20 +1293,10 @@ msgstr "Synchronizace kalendářů"
 
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Choose a calendar"
-msgstr "Vyberte kalendář"
-
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Connect a second calendar before setting up mirroring."
 msgstr "Před nastavením zrcadlení připojte druhý kalendář."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Create link"
-msgstr "Vytvořit propojení"
-
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Default calendar"
 msgstr "Výchozí kalendář"
@@ -1326,19 +1313,10 @@ msgstr "Obecný popisek"
 
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Mirror events from"
-msgstr "Zrcadlit události z"
-
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Mirror one calendar's events onto another as busy placeholders, so tools booking against the second calendar see the time as taken."
 msgstr "Zrcadlete události jednoho kalendáře do druhého jako zástupné bloky zaneprázdnění, aby nástroje rezervující v druhém kalendáři viděly čas jako obsazený."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Onto"
-msgstr "Do"
-
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Pause"
@@ -1349,12 +1327,13 @@ msgstr "Pozastavit"
 msgid "Remove"
 msgstr "Odebrat"
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Resume"
 msgstr "Obnovit"
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Show as"
 msgstr "Zobrazit jako"
@@ -1374,7 +1353,7 @@ msgstr "Zobrazeno jako zaneprázdněn, bez podrobností"
 msgid "Shown with the original title"
 msgstr "Zobrazeno s původním názvem"
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Target calendar"
 msgstr "Cílový kalendář"
@@ -1384,12 +1363,12 @@ msgstr "Cílový kalendář"
 msgid "That calendar could not be linked."
 msgstr "Tento kalendář se nepodařilo propojit."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
 #, elixir-autogen, elixir-format
 msgid "This provider always writes to its primary calendar."
 msgstr "Tento poskytovatel vždy zapisuje do svého hlavního kalendáře."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing was changed on the target calendar."
 msgstr "V cílovém kalendáři se nic nezměnilo."
@@ -1404,65 +1383,55 @@ msgstr "Nedávno vyřešené rozdíly"
 msgid "Refresh"
 msgstr "Obnovit"
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The busy block could not be written to the target calendar."
 msgstr "Blok zaneprázdnění se nepodařilo zapsat do cílového kalendáře."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The busy block was edited on the target calendar."
 msgstr "Blok zaneprázdnění byl upraven v cílovém kalendáři."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The busy block was removed."
 msgstr "Blok zaneprázdnění byl odstraněn."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The difference was resolved automatically."
 msgstr "Rozdíl byl vyřešen automaticky."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The original event and its busy block both changed."
 msgstr "Změnila se původní událost i její blok zaneprázdnění."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The original event was deleted while the placeholder was edited."
 msgstr "Původní událost byla smazána, zatímco se zástupný blok upravoval."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The original event was kept."
 msgstr "Byla zachována původní událost."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The two calendars differed."
 msgstr "Oba kalendáře se lišily."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The repeating busy block did not reflect cancelled occurrences at the time."
 msgstr "Opakující se blok zaneprázdnění tehdy nezohledňoval zrušené výskyty."
 
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
 #, elixir-autogen, elixir-format
 msgid "One occurrence of this repeating event was moved. The busy block still sits at its original time, and no busy block covers its new time — so that slot can be double-booked."
 msgstr "Jeden výskyt této opakující se události byl přesunut. Blok zaneprázdnění zůstává v původním čase a nový čas nepokrývá žádný blok — tento termín tak lze rezervovat dvakrát."
-
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Personal commitment"
-msgstr "Osobní závazek"
-
-#: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Placeholder title"
-msgstr "Název zástupného bloku"
 
 #: lib/tymeslot_web/live/dashboard/sync_links_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -1503,3 +1472,63 @@ msgstr "Cílový kalendář"
 #, elixir-autogen, elixir-format
 msgid "This link"
 msgstr "Toto propojení"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "Link grid"
+msgstr "Mřížka propojení"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "Mirror from"
+msgstr "Zrcadlit z"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "Save grid"
+msgstr "Uložit mřížku"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar is read-only and cannot receive mirrored events."
+msgstr "Tento kalendář je jen pro čtení a nemůže přijímat zrcadlené události."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "Tick a cell to mirror events from the calendar in that row onto the calendar in that column."
+msgstr "Zaškrtnutím pole zrcadlíte události kalendáře v daném řádku do kalendáře v daném sloupci."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "A calendar cannot mirror onto itself."
+msgstr "Kalendář nemůže zrcadlit sám na sebe."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "A greyed cell belongs to a read-only calendar, which can send but never receive. Click the dot under a ticked cell to configure that link."
+msgstr "Šedé pole patří kalendáři jen pro čtení, který může odesílat, ale nikdy přijímat. Kliknutím na tečku pod zaškrtnutým polem toto propojení nastavíte."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Busy"
+msgstr "Zaneprázdněn"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_matrix.ex
+#, elixir-autogen, elixir-format
+msgid "Configure this link"
+msgstr "Nastavit toto propojení"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Label"
+msgstr "Popisek"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Save settings"
+msgstr "Uložit nastavení"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/sync_link_settings_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Settings for this link"
+msgstr "Nastavení tohoto propojení"

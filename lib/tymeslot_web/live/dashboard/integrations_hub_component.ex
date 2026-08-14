@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Video
@@ -145,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
             severity: :warning,
             message:
               dgettext("dashboard_integrations", "%{name} needs reconnecting.",
-                name: integration.name
+                name: DisplayHelpers.integration_label(integration)
               )
           }
         ]
@@ -157,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
             severity: :warning,
             message:
               dgettext("dashboard_integrations", "%{name} stopped syncing.",
-                name: integration.name
+                name: DisplayHelpers.integration_label(integration)
               )
           }
         ]

@@ -67,6 +67,120 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   end
 
   @doc """
+  Names an integration in a way that survives a second account of the same
+  provider.
+
+  The `name` column cannot do this alone. Both OAuth helpers store a constant —
+  `"Google Calendar"` at `google_oauth_helper.ex`, `"Outlook Calendar"` at
+  `outlook_oauth_helper.ex` — and the onboarding wizard stores
+  `"CalDAV Calendar"` without ever showing a name field, so an organiser with
+  two Google accounts gets two rows that read identically everywhere a name is
+  rendered. The account they differ in was already stored at connect time; only
+  the display ignored it.
+
+  Composing here rather than writing a better `name` at connect time is
+  deliberate. Nothing records whether a name was chosen or generated — a rename
+  writes `name` and sets no flag — so a backfill would have to guess, and
+  guessing wrong overwrites something a person typed. Composing costs nothing at
+  rest, fixes rows already connected, and keeps `name` meaning "what the
+  organiser calls this" rather than a derived string that goes stale when an
+  account's email changes.
+
+  The qualifier differs by provider family because the families store different
+  things:
+
+  - OAuth (Google, Outlook) has `provider_account_email`, which is the account.
+  - The CalDAV family has `provider_account_id` as `base_url||username`. Only
+    the username is shown: the host is already implied by the provider's own
+    name, and the pair is long enough to crowd out the name in a dropdown.
+  - An ICS subscription's `provider_account_id` is a SHA-256 digest of the feed
+    URL — unique but unreadable — so its origin serves instead. Two feeds from
+    one host stay indistinguishable, which is why that form asks for a name.
+
+  A qualifier already present in the name is not repeated, so an organiser who
+  renamed a calendar to its own account address does not read it twice.
+  """
+  @spec integration_label(map()) :: String.t()
+  def integration_label(integration) do
+    name = integration_name(integration)
+
+    case qualifier(integration) do
+      nil -> name
+      qualifier -> join_label(name, qualifier)
+    end
+  end
+
+  defp integration_name(%{name: name}) when is_binary(name) do
+    case String.trim(name) do
+      "" -> fallback_name()
+      trimmed -> trimmed
+    end
+  end
+
+  defp integration_name(_integration), do: fallback_name()
+
+  defp fallback_name, do: dgettext("dashboard_common", "Calendar")
+
+  # An em dash rather than parentheses: the qualifier is a second fact about the
+  # calendar, not an aside about the first, and it reads the same in every
+  # locale this ships in.
+  defp join_label(name, qualifier) do
+    if repeats?(name, qualifier) do
+      name
+    else
+      "#{name} — #{qualifier}"
+    end
+  end
+
+  # Whole words, not a substring: a username of "al" inside "Personal" is a
+  # coincidence, and treating it as a repetition would drop the qualifier from
+  # precisely the calendars that need telling apart.
+  defp repeats?(name, qualifier) do
+    qualifier = String.downcase(qualifier)
+
+    name
+    |> String.downcase()
+    |> String.split(~r/[^\w.@+-]+/u, trim: true)
+    |> Enum.member?(qualifier)
+  end
+
+  defp qualifier(%{provider_account_email: email}) when is_binary(email) and email != "",
+    do: email
+
+  defp qualifier(integration) do
+    if subscription?(Map.get(integration, :provider)) do
+      host_only(Map.get(integration, :base_url))
+    else
+      caldav_username(Map.get(integration, :provider_account_id))
+    end
+  end
+
+  defp subscription?(provider), do: provider in ["ics_url", :ics_url]
+
+  # `base_url` already holds only the feed's origin for a subscription; the
+  # scheme is noise in a picker, so only the host survives.
+  defp host_only(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{host: host} when is_binary(host) and host != "" -> host
+      _no_host -> nil
+    end
+  end
+
+  defp host_only(_url), do: nil
+
+  # `nil` for anything without the `||` separator: an OAuth `provider_account_id`
+  # is an opaque subject identifier and an ICS one is a digest, and showing
+  # either would be worse than showing nothing.
+  defp caldav_username(account_id) when is_binary(account_id) do
+    case String.split(account_id, "||", parts: 2) do
+      [_base_url, username] when username != "" -> username
+      _no_separator -> nil
+    end
+  end
+
+  defp caldav_username(_account_id), do: nil
+
+  @doc """
   Helper to extract a friendly display name from a calendar.
   Handles the case where Radicale calendars may have UUIDs as names.
   """

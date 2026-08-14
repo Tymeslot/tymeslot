@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
           </div>
           <ProviderIcon.provider_icon provider={integration.provider} type="calendar" size="mini" />
           <span class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide truncate">
-            {integration.name}
+            {DisplayHelpers.integration_label(integration)}
           </span>
         </div>
 

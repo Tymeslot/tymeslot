@@ -52,6 +52,27 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
       assert Eligibility.mirror_source?(event([]), mirrors),
              "a mirror living on a different integration must not disqualify this event"
     end
+
+    test "a placeholder stays a leaf however many calendars mirror into its own" do
+      # The link matrix lets one calendar receive from every other, so a
+      # calendar can hold placeholders originating from four sources at once.
+      # The rule is a membership test on `{integration_id, uid}` and carries no
+      # notion of how many links exist, but the fan-out case is what the grid
+      # makes easy to build and a regression here is unbounded rather than
+      # cosmetic: a placeholder that mirrored onward would generate events
+      # until a provider quota stopped it.
+      mirrors =
+        MapSet.new(for source <- 1..4, do: {@integration_id, "from-calendar-#{source}"})
+
+      for source <- 1..4 do
+        refute Eligibility.mirror_source?(event(uid: "from-calendar-#{source}"), mirrors),
+               "a placeholder from calendar #{source} must not mirror onward"
+      end
+
+      # An organiser's own event on that same crowded calendar still mirrors
+      # out — the fan-in must not disable the calendar as a source.
+      assert Eligibility.mirror_source?(event(uid: "my-own-meeting"), mirrors)
+    end
   end
 
   describe "mirror_source?/3 — scoping rules" do

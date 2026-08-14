@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -48,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.CalendarListPanel do
         >
         </div>
         <span class="text-token-sm font-semibold text-tymeslot-700 truncate">
-          {integration.name}
+          {DisplayHelpers.integration_label(integration)}
         </span>
       </label>
 
