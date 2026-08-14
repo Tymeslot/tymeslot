@@ -285,3 +285,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your setup checklist"
 msgstr "Ваш список налаштування"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Availability is now built from named schedules - office hours, evening consults, weekend intensives - and every meeting type follows the one you choose. Keep up to five, each with its own hours, breaks and booking rules; anything you don't assign follows your default schedule."
+msgstr "Тепер доступність будується на іменованих розкладах — офісні години, вечірні консультації, вихідні інтенсиви — і кожен тип зустрічі йде за тим, який ви оберете. Тримайте до п'яти розкладів, кожен із власними годинами, перервами та правилами бронювання; усе, що ви не призначите, використовуватиме ваш типовий розклад."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Give every meeting type its own hours"
+msgstr "Дайте кожному типу зустрічі власні години"

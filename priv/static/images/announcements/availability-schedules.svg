@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="Named availability schedules, each meeting type follows the one you choose">
+  <defs>
+    <linearGradient id="as-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="as-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#as-bg)"/>
+
+  <!-- schedules card: a row of named schedule tabs, one marked as the default -->
+  <g filter="url(#as-shadow)">
+    <rect x="48" y="36" width="272" height="168" rx="18" fill="#ffffff"/>
+  </g>
+  <rect x="68" y="54" width="88" height="8" rx="4" fill="#cbd5e1"/>
+
+  <!-- tab 1: the default schedule, solid teal with a "default" badge -->
+  <rect x="68" y="72" width="72" height="32" rx="16" fill="#0d9488"/>
+  <circle cx="84" cy="88" r="5" fill="#ffffff"/>
+  <rect x="96" y="85" width="32" height="6" rx="3" fill="#ffffff" opacity="0.9"/>
+  <circle cx="140" cy="72" r="6" fill="#ffffff" stroke="#0d9488" stroke-width="1.5"/>
+  <path d="M137 72 l2 2 l4 -4" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- tab 2: an evening-consults schedule, inactive -->
+  <rect x="148" y="72" width="72" height="32" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <circle cx="164" cy="88" r="5" fill="#6366f1"/>
+  <rect x="176" y="85" width="32" height="6" rx="3" fill="#cbd5e1"/>
+
+  <!-- tab 3: a weekend-intensives schedule, inactive -->
+  <rect x="228" y="72" width="72" height="32" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <circle cx="244" cy="88" r="5" fill="#f59e0b"/>
+  <rect x="256" y="85" width="32" height="6" rx="3" fill="#cbd5e1"/>
+
+  <line x1="68" y1="120" x2="300" y2="120" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- working hours for the selected (default) schedule -->
+  <rect x="68" y="142" width="232" height="24" rx="8" fill="#f0fdfa"/>
+  <rect x="68" y="142" width="6" height="24" rx="3" fill="#0d9488"/>
+  <rect x="84" y="151" width="44" height="6" rx="3" fill="#5eead4"/>
+  <rect x="136" y="151" width="70" height="6" rx="3" fill="#99f6e4"/>
+  <circle cx="286" cy="154" r="4" fill="#ccfbf1" stroke="#0d9488" stroke-width="1"/>
+
+  <rect x="68" y="172" width="232" height="24" rx="8" fill="#f0fdfa"/>
+  <rect x="68" y="172" width="6" height="24" rx="3" fill="#0d9488"/>
+  <rect x="84" y="181" width="56" height="6" rx="3" fill="#5eead4"/>
+  <rect x="148" y="181" width="54" height="6" rx="3" fill="#99f6e4"/>
+
+  <!-- meeting types card: each type carries a chip naming the schedule it follows -->
+  <g filter="url(#as-shadow)">
+    <rect x="352" y="36" width="240" height="168" rx="18" fill="#ffffff"/>
+  </g>
+  <rect x="372" y="54" width="96" height="8" rx="4" fill="#cbd5e1"/>
+
+  <!-- meeting type 1: follows the default (teal) schedule -->
+  <rect x="372" y="72" width="200" height="34" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <rect x="384" y="82" width="60" height="7" rx="3.5" fill="#cbd5e1"/>
+  <rect x="384" y="93" width="40" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="502" y="80" width="62" height="18" rx="9" fill="#ccfbf1"/>
+  <circle cx="512" cy="89" r="4" fill="#0d9488"/>
+  <rect x="520" y="86" width="34" height="5" rx="2.5" fill="#5eead4"/>
+
+  <!-- meeting type 2: follows the evening-consults (indigo) schedule -->
+  <rect x="372" y="114" width="200" height="34" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <rect x="384" y="124" width="60" height="7" rx="3.5" fill="#cbd5e1"/>
+  <rect x="384" y="135" width="40" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="502" y="122" width="62" height="18" rx="9" fill="#e0e7ff"/>
+  <circle cx="512" cy="131" r="4" fill="#6366f1"/>
+  <rect x="520" y="128" width="34" height="5" rx="2.5" fill="#a5b4fc"/>
+
+  <!-- meeting type 3: also follows the weekend-intensives (amber) schedule -->
+  <rect x="372" y="156" width="200" height="34" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <rect x="384" y="166" width="60" height="7" rx="3.5" fill="#cbd5e1"/>
+  <rect x="384" y="177" width="40" height="5" rx="2.5" fill="#e2e8f0"/>
+  <rect x="502" y="164" width="62" height="18" rx="9" fill="#fef3c7"/>
+  <circle cx="512" cy="173" r="4" fill="#f59e0b"/>
+  <rect x="520" y="170" width="34" height="5" rx="2.5" fill="#fcd34d"/>
+</svg>
