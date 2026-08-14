@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar.Reminder
+
   attr :reminders, :list, default: []
   attr :myself, :any, required: true
   attr :add_event, :string, required: true
@@ -95,17 +97,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
 
   @doc """
   Returns a human-readable label for a reminder, e.g. "Notification 10 minutes before".
+
+  Reads through `Reminder`, so a raw string-keyed reminder straight out of the
+  JSONB cache column labels the same as a canonical atom-keyed one. Rendering is
+  the last place that should fail on a shape: a mislabelled reminder is a far
+  cheaper outcome than a crashed calendar.
   """
   @spec reminder_label(map()) :: String.t()
-  def reminder_label(%{method: method, minutes_before: minutes}) do
+  def reminder_label(%{} = reminder) do
     dgettext("dashboard_calendar_events", "%{method} %{minutes}",
-      method: method_label(method),
-      minutes: minutes_label(minutes)
+      method: method_label(Reminder.method(reminder)),
+      minutes: minutes_label(Reminder.minutes_before(reminder))
     )
   end
 
   defp method_label(:email), do: dgettext("dashboard_calendar_events", "Email")
   defp method_label(_popup_or_other), do: dgettext("dashboard_calendar_events", "Notification")
+
+  # A provider alarm whose trigger we could not parse reaches the cache without
+  # a lead time. Say so rather than inventing one.
+  defp minutes_label(minutes) when not is_integer(minutes),
+    do: dgettext("dashboard_calendar_events", "before the event")
 
   defp minutes_label(1440), do: dgettext("dashboard_calendar_events", "1 day before")
   defp minutes_label(60), do: dgettext("dashboard_calendar_events", "1 hour before")

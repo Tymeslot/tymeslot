@@ -1970,6 +1970,7 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your vote is needed"
 msgstr ""
+
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has moved your meeting."

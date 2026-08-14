@@ -166,7 +166,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
   end
 
   describe "clearing needs_reauth on reconnect" do
-    test "update/2 with fresh credentials clears the flag" do
+    setup do
       integration =
         insert(:calendar_integration,
           provider: "caldav",
@@ -174,8 +174,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
           needs_reauth: true
         )
 
+      %{integration: integration}
+    end
+
+    test "update_credentials/2 clears the flag", %{integration: integration} do
       {:ok, reconnected} =
-        CalendarIntegrationQueries.update(integration, %{
+        CalendarIntegrationQueries.update_credentials(integration, %{
           username: "user@example.com",
           password: "new-password"
         })
@@ -183,14 +187,27 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
       refute reconnected.needs_reauth
     end
 
-    test "update/2 without credential changes leaves the flag intact" do
-      integration =
-        insert(:calendar_integration,
-          provider: "caldav",
-          is_active: true,
-          needs_reauth: true
-        )
+    test "update/2 leaves the flag intact even when it writes credentials", %{
+      integration: integration
+    } do
+      # The regression this guards: credentials are encrypted with a fresh
+      # nonce per write, so any update that touches one produces a changed
+      # ciphertext whether or not the credential itself changed. Clearing the
+      # flag on that signal meant the hourly background token refresh silently
+      # un-flagged integrations that were broken for unrelated reasons, putting
+      # them straight back into the sync sweep.
+      {:ok, refreshed} =
+        CalendarIntegrationQueries.update(integration, %{
+          username: "user@example.com",
+          password: "new-password"
+        })
 
+      assert refreshed.needs_reauth
+    end
+
+    test "update/2 without credential changes leaves the flag intact", %{
+      integration: integration
+    } do
       {:ok, renamed} =
         CalendarIntegrationQueries.update(integration, %{name: "Renamed only"})
 

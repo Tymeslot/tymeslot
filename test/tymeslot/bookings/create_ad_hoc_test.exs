@@ -167,5 +167,48 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       params = %{params | title: ""}
       assert {:error, _reason} = CreateAdHoc.execute(params)
     end
+
+    test "rejects the organiser booking themselves as the guest", %{
+      base_params: params,
+      user: user
+    } do
+      params = %{params | attendee_email: user.email}
+
+      assert {:error, "The guest email must differ from your own address"} =
+               CreateAdHoc.execute(params)
+    end
+
+    test "rejects self-booking regardless of case or surrounding whitespace", %{
+      base_params: params,
+      user: user
+    } do
+      params = %{params | attendee_email: "  #{String.upcase(user.email)}  "}
+
+      assert {:error, "The guest email must differ from your own address"} =
+               CreateAdHoc.execute(params)
+    end
+
+    test "a rejected self-booking creates no meeting and schedules no email", %{
+      base_params: params,
+      user: user
+    } do
+      before_count = Repo.aggregate(MeetingSchema, :count)
+
+      assert {:error, _reason} = CreateAdHoc.execute(%{params | attendee_email: user.email})
+
+      assert Repo.aggregate(MeetingSchema, :count) == before_count
+      refute_enqueued(worker: Tymeslot.Workers.EmailWorker)
+    end
+
+    test "still allows a guest address that merely resembles the organiser's", %{
+      base_params: params,
+      user: user
+    } do
+      [local, domain] = String.split(user.email, "@", parts: 2)
+      params = %{params | attendee_email: "#{local}+guest@#{domain}"}
+
+      assert {:ok, meeting} = CreateAdHoc.execute(params)
+      assert meeting.attendee_email == "#{local}+guest@#{domain}"
+    end
   end
 end

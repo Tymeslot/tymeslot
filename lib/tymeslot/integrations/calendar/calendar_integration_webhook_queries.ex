@@ -289,12 +289,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   # Private helpers
   # ---------------------------------------------------------------------------
 
+  # `needs_reauth` is excluded for the same reason as in
+  # `list_unregistered_webhook_integrations/2`: renewing a channel for an
+  # integration awaiting reconnection re-runs a registration that cannot
+  # succeed until its owner acts. Without this filter a flagged integration
+  # stayed eligible here, so the daily run kept renewing channels against a
+  # calendar that no longer existed.
   defp list_expiring_webhook_integrations(provider, id_field, expires_at_field, hours_ahead) do
     threshold = DateTime.add(DateTime.utc_now(), hours_ahead, :hour)
 
     CalendarIntegrationSchema
     |> where([c], c.provider == ^provider)
     |> where([c], c.is_active == true)
+    |> where([c], c.needs_reauth == false)
     |> where([c], not is_nil(field(c, ^id_field)))
     |> where([c], field(c, ^expires_at_field) < ^threshold)
     |> order_by([c], asc: field(c, ^expires_at_field))

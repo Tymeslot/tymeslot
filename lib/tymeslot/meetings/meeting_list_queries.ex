@@ -282,6 +282,25 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
+  Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`
+  window, ordered by start time.
+
+  "Live" means the slot currently occupies the calendar: an occupying status
+  and not voided by a pending reschedule request. Past bookings inside the
+  window are included — the calendar grid shows history as well as what is
+  ahead.
+  """
+  @spec list_for_organizer_in_range(pos_integer(), DateTime.t(), DateTime.t()) :: [Meeting.t()]
+  def list_for_organizer_in_range(organizer_user_id, %DateTime{} = from_utc, %DateTime{} = to_utc) do
+    Meeting
+    |> MeetingState.where_slot_live()
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> where([m], m.start_time < ^to_utc and m.end_time > ^from_utc)
+    |> order_by_start_asc()
+    |> Repo.all()
+  end
+
+  @doc """
   Get upcoming meetings for a specific user with proper database filtering.
   Replaces the N+1 pattern of loading all meetings and filtering in memory.
   """

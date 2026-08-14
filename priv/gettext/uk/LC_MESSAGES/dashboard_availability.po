@@ -390,6 +390,7 @@ msgid "Duration must be greater than 0 minutes"
 msgstr "Тривалість має бути більшою за 0 хвилин"
 
 #: lib/tymeslot/availability/input_validation.ex
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
 msgstr "Час завершення має бути після часу початку"
@@ -413,3 +414,24 @@ msgstr "Час має бути рядком"
 #, elixir-autogen, elixir-format
 msgid "Time must be in HH:MM format (e.g., 09:30)"
 msgstr "Час має бути у форматі ГГ:ХХ (наприклад, 09:30)"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break could not be saved"
+msgstr "Не вдалося зберегти перерву"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break must end within this day's working hours"
+msgstr "Перерва має завершуватися в межах робочого часу цього дня"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break must start within this day's working hours"
+msgstr "Перерва має починатися в межах робочого часу цього дня"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "This break overlaps an existing break"
+msgstr "Ця перерва накладається на наявну перерву"

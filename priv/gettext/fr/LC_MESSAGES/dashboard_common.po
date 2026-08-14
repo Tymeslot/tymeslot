@@ -40,8 +40,7 @@ msgid "Availability"
 msgstr "Disponibilités"
 
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Calendrier"
@@ -50,11 +49,6 @@ msgstr "Calendrier"
 #, elixir-autogen, elixir-format
 msgid "Close sidebar"
 msgstr "Fermer la barre latérale"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Connect a calendar or video provider to finish setup"
-msgstr "Connectez un calendrier ou un fournisseur de visioconférence pour terminer la configuration"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -94,6 +88,7 @@ msgid "Meetings"
 msgstr "Réunions"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Aperçu"
@@ -108,7 +103,6 @@ msgstr "Pro"
 msgid "Profile"
 msgstr "Profil"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
@@ -563,3 +557,18 @@ msgstr "Oui"
 #, elixir-autogen, elixir-format
 msgid "e.g., Team sync"
 msgstr "ex. : point d'équipe"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar and a video provider to finish setup"
+msgstr "Connectez un calendrier et un fournisseur de visioconférence pour terminer la configuration"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to finish setup"
+msgstr "Connectez un calendrier pour terminer la configuration"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a video provider to finish setup"
+msgstr "Connectez un fournisseur de visioconférence pour terminer la configuration"

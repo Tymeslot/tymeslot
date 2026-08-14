@@ -192,7 +192,7 @@ defmodule Tymeslot.Integrations.VideoTest do
 
       assert {:ok, _updated} =
                Video.update_integration(user.id, integration.id, %{
-                 api_key_encrypted: "new-encrypted-key"
+                 api_key: "new-key"
                })
 
       # Health row is reset to a healthy baseline.

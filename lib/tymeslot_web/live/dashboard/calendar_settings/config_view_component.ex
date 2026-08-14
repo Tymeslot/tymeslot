@@ -214,6 +214,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
     send(self(), {:integration_added, :calendar})
     Flash.info(dgettext("dashboard_calendar_settings", "Calendar integration added successfully"))
     close_modal()
+
+    # Stays on the integrations tab on purpose: this is a settings context, and
+    # the organiser usually has more to do here (pick which calendars sync,
+    # rename the account, add a second one). The OAuth return path is the one
+    # that lands on the calendar, since that flow already left the app.
     {:noreply, reset_form_state(socket)}
   end
 

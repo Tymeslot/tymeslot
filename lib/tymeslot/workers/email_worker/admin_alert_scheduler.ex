@@ -96,6 +96,20 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
     handle_insert_result(result, category, args["alert_hash"])
   end
 
+  # A uniqueness conflict comes back as `{:ok, job}` carrying `conflict?: true`,
+  # not as an insert error — Oban returns the job already holding the slot.
+  # Matching it here keeps the logs honest: without this clause every
+  # deduplicated alert still logged "scheduled", so a worker failing on a loop
+  # looked like it was emailing an operator each cycle when it was not.
+  defp handle_insert_result({:ok, %Oban.Job{conflict?: true}}, category, alert_hash) do
+    Logger.debug("Admin alert email already pending, deduplicated",
+      category: category,
+      alert_hash: alert_hash
+    )
+
+    :ok
+  end
+
   defp handle_insert_result({:ok, _job}, category, _hash) do
     Logger.info("Admin alert email scheduled", category: category)
     :ok

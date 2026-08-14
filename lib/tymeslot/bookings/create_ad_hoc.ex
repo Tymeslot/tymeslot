@@ -39,16 +39,22 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   @spec execute(params()) ::
           {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, String.t() | :time_conflict}
   def execute(params) do
-    with :ok <- validate(params) do
+    # The organiser's details are resolved once and threaded through: validation
+    # needs the organiser email to reject self-booking, and the meeting attrs
+    # need all three fields. Looking them up twice would risk the check and the
+    # stored `organizer_email` disagreeing.
+    organizer = get_organizer_details(params.organizer_user_id)
+
+    with :ok <- validate(params, organizer) do
       guest_emails = params[:guest_emails] || []
 
       params
-      |> build_meeting_attrs()
+      |> build_meeting_attrs(organizer)
       |> run_transaction(guest_emails)
     end
   end
 
-  defp validate(params) do
+  defp validate(params, {_org_name, org_email, _org_username}) do
     cond do
       blank?(params[:title]) ->
         {:error, "Title is required"}
@@ -59,6 +65,9 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       blank?(params[:attendee_email]) ->
         {:error, "Attendee email is required"}
 
+      same_address?(params[:attendee_email], org_email) ->
+        {:error, "The guest email must differ from your own address"}
+
       DateTime.compare(params.end_time, params.start_time) != :gt ->
         {:error, "End time must be after start time"}
 
@@ -67,13 +76,26 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     end
   end
 
+  # Booking yourself as your own guest produces a meeting whose organiser and
+  # attendee are one person: both confirmation emails land in the same inbox,
+  # and the cancel/reschedule links are addressed to the organiser as if they
+  # were the guest. Compared case-insensitively, since addresses are not
+  # case-sensitive in the part that matters here.
+  defp same_address?(attendee_email, org_email)
+       when is_binary(attendee_email) and is_binary(org_email) do
+    normalise_address(attendee_email) == normalise_address(org_email)
+  end
+
+  defp same_address?(_attendee_email, _org_email), do: false
+
+  defp normalise_address(email), do: email |> String.trim() |> String.downcase()
+
   defp blank?(nil), do: true
   defp blank?(s) when is_binary(s), do: String.trim(s) == ""
   defp blank?(_other), do: false
 
-  defp build_meeting_attrs(params) do
+  defp build_meeting_attrs(params, {org_name, org_email, org_username}) do
     uid = UUID.generate()
-    {org_name, org_email, org_username} = get_organizer_details(params.organizer_user_id)
     duration = DateTime.diff(params.end_time, params.start_time, :minute)
 
     %{

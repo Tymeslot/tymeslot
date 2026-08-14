@@ -40,8 +40,7 @@ msgid "Availability"
 msgstr "Доступність"
 
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Календар"
@@ -50,11 +49,6 @@ msgstr "Календар"
 #, elixir-autogen, elixir-format
 msgid "Close sidebar"
 msgstr "Закрити бічну панель"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Connect a calendar or video provider to finish setup"
-msgstr "Підключіть календар або сервіс відеозв'язку, щоб завершити налаштування"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -94,6 +88,7 @@ msgid "Meetings"
 msgstr "Зустрічі"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Огляд"
@@ -108,7 +103,6 @@ msgstr "Pro"
 msgid "Profile"
 msgstr "Профіль"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
@@ -567,3 +561,18 @@ msgstr "Так"
 #, elixir-autogen, elixir-format
 msgid "e.g., Team sync"
 msgstr "напр., зустріч команди"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar and a video provider to finish setup"
+msgstr "Підключіть календар і сервіс відеозв'язку, щоб завершити налаштування"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to finish setup"
+msgstr "Підключіть календар, щоб завершити налаштування"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a video provider to finish setup"
+msgstr "Підключіть сервіс відеозв'язку, щоб завершити налаштування"

@@ -170,13 +170,31 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     :teams_user_id_encrypted
   ]
 
+  # The virtual counterparts callers actually write. Derived from the encrypted
+  # list so the two cannot drift: `attrs` carry `:api_key`, never
+  # `:api_key_encrypted`, which only exists after `encrypt_credentials/1` runs.
+  @credential_fields Enum.map(@encrypted_credential_fields, fn field ->
+                       field
+                       |> Atom.to_string()
+                       |> String.replace_suffix("_encrypted", "")
+                       |> String.to_atom()
+                     end)
+
   @doc """
   Returns the list of encrypted credential field atoms on this schema. Used by
-  `decryption_status/1` and `VideoIntegrationQueries.maybe_clear_needs_reauth/1`
-  so the authoritative list lives in one place.
+  `decryption_status/1` so the authoritative list lives in one place.
   """
   @spec encrypted_credential_fields() :: [atom()]
   def encrypted_credential_fields, do: @encrypted_credential_fields
+
+  @doc """
+  Returns the virtual credential field atoms a caller supplies in `attrs`.
+
+  Use this when deciding whether an update carries credentials the owner just
+  supplied; the encrypted names never appear in caller-supplied attrs.
+  """
+  @spec credential_fields() :: [atom()]
+  def credential_fields, do: @credential_fields
 
   @doc """
   Reports whether any encrypted credential on the integration fails to decrypt

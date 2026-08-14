@@ -1976,6 +1976,7 @@ msgstr "Голосування щодо %{title} завершено"
 #, elixir-autogen, elixir-format
 msgid "Your vote is needed"
 msgstr "Потрібен ваш голос"
+
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has moved your meeting."

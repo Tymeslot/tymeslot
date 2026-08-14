@@ -27,11 +27,6 @@ msgstr "Account settings and log out are here in the top-right."
 msgid "Back"
 msgstr "Back"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Common tasks"
-msgstr "Common tasks"
-
 #: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmation"
@@ -73,16 +68,6 @@ msgstr "New feature"
 msgid "Next"
 msgstr "Next"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Quick links to set up your profile, availability, and meeting types. Start here."
-msgstr "Quick links to set up your profile, availability, and meeting types. Start here."
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Settings live in the sidebar"
-msgstr "Settings live in the sidebar"
-
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Skip"
@@ -100,11 +85,6 @@ msgstr "Take 30 seconds to learn where everything lives."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
-msgid "Two modes"
-msgstr "Two modes"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
 msgstr "Welcome to your Tymeslot dashboard"
 
@@ -117,11 +97,6 @@ msgstr "You're set"
 #, elixir-autogen, elixir-format
 msgid "Your account"
 msgstr "Your account"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
-msgstr "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -238,11 +213,6 @@ msgstr ""
 msgid "Go create your first event type - and let people book you."
 msgstr "Go create your first event type - and let people book you."
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex
-#, elixir-autogen, elixir-format
-msgid "Profile, availability, integrations, and automation - all one click away."
-msgstr "Profile, availability, integrations, and automation - all one click away."
-
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Cap how many bookings you take"
@@ -256,4 +226,24 @@ msgstr ""
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Everything lives here"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Open it to connect a calendar, customise your booking page, and share your link. It disappears once every step is done."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex
+#, elixir-autogen, elixir-format
+msgid "Your setup checklist"
 msgstr ""

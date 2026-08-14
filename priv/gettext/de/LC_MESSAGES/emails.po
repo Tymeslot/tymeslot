@@ -1970,6 +1970,7 @@ msgstr "Die Abstimmung über %{title} ist beendet"
 #, elixir-autogen, elixir-format
 msgid "Your vote is needed"
 msgstr "Ihre Stimme wird benötigt"
+
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has moved your meeting."

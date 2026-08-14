@@ -43,28 +43,19 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
       <%!-- Top Navigation --%>
       <div class="shrink-0">
-        <.top_navigation
-          current_user={@current_user}
-          profile={@profile}
-          show_sidebar_toggle={mode(@current_action) == :scheduling}
-        />
+        <.top_navigation current_user={@current_user} profile={@profile} />
       </div>
-
-      <%!-- Mode Tab Bar --%>
-      <.mode_tabs current_action={@current_action} />
 
       <%!-- Main Layout Area --%>
       <div class="flex lg:gap-8 flex-1 overflow-hidden min-h-0">
-        <%= if mode(@current_action) == :scheduling do %>
-          <DashboardSidebar.sidebar
-            current_action={@current_action}
-            integration_status={@integration_status}
-            profile={@profile}
-            automations_allowed={@automations_allowed}
-            analytics_allowed={@analytics_allowed}
-            sidebar_extensions={@sidebar_extensions}
-          />
-        <% end %>
+        <DashboardSidebar.sidebar
+          current_action={@current_action}
+          integration_status={@integration_status}
+          profile={@profile}
+          automations_allowed={@automations_allowed}
+          analytics_allowed={@analytics_allowed}
+          sidebar_extensions={@sidebar_extensions}
+        />
 
         <%!-- Main Content Area --%>
         <div
@@ -156,45 +147,4 @@ defmodule TymeslotWeb.Components.DashboardLayout do
     </div>
     """
   end
-
-  attr :current_action, :atom, required: true
-
-  @spec mode_tabs(map()) :: Phoenix.LiveView.Rendered.t()
-  defp mode_tabs(assigns) do
-    ~H"""
-    <div class="mode-tab-bar" data-testid="mode-tab-bar" data-tour="mode-tabs">
-      <div class="flex items-stretch w-full gap-2">
-        <.link
-          patch={~p"/dashboard"}
-          class={[
-            "mode-tab flex-1 justify-center",
-            if(mode(@current_action) == :scheduling,
-              do: "mode-tab--active",
-              else: "mode-tab--inactive"
-            )
-          ]}
-          data-testid="mode-tab-scheduling"
-        >
-          <.icon name="hero-squares-2x2" class="w-4 h-4" />
-          {dgettext("dashboard_common", "Scheduling")}
-        </.link>
-
-        <.link
-          patch={~p"/dashboard/calendar"}
-          class={[
-            "mode-tab flex-1 justify-center",
-            if(mode(@current_action) == :calendar, do: "mode-tab--active", else: "mode-tab--inactive")
-          ]}
-          data-testid="mode-tab-calendar"
-        >
-          <.icon name="hero-calendar-days" class="w-4 h-4" />
-          {dgettext("dashboard_common", "Calendar")}
-        </.link>
-      </div>
-    </div>
-    """
-  end
-
-  defp mode(:calendar), do: :calendar
-  defp mode(_tab), do: :scheduling
 end
