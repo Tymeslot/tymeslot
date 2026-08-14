@@ -90,7 +90,10 @@ defmodule Tymeslot.Test.TagTaxonomy do
       # Browser-based E2E tests — run with E2E=true mix test --only e2e
       :e2e,
       # Destructive migration tests — run with mix test --include migrations
-      :migrations
+      :migrations,
+      # Needs the git-cliff binary — excluded only where it isn't installed
+      # (see Tymeslot.Test.SuiteConfig)
+      :git_cliff
     ]
   }
 

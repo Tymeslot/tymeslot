@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   configured behaviour module (defaults to `Calendar.Operations`).
   """
 
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -253,11 +254,23 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     case profile_result do
       {:ok, profile} ->
         today = Date.utc_today()
-        {today, Date.add(today, profile.advance_booking_days)}
+        {today, Date.add(today, booking_window_days(profile))}
 
       {:error, _reason} ->
         today = Date.utc_today()
         {today, Date.add(today, 30)}
     end
   end
+
+  # The prefetch range must cover the furthest date any of the host's schedules
+  # can be booked into: a meeting type on a longer window than the default would
+  # otherwise offer slots for dates this range never fetched events for.
+  defp booking_window_days(%{id: profile_id}) when is_integer(profile_id) do
+    profile_id
+    |> Schedules.list_for_profile()
+    |> Enum.map(& &1.advance_booking_days)
+    |> Enum.max(fn -> 90 end)
+  end
+
+  defp booking_window_days(_profile), do: 90
 end

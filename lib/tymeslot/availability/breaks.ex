@@ -63,14 +63,14 @@ defmodule Tymeslot.Availability.Breaks do
   end
 
   @doc """
-  Deletes a break, verifying ownership against the given profile_id.
+  Deletes a break, verifying ownership against the given schedule_id.
 
-  Returns `{:error, "Unauthorized"}` if the break belongs to a different profile,
+  Returns `{:error, "Unauthorized"}` if the break belongs to a different schedule,
   or `{:error, "Break not found"}` if the break does not exist.
   """
   @spec delete_break(integer(), integer()) ::
           {:ok, AvailabilityBreakSchema.t()} | {:error, String.t()}
-  def delete_break(break_id, profile_id) do
+  def delete_break(break_id, schedule_id) do
     case AvailabilityBreakQueries.get_break(break_id) do
       nil ->
         {:error, "Break not found"}
@@ -78,8 +78,8 @@ defmodule Tymeslot.Availability.Breaks do
       %AvailabilityBreakSchema{} = break ->
         case WeeklyAvailabilityQueries.get_weekly_availability(break.weekly_availability_id) do
           nil -> {:error, "Schedule not found"}
-          %{profile_id: ^profile_id} -> AvailabilityBreakQueries.delete_break(break)
-          %{profile_id: _other} -> {:error, "Unauthorized"}
+          %{schedule_id: ^schedule_id} -> AvailabilityBreakQueries.delete_break(break)
+          %{schedule_id: _other} -> {:error, "Unauthorized"}
         end
     end
   end
@@ -115,37 +115,6 @@ defmodule Tymeslot.Availability.Breaks do
       )
 
       {:error, "Invalid time calculation"}
-  end
-
-  @doc """
-  Validates that break times don't overlap with existing breaks.
-  """
-  @spec validate_break_times(Time.t(), Time.t(), Time.t(), Time.t(), list(), integer() | nil) ::
-          :ok | {:error, String.t()}
-  def validate_break_times(
-        start_time,
-        end_time,
-        work_start,
-        work_end,
-        existing_breaks,
-        exclude_break_id \\ nil
-      ) do
-    cond do
-      Time.compare(start_time, end_time) != :lt ->
-        {:error, "End time must be after start time"}
-
-      Time.compare(start_time, work_start) == :lt ->
-        {:error, "Break cannot start before work hours"}
-
-      Time.compare(end_time, work_end) == :gt ->
-        {:error, "Break cannot end after work hours"}
-
-      has_overlap?(start_time, end_time, existing_breaks, exclude_break_id) ->
-        {:error, "Break overlaps with existing break"}
-
-      true ->
-        :ok
-    end
   end
 
   # Private functions

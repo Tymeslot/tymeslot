@@ -37,6 +37,14 @@ defmodule Tymeslot.Demo.Behaviour do
   @callback demo_mode?(context :: map()) :: boolean()
 
   @doc """
+  Returns the booking window, in days, to advertise for a demo profile.
+
+  Demo profiles are plain maps with no availability schedule behind them, so the
+  figure cannot be read from the database the way it is for a real organiser.
+  """
+  @callback booking_window_days(profile :: map() | nil) :: pos_integer()
+
+  @doc """
   Gets a profile by username (returns demo profile if applicable).
   """
   @callback get_profile_by_username(username :: String.t()) :: map() | nil
@@ -57,11 +65,6 @@ defmodule Tymeslot.Demo.Behaviour do
   Gets theme customization for a profile and theme.
   """
   @callback get_theme_customization(profile_id :: integer(), theme_id :: String.t()) :: any()
-
-  @doc """
-  Gets weekly schedule for a profile.
-  """
-  @callback get_weekly_schedule(profile_id :: integer()) :: [map()]
 
   @doc """
   Lists active meeting types for a user.

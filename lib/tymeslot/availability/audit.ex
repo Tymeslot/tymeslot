@@ -20,6 +20,7 @@ defmodule Tymeslot.Availability.Audit do
   """
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
+  alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
@@ -40,6 +41,7 @@ defmodule Tymeslot.Availability.Audit do
 
   @type result :: %{
           required(:profile_id) => pos_integer(),
+          required(:schedule_id) => pos_integer(),
           required(:username) => String.t() | nil,
           required(:horizon) => {Date.t(), Date.t()},
           required(:duration_minutes) => pos_integer(),
@@ -90,21 +92,25 @@ defmodule Tymeslot.Availability.Audit do
       |> CalendarIntegrationQueries.list_active_for_user()
       |> Enum.map(& &1.id)
 
-    weekly_schedule = WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(profile.id)
+    # The audit reads the profile's default schedule, which is the one the public
+    # booking page falls back to when a meeting type names no schedule of its own.
+    schedule = AvailabilityScheduleQueries.get_default(profile.id)
+
+    weekly_schedule = WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule.id)
 
     overrides =
-      AvailabilityOverrideQueries.get_overrides_by_profile_and_date_range(
-        profile.id,
+      AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
+        schedule.id,
         start_date,
         end_date
       )
 
     config = %{
-      profile_id: profile.id,
+      schedule_id: schedule.id,
       duration_minutes: duration_minutes,
-      buffer_minutes: profile.buffer_minutes,
-      max_advance_booking_days: profile.advance_booking_days,
-      min_advance_hours: profile.min_advance_hours,
+      buffer_minutes: schedule.buffer_minutes,
+      max_advance_booking_days: schedule.advance_booking_days,
+      min_advance_hours: schedule.min_advance_hours,
       owner_timezone: timezone,
       weekly_schedule: weekly_schedule,
       overrides: overrides
@@ -122,6 +128,7 @@ defmodule Tymeslot.Availability.Audit do
 
     %{
       profile_id: profile.id,
+      schedule_id: schedule.id,
       username: profile.username,
       horizon: {start_date, end_date},
       duration_minutes: duration_minutes,

@@ -76,6 +76,8 @@ defmodule TymeslotWeb.Hooks.ModalHook do
   @modal_registry %{
     delete_break: {:show_delete_break_modal, :delete_break_modal_data},
     clear_day: {:show_clear_day_modal, :clear_day_modal_data},
+    schedule_form: {:show_schedule_form_modal, :schedule_form_modal_data},
+    delete_schedule: {:show_delete_schedule_modal, :delete_schedule_modal_data},
     cancel_meeting: {:show_cancel_meeting_modal, :cancel_meeting_modal_data},
     reschedule_request: {:show_reschedule_request_modal, :reschedule_request_modal_data},
     delete_meeting_type: {:show_delete_meeting_type_modal, :delete_meeting_type_modal_data},

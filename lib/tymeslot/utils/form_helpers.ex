@@ -39,6 +39,14 @@ defmodule Tymeslot.Utils.FormHelpers do
     }
   end
 
+  def format_context_error(:invalid_availability_schedule) do
+    %{
+      availability_schedule: [
+        dgettext("dashboard_meeting_form", "Selected schedule is not one of yours")
+      ]
+    }
+  end
+
   def format_context_error(:invalid_duration) do
     %{duration: [dgettext("dashboard_meeting_form", "Duration must be a valid number")]}
   end

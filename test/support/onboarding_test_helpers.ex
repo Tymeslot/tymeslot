@@ -8,6 +8,11 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Repo
+
   @endpoint TymeslotWeb.Endpoint
 
   @doc """
@@ -217,6 +222,16 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
     view |> element("button[phx-click='next_step']") |> render_click()
 
     view
+  end
+
+  @doc """
+  Loads the default availability schedule of the user's profile, where the
+  preference steps persist buffer, booking window and minimum notice.
+  """
+  @spec default_schedule(map()) :: AvailabilityScheduleSchema.t() | nil
+  def default_schedule(user) do
+    profile = Repo.get_by!(ProfileSchema, user_id: user.id)
+    Schedules.get_default(profile.id)
   end
 
   @doc """

@@ -1,681 +1,681 @@
 
 [1.9.0]
-* core: Prevent calendar crash when opening an event with a reminder
-* core: Stop alerting every cycle while a CalDAV server is down
-* core: Flag a deleted booking calendar instead of retrying its webhook
-* core: Keep the reconnect prompt until the owner reconnects
-* core: Prevent availability page crash when a break is rejected
-* core: Drop deleted events from the Up-next strip immediately
-* core: Fall back to UTC when a profile has no timezone set
-* core: Reject booking yourself as your own guest on the calendar
-* core: Say which integration is missing on the Integrations badge
-* core: Open the dashboard on your calendar
+* Prevent calendar crash when opening an event with a reminder
+* Stop alerting every cycle while a CalDAV server is down
+* Flag a deleted booking calendar instead of retrying its webhook
+* Keep the reconnect prompt until the owner reconnects
+* Prevent availability page crash when a break is rejected
+* Drop deleted events from the Up-next strip immediately
+* Fall back to UTC when a profile has no timezone set
+* Reject booking yourself as your own guest on the calendar
+* Say which integration is missing on the Integrations badge
+* Open the dashboard on your calendar
 
 
 [1.8.1]
-* core: Send reschedule emails and webhooks when an attendee moves a booking
-* core: Correct translations across all five locale catalogues
-* core: Reorganise the meeting type editor into tabs
+* Send reschedule emails and webhooks when an attendee moves a booking
+* Correct translations across all five locale catalogues
+* Reorganise the meeting type editor into tabs
 
 
 [1.8.0]
-* core: Show password rule errors in the user's language
-* core: Honour the classic Zoom write scope when cancelling meetings
-* core: Show authentication and account messages in the user's language
-* core: Correct German salutation capitalisation in email openings
-* core: Report why a new password is rejected on the reset form
-* core: Honour the private-network opt-out when saving a calendar server
-* core: Paint the grid in the colour chosen for each calendar
-* core: Raise contrast of calendar hour labels and grid lines
-* core: Apply the clock preference across every dashboard surface
-* core: Translate the calendar subscription name in the provider picker
-* core: Show two lines of provider descriptions in the integration picker
+* Show password rule errors in the user's language
+* Honour the classic Zoom write scope when cancelling meetings
+* Show authentication and account messages in the user's language
+* Correct German salutation capitalisation in email openings
+* Report why a new password is rejected on the reset form
+* Honour the private-network opt-out when saving a calendar server
+* Paint the grid in the colour chosen for each calendar
+* Raise contrast of calendar hour labels and grid lines
+* Apply the clock preference across every dashboard surface
+* Translate the calendar subscription name in the provider picker
+* Show two lines of provider descriptions in the integration picker
 * Delete provider video rooms after an integration is disconnected
-* core: Delete provider video rooms after an integration is disconnected
-* core: Translate the calendar colour names
-* core: Paint each calendar colour the colour it is named after
-* core: Show booking page times in the visitor's own language
-* core: Preload the profile before rendering webhook-triggered emails
-* core: Send Zoom meeting cancellations with the delete scope
-* core: Hide the admin menu entry when the admin UI is disabled
-* core: Apply the dashboard language switch across the whole page at once
-* core: Translate dashboard sidebar extension labels
-* core: Drop duration wording from the booking page intro
-* core: Unify terminology across the German, French, Italian and Ukrainian catalogues
-* core: Pluralise the duration and stats-period labels
-* core: Correct verified translation defects across the catalogues
-* core: Stop the booking page stacking duplicate prepositions
-* core: Pluralise the reminder count in appointment emails
-* core: Stop the German admin flashes misattributing a role change
-* core: Warn French users that changing currency clears their prices
-* core: Complete missing Ukrainian translations
-* core: Localise payment timestamps and change summaries in emails
-* core: Use Apple's own German labels in the iCloud setup steps
-* core: Remove duplicated word from OAuth sign-up email errors
-* core: Add Czech as a supported language
-* core: Colour and show each calendar independently in the dashboard
+* Delete provider video rooms after an integration is disconnected
+* Translate the calendar colour names
+* Paint each calendar colour the colour it is named after
+* Show booking page times in the visitor's own language
+* Preload the profile before rendering webhook-triggered emails
+* Send Zoom meeting cancellations with the delete scope
+* Hide the admin menu entry when the admin UI is disabled
+* Apply the dashboard language switch across the whole page at once
+* Translate dashboard sidebar extension labels
+* Drop duration wording from the booking page intro
+* Unify terminology across the German, French, Italian and Ukrainian catalogues
+* Pluralise the duration and stats-period labels
+* Correct verified translation defects across the catalogues
+* Stop the booking page stacking duplicate prepositions
+* Pluralise the reminder count in appointment emails
+* Stop the German admin flashes misattributing a role change
+* Warn French users that changing currency clears their prices
+* Complete missing Ukrainian translations
+* Localise payment timestamps and change summaries in emails
+* Use Apple's own German labels in the iCloud setup steps
+* Remove duplicated word from OAuth sign-up email errors
+* Add Czech as a supported language
+* Colour and show each calendar independently in the dashboard
 * Reconcile cancelled meetings holding orphaned video rooms
 * Offer to delete meeting rooms when disconnecting video
-* core: Offer to delete meeting rooms when disconnecting video
+* Offer to delete meeting rooms when disconnecting video
 * Record the video provider on meetings
-* core: Let each connected calendar carry its own name and colour
-* core: Let organisers choose a 12-hour or 24-hour clock
-* core: Localise the strings the mail and integration work introduced
-* core: Let hosts cap how many bookings they accept per day, week and month
-* core: Add Ukrainian language support
-* core: Add French and Italian language support
-* core: Send account, auth and calendar emails in the recipient's language
-* core: Add German translations across the app
-* core: Add a language option to embed snippets
-* core: Show the dashboard in each member's chosen language
+* Let each connected calendar carry its own name and colour
+* Let organisers choose a 12-hour or 24-hour clock
+* Localise the strings the mail and integration work introduced
+* Let hosts cap how many bookings they accept per day, week and month
+* Add Ukrainian language support
+* Add French and Italian language support
+* Send account, auth and calendar emails in the recipient's language
+* Add German translations across the app
+* Add a language option to embed snippets
+* Show the dashboard in each member's chosen language
 
 
 [1.7.0]
-* core: Keep a settled invoice from reverting to unpaid
-* core: Stop CalDAV sync from deleting events the server withheld
-* core: Correct booking times for 2026 Morocco and Alberta clock changes
-* core: Repair CalDAV delta sync on servers that track changes by token
-* core: Redact secret tokens from HTTP request logs
-* core: Show the real reason when a calendar connection test fails
-* core: Keep a calendar syncing when one event mixes date and date-time
-* core: Show the attendee's message on dashboard meeting cards
-* core: Keep recurring calendar events at their local time across DST
-* core: Stop an all-day event from blocking all CalDAV sync
-* core: Sync meeting reminders to the connected calendar event
-* core: Record Stripe subscription invoices for customer retrieval
-* core: Issue invoices for paid meeting bookings
-* core: Subscribe to a published calendar feed by URL
+* Keep a settled invoice from reverting to unpaid
+* Stop CalDAV sync from deleting events the server withheld
+* Correct booking times for 2026 Morocco and Alberta clock changes
+* Repair CalDAV delta sync on servers that track changes by token
+* Redact secret tokens from HTTP request logs
+* Show the real reason when a calendar connection test fails
+* Keep a calendar syncing when one event mixes date and date-time
+* Show the attendee's message on dashboard meeting cards
+* Keep recurring calendar events at their local time across DST
+* Stop an all-day event from blocking all CalDAV sync
+* Sync meeting reminders to the connected calendar event
+* Record Stripe subscription invoices for customer retrieval
+* Issue invoices for paid meeting bookings
+* Subscribe to a published calendar feed by URL
 
 
 [1.6.0]
-* core: Handle CalDAV servers that answer conditional PUT with 409
-* core: Stop a dead recipient address from blocking all outbound email
-* core: Prevent CalDAV sync stalling permanently on an emptied calendar
-* core: Let bookers retry after a failed security or rate-limit check
-* core: Stop clobbering the test mailer adapter and treat blank EMAIL_ADAPTER as unset
-* core: Run the mailer credential probe after the supervision tree starts
-* core: Apply mail tracking at delivery time and fix inline logo Content-ID
-* core: Stop the external-database compose file rebuilding over the published tag
-* core: Make docker compose up work without cloning the repository
-* core: Exclude read-only calendars from booking targets
-* core: Keep the calendar event's video link when no meeting URL is returned
-* core: Give connection-test rate limits a per-actor bucket
-* core: Probe a MiroTalk server once per health check, not twice
-* core: Keep a healthy integration healthy on its first probe
-* core: Tell users an expired grant is expired, not undecryptable
-* core: Store readable sync errors instead of inspected atoms
-* core: Read the organiser from CalDAV events
-* core: Give organisers and guests a video join link
-* core: Align video provider capability keys so lookups are complete
-* core: Stop attaching video rooms that cannot be joined
-* core: Block private IPv6 addresses that URI parsing hid
-* core: Greet users by name in emails, and escape it only once
-* core: Stop booking page views from seeding meeting types
-* core: Add SendGrid, Mailgun and AhaSend as email delivery options
+* Handle CalDAV servers that answer conditional PUT with 409
+* Stop a dead recipient address from blocking all outbound email
+* Prevent CalDAV sync stalling permanently on an emptied calendar
+* Let bookers retry after a failed security or rate-limit check
+* Stop clobbering the test mailer adapter and treat blank EMAIL_ADAPTER as unset
+* Run the mailer credential probe after the supervision tree starts
+* Apply mail tracking at delivery time and fix inline logo Content-ID
+* Stop the external-database compose file rebuilding over the published tag
+* Make docker compose up work without cloning the repository
+* Exclude read-only calendars from booking targets
+* Keep the calendar event's video link when no meeting URL is returned
+* Give connection-test rate limits a per-actor bucket
+* Probe a MiroTalk server once per health check, not twice
+* Keep a healthy integration healthy on its first probe
+* Tell users an expired grant is expired, not undecryptable
+* Store readable sync errors instead of inspected atoms
+* Read the organiser from CalDAV events
+* Give organisers and guests a video join link
+* Align video provider capability keys so lookups are complete
+* Stop attaching video rooms that cannot be joined
+* Block private IPv6 addresses that URI parsing hid
+* Greet users by name in emails, and escape it only once
+* Stop booking page views from seeding meeting types
+* Add SendGrid, Mailgun and AhaSend as email delivery options
 
 
 [1.5.0]
-* [BREAKING] core: Select an external database only when DATABASE_URL is remote
-* core: Recover calendar sync when a provider event no longer exists
-* core: Accept calendar event ids up to Google's documented maximum
-* core: Keep database credentials out of the process list at startup
-* core: Honour the sslmode parameter in DATABASE_URL
-* core: Open the mobile dashboard sidebar
-* core: Stop the setup checklist crushing its rows on narrow screens
-* core: Name the calendar selection dialog by its heading alone
-* core: Give footer column headings a sequential level
+* [BREAKING] Select an external database only when DATABASE_URL is remote
+* Recover calendar sync when a provider event no longer exists
+* Accept calendar event ids up to Google's documented maximum
+* Keep database credentials out of the process list at startup
+* Honour the sslmode parameter in DATABASE_URL
+* Open the mobile dashboard sidebar
+* Stop the setup checklist crushing its rows on narrow screens
+* Name the calendar selection dialog by its heading alone
+* Give footer column headings a sequential level
 * ci: Align test DB pool with Oban concurrency
 * calendar: Use provider event IDs for OAuth events
-* core: Show the saved icon on meeting type cards
-* core: Show the meeting type icon picker and mode-toggle icons
-* core: Run PostgreSQL as its own container with the slim image
-* core: Connect to an external PostgreSQL with DATABASE_URL and TLS
+* Show the saved icon on meeting type cards
+* Show the meeting type icon picker and mode-toggle icons
+* Run PostgreSQL as its own container with the slim image
+* Connect to an external PostgreSQL with DATABASE_URL and TLS
 
 
 [1.4.4]
-* core: Prevent availability crash on days the attendee's clocks change
-* core: Allow the Stripe Connect onboarding redirect through the CSP
-* core: Show the meeting description on meeting type cards
+* Prevent availability crash on days the attendee's clocks change
+* Allow the Stripe Connect onboarding redirect through the CSP
+* Show the meeting description on meeting type cards
 
 
 [1.4.3]
-* core: Clear the reschedule-requested state once the attendee rebooks
-* core: Remove calendar event and reminders when a reschedule is requested
-* core: Show current city names for legacy timezone ids browsers report
-* core: Show cancel and reschedule times in the attendee's timezone
-* core: Accept valid timezones the format check wrongly rejected
-* core: Retry the initial Outlook calendar sync after connecting
+* Clear the reschedule-requested state once the attendee rebooks
+* Remove calendar event and reminders when a reschedule is requested
+* Show current city names for legacy timezone ids browsers report
+* Show cancel and reschedule times in the attendee's timezone
+* Accept valid timezones the format check wrongly rejected
+* Retry the initial Outlook calendar sync after connecting
 
 
 [1.4.2]
 
 
 [1.4.1]
-* core: Fix invisible outline button in onboarding calendar skip modal
-* core: Show a branded 404 page for unknown routes
+* Fix invisible outline button in onboarding calendar skip modal
+* Show a branded 404 page for unknown routes
 
 
 [1.4.0]
-* core: Stop an empty CalDAV fetch from wrongly cancelling booked meetings
-* core: Stop CalDAV colour change from reverting a server-side event edit
-* core: Restore the setup step in the first-visit dashboard tour
-* core: Make the booking calendar accessible to keyboard and screen readers
-* core: Make modals and form errors accessible to keyboard and screen readers
-* core: Preserve reschedule context on Choose New Time
-* core: Return booker to schedule step when a slot is taken mid-submit
-* core: Show progress during onboarding CalDAV calendar discovery
-* core: Prevent calendar sync failure on very large initial imports
-* core: Render rounded-token-full pills and badges as circles
-* core: Gate admin feature announcements by signup date
-* core: Show the Analytics Pro badge across all dashboard pages
-* core: Redesign integrations with a provider picker and inline actions
-* core: Decouple and make rotatable the data-at-rest encryption key
-* core: Add calendar (.ics) download to the booking confirmation screen
-* core: Colour calendar events from the dashboard agenda
-* core: Nudge users to reconnect before skipping calendar in onboarding
-* core: Open appointment details in a modal from the dashboard agenda
-* core: Add a live "Your day" agenda to the dashboard overview
-* core: Improve dashboard calendar readability and contrast
-* core: Allow private-IP calendar, video and webhooks for self-hosters via env vars
-* core: Highlight dashboard sidebar items that still need setup
-* core: Redirect common login/signup URL aliases to the auth pages
-* core: Add dismissible dashboard onboarding checklist
-* core: Greet first-time users with "Welcome" on the dashboard
-* core: Prompt to connect a calendar or video provider when none is set up
-* core: Give sidebar setup indicators specific tooltips
-* core: Autofocus the first field on auth pages
+* Stop an empty CalDAV fetch from wrongly cancelling booked meetings
+* Stop CalDAV colour change from reverting a server-side event edit
+* Restore the setup step in the first-visit dashboard tour
+* Make the booking calendar accessible to keyboard and screen readers
+* Make modals and form errors accessible to keyboard and screen readers
+* Preserve reschedule context on Choose New Time
+* Return booker to schedule step when a slot is taken mid-submit
+* Show progress during onboarding CalDAV calendar discovery
+* Prevent calendar sync failure on very large initial imports
+* Render rounded-token-full pills and badges as circles
+* Gate admin feature announcements by signup date
+* Show the Analytics Pro badge across all dashboard pages
+* Redesign integrations with a provider picker and inline actions
+* Decouple and make rotatable the data-at-rest encryption key
+* Add calendar (.ics) download to the booking confirmation screen
+* Colour calendar events from the dashboard agenda
+* Nudge users to reconnect before skipping calendar in onboarding
+* Open appointment details in a modal from the dashboard agenda
+* Add a live "Your day" agenda to the dashboard overview
+* Improve dashboard calendar readability and contrast
+* Allow private-IP calendar, video and webhooks for self-hosters via env vars
+* Highlight dashboard sidebar items that still need setup
+* Redirect common login/signup URL aliases to the auth pages
+* Add dismissible dashboard onboarding checklist
+* Greet first-time users with "Welcome" on the dashboard
+* Prompt to connect a calendar or video provider when none is set up
+* Give sidebar setup indicators specific tooltips
+* Autofocus the first field on auth pages
 
 
 [1.3.0]
-* core: Describe Calendar as a full calendar view in the onboarding tour
-* core: Address the user as "you" in the Google sign-up confirmation
-* core: Keep sidebar View Page button on one line to prevent overflow
-* core: Stop all-day recurring events running past their end date
-* core: Keep weekly repeat-on-weekday events at local time across DST
-* core: Prevent booking-page previews from creating real bookings
-* core: Correct CalDAV event times for unrecognised timezones
-* core: Stop sending event-update emails to guests who declined
-* core: Keep recurring events at their local time across DST changes
-* core: Add live booking-page preview and theme step to onboarding
-* core: Add Apple iCloud as a calendar provider
-* core: Link to the WordPress.org plugin from embed settings
-* core: Set a per-event colour in the calendar
-* core: Add a mini-month date picker to the calendar toolbar
-* core: Add an agenda view to the calendar
-* core: Search your calendar events
-* core: Keyboard shortcuts and a shortcuts help overlay for the calendar
-* core: Quick-add events from a single line of text
-* core: Create and edit recurring events
-* core: Set event reminders that sync to your calendar provider
-* core: Create and toggle all-day events in the calendar
+* Describe Calendar as a full calendar view in the onboarding tour
+* Address the user as "you" in the Google sign-up confirmation
+* Keep sidebar View Page button on one line to prevent overflow
+* Stop all-day recurring events running past their end date
+* Keep weekly repeat-on-weekday events at local time across DST
+* Prevent booking-page previews from creating real bookings
+* Correct CalDAV event times for unrecognised timezones
+* Stop sending event-update emails to guests who declined
+* Keep recurring events at their local time across DST changes
+* Add live booking-page preview and theme step to onboarding
+* Add Apple iCloud as a calendar provider
+* Link to the WordPress.org plugin from embed settings
+* Set a per-event colour in the calendar
+* Add a mini-month date picker to the calendar toolbar
+* Add an agenda view to the calendar
+* Search your calendar events
+* Keyboard shortcuts and a shortcuts help overlay for the calendar
+* Quick-add events from a single line of text
+* Create and edit recurring events
+* Set event reminders that sync to your calendar provider
+* Create and toggle all-day events in the calendar
 
 
 [1.2.5]
-* core: Accept wildcard TLS certificates from SMTP servers
-* core: Show real meeting duration on Quill booking confirmation
-* core: Let hosts attach files to a meeting type
-* core: Enrich calendar events with conference links, language tags and free/busy status
-* core: Publish a per-user free/busy calendar feed
+* Accept wildcard TLS certificates from SMTP servers
+* Show real meeting duration on Quill booking confirmation
+* Let hosts attach files to a meeting type
+* Enrich calendar events with conference links, language tags and free/busy status
+* Publish a per-user free/busy calendar feed
 
 
 [1.2.4]
-* core: End live sessions immediately on logout and credential changes
-* core: Return a real 404 for unknown URLs instead of redirecting home
+* End live sessions immediately on logout and credential changes
+* Return a real 404 for unknown URLs instead of redirecting home
 
 
 [1.2.3]
-* core: Prevent calendar crash on stale create-event integration change
-* core: Prevent crash when a dashboard modal is confirmed twice
-* core: Point WordPress users to the official plugin from the embed dashboard
-* core: Show a notice instead of the homepage when an embed is blocked
+* Prevent calendar crash on stale create-event integration change
+* Prevent crash when a dashboard modal is confirmed twice
+* Point WordPress users to the official plugin from the embed dashboard
+* Show a notice instead of the homepage when an embed is blocked
 
 
 [1.2.2]
-* core: Give the analytics dashboard refresh visible feedback
-* core: Add one-click Google Calendar connect to onboarding
-* core: Refine and gate the booking analytics dashboard
-* core: Exclude an organizer's own page visits from booking analytics
+* Give the analytics dashboard refresh visible feedback
+* Add one-click Google Calendar connect to onboarding
+* Refine and gate the booking analytics dashboard
+* Exclude an organizer's own page visits from booking analytics
 
 
 [1.2.1]
-* core: Only require ANALYTICS_SALT_SECRET when booking analytics is enabled
-* core: Stop button icons wrapping onto their own line
-* core: Show hamburger nav on tablets, not just phones
-* core: Match mobile nav menu structure to desktop
-* core: Keep Quill booking content readable over image backgrounds
-* core: Present booking-analytics visitors and conversion as estimates
-* core: Suppress false booking-analytics anomaly alerts on small samples
-* core: Stop capturing arbitrary query parameters in booking analytics
-* core: Count booking-page visitors consistently when the client IP is unknown
-* core: Trust forwarded IP headers only from known proxies on live connections
-* core: Resolve the real client IP on live connections behind a proxy
-* core: Prevent scheduling page crash when booking analytics is enabled
-* core: Rate-limit booking confirmations per recipient to curb email abuse
-* core: Block SSRF to internal hosts on CalDAV and video integrations
-* core: Base booking-analytics conversion on actual converting visitors
-* core: Count a booking-page visitor once across meeting types
-* core: Show custom question answers in synced calendar events
-* core: Add device-type breakdown to booking analytics
-* core: Add admin toggle for booking analytics
-* core: Make booking analytics opt-in via config flag
-* core: Add analytics dashboard with sources and visits over time
-* core: Persist UTM and tracking params on bookings end-to-end
-* core: Log page views on public scheduling routes
-* core: Persist UTM and tracking parameters on bookings
-* core: Add analytics_events table for booking analytics
+* Only require ANALYTICS_SALT_SECRET when booking analytics is enabled
+* Stop button icons wrapping onto their own line
+* Show hamburger nav on tablets, not just phones
+* Match mobile nav menu structure to desktop
+* Keep Quill booking content readable over image backgrounds
+* Present booking-analytics visitors and conversion as estimates
+* Suppress false booking-analytics anomaly alerts on small samples
+* Stop capturing arbitrary query parameters in booking analytics
+* Count booking-page visitors consistently when the client IP is unknown
+* Trust forwarded IP headers only from known proxies on live connections
+* Resolve the real client IP on live connections behind a proxy
+* Prevent scheduling page crash when booking analytics is enabled
+* Rate-limit booking confirmations per recipient to curb email abuse
+* Block SSRF to internal hosts on CalDAV and video integrations
+* Base booking-analytics conversion on actual converting visitors
+* Count a booking-page visitor once across meeting types
+* Show custom question answers in synced calendar events
+* Add device-type breakdown to booking analytics
+* Add admin toggle for booking analytics
+* Make booking analytics opt-in via config flag
+* Add analytics dashboard with sources and visits over time
+* Persist UTM and tracking params on bookings end-to-end
+* Log page views on public scheduling routes
+* Persist UTM and tracking parameters on bookings
+* Add analytics_events table for booking analytics
 
 
 [1.2.0]
-* core: Prevent booking page step labels from clipping in themes
-* core: Accept text/plain handshake for calendar webhook validation
-* core: Scroll to top reliably when navigating between pages
-* core: Improve Quill booking card contrast on bright backgrounds
-* core: Correct wrong English text in notification emails
-* core: Correct English UI labels broken by a stale gettext merge
-* core: Add config-driven Resources navigation menu
-* core: Announce guest attendees and illustrate the booking-link modal
-* core: Add booking-link share previews with organiser photo and details
-* core: Add icons to the navigation menu and Features dropdown
-* core: Scroll to top on internal link navigation site-wide
-* core: Add Contact link to desktop site navigation
-* core: Surface the guest limit in the meeting type editor
-* core: Refine the guest booking flow across both themes
-* core: Add private and direct booking links for meeting types
-* core: Add guest attendees with email RSVP to bookings
+* Prevent booking page step labels from clipping in themes
+* Accept text/plain handshake for calendar webhook validation
+* Scroll to top reliably when navigating between pages
+* Improve Quill booking card contrast on bright backgrounds
+* Correct wrong English text in notification emails
+* Correct English UI labels broken by a stale gettext merge
+* Add config-driven Resources navigation menu
+* Announce guest attendees and illustrate the booking-link modal
+* Add booking-link share previews with organiser photo and details
+* Add icons to the navigation menu and Features dropdown
+* Scroll to top on internal link navigation site-wide
+* Add Contact link to desktop site navigation
+* Surface the guest limit in the meeting type editor
+* Refine the guest booking flow across both themes
+* Add private and direct booking links for meeting types
+* Add guest attendees with email RSVP to bookings
 
 
 [1.1.1]
-* core: Stop Zoom video integration falsely reporting connection issues
-* core: Create Google Meet links without a duplicate calendar event
-* core: Prevent calendar webhook renewal crash on provider network errors
-* core: Show try-later message when Stripe payment setup is temporarily unavailable
+* Stop Zoom video integration falsely reporting connection issues
+* Create Google Meet links without a duplicate calendar event
+* Prevent calendar webhook renewal crash on provider network errors
+* Show try-later message when Stripe payment setup is temporarily unavailable
 
 
 [1.1.0]
-* [BREAKING] core: Correct Docker Compose env forwarding, volumes, and DB config
-* core: Correct sender identity in host operational alert emails
-* core: Treat unfinished Stripe onboarding as incomplete, not restricted
-* core: Distinguish superseded from expired email verification links
-* core: Stop duplicate emails when SMTP delivery is slow
-* core: Keep verification and reset links valid after a resend
-* core: Prevent Google Calendar sync crash on token-refresh failure
-* core: Prevent admin-alert floods from repeated crashes and job failures
-* core: Stop endless sync retries when a calendar is deleted on the provider side
-* core: Auto-deselect Google calendars deleted on the provider side
-* core: Make POSTGRES_PASSWORD optional when building the Docker image
-* core: Prevent admin alert email floods when many jobs fail at once
-* core: Keep password-reset and verification links out of job logs
-* core: Reject theme video uploads when transcoding is unavailable
-* core: Give dropdown dialogs accessible names
-* core: Improve the dashboard tour on small screens
-* core: Restore centred embed layout and make wide layout opt-in
-* core: Translate booking flash messages
-* core: Remove orphaned calendar events when booking sync fails
-* core: Block private-network addresses in calendar server URLs
-* core: Prevent a crash when dismissing an announcement twice
-* core: Prevent locking yourself out of sign-in settings
-* core: Validate custom question answers and bounds more strictly
-* core: Improve paid booking reliability and payment errors
-* core: Keep video meeting links in sync when bookings change
-* core: Protect Slack webhook secrets and handle rate limits
-* core: Update final onboarding step CTA to go to dashboard
-* core: Keep dashboard sidebar fixed while only the content scrolls
-* core: Preserve typed answers when navigating booking questions
-* core: Reject overly long phone numbers in booking questions
-* core: Keep Quill meeting-type cards a fixed size on hover and selection
-* core: Size Quill meeting-type step to match the calendar step
-* core: Remove clipped copy-link confirmation tooltip in dashboard sidebar
-* core: Stop false type-change warning when editing a custom question
-* core: Show embed live preview before embed domains are configured
-* core: Copy booking link to clipboard on onboarding ready step
-* core: Show Rhythm booking meeting-type descriptions on wide screens
-* core: Show Quill booking meeting-type descriptions on wide screens
-* core: Keep Quill booking time-slot buttons a uniform size
-* core: Keep Quill booking time slots scrollable and free of overflow on small screens
-* core: Reflow the Quill booking overview to fit and use space across screen sizes
-* core: Prevent embedded booking from flickering and lurching on resize
-* core: Apply all Stripe Connect account updates, not just the first
-* core: Translate booker-facing booking and payment strings for de/fr/uk/it
-* core: Show booker-facing emails in the recipient's language for de/fr/uk
-* core: Show payment confirmation time in the attendee's timezone
-* core: Let attendees return to booking after a cancelled payment
-* core: Record disputes and refunds that arrive before payment confirmation
-* core: Allow refunds when no reason is supplied
-* core: Record Stripe charge id to enable refunds and disputes
-* core: Fix checkout failure for paid bookings
-* core: Show calendar reconnect prompt when event creation needs reauth
-* core: Allow disconnecting a Slack OAuth integration
-* core: Harden DashboardTour hook against scroll-jack and resize
-* core: Persist dashboard tour completion across all dismissal paths
-* core: Accept both yes and no as valid answers to a yes/no question
-* core: Keep edit button visible on each custom-question list row
-* core: Allow disabling password auth when no admin auth path is currently active
-* core: Redirect non-admins to dashboard from admin page
-* core: Show Baikal in the dashboard calendar integration list
-* core: Remove jumping hover effect on action buttons
-* core: Note acknowledgement not accepted in custom questions wizard
-* core: Persist custom_fields through the meeting type save path
-* core: Tighten Slack integration lifecycle and error reporting
-* core: Correct Slack worker retry handling and rate-limit backoff
-* core: Enforce refund window in cancel-meeting modal
-* core: Correct refund and disconnect flow in host payments dashboard
-* core: Show Pro and Stripe-required automation gates as user flashes
-* core: Make Stripe Connect onboarding country configurable
-* core: Block default currency change when pending payments exist
-* core: Omit application_fee_amount when zero in Stripe Checkout sessions
-* core: Prevent duplicate payment notification emails on Oban retry
-* core: Return 503 when Stripe Connect webhook secret is missing
-* core: Serialise charge.refunded webhook against in-app refunds
-* core: Recover meeting state when paid checkout completes after expiry
-* core: Close TOCTOU race when host disconnects Stripe with pending bookings
-* core: Preserve booking payments past host deletion with nil attendee data
-* core: Use integer arithmetic for payment money math
-* core: Drop the literal "there" salutation on anonymous refund emails
-* core: Show Zoom as an OAuth provider in the video integration list
-* core: Fix pixelated Cloudron dashboard icon
-* core: Repair Zoom meeting creation and harden the OAuth flow
-* core: Show a loading spinner while opening Stripe Connect onboarding
-* core: Auto-save meeting type edits as you change them
-* core: Show price and custom-question count on meeting type cards
-* core: Add slow fade animations to the dashboard tour
-* core: Add a cooldown to the resend verification email button
-* core: Announce custom questions, payments and Zoom in a what's-new modal
-* core: Widen the Quill booking card on short, wide viewports
-* core: Trim trailing empty weeks so the booking calendar fits
-* core: Fit Quill and Rhythm booking pages to short viewports
-* core: Add a payments dashboard for Stripe Connect, currency, and refunds
-* core: Let hosts set a price on paid meeting types
-* core: Toggle meeting payments from the admin settings page
-* core: Show reconnect prompt for revoked video integrations
-* core: Default new embed snippets to column layout
-* core: Auto-fit embed height and add column layout option
-* core: Add Reconnect button to pending Slack OAuth integrations
-* core: Redesign custom questions step with in-brand answer controls
-* core: Add post-onboarding dashboard tour
-* core: Edit custom question options as individual fields
-* core: Add SSO, reCAPTCHA, and admin alert toggles to admin settings
-* core: Disable password-auth toggle when lockout would apply
-* core: Show display name and booking slug in admin users table
-* core: Protect admin panel from auth lockout and allow self-demotion
-* core: Add admin control panel for self-hosted installs
-* core: Group calendar providers into OAuth and CalDAV sections
-* core: Show what's-new modal on dashboard for unseen feature announcements
-* core: Show custom-field answers on host booking cards
-* core: Include custom-field answers in ICS event description
-* core: Include custom-field answers in appointment emails
-* core: Show custom-field answers on Rhythm confirmation step
-* core: Show custom-field answers on Quill confirmation step
-* core: Confirm before clearing type-specific config on type change
-* core: Add custom questions builder to meeting type form
-* core: Persist custom-field snapshot and answers on booking submission
-* core: Allow refreshing Slack channel list without reopening the form
-* core: Notify Slack when meetings are booked, cancelled, or rescheduled
-* core: Add Slack dashboard UI
-* core: Add Baikal CalDAV calendar integration
-* core: Add SlackDeliverySchema and slack_integration factory
-* core: Add SlackIntegrationSchema with OAuth + webhook URL modes
-* core: Add slack_deliveries table
-* core: Add slack_integrations table
-* core: Sync Zoom meetings when bookings are rescheduled or cancelled
-* core: Cancel in-flight bookings when host disconnects Stripe
-* core: Translate meeting payments into de/fr/it/uk
-* core: Retain payment records past user deletion for tax compliance
-* core: Email hosts when Stripe restricts their connected account
-* core: Email hosts when Stripe opens a dispute on their booking
-* core: Email attendees when their booking payment is refunded
-* core: Add received-amount summary to organiser confirmation email
-* core: Add receipt block to attendee confirmation email
-* core: Add refunds context and host dashboard refund flow
-* core: Retain payment_transactions past user deletion for tax compliance
-* core: Remove Zoom integration automatically when uninstalled from Zoom
-* core: Add Zoom as a video meeting provider
+* [BREAKING] Correct Docker Compose env forwarding, volumes, and DB config
+* Correct sender identity in host operational alert emails
+* Treat unfinished Stripe onboarding as incomplete, not restricted
+* Distinguish superseded from expired email verification links
+* Stop duplicate emails when SMTP delivery is slow
+* Keep verification and reset links valid after a resend
+* Prevent Google Calendar sync crash on token-refresh failure
+* Prevent admin-alert floods from repeated crashes and job failures
+* Stop endless sync retries when a calendar is deleted on the provider side
+* Auto-deselect Google calendars deleted on the provider side
+* Make POSTGRES_PASSWORD optional when building the Docker image
+* Prevent admin alert email floods when many jobs fail at once
+* Keep password-reset and verification links out of job logs
+* Reject theme video uploads when transcoding is unavailable
+* Give dropdown dialogs accessible names
+* Improve the dashboard tour on small screens
+* Restore centred embed layout and make wide layout opt-in
+* Translate booking flash messages
+* Remove orphaned calendar events when booking sync fails
+* Block private-network addresses in calendar server URLs
+* Prevent a crash when dismissing an announcement twice
+* Prevent locking yourself out of sign-in settings
+* Validate custom question answers and bounds more strictly
+* Improve paid booking reliability and payment errors
+* Keep video meeting links in sync when bookings change
+* Protect Slack webhook secrets and handle rate limits
+* Update final onboarding step CTA to go to dashboard
+* Keep dashboard sidebar fixed while only the content scrolls
+* Preserve typed answers when navigating booking questions
+* Reject overly long phone numbers in booking questions
+* Keep Quill meeting-type cards a fixed size on hover and selection
+* Size Quill meeting-type step to match the calendar step
+* Remove clipped copy-link confirmation tooltip in dashboard sidebar
+* Stop false type-change warning when editing a custom question
+* Show embed live preview before embed domains are configured
+* Copy booking link to clipboard on onboarding ready step
+* Show Rhythm booking meeting-type descriptions on wide screens
+* Show Quill booking meeting-type descriptions on wide screens
+* Keep Quill booking time-slot buttons a uniform size
+* Keep Quill booking time slots scrollable and free of overflow on small screens
+* Reflow the Quill booking overview to fit and use space across screen sizes
+* Prevent embedded booking from flickering and lurching on resize
+* Apply all Stripe Connect account updates, not just the first
+* Translate booker-facing booking and payment strings for de/fr/uk/it
+* Show booker-facing emails in the recipient's language for de/fr/uk
+* Show payment confirmation time in the attendee's timezone
+* Let attendees return to booking after a cancelled payment
+* Record disputes and refunds that arrive before payment confirmation
+* Allow refunds when no reason is supplied
+* Record Stripe charge id to enable refunds and disputes
+* Fix checkout failure for paid bookings
+* Show calendar reconnect prompt when event creation needs reauth
+* Allow disconnecting a Slack OAuth integration
+* Harden DashboardTour hook against scroll-jack and resize
+* Persist dashboard tour completion across all dismissal paths
+* Accept both yes and no as valid answers to a yes/no question
+* Keep edit button visible on each custom-question list row
+* Allow disabling password auth when no admin auth path is currently active
+* Redirect non-admins to dashboard from admin page
+* Show Baikal in the dashboard calendar integration list
+* Remove jumping hover effect on action buttons
+* Note acknowledgement not accepted in custom questions wizard
+* Persist custom_fields through the meeting type save path
+* Tighten Slack integration lifecycle and error reporting
+* Correct Slack worker retry handling and rate-limit backoff
+* Enforce refund window in cancel-meeting modal
+* Correct refund and disconnect flow in host payments dashboard
+* Show Pro and Stripe-required automation gates as user flashes
+* Make Stripe Connect onboarding country configurable
+* Block default currency change when pending payments exist
+* Omit application_fee_amount when zero in Stripe Checkout sessions
+* Prevent duplicate payment notification emails on Oban retry
+* Return 503 when Stripe Connect webhook secret is missing
+* Serialise charge.refunded webhook against in-app refunds
+* Recover meeting state when paid checkout completes after expiry
+* Close TOCTOU race when host disconnects Stripe with pending bookings
+* Preserve booking payments past host deletion with nil attendee data
+* Use integer arithmetic for payment money math
+* Drop the literal "there" salutation on anonymous refund emails
+* Show Zoom as an OAuth provider in the video integration list
+* Fix pixelated Cloudron dashboard icon
+* Repair Zoom meeting creation and harden the OAuth flow
+* Show a loading spinner while opening Stripe Connect onboarding
+* Auto-save meeting type edits as you change them
+* Show price and custom-question count on meeting type cards
+* Add slow fade animations to the dashboard tour
+* Add a cooldown to the resend verification email button
+* Announce custom questions, payments and Zoom in a what's-new modal
+* Widen the Quill booking card on short, wide viewports
+* Trim trailing empty weeks so the booking calendar fits
+* Fit Quill and Rhythm booking pages to short viewports
+* Add a payments dashboard for Stripe Connect, currency, and refunds
+* Let hosts set a price on paid meeting types
+* Toggle meeting payments from the admin settings page
+* Show reconnect prompt for revoked video integrations
+* Default new embed snippets to column layout
+* Auto-fit embed height and add column layout option
+* Add Reconnect button to pending Slack OAuth integrations
+* Redesign custom questions step with in-brand answer controls
+* Add post-onboarding dashboard tour
+* Edit custom question options as individual fields
+* Add SSO, reCAPTCHA, and admin alert toggles to admin settings
+* Disable password-auth toggle when lockout would apply
+* Show display name and booking slug in admin users table
+* Protect admin panel from auth lockout and allow self-demotion
+* Add admin control panel for self-hosted installs
+* Group calendar providers into OAuth and CalDAV sections
+* Show what's-new modal on dashboard for unseen feature announcements
+* Show custom-field answers on host booking cards
+* Include custom-field answers in ICS event description
+* Include custom-field answers in appointment emails
+* Show custom-field answers on Rhythm confirmation step
+* Show custom-field answers on Quill confirmation step
+* Confirm before clearing type-specific config on type change
+* Add custom questions builder to meeting type form
+* Persist custom-field snapshot and answers on booking submission
+* Allow refreshing Slack channel list without reopening the form
+* Notify Slack when meetings are booked, cancelled, or rescheduled
+* Add Slack dashboard UI
+* Add Baikal CalDAV calendar integration
+* Add SlackDeliverySchema and slack_integration factory
+* Add SlackIntegrationSchema with OAuth + webhook URL modes
+* Add slack_deliveries table
+* Add slack_integrations table
+* Sync Zoom meetings when bookings are rescheduled or cancelled
+* Cancel in-flight bookings when host disconnects Stripe
+* Translate meeting payments into de/fr/it/uk
+* Retain payment records past user deletion for tax compliance
+* Email hosts when Stripe restricts their connected account
+* Email hosts when Stripe opens a dispute on their booking
+* Email attendees when their booking payment is refunded
+* Add received-amount summary to organiser confirmation email
+* Add receipt block to attendee confirmation email
+* Add refunds context and host dashboard refund flow
+* Retain payment_transactions past user deletion for tax compliance
+* Remove Zoom integration automatically when uninstalled from Zoom
+* Add Zoom as a video meeting provider
 
 
 [1.0.5]
-* core: Keep real-time calendar sync working for all connected calendars
+* Keep real-time calendar sync working for all connected calendars
 
 
 [1.0.4]
-* core: Restore clipped dropdown menus in the calendar grid toolbar
-* core: Refresh Outlook calendars on demand with a rolling sync window
-* core: Create Google Meet links inline with Google Calendar events
+* Restore clipped dropdown menus in the calendar grid toolbar
+* Refresh Outlook calendars on demand with a rolling sync window
+* Create Google Meet links inline with Google Calendar events
 
 
 [1.0.3]
-* core: Allow moving events between calendar integrations
-* core: Prevent email header injection in subject lines
-* core: Use a neutral greeting in transactional emails when no name is set
-* core: Respect calendar selection in meeting picker and grid
-* core: Show placeholder hints in form inputs
-* core: Prevent CalDAV event delete and update from failing through circuit breaker
-* core: Prevent Docker container from failing to restart with an existing volume
-* core: Preserve special characters in meeting titles and labels
+* Allow moving events between calendar integrations
+* Prevent email header injection in subject lines
+* Use a neutral greeting in transactional emails when no name is set
+* Respect calendar selection in meeting picker and grid
+* Show placeholder hints in form inputs
+* Prevent CalDAV event delete and update from failing through circuit breaker
+* Prevent Docker container from failing to restart with an existing volume
+* Preserve special characters in meeting titles and labels
 
 
 [1.0.2]
-* core: Prevent duplicate booking invites from CalDAV servers (closes #41)
+* Prevent duplicate booking invites from CalDAV servers (closes #41)
 
 
 [1.0.1]
-* core: Correct availability and slot ordering in the booking calendar
-* core: Fix pixelated Cloudron dashboard icon
+* Correct availability and slot ordering in the booking calendar
+* Fix pixelated Cloudron dashboard icon
 
 
 [1.0.0]
 
 
 [0.100.16]
-* core: Apply calendar deselection to CalDAV sync immediately
-* core: Prevent calendar dashboard crash on 3+ overlapping all-day events
-* core: Reject Google Calendar connections without write access
-* core: Add custom colour picker for booking page palettes and backgrounds
-* core: Add rotating file logs with sensitive-data redaction
+* Apply calendar deselection to CalDAV sync immediately
+* Prevent calendar dashboard crash on 3+ overlapping all-day events
+* Reject Google Calendar connections without write access
+* Add custom colour picker for booking page palettes and backgrounds
+* Add rotating file logs with sensitive-data redaction
 
 
 [0.100.15]
-* core: Translate reCAPTCHA notice text so it localises with the booking form
-* core: Translate location placeholder in booking confirmation emails
-* core: Fix invisible reply text in Thunderbird dark mode
-* core: Restore CalDAV booking creation when discovery omits path
+* Translate reCAPTCHA notice text so it localises with the booking form
+* Translate location placeholder in booking confirmation emails
+* Fix invisible reply text in Thunderbird dark mode
+* Restore CalDAV booking creation when discovery omits path
 
 
 [0.100.14]
-* core: Prevent CalDAV sync crash on all-day recurring events with EXDATEs
-* core: Fix Nextcloud connection test failing for bare server URLs
-* core: Auto-pause integrations stuck unhealthy past the configured cutoff
+* Prevent CalDAV sync crash on all-day recurring events with EXDATEs
+* Fix Nextcloud connection test failing for bare server URLs
+* Auto-pause integrations stuck unhealthy past the configured cutoff
 
 
 [0.100.13]
-* core: Fix mailbox.org calendar discovery failing with unsupported provider error
-* core: Prevent crash when clicking mailbox.org calendar provider
-* core: Reject blank CalDAV credentials before connecting
-* core: Keep Radicale auth failures flagged for reauth after 403 mapping change
-* core: Auto-discover calendars during CalDAV onboarding
-* core: Finish wiring mailbox.org through onboarding and runtime client paths
-* core: Keep signup form responsive when the email field is missing
-* core: Downgrade webhook redirects from POST to GET on 301/302/303
-* core: Make Outlook delta sync resilient to expired and partial responses
-* core: Align booking integration selection across meeting schemas
-* core: Enable mailbox.org in the runtime calendar-provider toggle list
-* core: Include mailbox.org in remaining CalDAV provider lists
-* core: Stop duplicating attendee message in calendar events
-* core: Hide task-only CalDAV calendars from event calendar pickers
-* core: Prevent CalDAV permission errors from disconnecting calendars
-* core: Pre-fill and lock server URL in mailbox.org calendar setup
-* core: Add setup guide links to CalDAV provider configuration forms
-* core: Notify users immediately when integration credentials become invalid
-* core: Add mailbox.org as a CalDAV calendar provider
-* core: Load environment variables from a .env file at boot
+* Fix mailbox.org calendar discovery failing with unsupported provider error
+* Prevent crash when clicking mailbox.org calendar provider
+* Reject blank CalDAV credentials before connecting
+* Keep Radicale auth failures flagged for reauth after 403 mapping change
+* Auto-discover calendars during CalDAV onboarding
+* Finish wiring mailbox.org through onboarding and runtime client paths
+* Keep signup form responsive when the email field is missing
+* Downgrade webhook redirects from POST to GET on 301/302/303
+* Make Outlook delta sync resilient to expired and partial responses
+* Align booking integration selection across meeting schemas
+* Enable mailbox.org in the runtime calendar-provider toggle list
+* Include mailbox.org in remaining CalDAV provider lists
+* Stop duplicating attendee message in calendar events
+* Hide task-only CalDAV calendars from event calendar pickers
+* Prevent CalDAV permission errors from disconnecting calendars
+* Pre-fill and lock server URL in mailbox.org calendar setup
+* Add setup guide links to CalDAV provider configuration forms
+* Notify users immediately when integration credentials become invalid
+* Add mailbox.org as a CalDAV calendar provider
+* Load environment variables from a .env file at boot
 
 
 [0.100.12]
-* core: Stop deleted CalDAV events from reappearing on refresh
-* core: Keep the dashboard in sync after editing a calendar event
-* core: Preserve CalDAV reauth flag when worker DB write fails
-* core: Harden CalDAV reconnect flow
-* core: Add 3-day view, swipe navigation, and responsive view demotion
-* core: Flag CalDAV integrations needing reauth when sync hits 401
-* core: Allow CalDAV credential rotation without recreating the integration
-* core: Add OAuth reconnect button to calendar integration cards
+* Stop deleted CalDAV events from reappearing on refresh
+* Keep the dashboard in sync after editing a calendar event
+* Preserve CalDAV reauth flag when worker DB write fails
+* Harden CalDAV reconnect flow
+* Add 3-day view, swipe navigation, and responsive view demotion
+* Flag CalDAV integrations needing reauth when sync hits 401
+* Allow CalDAV credential rotation without recreating the integration
+* Add OAuth reconnect button to calendar integration cards
 
 
 [0.100.11]
-* core: Prevent reCAPTCHA tokens being corrupted during form validation
-* core: Derive with_retry_async's Task.await timeout from the retry budget
-* core: Prevent search engines from indexing booking pages
-* core: Surface timezone conversion failures from ensure_utc/1
-* core: Surface OAuth token persistence failures loudly
-* core: Deliver reschedule confirmation emails without pattern mismatch
-* core: Warn when toggling a deleted calendar integration
-* core: Show validation error when break end time precedes start time
+* Prevent reCAPTCHA tokens being corrupted during form validation
+* Derive with_retry_async's Task.await timeout from the retry budget
+* Prevent search engines from indexing booking pages
+* Surface timezone conversion failures from ensure_utc/1
+* Surface OAuth token persistence failures loudly
+* Deliver reschedule confirmation emails without pattern mismatch
+* Warn when toggling a deleted calendar integration
+* Show validation error when break end time precedes start time
 
 
 [0.100.10]
-* core: Count all concurrent failed login attempts toward account lockout
-* core: Deliver attendee notifications on calendar event updates
-* core: Prevent password-reset race that could overwrite a user's new password
-* core: Prevent availability crash on DST-transition break times
-* core: Collapse duplicate time slot labels on daylight-saving fall-back days
-* core: Prevent CalDAV sync crash on malformed server responses
-* core: Reject double-encoded open-redirect payloads
-* core: Sign pagination cursors to prevent forged keyset offsets
-* core: Block webhook delivery redirects to private networks
-* core: Flag calendar integrations for reauth on decryption failure
-* core: Preserve circuit-breaker state across worker restarts
-* core: Keep account lockout counter in effect across restarts
-* core: Block XSS via custom theme CSS breakout
-* core: Require OAuth callback state to match session user
-* core: Add Italian to supported booking and email languages
+* Count all concurrent failed login attempts toward account lockout
+* Deliver attendee notifications on calendar event updates
+* Prevent password-reset race that could overwrite a user's new password
+* Prevent availability crash on DST-transition break times
+* Collapse duplicate time slot labels on daylight-saving fall-back days
+* Prevent CalDAV sync crash on malformed server responses
+* Reject double-encoded open-redirect payloads
+* Sign pagination cursors to prevent forged keyset offsets
+* Block webhook delivery redirects to private networks
+* Flag calendar integrations for reauth on decryption failure
+* Preserve circuit-breaker state across worker restarts
+* Keep account lockout counter in effect across restarts
+* Block XSS via custom theme CSS breakout
+* Require OAuth callback state to match session user
+* Add Italian to supported booking and email languages
 
 
 [0.100.9]
-* core: Prevent uploaded non-media files from being served as HTML
-* core: Restore Outlook calendar sync broken by Graph delta query rejection
-* core: Prevent Nextcloud calendar setup failure on common hostnames
-* core: Make Docker QuickStart succeed on Docker Desktop and bind-mounts
-* core: Surface calendar refresh flashes that were silently dropped
-* core: Surface booking and theme error flashes that were silently dropped
-* core: Translate user-facing emails in French, German, and Ukrainian
-* core: Warn in dashboard when a calendar integration has no calendars selected
+* Prevent uploaded non-media files from being served as HTML
+* Restore Outlook calendar sync broken by Graph delta query rejection
+* Prevent Nextcloud calendar setup failure on common hostnames
+* Make Docker QuickStart succeed on Docker Desktop and bind-mounts
+* Surface calendar refresh flashes that were silently dropped
+* Surface booking and theme error flashes that were silently dropped
+* Translate user-facing emails in French, German, and Ukrainian
+* Warn in dashboard when a calendar integration has no calendars selected
 
 
 [0.100.8]
-* core: Prevent Docker first-run failure when PostgreSQL volume is root-owned
-* core: Move video-room HTTP call outside DB transaction
-* core: Invalidate availability cache after calendar sync persists
-* core: Re-anchor UTC-midnight all-day events to owner tz in availability
+* Prevent Docker first-run failure when PostgreSQL volume is root-owned
+* Move video-room HTTP call outside DB transaction
+* Invalidate availability cache after calendar sync persists
+* Re-anchor UTC-midnight all-day events to owner tz in availability
 
 
 [0.100.7]
-* core: Prevent calendar grid crash on invalid user timezone
-* core: Extend IDOR prevention to booking-form reschedule paths
-* core: Prevent IDOR on meeting cancel/reschedule
-* core: Emit METHOD:PUBLISH cancellations and harden ICS parameters
-* core: Allow Stripe billing and checkout hosts in CSP form-action
+* Prevent calendar grid crash on invalid user timezone
+* Extend IDOR prevention to booking-form reschedule paths
+* Prevent IDOR on meeting cancel/reschedule
+* Emit METHOD:PUBLISH cancellations and harden ICS parameters
+* Allow Stripe billing and checkout hosts in CSP form-action
 
 
 [0.100.6]
-* core: Suppress CalDAV/iMIP auto-scheduling for booked events
-* core: Widen provider_calendar_events text columns to unbounded text
-* core: Handle 3-tuple api_error in Outlook fallback sync sweep
-* core: Deduplicate upsert batch by uid to prevent cardinality violation
-* core: Accept calendar server URLs without an explicit scheme
+* Suppress CalDAV/iMIP auto-scheduling for booked events
+* Widen provider_calendar_events text columns to unbounded text
+* Handle 3-tuple api_error in Outlook fallback sync sweep
+* Deduplicate upsert batch by uid to prevent cardinality violation
+* Accept calendar server URLs without an explicit scheme
 
 
 [0.100.5]
-* core: Expand recurring events in fresh-fetch availability path
+* Expand recurring events in fresh-fetch availability path
 
 
 [0.100.4]
-* core: Use boolean stable field in CloudronVersions.json
+* Use boolean stable field in CloudronVersions.json
 
 
 [0.100.3]
-* core: Add local icon path to manifest and use boolean stable field
-* core: Populate empty 0.99.32 changelog and correct install URL
+* Add local icon path to manifest and use boolean stable field
+* Populate empty 0.99.32 changelog and correct install URL
 
 
 [0.100.2]
-* core: Guard against nil calendar_paths in CalDAV queue wiring
-* core: Retain etag in provider_metadata for CalDAV events
-* core: Refresh scheduling page availability on calendar sync
-* core: Make CalDAV full-fetch reconciliation atomic
-* core: Centralise attendee notifications with change detection and ICS sequencing
-* core: Handle move_event_async failures via offline queue
-* core: Wire dashboard direct edit into CalDAV offline queue
-* core: Wire dashboard create/delete into CalDAV offline queue
-* core: Wire CalendarEventWorker into CalDAV offline queue
-* core: CalDAV offline write queue
-* core: Persist raw iCal body alongside parsed CalDAV events
-* core: Re-probe CalDAV sync tier on forced full fetch
-* core: Retry CalDAV conditional PUTs on transient errors
-* core: CalDAV conflict-resolution policy on 412
+* Guard against nil calendar_paths in CalDAV queue wiring
+* Retain etag in provider_metadata for CalDAV events
+* Refresh scheduling page availability on calendar sync
+* Make CalDAV full-fetch reconciliation atomic
+* Centralise attendee notifications with change detection and ICS sequencing
+* Handle move_event_async failures via offline queue
+* Wire dashboard direct edit into CalDAV offline queue
+* Wire dashboard create/delete into CalDAV offline queue
+* Wire CalendarEventWorker into CalDAV offline queue
+* CalDAV offline write queue
+* Persist raw iCal body alongside parsed CalDAV events
+* Re-probe CalDAV sync tier on forced full fetch
+* Retry CalDAV conditional PUTs on transient errors
+* CalDAV conflict-resolution policy on 412
 
 
 [0.100.1]
-* core: Address deep review findings for Outlook sync bootstrap refactor
-* core: Handle DST transitions in convert_to_utc and expand TZID coverage
-* core: Strip quoted TZID and normalise provider timezones (closes #38)
-* core: Align booking conflict check with canonical blocking predicate
-* core: Harden security module against edge-case bypasses
-* core: Honour configured meeting type order on public booking page
-* core: Normalise provider to atom in CalDAV health check client
-* core: Stop entity-encoding plain-text fields in UniversalSanitizer
-* core: Prevent Quick Actions card overflow on mobile dashboard
-* core: Prevent logo and user dropdown overlap on mobile dashboard
-* core: Hide back-to-website button on mobile auth pages
+* Address deep review findings for Outlook sync bootstrap refactor
+* Handle DST transitions in convert_to_utc and expand TZID coverage
+* Strip quoted TZID and normalise provider timezones (closes #38)
+* Align booking conflict check with canonical blocking predicate
+* Harden security module against edge-case bypasses
+* Honour configured meeting type order on public booking page
+* Normalise provider to atom in CalDAV health check client
+* Stop entity-encoding plain-text fields in UniversalSanitizer
+* Prevent Quick Actions card overflow on mobile dashboard
+* Prevent logo and user dropdown overlap on mobile dashboard
+* Hide back-to-website button on mobile auth pages
 
 
 [0.100.0]
-* core: Unbreak dashboard event creation async result path
-* core: Redirect to /dashboard after onboarding and update e2e test for 7-step flow
-* core: Wire password toggle hook on every auth form and give each a unique id
-* core: Stop back-to-website button animating from inside auth card
-* core: Style rhythm overview empty state
-* core: Register grid-cols-14 and grid-cols-16 in Tailwind config
-* core: Replace stale xs: breakpoint on automation card test buttons
-* core: Use turquoise scale for reCAPTCHA notice links
-* core: Harden 2026 email helpers against edge-case inputs
-* core: Render quill time slots in a responsive grid
-* core: Adapt rhythm schedule step to iframe height via flex
-* core: Preserve unspecified calendar preference fields on partial upsert
-* core: Re-centre dashboard calendar on current time after refresh
-* core: Keep cancel button icon and label on one line
-* core: Handle OAuth plain-map events in blocking? and convert_events_to_timezone
-* core: Convert CalDAV EXDATE values to Date for cache storage
-* core: Fold created_by_tymeslot into recreate_provider_calendar_events migration
-* core: Normalize OAuth calendar events in EventsRead fetch path
-* core: Replace fixed CSS values with fluid responsive equivalents
-* core: Validate calendar discovery input before rate-limiting
-* core: Add missing rate limits to calendar event creation and connection tests
-* core: Bound health check job execution to prevent 10+ minute runs
-* core: Redesign transactional and system emails for 2026
-* core: Add periodic forced full re-sync for CalDAV integrations
-* core: Fingerprint calendar events created by Tymeslot
-* core: Add og-image.png social card for Open Graph meta tags
-* core: Normalise all calendar providers through canonical CalendarEvent
-* core: Add canonical CalendarEvent struct and provider_calendar_events table
-* core: Enrich admin alerts with structured reason and PII scrubbing
-* core: Add standardised admin alerts infrastructure
+* Unbreak dashboard event creation async result path
+* Redirect to /dashboard after onboarding and update e2e test for 7-step flow
+* Wire password toggle hook on every auth form and give each a unique id
+* Stop back-to-website button animating from inside auth card
+* Style rhythm overview empty state
+* Register grid-cols-14 and grid-cols-16 in Tailwind config
+* Replace stale xs: breakpoint on automation card test buttons
+* Use turquoise scale for reCAPTCHA notice links
+* Harden 2026 email helpers against edge-case inputs
+* Render quill time slots in a responsive grid
+* Adapt rhythm schedule step to iframe height via flex
+* Preserve unspecified calendar preference fields on partial upsert
+* Re-centre dashboard calendar on current time after refresh
+* Keep cancel button icon and label on one line
+* Handle OAuth plain-map events in blocking? and convert_events_to_timezone
+* Convert CalDAV EXDATE values to Date for cache storage
+* Fold created_by_tymeslot into recreate_provider_calendar_events migration
+* Normalize OAuth calendar events in EventsRead fetch path
+* Replace fixed CSS values with fluid responsive equivalents
+* Validate calendar discovery input before rate-limiting
+* Add missing rate limits to calendar event creation and connection tests
+* Bound health check job execution to prevent 10+ minute runs
+* Redesign transactional and system emails for 2026
+* Add periodic forced full re-sync for CalDAV integrations
+* Fingerprint calendar events created by Tymeslot
+* Add og-image.png social card for Open Graph meta tags
+* Normalise all calendar providers through canonical CalendarEvent
+* Add canonical CalendarEvent struct and provider_calendar_events table
+* Enrich admin alerts with structured reason and PII scrubbing
+* Add standardised admin alerts infrastructure
 
 
 [0.99.40]
-* core: Skip duplicate transaction on initial subscription invoice
-* core: Remove dead pattern match branch in get_calendar_path
-* core: Add missing user FK constraint to integration_health_states
-* core: Add translations for attendee discard confirmation plural string
-* core: Notify attendees when organiser updates event details
-* core: Redesign onboarding with split-screen layout and individual scheduling steps
-* core: Add 310 missing IANA TLDs to validation list
-* core: Expand TLD list with 77 missing domain extensions
-* core: Add TLD validation to domain validator
-* core: Add TLD validation to email validator
-* core: Add TLD list module with typo suggestions
-* core: Add calendar invitation emails with attendee management
-* core: Add TLD data file for domain ending validation
-* core: Add multi-attendee support to calendar events
-* core: Add ad-hoc meeting invitations from dashboard calendar
-* core: Show empty state banner when no calendars are connected
+* Skip duplicate transaction on initial subscription invoice
+* Remove dead pattern match branch in get_calendar_path
+* Add missing user FK constraint to integration_health_states
+* Add translations for attendee discard confirmation plural string
+* Notify attendees when organiser updates event details
+* Redesign onboarding with split-screen layout and individual scheduling steps
+* Add 310 missing IANA TLDs to validation list
+* Expand TLD list with 77 missing domain extensions
+* Add TLD validation to domain validator
+* Add TLD validation to email validator
+* Add TLD list module with typo suggestions
+* Add calendar invitation emails with attendee management
+* Add TLD data file for domain ending validation
+* Add multi-attendee support to calendar events
+* Add ad-hoc meeting invitations from dashboard calendar
+* Show empty state banner when no calendars are connected
 
 
 [0.99.39]
@@ -688,228 +688,228 @@
 
 
 [0.99.36]
-* core: Preserve expanded recurring event occurrences in dedup
-* core: Expand CalDAV recurring events for availability checking
-* core: Centralise sync window and widen to 365 days back
-* core: Scope detect_deletions to calendar path in multi-calendar CalDAV sync
-* core: Harden calendar sync against webhook abuse, circuit breaker misfire, and duplicate notifications
-* core: Correct action_button doc and info_box spec
-* core: Harden calendar sync with batch webhooks, async CRUD, and race fixes
-* core: Make profile timezone optional and rename video integration route
-* core: Update booking, meeting list, and email UI
-* core: Calendar grid inline editing and event management
-* core: Update calendar webhook controllers
-* core: Improve calendar sync workers
-* core: Calendar API and backend sync improvements
-* core: Add calendar grid UI with inline title editing
-* core: Add calendar event sync engine
-* core: Rename integration routes and add scheduling/calendar mode tab bar
+* Preserve expanded recurring event occurrences in dedup
+* Expand CalDAV recurring events for availability checking
+* Centralise sync window and widen to 365 days back
+* Scope detect_deletions to calendar path in multi-calendar CalDAV sync
+* Harden calendar sync against webhook abuse, circuit breaker misfire, and duplicate notifications
+* Correct action_button doc and info_box spec
+* Harden calendar sync with batch webhooks, async CRUD, and race fixes
+* Make profile timezone optional and rename video integration route
+* Update booking, meeting list, and email UI
+* Calendar grid inline editing and event management
+* Update calendar webhook controllers
+* Improve calendar sync workers
+* Calendar API and backend sync improvements
+* Add calendar grid UI with inline title editing
+* Add calendar event sync engine
+* Rename integration routes and add scheduling/calendar mode tab bar
 
 
 [0.99.35]
 
 
 [0.99.34]
-* core: Derive display location from meeting fields in AppointmentBuilder
-* core: Translate email location labels at render time per recipient locale
-* core: Remove double scrollbar on time slots in constrained-height embeds
-* core: Fix timezone dropdown height, width, and popular ordering
-* core: Improve Quill overview duration card visibility and avatar alignment
-* core: Prevent time slots from stretching when period has few slots
-* core: I18n organizer reminder email and sanitize error output in CalDAV sync
-* core: Replace TzExtra with curated continent city modules
-* core: Multi-account integration support
-* core: Multi-account integration support with per-account uniqueness
+* Derive display location from meeting fields in AppointmentBuilder
+* Translate email location labels at render time per recipient locale
+* Remove double scrollbar on time slots in constrained-height embeds
+* Fix timezone dropdown height, width, and popular ordering
+* Improve Quill overview duration card visibility and avatar alignment
+* Prevent time slots from stretching when period has few slots
+* I18n organizer reminder email and sanitize error output in CalDAV sync
+* Replace TzExtra with curated continent city modules
+* Multi-account integration support
+* Multi-account integration support with per-account uniqueness
 
 
 [0.99.33]
-* core: Add tzdata and logger config to core runtime.exs
-* core: Resolve WebSocket and OAuth failures on Cloudron deployment
+* Add tzdata and logger config to core runtime.exs
+* Resolve WebSocket and OAuth failures on Cloudron deployment
 
 
 [0.99.32]
-* core: Resolve WebSocket and OAuth failures on Cloudron deployment
+* Resolve WebSocket and OAuth failures on Cloudron deployment
 * themes: Scope container margin removal to modal embed mode only
-* core: Harden availability edge cases — IDOR protection, cache invalidation, input guards
-* core: Point tzdata at writable directory on Cloudron
+* Harden availability edge cases — IDOR protection, cache invalidation, input guards
+* Point tzdata at writable directory on Cloudron
 
 
 [0.99.31]
-* core: Clarify embed option descriptions for non-technical users
-* core: Strip URL scheme/port/path in validate_domain/1
-* core: Compute availability over full 42-day calendar display range
-* core: Add missing "All rights reserved" to footer copyright
-* core: Reject domains with protocols in embed domain validation
-* core: Use Oban unique jobs for video transcoding and clean up variants on delete
-* core: Split Night period into Early Morning and Late Night
-* core: Split embed system into inline and modal modes
-* core: Responsive video transcoding for uploaded backgrounds
-* core: Add responsive video transcoding for uploaded backgrounds
-* core: Add natural sort for meeting types in LocalizationHelpers
+* Clarify embed option descriptions for non-technical users
+* Strip URL scheme/port/path in validate_domain/1
+* Compute availability over full 42-day calendar display range
+* Add missing "All rights reserved" to footer copyright
+* Reject domains with protocols in embed domain validation
+* Use Oban unique jobs for video transcoding and clean up variants on delete
+* Split Night period into Early Morning and Late Night
+* Split embed system into inline and modal modes
+* Responsive video transcoding for uploaded backgrounds
+* Add responsive video transcoding for uploaded backgrounds
+* Add natural sort for meeting types in LocalizationHelpers
 
 
 [0.99.30]
-* core: Hide reCAPTCHA v3 badge per Google's terms
-* core: Clean up iframe embedding security headers
-* core: Use signed parent_origin for embed domain verification
-* core: Redesign site_footer with supplemental_nav slot and column layout
-* core: Add supplemental_nav slot to site_footer for injecting extra link columns
+* Hide reCAPTCHA v3 badge per Google's terms
+* Clean up iframe embedding security headers
+* Use signed parent_origin for embed domain verification
+* Redesign site_footer with supplemental_nav slot and column layout
+* Add supplemental_nav slot to site_footer for injecting extra link columns
 
 
 [0.99.29]
-* core: Fix dashboard headline position on automation and profile pages
-* core: Use check_all_queues in healthcheck to handle test mode
-* core: Calendar integration edge cases — stale refs, timezone boundaries, error reporting
-* core: Harden video integration edge cases — upsert on OAuth, unique constraint, graceful JSON handling
-* core: Fix stale modal retry interval and digested filename error handler
-* core: Harden embed edge cases found in audit
-* core: Harden theme customisation — error tuples, browsing_type guard, image size limit
-* core: Discard permanent meeting errors and log confirmation step failures
-* core: Guard booking step against double-submission and direct URL access
-* core: Restore keyboard focus visibility and consolidate Inter font import
-* core: Add empty state to Rhythm overview and replace emoji icons in Quill meeting pages
-* core: Improve theme error logging and plug exception handling
-* core: Return error when all selected calendars fail in MultiCalendarFetch
-* core: Harden auth security — email normalisation, token hashing, open redirect
-* core: Harden infrastructure resilience and healthcheck
-* core: Decrypt CalDAV credentials and forward custom video URL in health check
-* core: Validate email format in PasswordReset.initiate_reset before anti-enumeration path
-* core: Handle invalid_input map from authenticate_user in session controller
-* core: Restore PubSub alias and canonical URL logic
-* core: Pass parent-origin to embedded iframe URL
-* core: Fall back to parent-origin param when referrer is stripped
-* core: Normalise canonical URLs to strip query params and trailing slashes
-* core: Add minimum height floor to inline embeds
-* core: Handle three-tuple OAuth discovery error and move tidewave to saas
-* core: Harden embed security, accessibility, and reliability
-* core: Respect calendar event transparency (free/busy) across all providers
-* core: Wire availability overrides into business hours calculation
-* core: Config-driven dashboard extension system with parallel init and health check fixes
-* core: Harden iframe embed security with wildcard domains and www auto-matching
+* Fix dashboard headline position on automation and profile pages
+* Use check_all_queues in healthcheck to handle test mode
+* Calendar integration edge cases — stale refs, timezone boundaries, error reporting
+* Harden video integration edge cases — upsert on OAuth, unique constraint, graceful JSON handling
+* Fix stale modal retry interval and digested filename error handler
+* Harden embed edge cases found in audit
+* Harden theme customisation — error tuples, browsing_type guard, image size limit
+* Discard permanent meeting errors and log confirmation step failures
+* Guard booking step against double-submission and direct URL access
+* Restore keyboard focus visibility and consolidate Inter font import
+* Add empty state to Rhythm overview and replace emoji icons in Quill meeting pages
+* Improve theme error logging and plug exception handling
+* Return error when all selected calendars fail in MultiCalendarFetch
+* Harden auth security — email normalisation, token hashing, open redirect
+* Harden infrastructure resilience and healthcheck
+* Decrypt CalDAV credentials and forward custom video URL in health check
+* Validate email format in PasswordReset.initiate_reset before anti-enumeration path
+* Handle invalid_input map from authenticate_user in session controller
+* Restore PubSub alias and canonical URL logic
+* Pass parent-origin to embedded iframe URL
+* Fall back to parent-origin param when referrer is stripped
+* Normalise canonical URLs to strip query params and trailing slashes
+* Add minimum height floor to inline embeds
+* Handle three-tuple OAuth discovery error and move tidewave to saas
+* Harden embed security, accessibility, and reliability
+* Respect calendar event transparency (free/busy) across all providers
+* Wire availability overrides into business hours calculation
+* Config-driven dashboard extension system with parallel init and health check fixes
+* Harden iframe embed security with wildcard domains and www auto-matching
 
 
 [0.99.28]
-* core: Use IANA zone1970.tab for primary timezone country assignment
-* core: Correct iconUrl path in Cloudron manifests
-* core: Compile app before asset setup in Dockerfiles
-* core: Add session-free WebSocket for cross-origin embed iframes
+* Use IANA zone1970.tab for primary timezone country assignment
+* Correct iconUrl path in Cloudron manifests
+* Compile app before asset setup in Dockerfiles
+* Add session-free WebSocket for cross-origin embed iframes
 
 
 [0.99.27]
-* core: Replace cookie rewriting with signed token auth for embeds
-* core: Add Tymeslot.Embed.Token for signed embed tokens
+* Replace cookie rewriting with signed token auth for embeds
+* Add Tymeslot.Embed.Token for signed embed tokens
 
 
 [0.99.26]
-* core: Show booking validation errors per-field based on touched state
+* Show booking validation errors per-field based on touched state
 
 
 [0.99.25]
 
 
 [0.99.24]
-* core: Restrict valid? to country-based timezones to prevent UTC fallback showing first list entry
-* core: Add features_url config and safelist display token classes
-* core: Add GitHub release workflows and cliff.toml
+* Restrict valid? to country-based timezones to prevent UTC fallback showing first list entry
+* Add features_url config and safelist display token classes
+* Add GitHub release workflows and cliff.toml
 
 
 [0.99.23]
 
 
 [0.99.22]
-* core: Show theme background in embedded Rhythm iframes
-* core: Fix timezone dropdown positioning in embedded iframes
-* core: Use fixed height on iframe wrapper instead of minHeight
-* core: Display version number in site footer
-* core: Rewrite session cookie to SameSite=None for cross-site iframes
+* Show theme background in embedded Rhythm iframes
+* Fix timezone dropdown positioning in embedded iframes
+* Use fixed height on iframe wrapper instead of minHeight
+* Display version number in site footer
+* Rewrite session cookie to SameSite=None for cross-site iframes
 
 
 [0.99.21]
-* core: Correct build-docker.sh to operate within apps/tymeslot/
+* Correct build-docker.sh to operate within apps/tymeslot/
 
 
 [0.99.20]
-* core: Log Cloudron addon detection at startup
-* core: Auto-detect Cloudron OIDC addon in runtime config
-* core: Auto-detect Cloudron sendmail addon in runtime config
-* core: Add CloudronConfig module for sendmail addon
-* core: Declare OIDC addon in Cloudron manifest
-* core: Declare sendmail addon in Cloudron manifest
+* Log Cloudron addon detection at startup
+* Auto-detect Cloudron OIDC addon in runtime config
+* Auto-detect Cloudron sendmail addon in runtime config
+* Add CloudronConfig module for sendmail addon
+* Declare OIDC addon in Cloudron manifest
+* Declare sendmail addon in Cloudron manifest
 
 
 [0.99.19]
-* core: Stop sanitizing calendar integration passwords
-* core: Prevent integration passwords from leaking into debug logs
+* Stop sanitizing calendar integration passwords
+* Prevent integration passwords from leaking into debug logs
 
 
 [0.99.18]
-* core: Allow localhost embedding in dev/test without configuring allowed domains
-* core: Add iframe embedding, weekly calendar view, and shared scheduling init
-* core: Add canonical URL tag and current_url/1 layout helper
+* Allow localhost embedding in dev/test without configuring allowed domains
+* Add iframe embedding, weekly calendar view, and shared scheduling init
+* Add canonical URL tag and current_url/1 layout helper
 
 
 [0.99.17]
-* core: Address code review issues in Telegram integration
-* core: Skip calendar deletion for unlinked meetings and fix resolve_client fallback
-* core: Resolve confirmation page overflow in rhythm theme
-* core: Pass attendee_locale through ContentBuilder for cancellation and reschedule emails
-* core: Add Telegram notification integration
-* core: Add Credo check for hand-rolled modal backdrops
-* core: Shared-bot Telegram wizard with link expiry and reconnect
-* core: Add Telegram notification integration
+* Address code review issues in Telegram integration
+* Skip calendar deletion for unlinked meetings and fix resolve_client fallback
+* Resolve confirmation page overflow in rhythm theme
+* Pass attendee_locale through ContentBuilder for cancellation and reschedule emails
+* Add Telegram notification integration
+* Add Credo check for hand-rolled modal backdrops
+* Shared-bot Telegram wizard with link expiry and reconnect
+* Add Telegram notification integration
 
 
 [0.99.16]
 * Request meetings.space.created scope in Google Meet OAuth flow
 * Use hexpm bookworm builder to satisfy cloudron/base OpenSSL 3.0
 * Use debian:trixie-slim runtime to satisfy OpenSSL 3.4 requirement
-* core: Add changelog link to site footer
+* Add changelog link to site footer
 * Add Docs link to site footer
 
 
 [0.99.15]
-* core: Move circuit breaker provider lookups from compile time to runtime
-* core: Use consistent short labels for OAuth buttons on signup page
-* core: Resolve flaky booking LiveView tests caused by config pollution
-* core: Add update_subscription_status/3 callback to SubscriptionManager behaviour
-* core: Fix reset-password token URI matching and update OAuth tests to use session
-* core: Add is_verified flag to OAuth email-linking test
-* core: Fill empty English translations for cancel/reschedule meeting strings
-* core: Unwrap {state, timestamp} tuple in OAuth state session test
-* core: Correct OAuth provider callback specs and remove dead clauses
-* core: Add top-level aliases and remove TODO tag in OAuth state modules
-* core: Harden OAuth SSO security and validation
-* core: Accept string email_verified claim and document IdP switching
-* core: Add defensive fallbacks and fix email verification default
-* core: Use constant-time comparison and TTL for OAuth state
-* core: Move OAuth registration data from URL params to session
+* Move circuit breaker provider lookups from compile time to runtime
+* Use consistent short labels for OAuth buttons on signup page
+* Resolve flaky booking LiveView tests caused by config pollution
+* Add update_subscription_status/3 callback to SubscriptionManager behaviour
+* Fix reset-password token URI matching and update OAuth tests to use session
+* Add is_verified flag to OAuth email-linking test
+* Fill empty English translations for cancel/reschedule meeting strings
+* Unwrap {state, timestamp} tuple in OAuth state session test
+* Correct OAuth provider callback specs and remove dead clauses
+* Add top-level aliases and remove TODO tag in OAuth state modules
+* Harden OAuth SSO security and validation
+* Accept string email_verified claim and document IdP switching
+* Add defensive fallbacks and fix email verification default
+* Use constant-time comparison and TTL for OAuth state
+* Move OAuth registration data from URL params to session
 * Add PASSWORD_AUTH_ENABLED flag to disable password-based auth
 
 
 [0.99.14]
-* core: Validate generic OAuth config and respect email_verified claim
-* core: Dispatch meeting.rescheduled event in reschedule flow
-* core: Add generic OAuth/OIDC provider support for SSO authentication
-* core: Localize meeting cancel, reschedule, and cancel-confirmed pages
+* Validate generic OAuth config and respect email_verified claim
+* Dispatch meeting.rescheduled event in reschedule flow
+* Add generic OAuth/OIDC provider support for SSO authentication
+* Localize meeting cancel, reschedule, and cancel-confirmed pages
 
 
 [0.99.13]
-* core: Request calendar.events scope instead of broad calendar scope
+* Request calendar.events scope instead of broad calendar scope
 
 
 [0.99.12]
-* core: Gate OAuth registration paths on REGISTRATION_ENABLED flag
-* core: Deduplicate registration-disabled message and gate complete-registration route
-* core: Build embed.js via esbuild and bump version to 0.99.12
-* core: Add REGISTRATION_ENABLED flag to gate all registration paths
+* Gate OAuth registration paths on REGISTRATION_ENABLED flag
+* Deduplicate registration-disabled message and gate complete-registration route
+* Build embed.js via esbuild and bump version to 0.99.12
+* Add REGISTRATION_ENABLED flag to gate all registration paths
 
 
 [0.99.11]
-* core: Name unused variable consistently in calendar workflows
-* core: Add missing in_person provider icon assets
-* core: Correct broken calendar link in meeting settings empty state
-* core: Show inactive calendar integrations in meeting settings and fix persist fallback
-* core: Add arrow_right icon to IconComponents
+* Name unused variable consistently in calendar workflows
+* Add missing in_person provider icon assets
+* Correct broken calendar link in meeting settings empty state
+* Show inactive calendar integrations in meeting settings and fix persist fallback
+* Add arrow_right icon to IconComponents
 
 
 [0.99.10]
@@ -922,12 +922,12 @@
 
 [0.99.9]
 * dialyzer: Suppress false-positive call_without_opaque in gettext.ex
-* core: Harden worker logging — safe error formatting, early discard on missing meeting
+* Harden worker logging — safe error formatting, early discard on missing meeting
 * payments: Expire superseded Stripe checkout sessions on retry
 * db: Cascade delete meetings when user is deleted
 * structured_logger: Suppress unused variable warning in log_by_phase/2
-* core: Add ObanLogger telemetry handler for job process tracing
-* core: Add LoggerMetadataHook for LiveView process tracing
+* Add ObanLogger telemetry handler for job process tracing
+* Add LoggerMetadataHook for LiveView process tracing
 * webhooks: Store Stripe event payload and auto-nullify after 30 days
 
 
@@ -976,28 +976,28 @@
 
 
 [0.99.4]
-* core: Add zimbra to calendar provider DB constraint
-* core: Convert non-standard HTTP methods to uppercase strings for Finch
-* core: Left-align body text in integration unhealthy email
+* Add zimbra to calendar provider DB constraint
+* Convert non-standard HTTP methods to uppercase strings for Finch
+* Left-align body text in integration unhealthy email
 * config: Fix coveralls terminal_options key and set file_column_width to 125
 * lint: Resolve Credo warnings in CalDAV base and discovery service
-* core: Migrate CalDAV header handling to Req map format
-* core: Add Zimbra to DiscoveryService routing and path_utils
-* core: Snooze CalendarEventWorker for circuit recovery on :circuit_open
-* core: Return error when all calendar fetches fail in range queries
-* core: Register Zimbra provider in registry and add discovery case
-* core: Resolve Credo warnings for unused var names and thin wrapper
-* core: Correct country mapping for Asia/Yangon to Myanmar
-* core: Sort availability slots chronologically within each time period
+* Migrate CalDAV header handling to Req map format
+* Add Zimbra to DiscoveryService routing and path_utils
+* Snooze CalendarEventWorker for circuit recovery on :circuit_open
+* Return error when all calendar fetches fail in range queries
+* Register Zimbra provider in registry and add discovery case
+* Resolve Credo warnings for unused var names and thin wrapper
+* Correct country mapping for Asia/Yangon to Myanmar
+* Sort availability slots chronologically within each time period
 * deploy: Make asset builds hermetic in all Dockerfiles
 
 
 [0.99.3]
-* core: Restore visibility and center "Forgot password?" link on login
+* Restore visibility and center "Forgot password?" link on login
 
 
 [0.99.2]
-* core: Build JS bundles in Docker and make asset build hermetic
+* Build JS bundles in Docker and make asset build hermetic
 * railway: Replace shell script with railpack.json start command
 * railway: Use absolute path for release binary in railway_start.sh
 * railway: Use shell script for start cmd to avoid eval escaping issues
@@ -1011,54 +1011,54 @@
 * csp: Add analytics provider origins to script-src
 * test: Rename bare _ to _i in for comprehension to satisfy Credo consistency check
 * test: Pre-exhaust rate limit via API to prevent clear_all race in embed settings test
-* core: Resolve compiler warnings and Credo violations
-* core: Language switcher clickaway and lazy hook destroy collision
-* core: Guard against nil duration in maybe_assign_meeting_type
-* core: Address code review issues in embed test suite
-* core: Fix scheduling box overflow when time slots list is too long
-* core: Remove duplicate Tymeslot suffix from page titles
-* core: Harden password DoS guard and sanitize backslash redirects
+* Resolve compiler warnings and Credo violations
+* Language switcher clickaway and lazy hook destroy collision
+* Guard against nil duration in maybe_assign_meeting_type
+* Address code review issues in embed test suite
+* Fix scheduling box overflow when time slots list is too long
+* Remove duplicate Tymeslot suffix from page titles
+* Harden password DoS guard and sanitize backslash redirects
 * auth: Add regenerate_verification_token/1 to Auth context
-* core: Add integration_unhealthy email template tests and fix strong tag rendering
-* core: Persist integration health state and notify users on sustained failures
-* core: Add page titles and meta descriptions to auth pages
+* Add integration_unhealthy email template tests and fix strong tag rendering
+* Persist integration health state and notify users on sustained failures
+* Add page titles and meta descriptions to auth pages
 
 
 [0.99.0]
-* core: Fix failing and flaky tests across multiple test modules
-* core: Remove unused LinkAccessPolicy alias in theme integration test
-* core: Move @moduletag after use in all test modules
-* core: Add @moduletag :security to rate_limiter_dashboard_test
-* core: Add @moduletag taxonomy tags to test modules
-* core: Remove @moduletag inserted inside alias blocks in test files
-* core: Sort Tymeslot.Security aliases alphabetically in auth modules
-* core: Rename anonymous _ variables to _error in input validators test
-* core: Remove unreachable list guard in booking orchestrator
-* core: Remove unreachable catch-all clause in theme customization rate limiter
-* core: Correct @spec type for assign_form_errors from list() to map()
-* core: Remove unreachable nil guard in assign_theme_customization_data
-* core: Address review issues in webhook input validation sanitization
-* core: Add UniversalSanitizer to webhook name and URL validation
-* core: Update rhythm theme confirmation page layout and label
-* core: Fix reCAPTCHA v3 hook so booking form token is populated on submit
-* core: Fix honeypot visibility and recaptcha disclaimer layout in booking themes
-* core: Fix logger_json formatter config for OTP 28
-* core: Remove unreachable clause in sanitize_css_class
-* core: Fix type errors in proxy verifier
+* Fix failing and flaky tests across multiple test modules
+* Remove unused LinkAccessPolicy alias in theme integration test
+* Move @moduletag after use in all test modules
+* Add @moduletag :security to rate_limiter_dashboard_test
+* Add @moduletag taxonomy tags to test modules
+* Remove @moduletag inserted inside alias blocks in test files
+* Sort Tymeslot.Security aliases alphabetically in auth modules
+* Rename anonymous _ variables to _error in input validators test
+* Remove unreachable list guard in booking orchestrator
+* Remove unreachable catch-all clause in theme customization rate limiter
+* Correct @spec type for assign_form_errors from list() to map()
+* Remove unreachable nil guard in assign_theme_customization_data
+* Address review issues in webhook input validation sanitization
+* Add UniversalSanitizer to webhook name and URL validation
+* Update rhythm theme confirmation page layout and label
+* Fix reCAPTCHA v3 hook so booking form token is populated on submit
+* Fix honeypot visibility and recaptcha disclaimer layout in booking themes
+* Fix logger_json formatter config for OTP 28
+* Remove unreachable clause in sanitize_css_class
+* Fix type errors in proxy verifier
 * test: Make availability fetch truly synchronous in tests
-* core: Align credo version and resolve sitemap routing issues
-* core: Handle HTML entity escaping in theme readiness error test
-* core: Resolve compiler warnings and test failures
-* core: Exclude Credo checks from compilation paths
-* core: Add Phoenix.CodeReloader listener to mix.exs
-* core: Resolve Credo warnings for nested module aliases and line length
-* core: Handle empty string meeting_id in custom video provider
-* core: Add rate limiting to all dashboard write operations
-* core: Implement structured logging with logger_json
+* Align credo version and resolve sitemap routing issues
+* Handle HTML entity escaping in theme readiness error test
+* Resolve compiler warnings and test failures
+* Exclude Credo checks from compilation paths
+* Add Phoenix.CodeReloader listener to mix.exs
+* Resolve Credo warnings for nested module aliases and line length
+* Handle empty string meeting_id in custom video provider
+* Add rate limiting to all dashboard write operations
+* Implement structured logging with logger_json
 * security: Add spam protection to booking forms with honeypot and reCAPTCHA v3
 * security: Add rate limiting to theme customization and meeting operations
-* core: Add Zimbra calendar provider with SSRF protection
-* core: Fix proxy authentication and add verification tools
+* Add Zimbra calendar provider with SSRF protection
+* Fix proxy authentication and add verification tools
 
 
 [0.98.1]
@@ -1079,8 +1079,8 @@
 
 
 [0.98.0]
-* core: Add HTTP proxy environment variable support
-* core: Add HTTP proxy configuration support
+* Add HTTP proxy environment variable support
+* Add HTTP proxy configuration support
 * Add Zimbra calendar provider support
 
 
@@ -1205,7 +1205,7 @@
 * security: Add support for wildcard domain prefixes in allowed embed domains
 * emails: Redesign templates with modern design tokens and Inter font
 * ui: Overhaul dashboard UI with token-based design system and glassmorphism
-* core: Enhance availability engine and scheduling logic
+* Enhance availability engine and scheduling logic
 * webhooks: Enhance security, delivery resilience, and atomic failure tracking
 * i18n: Implement comprehensive localization and internationalization support
 * integrations: Implement pluggable calendar architecture and improve worker resilience

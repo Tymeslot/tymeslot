@@ -366,8 +366,9 @@ defmodule Tymeslot.Availability.CalculateTest do
       assert slots == []
     end
 
-    test "respects profile business hours when available" do
+    test "respects schedule business hours when available" do
       profile = insert(:profile, timezone: "America/New_York")
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
 
       days_ahead =
         case Date.day_of_week(Date.utc_today()) do
@@ -383,14 +384,14 @@ defmodule Tymeslot.Availability.CalculateTest do
       future_weekday = Date.add(Date.utc_today(), days_ahead)
 
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: Date.day_of_week(future_weekday),
         start_time: ~T[09:00:00],
         end_time: ~T[10:00:00],
         is_available: true
       )
 
-      config = %{profile_id: profile.id}
+      config = %{schedule_id: schedule.id}
 
       assert {:ok, slots} =
                Calculate.available_slots(

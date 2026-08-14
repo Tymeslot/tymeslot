@@ -286,7 +286,22 @@ defmodule TymeslotWeb.Components.CoreComponents do
 
   attr :tabs, :list,
     required: true,
-    doc: "maps with :id, :label, optional :icon and :error"
+    doc: "maps with :id, :label, optional :icon, :error, :accent and :dot"
+
+  attr :event, :string,
+    default: "switch_tab",
+    doc: "event pushed on click, with the tab id under \"tab\""
+
+  attr :variant, :atom,
+    default: :card,
+    values: [:card, :attached],
+    doc: "`:card` stands alone; `:attached` forms the top edge of a wrapping panel"
+
+  attr :class, :string, default: nil, doc: "extra shell classes, applied after the variant's"
+
+  slot :trailing, doc: "controls rendered beside the tabs, outside the tablist"
+
+  slot :tab_action, doc: "a control sharing the active tab's pill; receives the tab map"
 
   @spec tab_bar(map()) :: Phoenix.LiveView.Rendered.t()
   def tab_bar(assigns), do: Navigation.tab_bar(assigns)
@@ -338,6 +353,11 @@ defmodule TymeslotWeb.Components.CoreComponents do
     doc: "Accessible name for the panel; required when role is \"dialog\""
 
   attr :trigger_class, :string, default: nil
+
+  attr :trigger_attrs, :list,
+    default: [],
+    doc: "extra `{name, value}` attributes for the trigger, for `phx-value-*` pairs"
+
   attr :class, :string, default: nil
   attr :unstyled, :boolean, default: false
   attr :rest, :global, include: ~w(aria-label)

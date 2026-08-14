@@ -133,7 +133,13 @@ export const ModalFocusTrap = {
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const items = this.focusable();
-    const target = items[0] || this.el.querySelector('[role="dialog"]') || this.el;
+    // A modal whose point is a single field marks it with the AutoFocus hook so
+    // it opens ready to type in. We defer to that element rather than taking the
+    // first focusable one, which is the header's close button on every modal in
+    // the app, and would otherwise win the race: AutoFocus fires during the
+    // patch, this runs a frame later.
+    const preferred = items.find((el) => el.getAttribute('phx-hook') === 'AutoFocus');
+    const target = preferred || items[0] || this.el.querySelector('[role="dialog"]') || this.el;
     // Defer so the browser has painted the now-visible modal before we focus.
     requestAnimationFrame(() => target?.focus());
 

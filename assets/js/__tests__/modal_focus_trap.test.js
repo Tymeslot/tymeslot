@@ -88,6 +88,24 @@ describe('ModalFocusTrap hook', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it('defers to an AutoFocus field rather than taking the first focusable', () => {
+    const { overlay, dialog, first } = makeOverlay();
+
+    const input = document.createElement('input');
+    input.value = 'Working hours';
+    input.setAttribute('phx-hook', 'AutoFocus');
+    dialog.append(input);
+    simulateLayout(input);
+
+    const hook = mount(overlay);
+
+    overlay.style.display = 'flex';
+    hook.syncVisibility();
+
+    expect(document.activeElement).toBe(input);
+    expect(document.activeElement).not.toBe(first);
+  });
+
   it('wraps Tab from the last focusable back to the first', () => {
     const { overlay, first, last } = makeOverlay();
     const hook = mount(overlay);

@@ -100,9 +100,9 @@ defmodule TymeslotWeb.OnboardingLive do
           username={Map.get(@form_data, "username", "")}
           avatar_url={Profiles.avatar_url(@profile, :thumb)}
           color_scheme={@color_scheme}
-          buffer_minutes={@profile.buffer_minutes}
-          advance_booking_days={@profile.advance_booking_days}
-          min_advance_hours={@profile.min_advance_hours}
+          buffer_minutes={policy_value(@availability_schedule, :buffer_minutes)}
+          advance_booking_days={policy_value(@availability_schedule, :advance_booking_days)}
+          min_advance_hours={policy_value(@availability_schedule, :min_advance_hours)}
           calendar_connected={@connected_calendars != [] or @calendar_choice not in [nil, "skip"]}
           booking_host={booking_host()}
         />
@@ -139,19 +139,19 @@ defmodule TymeslotWeb.OnboardingLive do
           />
         <% :buffer_time -> %>
           <PreferencesStep.buffer_time_step
-            profile={@profile}
+            availability_schedule={@availability_schedule}
             form_errors={@form_errors}
             custom_input_mode={@custom_input_mode}
           />
         <% :booking_window -> %>
           <PreferencesStep.booking_window_step
-            profile={@profile}
+            availability_schedule={@availability_schedule}
             form_errors={@form_errors}
             custom_input_mode={@custom_input_mode}
           />
         <% :minimum_notice -> %>
           <PreferencesStep.minimum_notice_step
-            profile={@profile}
+            availability_schedule={@availability_schedule}
             form_errors={@form_errors}
             custom_input_mode={@custom_input_mode}
           />
@@ -336,4 +336,9 @@ defmodule TymeslotWeb.OnboardingLive do
   defp booking_host do
     String.replace(Policy.app_url(), ~r{^https?://}, "")
   end
+
+  # The booking policy lives on the profile's default availability schedule,
+  # which is absent during the disconnected render.
+  defp policy_value(nil, _field), do: nil
+  defp policy_value(schedule, field), do: Map.get(schedule, field)
 end

@@ -18,9 +18,22 @@ defmodule Tymeslot.Test.SuiteConfig do
     migrations: true
   ]
 
-  @doc "Default `:exclude` tags every suite skips unless explicitly included."
+  @doc """
+  Default `:exclude` tags every suite skips unless explicitly included.
+
+  `:git_cliff` is excluded only where the binary is missing, so the changelog
+  config tests run by default for anyone able to cut a release (and in the
+  release workflow, which installs git-cliff) and are skipped elsewhere rather
+  than failing. ExUnit prints the exclusion at the top of the run, so the skip
+  is visible rather than silent.
+  """
   @spec default_exclude_tags() :: keyword()
-  def default_exclude_tags, do: @default_exclude_tags
+  def default_exclude_tags do
+    case System.find_executable("git-cliff") do
+      nil -> Keyword.put(@default_exclude_tags, :git_cliff, true)
+      _found -> @default_exclude_tags
+    end
+  end
 
   @doc """
   Concurrency cap for ExUnit. Honours `TEST_MAX_CASES`, otherwise one case per

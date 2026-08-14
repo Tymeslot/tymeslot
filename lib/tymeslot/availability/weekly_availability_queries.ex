@@ -1,10 +1,28 @@
 defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   @moduledoc """
   Query interface for weekly availability-related database operations.
+
+  Weekly rows hang off an availability schedule, so every lookup here is keyed
+  by `schedule_id` rather than by profile.
   """
   import Ecto.Query, warn: false
   alias Tymeslot.Availability.{AvailabilityBreakSchema, WeeklyAvailabilitySchema}
   alias Tymeslot.Repo
+
+  @default_start_time ~T[11:00:00]
+  @default_end_time ~T[19:30:00]
+
+  @doc """
+  The start time given to weekdays in a freshly created schedule.
+  """
+  @spec default_start_time() :: Time.t()
+  def default_start_time, do: @default_start_time
+
+  @doc """
+  The end time given to weekdays in a freshly created schedule.
+  """
+  @spec default_end_time() :: Time.t()
+  def default_end_time, do: @default_end_time
 
   @doc """
   Gets a single weekly availability.
@@ -26,70 +44,24 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   end
 
   @doc """
-  Gets weekly availability by profile and day of week.
+  Gets weekly availability by schedule and day of week.
   """
-  @spec get_weekly_availability_by_profile_and_day(integer(), integer()) ::
+  @spec get_weekly_availability_by_schedule_and_day(integer(), integer()) ::
           WeeklyAvailabilitySchema.t() | nil
-  def get_weekly_availability_by_profile_and_day(profile_id, day_of_week) do
-    Repo.get_by(WeeklyAvailabilitySchema, profile_id: profile_id, day_of_week: day_of_week)
+  def get_weekly_availability_by_schedule_and_day(schedule_id, day_of_week) do
+    Repo.get_by(WeeklyAvailabilitySchema, schedule_id: schedule_id, day_of_week: day_of_week)
   end
 
   @doc """
   Tagged-tuple variant: returns {:ok, weekly_availability} | {:error, :not_found}.
   """
-  @spec get_weekly_availability_by_profile_and_day_t(integer(), integer()) ::
+  @spec get_weekly_availability_by_schedule_and_day_t(integer(), integer()) ::
           {:ok, WeeklyAvailabilitySchema.t()} | {:error, :not_found}
-  def get_weekly_availability_by_profile_and_day_t(profile_id, day_of_week) do
-    case get_weekly_availability_by_profile_and_day(profile_id, day_of_week) do
+  def get_weekly_availability_by_schedule_and_day_t(schedule_id, day_of_week) do
+    case get_weekly_availability_by_schedule_and_day(schedule_id, day_of_week) do
       nil -> {:error, :not_found}
       wa -> {:ok, wa}
     end
-  end
-
-  @doc """
-  Gets all weekly availability for a profile.
-  """
-  @spec get_weekly_availability_by_profile(integer()) :: [WeeklyAvailabilitySchema.t()]
-  def get_weekly_availability_by_profile(profile_id) do
-    WeeklyAvailabilitySchema
-    |> where([w], w.profile_id == ^profile_id)
-    |> order_by(asc: :day_of_week)
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets all weekly availability for a profile with breaks preloaded.
-  """
-  @spec get_weekly_availability_with_breaks(integer()) :: [WeeklyAvailabilitySchema.t()]
-  def get_weekly_availability_with_breaks(profile_id) do
-    WeeklyAvailabilitySchema
-    |> where([w], w.profile_id == ^profile_id)
-    |> preload(:breaks)
-    |> order_by(asc: :day_of_week)
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets available days for a profile (where is_available is true).
-  """
-  @spec get_available_days_by_profile(integer()) :: [WeeklyAvailabilitySchema.t()]
-  def get_available_days_by_profile(profile_id) do
-    WeeklyAvailabilitySchema
-    |> where([w], w.profile_id == ^profile_id and w.is_available == true)
-    |> order_by(asc: :day_of_week)
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets available days for a profile with breaks preloaded.
-  """
-  @spec get_available_days_with_breaks(integer()) :: [WeeklyAvailabilitySchema.t()]
-  def get_available_days_with_breaks(profile_id) do
-    WeeklyAvailabilitySchema
-    |> where([w], w.profile_id == ^profile_id and w.is_available == true)
-    |> preload(:breaks)
-    |> order_by(asc: :day_of_week)
-    |> Repo.all()
   end
 
   @doc """
@@ -125,39 +97,14 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   end
 
   @doc """
-  Deletes all weekly availability for a profile.
-  """
-  @spec delete_weekly_availability_by_profile(integer()) :: {non_neg_integer(), nil | [term()]}
-  def delete_weekly_availability_by_profile(profile_id) do
-    Repo.delete_all(where(WeeklyAvailabilitySchema, [w], w.profile_id == ^profile_id))
-  end
-
-  @doc """
-  Upserts weekly availability (insert or update if exists).
-  """
-  @spec upsert_weekly_availability(map()) ::
-          {:ok, WeeklyAvailabilitySchema.t()}
-          | {:error, Ecto.Changeset.t()}
-          | {:error, term()}
-          | {atom(), term()}
-  def upsert_weekly_availability(attrs) when is_map(attrs) do
-    %WeeklyAvailabilitySchema{}
-    |> WeeklyAvailabilitySchema.changeset(attrs)
-    |> Repo.insert(
-      on_conflict: {:replace, [:is_available, :start_time, :end_time, :updated_at]},
-      conflict_target: [:profile_id, :day_of_week]
-    )
-  end
-
-  @doc """
-  Gets the complete weekly schedule for a profile including breaks.
+  Gets the complete weekly schedule for a schedule including breaks.
   """
   @spec get_weekly_schedule_with_breaks(integer()) :: [WeeklyAvailabilitySchema.t()]
-  def get_weekly_schedule_with_breaks(profile_id) do
+  def get_weekly_schedule_with_breaks(schedule_id) do
     breaks_query = from(b in AvailabilityBreakSchema, order_by: b.sort_order)
 
     WeeklyAvailabilitySchema
-    |> where([wa], wa.profile_id == ^profile_id)
+    |> where([wa], wa.schedule_id == ^schedule_id)
     |> preload([wa], breaks: ^breaks_query)
     |> order_by([wa], wa.day_of_week)
     |> Repo.all()
@@ -168,37 +115,25 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   """
   @spec get_day_availability_with_breaks(integer(), integer()) ::
           WeeklyAvailabilitySchema.t() | nil
-  def get_day_availability_with_breaks(profile_id, day_of_week) do
+  def get_day_availability_with_breaks(schedule_id, day_of_week) do
     breaks_query = from(b in AvailabilityBreakSchema, order_by: b.sort_order)
 
     WeeklyAvailabilitySchema
-    |> where([wa], wa.profile_id == ^profile_id and wa.day_of_week == ^day_of_week)
+    |> where([wa], wa.schedule_id == ^schedule_id and wa.day_of_week == ^day_of_week)
     |> preload([wa], breaks: ^breaks_query)
     |> Repo.one()
   end
 
   @doc """
-  Tagged-tuple variant: returns {:ok, weekly_availability} | {:error, :not_found}.
-  """
-  @spec get_day_availability_with_breaks_t(integer(), integer()) ::
-          {:ok, WeeklyAvailabilitySchema.t()} | {:error, :not_found}
-  def get_day_availability_with_breaks_t(profile_id, day_of_week) do
-    case get_day_availability_with_breaks(profile_id, day_of_week) do
-      nil -> {:error, :not_found}
-      wa -> {:ok, wa}
-    end
-  end
-
-  @doc """
-  Creates default weekly schedule for a new profile.
+  Creates the seven default weekly days for a new schedule.
 
   Accepts an optional `repo` argument so callers inside an existing database
   transaction can pass their transaction-scoped repo, ensuring the inserts are
   part of the same transaction rather than a separate connection.
   """
-  @spec create_default_weekly_schedule(integer(), Ecto.Repo.t()) ::
+  @spec create_default_weekly_days(integer(), Ecto.Repo.t()) ::
           {:ok, non_neg_integer()} | {:error, :failed_to_create_schedule}
-  def create_default_weekly_schedule(profile_id, repo \\ Repo) do
+  def create_default_weekly_days(schedule_id, repo \\ Repo) do
     now = DateTime.utc_now(:second)
 
     # Build all entries at once
@@ -207,18 +142,18 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
     entries =
       Enum.map(1..5, fn day ->
         %{
-          profile_id: profile_id,
+          schedule_id: schedule_id,
           day_of_week: day,
           is_available: true,
-          start_time: ~T[11:00:00],
-          end_time: ~T[19:30:00],
+          start_time: @default_start_time,
+          end_time: @default_end_time,
           inserted_at: now,
           updated_at: now
         }
       end) ++
         Enum.map(6..7, fn day ->
           %{
-            profile_id: profile_id,
+            schedule_id: schedule_id,
             day_of_week: day,
             is_available: false,
             start_time: nil,
@@ -229,11 +164,11 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
         end)
 
     # Bulk insert all 7 days at once. on_conflict: :nothing ensures that a
-    # pre-existing row for the same (profile_id, day_of_week) silently skips
-    # rather than raising — the count check below then surfaces the mismatch.
+    # pre-existing row for the same (schedule_id, day_of_week) silently skips
+    # rather than raising; the count check below then surfaces the mismatch.
     case repo.insert_all(WeeklyAvailabilitySchema, entries,
            on_conflict: :nothing,
-           conflict_target: [:profile_id, :day_of_week]
+           conflict_target: [:schedule_id, :day_of_week]
          ) do
       {count, _value} when count == 7 -> {:ok, count}
       {_count, _value} -> {:error, :failed_to_create_schedule}

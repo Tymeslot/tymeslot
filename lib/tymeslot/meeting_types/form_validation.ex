@@ -9,10 +9,12 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       types sit behind feature flags. Core's default checker allows everything,
       so self-hosters are unaffected; the managed overlay narrows them.
 
-    * **Do the referenced integrations exist and still work?** A video or
-      calendar integration id can be stale by the time it is submitted: the
-      integration may have been deleted, deactivated, or had the chosen
-      calendar turn read-only since the picker rendered.
+    * **Do the referenced records exist, still work, and belong to this host?**
+      A video or calendar integration id can be stale by the time it is
+      submitted: the integration may have been deleted, deactivated, or had the
+      chosen calendar turn read-only since the picker rendered. An availability
+      schedule id additionally has to be *owned*, because the referenced
+      schedule goes on to drive what the public booking page offers.
 
   Both gates deliberately restrict only the *permissive* direction. Turning
   payment off, or saving no questions, is always allowed, so a host who has
@@ -20,10 +22,12 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   locked out of their own meeting types.
   """
 
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.UriUtils
 
   @typedoc "Why a write was refused."
@@ -35,6 +39,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
           | :target_calendar_required
           | :target_calendar_invalid
           | :no_writable_calendars
+          | :invalid_availability_schedule
           | atom()
 
   @doc """
@@ -44,8 +49,47 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   def check(user_id, attrs) do
     with :ok <- gate_custom_fields(user_id, attrs),
          :ok <- gate_payment(user_id, attrs),
+         :ok <- validate_availability_schedule(attrs, user_id),
          :ok <- validate_video_integration(attrs, user_id) do
       validate_calendar_integration(attrs, user_id)
+    end
+  end
+
+  # The picker only ever lists this profile's own schedules, but the form posts
+  # a bare id and can be forged, and a foreign id would otherwise be accepted:
+  # the schema's `foreign_key_constraint` proves the row exists, not who owns
+  # it. `Schedules.resolve_for_meeting_type/1` looks the id up unscoped at
+  # booking time, so an unowned id would silently drive this meeting type's
+  # public availability from someone else's hours.
+  # Both write paths reach here with the id as a string, so it is normalised
+  # rather than matched on shape. A blank one means "follow the profile's
+  # default" and needs no check.
+  defp validate_availability_schedule(attrs, user_id) do
+    case schedule_id(Map.get(attrs, :availability_schedule_id)) do
+      :none -> :ok
+      :invalid -> {:error, :invalid_availability_schedule}
+      id -> schedule_owned?(id, user_id)
+    end
+  end
+
+  defp schedule_id(nil), do: :none
+  defp schedule_id(id) when is_integer(id) and id > 0, do: id
+
+  defp schedule_id(id) when is_binary(id) do
+    case Integer.parse(String.trim(id)) do
+      {parsed, ""} when parsed > 0 -> parsed
+      _other -> if String.trim(id) == "", do: :none, else: :invalid
+    end
+  end
+
+  defp schedule_id(_other), do: :invalid
+
+  defp schedule_owned?(id, user_id) do
+    with %{id: profile_id} <- Profiles.get_profile(user_id),
+         %{} <- Schedules.get_for_profile(id, profile_id) do
+      :ok
+    else
+      _not_owned -> {:error, :invalid_availability_schedule}
     end
   end
 

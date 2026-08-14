@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
+    AvailabilitySection,
     CustomQuestionsSection,
     GroupBookingsSection,
     GuestsSection,
@@ -37,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import AvailabilitySection, only: [availability_section: 1]
   import GroupBookingsSection, only: [group_bookings_section: 1]
   import GuestsSection, only: [guests_section: 1]
   import LimitsSection, only: [limits_section: 1]
@@ -219,6 +221,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             myself={@myself}
           />
 
+          <.availability_section
+            schedules={@schedules}
+            default_schedule_name={@default_schedule_name}
+            selected_availability_schedule_id={@selected_availability_schedule_id}
+            myself={@myself}
+          />
+
           <.limits_section booking_limits={@booking_limits} myself={@myself} />
 
           <.visibility_section :if={@is_edit && @type} type={@type} parent={@parent_myself} />
@@ -273,6 +282,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           selected_video_integration_id={@selected_video_integration_id}
           selected_calendar_integration_id={@selected_calendar_integration_id}
           selected_target_calendar_id={@selected_target_calendar_id}
+          selected_availability_schedule_id={@selected_availability_schedule_id}
           reminders={@reminders}
           custom_fields={@custom_fields}
           custom_questions_allowed={@custom_questions_allowed}

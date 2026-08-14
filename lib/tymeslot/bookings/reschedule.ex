@@ -6,11 +6,13 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   require Logger
 
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoSyncWorker
@@ -51,8 +53,7 @@ defmodule Tymeslot.Bookings.Reschedule do
     with {:ok, original_meeting} <-
            MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
          :ok <- validate_can_reschedule(original_meeting),
-         {:ok, new_times} <-
-           Validation.prepare_new_times(new_params, original_meeting.organizer_user_id),
+         {:ok, new_times} <- prepare_new_times(new_params, original_meeting),
          {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do
       AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
       sync_provider_video_room(updated_meeting)
@@ -129,6 +130,41 @@ defmodule Tymeslot.Bookings.Reschedule do
       :ok
     end
   end
+
+  # The rescheduled meeting keeps its meeting type, so the notice and window
+  # rules re-checked here come from the same schedule the original booking used.
+  defp prepare_new_times(params, meeting) do
+    organizer_user_id = meeting.organizer_user_id
+    meeting_type = fetch_meeting_type(meeting.meeting_type_id, organizer_user_id)
+
+    with {:ok, {start_datetime, end_datetime}} <-
+           Validation.parse_meeting_times(
+             params.date,
+             params.time,
+             params.duration,
+             params.user_timezone
+           ),
+         :ok <-
+           Validation.validate_booking_time(
+             start_datetime,
+             params.user_timezone,
+             Policy.scheduling_config(organizer_user_id, meeting_type)
+           ) do
+      {:ok,
+       %{
+         start_time: start_datetime,
+         end_time: end_datetime,
+         duration_minutes: TimeSlots.parse_duration(params.duration)
+       }}
+    end
+  end
+
+  # Ad-hoc meetings carry no meeting type; a nil resolves the organiser's
+  # default schedule, which is the right rule set for them.
+  defp fetch_meeting_type(nil, _organizer_user_id), do: nil
+
+  defp fetch_meeting_type(meeting_type_id, organizer_user_id),
+    do: MeetingTypes.get_meeting_type(meeting_type_id, organizer_user_id)
 
   defp update_meeting(meeting, attrs) do
     case Scheduling.update_meeting_with_conflict_check(meeting, attrs) do

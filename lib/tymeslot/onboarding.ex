@@ -18,9 +18,6 @@ defmodule Tymeslot.Onboarding do
       username: nil,
       full_name: nil,
       timezone: Profiles.get_default_timezone(),
-      buffer_minutes: 15,
-      advance_booking_days: 90,
-      min_advance_hours: 3,
       avatar: nil,
       booking_theme: "1"
     }

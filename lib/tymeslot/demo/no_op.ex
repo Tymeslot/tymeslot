@@ -8,7 +8,6 @@ defmodule Tymeslot.Demo.NoOp do
   @behaviour Tymeslot.Demo.Behaviour
 
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -42,6 +41,9 @@ defmodule Tymeslot.Demo.NoOp do
   def demo_mode?(_context), do: false
 
   @impl Tymeslot.Demo.Behaviour
+  def booking_window_days(_profile), do: 90
+
+  @impl Tymeslot.Demo.Behaviour
   def get_profile_by_username(username) when is_binary(username) do
     Profiles.get_profile_by_username(username)
   end
@@ -60,11 +62,6 @@ defmodule Tymeslot.Demo.NoOp do
   def get_theme_customization(profile_id, theme_id)
       when is_integer(profile_id) and is_binary(theme_id) do
     ThemeCustomizations.get_by_profile_and_theme(profile_id, theme_id)
-  end
-
-  @impl Tymeslot.Demo.Behaviour
-  def get_weekly_schedule(profile_id) when is_integer(profile_id) do
-    WeeklySchedule.get_weekly_schedule(profile_id)
   end
 
   @impl Tymeslot.Demo.Behaviour

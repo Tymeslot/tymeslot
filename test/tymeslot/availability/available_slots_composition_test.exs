@@ -10,7 +10,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
   the user-observable outcomes:
 
     * a blocking calendar event removes the slots that overlap it
-      (respecting the profile's buffer),
+      (respecting the schedule's buffer),
     * a non-working weekday (the weekend in the default setup) yields
       no slots regardless of incoming events,
     * an `unavailable` override zeros the day even when the weekly
@@ -35,7 +35,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
 
   describe "available_slots/6 with a blocking calendar event" do
     test "removes slots that overlap a busy event in the owner's timezone" do
-      profile = setup_weekday_profile("Europe/Berlin")
+      schedule = setup_weekday_schedule("Europe/Berlin")
       target = next_occurrence_of_weekday(1)
 
       event_start = local_to_utc(target, ~T[10:00:00], "Europe/Berlin")
@@ -50,7 +50,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  events,
-                 %{profile_id: profile.id}
+                 %{schedule_id: schedule.id}
                )
 
       refute slots == []
@@ -65,7 +65,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     end
 
     test "keeps all slots when the only event is cancelled" do
-      profile = setup_weekday_profile("Europe/Berlin")
+      schedule = setup_weekday_schedule("Europe/Berlin")
       target = next_occurrence_of_weekday(1)
 
       cancelled =
@@ -89,7 +89,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [cancelled],
-                 %{profile_id: profile.id}
+                 %{schedule_id: schedule.id}
                )
 
       assert "10:00 AM" in slots
@@ -97,7 +97,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     end
 
     test "keeps all slots when the only event is transparent (free)" do
-      profile = setup_weekday_profile("Europe/Berlin")
+      schedule = setup_weekday_schedule("Europe/Berlin")
       target = next_occurrence_of_weekday(1)
 
       free =
@@ -121,7 +121,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [free],
-                 %{profile_id: profile.id}
+                 %{schedule_id: schedule.id}
                )
 
       assert "10:00 AM" in slots
@@ -131,7 +131,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
 
   describe "available_slots/6 on a non-working day" do
     test "returns an empty list on a day the weekly schedule marks unavailable" do
-      profile = setup_weekday_profile("Europe/Berlin")
+      schedule = setup_weekday_schedule("Europe/Berlin")
       # 7 = Sunday, which is marked unavailable by the setup helper.
       sunday = next_occurrence_of_weekday(7)
 
@@ -142,14 +142,14 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 %{profile_id: profile.id}
+                 %{schedule_id: schedule.id}
                )
 
       assert slots == []
     end
 
     test "returns an empty list on Saturday (dow=6) which is also marked unavailable" do
-      profile = setup_weekday_profile("Europe/Berlin")
+      schedule = setup_weekday_schedule("Europe/Berlin")
       # 6 = Saturday, which is marked unavailable by the setup helper.
       saturday = next_occurrence_of_weekday(6)
 
@@ -160,7 +160,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 %{profile_id: profile.id}
+                 %{schedule_id: schedule.id}
                )
 
       assert slots == []
@@ -169,11 +169,11 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
 
   describe "available_slots/6 with overrides" do
     test "an 'unavailable' override zeros a day the weekly schedule marks available" do
-      profile = setup_weekday_profile("Europe/Berlin")
+      schedule = setup_weekday_schedule("Europe/Berlin")
       target = next_occurrence_of_weekday(1)
 
       insert(:availability_override,
-        profile: profile,
+        schedule: schedule,
         date: target,
         override_type: "unavailable"
       )
@@ -185,16 +185,16 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 %{profile_id: profile.id}
+                 %{schedule_id: schedule.id}
                )
     end
 
     test "a 'custom_hours' override narrows the window without touching the weekly schedule" do
-      profile = setup_weekday_profile("Europe/Berlin")
+      schedule = setup_weekday_schedule("Europe/Berlin")
       target = next_occurrence_of_weekday(1)
 
       insert(:availability_override,
-        profile: profile,
+        schedule: schedule,
         date: target,
         override_type: "custom_hours",
         start_time: ~T[10:00:00],
@@ -208,7 +208,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 %{profile_id: profile.id}
+                 %{schedule_id: schedule.id}
                )
 
       refute "9:00 AM" in slots
@@ -227,7 +227,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     @dst_config %{max_advance_booking_days: 2000, min_advance_hours: 0, buffer_minutes: 0}
 
     test "spring-forward Sunday (Europe/Berlin) does not affect normal business hours" do
-      profile = insert_always_on_profile("Europe/Berlin")
+      schedule = insert_always_on_schedule("Europe/Berlin")
 
       # The spring-forward date for Europe/Berlin (CET → CEST, clock jumps
       # 02:00 → 03:00). Business hours start at 09:00 local — well clear of the
@@ -243,7 +243,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 Map.put(@dst_config, :profile_id, profile.id)
+                 Map.put(@dst_config, :schedule_id, schedule.id)
                )
 
       assert length(slots) == 16
@@ -256,7 +256,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       # Hours 01:00–04:00 local straddle the spring-forward gap (02:00 → 03:00).
       # The gap hour is physically absent, so a correct 30-min slot generator
       # must emit exactly 4 slots: 1:00 AM, 1:30 AM, 3:00 AM, 3:30 AM.
-      profile = insert_profile_with_sunday_hours(~T[01:00:00], ~T[04:00:00], "Europe/Berlin")
+      schedule = insert_schedule_with_sunday_hours(~T[01:00:00], ~T[04:00:00], "Europe/Berlin")
       target = next_spring_forward_sunday("Europe/Berlin")
 
       assert {:ok, slots} =
@@ -266,7 +266,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "Europe/Berlin",
                  "Europe/Berlin",
                  [],
-                 Map.put(@dst_config, :profile_id, profile.id)
+                 Map.put(@dst_config, :schedule_id, schedule.id)
                )
 
       assert length(slots) == 4
@@ -279,7 +279,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     end
 
     test "fall-back Sunday (America/New_York) does not duplicate slots when business hours clear the repeated window" do
-      profile = insert_always_on_profile("America/New_York")
+      schedule = insert_always_on_schedule("America/New_York")
 
       # The fall-back date for America/New_York (EDT → EST, 01:00–02:00 repeats).
       # Business hours run 09:00–17:00 — entirely outside the repeated window.
@@ -293,7 +293,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "America/New_York",
                  "America/New_York",
                  [],
-                 Map.put(@dst_config, :profile_id, profile.id)
+                 Map.put(@dst_config, :schedule_id, schedule.id)
                )
 
       assert length(slots) == 16
@@ -309,8 +309,8 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       # (12:30 AM, 1:00 AM, 1:30 AM, 2:00 AM). Users can't disambiguate
       # "1:00 AM EDT" from "1:00 AM EST" when booking, so the generator must
       # collapse duplicates to one label each, keeping the earlier occurrence.
-      profile =
-        insert_profile_with_sunday_hours(~T[00:30:00], ~T[02:30:00], "America/New_York")
+      schedule =
+        insert_schedule_with_sunday_hours(~T[00:30:00], ~T[02:30:00], "America/New_York")
 
       target = next_fall_back_sunday("America/New_York")
 
@@ -321,7 +321,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "America/New_York",
                  "America/New_York",
                  [],
-                 Map.put(@dst_config, :profile_id, profile.id)
+                 Map.put(@dst_config, :schedule_id, schedule.id)
                )
 
       assert slots == ["12:30 AM", "1:00 AM", "1:30 AM", "2:00 AM"]
@@ -329,7 +329,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     end
 
     test "cross-timezone DST: owner in Berlin on spring-forward day, viewer in New York" do
-      profile = insert_always_on_profile("Europe/Berlin")
+      schedule = insert_always_on_schedule("Europe/Berlin")
 
       # On the Berlin spring-forward Sunday, Berlin has switched to CEST (UTC+2)
       # and New York is already on EDT (UTC-4) — a six-hour gap between zones.
@@ -346,7 +346,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                  "America/New_York",
                  "Europe/Berlin",
                  [],
-                 Map.put(@dst_config, :profile_id, profile.id)
+                 Map.put(@dst_config, :schedule_id, schedule.id)
                )
 
       assert length(slots) == 16
@@ -359,12 +359,15 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
 
   # --- Helpers ---
 
-  defp insert_always_on_profile(timezone) do
-    profile = insert(:profile, timezone: timezone, buffer_minutes: 0)
+  defp insert_always_on_schedule(timezone) do
+    profile = insert(:profile, timezone: timezone)
+
+    schedule =
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
 
     for dow <- 1..7 do
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: dow,
         is_available: true,
         start_time: ~T[09:00:00],
@@ -372,15 +375,18 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       )
     end
 
-    profile
+    schedule
   end
 
-  defp setup_weekday_profile(timezone) do
-    profile = insert(:profile, timezone: timezone, buffer_minutes: 15)
+  defp setup_weekday_schedule(timezone) do
+    profile = insert(:profile, timezone: timezone)
+
+    schedule =
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
 
     for dow <- 1..5 do
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: dow,
         is_available: true,
         start_time: ~T[09:00:00],
@@ -390,13 +396,13 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
 
     for dow <- 6..7 do
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: dow,
         is_available: false
       )
     end
 
-    profile
+    schedule
   end
 
   defp next_occurrence_of_weekday(target_dow) when target_dow in 1..7 do
@@ -427,29 +433,32 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     })
   end
 
-  # Inserts a profile available only on Sunday (dow 7) with the given local
+  # Inserts a schedule available only on Sunday (dow 7) with the given local
   # start/end times. All other days are marked unavailable. Useful for
   # targeting a specific DST transition Sunday without noise from other days.
-  defp insert_profile_with_sunday_hours(start_time, end_time, timezone) do
-    profile = insert(:profile, timezone: timezone, buffer_minutes: 0)
+  defp insert_schedule_with_sunday_hours(start_time, end_time, timezone) do
+    profile = insert(:profile, timezone: timezone)
+
+    schedule =
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 0)
 
     for dow <- 1..6 do
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: dow,
         is_available: false
       )
     end
 
     insert(:weekly_availability,
-      profile: profile,
+      schedule: schedule,
       day_of_week: 7,
       is_available: true,
       start_time: start_time,
       end_time: end_time
     )
 
-    profile
+    schedule
   end
 
   # Returns the next Sunday on or after `from` in `timezone` where the clock

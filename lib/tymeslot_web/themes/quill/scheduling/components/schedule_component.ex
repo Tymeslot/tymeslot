@@ -179,10 +179,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">
                           {dgettext("booking", "Bookings available up to %{advance}",
-                            advance:
-                              Panels.format_advance_booking_days(
-                                @organizer_profile.advance_booking_days
-                              )
+                            advance: Panels.format_advance_booking_days(@booking_window_days)
                           )}
                         </p>
                       <% end %>
@@ -245,7 +242,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               CalendarNavigation.next_week_disabled?(
                                 @current_week_start,
                                 @user_timezone,
-                                @organizer_profile.advance_booking_days
+                                @booking_window_days
                               )
                             }
                             class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
@@ -254,7 +251,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           </button>
                         </div>
                         <div class="week-day-strip">
-                          <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
+                          <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type) do %>
                             <button
                               class={[
                                 "week-day-cell",
@@ -331,7 +328,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                   @current_year,
                                   @current_month,
                                   @user_timezone,
-                                  @organizer_profile.advance_booking_days
+                                  @booking_window_days
                                 )
                               }
                               class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
@@ -360,7 +357,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             </div>
                           </div>
                           <div class="grid grid-cols-7 gap-0.5">
-                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map) do %>
+                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map, @meeting_type) do %>
                               <.calendar_day
                                 phx-click="select_date"
                                 phx-target={@myself}

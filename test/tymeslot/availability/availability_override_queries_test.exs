@@ -23,46 +23,37 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
       assert AvailabilityOverrideQueries.get_override_t(-1) == {:error, :not_found}
     end
 
-    test "get_override_by_profile_and_date/2 returns the override" do
-      profile = insert(:profile)
+    test "get_override_by_schedule_and_date/2 returns the override" do
+      schedule = insert(:availability_schedule)
       date = Date.add(Date.utc_today(), 5)
-      override = insert(:availability_override, profile: profile, date: date)
+      override = insert(:availability_override, schedule: schedule, date: date)
 
-      found = AvailabilityOverrideQueries.get_override_by_profile_and_date(profile.id, date)
+      found = AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule.id, date)
       assert found.id == override.id
     end
 
-    test "get_override_by_profile_and_date_t/2 returns {:ok, override} when found" do
-      profile = insert(:profile)
+    test "get_override_by_schedule_and_date/2 is scoped to the schedule" do
+      schedule = insert(:availability_schedule)
+      other_schedule = insert(:availability_schedule)
       date = Date.add(Date.utc_today(), 5)
-      override = insert(:availability_override, profile: profile, date: date)
+      insert(:availability_override, schedule: schedule, date: date)
 
-      assert {:ok, found} =
-               AvailabilityOverrideQueries.get_override_by_profile_and_date_t(profile.id, date)
-
-      assert found.id == override.id
+      assert AvailabilityOverrideQueries.get_override_by_schedule_and_date(
+               other_schedule.id,
+               date
+             ) == nil
     end
 
-    test "get_overrides_by_profile/1 returns all overrides for profile" do
-      profile = insert(:profile)
-      insert(:availability_override, profile: profile, date: Date.add(Date.utc_today(), 1))
-      insert(:availability_override, profile: profile, date: Date.add(Date.utc_today(), 2))
-      insert(:availability_override, profile: insert(:profile))
-
-      overrides = AvailabilityOverrideQueries.get_overrides_by_profile(profile.id)
-      assert length(overrides) == 2
-    end
-
-    test "get_overrides_by_profile_and_date_range/3 returns overrides in range" do
-      profile = insert(:profile)
+    test "get_overrides_by_schedule_and_date_range/3 returns overrides in range" do
+      schedule = insert(:availability_schedule)
       today = Date.utc_today()
-      insert(:availability_override, profile: profile, date: Date.add(today, 1))
-      insert(:availability_override, profile: profile, date: Date.add(today, 3))
-      insert(:availability_override, profile: profile, date: Date.add(today, 5))
+      insert(:availability_override, schedule: schedule, date: Date.add(today, 1))
+      insert(:availability_override, schedule: schedule, date: Date.add(today, 3))
+      insert(:availability_override, schedule: schedule, date: Date.add(today, 5))
 
       overrides =
-        AvailabilityOverrideQueries.get_overrides_by_profile_and_date_range(
-          profile.id,
+        AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
+          schedule.id,
           Date.add(today, 2),
           Date.add(today, 4)
         )
@@ -70,25 +61,18 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
       assert length(overrides) == 1
     end
 
-    test "get_overrides_by_profile_and_type/2 returns overrides of specific type" do
-      profile = insert(:profile)
-
-      insert(:availability_override,
-        profile: profile,
-        override_type: "unavailable",
-        date: Date.add(Date.utc_today(), 1)
-      )
-
-      insert(:availability_override,
-        profile: profile,
-        override_type: "custom_hours",
-        date: Date.add(Date.utc_today(), 2),
-        start_time: ~T[08:00:00],
-        end_time: ~T[12:00:00]
-      )
+    test "get_overrides_by_schedule_and_date_range/3 excludes other schedules" do
+      schedule = insert(:availability_schedule)
+      today = Date.utc_today()
+      insert(:availability_override, schedule: schedule, date: Date.add(today, 3))
+      insert(:availability_override, date: Date.add(today, 3))
 
       overrides =
-        AvailabilityOverrideQueries.get_overrides_by_profile_and_type(profile.id, "unavailable")
+        AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
+          schedule.id,
+          Date.add(today, 1),
+          Date.add(today, 5)
+        )
 
       assert length(overrides) == 1
     end
@@ -107,41 +91,17 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
       {:ok, _result} = AvailabilityOverrideQueries.delete_override(override)
       assert Repo.get(Tymeslot.Availability.AvailabilityOverrideSchema, override.id) == nil
     end
-
-    test "delete_overrides_by_profile/1 deletes all for profile" do
-      profile = insert(:profile)
-      insert(:availability_override, profile: profile, date: Date.add(Date.utc_today(), 1))
-      insert(:availability_override, profile: profile, date: Date.add(Date.utc_today(), 2))
-
-      {count, _value} = AvailabilityOverrideQueries.delete_overrides_by_profile(profile.id)
-      assert count == 2
-      assert AvailabilityOverrideQueries.get_overrides_by_profile(profile.id) == []
-    end
-
-    test "delete_overrides_before_date/2 deletes old overrides" do
-      profile = insert(:profile)
-      today = Date.utc_today()
-      insert(:availability_override, profile: profile, date: Date.add(today, -5))
-      insert(:availability_override, profile: profile, date: Date.add(today, -2))
-      insert(:availability_override, profile: profile, date: Date.add(today, 2))
-
-      {count, _value} =
-        AvailabilityOverrideQueries.delete_overrides_before_date(profile.id, today)
-
-      assert count == 2
-      assert length(AvailabilityOverrideQueries.get_overrides_by_profile(profile.id)) == 1
-    end
   end
 
   describe "availability override business rules" do
     test "prevents conflicting overrides for same date" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
       tomorrow = Date.add(Date.utc_today(), 1)
 
-      insert(:availability_override, profile: profile, date: tomorrow)
+      insert(:availability_override, schedule: schedule, date: tomorrow)
 
       conflicting_override = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: tomorrow,
         override_type: "unavailable"
       }
@@ -153,11 +113,11 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
 
   describe "custom hours validation (business requirement)" do
     test "enforces time requirements for custom hours override" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
       tomorrow = Date.add(Date.utc_today(), 1)
 
       incomplete_custom_hours = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: tomorrow,
         override_type: "custom_hours"
         # Missing required start_time and end_time

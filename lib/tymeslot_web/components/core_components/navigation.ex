@@ -104,60 +104,128 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   Each entry in `tabs` is a map with `:id` and `:label`, an optional
   `:icon` (`hero-…` name), and an optional `:error` flag that marks the
-  tab with a dot when content inside it needs attention.
+  tab with a dot when content inside it needs attention. Tabs that stand
+  for differently coloured things may also carry `:accent` (classes used
+  in place of the default active styling) and `:dot` (a background class
+  shown as a small disc while the tab is inactive, so its colour is
+  readable before it is selected).
   """
   attr :active_tab, :string, required: true
   attr :target, :any, default: nil
 
   attr :tabs, :list,
     required: true,
-    doc: "maps with :id, :label, optional :icon and :error"
+    doc: "maps with :id, :label, optional :icon, :error, :accent and :dot"
+
+  attr :event, :string,
+    default: "switch_tab",
+    doc: "event pushed on click, with the tab id under \"tab\""
+
+  attr :variant, :atom,
+    default: :card,
+    values: [:card, :attached],
+    doc: """
+    `:card` is a standalone rounded bar. `:attached` drops the shell's own
+    rounding, shadow and background so the strip reads as the top edge of the
+    panel a caller wraps around it; that caller supplies the tint and rule
+    colour through `class`.
+    """
+
+  attr :class, :string,
+    default: nil,
+    doc: "extra classes for the shell, applied after the variant's own"
+
+  slot :trailing,
+    doc: """
+    Controls rendered beside the tabs, such as an "add" affordance. Rendered
+    outside the `tablist`, since ARIA expects a tablist to contain only tabs.
+    """
+
+  slot :tab_action,
+    doc: """
+    A control rendered inside the active tab, sharing its pill: a menu whose
+    actions belong to that tab and nowhere else. Receives the tab map, and is
+    rendered only for the active one. It cannot be nested in the tab `<button>`
+    itself, so both sit in a wrapper marked `role="presentation"`, which keeps
+    the button the tablist's only meaningful child.
+    """
 
   @spec tab_bar(map()) :: Phoenix.LiveView.Rendered.t()
   def tab_bar(assigns) do
     ~H"""
-    <div class="bg-white rounded-token-2xl border-2 border-tymeslot-100 p-2 shadow-sm">
+    <div class={[
+      "p-2",
+      shell_class(@variant),
+      @trailing != [] && "flex items-center gap-2",
+      @class
+    ]}>
       <nav
         role="tablist"
         aria-label={dgettext("common", "Tabs")}
-        class="flex flex-wrap gap-2"
+        class={["flex flex-wrap gap-2", @trailing != [] && "grow"]}
       >
         <%= for tab <- @tabs do %>
-          <button
-            type="button"
-            role="tab"
-            id={"tab-#{tab.id}"}
-            aria-selected={to_string(@active_tab == tab.id)}
-            aria-controls={"panel-#{tab.id}"}
-            phx-click="switch_tab"
-            phx-value-tab={tab.id}
-            phx-target={@target}
+          <div
+            role="presentation"
             class={[
-              "flex items-center gap-2 px-6 py-3 rounded-token-xl font-bold text-token-sm transition-all duration-300",
+              "flex items-center rounded-token-xl transition-all duration-300",
               if(@active_tab == tab.id,
                 do:
-                  "bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/30 transform scale-105",
-                else: "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-turquoise-700"
+                  Map.get(tab, :accent) ||
+                    "bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/30 transform scale-105",
+                else: "text-tymeslot-600 hover:bg-white hover:text-turquoise-700"
               )
             ]}
           >
-            <%= if Map.get(tab, :icon) do %>
-              <TymeslotWeb.Components.CoreComponents.Icons.icon
-                name={tab.icon}
-                class="w-5 h-5"
-              />
-            <% end %>
-            <span>{tab.label}</span>
-            <span
-              :if={Map.get(tab, :error)}
-              class="w-2 h-2 shrink-0 rounded-full bg-red-500"
+            <button
+              type="button"
+              role="tab"
+              id={"tab-#{tab.id}"}
+              aria-selected={to_string(@active_tab == tab.id)}
+              aria-controls={"panel-#{tab.id}"}
+              phx-click={@event}
+              phx-value-tab={tab.id}
+              phx-target={@target}
+              class={[
+                "flex items-center gap-2 py-3 rounded-token-xl font-bold text-token-sm",
+                if(@tab_action != [] && @active_tab == tab.id, do: "pl-6 pr-3", else: "px-6")
+              ]}
             >
-              <span class="sr-only">{dgettext("common", "This tab contains errors")}</span>
-            </span>
-          </button>
+              <%= if Map.get(tab, :icon) do %>
+                <TymeslotWeb.Components.CoreComponents.Icons.icon
+                  name={tab.icon}
+                  class="w-5 h-5"
+                />
+              <% end %>
+              <span
+                :if={Map.get(tab, :dot) && @active_tab != tab.id}
+                class={["w-2.5 h-2.5 shrink-0 rounded-full", tab.dot]}
+              ></span>
+              <span>{tab.label}</span>
+              <span
+                :if={Map.get(tab, :error)}
+                class="w-2 h-2 shrink-0 rounded-full bg-red-500"
+              >
+                <span class="sr-only">{dgettext("common", "This tab contains errors")}</span>
+              </span>
+            </button>
+
+            <div :if={@tab_action != [] && @active_tab == tab.id} class="pr-2">
+              {render_slot(@tab_action, tab)}
+            </div>
+          </div>
         <% end %>
       </nav>
+
+      <div :if={@trailing != []} class="flex items-center gap-2 shrink-0">
+        {render_slot(@trailing)}
+      </div>
     </div>
     """
   end
+
+  defp shell_class(:card),
+    do: "bg-white rounded-token-2xl border-2 border-tymeslot-100 shadow-sm"
+
+  defp shell_class(:attached), do: "border-b-2"
 end

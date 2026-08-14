@@ -108,7 +108,13 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
       insert(:profile,
         user: user,
         username: "alice-#{unique}",
-        timezone: "Europe/Berlin",
+        timezone: "Europe/Berlin"
+      )
+
+    schedule =
+      insert(:availability_schedule,
+        profile: profile,
+        is_default: true,
         advance_booking_days: 30,
         min_advance_hours: 0,
         buffer_minutes: 0
@@ -124,7 +130,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
     Enum.each(1..7, fn day_of_week ->
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: day_of_week,
         is_available: true,
         start_time: ~T[09:00:00],

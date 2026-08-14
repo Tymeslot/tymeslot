@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
   describe "get_week_days/4" do
     test "accepts user_timezone parameter and uses it for today detection" do
       week_start = ~D[2027-06-07]
-      profile = insert(:profile, advance_booking_days: 90)
+      profile = insert(:profile)
+      insert(:availability_schedule, profile: profile, is_default: true, advance_booking_days: 90)
       days = CalendarHelpers.get_week_days(week_start, profile, nil, "America/New_York")
       assert length(days) == 7
       assert Enum.all?(days, &Map.has_key?(&1, :today))
@@ -17,7 +18,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
 
     test "uses availability_map for dates spanning month boundaries" do
       week_start = ~D[2027-03-29]
-      profile = insert(:profile, advance_booking_days: 90)
+      profile = insert(:profile)
+      insert(:availability_schedule, profile: profile, is_default: true, advance_booking_days: 90)
 
       availability_map = %{
         "2027-03-29" => true,
@@ -92,7 +94,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
 
   describe "get_calendar_days/5 trims trailing other-month weeks" do
     test "keeps full weeks, all current-month days, and no all-next-month tail" do
-      profile = insert(:profile, advance_booking_days: 90)
+      profile = insert(:profile)
+      insert(:availability_schedule, profile: profile, is_default: true, advance_booking_days: 90)
       days = CalendarHelpers.get_calendar_days("Etc/UTC", 2025, 6, profile, nil)
 
       # Whole weeks only, and the last rendered week still has a real June day.

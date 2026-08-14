@@ -8,12 +8,12 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
 
   describe "changeset/2 - override type validation" do
     test "accepts valid override types (unavailable, custom_hours, available)" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
       valid_types = ["unavailable", "custom_hours", "available"]
 
       for override_type <- valid_types do
         attrs = %{
-          profile_id: profile.id,
+          schedule_id: schedule.id,
           date: ~D[2025-01-15],
           override_type: override_type,
           start_time: if(override_type == "custom_hours", do: ~T[09:00:00], else: nil),
@@ -26,10 +26,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "rejects invalid override types" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "invalid_type"
       }
@@ -40,10 +40,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "requires override_type to be present" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15]
       }
 
@@ -55,10 +55,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
 
   describe "changeset/2 - date validation" do
     test "requires date to be present" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         override_type: "unavailable"
       }
 
@@ -67,35 +67,39 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
       assert "can't be blank" in errors_on(changeset).date
     end
 
-    test "prevents duplicate overrides for the same profile and date" do
-      profile = insert(:profile)
+    test "prevents duplicate overrides for the same schedule and date" do
+      schedule = insert(:availability_schedule)
       date = ~D[2025-01-15]
 
-      insert(:availability_override, profile: profile, date: date, override_type: "unavailable")
+      insert(:availability_override, schedule: schedule, date: date, override_type: "unavailable")
 
       {:error, changeset} =
         %AvailabilityOverrideSchema{}
         |> AvailabilityOverrideSchema.changeset(%{
-          profile_id: profile.id,
+          schedule_id: schedule.id,
           date: date,
           override_type: "available"
         })
         |> Repo.insert()
 
-      assert "has already been taken" in errors_on(changeset).profile_id
+      assert "has already been taken" in errors_on(changeset).schedule_id
     end
 
-    test "allows the same date for different profiles" do
-      profile1 = insert(:profile)
-      profile2 = insert(:profile)
+    test "allows the same date for different schedules" do
+      schedule1 = insert(:availability_schedule)
+      schedule2 = insert(:availability_schedule)
       date = ~D[2025-01-15]
 
-      insert(:availability_override, profile: profile1, date: date, override_type: "unavailable")
+      insert(:availability_override,
+        schedule: schedule1,
+        date: date,
+        override_type: "unavailable"
+      )
 
       {:ok, _override} =
         %AvailabilityOverrideSchema{}
         |> AvailabilityOverrideSchema.changeset(%{
-          profile_id: profile2.id,
+          schedule_id: schedule2.id,
           date: date,
           override_type: "unavailable"
         })
@@ -105,10 +109,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
 
   describe "changeset/2 - time validation for custom_hours" do
     test "requires start_time and end_time when override_type is custom_hours" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "custom_hours"
       }
@@ -120,10 +124,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "ensures start_time is before end_time for custom_hours" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "custom_hours",
         start_time: ~T[17:00:00],
@@ -136,10 +140,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "rejects equal start_time and end_time for custom_hours" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "custom_hours",
         start_time: ~T[09:00:00],
@@ -152,10 +156,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "accepts valid time range for custom_hours" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "custom_hours",
         start_time: ~T[09:00:00],
@@ -169,10 +173,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
 
   describe "changeset/2 - time validation for other override types" do
     test "does not require times for unavailable override" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "unavailable"
       }
@@ -182,10 +186,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "does not require times for available override" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "available"
       }
@@ -197,10 +201,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
 
   describe "changeset/2 - reason validation" do
     test "accepts reason within character limit" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "unavailable",
         reason: "Vacation day"
@@ -211,10 +215,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "rejects reason longer than 100 characters" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "unavailable",
         reason: String.duplicate("a", 101)
@@ -226,10 +230,10 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
 
     test "allows nil reason" do
-      profile = insert(:profile)
+      schedule = insert(:availability_schedule)
 
       attrs = %{
-        profile_id: profile.id,
+        schedule_id: schedule.id,
         date: ~D[2025-01-15],
         override_type: "unavailable",
         reason: nil
@@ -240,8 +244,8 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
     end
   end
 
-  describe "changeset/2 - profile_id validation" do
-    test "requires profile_id to be present" do
+  describe "changeset/2 - schedule_id validation" do
+    test "requires schedule_id to be present" do
       attrs = %{
         date: ~D[2025-01-15],
         override_type: "unavailable"
@@ -249,12 +253,12 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
 
       changeset = AvailabilityOverrideSchema.changeset(%AvailabilityOverrideSchema{}, attrs)
       refute changeset.valid?
-      assert "can't be blank" in errors_on(changeset).profile_id
+      assert "can't be blank" in errors_on(changeset).schedule_id
     end
 
-    test "enforces foreign key constraint on profile_id" do
+    test "enforces foreign key constraint on schedule_id" do
       attrs = %{
-        profile_id: 999_999,
+        schedule_id: 999_999,
         date: ~D[2025-01-15],
         override_type: "unavailable"
       }
@@ -264,7 +268,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
         |> AvailabilityOverrideSchema.changeset(attrs)
         |> Repo.insert()
 
-      assert "does not exist" in errors_on(changeset).profile_id
+      assert "does not exist" in errors_on(changeset).schedule_id
     end
   end
 end

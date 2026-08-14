@@ -14,8 +14,6 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
   import Mox
   import TymeslotWeb.OnboardingTestHelpers
 
-  alias Tymeslot.Repo
-
   setup :verify_on_exit!
 
   setup tags do
@@ -63,8 +61,8 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       |> render_click()
 
       # Verify custom value was saved
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes == 20
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 20
     end
   end
 
@@ -108,8 +106,8 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       |> render_click()
 
       # Verify custom value was saved
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.advance_booking_days == 100
+      schedule = default_schedule(user)
+      assert schedule.advance_booking_days == 100
     end
   end
 
@@ -149,8 +147,8 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       |> render_click()
 
       # Verify custom value was saved
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.min_advance_hours == 10
+      schedule = default_schedule(user)
+      assert schedule.min_advance_hours == 10
     end
   end
 
@@ -244,10 +242,10 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
       # Verify all three custom values were saved to the database
       # Default custom values from step_config.ex: buffer=20, advance=120, min=8
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes == 20
-      assert profile.advance_booking_days == 120
-      assert profile.min_advance_hours == 8
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 20
+      assert schedule.advance_booking_days == 120
+      assert schedule.min_advance_hours == 8
     end
 
     test "can switch from custom back to preset", %{conn: conn} do

@@ -1,11 +1,14 @@
 [changelog]
 header = ""
+# With `saas`-scoped commits skipped below, `core` is the scope on all but a
+# handful of the entries that remain, so printing it would repeat the same
+# prefix down the whole list. Narrower scopes still say something and are kept.
 body = """
 {% if version %}\
 [{{ version | trim_start_matches(pat="v") }}]
 {% for group, commits in commits | group_by(attribute="group") %}\
 {% for commit in commits %}\
-* {% if commit.breaking %}[BREAKING] {% endif %}{% if commit.scope %}{{ commit.scope }}: {% endif %}{{ commit.message | upper_first }}
+* {% if commit.breaking %}[BREAKING] {% endif %}{% if commit.scope and commit.scope != "core" %}{{ commit.scope }}: {% endif %}{{ commit.message | upper_first }}
 {% endfor %}\
 {% endfor %}\
 {% endif %}\

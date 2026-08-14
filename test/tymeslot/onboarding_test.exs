@@ -3,6 +3,8 @@ defmodule Tymeslot.OnboardingTest do
 
   @moduletag :utils
 
+  alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Onboarding
 
   describe "dev helpers" do
@@ -24,6 +26,14 @@ defmodule Tymeslot.OnboardingTest do
       user = insert(:user)
       assert {:ok, profile} = Onboarding.get_or_create_profile(user.id)
       assert profile.user_id == user.id
+    end
+
+    test "the new profile comes with a default schedule and its seven weekdays" do
+      user = insert(:user)
+      {:ok, profile} = Onboarding.get_or_create_profile(user.id)
+
+      assert %{is_default: true} = schedule = Schedules.get_default(profile.id)
+      assert length(WeeklySchedule.get_weekly_schedule(schedule.id)) == 7
     end
 
     test "returns existing profile when one already exists" do

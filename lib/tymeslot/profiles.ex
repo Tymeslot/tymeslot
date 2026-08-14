@@ -9,7 +9,7 @@ defmodule Tymeslot.Profiles do
 
   require Logger
 
-  alias Tymeslot.Availability.WeeklySchedule
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.EmbedDomains
@@ -24,7 +24,6 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.Catalog
-  alias Tymeslot.Validation.Constraints
 
   @type user_id :: pos_integer()
   @type username :: String.t()
@@ -35,9 +34,6 @@ defmodule Tymeslot.Profiles do
   @type uploaded_entry :: map()
   @type profile_settings :: %{
           timezone: timezone,
-          buffer_minutes: non_neg_integer(),
-          advance_booking_days: non_neg_integer(),
-          min_advance_hours: non_neg_integer(),
           max_bookings_per_day: pos_integer() | nil,
           max_bookings_per_week: pos_integer() | nil,
           max_bookings_per_month: pos_integer() | nil
@@ -104,7 +100,7 @@ defmodule Tymeslot.Profiles do
   def create_profile(user_id) do
     Repo.transaction(fn ->
       with {:ok, profile} <- ProfileQueries.insert_profile(user_id),
-           {:ok, _result} <- WeeklySchedule.create_default_weekly_schedule(profile.id) do
+           {:ok, _schedule} <- Schedules.create_default(profile.id) do
         profile
       else
         {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
@@ -288,9 +284,6 @@ defmodule Tymeslot.Profiles do
       {:error, :not_found} ->
         %{
           timezone: get_default_timezone(),
-          buffer_minutes: 15,
-          advance_booking_days: 90,
-          min_advance_hours: 3,
           max_bookings_per_day: nil,
           max_bookings_per_week: nil,
           max_bookings_per_month: nil
@@ -299,9 +292,6 @@ defmodule Tymeslot.Profiles do
       {:ok, profile} ->
         %{
           timezone: profile.timezone,
-          buffer_minutes: profile.buffer_minutes,
-          advance_booking_days: profile.advance_booking_days,
-          min_advance_hours: profile.min_advance_hours,
           max_bookings_per_day: profile.max_bookings_per_day,
           max_bookings_per_week: profile.max_bookings_per_week,
           max_bookings_per_month: profile.max_bookings_per_month
@@ -309,42 +299,9 @@ defmodule Tymeslot.Profiles do
     end
   end
 
-  @spec update_buffer_minutes(profile, non_neg_integer()) :: result(profile)
-  def update_buffer_minutes(profile, buffer),
-    do: Scheduling.update_buffer_minutes(profile, buffer)
-
-  @spec update_advance_booking_days(profile, non_neg_integer()) :: result(profile)
-  def update_advance_booking_days(profile, days),
-    do: Scheduling.update_advance_booking_days(profile, days)
-
-  @spec update_min_advance_hours(profile, non_neg_integer()) :: result(profile)
-  def update_min_advance_hours(profile, hours),
-    do: Scheduling.update_min_advance_hours(profile, hours)
-
   @spec update_booking_limit(profile, atom(), String.t() | integer() | nil) :: result(profile)
   def update_booking_limit(profile, field, value),
     do: Scheduling.update_booking_limit(profile, field, value)
-
-  @doc """
-  Validates buffer minutes value.
-  """
-  @spec validate_buffer_minutes(integer()) :: boolean()
-  def validate_buffer_minutes(minutes),
-    do: minutes in Constraints.buffer_minutes_range()
-
-  @doc """
-  Validates advance booking days value.
-  """
-  @spec validate_advance_booking_days(integer()) :: boolean()
-  def validate_advance_booking_days(days),
-    do: days in Constraints.advance_booking_days_range()
-
-  @doc """
-  Validates minimum advance hours value.
-  """
-  @spec validate_min_advance_hours(integer()) :: boolean()
-  def validate_min_advance_hours(hours),
-    do: hours in Constraints.min_advance_hours_range()
 
   # --- Avatar Management ---
 

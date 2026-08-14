@@ -10,12 +10,13 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
     check rate limit →
     create user →
     create profile →
-    create default weekly schedule (7 rows) →
+    create default availability schedule with its weekly days (7 rows) →
     broadcast `:user_registered` on PubSub
 
   The critical invariant here — asserted nowhere else — is that a
   successfully registered user ends up with **both** a profile row
-  **and** a complete default weekly schedule, because the downstream
+  **and** a default availability schedule carrying a complete set of
+  weekly days, because the downstream
   availability calculations are silent no-ops when the schedule is
   missing.
   """
@@ -28,6 +29,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
 
   alias Tymeslot.Auth.Registration
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
@@ -71,11 +73,14 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       # Profile row is written and linked to the user.
       assert %ProfileSchema{} = profile = Repo.get_by(ProfileSchema, user_id: user.id)
 
+      # The profile owns exactly one default availability schedule.
+      assert %{is_default: true} = schedule = Schedules.get_default(profile.id)
+
       # Default weekly schedule has one row per day (Mon..Sun = 1..7).
       weekly_rows =
         WeeklyAvailabilitySchema
         |> Repo.all()
-        |> Enum.filter(&(&1.profile_id == profile.id))
+        |> Enum.filter(&(&1.schedule_id == schedule.id))
         |> Enum.sort_by(& &1.day_of_week)
 
       assert length(weekly_rows) == 7

@@ -99,10 +99,12 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       assert profile.username == "testuser123"
       # Without connect_params, timezone falls back to business default
       assert profile.timezone == "Europe/Tallinn"
+
       # Scheduling defaults are preserved when not changed
-      assert profile.buffer_minutes == 15
-      assert profile.advance_booking_days == 90
-      assert profile.min_advance_hours == 3
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 15
+      assert schedule.advance_booking_days == 90
+      assert schedule.min_advance_hours == 3
     end
 
     test "onboarding persists all fields including detected timezone", %{conn: conn} do
@@ -211,10 +213,10 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify custom values were persisted (defaults from step_config.ex: 20, 120, 8)
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes == 20
-      assert profile.advance_booking_days == 120
-      assert profile.min_advance_hours == 8
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 20
+      assert schedule.advance_booking_days == 120
+      assert schedule.min_advance_hours == 8
 
       # Verify user completed onboarding
       user = Repo.reload!(user)

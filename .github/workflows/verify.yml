@@ -48,6 +48,19 @@ jobs:
       - run: mix sobelow
       - run: mix deps.audit
       - run: mix excellent_migrations.check_safety
+      # test/release/changelog_configs_test.exs renders the real git-cliff
+      # templates, and Tymeslot.Test.SuiteConfig excludes those tests wherever
+      # the binary is missing — so without this step they would silently never
+      # run here, which is the one place a broken template could still be
+      # caught before a release. Keep the pin in step with release.yml, which
+      # generates the release notes with the same binary.
+      - name: Install git-cliff
+        run: |
+          CLIFF_VERSION="2.12.0"
+          curl -sSfLo /tmp/git-cliff.tar.gz \
+            "https://github.com/orhun/git-cliff/releases/download/v${CLIFF_VERSION}/git-cliff-${CLIFF_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          sudo tar -xzf /tmp/git-cliff.tar.gz -C /usr/local/bin --strip-components=1 "git-cliff-${CLIFF_VERSION}/git-cliff"
+          git-cliff --version
       - run: mix test
       # Catalogue references drift whenever a translatable string is added,
       # removed, or moved between files, and nothing else in this workflow

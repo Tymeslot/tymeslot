@@ -34,7 +34,9 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   @doc """
   Handles updating scheduling preferences in the database.
 
-  Validates and persists scheduling preference settings.
+  Validates and persists scheduling preference settings. The buffer, booking
+  window and minimum notice live on the profile's default availability
+  schedule, so the updated schedule is what gets assigned back.
   """
   @spec handle_update_scheduling_preferences(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -45,10 +47,10 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
                socket.assigns.profile,
                sanitized_params
              ) do
-          {:ok, profile} ->
+          {:ok, schedule} ->
             socket =
               socket
-              |> Component.assign(:profile, profile)
+              |> Component.assign(:availability_schedule, schedule)
               |> Component.assign(:form_errors, %{})
 
             {:noreply, socket}
@@ -94,8 +96,8 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_focus_custom_input(setting, socket) do
     with %{} = config <- StepConfig.custom_input_config()[setting],
-         %{} = profile <- socket.assigns[:profile] do
-      current = Map.get(profile, config.field) || config.constraints.default_custom
+         %{} = schedule <- socket.assigns[:availability_schedule] do
+      current = Map.get(schedule, config.field) || config.constraints.default_custom
 
       custom_value =
         if current in config.presets, do: config.constraints.default_custom, else: current

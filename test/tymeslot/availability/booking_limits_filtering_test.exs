@@ -47,7 +47,7 @@ defmodule Tymeslot.Availability.BookingLimitsFilteringTest do
 
   defp config_with_checker(user, profile, from, to) do
     %{
-      profile_id: nil,
+      schedule_id: nil,
       min_advance_hours: 0,
       max_advance_booking_days: 365,
       buffer_minutes: 0,

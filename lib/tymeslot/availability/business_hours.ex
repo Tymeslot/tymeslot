@@ -2,7 +2,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   @moduledoc """
   Pure functions for business hours calculations.
   Handles business hours definitions and timezone conversions.
-  Uses dynamic weekly availability from user profiles.
+  Uses the weekly availability of a named availability schedule.
   """
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
@@ -50,7 +50,7 @@ defmodule Tymeslot.Availability.BusinessHours do
         ) :: {:ok, business_hours_result()} | {:error, String.t()}
   def get_business_hours_in_timezone(
         date,
-        profile_id,
+        schedule_id,
         owner_timezone,
         user_timezone,
         config \\ %{}
@@ -60,8 +60,8 @@ defmodule Tymeslot.Availability.BusinessHours do
     get_business_hours_in_timezone_fallback(date, owner_timezone, user_timezone)
   end
 
-  def get_business_hours_in_timezone(date, profile_id, owner_timezone, user_timezone, config) do
-    override = lookup_override(date, profile_id, config)
+  def get_business_hours_in_timezone(date, schedule_id, owner_timezone, user_timezone, config) do
+    override = lookup_override(date, schedule_id, config)
 
     case override do
       %{override_type: "unavailable"} ->
@@ -79,7 +79,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
       _no_override ->
         day_of_week = Date.day_of_week(date)
-        day_availability = lookup_day_availability(day_of_week, profile_id, config)
+        day_availability = lookup_day_availability(day_of_week, schedule_id, config)
 
         case day_availability do
           %{is_available: true, start_time: start_time, end_time: end_time}
@@ -117,9 +117,9 @@ defmodule Tymeslot.Availability.BusinessHours do
           String.t(),
           Calculate.availability_config()
         ) :: [slot_window()]
-  def windows_for_target_date(target_date, profile_id, owner_timezone, user_timezone, config) do
+  def windows_for_target_date(target_date, schedule_id, owner_timezone, user_timezone, config) do
     Enum.flat_map([Date.add(target_date, -1), target_date, Date.add(target_date, 1)], fn d ->
-      case get_business_hours_in_timezone(d, profile_id, owner_timezone, user_timezone, config) do
+      case get_business_hours_in_timezone(d, schedule_id, owner_timezone, user_timezone, config) do
         {:ok, %{start_datetime: %DateTime{} = start_dt, end_datetime: %DateTime{} = end_dt}} ->
           if DateTime.to_date(start_dt) == target_date or
                DateTime.to_date(end_dt) == target_date do
@@ -140,10 +140,10 @@ defmodule Tymeslot.Availability.BusinessHours do
   """
   @spec breaks_for_day(Date.t(), integer() | nil, Calculate.availability_config()) ::
           [{Time.t(), Time.t()}]
-  def breaks_for_day(date, profile_id, config) do
+  def breaks_for_day(date, schedule_id, config) do
     day_of_week = Date.day_of_week(date)
 
-    case lookup_day_availability(day_of_week, profile_id, config) do
+    case lookup_day_availability(day_of_week, schedule_id, config) do
       %{breaks: breaks} when is_list(breaks) ->
         Enum.map(breaks, &{&1.start_time, &1.end_time})
 
@@ -153,8 +153,8 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   @doc """
-  Fallback for profiles without explicit business hours configuration.
-  Uses default hardcoded hours when profile_id is not provided.
+  Fallback for callers with no resolvable availability schedule.
+  Uses the hard-coded fallback hours when no schedule is resolvable.
   """
   @spec get_business_hours_in_timezone_fallback(Date.t(), String.t(), String.t()) ::
           {:ok, business_hours_result()}
@@ -175,19 +175,19 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   @doc """
-  Checks if a given date is a business day for a profile.
+  Checks if a given date is a business day within a schedule.
 
   Accepts preloaded data via `config` to avoid per-date DB queries.
   """
   @spec business_day?(Date.t(), integer() | nil, Calculate.availability_config()) :: boolean()
-  def business_day?(date, profile_id, config \\ %{})
+  def business_day?(date, schedule_id, config \\ %{})
 
   def business_day?(date, nil, _config) do
     Date.day_of_week(date) in @fallback_working_days
   end
 
-  def business_day?(date, profile_id, config) do
-    override = lookup_override(date, profile_id, config)
+  def business_day?(date, schedule_id, config) do
+    override = lookup_override(date, schedule_id, config)
 
     case override do
       %{override_type: "unavailable"} ->
@@ -198,7 +198,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
       _no_override ->
         day_of_week = Date.day_of_week(date)
-        day_availability = lookup_day_availability(day_of_week, profile_id, config)
+        day_availability = lookup_day_availability(day_of_week, schedule_id, config)
 
         match?(%{is_available: true}, day_availability)
     end
@@ -211,14 +211,14 @@ defmodule Tymeslot.Availability.BusinessHours do
   """
   @spec business_hours_range(integer() | nil, integer(), Calculate.availability_config()) ::
           {Time.t() | nil, Time.t() | nil}
-  def business_hours_range(profile_id, day_of_week, config \\ %{})
+  def business_hours_range(schedule_id, day_of_week, config \\ %{})
 
   def business_hours_range(nil, _day_of_week, _config) do
     {@fallback_start_time, @fallback_end_time}
   end
 
-  def business_hours_range(profile_id, day_of_week, config) do
-    day_availability = lookup_day_availability(day_of_week, profile_id, config)
+  def business_hours_range(schedule_id, day_of_week, config) do
+    day_availability = lookup_day_availability(day_of_week, schedule_id, config)
 
     case day_availability do
       %{is_available: true, start_time: start_time, end_time: end_time} ->
@@ -230,7 +230,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   @doc """
-  Returns default business hours when no profile-specific settings are configured.
+  Returns the fallback business hours used when no schedule is resolvable.
   """
   @spec fallback_business_hours_range() :: {Time.t(), Time.t()}
   def fallback_business_hours_range do
@@ -265,12 +265,12 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   # Data lookup — uses preloaded collections when available, falls back to DB queries
 
-  defp lookup_override(date, profile_id, %{overrides: overrides}) when is_list(overrides) do
-    Enum.find(overrides, &(&1.date == date and &1.profile_id == profile_id))
+  defp lookup_override(date, schedule_id, %{overrides: overrides}) when is_list(overrides) do
+    Enum.find(overrides, &(&1.date == date and &1.schedule_id == schedule_id))
   end
 
-  defp lookup_override(date, profile_id, _config) do
-    AvailabilityOverrideQueries.get_override_by_profile_and_date(profile_id, date)
+  defp lookup_override(date, schedule_id, _config) do
+    AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule_id, date)
   end
 
   @doc false
@@ -278,13 +278,13 @@ defmodule Tymeslot.Availability.BusinessHours do
           day_availability() | nil
   def lookup_day_availability(_day_of_week, nil, _config), do: nil
 
-  def lookup_day_availability(day_of_week, _profile_id, %{weekly_schedule: schedule})
+  def lookup_day_availability(day_of_week, _schedule_id, %{weekly_schedule: schedule})
       when is_list(schedule) do
     Enum.find(schedule, &(&1.day_of_week == day_of_week))
   end
 
-  def lookup_day_availability(day_of_week, profile_id, _config) do
-    WeeklySchedule.get_day_availability(profile_id, day_of_week)
+  def lookup_day_availability(day_of_week, schedule_id, _config) do
+    WeeklySchedule.get_day_availability(schedule_id, day_of_week)
   end
 
   # Private functions

@@ -20,6 +20,11 @@ defmodule Tymeslot.Demo.NoOpTest do
       refute NoOp.demo_profile?(nil)
     end
 
+    test "booking_window_days/1 falls back to the standard 90-day window" do
+      assert NoOp.booking_window_days(%{id: 1}) == 90
+      assert NoOp.booking_window_days(nil) == 90
+    end
+
     test "get_profile_by_user_id/1 returns profile by user id" do
       user = insert(:user)
       profile = insert(:profile, user: user)
