@@ -121,6 +121,60 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
     }
   end
 
+  describe "the schedule a reschedule is offered against" do
+    @tag :capture_log
+    test "comes from the meeting's own type, not a duration match", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting: meeting
+    } do
+      # A reschedule link carries only the meeting uid, and the type used to be
+      # re-picked from the duration in the URL — which resolves against slugs,
+      # so it matched nothing and the page fell back to the profile's default
+      # schedule. Slots were then offered from the default while the submit was
+      # validated against the meeting's own type, which is the one way left to
+      # break "if it is offered, it can be booked".
+      long_schedule =
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: false,
+          name: "Long lead time",
+          advance_booking_days: 180,
+          min_advance_hours: 0,
+          buffer_minutes: 0
+        )
+
+      pinned_type =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "Pinned Chat",
+          is_active: true,
+          availability_schedule_id: long_schedule.id
+        )
+
+      {:ok, _updated} =
+        meeting
+        |> Changeset.change(%{meeting_type_id: pinned_type.id})
+        |> Repo.update()
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+      # Picking the *other* type's card: even that must not move the reschedule
+      # off the type it is committed to.
+      view
+      |> element("button[data-testid='duration-option'][phx-value-duration='quick-chat']")
+      |> render_click()
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert assigns.meeting_type.id == pinned_type.id
+      assert assigns.booking_window_days == 180
+    end
+  end
+
   describe "completing a reschedule from the public scheduling page" do
     @tag :capture_log
     test "moves the existing meeting instead of creating a second one", %{
