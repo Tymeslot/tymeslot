@@ -32,6 +32,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
@@ -102,8 +103,9 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
         |> Repo.insert()
 
       # Profile-chained :delete_all
-      weekly = insert(:weekly_availability, profile: profile)
-      override = insert(:availability_override, profile: profile)
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
+      weekly = insert(:weekly_availability, schedule: schedule)
+      override = insert(:availability_override, schedule: schedule)
 
       # Transitive cascade via weekly_availability_id -> delete_all
       availability_break = insert(:availability_break, weekly_availability: weekly)
@@ -155,6 +157,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert Repo.get(BookingPaymentSchema, booking_payment.id)
       assert Repo.get(ConnectAccountSchema, connect_account.id)
       assert Repo.get(MeetingSchema, meeting.id)
+      assert Repo.get(AvailabilityScheduleSchema, schedule.id)
       assert Repo.get(WeeklyAvailabilitySchema, weekly.id)
       assert Repo.get(AvailabilityOverrideSchema, override.id)
       assert Repo.get(ThemeCustomizationSchema, theme.id)
@@ -258,11 +261,14 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
              "calendar_preferences: expected delete-cascade via user_id FK (`on_delete: :delete_all`)"
 
       # Profile-chained :delete_all.
+      refute Repo.get(AvailabilityScheduleSchema, schedule.id),
+             "availability_schedule: expected transitive delete-cascade through its profile"
+
       refute Repo.get(WeeklyAvailabilitySchema, weekly.id),
-             "weekly_availability: expected transitive delete-cascade through its profile"
+             "weekly_availability: expected transitive delete-cascade through its schedule"
 
       refute Repo.get(AvailabilityOverrideSchema, override.id),
-             "availability_override: expected transitive delete-cascade through its profile"
+             "availability_override: expected transitive delete-cascade through its schedule"
 
       refute Repo.get(ThemeCustomizationSchema, theme.id),
              "theme_customization: expected transitive delete-cascade through its profile"
@@ -275,7 +281,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       refute Repo.get(TelegramDeliverySchema, telegram_delivery.id),
              "telegram_delivery: expected transitive delete-cascade through its telegram_integration"
 
-      # Transitive :delete_all: availability_break -> weekly_availability -> profile -> user.
+      # Transitive :delete_all: availability_break -> weekly_availability -> schedule -> profile -> user.
       refute Repo.get(AvailabilityBreakSchema, availability_break.id),
              "availability_break: expected transitive delete-cascade through its weekly_availability"
     end

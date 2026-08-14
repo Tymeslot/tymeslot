@@ -187,7 +187,7 @@ defmodule Tymeslot.Bookings.Create do
       user_id ->
         # Meeting type active check
         with :ok <- validate_meeting_type_active(booking_data) do
-          config = Policy.scheduling_config(user_id)
+          config = Policy.scheduling_config(user_id, booking_data.meeting_type)
 
           # Time window validation
           with :ok <-
@@ -293,7 +293,7 @@ defmodule Tymeslot.Bookings.Create do
               start_datetime,
               end_datetime,
               events,
-              Policy.scheduling_config(organizer_user_id)
+              Policy.scheduling_config(organizer_user_id, Map.get(booking_data, :meeting_type))
             )
 
           {:ok, {:error, reason}} ->

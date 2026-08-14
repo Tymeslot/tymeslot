@@ -42,6 +42,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "video_integration_id" => to_param(assigns.selected_video_integration_id),
       "calendar_integration_id" => to_param(assigns.selected_calendar_integration_id),
       "target_calendar_id" => to_param(assigns.selected_target_calendar_id),
+      "availability_schedule_id" =>
+        to_param(Map.get(assigns, :selected_availability_schedule_id)),
       "icon" => assigns.selected_icon,
       "allow_guests" => to_string(Map.get(assigns, :allow_guests, false)),
       "show_as_free" => to_string(Map.get(assigns, :show_as_free, false)),

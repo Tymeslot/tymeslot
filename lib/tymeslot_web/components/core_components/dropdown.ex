@@ -28,6 +28,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
     """
 
   attr :trigger_class, :string, default: nil
+
+  attr :trigger_attrs, :list,
+    default: [],
+    doc: """
+    Extra `{name, value}` attributes for the trigger button. Needed for
+    `phx-value-*` pairs, which are not global attributes and so cannot arrive
+    through `@rest`: a menu shared by several rows uses them to tell the
+    toggle handler which row it belongs to.
+    """
+
   attr :class, :string, default: nil
 
   attr :unstyled, :boolean,
@@ -64,6 +74,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
         aria-expanded={to_string(@open)}
         aria-haspopup="true"
         aria-controls={"#{@id}-panel"}
+        {@trigger_attrs}
         {@rest}
       >
         {render_slot(@trigger)}

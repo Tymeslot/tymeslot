@@ -11,7 +11,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
-  alias Tymeslot.Availability.WeeklySchedule
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
@@ -92,7 +92,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       end
 
     with {:ok, profile} <- ProfileQueries.create_profile_in_transaction(repo, profile_attrs),
-         {:ok, _count} <- WeeklySchedule.create_default_weekly_schedule(profile.id, repo) do
+         {:ok, _schedule} <- Schedules.create_default(profile.id, repo) do
       Logger.info("Created profile", user_id: user.id)
       {:ok, profile}
     else

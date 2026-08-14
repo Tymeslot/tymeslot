@@ -9,6 +9,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -145,9 +146,6 @@ defmodule Tymeslot.Factory do
   def profile_factory do
     %ProfileSchema{
       timezone: Profiles.get_default_timezone(),
-      buffer_minutes: 15,
-      advance_booking_days: 90,
-      min_advance_hours: 3,
       user: build(:user)
     }
   end
@@ -229,12 +227,25 @@ defmodule Tymeslot.Factory do
     }
   end
 
+  @spec availability_schedule_factory() ::
+          Tymeslot.Availability.AvailabilityScheduleSchema.t()
+  def availability_schedule_factory do
+    %AvailabilityScheduleSchema{
+      name: sequence(:availability_schedule_name, &"Schedule #{&1}"),
+      is_default: false,
+      buffer_minutes: 15,
+      min_advance_hours: 3,
+      advance_booking_days: 90,
+      profile: build(:profile)
+    }
+  end
+
   @spec weekly_availability_factory() :: Tymeslot.Availability.WeeklyAvailabilitySchema.t()
   def weekly_availability_factory do
     %WeeklyAvailabilitySchema{
       # Monday
       day_of_week: 1,
-      profile: build(:profile)
+      schedule: build(:availability_schedule)
     }
   end
 
@@ -255,7 +266,7 @@ defmodule Tymeslot.Factory do
       date: Date.add(Date.utc_today(), 1),
       override_type: "unavailable",
       reason: "Out of office",
-      profile: build(:profile)
+      schedule: build(:availability_schedule)
     }
   end
 

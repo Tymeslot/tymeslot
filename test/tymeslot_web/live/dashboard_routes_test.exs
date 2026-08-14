@@ -133,17 +133,10 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       assert to =~ "refresh=1"
     end
 
-    test "availability can switch to grid view", %{conn: conn} do
+    test "availability renders the weekly schedule", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/availability")
 
       assert render(view) =~ "Weekly Schedule"
-
-      view
-      |> element("button[phx-click='toggle_input_mode'][phx-value-option='grid']")
-      |> render_click()
-
-      assert render(view) =~ "Availability"
-      assert render(view) =~ "Weekly Visual Grid"
     end
 
     test "meeting settings can open the add meeting type form", %{conn: conn} do

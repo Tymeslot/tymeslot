@@ -12,7 +12,6 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Timezones
-  alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -20,9 +19,6 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           username: String.t() | nil,
           full_name: String.t() | nil,
           timezone: String.t() | nil,
-          buffer_minutes: integer(),
-          advance_booking_days: integer(),
-          min_advance_hours: integer(),
           max_bookings_per_day: pos_integer() | nil,
           max_bookings_per_week: pos_integer() | nil,
           max_bookings_per_month: pos_integer() | nil,
@@ -49,9 +45,6 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:username, :string)
     field(:full_name, :string)
     field(:timezone, :string)
-    field(:buffer_minutes, :integer, default: 15)
-    field(:advance_booking_days, :integer, default: 90)
-    field(:min_advance_hours, :integer, default: 3)
     field(:max_bookings_per_day, :integer)
     field(:max_bookings_per_week, :integer)
     field(:max_bookings_per_month, :integer)
@@ -83,9 +76,6 @@ defmodule Tymeslot.Profiles.ProfileSchema do
       :username,
       :full_name,
       :timezone,
-      :buffer_minutes,
-      :advance_booking_days,
-      :min_advance_hours,
       :max_bookings_per_day,
       :max_bookings_per_week,
       :max_bookings_per_month,
@@ -101,9 +91,6 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     |> validate_timezone()
     |> validate_booking_theme()
     |> validate_embed_domains()
-    |> validate_number(:buffer_minutes, Constraints.buffer_minutes_opts())
-    |> validate_number(:advance_booking_days, Constraints.advance_booking_days_opts())
-    |> validate_number(:min_advance_hours, Constraints.min_advance_hours_opts())
     |> validate_booking_limits(:profiles)
     |> unique_constraint(:username)
   end

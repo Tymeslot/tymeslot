@@ -8,19 +8,19 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   alias Tymeslot.Repo
 
   @doc """
-  Gets the complete weekly schedule for a profile including breaks.
+  Gets the complete weekly schedule for a schedule including breaks.
   """
   @spec get_weekly_schedule(integer()) :: list(WeeklyAvailabilitySchema.t())
-  def get_weekly_schedule(profile_id) do
-    WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(profile_id)
+  def get_weekly_schedule(schedule_id) do
+    WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule_id)
   end
 
   @doc """
   Gets availability for a specific day of the week.
   """
   @spec get_day_availability(integer(), integer()) :: WeeklyAvailabilitySchema.t() | nil
-  def get_day_availability(profile_id, day_of_week) do
-    WeeklyAvailabilityQueries.get_day_availability_with_breaks(profile_id, day_of_week)
+  def get_day_availability(schedule_id, day_of_week) do
+    WeeklyAvailabilityQueries.get_day_availability_with_breaks(schedule_id, day_of_week)
   end
 
   @doc """
@@ -28,10 +28,10 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   """
   @spec upsert_day_availability(integer(), integer(), map()) ::
           {:ok, WeeklyAvailabilitySchema.t()} | {:error, Ecto.Changeset.t() | String.t()}
-  def upsert_day_availability(profile_id, day_of_week, attrs) do
-    case get_day_availability(profile_id, day_of_week) do
+  def upsert_day_availability(schedule_id, day_of_week, attrs) do
+    case get_day_availability(schedule_id, day_of_week) do
       nil ->
-        create_day_availability(profile_id, day_of_week, attrs)
+        create_day_availability(schedule_id, day_of_week, attrs)
 
       existing ->
         update_day_availability(existing, attrs)
@@ -43,8 +43,8 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   """
   @spec create_day_availability(integer(), integer(), map()) ::
           {:ok, WeeklyAvailabilitySchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_day_availability(profile_id, day_of_week, attrs) do
-    attrs = Map.merge(attrs, %{profile_id: profile_id, day_of_week: day_of_week})
+  def create_day_availability(schedule_id, day_of_week, attrs) do
+    attrs = Map.merge(attrs, %{schedule_id: schedule_id, day_of_week: day_of_week})
     WeeklyAvailabilityQueries.create_weekly_availability(attrs)
   end
 
@@ -62,8 +62,8 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   """
   @spec copy_day_settings(integer(), integer(), list(integer())) ::
           {:ok, term()} | {:error, String.t()}
-  def copy_day_settings(profile_id, from_day, to_days) when is_list(to_days) do
-    case get_day_availability(profile_id, from_day) do
+  def copy_day_settings(schedule_id, from_day, to_days) when is_list(to_days) do
+    case get_day_availability(schedule_id, from_day) do
       nil ->
         {:error, "Source day not found"}
 
@@ -71,7 +71,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
         Repo.transaction(fn ->
           to_days
           |> Enum.reject(&(&1 == from_day))
-          |> Enum.each(&copy_single_day_settings(source, profile_id, &1))
+          |> Enum.each(&copy_single_day_settings(source, schedule_id, &1))
         end)
     end
   end
@@ -81,36 +81,36 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   """
   @spec set_preset_schedule(integer(), String.t(), list(integer())) ::
           {:ok, term()} | {:error, String.t()}
-  def set_preset_schedule(profile_id, preset_name, days) when is_list(days) do
+  def set_preset_schedule(schedule_id, preset_name, days) when is_list(days) do
     case get_preset_config(preset_name) do
       nil -> {:error, "Unknown preset: #{preset_name}"}
-      config -> apply_preset_in_tx(profile_id, days, config)
+      config -> apply_preset_in_tx(schedule_id, days, config)
     end
   end
 
-  defp apply_preset_in_tx(profile_id, days, config) do
+  defp apply_preset_in_tx(schedule_id, days, config) do
     Repo.transaction(fn ->
-      Enum.each(days, &upsert_day_availability(profile_id, &1, config))
+      Enum.each(days, &upsert_day_availability(schedule_id, &1, config))
     end)
   end
 
   @doc """
-  Creates default weekly schedule for a new profile.
+  Creates the seven default weekly days for a new schedule.
   Weekdays 11AM-7:30PM, weekends unavailable.
 
   Accepts an optional `repo` argument so callers inside an existing database
   transaction can pass their transaction-scoped repo, ensuring the inserts are
   part of the same transaction rather than a separate connection.
   """
-  @spec create_default_weekly_schedule(integer(), Ecto.Repo.t()) ::
+  @spec create_default_weekly_days(integer(), Ecto.Repo.t()) ::
           {:ok, non_neg_integer()} | {:error, term()}
-  def create_default_weekly_schedule(profile_id, repo \\ Repo) do
-    WeeklyAvailabilityQueries.create_default_weekly_schedule(profile_id, repo)
+  def create_default_weekly_days(schedule_id, repo \\ Repo) do
+    WeeklyAvailabilityQueries.create_default_weekly_days(schedule_id, repo)
   end
 
   # Private functions
 
-  defp copy_single_day_settings(source, profile_id, to_day) do
+  defp copy_single_day_settings(source, schedule_id, to_day) do
     # Create or update the target day
     attrs = %{
       is_available: source.is_available,
@@ -118,7 +118,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
       end_time: source.end_time
     }
 
-    case upsert_day_availability(profile_id, to_day, attrs) do
+    case upsert_day_availability(schedule_id, to_day, attrs) do
       {:ok, target_availability} ->
         # Copy breaks
         copy_breaks(source.breaks, target_availability.id)
@@ -169,11 +169,11 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   """
   @spec clear_day_settings(integer(), integer()) ::
           {:ok, WeeklyAvailabilitySchema.t()} | {:error, Ecto.Changeset.t()}
-  def clear_day_settings(profile_id, day_of_week) do
-    case get_day_availability(profile_id, day_of_week) do
+  def clear_day_settings(schedule_id, day_of_week) do
+    case get_day_availability(schedule_id, day_of_week) do
       nil ->
         # Day doesn't exist, create an unavailable day
-        create_day_availability(profile_id, day_of_week, %{is_available: false})
+        create_day_availability(schedule_id, day_of_week, %{is_available: false})
 
       existing ->
         # Update to unavailable and clear times

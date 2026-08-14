@@ -47,6 +47,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         allow_guests: params["allow_guests"] == "true",
         video_integration_id: video_integration_id(ui_state),
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
+        availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
         reminder_config: reminder_config,
         payment_required: payment_required,

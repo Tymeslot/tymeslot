@@ -237,7 +237,8 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
   describe "buffer time conflict detection" do
     test "respects buffer time between meetings" do
       user = insert(:user)
-      _profile = insert(:profile, user: user, buffer_minutes: 30)
+      profile = insert(:profile, user: user)
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 30)
 
       {start_time1, end_time1} = build_meeting_times(1, 60)
 

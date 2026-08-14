@@ -562,3 +562,22 @@
     --time-axis: 3rem;
   }
 }
+
+/* ===================================
+   AVAILABILITY WEEKDAY ROWS
+   =================================== */
+
+/* Seven weekdays share one panel, so each is a single row. The hour selects
+   drop to a compact height there: at their default size they, not the content,
+   would set the row height. Scoped to the row rather than added as a modifier
+   on .input, so the shared component keeps one shape everywhere else. */
+.day-hours-inline .input {
+  @apply w-auto rounded-xl py-1 text-sm;
+  /* The shared select style reserves pr-10 for the chevron it paints as a
+     background image. Tightening the padding here has to move the chevron with
+     it, or the time runs underneath the arrow. */
+  padding-left: 0.5rem;
+  padding-right: 1.625rem;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+}

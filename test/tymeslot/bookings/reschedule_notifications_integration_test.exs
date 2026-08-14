@@ -71,7 +71,11 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     end)
 
     user = insert(:user)
-    profile = insert(:profile, user: user, timezone: "Europe/Berlin", buffer_minutes: 15)
+    profile = insert(:profile, user: user, timezone: "Europe/Berlin")
+
+    # The booking policy lives on the schedule now, not the profile; these tests
+    # only need one to exist so the reschedule resolves a policy at all.
+    insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
     insert(:webhook, user: user, events: ["meeting.rescheduled"])
     insert(:telegram_integration, user: user, events: ["meeting.rescheduled"])
 

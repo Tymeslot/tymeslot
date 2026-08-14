@@ -173,7 +173,13 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
         insert(:profile,
           user: user,
           username: "suggesthost",
-          timezone: "Europe/Tallinn",
+          timezone: "Europe/Tallinn"
+        )
+
+      schedule =
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
           buffer_minutes: 0,
           min_advance_hours: 0,
           advance_booking_days: 90
@@ -181,7 +187,7 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       Enum.each(1..7, fn day_of_week ->
         insert(:weekly_availability,
-          profile: profile,
+          schedule: schedule,
           day_of_week: day_of_week,
           is_available: true,
           start_time: ~T[09:00:00],

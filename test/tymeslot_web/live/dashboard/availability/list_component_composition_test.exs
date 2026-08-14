@@ -75,11 +75,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   setup :setup_dashboard_user
 
   setup %{user: user, profile: profile} = ctx do
-    # Ensure the profile has a full weekly schedule; list_component
-    # reads it via `weekly_schedule` assigns.
+    # Ensure the profile's default schedule has a full weekly pattern;
+    # list_component reads it via `weekly_schedule` assigns.
+    schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
     Enum.each(1..7, fn day_of_week ->
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: day_of_week,
         is_available: day_of_week <= 5,
         start_time: ~T[09:00:00],
@@ -87,13 +89,13 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       )
     end)
 
-    Map.merge(ctx, %{user: user, profile: profile})
+    Map.merge(ctx, %{user: user, profile: profile, schedule: schedule})
   end
 
   describe "add_break — end-before-start bypass" do
     @tag :capture_log
     test "start time after end time is rejected and no break row is created",
-         %{conn: conn, profile: profile} do
+         %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -116,7 +118,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       refute html =~ "Impossible Break"
       assert html =~ "End time must be after start time"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert Breaks.get_breaks_for_day(day.id) == []
     end
   end
@@ -124,7 +126,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   describe "add_break — oversized label" do
     @tag :capture_log
     test "label exceeding 50 characters is rejected and no break row is created",
-         %{conn: conn, profile: profile} do
+         %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
@@ -149,63 +151,56 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       refute html =~ oversized_label
       assert html =~ "Break label must be 50 characters or less"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert Breaks.get_breaks_for_day(day.id) == []
     end
   end
 
   describe "add_break — outside the day's working hours" do
-    @tag :capture_log
-    test "a break starting before work hours is reported, not crashed on",
-         %{conn: conn, profile: profile} do
+    test "the pickers only offer times inside the day's hours", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
       |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
       |> render_click()
 
-      # The dropdowns offer every quarter-hour of the day, so a time
-      # outside the 09:00–17:00 working hours is one click away.
+      # Scoped to the break form: the row's own hour selects still offer the
+      # whole clock, since those are what set the day's hours in the first place.
+      html = view |> element("#add-break-form-1") |> render()
+
+      # Monday runs 09:00–17:00, so the only way to pick an out-of-hours break
+      # would be an option outside that window; there is none to pick.
+      refute html =~ ~s(<option value="07:00")
+      refute html =~ ~s(<option value="18:00")
+      assert html =~ ~s(<option value="09:15")
+      assert html =~ ~s(<option value="16:45")
+    end
+
+    @tag :capture_log
+    test "an out-of-hours break is still reported, not crashed on, if one arrives",
+         %{conn: conn, schedule: schedule} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
       view
-      |> form("form[phx-submit='add_break']", %{
+      |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
+      |> render_click()
+
+      # Sent past the form, because the form no longer offers these times. The
+      # server-side guard is what stops a hand-made event, so it stays covered.
+      view
+      |> with_target("#availability-list")
+      |> render_submit("add_break", %{
         "day" => "1",
         "start" => "07:00",
         "end" => "08:00",
         "label" => "Early Break"
       })
-      |> render_submit()
 
       html = render(view)
       refute html =~ "Break added"
       assert html =~ "Break must start within this day&#39;s working hours"
 
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
-      assert Breaks.get_breaks_for_day(day.id) == []
-    end
-
-    @tag :capture_log
-    test "a break ending after work hours is reported, not crashed on",
-         %{conn: conn, profile: profile} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
-
-      view
-      |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
-      |> render_click()
-
-      view
-      |> form("form[phx-submit='add_break']", %{
-        "day" => "1",
-        "start" => "16:30",
-        "end" => "18:00",
-        "label" => "Late Break"
-      })
-      |> render_submit()
-
-      html = render(view)
-      refute html =~ "Break added"
-      assert html =~ "Break must end within this day&#39;s working hours"
-
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert Breaks.get_breaks_for_day(day.id) == []
     end
   end
@@ -213,8 +208,8 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   describe "add_break — overlapping an existing break" do
     @tag :capture_log
     test "the clash is flashed and no second break is created",
-         %{conn: conn, profile: profile} do
-      day = WeeklySchedule.get_day_availability(profile.id, 1)
+         %{conn: conn, schedule: schedule} do
+      day = WeeklySchedule.get_day_availability(schedule.id, 1)
 
       insert(:availability_break,
         weekly_availability: day,

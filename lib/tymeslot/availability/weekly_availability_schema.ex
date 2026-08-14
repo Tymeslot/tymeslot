@@ -6,17 +6,17 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
   import Ecto.Changeset
 
   alias Tymeslot.Availability.AvailabilityBreakSchema
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.ChangesetValidators.TimeOrder
-  alias Tymeslot.Profiles.ProfileSchema
 
   @type t :: %__MODULE__{
           id: integer() | nil,
-          profile_id: integer() | nil,
+          schedule_id: integer() | nil,
           day_of_week: integer() | nil,
           is_available: boolean(),
           start_time: Time.t() | nil,
           end_time: Time.t() | nil,
-          profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t(),
+          schedule: AvailabilityScheduleSchema.t() | Ecto.Association.NotLoaded.t(),
           breaks: [AvailabilityBreakSchema.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -28,7 +28,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
     field(:start_time, :time)
     field(:end_time, :time)
 
-    belongs_to(:profile, ProfileSchema)
+    belongs_to(:schedule, AvailabilityScheduleSchema)
     has_many(:breaks, AvailabilityBreakSchema, foreign_key: :weekly_availability_id)
 
     timestamps(type: :utc_datetime)
@@ -38,14 +38,14 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(weekly_availability, attrs) do
     weekly_availability
-    |> cast(attrs, [:profile_id, :day_of_week, :is_available, :start_time, :end_time])
-    |> validate_required([:profile_id, :day_of_week])
+    |> cast(attrs, [:schedule_id, :day_of_week, :is_available, :start_time, :end_time])
+    |> validate_required([:schedule_id, :day_of_week])
     |> validate_inclusion(:day_of_week, 1..7,
       message: "must be between 1 (Monday) and 7 (Sunday)"
     )
     |> validate_times()
-    |> unique_constraint([:profile_id, :day_of_week])
-    |> foreign_key_constraint(:profile_id)
+    |> unique_constraint([:schedule_id, :day_of_week])
+    |> foreign_key_constraint(:schedule_id)
   end
 
   defp validate_times(changeset) do

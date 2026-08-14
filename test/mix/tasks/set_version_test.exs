@@ -7,13 +7,13 @@ defmodule Mix.Tasks.SetVersionTest do
 
   describe "build_cloudron_changelog/2" do
     test "returns the raw commit section verbatim when no highlights are curated" do
-      raw = "* core: Some commit\n* core: Another commit"
+      raw = "* Some commit\n* Another commit"
 
       assert SetVersion.build_cloudron_changelog(raw, nil) == raw
     end
 
     test "uses curated summary and Core highlights instead of the raw commit list" do
-      raw = "* core: Raw plumbing commit\n* core: More plumbing"
+      raw = "* Raw plumbing commit\n* More plumbing"
 
       curated = %{
         summary: "A focused release.",
@@ -25,7 +25,7 @@ defmodule Mix.Tasks.SetVersionTest do
     end
 
     test "drops SaaS-scoped highlights, since Cloudron is the Core product" do
-      raw = "* core: Raw commit"
+      raw = "* Raw commit"
 
       curated = %{
         summary: "Mixed release.",
@@ -37,16 +37,16 @@ defmodule Mix.Tasks.SetVersionTest do
     end
 
     test "always prepends [BREAKING] lines parsed from the raw section" do
-      raw = "* [BREAKING] core: Removed an env var\n* core: Raw plumbing"
+      raw = "* [BREAKING] Removed an env var\n* Raw plumbing"
 
       curated = %{summary: nil, highlights: [{"core", "A headline"}]}
 
       assert SetVersion.build_cloudron_changelog(raw, curated) ==
-               "* [BREAKING] core: Removed an env var\n* A headline"
+               "* [BREAKING] Removed an env var\n* A headline"
     end
 
     test "omits the summary line when no summary is curated" do
-      raw = "* core: Raw commit"
+      raw = "* Raw commit"
 
       curated = %{summary: nil, highlights: [{"core", "A headline"}]}
 
@@ -54,7 +54,7 @@ defmodule Mix.Tasks.SetVersionTest do
     end
 
     test "falls back to the raw section when all highlights are SaaS-scoped" do
-      raw = "* core: Raw commit"
+      raw = "* Raw commit"
 
       curated = %{summary: "Cloud-only release.", highlights: [{"saas", "Cloud thing"}]}
 

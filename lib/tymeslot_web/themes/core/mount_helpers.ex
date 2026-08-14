@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Core.{Context, EventBus, MeetingManagement, PollVoting, Registry}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
@@ -259,6 +260,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
       socket
       |> assign(:theme_id, theme_id)
       |> assign(:organizer_profile, profile)
+      |> assign(:booking_window_days, OrganizerHelpers.booking_window_days(profile))
       |> assign(:meeting, meeting)
       |> assign(:meeting_uid, meeting_uid)
       |> assign(:loading, false)

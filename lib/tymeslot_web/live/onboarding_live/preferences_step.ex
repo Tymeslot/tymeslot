@@ -17,7 +17,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @doc """
   Renders the buffer time preference step.
   """
-  attr :profile, :map, required: true
+  attr :availability_schedule, :map, required: true
   attr :form_errors, :map, required: true
 
   attr :custom_input_mode, :map,
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
       class="onboarding-form"
     >
       <p class="onboarding-preference-example">
-        {buffer_example(@profile.buffer_minutes)}
+        {buffer_example(@availability_schedule.buffer_minutes)}
       </p>
 
       <div class="onboarding-preference-presets">
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
             class={[
               "btn-tag-selector btn-tag-selector-primary",
               if(
-                @profile.buffer_minutes == value and
+                @availability_schedule.buffer_minutes == value and
                   not Map.get(@custom_input_mode, :buffer_minutes, false),
                 do: "btn-tag-selector-primary--active"
               )
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
         <.custom_input_toggle
           field_name="buffer_minutes"
-          current_value={@profile.buffer_minutes}
+          current_value={@availability_schedule.buffer_minutes}
           preset_values={StepConfig.buffer_time_values()}
           constraints={StepConfig.buffer_minutes_constraints()}
           style_variant="primary"
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @doc """
   Renders the booking window preference step.
   """
-  attr :profile, :map, required: true
+  attr :availability_schedule, :map, required: true
   attr :form_errors, :map, required: true
 
   attr :custom_input_mode, :map,
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
       class="onboarding-form"
     >
       <p class="onboarding-preference-example">
-        {window_example(@profile.advance_booking_days)}
+        {window_example(@availability_schedule.advance_booking_days)}
       </p>
 
       <div class="onboarding-preference-presets">
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
             class={[
               "btn-tag-selector btn-tag-selector-secondary",
               if(
-                @profile.advance_booking_days == value and
+                @availability_schedule.advance_booking_days == value and
                   not Map.get(@custom_input_mode, :advance_booking_days, false),
                 do: "btn-tag-selector-secondary--active"
               )
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
         <.custom_input_toggle
           field_name="advance_booking_days"
-          current_value={@profile.advance_booking_days}
+          current_value={@availability_schedule.advance_booking_days}
           preset_values={StepConfig.advance_booking_values()}
           constraints={StepConfig.advance_booking_constraints()}
           style_variant="secondary"
@@ -135,7 +135,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @doc """
   Renders the minimum notice preference step.
   """
-  attr :profile, :map, required: true
+  attr :availability_schedule, :map, required: true
   attr :form_errors, :map, required: true
 
   attr :custom_input_mode, :map,
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
       class="onboarding-form"
     >
       <p class="onboarding-preference-example">
-        {notice_example(@profile.min_advance_hours)}
+        {notice_example(@availability_schedule.min_advance_hours)}
       </p>
 
       <div class="onboarding-preference-presets">
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
             class={[
               "btn-tag-selector btn-tag-selector-tertiary",
               if(
-                @profile.min_advance_hours == value and
+                @availability_schedule.min_advance_hours == value and
                   not Map.get(@custom_input_mode, :min_advance_hours, false),
                 do: "btn-tag-selector-tertiary--active"
               )
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
         <.custom_input_toggle
           field_name="min_advance_hours"
-          current_value={@profile.min_advance_hours}
+          current_value={@availability_schedule.min_advance_hours}
           preset_values={StepConfig.min_advance_values()}
           constraints={StepConfig.min_advance_constraints()}
           style_variant="tertiary"

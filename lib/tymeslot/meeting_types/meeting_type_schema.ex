@@ -66,6 +66,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema)
     belongs_to(:calendar_integration, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema)
 
+    belongs_to(
+      :availability_schedule,
+      Tymeslot.Availability.AvailabilityScheduleSchema
+    )
+
     embeds_many(:custom_fields, FieldDefinition, on_replace: :delete)
     embeds_many(:attachments, MeetingTypeAttachment, on_replace: :delete)
 
@@ -131,6 +136,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :user_id,
       :video_integration_id,
       :calendar_integration_id,
+      :availability_schedule_id,
       :target_calendar_id,
       :reminder_config,
       :payment_required,
@@ -165,6 +171,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:video_integration_id)
     |> foreign_key_constraint(:calendar_integration_id)
+    |> foreign_key_constraint(:availability_schedule_id)
   end
 
   @doc """

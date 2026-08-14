@@ -12,12 +12,15 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   require Logger
 
   alias Phoenix.Component
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Demo
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
 
   import Component, only: [assign: 3]
+
+  @default_booking_window_days 90
 
   @doc """
   Handles username resolution and organizer setup.
@@ -40,6 +43,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, nil)
         |> assign(:organizer_profile, nil)
+        |> assign(:booking_window_days, booking_window_days(nil))
         |> assign(:organizer_user_id, nil)
         |> assign(:meeting_types, [])
         |> assign(:page_title, dgettext("errors", "Page not found"))
@@ -48,10 +52,57 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         socket
         |> assign(:username_context, context.username)
         |> assign(:organizer_profile, context.profile)
+        |> assign(:booking_window_days, booking_window_days(context.profile))
         |> assign(:organizer_user_id, context.user_id)
         |> assign(:meeting_types, context.meeting_types)
         |> assign(:page_title, context.page_title)
     end
+  end
+
+  @doc """
+  Resolves the booking window, in days, to show a visitor for an organiser.
+
+  Read from the schedule the given meeting type resolves to, falling back to the
+  organiser's default schedule before one is chosen. It cannot be read from the
+  default alone: this figure both advertises the window and disables the
+  calendar's forward navigation, and a meeting type's schedule may open a
+  *longer* window than the default, whose dates would then be unreachable.
+
+  Demo organisers are plain maps supplied by the overlay rather than persisted
+  profiles, so they carry no schedule and are answered by the demo provider.
+  """
+  @spec booking_window_days(map() | nil, map() | nil) :: pos_integer()
+  def booking_window_days(profile, meeting_type \\ nil)
+
+  def booking_window_days(nil, _meeting_type), do: @default_booking_window_days
+
+  def booking_window_days(profile, meeting_type) do
+    if Demo.demo_profile?(profile) do
+      Demo.booking_window_days(profile)
+    else
+      case Schedules.resolve_for(meeting_type, profile) do
+        nil -> @default_booking_window_days
+        schedule -> schedule.advance_booking_days
+      end
+    end
+  end
+
+  @doc """
+  Re-reads the booking window for whatever meeting type is now selected.
+
+  Call after assigning `:meeting_type`; the window is first assigned at mount,
+  when no meeting type has been picked yet.
+  """
+  @spec assign_booking_window(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_booking_window(socket) do
+    assign(
+      socket,
+      :booking_window_days,
+      booking_window_days(
+        socket.assigns[:organizer_profile],
+        socket.assigns[:meeting_type]
+      )
+    )
   end
 
   @doc "Initialises form, touched-field, validation-error, and saving assigns."

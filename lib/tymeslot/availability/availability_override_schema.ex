@@ -5,19 +5,19 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.ChangesetValidators.TimeOrder
-  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
-          profile_id: integer() | nil,
+          schedule_id: integer() | nil,
           date: Date.t() | nil,
           override_type: String.t() | nil,
           start_time: Time.t() | nil,
           end_time: Time.t() | nil,
           reason: String.t() | nil,
-          profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t(),
+          schedule: AvailabilityScheduleSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -31,7 +31,7 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
     field(:end_time, :time)
     field(:reason, :string)
 
-    belongs_to(:profile, ProfileSchema)
+    belongs_to(:schedule, AvailabilityScheduleSchema)
 
     timestamps(type: :utc_datetime)
   end
@@ -40,13 +40,13 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(override, attrs) do
     override
-    |> cast(attrs, [:profile_id, :date, :override_type, :start_time, :end_time, :reason])
-    |> validate_required([:profile_id, :date, :override_type])
+    |> cast(attrs, [:schedule_id, :date, :override_type, :start_time, :end_time, :reason])
+    |> validate_required([:schedule_id, :date, :override_type])
     |> validate_inclusion(:override_type, @override_types)
     |> validate_times()
     |> validate_reason()
-    |> unique_constraint([:profile_id, :date])
-    |> foreign_key_constraint(:profile_id)
+    |> unique_constraint([:schedule_id, :date])
+    |> foreign_key_constraint(:schedule_id)
   end
 
   defp validate_times(changeset) do

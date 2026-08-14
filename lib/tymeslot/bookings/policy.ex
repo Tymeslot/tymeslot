@@ -3,6 +3,7 @@ defmodule Tymeslot.Bookings.Policy do
   Business rules and policies for bookings.
   Pure functions that define what is allowed.
   """
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -18,37 +19,55 @@ defmodule Tymeslot.Bookings.Policy do
   require Logger
 
   @doc """
-  Gets scheduling configuration with defaults.
-  Now accepts an optional organizer_user_id to get user-specific settings.
+  Scheduling policy for a booking: buffer, minimum notice, advance window and
+  the organiser's timezone.
+
+  The policy comes from the schedule the meeting type is booked against, so
+  server-side validation applies exactly the rules the offered slots were
+  computed from. A nil meeting type resolves the organiser's default schedule.
   """
-  @spec scheduling_config(integer() | nil) :: %{
+  @spec scheduling_config(integer() | nil, map() | nil) :: %{
           required(:buffer_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
           required(:owner_timezone) => String.t()
         }
-  def scheduling_config(organizer_user_id \\ nil) do
-    # Get timezone and settings from user profile
-    {owner_timezone, buffer_minutes, advance_booking_days, min_advance_hours} =
-      case organizer_user_id do
-        nil ->
-          # Fallback when no user specified
-          {Profiles.get_default_timezone(), 15, 90, 3}
+  def scheduling_config(organizer_user_id \\ nil, meeting_type \\ nil)
 
-        user_id ->
-          settings = Profiles.get_profile_settings(user_id)
-
-          {settings.timezone, settings.buffer_minutes, settings.advance_booking_days,
-           settings.min_advance_hours}
-      end
-
+  def scheduling_config(nil, _meeting_type) do
     %{
-      buffer_minutes: buffer_minutes,
-      min_advance_hours: min_advance_hours,
-      max_advance_booking_days: advance_booking_days,
-      owner_timezone: owner_timezone
+      buffer_minutes: 15,
+      min_advance_hours: 3,
+      max_advance_booking_days: 90,
+      owner_timezone: Profiles.get_default_timezone()
     }
   end
+
+  def scheduling_config(organizer_user_id, meeting_type) do
+    settings = Profiles.get_profile_settings(organizer_user_id)
+    schedule = resolve_schedule(organizer_user_id, meeting_type)
+
+    %{
+      buffer_minutes: policy(schedule, :buffer_minutes, 15),
+      min_advance_hours: policy(schedule, :min_advance_hours, 3),
+      max_advance_booking_days: policy(schedule, :advance_booking_days, 90),
+      owner_timezone: settings.timezone
+    }
+  end
+
+  defp resolve_schedule(_organizer_user_id, %{} = meeting_type) do
+    Schedules.resolve_for_meeting_type(meeting_type)
+  end
+
+  defp resolve_schedule(organizer_user_id, _meeting_type) do
+    case ProfileQueries.get_by_user_id(organizer_user_id) do
+      {:ok, profile} -> Schedules.get_default(profile.id)
+      {:error, :not_found} -> nil
+    end
+  end
+
+  defp policy(nil, _key, default), do: default
+  defp policy(schedule, key, _default), do: Map.fetch!(schedule, key)
 
   @typedoc "A single reminder entry with a numeric value and a unit string (e.g. \"minutes\")."
   @type reminder :: %{required(:value) => integer(), required(:unit) => String.t()}
@@ -132,7 +151,7 @@ defmodule Tymeslot.Bookings.Policy do
     {org_name, org_email, org_username} = get_organizer_details(organizer_user_id)
 
     # Resolve attendee timezone
-    config = scheduling_config(organizer_user_id)
+    config = scheduling_config(organizer_user_id, meeting_type_record)
     user_timezone = params.user_timezone || config.owner_timezone
 
     # Get calendar integration info

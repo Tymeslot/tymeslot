@@ -8,6 +8,7 @@ defmodule Tymeslot.ProfilesContextTest do
   @moduletag :profiles
   @moduletag :unit
 
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Locales
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
@@ -76,29 +77,29 @@ defmodule Tymeslot.ProfilesContextTest do
       _profile =
         update_profile_settings(user.id, %{
           timezone: "America/Los_Angeles",
-          buffer_minutes: 30,
-          advance_booking_days: 60,
-          min_advance_hours: 6
+          max_bookings_per_day: 3,
+          max_bookings_per_week: 12,
+          max_bookings_per_month: 40
         })
 
       settings = Profiles.get_profile_settings(user.id)
 
       assert settings.timezone == "America/Los_Angeles"
-      assert settings.buffer_minutes == 30
-      assert settings.advance_booking_days == 60
-      assert settings.min_advance_hours == 6
+      assert settings.max_bookings_per_day == 3
+      assert settings.max_bookings_per_week == 12
+      assert settings.max_bookings_per_month == 40
     end
 
     test "update_profile updates multiple fields", %{profile: profile} do
       attrs = %{
         timezone: "Asia/Tokyo",
-        buffer_minutes: 45,
+        max_bookings_per_day: 5,
         full_name: "Test User"
       }
 
       assert {:ok, updated} = Profiles.update_profile(profile, attrs)
       assert updated.timezone == "Asia/Tokyo"
-      assert updated.buffer_minutes == 45
+      assert updated.max_bookings_per_day == 5
       assert updated.full_name == "Test User"
     end
 
@@ -183,38 +184,46 @@ defmodule Tymeslot.ProfilesContextTest do
   # Scheduling Preferences
   # =====================================
 
+  # The scheduling policy is owned by the profile's default availability
+  # schedule, so the edits go through Schedules.update_policy/2 rather than
+  # the Profiles context.
   describe "scheduling preferences" do
     setup do
-      %{profile: insert(:profile)}
+      profile = insert(:profile)
+      %{schedule: insert(:availability_schedule, profile: profile, is_default: true)}
     end
 
-    test "update_buffer_minutes accepts valid value", %{profile: profile} do
-      assert {:ok, updated} = Profiles.update_buffer_minutes(profile, 30)
+    test "update_policy accepts a valid buffer_minutes value", %{schedule: schedule} do
+      assert {:ok, updated} = Schedules.update_policy(schedule, %{buffer_minutes: 30})
       assert updated.buffer_minutes == 30
     end
 
-    test "update_buffer_minutes rejects out-of-range value", %{profile: profile} do
-      assert {:error, :invalid_buffer_minutes} = Profiles.update_buffer_minutes(profile, 200)
+    test "update_policy rejects an out-of-range buffer_minutes value", %{schedule: schedule} do
+      assert {:error, changeset} = Schedules.update_policy(schedule, %{buffer_minutes: 200})
+      assert "must be less than or equal to 120" in errors_on(changeset).buffer_minutes
     end
 
-    test "update_advance_booking_days accepts valid value", %{profile: profile} do
-      assert {:ok, updated} = Profiles.update_advance_booking_days(profile, 60)
+    test "update_policy accepts a valid advance_booking_days value", %{schedule: schedule} do
+      assert {:ok, updated} = Schedules.update_policy(schedule, %{advance_booking_days: 60})
       assert updated.advance_booking_days == 60
     end
 
-    test "update_advance_booking_days rejects out-of-range value", %{profile: profile} do
-      assert {:error, :invalid_advance_booking_days} =
-               Profiles.update_advance_booking_days(profile, 0)
+    test "update_policy rejects an out-of-range advance_booking_days value", %{
+      schedule: schedule
+    } do
+      assert {:error, changeset} = Schedules.update_policy(schedule, %{advance_booking_days: 0})
+
+      assert "must be greater than or equal to 1" in errors_on(changeset).advance_booking_days
     end
 
-    test "update_min_advance_hours accepts valid value", %{profile: profile} do
-      assert {:ok, updated} = Profiles.update_min_advance_hours(profile, 12)
+    test "update_policy accepts a valid min_advance_hours value", %{schedule: schedule} do
+      assert {:ok, updated} = Schedules.update_policy(schedule, %{min_advance_hours: 12})
       assert updated.min_advance_hours == 12
     end
 
-    test "update_min_advance_hours rejects out-of-range value", %{profile: profile} do
-      assert {:error, :invalid_min_advance_hours} =
-               Profiles.update_min_advance_hours(profile, 200)
+    test "update_policy rejects an out-of-range min_advance_hours value", %{schedule: schedule} do
+      assert {:error, changeset} = Schedules.update_policy(schedule, %{min_advance_hours: 200})
+      assert "must be less than or equal to 168" in errors_on(changeset).min_advance_hours
     end
   end
 

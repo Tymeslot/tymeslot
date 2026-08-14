@@ -1,80 +1,20 @@
 defmodule Tymeslot.Profiles.Scheduling do
   @moduledoc """
-  Subcomponent for managing profile scheduling preferences.
-  Focuses on validation and coordination with ProfileQueries.
+  Subcomponent for managing a profile's account-wide booking limits.
+
+  Buffer, minimum notice and the advance booking window are no longer profile
+  settings: they belong to an availability schedule and are edited through
+  `Tymeslot.Availability.Schedules.update_policy/2`.
   """
 
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
 
-  @min_advance_hours_range Constraints.min_advance_hours_range()
   @booking_limit_fields Constraints.booking_limit_fields()
 
   @type profile :: ProfileSchema.t()
   @type result(t) :: {:ok, t} | {:error, any()}
-
-  @doc """
-  Updates buffer minutes with validation.
-  """
-  @spec update_buffer_minutes(profile, String.t() | integer()) :: result(profile)
-  def update_buffer_minutes(%ProfileSchema{} = profile, buffer_str) when is_binary(buffer_str) do
-    case Integer.parse(buffer_str) do
-      {buffer_minutes, _value} -> update_buffer_minutes(profile, buffer_minutes)
-      _other -> {:error, :invalid_buffer_minutes}
-    end
-  end
-
-  def update_buffer_minutes(%ProfileSchema{} = profile, buffer_minutes)
-      when is_integer(buffer_minutes) do
-    if buffer_minutes in Constraints.buffer_minutes_range() do
-      ProfileQueries.update_profile(profile, %{buffer_minutes: buffer_minutes})
-    else
-      {:error, :invalid_buffer_minutes}
-    end
-  end
-
-  @doc """
-  Updates advance booking days with validation.
-  """
-  @spec update_advance_booking_days(profile, String.t() | integer()) :: result(profile)
-  def update_advance_booking_days(%ProfileSchema{} = profile, days_str)
-      when is_binary(days_str) do
-    case Integer.parse(days_str) do
-      {days, _value} -> update_advance_booking_days(profile, days)
-      _other -> {:error, :invalid_advance_booking_days}
-    end
-  end
-
-  def update_advance_booking_days(%ProfileSchema{} = profile, days) when is_integer(days) do
-    if days in Constraints.advance_booking_days_range() do
-      ProfileQueries.update_profile(profile, %{advance_booking_days: days})
-    else
-      {:error, :invalid_advance_booking_days}
-    end
-  end
-
-  @doc """
-  Updates minimum advance hours with validation.
-  """
-  @spec update_min_advance_hours(profile, String.t() | integer()) :: result(profile)
-  def update_min_advance_hours(%ProfileSchema{} = profile, hours_str) when is_binary(hours_str) do
-    case Integer.parse(hours_str) do
-      {hours, _value} when hours in @min_advance_hours_range ->
-        ProfileQueries.update_profile(profile, %{min_advance_hours: hours})
-
-      _other ->
-        {:error, :invalid_min_advance_hours}
-    end
-  end
-
-  def update_min_advance_hours(%ProfileSchema{} = profile, hours) when is_integer(hours) do
-    if hours in Constraints.min_advance_hours_range() do
-      ProfileQueries.update_profile(profile, %{min_advance_hours: hours})
-    else
-      {:error, :invalid_min_advance_hours}
-    end
-  end
 
   @doc """
   Updates one account-wide booking-limit field with validation.

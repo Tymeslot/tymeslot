@@ -75,9 +75,9 @@ Upcoming meetings, quick actions and your whole setup on a single screen. No hun
 
 ### Availability that mirrors reality
 
-Working hours, date-specific overrides, holiday blocks, per-meeting buffers, booking windows and minimum notice — set once, and your booking page reflects exactly when you are free.
+Keep as many named schedules as your week needs — weekday office hours, Tuesday evenings, one weekend a month — each with its own working hours, breaks, date overrides, buffers, booking window and minimum notice. Point each meeting type at the schedule it belongs to, and your booking page offers exactly the hours you meant for it.
 
-![Availability editor — weekly schedule with per-day hours and breaks](./priv/static/images/screenshots/availability.webp)
+![Availability editor — named schedules as tabs, with per-day hours and breaks](./priv/static/images/screenshots/availability.webp)
 
 ### Embed it anywhere
 
