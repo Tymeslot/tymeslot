@@ -290,19 +290,14 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       calendar_integration_id: integration.id
     )
 
-    case CalendarManagement.mark_needs_reauth(
-           integration,
-           dgettext(
-             "dashboard_calendar_providers",
-             "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
-           )
-         ) do
-      {:ok, _updated} ->
-        {:discard, "Booking calendar not found — user action required"}
-
-      {:error, _changeset} ->
-        {:error, "Failed to flag integration for missing booking calendar"}
-    end
+    CalendarManagement.flag_for_reconnection(
+      integration,
+      dgettext(
+        "dashboard_calendar_providers",
+        "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
+      ),
+      "Booking calendar not found — user action required"
+    )
   end
 
   defp deselect_missing_calendars(_integration, []), do: :ok

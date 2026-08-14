@@ -108,6 +108,7 @@ msgid "Invalid redirect URL"
 msgstr "URL di reindirizzamento non valido"
 
 #: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_up_next_strip.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Join"
@@ -160,6 +161,7 @@ msgstr "Oggi"
 msgid "Tomorrow"
 msgstr "Domani"
 
+#: lib/tymeslot_web/live/dashboard/calendar_up_next_strip.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Up next"

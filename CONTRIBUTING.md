@@ -79,7 +79,7 @@ If the alert references logs, attach the relevant log lines as well. The more co
 
 ### Prerequisites
 
-- **Elixir**: ~> 1.20 (with Erlang 28.3.3+)
+- **Elixir**: ~> 1.20 (with Erlang 28.5.0.5+)
 - **Node.js**: 18+ (for asset compilation)
 - **PostgreSQL**: 14+
 - **Git**: Latest version

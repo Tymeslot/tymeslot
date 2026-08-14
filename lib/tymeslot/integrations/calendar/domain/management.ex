@@ -124,24 +124,25 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @doc """
   Updates a calendar integration.
 
-  When the update touches an encrypted credential field — i.e. the user has
-  supplied fresh credentials — the integration's health state row is reset and
-  an immediate verification probe is enqueued so the in-app badge clears
-  without waiting up to an hour for the next scheduled probe.
+  When the attrs carry credentials — i.e. the owner has supplied fresh ones via
+  a reconnect form — `needs_reauth` is cleared, the integration's health state
+  row is reset, and an immediate verification probe is enqueued so the in-app
+  badge clears without waiting up to an hour for the next scheduled probe.
   """
   @spec update_calendar_integration(CalendarIntegrationSchema.t(), integration_attrs()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_calendar_integration(integration, attrs) do
-    case CalendarIntegrationQueries.update(integration, attrs) do
-      {:ok, updated} = ok ->
-        if credentials_in_attrs?(attrs) do
-          HealthCheck.mark_user_recovered(:calendar, updated.id)
-        end
+    if credentials_in_attrs?(attrs) do
+      update_with_credentials(integration, attrs)
+    else
+      CalendarIntegrationQueries.update(integration, attrs)
+    end
+  end
 
-        ok
-
-      error ->
-        error
+  defp update_with_credentials(integration, attrs) do
+    with {:ok, updated} = ok <- CalendarIntegrationQueries.update_credentials(integration, attrs) do
+      HealthCheck.mark_user_recovered(:calendar, updated.id)
+      ok
     end
   end
 
@@ -238,6 +239,29 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   end
 
   @doc """
+  Flags an integration for reconnection and returns the Oban value a worker
+  should return, for failures only the owner can resolve: a deleted booking
+  calendar, or credentials the provider now rejects.
+
+  `message` is the translated explanation shown on the dashboard;
+  `discard_reason` is the operator-facing reason recorded on the job.
+
+  Discarding rather than returning `{:error, _}` is the point. Retrying re-asks
+  a question already answered, and an exhausted retry chain raises a
+  permanent-failure admin alert about a condition no operator can fix.
+  A failed *flag write* is worth retrying, though: without it the dashboard
+  never tells the owner why their calendar stopped syncing.
+  """
+  @spec flag_for_reconnection(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+          {:discard, String.t()} | {:error, String.t()}
+  def flag_for_reconnection(%CalendarIntegrationSchema{} = integration, message, discard_reason) do
+    case mark_needs_reauth(integration, message) do
+      {:ok, _updated} -> {:discard, discard_reason}
+      {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
+    end
+  end
+
+  @doc """
   Fetches a calendar integration by ID, collapsing the
   `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
   after silently flagging the integration for reauthentication.
@@ -272,8 +296,11 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     )
   end
 
+  # Callers supply the virtual field names (`:password`), never the encrypted
+  # ones — those only exist after `encrypt_credentials/1` runs inside the
+  # changeset, by which point the attrs have already been consumed.
   defp credentials_in_attrs?(attrs) when is_map(attrs) do
-    fields = CalendarIntegrationSchema.encrypted_credential_fields()
+    fields = CalendarIntegrationSchema.credential_fields()
 
     Enum.any?(fields, fn f -> Map.has_key?(attrs, f) or Map.has_key?(attrs, Atom.to_string(f)) end)
   end

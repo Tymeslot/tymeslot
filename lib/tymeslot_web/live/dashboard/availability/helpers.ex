@@ -19,7 +19,10 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
           country_code: String.t() | nil
         }
   def get_timezone_info(profile) do
-    timezone = if profile, do: profile.timezone, else: "UTC"
+    # `profile.timezone` is nullable, so a present profile is not a present zone;
+    # the old `if profile` reached `format/1` with nil for a profile that had
+    # simply never had one set.
+    timezone = (profile && profile.timezone) || Timezones.fallback()
 
     %{
       timezone: timezone,
@@ -41,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
         fallback_icon="🌐"
         show_fallback={true}
       />
-      <span>{@timezone_display}</span>
+      <span data-testid="timezone-display">{@timezone_display}</span>
     </div>
     """
   end

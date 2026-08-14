@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
   test "user colours an agenda event and it persists", %{conn: conn, user: user} do
     integration = all_day_event(user, "uid-colour-journey")
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     # Open the event's detail modal from its all-day pill.
     view |> element("button", "Company offsite") |> render_click()
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
         "blueberry"
       )
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     view |> element("button", "Company offsite") |> render_click()
     view |> element(~s{button[phx-click="clear_entry_colour"]}) |> render_click()
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
         title: "Quarterly review"
       )
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     view
     |> element(~s([aria-label="View details for Quarterly review"]))
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
        %{conn: conn, user: user} do
     all_day_event(user, "uid-malformed-target")
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     view |> element("button", "Company offsite") |> render_click()
 

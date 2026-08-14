@@ -8,7 +8,8 @@
  *   - gates on viewport size (>= 1024px)
  *   - locates the anchor element (with a short retry for late-loading DOM)
  *   - sizes the spotlight div over the anchor's bounding rect (+padding)
- *   - places the tooltip per `data-placement`
+ *   - places the tooltip per `data-placement`, flipping and clamping it so it
+ *     stays inside the viewport whatever the anchor's position
  *   - keeps both elements in sync on resize and scroll
  */
 const ANCHOR_RETRY_MS = 100;
@@ -16,6 +17,7 @@ const ANCHOR_RETRY_TIMEOUT_MS = 1000;
 const SPOTLIGHT_PADDING_PX = 8;
 const TOOLTIP_GAP_PX = 12;
 const MIN_VIEWPORT_PX = 1024;
+const VIEWPORT_MARGIN_PX = 8;
 
 export const DashboardTour = {
   mounted() {
@@ -203,35 +205,73 @@ export const DashboardTour = {
 
   placeTooltip(tooltip, rect, placement) {
     tooltip.style.position = "fixed";
+    // Cleared before measuring, and left cleared: the maths below works in
+    // untranslated coordinates so the result can be clamped, which a
+    // translate-based offset gives no way to do.
     tooltip.style.transform = "none";
+
+    const { width, height } = tooltip.getBoundingClientRect();
+    const resolved = this.resolvePlacement(rect, placement, width, height);
+    const { top, left } = this.tooltipOrigin(rect, resolved, width, height);
+
+    // Clamped unconditionally, after any flip. Flipping finds room on the
+    // anchor's other side, but an anchor pinned against an edge or a card
+    // taller than the viewport can still overflow, and a tooltip off-screen
+    // is a tour the host cannot read or dismiss.
+    tooltip.style.top = `${clamp(top, VIEWPORT_MARGIN_PX, window.innerHeight - height - VIEWPORT_MARGIN_PX)}px`;
+    tooltip.style.left = `${clamp(left, VIEWPORT_MARGIN_PX, window.innerWidth - width - VIEWPORT_MARGIN_PX)}px`;
+  },
+
+  // Flips a cardinal placement to its opposite when the preferred side has no
+  // room and the opposite does. `bottom_end` and anything unrecognised are
+  // left alone and rely on the clamp.
+  resolvePlacement(rect, placement, width, height) {
+    const needsVertical = height + TOOLTIP_GAP_PX + VIEWPORT_MARGIN_PX;
+    const needsHorizontal = width + TOOLTIP_GAP_PX + VIEWPORT_MARGIN_PX;
+
+    const roomAbove = rect.top;
+    const roomBelow = window.innerHeight - rect.bottom;
+    const roomLeft = rect.left;
+    const roomRight = window.innerWidth - rect.right;
 
     switch (placement) {
       case "top":
-        tooltip.style.top = `${rect.top - TOOLTIP_GAP_PX}px`;
-        tooltip.style.left = `${rect.left + rect.width / 2}px`;
-        tooltip.style.transform = "translate(-50%, -100%)";
-        break;
+        return roomAbove < needsVertical && roomBelow >= needsVertical ? "bottom" : "top";
+      case "bottom":
+        return roomBelow < needsVertical && roomAbove >= needsVertical ? "top" : "bottom";
       case "left":
-        tooltip.style.top = `${rect.top + rect.height / 2}px`;
-        tooltip.style.left = `${rect.left - TOOLTIP_GAP_PX}px`;
-        tooltip.style.transform = "translate(-100%, -50%)";
-        break;
+        return roomLeft < needsHorizontal && roomRight >= needsHorizontal ? "right" : "left";
       case "right":
-        tooltip.style.top = `${rect.top + rect.height / 2}px`;
-        tooltip.style.left = `${rect.right + TOOLTIP_GAP_PX}px`;
-        tooltip.style.transform = "translate(0, -50%)";
-        break;
+        return roomRight < needsHorizontal && roomLeft >= needsHorizontal ? "left" : "right";
+      default:
+        return placement;
+    }
+  },
+
+  // Top-left corner the tooltip would occupy for `placement`, before clamping.
+  tooltipOrigin(rect, placement, width, height) {
+    const centredX = rect.left + rect.width / 2 - width / 2;
+    const centredY = rect.top + rect.height / 2 - height / 2;
+
+    switch (placement) {
+      case "top":
+        return { top: rect.top - TOOLTIP_GAP_PX - height, left: centredX };
+      case "left":
+        return { top: centredY, left: rect.left - TOOLTIP_GAP_PX - width };
+      case "right":
+        return { top: centredY, left: rect.right + TOOLTIP_GAP_PX };
       case "bottom_end":
-        tooltip.style.top = `${rect.bottom + TOOLTIP_GAP_PX}px`;
-        tooltip.style.left = `${rect.right}px`;
-        tooltip.style.transform = "translate(-100%, 0)";
-        break;
+        return { top: rect.bottom + TOOLTIP_GAP_PX, left: rect.right - width };
       case "bottom":
       default:
-        tooltip.style.top = `${rect.bottom + TOOLTIP_GAP_PX}px`;
-        tooltip.style.left = `${rect.left + rect.width / 2}px`;
-        tooltip.style.transform = "translate(-50%, 0)";
-        break;
+        return { top: rect.bottom + TOOLTIP_GAP_PX, left: centredX };
     }
   },
 };
+
+// `max` falls below `min` when the tooltip is larger than the viewport allows;
+// pinning to `min` then keeps the readable top-left corner on screen.
+function clamp(value, min, max) {
+  if (max < min) return min;
+  return Math.min(Math.max(value, min), max);
+}

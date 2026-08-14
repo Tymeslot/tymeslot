@@ -1,4 +1,17 @@
 
+[1.9.0]
+* core: Prevent calendar crash when opening an event with a reminder
+* core: Stop alerting every cycle while a CalDAV server is down
+* core: Flag a deleted booking calendar instead of retrying its webhook
+* core: Keep the reconnect prompt until the owner reconnects
+* core: Prevent availability page crash when a break is rejected
+* core: Drop deleted events from the Up-next strip immediately
+* core: Fall back to UTC when a profile has no timezone set
+* core: Reject booking yourself as your own guest on the calendar
+* core: Say which integration is missing on the Integrations badge
+* core: Open the dashboard on your calendar
+
+
 [1.8.1]
 * core: Send reschedule emails and webhooks when an attendee moves a booking
 * core: Correct translations across all five locale catalogues

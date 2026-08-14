@@ -118,6 +118,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       assert html =~ "Add reminder"
     end
 
+    test "opens an event whose reminders were round-tripped through the cache", %{
+      conn: conn,
+      integration: integration
+    } do
+      today = Date.utc_today()
+
+      # Reminders live in a JSONB column, so a synced reminder comes back
+      # string-keyed however it was written.
+      stored =
+        insert_event(integration, %{
+          summary: "Quarterly Planning",
+          start_at: DateTime.new!(today, ~T[14:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(today, ~T[15:00:00], "Etc/UTC"),
+          all_day: false,
+          reminders: [%{"method" => "popup", "minutes_before" => 30}]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{stored.id}-']") |> render_click()
+
+      assert html =~ "Notification 30 minutes before"
+    end
+
     test "adding a reminder shows it in the editor (optimistic update)", %{
       conn: conn,
       event: event

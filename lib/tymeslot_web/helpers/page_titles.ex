@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Helpers.PageTitles do
   Returns the page title for dashboard sections.
   """
   @spec dashboard_title(atom()) :: String.t()
-  def dashboard_title(:overview), do: dgettext("dashboard_common", "Dashboard")
+  def dashboard_title(:overview), do: section_title(dgettext("dashboard_common", "Overview"))
   def dashboard_title(:settings), do: section_title(dgettext("dashboard_common", "Settings"))
 
   def dashboard_title(:availability),
@@ -20,7 +20,8 @@ defmodule TymeslotWeb.Helpers.PageTitles do
   def dashboard_title(:meeting_settings),
     do: section_title(dgettext("dashboard_common", "Meeting Settings"))
 
-  def dashboard_title(:calendar), do: section_title(dgettext("dashboard_common", "Calendar"))
+  # The calendar is the dashboard's landing mode, so it carries the bare title.
+  def dashboard_title(:calendar), do: dgettext("dashboard_common", "Dashboard")
 
   def dashboard_title(:calendar_integration),
     do: section_title(dgettext("dashboard_common", "Calendar Integration"))

@@ -2753,6 +2753,53 @@
       },
       "publishState": "published",
       "ts": "Wed, 12 Aug 2026 11:47:46 GMT"
+    },
+    "1.9.0": {
+      "creationDate": "Fri, 14 Aug 2026 05:27:51 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "The dashboard now opens on your calendar, and calendar connection problems stay visible until fixed.\n* The dashboard opens on your calendar, with all navigation in the sidebar\n* The Integrations badge names the integration that needs attention\n* A broken calendar connection alerts once and stays flagged until you reconnect\n* Fixed crashes when opening an event with a reminder or when a break is rejected",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.9.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.9.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Fri, 14 Aug 2026 05:27:51 GMT"
     }
   }
 }

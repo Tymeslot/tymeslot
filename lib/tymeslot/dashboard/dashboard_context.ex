@@ -104,9 +104,11 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   @doc """
   Gets dashboard-specific data for a given action.
 
-  For the `:overview` action, builds the live agenda (`Agenda.Day`) for the user
-  in their timezone — the merged Today/Tomorrow view of bookings and synced
-  calendar events. Other actions need no extra data and return an empty map.
+  For the `:overview` and `:calendar` actions, builds the live agenda
+  (`Agenda.Day`) for the user in their timezone — the merged Today/Tomorrow
+  view of bookings and synced calendar events. The calendar uses it for the
+  "Up next" strip above the grid. Other actions need no extra data and return
+  an empty map.
 
   ## Examples
 
@@ -117,8 +119,8 @@ defmodule Tymeslot.Dashboard.DashboardContext do
       %{}
   """
   @spec get_dashboard_data_for_action(map(), String.t() | nil, atom()) :: map()
-  def get_dashboard_data_for_action(%{email: email} = user, timezone, :overview)
-      when is_binary(email) do
+  def get_dashboard_data_for_action(%{email: email} = user, timezone, action)
+      when is_binary(email) and action in [:overview, :calendar] do
     %{agenda: Agenda.day_agenda(user, timezone)}
   end
 

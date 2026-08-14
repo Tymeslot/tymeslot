@@ -233,31 +233,40 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
-  Updates a calendar integration.
+  Updates a calendar integration, leaving any outstanding `needs_reauth` flag
+  in place.
 
-  When the update replaces any encrypted credential field, clears the
-  `needs_reauth` flag — the caller has supplied fresh credentials (via OAuth
-  reconnect or a CalDAV form), so the previous decryption-failure flag no
-  longer applies.
+  Background writers (token refresh, sync bookkeeping) must use this. To clear
+  the flag, the caller must say so explicitly via `update_credentials/2`.
   """
   @spec update(CalendarIntegrationSchema.t(), map()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(%CalendarIntegrationSchema{} = integration, attrs) do
     integration
     |> CalendarIntegrationSchema.changeset(attrs)
-    |> maybe_clear_needs_reauth()
     |> Repo.update()
   end
 
-  defp maybe_clear_needs_reauth(changeset) do
-    if Enum.any?(
-         CalendarIntegrationSchema.encrypted_credential_fields(),
-         &Map.has_key?(changeset.changes, &1)
-       ) do
-      Changeset.put_change(changeset, :needs_reauth, false)
-    else
-      changeset
-    end
+  @doc """
+  Updates a calendar integration with credentials its owner has just supplied,
+  clearing `needs_reauth`.
+
+  Only reconnect paths may use this: an OAuth callback, or a CalDAV credential
+  form. It cannot be inferred from the changeset instead, because credentials
+  are encrypted with a fresh nonce per write (`Tymeslot.Security.Encryption`),
+  so the ciphertext differs on every update whether or not the credential
+  itself changed — "an encrypted field changed" carries no information about
+  who supplied it. Inferring it meant the hourly background token refresh
+  cleared reauth flags raised by unrelated failures, putting broken
+  integrations back into the sync sweep every hour.
+  """
+  @spec update_credentials(CalendarIntegrationSchema.t(), map()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_credentials(%CalendarIntegrationSchema{} = integration, attrs) do
+    integration
+    |> CalendarIntegrationSchema.changeset(attrs)
+    |> Changeset.put_change(:needs_reauth, false)
+    |> Repo.update()
   end
 
   @doc """

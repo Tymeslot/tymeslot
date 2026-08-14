@@ -86,7 +86,8 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
       conn =
         get(conn, ~p"/auth/google/calendar/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
+      # A successful connect lands on the calendar, not the integrations tab.
+      assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :info) =~ "Google Calendar connected successfully"
     end
 
@@ -100,7 +101,8 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
       conn =
         get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
+      # A successful connect lands on the calendar, not the integrations tab.
+      assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :info) =~ "Outlook Calendar connected successfully"
     end
 

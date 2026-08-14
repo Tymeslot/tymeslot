@@ -35,14 +35,14 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert length(active_links) == 1
 
     [active_link] = active_links
-    assert Floki.attribute(active_link, "href") == ["/dashboard"]
+    assert Floki.attribute(active_link, "href") == ["/dashboard/overview"]
   end
 
   test "renders active link correctly for different actions" do
     # The merged Integrations item is current for the hub action and for every
     # legacy action that redirects into it, so all four highlight the same link.
     action_to_path = %{
-      overview: "/dashboard",
+      overview: "/dashboard/overview",
       settings: "/dashboard/settings",
       availability: "/dashboard/availability",
       meeting_settings: "/dashboard/meeting-settings",
@@ -185,6 +185,25 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
            ) == 1
   end
 
+  test "Integrations badge names the video provider when only that is unconnected" do
+    status = %{has_calendar: true, has_video: false, has_meeting_types: true}
+
+    assert integrations_badge_title(status) == "Connect a video provider to finish setup"
+  end
+
+  test "Integrations badge names the calendar when only that is unconnected" do
+    status = %{has_calendar: false, has_video: true, has_meeting_types: true}
+
+    assert integrations_badge_title(status) == "Connect a calendar to finish setup"
+  end
+
+  test "Integrations badge names both when neither is connected" do
+    status = %{has_calendar: false, has_video: false, has_meeting_types: true}
+
+    assert integrations_badge_title(status) ==
+             "Connect a calendar and a video provider to finish setup"
+  end
+
   test "Integrations badge is absent once calendar and video are both connected" do
     assigns = %{
       current_action: :overview,
@@ -250,6 +269,23 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     html = render_component(&DashboardSidebar.sidebar/1, assigns)
 
     assert html =~ "Some Untranslated Extension"
+  end
+
+  # The badge is a hover affordance, so what it says lives in the `title`
+  # attribute rather than in the rendered text.
+  defp integrations_badge_title(integration_status) do
+    assigns = %{
+      current_action: :overview,
+      integration_status: integration_status,
+      profile: %{username: "testuser"}
+    }
+
+    (&DashboardSidebar.sidebar/1)
+    |> render_component(assigns)
+    |> Floki.parse_document!()
+    |> Floki.find("a[href='/dashboard/integrations'] .dashboard-nav-notification")
+    |> Floki.attribute("title")
+    |> List.first()
   end
 
   # In the umbrella build the SaaS config repoints :dashboard_extension_gettext at

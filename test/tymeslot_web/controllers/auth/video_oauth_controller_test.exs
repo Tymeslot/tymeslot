@@ -281,7 +281,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
         {:ok, existing}
       end)
 
-      :meck.expect(VideoIntegrationQueries, :update, fn ^existing, attrs ->
+      :meck.expect(VideoIntegrationQueries, :update_credentials, fn ^existing, attrs ->
         assert attrs.access_token == "new_at"
         assert attrs.refresh_token == "new_rt"
         refute Map.has_key?(attrs, :user_id)
@@ -366,7 +366,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
         {:ok, existing}
       end)
 
-      :meck.expect(VideoIntegrationQueries, :update, fn ^existing, attrs ->
+      :meck.expect(VideoIntegrationQueries, :update_credentials, fn ^existing, attrs ->
         assert attrs.access_token == "new_at"
         assert attrs.refresh_token == "new_rt"
         assert attrs.tenant_id == "new-tenant-id"

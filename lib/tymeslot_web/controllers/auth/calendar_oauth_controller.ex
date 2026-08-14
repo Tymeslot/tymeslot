@@ -33,7 +33,8 @@ defmodule TymeslotWeb.CalendarOAuthController do
             GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
           end,
           create_fun: fn result -> {:ok, result} end,
-          redirect_path: redirect_path
+          redirect_path: redirect_path,
+          success_redirect_path: success_redirect_path(state)
         )
 
       {:error, reason} ->
@@ -97,7 +98,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     case OAuthStateGuard.enforce_user_match(conn, state, :outlook) do
       :ok ->
-        handle_outlook_callback(conn, code, state, redirect_path)
+        handle_outlook_callback(conn, code, state, {redirect_path, success_redirect_path(state)})
 
       {:error, reason} ->
         reject_callback(conn, reason)
@@ -141,7 +142,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
     |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
   end
 
-  defp handle_outlook_callback(conn, code, state, redirect_path) do
+  defp handle_outlook_callback(conn, code, state, {redirect_path, success_path}) do
     case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
       :ok ->
         redirect_uri = "#{Endpoint.url()}/auth/outlook/calendar/callback"
@@ -153,7 +154,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
               :info,
               dgettext("dashboard_integrations", "Outlook Calendar connected successfully!")
             )
-            |> redirect(to: redirect_path)
+            |> redirect(to: success_path)
 
           {:error, reason} ->
             Logger.error("Outlook Calendar OAuth callback failed", reason: inspect(reason))
@@ -196,5 +197,13 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
   defp return_to_or_default(state) do
     State.peek_return_to(state) || ~p"/dashboard/integrations?tab=calendars"
+  end
+
+  # A successful connect lands on the calendar (unless the flow asked to
+  # return somewhere specific, e.g. onboarding): the reward for connecting is
+  # seeing the week fill in. Failures keep returning to the integrations tab,
+  # where retrying makes sense.
+  defp success_redirect_path(state) do
+    State.peek_return_to(state) || ~p"/dashboard"
   end
 end

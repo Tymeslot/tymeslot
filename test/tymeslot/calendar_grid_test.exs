@@ -176,6 +176,32 @@ defmodule Tymeslot.CalendarGridTest do
 
       assert result == []
     end
+
+    test "normalises string-keyed reminders round-tripped through JSONB", %{
+      integration: integration
+    } do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        start_at: ~U[2026-03-15 10:00:00Z],
+        end_at: ~U[2026-03-15 11:00:00Z],
+        reminders: [
+          %{"method" => "popup", "minutes_before" => 30},
+          %{"method" => "email", "minutes_before" => 1440}
+        ]
+      )
+
+      assert [found] =
+               CalendarGrid.list_events_for_range(
+                 [integration.id],
+                 ~U[2026-03-15 00:00:00Z],
+                 ~U[2026-03-16 00:00:00Z]
+               )
+
+      assert found.reminders == [
+               %{method: :popup, minutes_before: 30},
+               %{method: :email, minutes_before: 1440}
+             ]
+    end
   end
 
   describe "refresh_events/1" do

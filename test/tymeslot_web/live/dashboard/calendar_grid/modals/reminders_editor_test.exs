@@ -64,5 +64,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditorTest do
       assert RemindersEditor.reminder_label(%{method: :popup, minutes_before: 1440}) ==
                "Notification 1 day before"
     end
+
+    test "labels a string-keyed reminder straight out of the cache column" do
+      assert RemindersEditor.reminder_label(%{"method" => "popup", "minutes_before" => 30}) ==
+               "Notification 30 minutes before"
+
+      assert RemindersEditor.reminder_label(%{"method" => "email", "minutes_before" => 60}) ==
+               "Email 1 hour before"
+    end
+
+    test "labels a reminder with no parsable lead time" do
+      assert RemindersEditor.reminder_label(%{method: :popup, minutes_before: nil}) ==
+               "Notification before the event"
+    end
   end
 end

@@ -223,7 +223,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   end
 
   defp update_existing_integration(existing, token_attrs) do
-    with {:ok, updated} <- CalendarIntegrationQueries.update(existing, token_attrs) do
+    with {:ok, updated} <- CalendarIntegrationQueries.update_credentials(existing, token_attrs) do
       if updated.calendar_list == [] do
         discover_and_configure_calendars(updated)
       else

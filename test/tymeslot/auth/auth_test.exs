@@ -125,7 +125,9 @@ defmodule Tymeslot.AuthTest do
       assert verified_user.id == user.id
 
       user_id = user.id
-      assert_receive {:user_registered, %{user: %{id: ^user_id}}}, 500
+      # The broadcast runs in a supervised task, so there is no synchronisation
+      # point to wait on; the window is generous rather than tight.
+      assert_receive {:user_registered, %{user: %{id: ^user_id}}}, 5_000
     end
   end
 

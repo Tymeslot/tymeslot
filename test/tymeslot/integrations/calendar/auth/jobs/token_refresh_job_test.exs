@@ -73,6 +73,32 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
       assert :ok = TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
     end
 
+    test "leaves an outstanding needs_reauth flag intact" do
+      # The observed production loop: a sync worker flags an integration whose
+      # booking calendar was deleted, the hourly token refresh writes fresh
+      # tokens and clears the flag as a side effect, and the sweep picks the
+      # integration up again — 404ing every hour, forever.
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          token_expires_at:
+            DateTime.truncate(DateTime.add(DateTime.utc_now(), -1, :hour), :second),
+          refresh_token: "rt-123",
+          needs_reauth: true
+        )
+
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _refresh_token ->
+        {:ok,
+         {"new-at", "new-rt",
+          DateTime.truncate(DateTime.add(DateTime.utc_now(), 1, :hour), :second)}}
+      end)
+
+      assert :ok = TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth
+    end
+
     test "handles permanent errors by deactivating integration" do
       integration =
         insert(:calendar_integration,

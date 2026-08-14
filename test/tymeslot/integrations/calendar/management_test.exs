@@ -72,7 +72,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
 
       assert {:ok, _updated} =
                CalendarManagement.update_calendar_integration(integration, %{
-                 password_encrypted: "new-encrypted-password"
+                 password: "new-password"
                })
 
       # Health row is reset to a healthy baseline.

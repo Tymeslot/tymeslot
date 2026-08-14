@@ -82,7 +82,7 @@ defmodule Tymeslot.Integrations.Video.ReauthTest do
   end
 
   describe "VideoIntegrationQueries.update/2 clearing needs_reauth on reconnect" do
-    test "update/2 with fresh credentials clears the flag" do
+    test "update_credentials/2 clears the flag" do
       integration =
         insert(:video_integration,
           provider: "mirotalk",
@@ -92,9 +92,24 @@ defmodule Tymeslot.Integrations.Video.ReauthTest do
         )
 
       {:ok, reconnected} =
-        VideoIntegrationQueries.update(integration, %{api_key: "new-api-key"})
+        VideoIntegrationQueries.update_credentials(integration, %{api_key: "new-api-key"})
 
       refute reconnected.needs_reauth
+    end
+
+    test "update/2 leaves the flag intact even when it writes credentials" do
+      integration =
+        insert(:video_integration,
+          provider: "mirotalk",
+          is_active: true,
+          api_key_encrypted: Encryption.encrypt("my-api-key"),
+          needs_reauth: true
+        )
+
+      {:ok, refreshed} =
+        VideoIntegrationQueries.update(integration, %{api_key: "new-api-key"})
+
+      assert refreshed.needs_reauth
     end
   end
 end

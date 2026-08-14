@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
             </span>
           </div>
           <.link
-            patch={~p"/dashboard/calendar"}
+            patch={~p"/dashboard"}
             class="text-turquoise-600 hover:text-turquoise-700 font-bold text-token-sm transition-colors flex items-center gap-1 group shrink-0"
           >
             {dgettext("dashboard_home", "View calendar")}

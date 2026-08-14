@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
 
   alias Tymeslot.Onboarding
   alias Tymeslot.Onboarding.DashboardTour
+  alias TymeslotWeb.Dashboard.OnboardingChecklist
 
   @doc """
   Handles a `tour:<action>` event. The `action` is the portion of the event
@@ -55,30 +56,50 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
   end
 
   @doc """
-  Initialises tour assigns for the current action. Only the `:overview`
-  action activates the tour, and only for users who haven't seen it yet.
+  Initialises tour assigns for the current action. Only the `:calendar`
+  action (the dashboard's landing mode) activates the tour, and only for
+  users who haven't seen it yet.
   """
   @spec assign_tour_state(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
-  def assign_tour_state(socket, :overview) do
+  def assign_tour_state(socket, :calendar) do
     user = socket.assigns[:current_user]
 
     if user && !Onboarding.dashboard_tour_seen?(user) do
-      socket
-      |> assign(:tour_active, true)
-      |> assign(:tour_step_index, 0)
-      |> assign(:tour_total_steps, DashboardTour.count())
+      activate_tour(socket, user)
     else
-      socket
-      |> assign(:tour_active, false)
-      |> assign(:tour_step_index, 0)
-      |> assign(:tour_total_steps, 0)
+      deactivate_tour(socket)
     end
   end
 
-  def assign_tour_state(socket, _other_action) do
+  def assign_tour_state(socket, _other_action), do: deactivate_tour(socket)
+
+  # Resolved once, as the tour starts, against what the dashboard is actually
+  # rendering: a step whose anchor is absent is dropped here rather than
+  # spotlit and then skipped by the client, so the progress count the host
+  # reads counts only steps they will be shown.
+  defp activate_tour(socket, user) do
+    steps =
+      DashboardTour.steps(%{
+        checklist_visible?:
+          OnboardingChecklist.visible?(user, socket.assigns[:integration_status] || %{})
+      })
+
+    if steps == [] do
+      deactivate_tour(socket)
+    else
+      socket
+      |> assign(:tour_active, true)
+      |> assign(:tour_step_index, 0)
+      |> assign(:tour_steps, steps)
+      |> assign(:tour_total_steps, length(steps))
+    end
+  end
+
+  defp deactivate_tour(socket) do
     socket
     |> assign(:tour_active, false)
     |> assign(:tour_step_index, 0)
+    |> assign(:tour_steps, [])
     |> assign(:tour_total_steps, 0)
   end
 

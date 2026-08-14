@@ -20,6 +20,8 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     max_attempts: 3,
     unique: [period: 86_400]
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Infrastructure.Config
@@ -131,65 +133,91 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     end)
   end
 
-  defp renew_single(integration, "google") do
-    case Config.google_calendar_api_module().register_push_channel(integration) do
-      {:ok, _updated} ->
-        :ok
+  # The two providers differ only in which API call registers the subscription
+  # and what it is called in the logs. Every decision about the outcome is
+  # identical, so it is made once in `handle_renewal/3`.
+  @renewal_labels %{
+    "google" => "Google Calendar push channel",
+    "outlook" => "Outlook Graph subscription"
+  }
 
-      {:error, :webhook_base_url_not_configured} ->
-        Logger.warning(
-          "Webhook base URL not configured; skipping Google push channel renewal",
-          calendar_integration_id: integration.id
-        )
+  defp renew_single(integration, "google" = provider) do
+    api = Config.google_calendar_api_module()
 
-        :ok
-
-      {:error, _type, reason} ->
-        Logger.error("Failed to renew Google Calendar push channel",
-          calendar_integration_id: integration.id,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
-
-      {:error, reason} ->
-        Logger.error("Failed to renew Google Calendar push channel",
-          calendar_integration_id: integration.id,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
-    end
+    integration
+    |> api.register_push_channel()
+    |> handle_renewal(integration, provider)
   end
 
-  defp renew_single(integration, "outlook") do
-    case Config.outlook_calendar_api_module().register_graph_subscription(integration) do
-      {:ok, _updated} ->
-        :ok
+  defp renew_single(integration, "outlook" = provider) do
+    api = Config.outlook_calendar_api_module()
 
-      {:error, :webhook_base_url_not_configured} ->
-        Logger.warning(
-          "Webhook base URL not configured; skipping Outlook Graph subscription renewal",
-          calendar_integration_id: integration.id
-        )
+    integration
+    |> api.register_graph_subscription()
+    |> handle_renewal(integration, provider)
+  end
 
-        :ok
+  defp handle_renewal({:ok, _updated}, _integration, _provider), do: :ok
 
-      {:error, _type, reason} ->
-        Logger.error("Failed to renew Outlook Graph subscription",
-          calendar_integration_id: integration.id,
-          error: inspect(reason)
-        )
+  defp handle_renewal({:error, :webhook_base_url_not_configured}, integration, provider) do
+    Logger.warning("Webhook base URL not configured; skipping renewal",
+      calendar_integration_id: integration.id,
+      channel_kind: @renewal_labels[provider]
+    )
 
-        {:error, reason}
+    :ok
+  end
 
-      {:error, reason} ->
-        Logger.error("Failed to renew Outlook Graph subscription",
-          calendar_integration_id: integration.id,
-          error: inspect(reason)
-        )
+  # The channel endpoint is calendar-scoped, so a 404 means the calendar this
+  # integration books into is gone at the provider (see
+  # `Integrations.Calendar.HTTP.not_found_message/1`). Retrying re-asks a
+  # settled question, and the third attempt raises a permanent-failure admin
+  # alert every single day about a condition only the owner can resolve. Flag
+  # for reconnection and discard, matching what the sync workers already do
+  # with the same 404.
+  defp handle_renewal({:error, :not_found, _reason}, integration, provider) do
+    Logger.warning(
+      "Booking calendar no longer exists; flagging integration for reconnection",
+      calendar_integration_id: integration.id,
+      provider: provider
+    )
 
-        {:error, reason}
-    end
+    CalendarManagement.flag_for_reconnection(
+      integration,
+      booking_calendar_missing_message(provider),
+      "Booking calendar not found — user action required"
+    )
+  end
+
+  defp handle_renewal({:error, _type, reason}, integration, provider),
+    do: log_renewal_failure(integration, provider, reason)
+
+  defp handle_renewal({:error, reason}, integration, provider),
+    do: log_renewal_failure(integration, provider, reason)
+
+  defp log_renewal_failure(integration, provider, reason) do
+    Logger.error("Failed to renew webhook channel",
+      calendar_integration_id: integration.id,
+      channel_kind: @renewal_labels[provider],
+      error: inspect(reason)
+    )
+
+    {:error, reason}
+  end
+
+  # Separate clauses rather than an interpolated provider name: gettext
+  # extracts literals, so an interpolated msgid could never be translated.
+  defp booking_calendar_missing_message("google") do
+    dgettext(
+      "dashboard_calendar_providers",
+      "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
+    )
+  end
+
+  defp booking_calendar_missing_message("outlook") do
+    dgettext(
+      "dashboard_calendar_providers",
+      "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
+    )
   end
 end

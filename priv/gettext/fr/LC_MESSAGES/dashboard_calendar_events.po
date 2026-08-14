@@ -976,3 +976,69 @@ msgstr "Plusieurs personnes sont inscrites sur ce créneau, son horaire est donc
 #, elixir-autogen, elixir-format
 msgid "This slot is booked by several people, so its time is fixed here. Ask them to rebook from the meeting instead."
 msgstr "Ce créneau est réservé par plusieurs personnes, son horaire est donc fixe ici. Demandez-leur plutôt de réserver à nouveau depuis la réunion."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "A valid guest email is required"
+msgstr "Une adresse e-mail valide pour l’invité est requise"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Ada Lovelace"
+msgstr "Ada Lovelace"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Books the slot, emails the guest an invitation, and adds it to your calendar."
+msgstr "Réserve le créneau, envoie une invitation par e-mail à l’invité et l’ajoute à votre calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr "Événement"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guest email"
+msgstr "E-mail de l’invité"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guest name"
+msgstr "Nom de l’invité"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Guest name is required"
+msgstr "Le nom de l’invité est requis"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with %{name}"
+msgstr "Réunion avec %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with a guest"
+msgstr "Réunion avec un invité"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "New Meeting"
+msgstr "Nouvelle réunion"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "What to create"
+msgstr "Que créer"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
+#, elixir-autogen, elixir-format
+msgid "You cannot add yourself as a guest. Use a different email address."
+msgstr "Vous ne pouvez pas vous ajouter comme invité. Utilisez une autre adresse "
+"e-mail."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
+msgid "before the event"
+msgstr "avant l'événement"

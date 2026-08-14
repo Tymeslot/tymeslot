@@ -22,8 +22,8 @@ jobs:
     env:
       MIX_ENV: test
       TEST_DB_POOL_SIZE: "10"
-      ELIXIR_VERSION: "1.20.1"
-      OTP_VERSION: "28.3.3"
+      ELIXIR_VERSION: "1.20.3"
+      OTP_VERSION: "28.5.0.5"
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1

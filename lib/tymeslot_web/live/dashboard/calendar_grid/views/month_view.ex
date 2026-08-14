@@ -121,8 +121,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             :for={seg <- @segments}
             class={"absolute px-1 flex items-center text-token-xs font-medium text-white truncate cursor-pointer pointer-events-auto #{bar_round_class(seg)} #{Helpers.color_for_event(@assigns_ref, seg.event)}"}
             style={bar_style(seg)}
-            phx-click="show_event"
-            phx-value-event-id={seg.event.id}
+            {Helpers.open_event_attrs(seg.event)}
             phx-target={@myself}
             title={seg.event.summary || dgettext("dashboard_calendar", "(No title)")}
           >
@@ -192,8 +191,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
         <div
           :for={event <- Enum.take(@chips, 3)}
           class={"rounded px-1 text-token-xs font-medium text-white truncate mb-0.5 cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
-          phx-click="show_event"
-          phx-value-event-id={event.id}
+          {Helpers.open_event_attrs(event)}
           phx-target={@myself}
         >
           <img

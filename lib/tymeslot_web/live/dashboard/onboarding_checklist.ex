@@ -47,6 +47,10 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   attr :current_user, :map, required: true
   attr :profile, :any, required: true
 
+  attr :variant, :atom,
+    default: :full,
+    doc: "`:full` for the overview card, `:compact` for the collapsed strip above the calendar."
+
   @spec onboarding_checklist(map()) :: Phoenix.LiveView.Rendered.t()
   def onboarding_checklist(assigns) do
     items =
@@ -54,13 +58,69 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       |> items(assigns.current_user)
       |> Enum.map(&with_copy_state(&1, assigns.integration_status, assigns.profile))
 
-    assigns =
-      assign(assigns,
-        items: items,
-        done_count: Enum.count(items, & &1.done),
-        total: length(items)
-      )
+    assigns
+    |> assign(
+      items: items,
+      done_count: Enum.count(items, & &1.done),
+      total: length(items)
+    )
+    |> checklist_body()
+  end
 
+  # The calendar owns its whole viewport, so there the checklist is a single
+  # collapsed row that opens on demand rather than a card that pushes the grid
+  # below the fold. `<details>` keeps the open/closed state in the DOM, so
+  # expanding it costs no LiveView round trip and survives grid re-renders.
+  defp checklist_body(%{variant: :compact} = assigns) do
+    assigns = assign(assigns, :next_item, Enum.find(assigns.items, &(not &1.done)))
+
+    ~H"""
+    <div
+      class="flex items-center gap-2 rounded-token-xl border border-turquoise-200 bg-white px-3 py-2 shadow-sm"
+      data-testid="onboarding-checklist"
+      data-tour="quick-actions"
+      phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
+    >
+      <details class="group min-w-0 flex-1 [&>summary::-webkit-details-marker]:hidden">
+        <summary
+          class="flex cursor-pointer list-none items-center gap-2 text-token-sm"
+          aria-label={dgettext("onboarding_wizard", "Setup checklist")}
+        >
+          <span class="shrink-0 rounded-full bg-turquoise-50 px-2 py-0.5 text-token-xs font-black tabular-nums text-turquoise-700">
+            {@done_count}/{@total}
+          </span>
+          <span class="font-bold text-tymeslot-800">
+            {dgettext("onboarding_wizard", "Finish setting up")}
+          </span>
+          <span :if={@next_item} class="hidden truncate text-tymeslot-500 sm:inline">
+            · {@next_item.title}
+          </span>
+          <.icon
+            name="hero-chevron-down"
+            class="ml-auto h-4 w-4 shrink-0 text-tymeslot-400 transition-transform group-open:rotate-180"
+          />
+        </summary>
+
+        <ul class="mt-3 space-y-2">
+          <li :for={item <- @items}>
+            <.item_row item={item} />
+          </li>
+        </ul>
+      </details>
+
+      <button
+        type="button"
+        phx-click="onboarding:dismiss"
+        aria-label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-token-lg text-tymeslot-400 transition-colors hover:bg-tymeslot-100 hover:text-tymeslot-600"
+      >
+        <.icon name="hero-x-mark" class="h-5 w-5" />
+      </button>
+    </div>
+    """
+  end
+
+  defp checklist_body(assigns) do
     ~H"""
     <section
       class="card-glass onboarding-checklist"

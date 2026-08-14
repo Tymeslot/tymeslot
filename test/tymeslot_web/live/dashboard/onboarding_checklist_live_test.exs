@@ -23,14 +23,14 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
   test "shows the setup widget to a host with setup still outstanding", %{conn: conn} do
     {conn, _user} = log_in_fresh_host(conn)
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     assert has_element?(view, "[data-testid=onboarding-checklist]")
   end
 
   test "ticking an item greys it out immediately and persists", %{conn: conn} do
     {conn, user} = log_in_fresh_host(conn)
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     refute has_element?(view, "button[phx-value-id='share'][aria-checked='true']")
 
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
 
   test "dismissing the widget hides it permanently", %{conn: conn} do
     {conn, user} = log_in_fresh_host(conn)
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     assert has_element?(view, "[data-testid=onboarding-checklist]")
 
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
     assert Onboarding.dashboard_setup_dismissed?(Repo.get!(UserSchema, user.id))
 
     # Stays hidden on a fresh mount.
-    {:ok, view2, _html} = live(conn, ~p"/dashboard")
+    {:ok, view2, _html} = live(conn, ~p"/dashboard/overview")
     refute has_element?(view2, "[data-testid=onboarding-checklist]")
   end
 end

@@ -43,6 +43,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
     view |> element("button[phx-click='toggle_calendar_list']") |> render_click()
   end
 
+  defp grid_html(html) do
+    html |> Floki.parse_document!() |> Floki.find("#calendar-grid") |> Floki.raw_html()
+  end
+
   # The class list of the grid element rendering the event with this title.
   defp event_classes(html, summary) do
     html
@@ -142,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
       )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar")
-      assert render(view) =~ "Someone&#39;s birthday"
+      assert view |> render() |> grid_html() =~ "Someone&#39;s birthday"
 
       open_dropdown(view)
 
@@ -153,8 +157,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.PerCalendarAppearanceTest do
         )
         |> render_click()
 
-      refute html =~ "Someone&#39;s birthday"
-      assert html =~ "Sprint planning"
+      # Scoped to the grid: the Up-next strip above it reads `Agenda`, which
+      # works from the account's active integrations and knows nothing about
+      # per-calendar visibility, so it still names whichever event is next.
+      refute grid_html(html) =~ "Someone&#39;s birthday"
+      assert grid_html(html) =~ "Sprint planning"
     end
 
     test "leaves the account-level toggle untouched", %{conn: conn, user: user} do

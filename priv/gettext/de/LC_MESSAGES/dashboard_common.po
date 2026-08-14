@@ -40,8 +40,7 @@ msgid "Availability"
 msgstr "Verfügbarkeit"
 
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Kalender"
@@ -50,11 +49,6 @@ msgstr "Kalender"
 #, elixir-autogen, elixir-format
 msgid "Close sidebar"
 msgstr "Seitenleiste schließen"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Connect a calendar or video provider to finish setup"
-msgstr "Verbinden Sie einen Kalender- oder Video-Anbieter, um die Einrichtung abzuschließen"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -94,6 +88,7 @@ msgid "Meetings"
 msgstr "Termine"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Übersicht"
@@ -108,7 +103,6 @@ msgstr "Pro"
 msgid "Profile"
 msgstr "Profil"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
@@ -228,3 +222,18 @@ msgstr "Video-Integration"
 #, elixir-autogen, elixir-format
 msgid "Calendar subscription"
 msgstr "Kalenderabonnement"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar and a video provider to finish setup"
+msgstr "Verbinden Sie einen Kalender und einen Video-Anbieter, um die Einrichtung abzuschließen"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to finish setup"
+msgstr "Verbinden Sie einen Kalender, um die Einrichtung abzuschließen"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a video provider to finish setup"
+msgstr "Verbinden Sie einen Video-Anbieter, um die Einrichtung abzuschließen"

@@ -45,7 +45,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   # whose calendar was deleted or never had a choice still paints. An
   # unrecognised stored value (e.g. a raw inbound provider colour) resolves to a
   # neutral class via `EventColour` and never crashes.
+  @doc "True when the event is a Tymeslot booking projection rather than a cached provider event."
+  @spec booking?(map()) :: boolean()
+  def booking?(%{kind: :booking}), do: true
+  def booking?(_event), do: false
+
+  # Click wiring for an event block. Bookings open the read-only booking
+  # detail modal; provider events open the editable event detail modal. One
+  # helper so every view (timed grid, month, agenda, overflow chip) stays in
+  # agreement about which modal an entry opens.
+  @spec open_event_attrs(map()) :: keyword()
+  def open_event_attrs(%{kind: :booking} = event),
+    do: ["phx-click": "show_booking", "phx-value-meeting-id": event.meeting_id]
+
+  def open_event_attrs(event),
+    do: ["phx-click": "show_event", "phx-value-event-id": event.id]
+
   @spec color_for_event(map(), map()) :: String.t()
+  def color_for_event(_assigns, %{kind: :booking}), do: "bg-turquoise-600"
+
   def color_for_event(assigns, event) do
     with nil <- EventColour.tailwind_class(Map.get(event, :colour)),
          nil <- calendar_colour(assigns, event) do

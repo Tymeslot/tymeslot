@@ -56,11 +56,34 @@ defmodule Tymeslot.Precommit.Runner do
       System.cmd("mix", args,
         into: IO.stream(:stdio, :line),
         stderr_to_stdout: true,
-        env: [{"MIX_ENV", to_string(env)}]
+        env: [{"MIX_ENV", to_string(env)} | step_env(args)]
       )
 
     code
   end
+
+  # Dialyzer sizes its analysis worker pool to
+  # `erlang:system_info(schedulers_online)` (`dialyzer_utils:parallelism/0`,
+  # consumed by the regulator in `dialyzer_coordinator`), so its peak memory is
+  # a function of the host's core count rather than of project size. On a
+  # 16-core machine that is sixteen concurrent workers each holding module
+  # code, callgraph slices and inferred types, measured at roughly 13G, which
+  # is enough for systemd-oomd to start killing desktop applications.
+  #
+  # Capping schedulers makes dialyzer *use* less, where a memory cap alone only
+  # makes it thrash or get killed once it has already asked for too much. The
+  # cap is keyed off the command rather than the step's display name, and set
+  # here rather than for the run as a whole, so the test suite in the same
+  # `mix precommit` keeps every core. `MIX_DIALYZER_SCHEDULERS` overrides it,
+  # matching the flag of the same name in the workspace `mix.sh`.
+  @doc false
+  @spec step_env([String.t()]) :: [{String.t(), String.t()}]
+  def step_env(["dialyzer" | _rest]) do
+    schedulers = System.get_env("MIX_DIALYZER_SCHEDULERS", "4")
+    [{"ERL_FLAGS", "+S #{schedulers}:#{schedulers}"}]
+  end
+
+  def step_env(_args), do: []
 
   defp report(results) do
     Mix.shell().info([:bright, "\nSummary", :reset])

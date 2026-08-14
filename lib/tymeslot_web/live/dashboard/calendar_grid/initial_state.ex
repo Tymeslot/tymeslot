@@ -9,6 +9,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
   defaults so the template never reads an unset assign.
   """
 
+  alias Tymeslot.Timezones
+
   @doc "The default assigns applied in the component's `mount/1`."
   @spec defaults() :: map()
   def defaults do
@@ -20,6 +22,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       integration_colors: %{},
       loading: false,
       selected_event: nil,
+      selected_booking: nil,
+      agenda_lens: :all,
       current_time: DateTime.utc_now(),
       hidden_integration_ids: [],
       # Seeded empty so the first static render, which happens before
@@ -53,9 +57,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       guest_rsvp_summaries: %{},
       group_booking_uids: MapSet.new(),
       visible_days: [],
-      user_timezone: "UTC",
-      timezone_display: "UTC",
-      timezone_country_code: nil,
+      # Overwritten from the profile in `UpdateHandlers.handle_initial/2` before
+      # the first render, on the static pass as much as the connected one. These
+      # only stand in for the window between `mount/1` and `update/2`, so they
+      # derive from `Timezones.fallback/0` rather than spelling their own UTC.
+      user_timezone: Timezones.fallback(),
+      timezone_display: Timezones.format(Timezones.fallback()),
+      timezone_country_code: Timezones.country_code(Timezones.fallback()),
       syncing: false,
       sync_total: 0,
       sync_completed: 0,

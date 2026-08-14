@@ -779,6 +779,7 @@ msgstr ""
 msgid "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
 msgstr ""
 
+#: lib/tymeslot/workers/renew_webhook_channels_worker.ex
 #: lib/tymeslot/workers/sync_google_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
@@ -1120,4 +1121,9 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Rename"
+msgstr ""
+
+#: lib/tymeslot/workers/renew_webhook_channels_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
 msgstr ""

@@ -102,4 +102,27 @@ defmodule Tymeslot.Precommit.RunnerTest do
       refute output =~ "skipped"
     end
   end
+
+  # Dialyzer sizes its worker pool to the number of online schedulers, so
+  # uncapped it scales its memory with the host's core count rather than with
+  # the project. Left alone on a 16-core machine that has been enough to push
+  # the desktop into an OOM kill, so the cap failing silently is the failure
+  # mode worth a test: nothing else in a `mix precommit` run would report it.
+  describe "step_env/1" do
+    test "caps schedulers for the dialyzer step" do
+      assert Runner.step_env(["dialyzer"]) == [{"ERL_FLAGS", "+S 4:4"}]
+    end
+
+    test "leaves every other step's environment alone" do
+      assert Runner.step_env(["test"]) == []
+      assert Runner.step_env(["credo", "--strict"]) == []
+      assert Runner.step_env(["compile", "--warnings-as-errors"]) == []
+    end
+
+    # The `MIX_DIALYZER_SCHEDULERS` override is deliberately not covered here.
+    # Asserting on it means mutating the OS environment, which every other case
+    # in this async module would race against — the same shared-global problem
+    # that pushes modules to `async: false` across this suite. It is a plain
+    # `System.get_env/2` default; the branch that matters is tested above.
+  end
 end
