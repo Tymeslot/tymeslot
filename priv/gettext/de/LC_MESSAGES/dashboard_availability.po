@@ -593,3 +593,8 @@ msgstr "Buchungen am %{day} deaktivieren"
 #, elixir-autogen, elixir-format
 msgid "Take bookings on %{day}"
 msgstr "Buchungen am %{day} aktivieren"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated. Its date overrides were not copied."
+msgstr "Zeitplan dupliziert. Seine Datumsausnahmen wurden nicht kopiert."

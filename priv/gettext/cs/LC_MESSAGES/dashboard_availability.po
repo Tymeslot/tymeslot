@@ -593,3 +593,8 @@ msgstr "Nepřijímat rezervace v %{day}"
 #, elixir-autogen, elixir-format
 msgid "Take bookings on %{day}"
 msgstr "Přijímat rezervace v %{day}"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated. Its date overrides were not copied."
+msgstr "Rozvrh duplikován. Jeho výjimky pro konkrétní dny nebyly zkopírovány."

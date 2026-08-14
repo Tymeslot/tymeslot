@@ -10,6 +10,7 @@ defmodule Tymeslot.Availability.Schedules do
   """
 
   alias Tymeslot.Availability.AvailabilityBreakQueries
+  alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
@@ -198,6 +199,17 @@ defmodule Tymeslot.Availability.Schedules do
   """
   @spec meeting_type_names(integer()) :: [String.t()]
   defdelegate meeting_type_names(schedule_id), to: AvailabilityScheduleQueries
+
+  @doc """
+  Whether a schedule has any date overrides.
+
+  `duplicate/2` leaves them behind on purpose, so a caller can use this to say
+  so at the moment it matters rather than letting the copy quietly differ.
+  """
+  @spec has_overrides?(integer()) :: boolean()
+  def has_overrides?(schedule_id) do
+    AvailabilityOverrideQueries.count_by_schedule(schedule_id) > 0
+  end
 
   @doc """
   Resolves the schedule a meeting type is booked against: its own when set, the

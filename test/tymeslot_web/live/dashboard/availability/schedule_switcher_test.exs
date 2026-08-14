@@ -24,6 +24,36 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
     Map.put(ctx, :default_schedule, default_schedule)
   end
 
+  describe "duplicating a schedule" do
+    setup %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
+
+      %{view: view}
+    end
+
+    test "says nothing extra when there were no overrides to lose", %{view: view} do
+      view |> element("[phx-click='duplicate_schedule']") |> render_click()
+
+      html = render(view)
+      assert html =~ "Schedule duplicated"
+      refute html =~ "date overrides were not copied"
+    end
+
+    test "warns that date overrides did not come along", %{
+      view: view,
+      default_schedule: default_schedule
+    } do
+      # A copy takes the hours, breaks and rules but not the dated exceptions,
+      # so a host who blocked a holiday would otherwise find it silently absent.
+      insert(:availability_override, schedule: default_schedule, date: ~D[2026-12-24])
+
+      view |> element("[phx-click='duplicate_schedule']") |> render_click()
+
+      assert render(view) =~ "date overrides were not copied"
+    end
+  end
+
   describe "creating a schedule" do
     test "creates it and switches the page onto the new schedule", %{
       conn: conn,

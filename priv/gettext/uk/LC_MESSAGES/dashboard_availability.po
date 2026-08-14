@@ -592,3 +592,8 @@ msgstr "Не приймати бронювання в %{day}"
 #, elixir-autogen, elixir-format
 msgid "Take bookings on %{day}"
 msgstr "Приймати бронювання в %{day}"
+
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule duplicated. Its date overrides were not copied."
+msgstr "Розклад продубльовано. Його винятки за датами не скопійовано."

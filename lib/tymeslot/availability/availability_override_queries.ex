@@ -50,6 +50,16 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   end
 
   @doc """
+  How many date overrides a schedule owns.
+  """
+  @spec count_by_schedule(integer()) :: non_neg_integer()
+  def count_by_schedule(schedule_id) do
+    AvailabilityOverrideSchema
+    |> where([o], o.schedule_id == ^schedule_id)
+    |> Repo.aggregate(:count)
+  end
+
+  @doc """
   Creates an availability override.
   """
   @spec create_override(map()) ::

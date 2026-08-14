@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
       case Schedules.duplicate(schedule, copy_name(schedule.name, taken)) do
         {:ok, copy} ->
-          Flash.info(dgettext("dashboard_availability", "Schedule duplicated"))
+          Flash.info(duplicate_message(schedule))
           {:noreply, select_and_reload(socket, copy.id)}
 
         {:error, reason} ->
@@ -326,6 +326,20 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
       {:error, reason} ->
         Flash.error(failure_message(reason))
         {:noreply, socket}
+    end
+  end
+
+  # A copy carries the hours, breaks and rules but not the date overrides, which
+  # name specific calendar days. Said only when the source actually had some, so
+  # the ordinary duplicate stays a one-word confirmation.
+  defp duplicate_message(source) do
+    if Schedules.has_overrides?(source.id) do
+      dgettext(
+        "dashboard_availability",
+        "Schedule duplicated. Its date overrides were not copied."
+      )
+    else
+      dgettext("dashboard_availability", "Schedule duplicated")
     end
   end
 
