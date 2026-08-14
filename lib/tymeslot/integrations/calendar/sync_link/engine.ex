@@ -115,6 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.SyncLink.Capability
   alias Tymeslot.Integrations.Calendar.SyncLink.ConflictLog
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
 
@@ -408,9 +409,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   the reason, in the same vocabulary the rest of the sync path uses — a colour
   that can never be applied is not a failure to retry.
 
-  Google is the only provider with a per-event colour reachable from here:
-  `patch_event_colour/4` lives on `Google.GoogleCalendarApi` alone and is not
-  part of the shared `Provider` behaviour. The CalDAV family does have a `COLOR`
+  Which providers those are is `SyncLink.Capability`'s `:per_event_colour` to
+  answer, not this module's. Today it is Google alone:
+  `patch_event_colour/4` lives on `Google.GoogleCalendarApi` and is not part of
+  the shared `Provider` behaviour. The CalDAV family does have a `COLOR`
   property, but the colour-only path patches the event's *cached* `raw_ical`,
   which for a placeholder Tymeslot has only just written does not exist in the
   target's cache yet — so a patch there would have nothing to patch.
@@ -420,12 +422,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
       when not is_binary(colour) or colour == "",
       do: {:discard, :no_mirror_colour}
 
-  def colour_target(%CalendarSyncLinkSchema{
-        mirror_colour: colour,
-        target_integration: %{provider: "google"}
-      }),
-      do: {:ok, colour}
-
   # A link whose target association was never loaded cannot be asked what
   # provider it points at. Named separately from the unsupported-provider case
   # because the two are different bugs: this one is a caller that skipped
@@ -433,13 +429,32 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # colour" would send whoever investigates to the wrong place. Both decline to
   # paint — an unpainted placeholder is the safe failure, since the block is
   # already on the target doing its job.
+  #
+  # It stays a function head, ahead of the capability question, for exactly that
+  # reason: `Capability` answers `false` for a provider it cannot see, which is
+  # the right answer to a different question than the one this reason names.
   def colour_target(%CalendarSyncLinkSchema{target_integration: %Ecto.Association.NotLoaded{}}),
     do: {:discard, :target_integration_not_loaded}
 
-  # Every other target: Outlook has no per-event colour at all, an ICS
-  # subscription cannot be written to, and CalDAV has nothing cached to patch.
-  # Matched as a function head rather than decided inside the write, so the
-  # unsupported case costs no request.
+  # The provider question itself. Outlook has no per-event colour at all, an ICS
+  # subscription cannot be written to, and CalDAV has nothing cached to patch —
+  # all three answer `false` to `:per_event_colour` and decline here without
+  # costing a request, the same as when this head matched `"google"` directly.
+  def colour_target(%CalendarSyncLinkSchema{
+        mirror_colour: colour,
+        target_integration: %{provider: provider}
+      }) do
+    if Capability.supports?(provider, :per_event_colour) do
+      {:ok, colour}
+    else
+      {:discard, :provider_has_no_event_colour}
+    end
+  end
+
+  # A target association that is neither unloaded nor a shape carrying a
+  # provider — `nil`, most plainly. Unreachable through
+  # `CalendarSyncLinkQueries.get/1`, kept so the function stays total and so
+  # this case cannot silently become `{:ok, colour}`.
   def colour_target(%CalendarSyncLinkSchema{}), do: {:discard, :provider_has_no_event_colour}
 
   # Best-effort by construction — see the moduledoc. `result` is returned

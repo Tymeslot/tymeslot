@@ -211,6 +211,39 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Fetches one event by its Google event id, returning the raw provider body.
+
+  Built for the series-master lookup: under `singleEvents=true` every event
+  Tymeslot caches for a recurring series is an *expanded instance*, whose
+  `recurrence` Google does not send and whose cached rule therefore cannot
+  describe the series. The master carries the rule, and this is the only way to
+  read it — `list_events/4` will never return it while expansion is on.
+
+  `event_id` is sent **verbatim**, deliberately unlike every other event-scoped
+  call here. Those take a Tymeslot UID and pass it through
+  `EventMapper.uuid_to_google_event_id/1`, which re-hashes anything that is not
+  base32hex. A `recurringEventId` is already a Google event id and routinely
+  contains characters outside that alphabet (an underscore, in the
+  `<master>_<instance-stamp>` form), so mapping one would silently produce a
+  32-character digest addressing an event that does not exist — a 404 for an
+  event that is plainly there.
+
+  The raw map is returned rather than a normalised `CalendarEvent`: the caller
+  wants `"recurrence"`, which is a list holding an RRULE and possibly EXDATEs,
+  and the normaliser keeps only the first entry (`map_recurrence_rule/1`).
+  Normalising here would discard the exceptions before anything could notice
+  them.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+          {:ok, map()} | api_error()
+  def get_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request(:get, "/calendars/#{calendar_id}/events/#{event_id}", token)
+    end)
+  end
+
+  @doc """
   Deletes an event from the specified calendar.
   """
   @impl CalendarAPIBehaviour

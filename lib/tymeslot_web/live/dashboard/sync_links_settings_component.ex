@@ -13,13 +13,15 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   choice the engine cannot act on, and then show it back to them as though
   mirrors were landing there.
 
-  The comparison is deliberately against `caldav_based_provider_strings/0` and
-  not `caldav_based?/1`. That predicate is atom-only: handed the `"nextcloud"`
-  string that comes off the integration row and off the form parameter, it
-  falls through to its catch-all and answers `false`. A picker gated on it
-  would stay visible for exactly the providers it exists to hide from, and
-  nothing would fail loudly — the changeset would quietly null the field out
-  and the form would keep showing a calendar the organiser had picked.
+  The question is asked of `SyncLink.Capability`, which holds that asymmetry in
+  one table alongside the three others and answers for a provider *string* as
+  readily as an atom. That last part is the load-bearing half:
+  `ProviderConfig.caldav_based?/1` is atom-only, so handed the `"nextcloud"`
+  string that comes off the integration row and off the form parameter it falls
+  through to its catch-all and answers `false`. A picker gated on it would stay
+  visible for exactly the providers it exists to hide from, and nothing would
+  fail loudly — the changeset would quietly null the field out and the form
+  would keep showing a calendar the organiser had picked.
 
   Subscriptions are excluded from the target list at source rather than
   rejected on submit. `Ics.Provider.create_event/2` answers
@@ -57,8 +59,8 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.SyncLink
+  alias Tymeslot.Integrations.Calendar.SyncLink.Capability
   alias Tymeslot.Integrations.Calendar.SyncLink.ConflictHistory
   alias Tymeslot.Security.RateLimiter
 
@@ -216,16 +218,28 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   defp target_options(integrations) do
     for integration <- integrations,
         integration.is_active,
-        not ProviderConfig.subscription?(integration.provider),
+        Capability.supports?(integration.provider, :mirror_target),
         do: {integration.name, integration.id}
   end
 
-  # `caldav_based?/1` is atom-only and would answer false for this string. The
-  # string list is the only comparison that holds for a value off a DB row.
-  defp caldav_target?(nil), do: false
+  # No target selected yet is not "this target cannot choose a calendar" — it is
+  # no target at all, and the note explaining the restriction would be claiming
+  # something about a provider the organiser has not named. So `nil` gets its
+  # own clause rather than falling through to `Capability`, whose honest answer
+  # for a missing provider is `false`.
+  defp target_without_calendar_choice?(nil), do: false
 
-  defp caldav_target?(%{provider: provider}),
-    do: provider in ProviderConfig.caldav_based_provider_strings()
+  # `:mirror_target` is asked first for the same reason the changeset asks it
+  # first: a provider that cannot receive a mirror at all answers `false` to
+  # `:target_calendar_choice` too, and explaining to the organiser that such a
+  # target "always writes to its primary calendar" would describe writes it can
+  # never perform. `target_options/1` keeps subscriptions out of the picker, so
+  # this only bites on a forged form parameter — which is exactly when a
+  # confident wrong sentence is worst.
+  defp target_without_calendar_choice?(%{provider: provider}) do
+    Capability.supports?(provider, :mirror_target) and
+      not Capability.supports?(provider, :target_calendar_choice)
+  end
 
   defp selected_target(integrations, form_values) do
     case Map.get(form_values, "target_integration_id") do
@@ -267,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
       |> assign(:source_options, source_options(assigns.integrations))
       |> assign(:target_options, target_options(assigns.integrations))
       |> assign(:selected_target, target)
-      |> assign(:caldav_target?, caldav_target?(target))
+      |> assign(:target_without_calendar_choice?, target_without_calendar_choice?(target))
       |> assign(:target_calendar_options, target_calendar_options(target))
       |> assign(:privacy_tier_options, privacy_tier_options())
 
@@ -417,10 +431,11 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
             prompt={dgettext("dashboard_integrations", "Choose a calendar")}
           />
 
-          <%!-- Hidden for a CalDAV target: that family ignores a calendar id
-                and always writes to the primary path. --%>
+          <%!-- Hidden for a target without `:target_calendar_choice`: the
+                CalDAV family ignores a calendar id and always writes to the
+                primary path. --%>
           <.input
-            :if={not @caldav_target? and @target_calendar_options != []}
+            :if={not @target_without_calendar_choice? and @target_calendar_options != []}
             type="select"
             name="sync_link[target_calendar_id]"
             id="sync-link-target-calendar"
@@ -430,7 +445,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
             prompt={dgettext("dashboard_integrations", "Default calendar")}
           />
 
-          <p :if={@caldav_target?} class="self-end text-token-xs text-tymeslot-500">
+          <p :if={@target_without_calendar_choice?} class="self-end text-token-xs text-tymeslot-500">
             {dgettext(
               "dashboard_integrations",
               "This provider always writes to its primary calendar."

@@ -15,8 +15,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema do
   Two rules depend on what the target integration *is*, not on what the link
   says: a read-only subscription can never receive a mirror, and the CalDAV
   family ignores a calendar id on write and always lands on the primary path.
-  Both need `calendar_integrations.provider`, which a changeset cannot read —
-  it has no Repo access, and giving it one would make every validation a query.
+  Both are asked of `SyncLink.Capability`, which holds every provider
+  asymmetry in one table; both need `calendar_integrations.provider`, which a
+  changeset cannot read — it has no Repo access, and giving it one would make
+  every validation a query.
 
   So the caller loads the target integration it is already holding and passes
   its provider in as `:target_provider`. The field is `virtual: true`: it
@@ -39,7 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventColour
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.SyncLink.Capability
 
   @privacy_tiers ~w(busy_only generic_label full_passthrough)
 
@@ -111,7 +113,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema do
     |> validate_required([:user_id, :source_integration_id, :target_integration_id])
     |> validate_not_self_link()
     |> validate_target_writable()
-    |> clear_calendar_id_for_caldav_target()
+    |> clear_calendar_id_when_target_cannot_choose()
     |> validate_inclusion(:privacy_tier, @privacy_tiers)
     |> validate_colour()
     |> foreign_key_constraint(:user_id)
@@ -152,14 +154,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema do
         changeset
 
       provider ->
-        if ProviderConfig.subscription?(provider) do
+        if Capability.supports?(provider, :mirror_target) do
+          changeset
+        else
           add_error(
             changeset,
             :target_integration_id,
             "is a read-only subscription and cannot receive mirrored events"
           )
-        else
-          changeset
         end
     end
   end
@@ -168,10 +170,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema do
   # writes to the primary calendar path. Storing a calendar id for such a
   # target would record a choice the engine cannot honour, and the dashboard
   # would go on displaying it as though mirrors were landing there.
-  defp clear_calendar_id_for_caldav_target(changeset) do
+  #
+  # Gated on `:mirror_target` first, and not merely as a shortcut. A target that
+  # cannot be written to at all answers `false` to `:target_calendar_choice`
+  # too, so asking only the second question would start nulling the field out
+  # for a subscription target — a changeset `validate_target_writable/1` has
+  # already rejected, whose stored values nobody should be quietly rewriting on
+  # the way to reporting the error.
+  defp clear_calendar_id_when_target_cannot_choose(changeset) do
     provider = get_field(changeset, :target_provider)
 
-    if is_binary(provider) and provider in ProviderConfig.caldav_based_provider_strings() do
+    if Capability.supports?(provider, :mirror_target) and
+         not Capability.supports?(provider, :target_calendar_choice) do
       put_change(changeset, :target_calendar_id, nil)
     else
       changeset

@@ -121,7 +121,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.SyncLink.Capability
   alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
   alias Tymeslot.Integrations.HealthCheck
@@ -177,8 +177,11 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   # missing busy block, and of writing to an unknown one is an event on a
   # calendar nobody asked for.
   defp read_only_target?(%{target_integration: %{provider: provider}}),
-    do: ProviderConfig.subscription?(provider)
+    do: not Capability.supports?(provider, :mirror_target)
 
+  # The fallback stays a separate head rather than folding into the capability
+  # question: there is no provider to ask about here, and the answer is not
+  # "this provider cannot receive writes" but "nothing established that it can".
   defp read_only_target?(_link), do: true
 
   # The attempt travels into the domain for one decision only: whether a
