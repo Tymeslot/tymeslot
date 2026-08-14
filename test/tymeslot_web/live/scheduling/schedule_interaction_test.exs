@@ -81,7 +81,52 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
       insert(:calendar_integration, user: user, is_active: true)
 
-      %{profile: profile}
+      %{profile: profile, user: user}
+    end
+
+    @tag :capture_log
+    test "a meeting type on a longer schedule widens the window past the default",
+         %{conn: conn, profile: profile, user: user} do
+      # The window disables the calendar's forward navigation, so reading it from
+      # the default schedule alone would put this type's later dates out of
+      # reach: 180 days of bookable time behind a 30-day wall.
+      long_schedule =
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: false,
+          name: "Long lead time",
+          advance_booking_days: 180,
+          min_advance_hours: 0,
+          buffer_minutes: 0
+        )
+
+      Enum.each(1..7, fn day_of_week ->
+        insert(:weekly_availability,
+          schedule: long_schedule,
+          day_of_week: day_of_week,
+          is_available: true,
+          start_time: ~T[09:00:00],
+          end_time: ~T[17:00:00]
+        )
+      end)
+
+      insert(:meeting_type,
+        user: user,
+        duration_minutes: 45,
+        name: "Deep Dive",
+        is_active: true,
+        availability_schedule_id: long_schedule.id
+      )
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
+
+      view
+      |> element("button[data-testid='duration-option'][phx-value-duration='deep-dive']")
+      |> render_click()
+
+      view |> element("button[data-testid='next-step']") |> render_click()
+
+      assert :sys.get_state(view.pid).socket.assigns.booking_window_days == 180
     end
 
     @tag :capture_log

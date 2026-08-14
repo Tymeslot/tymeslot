@@ -181,6 +181,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
           socket
           |> assign(:meeting_type, meeting_type)
           |> assign(:engine, QEngine.init(defs))
+          |> OrganizerHelpers.assign_booking_window()
       end
     else
       socket
@@ -271,6 +272,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         socket
         |> assign(:meeting_type, meeting_type)
         |> assign(:engine, QEngine.init(defs))
+        |> OrganizerHelpers.assign_booking_window()
         |> do_handle_schedule_entry(params)
 
       _other ->

@@ -31,15 +31,28 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       - :loading: Show loading state
       - %{}: Use real conflict-aware availability
   """
-  @spec get_calendar_days(String.t(), integer(), integer(), map() | nil, map() | atom() | nil) ::
-          [map()]
-  def get_calendar_days(user_timezone, year, month, organizer_profile, availability_map \\ nil) do
+  @spec get_calendar_days(
+          String.t(),
+          integer(),
+          integer(),
+          map() | nil,
+          map() | atom() | nil,
+          map() | nil
+        ) :: [map()]
+  def get_calendar_days(
+        user_timezone,
+        year,
+        month,
+        organizer_profile,
+        availability_map \\ nil,
+        meeting_type \\ nil
+      ) do
     if organizer_profile do
       if Demo.demo_profile?(organizer_profile) do
         # Delegate to demo provider for calendar days
         Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
       else
-        schedule = Schedules.resolve_for(nil, organizer_profile)
+        schedule = Schedules.resolve_for(meeting_type, organizer_profile)
 
         config = %{
           schedule_id: schedule && schedule.id,
@@ -93,19 +106,20 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   @doc """
   Gets calendar days for a week view.
   """
-  @spec get_week_days(Date.t(), map(), map() | atom() | nil, String.t()) :: [map()]
+  @spec get_week_days(Date.t(), map(), map() | atom() | nil, String.t(), map() | nil) :: [map()]
   def get_week_days(
         week_start,
         organizer_profile,
         availability_map \\ nil,
-        user_timezone \\ "Etc/UTC"
+        user_timezone \\ "Etc/UTC",
+        meeting_type \\ nil
       ) do
     if organizer_profile do
       today = user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
       # Resolved once rather than inside the loop: the fallback branch below runs
       # for all seven days and would otherwise repeat the same lookup each time.
-      schedule = fallback_schedule(organizer_profile, availability_map)
+      schedule = fallback_schedule(organizer_profile, availability_map, meeting_type)
 
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
@@ -246,13 +260,13 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
 
   # Only the fallback path needs a schedule; a supplied availability map already
   # answers the question, so resolving one there would be a pointless query.
-  defp fallback_schedule(_organizer_profile, :loading), do: nil
+  defp fallback_schedule(_organizer_profile, :loading, _meeting_type), do: nil
 
-  defp fallback_schedule(organizer_profile, availability_map) do
+  defp fallback_schedule(organizer_profile, availability_map, meeting_type) do
     if is_map(availability_map) do
       nil
     else
-      Schedules.resolve_for(nil, organizer_profile)
+      Schedules.resolve_for(meeting_type, organizer_profile)
     end
   end
 
@@ -281,7 +295,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         current_year,
         current_month,
         organizer_profile,
-        availability_map
+        availability_map,
+        Map.get(socket.assigns, :meeting_type)
       )
 
     assign(socket, :calendar_days, calendar_days)
