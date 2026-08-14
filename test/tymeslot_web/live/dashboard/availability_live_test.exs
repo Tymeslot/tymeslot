@@ -20,6 +20,14 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
     Keyword.put(ctx, :schedule, schedule)
   end
 
+  # Copying a day's hours and clearing a day live in that row's overflow menu,
+  # which has to be open before its items are in the DOM.
+  defp open_day_menu(view, day) do
+    view
+    |> element("button[phx-click='toggle_day_menu'][phx-value-day='#{day}']")
+    |> render_click()
+  end
+
   # ===========================================================================
   # Page rendering
   # ===========================================================================
@@ -41,13 +49,13 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       end
     end
 
-    test "shows workdays as available and weekend as off by default", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/availability")
+    test "shows workdays with hours and the weekend as unavailable", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
-      # Workdays show Available toggle
-      assert html =~ "Available"
-      # Weekend days show Off toggle
-      assert html =~ "Off"
+      # A workday carries its hour selects; the weekend rows say so instead.
+      assert has_element?(view, "#day-hours-form-1")
+      refute has_element?(view, "#day-hours-form-6")
+      assert render(view) =~ "Unavailable"
     end
   end
 
@@ -276,6 +284,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
     test "shows the clear day modal", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
+      open_day_menu(view, 1)
+
       view
       |> element("button[phx-click='show_clear_day_modal'][phx-value-day='1']")
       |> render_click()
@@ -286,6 +296,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
 
     test "clears a workday after confirmation", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      open_day_menu(view, 1)
 
       view
       |> element("button[phx-click='show_clear_day_modal'][phx-value-day='1']")
@@ -304,6 +316,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
 
     test "cancelling the clear modal does not clear the day", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      open_day_menu(view, 1)
 
       view
       |> element("button[phx-click='show_clear_day_modal'][phx-value-day='1']")
@@ -326,6 +340,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
     test "copies settings from Monday to all days", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
+      open_day_menu(view, 1)
+
       view
       |> element(
         "button[phx-click='copy_to_days'][phx-value-from_day='1'][phx-value-to_days='1,2,3,4,5,6,7']"
@@ -344,6 +360,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
 
     test "copies settings from Monday to workdays only", %{conn: conn, schedule: schedule} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      open_day_menu(view, 1)
 
       view
       |> element(

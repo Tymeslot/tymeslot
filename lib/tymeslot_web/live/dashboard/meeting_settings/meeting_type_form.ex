@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Validation
   }
 
+  alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   # Public assigns passed from parent
@@ -214,19 +215,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("update_availability_schedule", params, socket) do
-    # The select sits inside the meeting-type form, so the event carries the
-    # whole form's params under "meeting_type".
-    schedule_id =
-      params
-      |> Map.get("meeting_type", %{})
-      |> Map.get("availability_schedule_id")
-      |> parse_schedule_id()
+  def handle_event("update_availability_schedule", %{"schedule" => schedule}, socket) do
+    # Blank is the "default schedule" chip, and parses to nil, so the meeting
+    # type keeps following whichever schedule is default rather than pinning
+    # the one that happened to be default when it was chosen.
+    socket =
+      socket
+      |> assign(:selected_availability_schedule_id, parse_schedule_id(schedule))
+      |> Autosave.maybe_run()
 
-    {:noreply,
-     socket
-     |> assign(:selected_availability_schedule_id, schedule_id)
-     |> Autosave.maybe_run()}
+    {:noreply, flash_schedule_saved(socket)}
   end
 
   @impl Phoenix.LiveComponent
@@ -405,8 +403,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply, Autosave.maybe_run(socket)}
   end
 
+  # Picking a schedule is one deliberate click on a chip, so it is worth a flash
+  # confirming the change is already stored: the inline indicator sits beside
+  # "Done", far from the chips, and reads as ambient. Autosave's other triggers
+  # stay silent on purpose — typing a name would fire one per keystroke, which
+  # is exactly what `Autosave.indicator/1` exists to avoid.
+  defp flash_schedule_saved(%{assigns: %{is_edit: true, save_status: :saved}} = socket) do
+    Flash.info(dgettext("dashboard_meeting_form", "Schedule updated and saved"))
+    socket
+  end
+
+  # Creating still saves on submit, and a failed save already shows its own
+  # error, so neither gets a "saved" flash.
+  defp flash_schedule_saved(socket), do: socket
+
   # Blank means "follow the profile's default schedule", stored as nil; the
-  # same goes for anything unparseable, since the select only ever offers the
+  # same goes for anything unparseable, since the chips only ever offer the
   # blank default and the profile's own schedule ids.
   defp parse_schedule_id(value) when is_binary(value) do
     case Integer.parse(String.trim(value)) do

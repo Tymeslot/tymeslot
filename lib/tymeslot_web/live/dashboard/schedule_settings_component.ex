@@ -25,12 +25,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   alias TymeslotWeb.Components.Dashboard.Availability.{DeleteScheduleModal, ScheduleFormModal}
   alias TymeslotWeb.CustomInputModeHelper
 
-  alias TymeslotWeb.Dashboard.Availability.{
-    GridComponent,
-    ListComponent,
-    PolicyCard,
-    ScheduleSwitcher
-  }
+  alias TymeslotWeb.Dashboard.Availability.{ListComponent, PolicyCard, ScheduleSwitcher}
 
   # The policy settings differ only in which schedule field they write, so the
   # handlers below route through one pair of helpers driven by these tables.
@@ -46,6 +41,9 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     "min_advance_hours" => :min_advance_hours
   }
 
+  # Query-string key carrying the schedule the page is editing.
+  @schedule_param "schedule"
+
   @policy_defaults %{buffer_minutes: "0", advance_booking_days: "90", min_advance_hours: "24"}
 
   # {preset values, value used when switching a preset into custom mode}
@@ -58,7 +56,9 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(socket) do
-    {:ok, ModalHook.mount_modal(socket, schedule_form: false, delete_schedule: false)}
+    socket = ModalHook.mount_modal(socket, schedule_form: false, delete_schedule: false)
+
+    {:ok, assign(socket, :schedule_menu_open, false)}
   end
 
   @impl Phoenix.LiveComponent
@@ -67,10 +67,10 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     socket =
       socket
       |> assign(assigns)
+      |> select_from_params()
       |> load_schedules()
       |> assign(saving: false)
       |> assign(form_errors: %{})
-      |> assign_new(:input_mode, fn -> :list end)
       |> assign_new(:custom_input_mode, fn -> CustomInputModeHelper.default_custom_mode() end)
 
     {:ok, socket}
@@ -79,37 +79,42 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   @impl Phoenix.LiveComponent
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_event("toggle_input_mode", %{"option" => option}, socket) do
-    new_mode =
-      case option do
-        "list" -> :list
-        "grid" -> :grid
-        _other -> :list
-      end
-
-    {:noreply, assign(socket, :input_mode, new_mode)}
-  end
-
   # Schedule management
 
-  def handle_event("select_schedule", %{"schedule_id" => schedule_id}, socket) do
+  def handle_event("toggle_schedule_menu", _params, socket) do
+    {:noreply, assign(socket, :schedule_menu_open, not socket.assigns.schedule_menu_open)}
+  end
+
+  def handle_event("close_schedule_menu", _params, socket) do
+    {:noreply, assign(socket, :schedule_menu_open, false)}
+  end
+
+  def handle_event("switch_tab", %{"tab" => schedule_id}, socket) do
     socket =
       socket
+      # The menu acts on the active schedule, so leaving it open across a switch
+      # would aim its actions at a schedule the user is no longer looking at.
+      |> close_menu()
       |> assign(:selected_schedule_id, parse_id(schedule_id))
       |> load_schedules()
 
-    {:noreply, socket}
+    {:noreply, patch_to_selected(socket)}
   end
 
   def handle_event("show_schedule_form", %{"mode" => "rename"}, socket) do
     with_selected(socket, fn schedule ->
       {:noreply,
-       ModalHook.show_modal(socket, :schedule_form, %{mode: :rename, name: schedule.name})}
+       socket
+       |> close_menu()
+       |> ModalHook.show_modal(:schedule_form, %{mode: :rename, name: schedule.name})}
     end)
   end
 
   def handle_event("show_schedule_form", _params, socket) do
-    {:noreply, ModalHook.show_modal(socket, :schedule_form, %{mode: :create, name: ""})}
+    {:noreply,
+     socket
+     |> close_menu()
+     |> ModalHook.show_modal(:schedule_form, %{mode: :create, name: ""})}
   end
 
   def handle_event("hide_schedule_form", _params, socket) do
@@ -160,7 +165,10 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
         meeting_type_names: Schedules.meeting_type_names(schedule.id)
       }
 
-      {:noreply, ModalHook.show_modal(socket, :delete_schedule, data)}
+      {:noreply,
+       socket
+       |> close_menu()
+       |> ModalHook.show_modal(:delete_schedule, data)}
     end)
   end
 
@@ -205,8 +213,32 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     |> assign(:schedules, schedules)
     |> assign(:selected_schedule, selected)
     |> assign(:selected_schedule_id, selected && selected.id)
+    |> assign(:meeting_type_names, meeting_type_names_for(selected))
     |> assign(:weekly_schedule, weekly_schedule_for(selected))
     |> assign(:saving, false)
+  end
+
+  defp meeting_type_names_for(nil), do: []
+  defp meeting_type_names_for(schedule), do: Schedules.meeting_type_names(schedule.id)
+
+  # The selected schedule lives in the query string so a reload, a bookmark or a
+  # shared link reopens the same one. Anything unparseable is ignored rather
+  # than clearing the selection, which would silently bounce the user to the
+  # default schedule.
+  defp select_from_params(socket) do
+    case parse_id(socket.assigns[:params][@schedule_param]) do
+      nil -> socket
+      id -> assign(socket, :selected_schedule_id, id)
+    end
+  end
+
+  defp patch_to_selected(%{assigns: %{selected_schedule: nil}} = socket) do
+    push_patch(socket, to: ~p"/dashboard/availability")
+  end
+
+  defp patch_to_selected(socket) do
+    query = [{@schedule_param, socket.assigns.selected_schedule.id}]
+    push_patch(socket, to: ~p"/dashboard/availability?#{query}")
   end
 
   # The list is ordered default first, so the head is the natural fallback when
@@ -224,12 +256,16 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     |> AvailabilityActions.ensure_complete_schedule(schedule.id)
   end
 
+  defp close_menu(socket), do: assign(socket, :schedule_menu_open, false)
+
   defp select_and_reload(socket, schedule_id) do
     socket
+    |> close_menu()
     |> ModalHook.hide_modal(:schedule_form)
     |> ModalHook.hide_modal(:delete_schedule)
     |> assign(:selected_schedule_id, schedule_id)
     |> load_schedules()
+    |> patch_to_selected()
   end
 
   defp with_selected(socket, fun) do
@@ -274,7 +310,8 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
          socket
          |> ModalHook.hide_modal(:delete_schedule)
          |> assign(:selected_schedule_id, nil)
-         |> load_schedules()}
+         |> load_schedules()
+         |> patch_to_selected()}
 
       {:error, :cannot_delete_default} ->
         Flash.error(
@@ -420,6 +457,14 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   defp failure_message(%Changeset{} = changeset), do: ChangesetUtils.get_first_error(changeset)
   defp failure_message(message) when is_binary(message), do: message
 
+  defp failure_message(:schedule_limit_reached),
+    do:
+      dgettext(
+        "dashboard_availability",
+        "You have reached the limit of %{count} schedules. Delete one to add another.",
+        count: Schedules.max_schedules()
+      )
+
   defp failure_message(_reason),
     do: dgettext("dashboard_availability", "Something went wrong. Please try again.")
 
@@ -434,94 +479,33 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
         saving={@saving}
       />
 
-      <ScheduleSwitcher.schedule_switcher
+      <ScheduleSwitcher.schedule_panel
         schedules={@schedules}
         selected_schedule={@selected_schedule}
+        meeting_type_names={@meeting_type_names}
+        max_schedules={Schedules.max_schedules()}
+        menu_open={@schedule_menu_open}
         myself={@myself}
-      />
+      >
+        <.live_component
+          module={ListComponent}
+          id="availability-list"
+          weekly_schedule={@weekly_schedule}
+          profile={@profile}
+          selected_schedule={@selected_schedule}
+          time_format={@time_format}
+          form_errors={@form_errors}
+          client_ip={@client_ip}
+          user_agent={@user_agent}
+        />
 
-      <div class="flex justify-end">
-        <%!-- Input Mode Toggle --%>
-        <div class="bg-white border-2 border-tymeslot-50 p-1.5 rounded-token-2xl shadow-sm flex items-center">
-          <button
-            phx-click="toggle_input_mode"
-            phx-value-option="list"
-            phx-target={@myself}
-            class={[
-              "flex items-center gap-2 px-4 py-2 rounded-token-xl text-sm font-black transition-all duration-300",
-              if(@input_mode == :list,
-                do: "bg-turquoise-50 text-turquoise-700 shadow-sm",
-                else: "text-tymeslot-400 hover:text-tymeslot-600"
-              )
-            ]}
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M4 6h16M4 10h16M4 14h16M4 18h16"
-              />
-            </svg>
-            {dgettext("dashboard_availability", "List")}
-          </button>
-          <button
-            phx-click="toggle_input_mode"
-            phx-value-option="grid"
-            phx-target={@myself}
-            class={[
-              "flex items-center gap-2 px-4 py-2 rounded-token-xl text-sm font-black transition-all duration-300",
-              if(@input_mode == :grid,
-                do: "bg-turquoise-50 text-turquoise-700 shadow-sm",
-                else: "text-tymeslot-400 hover:text-tymeslot-600"
-              )
-            ]}
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-              />
-            </svg>
-            {dgettext("dashboard_availability", "Grid")}
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <%= if @input_mode == :list do %>
-          <.live_component
-            module={ListComponent}
-            id="availability-list"
-            weekly_schedule={@weekly_schedule}
-            profile={@profile}
-            selected_schedule={@selected_schedule}
-            time_format={@time_format}
-            form_errors={@form_errors}
-            client_ip={@client_ip}
-            user_agent={@user_agent}
-          />
-        <% else %>
-          <.live_component
-            module={GridComponent}
-            id="availability-grid"
-            current_user={@current_user}
-            profile={@profile}
-            selected_schedule={@selected_schedule}
-            time_format={@time_format}
-            weekly_schedule={@weekly_schedule}
-          />
-        <% end %>
-      </div>
-
-      <PolicyCard.policy_card
-        :if={@selected_schedule}
-        schedule={@selected_schedule}
-        myself={@myself}
-        custom_input_mode={@custom_input_mode}
-      />
+        <PolicyCard.policy_card
+          :if={@selected_schedule}
+          schedule={@selected_schedule}
+          myself={@myself}
+          custom_input_mode={@custom_input_mode}
+        />
+      </ScheduleSwitcher.schedule_panel>
 
       <ScheduleFormModal.schedule_form_modal
         id="schedule-form-modal"

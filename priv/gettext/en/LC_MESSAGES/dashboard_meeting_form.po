@@ -769,3 +769,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Schedule"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule updated and saved"
+msgstr ""
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Selected schedule is not one of yours"
+msgstr ""

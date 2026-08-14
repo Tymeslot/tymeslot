@@ -67,6 +67,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ScheduleFormModal do
             maxlength={AvailabilityScheduleSchema.name_max_length()}
             autocomplete="off"
             required
+            phx-hook="AutoFocus"
             class="input"
             placeholder={dgettext("dashboard_availability", "For example: Consulting hours")}
           />

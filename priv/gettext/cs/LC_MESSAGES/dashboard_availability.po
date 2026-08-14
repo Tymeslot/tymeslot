@@ -11,14 +11,6 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} total"
-msgid_plural "%{count} total"
-msgstr[0] "celkem %{count}"
-msgstr[1] "celkem %{count}"
-msgstr[2] "celkem %{count}"
-
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{day_name} settings cleared"
@@ -66,17 +58,6 @@ msgstr "Dostupnost"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
-msgid "Available"
-msgstr "K dispozici"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Available for booking"
-msgstr "K dispozici pro rezervace"
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
 msgid "Break"
 msgstr "Přestávka"
 
@@ -89,16 +70,6 @@ msgstr "Přestávka byla přidána."
 #, elixir-autogen, elixir-format
 msgid "Break deleted"
 msgstr "Přestávka byla smazána."
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Break: %{label}"
-msgstr "Přestávka: %{label}"
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "Breaks"
-msgstr "Přestávky"
 
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
@@ -123,16 +94,6 @@ msgstr "Vymazat den"
 #, elixir-autogen, elixir-format
 msgid "Clear Day Settings"
 msgstr "Vymazat nastavení dne"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Day not configured"
-msgstr "Den není nastaven"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Day unavailable"
-msgstr "Den není k dispozici"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
@@ -170,30 +131,10 @@ msgstr "Přestávku se nepodařilo smazat."
 msgid "Failed to update availability"
 msgstr "Dostupnost se nepodařilo aktualizovat."
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Fri"
-msgstr "Pá"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Friday"
-msgstr "Pátek"
-
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr "Od"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Full Availability"
-msgstr "Plná dostupnost"
-
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Grid"
-msgstr "Mřížka"
 
 #: lib/tymeslot/availability/input_validation.ex
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
@@ -206,65 +147,10 @@ msgstr "Neplatný formát času"
 msgid "Label"
 msgstr "Označení"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "List"
-msgstr "Seznam"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Mon"
-msgstr "Po"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Monday"
-msgstr "Pondělí"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "No hours set"
-msgstr "Není nastavena pracovní doba"
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "Not taking any bookings on this day."
-msgstr "V tento den nepřijímáte žádné rezervace."
-
-#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
-#, elixir-autogen, elixir-format
-msgid "Off"
-msgstr "Vypnuto"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Outside business hours"
-msgstr "Mimo pracovní dobu"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Partial (Breaks)"
-msgstr "Částečná (přestávky)"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Partially available (Break: %{label} overlaps)"
-msgstr "Částečně k dispozici (překrývá se přestávka: %{label})"
-
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Quick break added"
 msgstr "Rychlá přestávka byla přidána."
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Sat"
-msgstr "So"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Saturday"
-msgstr "Sobota"
 
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
 #, elixir-autogen, elixir-format
@@ -281,16 +167,6 @@ msgstr "Začátek"
 msgid "Start Time"
 msgstr "Začátek"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Sun"
-msgstr "Ne"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Sunday"
-msgstr "Neděle"
-
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex
 #: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
 #, elixir-autogen, elixir-format
@@ -302,27 +178,7 @@ msgstr "Tuto akci nelze vrátit zpět."
 msgid "This will remove all availability hours and breaks for this day. This action cannot be undone."
 msgstr "Tím se pro tento den odstraní veškerá pracovní doba i přestávky. Tuto akci nelze vrátit zpět."
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Thu"
-msgstr "Čt"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Thursday"
-msgstr "Čtvrtek"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Tue"
-msgstr "Út"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Tuesday"
-msgstr "Úterý"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
 #, elixir-autogen, elixir-format
 msgid "Unavailable"
 msgstr "Není k dispozici"
@@ -332,25 +188,10 @@ msgstr "Není k dispozici"
 msgid "Until"
 msgstr "Do"
 
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Wed"
-msgstr "St"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Wednesday"
-msgstr "Středa"
-
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Weekly Schedule"
 msgstr "Týdenní rozvrh"
-
-#: lib/tymeslot_web/live/dashboard/availability/grid_component.ex
-#, elixir-autogen, elixir-format
-msgid "Weekly Visual Grid"
-msgstr "Týdenní mřížka"
 
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex
 #, elixir-autogen, elixir-format
@@ -614,11 +455,6 @@ msgstr "Přejmenovat rozvrh"
 msgid "Save"
 msgstr "Uložit"
 
-#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule"
-msgstr "Rozvrh"
-
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule created"
@@ -714,3 +550,46 @@ msgstr "Přestávka musí začínat v rámci pracovní doby tohoto dne."
 #, elixir-autogen, elixir-format
 msgid "This break overlaps an existing break"
 msgstr "Tato přestávka se překrývá s již existující přestávkou."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "You have reached the limit of %{count} schedules. Delete one to add another."
+msgstr ""
+"Byl dosažen limit %{count} rozvrhů. Smažte jeden, aby bylo možné přidat "
+"další."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Manage this schedule"
+msgstr "Spravovat tento rozvrh"
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "No meeting type uses these hours yet. Pick this schedule under a meeting type's booking rules."
+msgstr "Tyto hodiny zatím nepoužívá žádný typ schůzky. Vyberte tento rozvrh v pravidlech rezervací u typu schůzky."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{meeting_types}."
+msgstr "Používá: %{meeting_types}."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Used by every meeting type that has no schedule of its own."
+msgstr "Používá jej každý typ schůzky, který nemá vlastní rozvrh."
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "More actions for %{day}"
+msgstr "Další akce pro %{day}"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stop taking bookings on %{day}"
+msgstr "Nepřijímat rezervace v %{day}"
+
+#: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex
+#, elixir-autogen, elixir-format
+msgid "Take bookings on %{day}"
+msgstr "Přijímat rezervace v %{day}"

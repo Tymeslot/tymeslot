@@ -18,6 +18,11 @@ defmodule Tymeslot.Availability.Schedules do
 
   @default_schedule_name "Working hours"
 
+  # A profile's schedules are presented as a tab strip, which stops reading as
+  # navigation once there are too many of them. The cap keeps that surface
+  # legible; it is deliberately low and easy to raise.
+  @max_schedules 5
+
   @policy_fields [:buffer_minutes, :min_advance_hours, :advance_booking_days]
 
   @type schedule :: AvailabilityScheduleSchema.t()
@@ -59,8 +64,28 @@ defmodule Tymeslot.Availability.Schedules do
   end
 
   @doc """
+  The maximum number of schedules one profile may own.
+  """
+  @spec max_schedules() :: pos_integer()
+  def max_schedules, do: @max_schedules
+
+  @doc """
+  Whether a profile has room for another schedule.
+
+  Callers use this to hide the actions that would fail, rather than offering a
+  button whose only outcome is an error.
+  """
+  @spec can_create?(integer()) :: boolean()
+  def can_create?(profile_id) do
+    AvailabilityScheduleQueries.count_by_profile(profile_id) < @max_schedules
+  end
+
+  @doc """
   Creates an additional (non-default) schedule and seeds its seven weekday rows,
   so a new schedule is immediately editable rather than half-populated.
+
+  Returns `{:error, :schedule_limit_reached}` once the profile owns
+  `max_schedules/0` of them.
   """
   @spec create(integer(), map()) :: result()
   def create(profile_id, attrs) do
@@ -70,7 +95,10 @@ defmodule Tymeslot.Availability.Schedules do
       |> Map.merge(%{profile_id: profile_id, is_default: false})
 
     Repo.transaction(fn ->
-      with {:ok, schedule} <- AvailabilityScheduleQueries.insert(attrs),
+      # Counted inside the transaction so two concurrent creates cannot both
+      # read a count below the cap and each insert past it.
+      with :ok <- check_limit(profile_id),
+           {:ok, schedule} <- AvailabilityScheduleQueries.insert(attrs),
            {:ok, _count} <- WeeklyAvailabilityQueries.create_default_weekly_days(schedule.id) do
         schedule
       else
@@ -118,6 +146,9 @@ defmodule Tymeslot.Availability.Schedules do
 
   Date overrides are deliberately not copied: they name specific calendar dates,
   and carrying a stale exception list into a copy is more often wrong than right.
+
+  Returns `{:error, :schedule_limit_reached}` once the profile owns
+  `max_schedules/0` of them.
   """
   @spec duplicate(schedule(), String.t()) :: result()
   def duplicate(%AvailabilityScheduleSchema{} = source, name) do
@@ -127,13 +158,12 @@ defmodule Tymeslot.Availability.Schedules do
       |> Map.merge(%{profile_id: source.profile_id, name: name, is_default: false})
 
     Repo.transaction(fn ->
-      case AvailabilityScheduleQueries.insert(attrs) do
-        {:ok, copy} ->
-          copy_weekly_days(source.id, copy.id)
-          copy
-
-        {:error, reason} ->
-          Repo.rollback(reason)
+      with :ok <- check_limit(source.profile_id),
+           {:ok, copy} <- AvailabilityScheduleQueries.insert(attrs) do
+        copy_weekly_days(source.id, copy.id)
+        copy
+      else
+        {:error, reason} -> Repo.rollback(reason)
       end
     end)
   end
@@ -204,6 +234,10 @@ defmodule Tymeslot.Availability.Schedules do
   """
   @spec default_schedule_name() :: String.t()
   def default_schedule_name, do: @default_schedule_name
+
+  defp check_limit(profile_id) do
+    if can_create?(profile_id), do: :ok, else: {:error, :schedule_limit_reached}
+  end
 
   defp copy_weekly_days(source_schedule_id, target_schedule_id) do
     source_schedule_id

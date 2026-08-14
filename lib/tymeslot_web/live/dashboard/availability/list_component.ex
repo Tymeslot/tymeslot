@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     {:ok,
      socket
      |> ModalHook.mount_modal(delete_break: false, clear_day: false)
-     |> assign(show_add_break_form: nil)}
+     |> assign(show_add_break_form: nil, open_menu_day: nil)}
   end
 
   @impl Phoenix.LiveComponent
@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       |> assign(break_duration_presets: Breaks.get_break_duration_presets())
       |> assign(form_errors: %{})
       |> assign_new(:show_add_break_form, fn -> nil end)
+      |> assign_new(:open_menu_day, fn -> nil end)
       |> assign_new(:show_delete_break_modal, fn -> false end)
       |> assign_new(:show_clear_day_modal, fn -> false end)
       |> assign_new(:delete_break_modal_data, fn -> nil end)
@@ -171,6 +172,25 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     {:noreply, ModalHook.hide_modal(socket, :delete_break)}
   end
 
+  def handle_event("toggle_day_menu", %{"day" => day_str}, socket) do
+    case BreakHelpers.parse_day(day_str) do
+      # Toggling the open day's own menu closes it; any other day replaces it,
+      # so at most one row's menu is ever open.
+      {:ok, day} when day == socket.assigns.open_menu_day ->
+        {:noreply, assign(socket, :open_menu_day, nil)}
+
+      {:ok, day} ->
+        {:noreply, assign(socket, :open_menu_day, day)}
+
+      _other ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_day_menu", _params, socket) do
+    {:noreply, assign(socket, :open_menu_day, nil)}
+  end
+
   def handle_event("show_add_break_form", %{"day" => day_str}, socket) do
     case BreakHelpers.parse_day(day_str) do
       {:ok, day} ->
@@ -243,6 +263,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         socket
       ) do
     metadata = DashboardHelpers.get_security_metadata(socket)
+    socket = assign(socket, :open_menu_day, nil)
 
     with {:ok, from_day} <- BreakHelpers.parse_day(from_day_str),
          {:ok, to_days} <-
@@ -276,7 +297,10 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       {:ok, day} ->
         day_name = AvailabilityActions.day_name(day)
 
-        {:noreply, ModalHook.show_modal(socket, :clear_day, %{day: day, day_name: day_name})}
+        {:noreply,
+         socket
+         |> assign(:open_menu_day, nil)
+         |> ModalHook.show_modal(:clear_day, %{day: day, day_name: day_name})}
     end
   end
 
@@ -421,7 +445,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div>
+    <div id={@id}>
       <%!-- Timezone Display Header --%>
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-2 sm:space-y-0">
         <.section_header
@@ -432,7 +456,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       </div>
 
       <%!-- Weekly Schedule --%>
-      <div class="space-y-1">
+      <div class="space-y-2">
         <%= for day_availability <- @weekly_schedule do %>
           <DayCardComponent.day_card
             day_availability={day_availability}
@@ -440,6 +464,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
             break_duration_presets={@break_duration_presets}
             form_errors={@form_errors}
             show_add_break_form={@show_add_break_form}
+            open_menu_day={@open_menu_day}
             time_format={@time_format}
             myself={@myself}
           />

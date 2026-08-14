@@ -48,9 +48,11 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       refute created.is_default
 
-      # The page follows the new schedule: its option is selected, and the
+      # The page follows the new schedule: its tab is the selected one, and the
       # actions only a non-default schedule offers are now available.
-      assert has_element?(view, "option[value='#{created.id}'][selected]")
+      assert has_element?(view, "#tab-#{created.id}[aria-selected='true']")
+
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
       assert has_element?(view, "[phx-click='set_default_schedule']")
     end
 
@@ -63,19 +65,68 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
-      view
-      |> form("form[phx-change='select_schedule']", %{"schedule_id" => to_string(other.id)})
-      |> render_change()
+      view |> element("#tab-#{other.id}") |> render_click()
 
-      assert has_element?(view, "option[value='#{other.id}'][selected]")
+      assert has_element?(view, "#tab-#{other.id}[aria-selected='true']")
 
-      view
-      |> form("form[phx-change='select_schedule']", %{
-        "schedule_id" => to_string(default_schedule.id)
-      })
-      |> render_change()
+      view |> element("#tab-#{default_schedule.id}") |> render_click()
 
-      assert has_element?(view, "option[value='#{default_schedule.id}'][selected]")
+      assert has_element?(view, "#tab-#{default_schedule.id}[aria-selected='true']")
+    end
+
+    test "reopens the schedule named in the query string", %{
+      conn: conn,
+      profile: profile
+    } do
+      other = insert(:availability_schedule, profile: profile, name: "Evening hours")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=#{other.id}")
+
+      assert has_element?(view, "#tab-#{other.id}[aria-selected='true']")
+    end
+
+    test "falls back to the default when the query string names a stale schedule", %{
+      conn: conn,
+      default_schedule: default_schedule
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=999999")
+
+      assert has_element?(view, "#tab-#{default_schedule.id}[aria-selected='true']")
+    end
+  end
+
+  describe "the schedule limit" do
+    test "stops offering creation once the profile owns the maximum", %{
+      conn: conn,
+      profile: profile
+    } do
+      # One default already exists, so this fills the remaining slots.
+      for n <- 2..Schedules.max_schedules() do
+        insert(:availability_schedule, profile: profile, name: "Schedule #{n}")
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      # The button stays put and greys out, so the ceiling is visible rather
+      # than inferred from a control that vanished.
+      refute has_element?(view, "[phx-click='show_schedule_form'][phx-value-mode='create']")
+      assert has_element?(view, "button[disabled]", "New schedule")
+      assert render(view) =~ "reached the limit"
+
+      # Duplicating would also push past the cap, so the menu drops it too.
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
+      refute has_element?(view, "[phx-click='duplicate_schedule']")
+    end
+
+    test "refuses to create past the maximum", %{profile: profile} do
+      for n <- 2..Schedules.max_schedules() do
+        insert(:availability_schedule, profile: profile, name: "Schedule #{n}")
+      end
+
+      assert {:error, :schedule_limit_reached} =
+               Schedules.create(profile.id, %{name: "One too many"})
+
+      assert length(Schedules.list_for_profile(profile.id)) == Schedules.max_schedules()
     end
   end
 
@@ -88,16 +139,70 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
+
       # The default schedule is selected first: neither deleting it nor making
       # it the default again is offered.
       refute has_element?(view, "[phx-click='show_delete_schedule_modal']")
       refute has_element?(view, "[phx-click='set_default_schedule']")
 
-      view
-      |> form("form[phx-change='select_schedule']", %{"schedule_id" => to_string(other.id)})
-      |> render_change()
+      view |> element("#tab-#{other.id}") |> render_click()
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
 
       assert has_element?(view, "[phx-click='show_delete_schedule_modal']")
+    end
+
+    test "the management actions stay behind the menu until it is opened", %{
+      conn: conn,
+      profile: profile
+    } do
+      insert(:availability_schedule, profile: profile, name: "Evening hours")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      # Closed by default, so the tabs are the loudest thing on the strip.
+      refute has_element?(view, "[phx-click='show_schedule_form'][phx-value-mode='rename']")
+
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
+
+      assert has_element?(view, "[phx-click='show_schedule_form'][phx-value-mode='rename']")
+    end
+  end
+
+  describe "what a schedule applies to" do
+    test "names the meeting types booked against the selected schedule", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      other = insert(:availability_schedule, profile: profile, name: "Evening hours")
+
+      insert(:meeting_type,
+        user: user,
+        name: "Evening Consultation",
+        availability_schedule_id: other.id
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=#{other.id}")
+
+      assert render(view) =~ "Used by Evening Consultation."
+    end
+
+    test "says so when a non-default schedule is used by nothing", %{
+      conn: conn,
+      profile: profile
+    } do
+      other = insert(:availability_schedule, profile: profile, name: "Evening hours")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=#{other.id}")
+
+      assert render(view) =~ "No meeting type uses these hours yet"
+    end
+
+    test "explains that the default catches everything unassigned", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      assert render(view) =~ "Used by every meeting type that has no schedule of its own."
     end
   end
 
@@ -117,10 +222,9 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
-      view
-      |> form("form[phx-change='select_schedule']", %{"schedule_id" => to_string(other.id)})
-      |> render_change()
+      view |> element("#tab-#{other.id}") |> render_click()
 
+      view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
       view |> element("[phx-click='show_delete_schedule_modal']") |> render_click()
 
       html = render(view)

@@ -49,10 +49,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.AvailabilitySectionTest do
       view |> element("button[aria-label='Remove reminder']") |> render_click()
 
       view
-      |> element(~s|select[name="meeting_type[availability_schedule_id]"]|)
-      |> render_change(%{
-        "meeting_type" => %{"availability_schedule_id" => to_string(evenings.id)}
-      })
+      |> element(
+        "button[phx-click='update_availability_schedule'][phx-value-schedule='#{evenings.id}']"
+      )
+      |> render_click()
+
+      # The chosen chip is the pressed one, which is the only feedback the host
+      # gets that the click landed.
+      assert has_element?(
+               view,
+               "button[phx-value-schedule='#{evenings.id}'][aria-pressed='true']"
+             )
 
       view
       |> form("form[phx-submit='save_meeting_type']", %{
@@ -91,12 +98,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.AvailabilitySectionTest do
 
       view |> element("#tab-booking") |> render_click()
 
+      # The blank chip is the "follow the default" one.
       view
-      |> element(~s|select[name="meeting_type[availability_schedule_id]"]|)
-      |> render_change(%{"meeting_type" => %{"availability_schedule_id" => ""}})
+      |> element("button[phx-click='update_availability_schedule'][phx-value-schedule='']")
+      |> render_click()
 
-      # Edits auto-save, so the change is persisted without any submit.
-      assert render(view) =~ "All changes saved"
+      # Edits auto-save, so the change is persisted without any submit, and the
+      # flash says so rather than leaving the host looking for a save button.
+      html = render(view)
+      assert html =~ "All changes saved"
+      assert html =~ "Schedule updated and saved"
 
       assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).availability_schedule_id ==
                nil

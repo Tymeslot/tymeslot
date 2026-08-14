@@ -24,6 +24,16 @@ defmodule Tymeslot.Availability.AvailabilityScheduleQueries do
   end
 
   @doc """
+  Counts a profile's schedules, used to enforce the per-profile cap.
+  """
+  @spec count_by_profile(integer()) :: non_neg_integer()
+  def count_by_profile(profile_id) do
+    AvailabilityScheduleSchema
+    |> where([s], s.profile_id == ^profile_id)
+    |> Repo.aggregate(:count)
+  end
+
+  @doc """
   Fetches a schedule by id.
   """
   @spec get(integer() | nil) :: AvailabilityScheduleSchema.t() | nil

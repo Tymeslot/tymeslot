@@ -24,4 +24,23 @@ defmodule TymeslotWeb.Components.Shared.TimeOptions do
       {TimeFormat.format(Time.new!(hour, minute, 0), time_format), value}
     end
   end
+
+  @doc """
+  Same as `time_options/1`, narrowed to the slots from `from` to `to` inclusive.
+
+  Break pickers use this: a break has to fall inside the hours of the day it
+  belongs to, so offering the whole clock and rejecting the choice afterwards
+  delivers the same constraint as an error message. Times outside the range
+  simply are not on the list.
+  """
+  @spec time_options_between(Time.t(), Time.t(), String.t() | nil) ::
+          list({String.t(), String.t()})
+  def time_options_between(%Time{} = from, %Time{} = to, time_format \\ "24h") do
+    time_format
+    |> time_options()
+    |> Enum.filter(fn {_label, value} ->
+      slot = Time.from_iso8601!(value <> ":00")
+      Time.compare(slot, from) != :lt and Time.compare(slot, to) != :gt
+    end)
+  end
 end
