@@ -9,6 +9,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes
 
   setup do
@@ -213,6 +214,80 @@ defmodule Tymeslot.Availability.SchedulesTest do
 
       assert {:error, changeset} = Schedules.update_policy(schedule, %{"buffer_minutes" => "999"})
       assert Map.has_key?(errors_on(changeset), :buffer_minutes)
+    end
+  end
+
+  describe "cache invalidation" do
+    # Every mutation here changes what the slot engine would compute, and the
+    # availability cache is keyed by user, so a surviving entry would keep
+    # offering the old hours to whoever is on the booking page.
+    test "update_policy clears the user's cached availability", %{
+      user: user,
+      profile: profile
+    } do
+      {:ok, schedule} = Schedules.create_default(profile.id)
+      key = seed_cache(user.id)
+
+      {:ok, _updated} = Schedules.update_policy(schedule, %{"buffer_minutes" => "45"})
+
+      assert cache_missing?(key)
+    end
+
+    test "set_default clears it, because every unpinned meeting type just moved", %{
+      user: user,
+      profile: profile
+    } do
+      {:ok, _default} = Schedules.create_default(profile.id)
+      {:ok, other} = Schedules.create(profile.id, %{name: "Evenings"})
+      key = seed_cache(user.id)
+
+      {:ok, _promoted} = Schedules.set_default(other)
+
+      assert cache_missing?(key)
+    end
+
+    test "delete clears it, because its meeting types fall back to the default", %{
+      user: user,
+      profile: profile
+    } do
+      {:ok, _default} = Schedules.create_default(profile.id)
+      {:ok, other} = Schedules.create(profile.id, %{name: "Evenings"})
+      key = seed_cache(user.id)
+
+      {:ok, _deleted} = Schedules.delete(other)
+
+      assert cache_missing?(key)
+    end
+
+    test "a rejected write leaves the cache alone", %{user: user, profile: profile} do
+      {:ok, schedule} = Schedules.create_default(profile.id)
+      key = seed_cache(user.id)
+
+      assert {:error, _changeset} =
+               Schedules.update_policy(schedule, %{"buffer_minutes" => "999"})
+
+      refute cache_missing?(key)
+    end
+
+    defp seed_cache(user_id) do
+      key =
+        AvailabilityCache.availability_range_key(
+          user_id,
+          ~D[2026-09-01],
+          ~D[2026-09-30],
+          "Europe/Berlin",
+          30,
+          nil
+        )
+
+      AvailabilityCache.put(key, :cached)
+      refute cache_missing?(key)
+
+      key
+    end
+
+    defp cache_missing?(key) do
+      AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :recomputed
     end
   end
 

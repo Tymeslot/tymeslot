@@ -13,6 +13,7 @@ defmodule Tymeslot.Availability.Schedules do
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
@@ -120,7 +121,9 @@ defmodule Tymeslot.Availability.Schedules do
   """
   @spec update_policy(schedule(), map()) :: result()
   def update_policy(%AvailabilityScheduleSchema{} = schedule, attrs) do
-    AvailabilityScheduleQueries.update_policy(schedule, normalise_attrs(attrs))
+    schedule
+    |> AvailabilityScheduleQueries.update_policy(normalise_attrs(attrs))
+    |> invalidate_cache(schedule)
   end
 
   @doc """
@@ -131,14 +134,17 @@ defmodule Tymeslot.Availability.Schedules do
   def set_default(%AvailabilityScheduleSchema{is_default: true} = schedule), do: {:ok, schedule}
 
   def set_default(%AvailabilityScheduleSchema{} = schedule) do
-    Repo.transaction(fn ->
-      # Clearing before marking matters: the partial unique index allows only one
-      # default per profile, so the two writes cannot be reordered.
-      AvailabilityScheduleQueries.clear_default(schedule.profile_id)
-      AvailabilityScheduleQueries.mark_default(schedule.id)
+    promoted =
+      Repo.transaction(fn ->
+        # Clearing before marking matters: the partial unique index allows only
+        # one default per profile, so the two writes cannot be reordered.
+        AvailabilityScheduleQueries.clear_default(schedule.profile_id)
+        AvailabilityScheduleQueries.mark_default(schedule.id)
 
-      %{schedule | is_default: true}
-    end)
+        %{schedule | is_default: true}
+      end)
+
+    invalidate_cache(promoted, schedule)
   end
 
   @doc """
@@ -157,15 +163,18 @@ defmodule Tymeslot.Availability.Schedules do
       |> Map.take(@policy_fields)
       |> Map.merge(%{profile_id: source.profile_id, name: name, is_default: false})
 
-    Repo.transaction(fn ->
-      with :ok <- check_limit(source.profile_id),
-           {:ok, copy} <- AvailabilityScheduleQueries.insert(attrs) do
-        copy_weekly_days(source.id, copy.id)
-        copy
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+    copy =
+      Repo.transaction(fn ->
+        with :ok <- check_limit(source.profile_id),
+             {:ok, inserted} <- AvailabilityScheduleQueries.insert(attrs) do
+          copy_weekly_days(source.id, inserted.id)
+          inserted
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    invalidate_cache(copy, source)
   end
 
   @doc """
@@ -178,7 +187,9 @@ defmodule Tymeslot.Availability.Schedules do
   def delete(%AvailabilityScheduleSchema{is_default: true}), do: {:error, :cannot_delete_default}
 
   def delete(%AvailabilityScheduleSchema{} = schedule) do
-    AvailabilityScheduleQueries.delete(schedule)
+    schedule
+    |> AvailabilityScheduleQueries.delete()
+    |> invalidate_cache(schedule)
   end
 
   @doc """
@@ -272,6 +283,24 @@ defmodule Tymeslot.Availability.Schedules do
 
   # The UI submits string-keyed params while internal callers use atoms; the
   # merges above need one consistent key type.
+  # The slot engine reads these rows and the availability cache is keyed by
+  # user, so a mutation here walks profile -> user and clears it. Changing the
+  # default or deleting a schedule re-points every meeting type that follows the
+  # default, so leaving it to the two-minute TTL would keep offering the old
+  # hours to whoever is on the booking page meanwhile. A failed write, or a
+  # missing link in the walk, is a no-op: invalidation must never turn a
+  # successful edit into an error.
+  defp invalidate_cache({:ok, _result} = outcome, %{profile_id: profile_id}) do
+    case ProfileQueries.get_profile(profile_id) do
+      %{user_id: user_id} -> AvailabilityCache.invalidate_for_user(user_id)
+      _no_profile -> :ok
+    end
+
+    outcome
+  end
+
+  defp invalidate_cache(outcome, _schedule), do: outcome
+
   defp normalise_attrs(attrs) do
     Map.new(attrs, fn
       {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
