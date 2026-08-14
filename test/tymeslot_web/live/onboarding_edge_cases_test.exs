@@ -17,8 +17,6 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   import Mox
   import TymeslotWeb.OnboardingTestHelpers
 
-  alias Tymeslot.Repo
-
   setup :verify_on_exit!
 
   setup tags do
@@ -70,8 +68,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # Navigate through remaining steps to ready
       navigate_scheduling_steps_to_ready(view)
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes >= 0
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes >= 0
     end
 
     test "exceeding maximum buffer_minutes is rejected", %{conn: conn} do
@@ -88,8 +86,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
       navigate_scheduling_steps_to_ready(view)
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes <= 120
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes <= 120
     end
   end
 
@@ -115,8 +113,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
       navigate_scheduling_steps_to_ready(view)
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes == 20
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 20
     end
 
     test "preset marker is verified for actual preset values", %{conn: conn} do
@@ -208,8 +206,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.advance_booking_days == 1
+      schedule = default_schedule(user)
+      assert schedule.advance_booking_days == 1
     end
 
     test "advance_booking_days accepts maximum value (365)", %{conn: conn} do
@@ -229,8 +227,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.advance_booking_days == 365
+      schedule = default_schedule(user)
+      assert schedule.advance_booking_days == 365
     end
 
     test "min_advance_hours accepts zero", %{conn: conn} do
@@ -250,8 +248,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.min_advance_hours == 0
+      schedule = default_schedule(user)
+      assert schedule.min_advance_hours == 0
     end
 
     test "min_advance_hours accepts maximum (168)", %{conn: conn} do
@@ -273,8 +271,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.min_advance_hours == 168
+      schedule = default_schedule(user)
+      assert schedule.min_advance_hours == 168
     end
   end
 
@@ -301,8 +299,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       )
       |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes == 45
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 45
     end
 
     test "switching through preset and back to custom seeds the default custom value", %{
@@ -331,8 +329,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # Custom input is visible.
       assert render(view) =~ ~s(name="buffer_minutes")
       # The re-seeded value (20) was persisted, not the last preset (30).
-      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
-      assert profile.buffer_minutes == 20
+      schedule = default_schedule(user)
+      assert schedule.buffer_minutes == 20
     end
   end
 

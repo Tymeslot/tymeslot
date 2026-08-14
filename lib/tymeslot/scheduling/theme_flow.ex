@@ -20,6 +20,33 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
     Demo.find_by_slug(user_id, slug)
   end
 
+  @doc """
+  The meeting type a reschedule is already committed to.
+
+  Matching by duration is right while a visitor is still choosing what to book,
+  but a reschedule is not a choice: the rules enforced on submit come from the
+  original meeting's type, and two types sharing a duration may sit on
+  different availability schedules. Resolving by duration could therefore offer
+  slots from one schedule and reject the booking against another's.
+
+  Returns `nil` when this is not a reschedule, when the meeting is not the
+  organiser's, or when it predates meeting types; the caller then falls back to
+  the duration match.
+  """
+  @spec resolve_meeting_type_for_reschedule(String.t() | nil, integer() | nil) :: map() | nil
+  def resolve_meeting_type_for_reschedule(meeting_uid, organizer_user_id)
+      when is_binary(meeting_uid) and is_integer(organizer_user_id) do
+    with {:ok, %{meeting_type_id: id}} when is_integer(id) <-
+           Orchestrator.get_meeting_for_reschedule(meeting_uid, organizer_user_id),
+         %{} = meeting_type <- MeetingTypes.get_meeting_type(id, organizer_user_id) do
+      meeting_type
+    else
+      _not_resolvable -> nil
+    end
+  end
+
+  def resolve_meeting_type_for_reschedule(_meeting_uid, _organizer_user_id), do: nil
+
   @spec build_booking_form_data(String.t() | nil, integer() | nil) :: map()
   def build_booking_form_data(reschedule_uid, organizer_user_id \\ nil)
 

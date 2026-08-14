@@ -41,6 +41,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @booking_limits_published_at ~U[2026-08-07 00:00:00Z]
   @booking_limits_expires_at ~U[2026-09-06 00:00:00Z]
 
+  @availability_schedules_published_at ~U[2026-08-14 00:00:00Z]
+  @availability_schedules_expires_at ~U[2026-09-13 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -48,6 +51,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      availability_schedules(),
       booking_limits(),
       app_languages(),
       integrations_hub(),
@@ -59,6 +63,26 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp availability_schedules do
+    %Announcement{
+      key: "availability_schedules",
+      title: dgettext("onboarding", "Give every meeting type its own hours"),
+      body:
+        dgettext(
+          "onboarding",
+          "Availability is now built from named schedules - office hours, evening consults, " <>
+            "weekend intensives - and every meeting type follows the one you choose. Keep up " <>
+            "to five, each with its own hours, breaks and booking rules; anything you don't " <>
+            "assign follows your default schedule."
+        ),
+      image_path: "/images/announcements/availability-schedules.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "availability-schedules",
+      published_at: @availability_schedules_published_at,
+      expires_at: @availability_schedules_expires_at
+    }
   end
 
   defp booking_limits do

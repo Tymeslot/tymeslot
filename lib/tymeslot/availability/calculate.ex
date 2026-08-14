@@ -10,7 +10,7 @@ defmodule Tymeslot.Availability.Calculate do
   alias Tymeslot.Utils.DateTimeUtils
 
   @type availability_config :: %{
-          optional(:profile_id) => pos_integer(),
+          optional(:schedule_id) => pos_integer(),
           optional(:max_advance_booking_days) => pos_integer(),
           optional(:duration_minutes) => pos_integer(),
           optional(:buffer_minutes) => non_neg_integer(),
@@ -63,15 +63,15 @@ defmodule Tymeslot.Availability.Calculate do
         config \\ %{}
       ) do
     duration_minutes = duration_minutes |> max(1) |> min(1440)
-    profile_id = Map.get(config, :profile_id)
+    schedule_id = Map.get(config, :schedule_id)
 
     # Prefetch schedule data once for all adjacent-day lookups
-    config = prefetch_schedule_data(config, profile_id, Date.add(date, -1), Date.add(date, 1))
+    config = prefetch_schedule_data(config, schedule_id, Date.add(date, -1), Date.add(date, 1))
 
     business_hours_windows =
       BusinessHours.windows_for_target_date(
         date,
-        profile_id,
+        schedule_id,
         owner_timezone,
         user_timezone,
         config
@@ -88,7 +88,7 @@ defmodule Tymeslot.Availability.Calculate do
       all_available_slots =
         business_hours_windows
         |> Enum.flat_map(fn window ->
-          breaks = BusinessHours.breaks_for_day(window.date, profile_id, config)
+          breaks = BusinessHours.breaks_for_day(window.date, schedule_id, config)
 
           all_slots =
             TimeSlots.generate_slots_for_range_with_breaks(
@@ -150,13 +150,13 @@ defmodule Tymeslot.Availability.Calculate do
     events_in_user_tz =
       Events.convert_events_to_timezone(blocking_events, owner_timezone, user_timezone)
 
-    profile_id = Map.get(config, :profile_id)
+    schedule_id = Map.get(config, :schedule_id)
 
     # Prefetch schedule data once for the entire range (with 1-day padding for adjacent-day checks)
     config =
       config
       |> Map.put(:duration_minutes, duration_minutes)
-      |> prefetch_schedule_data(profile_id, Date.add(start_date, -1), Date.add(end_date, 1))
+      |> prefetch_schedule_data(schedule_id, Date.add(start_date, -1), Date.add(end_date, 1))
 
     availability_map =
       Enum.reduce(Date.range(start_date, end_date), %{}, fn date, acc ->
@@ -238,7 +238,7 @@ defmodule Tymeslot.Availability.Calculate do
     - user_timezone: Timezone of the user viewing the calendar
     - year: Year to display
     - month: Month to display (1-12)
-    - config: Configuration map with profile_id, max_advance_booking_days, etc.
+    - config: Configuration map with schedule_id, max_advance_booking_days, etc.
     - availability_map: Optional map of date strings to boolean availability.
       Can be:
       - nil: Use business hours logic only (fast, but not conflict-aware)
@@ -294,18 +294,19 @@ defmodule Tymeslot.Availability.Calculate do
 
   # Private functions
 
-  # Prefetches weekly schedule and overrides into config to avoid N+1 queries.
-  # When profile_id is nil, returns config unchanged (fallback hours are used).
+  # Prefetches the schedule's weekly pattern and overrides into config to avoid
+  # N+1 queries. A nil schedule id means no schedule could be resolved, and the
+  # hard-coded fallback hours are used instead.
   defp prefetch_schedule_data(config, nil, _start_date, _end_date), do: config
 
-  defp prefetch_schedule_data(config, profile_id, start_date, end_date) do
+  defp prefetch_schedule_data(config, schedule_id, start_date, end_date) do
     config
     |> Map.put_new_lazy(:weekly_schedule, fn ->
-      WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(profile_id)
+      WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule_id)
     end)
     |> Map.put_new_lazy(:overrides, fn ->
-      AvailabilityOverrideQueries.get_overrides_by_profile_and_date_range(
-        profile_id,
+      AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
+        schedule_id,
         start_date,
         end_date
       )
@@ -332,10 +333,10 @@ defmodule Tymeslot.Availability.Calculate do
   end
 
   defp fallback_day_available?(date, today, now, config) do
-    profile_id = Map.get(config, :profile_id)
+    schedule_id = Map.get(config, :schedule_id)
     max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
 
-    is_business_day = BusinessHours.business_day?(date, profile_id, config)
+    is_business_day = BusinessHours.business_day?(date, schedule_id, config)
     is_future = Date.compare(date, today) == :gt
     is_today = date == today
     is_within_limit = Date.diff(date, today) <= max_advance_booking_days
@@ -351,14 +352,14 @@ defmodule Tymeslot.Availability.Calculate do
   end
 
   defp check_today_fallback_availability(date, now, config) do
-    profile_id = Map.get(config, :profile_id)
+    schedule_id = Map.get(config, :schedule_id)
     owner_timezone = Map.get(config, :owner_timezone, "Etc/UTC")
     user_timezone = now.time_zone
 
     result =
       BusinessHours.get_business_hours_in_timezone(
         date,
-        profile_id,
+        schedule_id,
         owner_timezone,
         user_timezone,
         config
@@ -366,7 +367,7 @@ defmodule Tymeslot.Availability.Calculate do
 
     case result do
       {:ok, %{end_datetime: %DateTime{} = end_dt}} ->
-        min_advance_hours = Map.get(config, :min_advance_hours, 0)
+        min_advance_hours = Map.get(config, :min_advance_hours, 3)
         latest_start = DateTime.add(end_dt, -min_advance_hours * 60, :minute)
         DateTime.compare(now, latest_start) != :gt
 

@@ -166,10 +166,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     duration_str = if is_integer(duration), do: "#{duration}min", else: duration
 
     if socket.assigns[:username_context] && socket.assigns[:organizer_user_id] do
-      case ThemeFlow.resolve_meeting_type_for_duration(
-             socket.assigns[:organizer_user_id],
-             duration_str
-           ) do
+      case resolve_meeting_type(socket, duration_str) do
         nil ->
           socket
 
@@ -181,10 +178,25 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
           socket
           |> assign(:meeting_type, meeting_type)
           |> assign(:engine, QEngine.init(defs))
+          |> OrganizerHelpers.assign_booking_window()
       end
     else
       socket
     end
+  end
+
+  # A reschedule stays on the meeting's own type, because that is the one whose
+  # rules the submit will be validated against. Everything else picks by
+  # duration, which is what the visitor actually chose.
+  defp resolve_meeting_type(socket, duration_str) do
+    ThemeFlow.resolve_meeting_type_for_reschedule(
+      socket.assigns[:reschedule_meeting_uid],
+      socket.assigns[:organizer_user_id]
+    ) ||
+      ThemeFlow.resolve_meeting_type_for_duration(
+        socket.assigns[:organizer_user_id],
+        duration_str
+      )
   end
 
   @doc """
@@ -271,6 +283,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         socket
         |> assign(:meeting_type, meeting_type)
         |> assign(:engine, QEngine.init(defs))
+        |> OrganizerHelpers.assign_booking_window()
         |> do_handle_schedule_entry(params)
 
       _other ->

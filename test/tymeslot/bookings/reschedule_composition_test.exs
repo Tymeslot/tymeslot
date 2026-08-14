@@ -43,7 +43,8 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
     TestMocks.setup_email_mocks()
 
     user = insert(:user)
-    profile = insert(:profile, user: user, timezone: "Europe/Berlin", buffer_minutes: 15)
+    profile = insert(:profile, user: user, timezone: "Europe/Berlin")
+    insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
     insert(:webhook, user: user, events: ["meeting.rescheduled"])
     insert(:telegram_integration, user: user, events: ["meeting.rescheduled"])
 

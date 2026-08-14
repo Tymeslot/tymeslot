@@ -2,9 +2,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @moduledoc "Initialisation and form data building for MeetingTypeForm."
 
   alias Phoenix.Component
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
 
   @doc """
@@ -32,6 +34,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:allow_guests, get_allow_guests(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))
     |> Component.assign(:booking_limits, get_booking_limits(type))
+    |> Component.assign(
+      :selected_availability_schedule_id,
+      get_availability_schedule_id(type)
+    )
+    |> assign_availability_schedules(Map.get(assigns, :current_user))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> then(fn socket ->
       if id = socket.assigns.selected_calendar_integration_id do
@@ -50,6 +57,40 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     end)
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:__initialized__, true)
+  end
+
+  @doc """
+  Assigns the profile's availability schedules and the name of its default.
+
+  The list drives the availability picker, and the default's name labels the
+  "Default (…)" option so the user can see which hours a meeting type falls
+  back to. A profile that somehow has no default yet falls back to the name
+  the default is created with, keeping the option readable rather than blank.
+  """
+  @spec assign_availability_schedules(Phoenix.LiveView.Socket.t(), map() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def assign_availability_schedules(socket, current_user) do
+    schedules = list_schedules(current_user)
+
+    socket
+    |> Component.assign(:schedules, schedules)
+    |> Component.assign(:default_schedule_name, default_schedule_name(schedules))
+  end
+
+  defp list_schedules(%{id: user_id}) do
+    case Profiles.get_profile(user_id) do
+      %{id: profile_id} -> Schedules.list_for_profile(profile_id)
+      _no_profile -> []
+    end
+  end
+
+  defp list_schedules(_current_user), do: []
+
+  defp default_schedule_name(schedules) do
+    case Enum.find(schedules, & &1.is_default) do
+      %{name: name} -> name
+      _no_default -> Schedules.default_schedule_name()
+    end
   end
 
   @doc """
@@ -200,6 +241,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   def get_calendar_integration_id(nil), do: nil
   def get_calendar_integration_id(%{calendar_integration_id: nil}), do: nil
   def get_calendar_integration_id(%{calendar_integration_id: id}), do: id
+
+  @doc """
+  Returns the availability schedule id for a meeting type, or nil when it
+  follows the profile's default schedule.
+  """
+  @spec get_availability_schedule_id(Ecto.Schema.t() | nil) :: integer() | nil
+  def get_availability_schedule_id(nil), do: nil
+  def get_availability_schedule_id(%{availability_schedule_id: nil}), do: nil
+  def get_availability_schedule_id(%{availability_schedule_id: id}), do: id
 
   @doc "Returns the target calendar id for a meeting type, or nil."
   @spec get_target_calendar_id(Ecto.Schema.t() | nil) :: String.t() | nil

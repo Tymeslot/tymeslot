@@ -58,7 +58,6 @@ msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessa
 msgstr "Usa lettere minuscole, numeri e trattini. Con \"Genera link casuale\" ottieni un link impossibile da indovinare."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr "%{minutes} min"
@@ -70,85 +69,10 @@ msgid_plural "+%{count} custom questions"
 msgstr[0] "+%{count} domanda personalizzata"
 msgstr[1] "+%{count} domande personalizzate"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 day"
-msgstr "1 giorno"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 hour"
-msgstr "1 ora"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 month"
-msgstr "1 mese"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "1 week"
-msgstr "1 settimana"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "2 days"
-msgstr "2 giorni"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "2 months"
-msgstr "2 mesi"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "2 weeks"
-msgstr "2 settimane"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "3 months"
-msgstr "3 mesi"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "4 hours"
-msgstr "4 ore"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "6 months"
-msgstr "6 mesi"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add Meeting Type"
 msgstr "Aggiungi tipo di riunione"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Advance booking set to custom value"
-msgstr "Finestra di prenotazione anticipata impostata su un valore personalizzato"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Advance booking window updated to %{days} days"
-msgstr "Finestra di prenotazione anticipata aggiornata a %{days} giorni"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer Between Appointments"
-msgstr "Margine tra gli appuntamenti"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time set to custom value"
-msgstr "Margine impostato su un valore personalizzato"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Buffer time updated to %{minutes} minutes"
-msgstr "Margine aggiornato a %{minutes} minuti"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -159,11 +83,6 @@ msgstr "Calendario"
 #, elixir-autogen, elixir-format
 msgid "Create meeting types to offer different appointment options"
 msgstr "Crea tipi di riunione per offrire diverse opzioni di appuntamento"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Custom"
-msgstr "Personalizzato"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -180,70 +99,25 @@ msgstr "Elimina tipo di riunione"
 msgid "Edit"
 msgstr "Modifica"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "How Far in Advance Can People Book"
-msgstr "Con quanto anticipo si può prenotare"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "In-person"
 msgstr "Di persona"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Maximum number of days into the future that appointments can be booked."
-msgstr "Numero massimo di giorni nel futuro entro cui è possibile prenotare gli appuntamenti."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
 msgstr "Tipi di riunione"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum Booking Notice"
-msgstr "Preavviso minimo di prenotazione"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum booking notice updated to %{hours} hours"
-msgstr "Preavviso minimo di prenotazione aggiornato a %{hours} ore"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum hours of notice required before an appointment can be booked."
-msgstr "Numero minimo di ore di preavviso richieste prima che un appuntamento possa essere prenotato."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Minimum notice set to custom value"
-msgstr "Preavviso minimo impostato su un valore personalizzato"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "No buffer"
-msgstr "Nessun margine"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting types configured yet"
 msgstr "Nessun tipo di riunione ancora configurato"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "Scheduling Preferences"
-msgstr "Preferenze di pianificazione"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will permanently remove this meeting type from your account."
 msgstr "Questa azione non può essere annullata e rimuoverà definitivamente questo tipo di riunione dall'account."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "Time to block after each appointment for preparation, travel, or breaks."
-msgstr "Tempo da bloccare dopo ogni appuntamento per preparazione, spostamenti o pause."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -255,32 +129,13 @@ msgstr "Attiva/disattiva la disponibilità di %{name}"
 msgid "Video"
 msgstr "Video"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "days"
-msgstr "giorni"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "hours"
-msgstr "ore"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "instant"
-msgstr "immediato"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
-#, elixir-autogen, elixir-format
-msgid "min"
-msgstr "min"
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
 msgstr "Vuoi davvero eliminare il tipo di riunione \"%{name}\"?"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Limits"
 msgstr "Limiti di prenotazione"

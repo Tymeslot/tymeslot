@@ -749,3 +749,33 @@ msgstr "Видимість"
 #, elixir-autogen, elixir-format
 msgid "When on, this meeting type is reachable only through its direct link."
 msgstr "Якщо ввімкнено, цей тип зустрічі буде доступний лише за прямим посиланням."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Availability"
+msgstr "Доступність"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Choose the hours this meeting type can be booked in. The default schedule applies unless you pick another one."
+msgstr "Виберіть години, у які можна бронювати цей тип зустрічі. Типовий розклад застосовується, якщо ви не виберете інший."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Default (%{name})"
+msgstr "Типовий (%{name})"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule"
+msgstr "Розклад"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule updated and saved"
+msgstr "Розклад оновлено та збережено"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Selected schedule is not one of yours"
+msgstr "Обраний розклад вам не належить"

@@ -223,7 +223,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         CalendarNavigation.next_week_disabled?(
                           @current_week_start,
                           @user_timezone,
-                          @organizer_profile.advance_booking_days
+                          @booking_window_days
                         )
                       }
                     >
@@ -233,7 +233,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
 
                 <div class="calendar-grid">
-                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
+                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type) do %>
                     <button
                       class={[
                         "calendar-day",

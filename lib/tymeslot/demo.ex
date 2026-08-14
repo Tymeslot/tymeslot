@@ -48,8 +48,8 @@ defmodule Tymeslot.Demo do
   def get_theme_customization(profile_id, theme_id),
     do: provider().get_theme_customization(profile_id, theme_id)
 
-  @spec get_weekly_schedule(integer()) :: map() | nil
-  def get_weekly_schedule(profile_id), do: provider().get_weekly_schedule(profile_id)
+  @spec booking_window_days(map()) :: non_neg_integer()
+  def booking_window_days(profile), do: provider().booking_window_days(profile)
 
   @spec list_active_meeting_types(integer()) :: [map()]
   def list_active_meeting_types(user_id), do: provider().list_active_meeting_types(user_id)

@@ -7,6 +7,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
   alias Tymeslot.Auth.OAuth.TransactionalUserCreation
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Profiles.{ProfileQueries, ProfileSchema}
@@ -118,10 +120,12 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
       assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
 
-      schedules = WeeklyAvailabilityQueries.get_weekly_availability_by_profile(profile.id)
+      assert %{is_default: true} = schedule = Schedules.get_default(profile.id)
 
-      assert length(schedules) == 7,
-             "Expected 7 days of weekly availability for OAuth user, got #{length(schedules)}"
+      days = WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule.id)
+
+      assert length(days) == 7,
+             "Expected 7 days of weekly availability for OAuth user, got #{length(days)}"
     end
 
     test "creates profile and default schedule for existing user without a profile" do
@@ -141,10 +145,12 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
       assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
 
-      schedules = WeeklyAvailabilityQueries.get_weekly_availability_by_profile(profile.id)
+      assert %{is_default: true} = schedule = Schedules.get_default(profile.id)
 
-      assert length(schedules) == 7,
-             "Expected 7 days of weekly availability for existing user without profile, got #{length(schedules)}"
+      days = WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule.id)
+
+      assert length(days) == 7,
+             "Expected 7 days of weekly availability for existing user without profile, got #{length(days)}"
     end
 
     test "rolls back weekly schedule rows when user creation fails" do
@@ -164,8 +170,10 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
       scoped_schedule_count = fn ->
         Repo.aggregate(
           from(wa in WeeklyAvailabilitySchema,
+            join: s in AvailabilityScheduleSchema,
+            on: wa.schedule_id == s.id,
             join: p in ProfileSchema,
-            on: wa.profile_id == p.id,
+            on: s.profile_id == p.id,
             join: u in UserSchema,
             on: p.user_id == u.id,
             where: u.email == ^rollback_email

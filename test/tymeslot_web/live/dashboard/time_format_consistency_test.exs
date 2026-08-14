@@ -29,9 +29,11 @@ defmodule TymeslotWeb.Dashboard.TimeFormatConsistencyTest do
   setup :setup_dashboard_user
 
   setup %{profile: profile} do
+    schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
     monday =
       insert(:weekly_availability,
-        profile: profile,
+        schedule: schedule,
         day_of_week: 1,
         is_available: true,
         start_time: ~T[09:00:00],
