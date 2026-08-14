@@ -12,6 +12,9 @@ defmodule TymeslotWeb.DashboardTourTest do
   alias Tymeslot.Onboarding.DashboardTour
   alias Tymeslot.Repo
 
+  # The fixture host has setup outstanding, so the checklist step is present.
+  defp step_count, do: length(DashboardTour.steps(%{checklist_visible?: true}))
+
   defp insert_fresh_dashboard_user(opts) do
     seen_at = Keyword.get(opts, :dashboard_tour_seen_at, nil)
 
@@ -45,11 +48,11 @@ defmodule TymeslotWeb.DashboardTourTest do
       refute has_element?(view, "#dashboard-tour")
     end
 
-    test "does not render the tour on /dashboard/calendar even for fresh users", %{conn: conn} do
+    test "does not render the tour on /dashboard/overview even for fresh users", %{conn: conn} do
       user = insert_fresh_dashboard_user(dashboard_tour_seen_at: nil)
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
       refute has_element?(view, "#dashboard-tour")
     end
@@ -85,7 +88,7 @@ defmodule TymeslotWeb.DashboardTourTest do
     end
 
     test "tour:next past the last step dismisses the overlay", %{view: view} do
-      for _step <- 1..(DashboardTour.count() - 1), do: render_click(view, "tour:next")
+      for _step <- 1..(step_count() - 1), do: render_click(view, "tour:next")
 
       assert has_element?(view, "#dashboard-tour")
 
@@ -101,7 +104,7 @@ defmodule TymeslotWeb.DashboardTourTest do
     end
 
     test "tour:finish dismisses the overlay", %{view: view, user: user} do
-      for _step <- 1..(DashboardTour.count() - 1), do: render_click(view, "tour:next")
+      for _step <- 1..(step_count() - 1), do: render_click(view, "tour:next")
 
       render_click(view, "tour:finish")
       refute has_element?(view, "#dashboard-tour")
@@ -117,7 +120,7 @@ defmodule TymeslotWeb.DashboardTourTest do
     end
 
     test "tour:skip-step on the final step dismisses the overlay", %{view: view} do
-      for _step <- 1..(DashboardTour.count() - 1), do: render_click(view, "tour:next")
+      for _step <- 1..(step_count() - 1), do: render_click(view, "tour:next")
 
       assert has_element?(view, "#dashboard-tour")
 

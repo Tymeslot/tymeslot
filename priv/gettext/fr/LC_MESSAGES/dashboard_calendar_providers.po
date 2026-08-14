@@ -779,6 +779,7 @@ msgstr "L’URL du serveur doit être du texte"
 msgid "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
 msgstr "Certains chemins de calendrier ont un format invalide. Utilisez des URL complètes (https://...) ou des chemins (/calendar/)"
 
+#: lib/tymeslot/workers/renew_webhook_channels_worker.ex
 #: lib/tymeslot/workers/sync_google_calendar_worker.ex
 #, elixir-autogen, elixir-format
 msgid "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
@@ -1121,3 +1122,8 @@ msgstr "Nom"
 #, elixir-autogen, elixir-format
 msgid "Rename"
 msgstr "Renommer"
+
+#: lib/tymeslot/workers/renew_webhook_channels_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
+msgstr "Le calendrier de réservation n’existe plus sur Outlook. Veuillez reconnecter l’intégration et choisir un autre calendrier."

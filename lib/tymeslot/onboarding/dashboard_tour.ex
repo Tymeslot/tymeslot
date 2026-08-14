@@ -11,6 +11,13 @@ defmodule Tymeslot.Onboarding.DashboardTour do
       `:center`
     * `:title` — gettext-translated headline string
     * `:body` — gettext-translated body string
+    * `:requires` — condition key the caller's context must satisfy for the step
+      to appear, or `nil` for a step that is always shown
+
+  Anchors that only render under some condition are what `:requires` is for.
+  Resolving the list against a context up front drops such a step outright,
+  rather than letting the client spotlight a missing element, time out, and
+  skip it, which leaves the host watching the progress count jump a number.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -22,56 +29,74 @@ defmodule Tymeslot.Onboarding.DashboardTour do
           anchor: String.t() | nil,
           placement: placement(),
           title: String.t(),
-          body: String.t()
+          body: String.t(),
+          requires: atom() | nil
         }
 
-  @spec steps() :: [step()]
-  def steps do
+  @typedoc """
+  Which optional anchors the dashboard is rendering, keyed by condition.
+  An absent key means the condition is unmet, so its step is dropped.
+  """
+  @type context :: %{optional(atom()) => boolean()}
+
+  @doc """
+  The steps to show on a dashboard described by `context`.
+
+  Steps declaring a `:requires` key appear only when `context` marks that
+  condition true; every other step is always present.
+  """
+  @spec steps(context()) :: [step()]
+  def steps(context) do
+    Enum.filter(catalog(), fn
+      %{requires: nil} -> true
+      %{requires: condition} -> Map.get(context, condition, false)
+    end)
+  end
+
+  @spec catalog() :: [step()]
+  defp catalog do
     [
       %{
         id: :welcome,
         anchor: nil,
         placement: :center,
+        requires: nil,
         title: dgettext("onboarding", "Welcome to your Tymeslot dashboard"),
         body: dgettext("onboarding", "Take 30 seconds to learn where everything lives.")
-      },
-      %{
-        id: :mode_tabs,
-        anchor: "mode-tabs",
-        placement: :bottom,
-        title: dgettext("onboarding", "Two modes"),
-        body:
-          dgettext(
-            "onboarding",
-            "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
-          )
       },
       %{
         id: :sidebar_nav,
         anchor: "sidebar-nav",
         placement: :right,
-        title: dgettext("onboarding", "Settings live in the sidebar"),
+        requires: nil,
+        title: dgettext("onboarding", "Everything lives here"),
         body:
           dgettext(
             "onboarding",
-            "Profile, availability, integrations, and automation - all one click away."
+            "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
           )
       },
+      # `:bottom`, not `:top`: on the calendar this strip is pinned just under
+      # the header, so there is no room for a tooltip above it. The checklist
+      # hides itself once setup is complete or the host closes it, hence
+      # `:requires`.
       %{
         id: :quick_actions,
         anchor: "quick-actions",
-        placement: :top,
-        title: dgettext("onboarding", "Common tasks"),
+        placement: :bottom,
+        requires: :checklist_visible?,
+        title: dgettext("onboarding", "Your setup checklist"),
         body:
           dgettext(
             "onboarding",
-            "Quick links to set up your profile, availability, and meeting types. Start here."
+            "Open it to connect a calendar, customise your booking page, and share your link. It disappears once every step is done."
           )
       },
       %{
         id: :user_menu,
         anchor: "user-menu",
         placement: :bottom_end,
+        requires: nil,
         title: dgettext("onboarding", "Your account"),
         body: dgettext("onboarding", "Account settings and log out are here in the top-right.")
       },
@@ -79,15 +104,10 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         id: :done,
         anchor: nil,
         placement: :center,
+        requires: nil,
         title: dgettext("onboarding", "You're set"),
         body: dgettext("onboarding", "Go create your first event type - and let people book you.")
       }
     ]
   end
-
-  @spec count() :: non_neg_integer()
-  def count, do: length(steps())
-
-  @spec step_at(non_neg_integer()) :: step() | nil
-  def step_at(index), do: Enum.at(steps(), index)
 end

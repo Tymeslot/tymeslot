@@ -23,6 +23,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
 
   @spec create_event_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def create_event_modal(assigns) do
+    assigns = assign(assigns, :meeting_mode, assigns.creating_event[:mode] == :meeting)
+
     ~H"""
     <.modal
       id="create-event-modal"
@@ -30,7 +32,52 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       on_cancel={JS.push("close_create_form", target: @myself)}
       size={:medium}
     >
-      <:header>{dgettext("dashboard_calendar_events", "New Event")}</:header>
+      <:header>
+        {if @meeting_mode,
+          do: dgettext("dashboard_calendar_events", "New Meeting"),
+          else: dgettext("dashboard_calendar_events", "New Event")}
+      </:header>
+
+      <%!-- Mode toggle: a bare provider event vs an ad-hoc Tymeslot meeting.
+            Hidden when no calendar is connected — the form is then fixed to
+            meeting mode, the only kind that can exist without one. --%>
+      <div :if={@integrations != []} class="mb-4">
+        <div
+          class="inline-flex rounded-token-lg border border-tymeslot-200 p-0.5 gap-0.5"
+          role="tablist"
+          aria-label={dgettext("dashboard_calendar_events", "What to create")}
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={to_string(!@meeting_mode)}
+            phx-click="set_create_mode"
+            phx-value-mode="event"
+            phx-target={@myself}
+            class={"px-3 py-1.5 rounded-token-md text-token-sm font-semibold transition-colors #{if !@meeting_mode, do: "bg-turquoise-600 text-white shadow-sm", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
+          >
+            {dgettext("dashboard_calendar_events", "Event")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={to_string(@meeting_mode)}
+            phx-click="set_create_mode"
+            phx-value-mode="meeting"
+            phx-target={@myself}
+            data-testid="create-mode-meeting"
+            class={"px-3 py-1.5 rounded-token-md text-token-sm font-semibold transition-colors #{if @meeting_mode, do: "bg-turquoise-600 text-white shadow-sm", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
+          >
+            {dgettext("dashboard_calendar_events", "Meeting with a guest")}
+          </button>
+        </div>
+        <p :if={@meeting_mode} class="mt-1.5 text-token-xs text-tymeslot-400">
+          {dgettext(
+            "dashboard_calendar_events",
+            "Books the slot, emails the guest an invitation, and adds it to your calendar."
+          )}
+        </p>
+      </div>
 
       <div class="mb-3">
         <.input
@@ -46,7 +93,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         />
       </div>
 
-      <div class="mb-3 flex items-center justify-between">
+      <%!-- Guest details (meeting mode only) --%>
+      <div :if={@meeting_mode} class="mb-3 grid gap-3 sm:grid-cols-2">
+        <.input
+          type="text"
+          name="guest_name"
+          value={@creating_event[:guest_name] || ""}
+          label={dgettext("dashboard_calendar_events", "Guest name")}
+          placeholder={dgettext("dashboard_calendar_events", "Ada Lovelace")}
+          id="create-meeting-guest-name"
+          phx-blur="update_create_guest_name"
+          phx-target={@myself}
+        />
+        <.input
+          type="email"
+          name="guest_email"
+          value={@creating_event[:guest_email] || ""}
+          label={dgettext("dashboard_calendar_events", "Guest email")}
+          placeholder="guest@example.com"
+          id="create-meeting-guest-email"
+          phx-blur="update_create_guest_email"
+          phx-target={@myself}
+        />
+      </div>
+
+      <div :if={!@meeting_mode} class="mb-3 flex items-center justify-between">
         <p class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar_events", "All day")}
         </p>
@@ -109,6 +180,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <CalendarPicker.calendar_picker
+        :if={@integrations != []}
         integrations={@integrations}
         integration_colors={@integration_colors}
         selected_integration_id={@creating_event.integration_id}
@@ -117,8 +189,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         event_name="update_create_integration"
       />
 
+      <%!-- Video (meeting mode): which provider backs the meeting link --%>
+      <div
+        :if={@meeting_mode and @video_integrations != []}
+        class="border-t border-tymeslot-200 pt-3 mt-3"
+      >
+        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
+          {dgettext("dashboard_calendar_events", "Video")}
+        </p>
+        <div class="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            phx-click="update_create_video"
+            phx-value-video_integration_id=""
+            phx-target={@myself}
+            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+          >
+            {dgettext("dashboard_calendar_events", "None")}
+          </button>
+          <button
+            :for={vi <- @video_integrations}
+            type="button"
+            phx-click="update_create_video"
+            phx-value-video_integration_id={vi.id}
+            phx-target={@myself}
+            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+          >
+            <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
+            <span class="truncate max-w-[10rem]">{vi.name}</span>
+          </button>
+        </div>
+      </div>
+
       <%!-- Repeat --%>
-      <div class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={@creating_event[:recurrence_rule]}
           myself={@myself}
@@ -127,7 +231,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Reminders --%>
-      <div class="border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RemindersEditor.reminders_editor
           reminders={@creating_event[:reminders] || []}
           myself={@myself}
@@ -137,7 +241,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <%!-- Attendee section --%>
-      <div class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
+      <div :if={!@meeting_mode} class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
         <p class="text-token-xs font-medium text-tymeslot-400">
           {dgettext("dashboard_calendar_events", "Invite attendees (optional)")}
         </p>

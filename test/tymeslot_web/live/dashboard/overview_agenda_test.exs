@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       title: "Quarterly review"
     )
 
-    {:ok, _view, html} = live(conn, ~p"/dashboard")
+    {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
     assert html =~ "Your day"
     assert html =~ "Up next"
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       title: "Roadmap review"
     )
 
-    {:ok, _view, html} = live(conn, ~p"/dashboard")
+    {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
     # The earliest is the cockpit's "next"; the later one fills the Tomorrow peek.
     assert html =~ "Tomorrow"
@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
 
   test "shows the empty state and connect-a-calendar nudge when nothing is scheduled",
        %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/dashboard")
+    {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
     assert html =~ "Nothing on your plate today or tomorrow"
     assert html =~ "Connect a calendar to see your whole schedule here"
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organizer_video_url: "https://zoom.us/j/123"
     )
 
-    {:ok, view, html} = live(conn, ~p"/dashboard")
+    {:ok, view, html} = live(conn, ~p"/dashboard/overview")
     refute html =~ "agenda-detail-modal"
 
     view
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       title: "Quarterly review"
     )
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     assert view
            |> element(~s([aria-label="View details for Quarterly review"]))
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
 
   test "the 60s agenda tick refreshes the agenda without a page reload",
        %{conn: conn, user: user} do
-    {:ok, view, html} = live(conn, ~p"/dashboard")
+    {:ok, view, html} = live(conn, ~p"/dashboard/overview")
 
     assert html =~ "Nothing on your plate today or tomorrow"
 
@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
       organiser: %{"displayName" => "Sam Rivera"}
     )
 
-    {:ok, view, _html} = live(conn, ~p"/dashboard")
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
     view
     |> element(~s([aria-label="View details for Design sync"]))
@@ -227,7 +227,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
         end_at: nil
       )
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Company offsite"
       assert html =~ EventColour.tailwind_class("blueberry")
@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
         end_at: DateTime.add(later, 3600, :second)
       )
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Design review"
       assert html =~ EventColour.tailwind_class("blueberry")

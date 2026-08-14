@@ -8,6 +8,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence
 
   defdelegate handle_show_create_form(params, socket), to: CreateFormState
+  defdelegate handle_set_create_mode(params, socket), to: CreateFormState
+  defdelegate handle_update_create_guest_name(params, socket), to: CreateFormState
+  defdelegate handle_update_create_guest_email(params, socket), to: CreateFormState
   defdelegate handle_close_create_form(params, socket), to: CreateFormState
   defdelegate handle_update_create_title(params, socket), to: CreateFormState
   defdelegate handle_update_create_time(params, socket), to: CreateFormState

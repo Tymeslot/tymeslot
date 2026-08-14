@@ -228,16 +228,10 @@ defmodule Tymeslot.Integrations.Video do
   def update_integration(user_id, id, attrs) when is_integer(user_id) and is_integer(id) do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
       {:ok, integration} ->
-        case VideoIntegrationQueries.update(integration, attrs) do
-          {:ok, updated} = ok ->
-            if credentials_in_attrs?(attrs) do
-              HealthCheck.mark_user_recovered(:video, updated.id)
-            end
-
-            ok
-
-          err ->
-            err
+        if credentials_in_attrs?(attrs) do
+          update_with_credentials(integration, attrs)
+        else
+          VideoIntegrationQueries.update(integration, attrs)
         end
 
       {:error, :not_found} = err ->
@@ -248,8 +242,18 @@ defmodule Tymeslot.Integrations.Video do
     end
   end
 
+  defp update_with_credentials(integration, attrs) do
+    with {:ok, updated} = ok <- VideoIntegrationQueries.update_credentials(integration, attrs) do
+      HealthCheck.mark_user_recovered(:video, updated.id)
+      ok
+    end
+  end
+
+  # Callers supply the virtual field names (`:api_key`), never the encrypted
+  # ones — those only exist after `encrypt_credentials/1` runs inside the
+  # changeset, by which point the attrs have already been consumed.
   defp credentials_in_attrs?(attrs) when is_map(attrs) do
-    fields = VideoIntegrationSchema.encrypted_credential_fields()
+    fields = VideoIntegrationSchema.credential_fields()
 
     Enum.any?(fields, fn f -> Map.has_key?(attrs, f) or Map.has_key?(attrs, Atom.to_string(f)) end)
   end
@@ -410,7 +414,7 @@ defmodule Tymeslot.Integrations.Video do
     case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
       {:ok, existing} ->
         AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          VideoIntegrationQueries.update(existing, token_attrs)
+          VideoIntegrationQueries.update_credentials(existing, token_attrs)
         end)
 
       {:error, :not_found} ->
@@ -420,7 +424,7 @@ defmodule Tymeslot.Integrations.Video do
         # Credentials are stale but the user is reconnecting — allow the update
         # so fresh credentials replace the undecryptable ones.
         AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          VideoIntegrationQueries.update(existing, token_attrs)
+          VideoIntegrationQueries.update_credentials(existing, token_attrs)
         end)
     end
   end
@@ -428,7 +432,7 @@ defmodule Tymeslot.Integrations.Video do
   defp match_or_create_by_account(user_id, provider, name, provider_account_id, token_attrs) do
     case VideoIntegrationQueries.get_by_account_for_user(user_id, provider, provider_account_id) do
       {:ok, existing} ->
-        VideoIntegrationQueries.update(existing, token_attrs)
+        VideoIntegrationQueries.update_credentials(existing, token_attrs)
 
       {:error, :not_found} ->
         reactivate_or_create_video(user_id, provider, name, provider_account_id, token_attrs)
@@ -447,7 +451,7 @@ defmodule Tymeslot.Integrations.Video do
           provider_account_id
         )
       end,
-      fn existing -> VideoIntegrationQueries.update(existing, reactivation_attrs) end,
+      fn existing -> VideoIntegrationQueries.update_credentials(existing, reactivation_attrs) end,
       fn ->
         AccountMatch.create_with_race_protection(
           fn -> VideoIntegrationQueries.create(create_attrs) end,
@@ -458,7 +462,7 @@ defmodule Tymeslot.Integrations.Video do
               provider_account_id
             )
           end,
-          fn existing -> VideoIntegrationQueries.update(existing, token_attrs) end
+          fn existing -> VideoIntegrationQueries.update_credentials(existing, token_attrs) end
         )
       end
     )

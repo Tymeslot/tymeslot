@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.8.1",
+      version: "1.9.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -28,7 +28,11 @@ defmodule Tymeslot.MixProject do
         list_unused_filters: true,
         # Include Mix and Credo so Dialyzer knows about their behaviours and
         # modules; the custom checks under dev_support/ implement Credo's.
-        plt_add_apps: [:mix, :credo],
+        # Dialyxir is here for the same reason: it is `runtime: false`, so
+        # `plt_add_deps: :app_tree` leaves it out, and `mix dialyzer.incremental`
+        # calls into it. Without it every one of those calls is reported as a
+        # call to a function that does not exist.
+        plt_add_apps: [:mix, :credo, :dialyxir],
         # Analyse against the full runtime dependency tree rather than the
         # direct deps alone, so cross-dependency contract errors are caught.
         plt_add_deps: :app_tree,

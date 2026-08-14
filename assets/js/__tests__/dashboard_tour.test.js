@@ -103,6 +103,109 @@ describe('DashboardTour layout cache', () => {
   });
 });
 
+describe('DashboardTour tooltip placement', () => {
+  const VIEWPORT_WIDTH = 1280;
+  const VIEWPORT_HEIGHT = 800;
+  const TOOLTIP_WIDTH = 352;
+  const TOOLTIP_HEIGHT = 180;
+
+  // Places a tooltip of a fixed size against `rect` and returns the resulting
+  // box, so assertions can talk about where the card actually landed.
+  function place(rect, placement) {
+    const el = buildOverlay(null, null);
+    const hook = makeHook(el);
+    const tooltip = el.querySelector('.dashboard-tour__tooltip');
+    tooltip.getBoundingClientRect = () => ({
+      width: TOOLTIP_WIDTH,
+      height: TOOLTIP_HEIGHT,
+    });
+
+    hook.placeTooltip(tooltip, rect, placement);
+
+    const top = parseFloat(tooltip.style.top);
+    const left = parseFloat(tooltip.style.left);
+    return { top, left, bottom: top + TOOLTIP_HEIGHT, right: left + TOOLTIP_WIDTH };
+  }
+
+  function anchorRect({ top, left, width = 200, height = 40 }) {
+    return { top, left, width, height, bottom: top + height, right: left + width };
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('innerWidth', VIEWPORT_WIDTH);
+    vi.stubGlobal('innerHeight', VIEWPORT_HEIGHT);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  test('a tooltip that would overflow the top is flipped below its anchor', () => {
+    // The calendar's setup-checklist strip: pinned just under the 64px header,
+    // so a card placed above it has nowhere to go.
+    const rect = anchorRect({ top: 72, left: 300 });
+
+    const box = place(rect, 'top');
+
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    // Flipped, not merely nudged: it now sits below the anchor.
+    expect(box.top).toBeGreaterThanOrEqual(rect.bottom);
+  });
+
+  test('a tooltip that would overflow the bottom is flipped above its anchor', () => {
+    const rect = anchorRect({ top: VIEWPORT_HEIGHT - 60, left: 300 });
+
+    const box = place(rect, 'bottom');
+
+    expect(box.bottom).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
+    expect(box.bottom).toBeLessThanOrEqual(rect.top);
+  });
+
+  test('a tooltip is clamped when neither side of the anchor has room', () => {
+    // Anchor taller than the viewport leaves no room above or below, so the
+    // flip cannot help and only the clamp keeps the card readable.
+    const rect = anchorRect({ top: -50, left: 300, height: VIEWPORT_HEIGHT + 100 });
+
+    const box = place(rect, 'top');
+
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.bottom).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
+  });
+
+  test('a tooltip beside an edge-hugging anchor stays within the viewport', () => {
+    // `right` placement against an anchor flush to the right edge.
+    const rect = anchorRect({ top: 300, left: VIEWPORT_WIDTH - 210 });
+
+    const box = place(rect, 'right');
+
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(VIEWPORT_WIDTH);
+  });
+
+  test('bottom_end right-aligns the card with its anchor and stays on screen', () => {
+    // The user menu: top-right of the header, tooltip hangs down and left.
+    const rect = anchorRect({ top: 12, left: VIEWPORT_WIDTH - 60, width: 48 });
+
+    const box = place(rect, 'bottom_end');
+
+    expect(box.top).toBeGreaterThanOrEqual(rect.bottom);
+    expect(box.right).toBeLessThanOrEqual(VIEWPORT_WIDTH);
+    expect(box.left).toBeGreaterThanOrEqual(0);
+  });
+
+  test('a placement with room to spare is left where it was asked for', () => {
+    const rect = anchorRect({ top: 400, left: 500 });
+
+    const box = place(rect, 'bottom');
+
+    // 12px gap below the anchor, horizontally centred on it — no flip, no clamp.
+    expect(box.top).toBe(rect.bottom + 12);
+    expect(box.left).toBe(rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2);
+  });
+});
+
 describe('DashboardTour per-step fade', () => {
   beforeEach(() => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: true });

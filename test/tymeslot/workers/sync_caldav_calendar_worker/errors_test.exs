@@ -169,7 +169,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       assert updated.needs_reauth == false
     end
 
-    test "still retries a 5xx" do
+    test "discards a 5xx and leaves the retry to the next scheduled sync" do
       integration =
         insert(:calendar_integration,
           provider: "caldav",
@@ -182,10 +182,24 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
         Conn.send_resp(conn, 503, "Service Unavailable")
       end)
 
-      assert {:error, :server_error} =
+      # The remote is broken, not the request — but the three Oban attempts
+      # span under a minute, far too short for a server to recover, while the
+      # scheduled sync comes round again in minutes. A server that 5xxs
+      # persistently used to exhaust the retries every cycle and raise a
+      # permanent-failure admin alert each time.
+      assert {:discard, reason} =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
+
+      assert reason =~ "server error"
+
+      updated =
+        Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
+
+      # A remote outage says nothing about the credentials, so it must not push
+      # the user through a reconnection they do not need.
+      assert updated.needs_reauth == false
     end
   end
 

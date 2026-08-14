@@ -78,7 +78,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
   end
 
   describe "clearing needs_reauth on reconnect" do
-    test "update/2 with fresh credentials clears the flag" do
+    test "update_credentials/2 clears the flag" do
       integration =
         insert(:calendar_integration,
           provider: "google",
@@ -89,12 +89,34 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
         )
 
       {:ok, reconnected} =
-        CalendarIntegrationQueries.update(integration, %{
+        CalendarIntegrationQueries.update_credentials(integration, %{
           access_token: "new-access-token",
           refresh_token: "new-refresh-token"
         })
 
       refute reconnected.needs_reauth
+    end
+
+    test "update/2 leaves the flag intact even when it writes tokens" do
+      # The hourly background token refresh goes through `update/2`. It must not
+      # clear a flag raised for an unrelated reason, or a broken integration is
+      # handed straight back to the sync sweep every hour.
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          is_active: true,
+          access_token_encrypted: Encryption.encrypt("test-access-token"),
+          refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
+          needs_reauth: true
+        )
+
+      {:ok, refreshed} =
+        CalendarIntegrationQueries.update(integration, %{
+          access_token: "new-access-token",
+          refresh_token: "new-refresh-token"
+        })
+
+      assert refreshed.needs_reauth
     end
 
     test "update/2 without credential changes leaves the flag intact" do

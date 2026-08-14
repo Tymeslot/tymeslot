@@ -58,7 +58,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   Updates the working hours for a specific day.
   """
   @spec update_day_hours(integer(), integer(), String.t(), String.t()) ::
-          {:ok, term()} | {:error, atom()}
+          {:ok, term()} | {:error, :invalid_time_format | Ecto.Changeset.t()}
   def update_day_hours(schedule_id, day, start_str, end_str) do
     with_cache_invalidation(schedule_id, fn ->
       with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
@@ -80,7 +80,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   Adds a break to a day's availability.
   """
   @spec add_break(integer(), String.t(), String.t(), String.t()) ::
-          {:ok, term()} | {:error, atom()}
+          {:ok, term()} | {:error, :invalid_time_format | Ecto.Changeset.t()}
   def add_break(day_availability_id, start_str, end_str, label) do
     with_cache_invalidation_by_availability(day_availability_id, fn ->
       with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
@@ -100,7 +100,8 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   @doc """
   Adds a quick break with a predefined duration.
   """
-  @spec add_quick_break(integer(), String.t(), integer()) :: {:ok, term()} | {:error, atom()}
+  @spec add_quick_break(integer(), String.t(), integer()) ::
+          {:ok, term()} | {:error, :invalid_time_format | Ecto.Changeset.t() | String.t()}
   def add_quick_break(day_availability_id, start_str, duration) do
     with_cache_invalidation_by_availability(day_availability_id, fn ->
       case DateTimeUtils.parse_hhmm(start_str) do

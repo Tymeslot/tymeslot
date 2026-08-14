@@ -8,6 +8,8 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.RenewWebhookChannelsWorker
 
   describe "perform/1 - no expiring integrations" do
@@ -44,6 +46,45 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
       assert_enqueued(
         worker: RenewWebhookChannelsWorker,
         args: %{"calendar_integration_id" => integration.id, "provider" => "google"}
+      )
+    end
+  end
+
+  describe "perform/1 - integrations awaiting reauthorisation" do
+    test "does not renew an expiring Google channel for a flagged integration" do
+      # A flagged integration cannot succeed at renewal until its owner
+      # reconnects, so re-registering its channel every day only burns retries
+      # and raises a daily permanent-failure alert.
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "expiring-channel",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour),
+          needs_reauth: true
+        )
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      refute_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "does not renew an expiring Outlook subscription for a flagged integration" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "expiring-subscription",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour),
+          needs_reauth: true
+        )
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      refute_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id}
       )
     end
   end
@@ -226,6 +267,57 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
                  "calendar_integration_id" => integration.id,
                  "provider" => "outlook"
                })
+    end
+
+    test "discards and flags for reconnection when the Google calendar is gone" do
+      # The channel endpoint is calendar-scoped, so a 404 means the booking
+      # calendar was deleted at the provider. Retrying cannot recover it, and
+      # exhausting the retries raises a permanent-failure admin alert daily.
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "orphaned-channel",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour),
+          needs_reauth: false
+        )
+
+      expect(GoogleCalendarAPIMock, :register_push_channel, fn _integration ->
+        {:error, :not_found, "Calendar not found"}
+      end)
+
+      assert {:discard, "Booking calendar not found — user action required"} =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "google"
+               })
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth
+      assert reloaded.sync_error =~ "no longer exists"
+    end
+
+    test "discards and flags for reconnection when the Outlook calendar is gone" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "orphaned-sub",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour),
+          needs_reauth: false
+        )
+
+      expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
+        {:error, :not_found, "Calendar not found"}
+      end)
+
+      assert {:discard, "Booking calendar not found — user action required"} =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "outlook"
+               })
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth
+      assert reloaded.sync_error =~ "no longer exists"
     end
   end
 

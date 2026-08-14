@@ -153,7 +153,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
           is_active: true
         }
 
-        CalendarIntegrationQueries.update(existing_integration, attrs)
+        CalendarIntegrationQueries.update_credentials(existing_integration, attrs)
     end
   end
 

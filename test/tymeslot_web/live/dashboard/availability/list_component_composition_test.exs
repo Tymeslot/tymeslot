@@ -49,6 +49,14 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   submits `add_break` with start ≥ end must surface a form error and
   not persist a nonsensical break window — the UI uses dropdowns, but
   nothing enforces start < end client-side.
+
+  Added after a production crash: the time dropdowns offer the whole
+  day regardless of the day's working hours, so the rejections raised
+  by `Tymeslot.Availability.Breaks` (outside work hours, overlapping
+  an existing break) are reachable from the real UI. Those arrive as
+  an `%Ecto.Changeset{}`, which the handler used to leave unmatched —
+  a `CaseClauseError` that killed the LiveView instead of telling the
+  organiser what was wrong.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -145,6 +153,98 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert Breaks.get_breaks_for_day(day.id) == []
+    end
+  end
+
+  describe "add_break — outside the day's working hours" do
+    @tag :capture_log
+    test "a break starting before work hours is reported, not crashed on",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view
+      |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
+      |> render_click()
+
+      # The dropdowns offer every quarter-hour of the day, so a time
+      # outside the 09:00–17:00 working hours is one click away.
+      view
+      |> form("form[phx-submit='add_break']", %{
+        "day" => "1",
+        "start" => "07:00",
+        "end" => "08:00",
+        "label" => "Early Break"
+      })
+      |> render_submit()
+
+      html = render(view)
+      refute html =~ "Break added"
+      assert html =~ "Break must start within this day&#39;s working hours"
+
+      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      assert Breaks.get_breaks_for_day(day.id) == []
+    end
+
+    @tag :capture_log
+    test "a break ending after work hours is reported, not crashed on",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view
+      |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
+      |> render_click()
+
+      view
+      |> form("form[phx-submit='add_break']", %{
+        "day" => "1",
+        "start" => "16:30",
+        "end" => "18:00",
+        "label" => "Late Break"
+      })
+      |> render_submit()
+
+      html = render(view)
+      refute html =~ "Break added"
+      assert html =~ "Break must end within this day&#39;s working hours"
+
+      day = WeeklySchedule.get_day_availability(profile.id, 1)
+      assert Breaks.get_breaks_for_day(day.id) == []
+    end
+  end
+
+  describe "add_break — overlapping an existing break" do
+    @tag :capture_log
+    test "the clash is flashed and no second break is created",
+         %{conn: conn, profile: profile} do
+      day = WeeklySchedule.get_day_availability(profile.id, 1)
+
+      insert(:availability_break,
+        weekly_availability: day,
+        start_time: ~T[12:00:00],
+        end_time: ~T[13:00:00],
+        label: "Lunch"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view
+      |> element("button[phx-click='show_add_break_form'][phx-value-day='1']")
+      |> render_click()
+
+      view
+      |> form("form[phx-submit='add_break']", %{
+        "day" => "1",
+        "start" => "12:30",
+        "end" => "13:30",
+        "label" => "Second Lunch"
+      })
+      |> render_submit()
+
+      html = render(view)
+      refute html =~ "Break added"
+      assert html =~ "This break overlaps an existing break"
+
+      assert [%{label: "Lunch"}] = Breaks.get_breaks_for_day(day.id)
     end
   end
 end

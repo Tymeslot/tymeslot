@@ -137,27 +137,13 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
              %{"start" => start_str, "end" => end_str, "label" => label},
              metadata: metadata
            ) do
-      case AvailabilityActions.add_break(
-             day_availability.id,
-             sanitized_params["start"],
-             sanitized_params["end"],
-             sanitized_params["label"]
-           ) do
-        {:ok, _break} ->
-          Flash.info(dgettext("dashboard_availability", "Break added"))
-          send(self(), {:reload_schedule})
-
-          socket =
-            socket
-            |> assign(:form_errors, %{})
-            |> assign(:show_add_break_form, nil)
-
-          {:noreply, socket}
-
-        {:error, :invalid_time_format} ->
-          Flash.error(dgettext("dashboard_availability", "Invalid time format"))
-          {:noreply, socket}
-      end
+      day_availability.id
+      |> AvailabilityActions.add_break(
+        sanitized_params["start"],
+        sanitized_params["end"],
+        sanitized_params["label"]
+      )
+      |> handle_break_result(socket, dgettext("dashboard_availability", "Break added"))
     else
       nil ->
         {:noreply, socket}
@@ -233,26 +219,9 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
            ) do
       duration = String.to_integer(sanitized_params["duration"])
 
-      case AvailabilityActions.add_quick_break(
-             day_availability.id,
-             sanitized_params["start"],
-             duration
-           ) do
-        {:ok, _break} ->
-          Flash.info(dgettext("dashboard_availability", "Quick break added"))
-          send(self(), {:reload_schedule})
-
-          socket =
-            socket
-            |> assign(:form_errors, %{})
-            |> assign(:show_add_break_form, nil)
-
-          {:noreply, socket}
-
-        {:error, :invalid_time_format} ->
-          Flash.error(dgettext("dashboard_availability", "Invalid time format"))
-          {:noreply, socket}
-      end
+      day_availability.id
+      |> AvailabilityActions.add_quick_break(sanitized_params["start"], duration)
+      |> handle_break_result(socket, dgettext("dashboard_availability", "Quick break added"))
     else
       nil ->
         {:noreply, socket}
@@ -388,7 +357,43 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       {:error, :invalid_time_format} ->
         Flash.error(dgettext("dashboard_availability", "Invalid time format"))
         {:noreply, socket}
+
+      {:error, _reason} ->
+        Flash.error(dgettext("dashboard_availability", "Failed to update availability"))
+        {:noreply, socket}
     end
+  end
+
+  # Every break write funnels through here so a rejected changeset reaches the
+  # organiser as a form error rather than crashing the LiveView.
+  defp handle_break_result({:ok, _break}, socket, success_message) do
+    Flash.info(success_message)
+    send(self(), {:reload_schedule})
+
+    socket =
+      socket
+      |> assign(:form_errors, %{})
+      |> assign(:show_add_break_form, nil)
+
+    {:noreply, socket}
+  end
+
+  defp handle_break_result({:error, :invalid_time_format}, socket, _success_message) do
+    Flash.error(dgettext("dashboard_availability", "Invalid time format"))
+    {:noreply, socket}
+  end
+
+  defp handle_break_result({:error, %Ecto.Changeset{} = changeset}, socket, _success_message) do
+    {field_errors, general_messages} = BreakHelpers.break_error_messages(changeset)
+
+    Enum.each(general_messages, &Flash.error/1)
+
+    {:noreply, assign(socket, :form_errors, field_errors)}
+  end
+
+  defp handle_break_result({:error, _reason}, socket, _success_message) do
+    Flash.error(dgettext("dashboard_availability", "Break could not be saved"))
+    {:noreply, socket}
   end
 
   # Small helpers to reduce duplication

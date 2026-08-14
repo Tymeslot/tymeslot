@@ -392,6 +392,7 @@ msgid "Duration must be greater than 0 minutes"
 msgstr "Die Dauer muss größer als 0 Minuten sein"
 
 #: lib/tymeslot/availability/input_validation.ex
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
 msgstr "Die Endzeit muss nach der Startzeit liegen"
@@ -691,3 +692,24 @@ msgstr "sofort"
 #, elixir-autogen, elixir-format
 msgid "min"
 msgstr "Min."
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component.ex
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break could not be saved"
+msgstr "Pause konnte nicht gespeichert werden"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break must end within this day's working hours"
+msgstr "Die Pause muss innerhalb der Arbeitszeiten dieses Tages enden"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Break must start within this day's working hours"
+msgstr "Die Pause muss innerhalb der Arbeitszeiten dieses Tages beginnen"
+
+#: lib/tymeslot_web/live/dashboard/availability/list_component/break_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "This break overlaps an existing break"
+msgstr "Diese Pause überschneidet sich mit einer bestehenden Pause"

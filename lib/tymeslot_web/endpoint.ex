@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :tymeslot
 
+  alias Plug.Static
   alias Tymeslot.Infrastructure.StaticCompressors
 
   # The session will be stored in the cookie and signed,
@@ -133,10 +134,41 @@ defmodule TymeslotWeb.Endpoint do
   # under the upload root can never be served as same-origin HTML.
   plug TymeslotWeb.Plugs.UploadStaticSecurity
 
-  plug Plug.Static,
-    at: "/uploads",
-    from: Application.compile_env(:tymeslot, :upload_directory, "uploads"),
-    gzip: false
+  # Resolved at runtime rather than through `compile_env`. The upload root is
+  # the one endpoint setting the test suite varies per run: `config/test.exs`
+  # suffixes it with `MIX_TEST_PARTITION` so partitioned suites cannot write
+  # over each other. Pinned at compile time, that suffix makes every partition
+  # but the one the build was compiled for abort at boot on a compile-env
+  # mismatch, which rules out `mix test --partitions` entirely.
+  #
+  # `Plug.Static.init/1` is therefore called on first use instead of at compile
+  # time, and its result cached in `:persistent_term` so the cost is paid once
+  # per node rather than per request.
+  plug :serve_uploads
+
+  @upload_static_key {__MODULE__, :upload_static_opts}
+
+  defp serve_uploads(conn, _opts) do
+    Static.call(conn, upload_static_opts())
+  end
+
+  defp upload_static_opts do
+    case :persistent_term.get(@upload_static_key, nil) do
+      nil ->
+        opts =
+          Static.init(
+            at: "/uploads",
+            from: Application.get_env(:tymeslot, :upload_directory, "uploads"),
+            gzip: false
+          )
+
+        :persistent_term.put(@upload_static_key, opts)
+        opts
+
+      opts ->
+        opts
+    end
+  end
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

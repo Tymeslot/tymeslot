@@ -27,6 +27,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
 
   @spec sidebar(map()) :: Phoenix.LiveView.Rendered.t()
   def sidebar(assigns) do
+    assigns =
+      assign(assigns, :missing_integrations, missing_integrations(assigns.integration_status))
+
     ~H"""
     <%!-- Mobile Overlay --%>
     <div
@@ -102,9 +105,14 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           <div>
             <div class="dashboard-nav-section-title">{dgettext("dashboard_common", "General")}</div>
             <div class="space-y-0">
-              <.nav_link patch={~p"/dashboard"} current={@current_action} action={:overview}>
+              <.nav_link patch={~p"/dashboard/overview"} current={@current_action} action={:overview}>
                 <.icon name="hero-home" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Overview")}</span>
+              </.nav_link>
+
+              <.nav_link patch={~p"/dashboard"} current={@current_action} action={:calendar}>
+                <.icon name="hero-calendar-days" class="w-5 h-5" />
+                <span>{dgettext("dashboard_common", "Calendar")}</span>
               </.nav_link>
 
               <.nav_link patch={~p"/dashboard/meetings"} current={@current_action} action={:meetings}>
@@ -150,7 +158,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 current={@current_action}
                 action={:availability}
               >
-                <.icon name="hero-calendar-days" class="w-5 h-5" />
+                <.icon name="hero-adjustments-horizontal" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Availability")}</span>
               </.nav_link>
 
@@ -176,11 +184,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 patch={~p"/dashboard/integrations"}
                 current={integrations_current(@current_action)}
                 action={:integrations}
-                show_notification={needs_integration_setup?(@integration_status)}
+                show_notification={@missing_integrations != []}
                 notification_type="info"
-                notification_title={
-                  dgettext("dashboard_common", "Connect a calendar or video provider to finish setup")
-                }
+                notification_title={integration_setup_title(@missing_integrations)}
               >
                 <.icon name="hero-puzzle-piece" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Integrations")}</span>
@@ -257,12 +263,27 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   defp integrations_current(action) when action in @integration_actions, do: :integrations
   defp integrations_current(action), do: action
 
-  # The single Integrations item flags "needs attention" when either a calendar
-  # or a video provider is still unconnected — the union of the badges the
-  # separate Calendar and Video items used to carry.
-  defp needs_integration_setup?(status) do
-    not (Map.get(status, :has_calendar, false) and Map.get(status, :has_video, false))
+  # The single Integrations item stands in for the separate Calendar and Video
+  # items that used to carry their own badges, so it flags "needs attention"
+  # when either is still unconnected. Which of the two is outstanding has to
+  # travel with the marker: once one is connected, a badge that only says
+  # "something is missing" reads as if the connection never registered.
+  defp missing_integrations(status) do
+    for {kind, key} <- [calendar: :has_calendar, video: :has_video],
+        not Map.get(status, key, false),
+        do: kind
   end
+
+  defp integration_setup_title([]), do: nil
+
+  defp integration_setup_title([:calendar]),
+    do: dgettext("dashboard_common", "Connect a calendar to finish setup")
+
+  defp integration_setup_title([:video]),
+    do: dgettext("dashboard_common", "Connect a video provider to finish setup")
+
+  defp integration_setup_title([:calendar, :video]),
+    do: dgettext("dashboard_common", "Connect a calendar and a video provider to finish setup")
 
   defp close_sidebar_js do
     %JS{}

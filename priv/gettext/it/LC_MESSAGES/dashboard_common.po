@@ -40,8 +40,7 @@ msgid "Availability"
 msgstr "Disponibilità"
 
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
-#: lib/tymeslot_web/components/dashboard_layout.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Calendario"
@@ -50,11 +49,6 @@ msgstr "Calendario"
 #, elixir-autogen, elixir-format
 msgid "Close sidebar"
 msgstr "Chiudi la barra laterale"
-
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#, elixir-autogen, elixir-format
-msgid "Connect a calendar or video provider to finish setup"
-msgstr "Collega un calendario o un provider video per completare la configurazione"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -94,6 +88,7 @@ msgid "Meetings"
 msgstr "Riunioni"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr "Panoramica"
@@ -108,7 +103,6 @@ msgstr "Pro"
 msgid "Profile"
 msgstr "Profilo"
 
-#: lib/tymeslot_web/components/dashboard_layout.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
@@ -228,3 +222,18 @@ msgstr "Integrazione video"
 #, elixir-autogen, elixir-format
 msgid "Calendar subscription"
 msgstr "Abbonamento a un calendario"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar and a video provider to finish setup"
+msgstr "Collega un calendario e un provider video per completare la configurazione"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to finish setup"
+msgstr "Collega un calendario per completare la configurazione"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a video provider to finish setup"
+msgstr "Collega un provider video per completare la configurazione"

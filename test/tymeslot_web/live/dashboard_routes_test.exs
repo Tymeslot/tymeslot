@@ -73,7 +73,8 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
 
     @routes [
-      {"/dashboard", "Welcome back"},
+      {"/dashboard", "calendar-grid"},
+      {"/dashboard/overview", "Welcome back"},
       {"/dashboard/settings", "Profile Settings"},
       {"/dashboard/availability", "Availability"},
       {"/dashboard/meeting-settings", "Meeting Settings"},
@@ -185,13 +186,13 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
 
     test "shows the user's full name in the welcome banner", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Welcome back, Test User"
     end
 
     test "shows empty state when no meetings are scheduled", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Nothing on your plate today or tomorrow."
     end
@@ -203,14 +204,14 @@ defmodule TymeslotWeb.DashboardRoutesTest do
         attendee_name: "Jane Smith"
       )
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Strategy Session"
       assert html =~ "Jane Smith"
     end
 
     test "updates welcome banner name when profile is updated", %{conn: conn, profile: profile} do
-      {:ok, view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, html} = live(conn, ~p"/dashboard/overview")
       assert html =~ "Welcome back, Test User"
 
       send(view.pid, {:profile_updated, %{profile | full_name: "Updated Name"}})
@@ -219,7 +220,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
 
     test "refreshes meeting list after meeting type is changed", %{conn: conn, user: user} do
-      {:ok, view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, html} = live(conn, ~p"/dashboard/overview")
       assert html =~ "Nothing on your plate today or tomorrow."
 
       insert(:meeting,
@@ -233,46 +234,62 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
   end
 
-  describe "mode tab bar" do
+  describe "sidebar navigation" do
     setup %{conn: conn} do
       {:ok, setup_authenticated_user(conn)}
     end
 
-    test "renders mode tab bar on scheduling pages", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
-      assert html =~ "mode-tab-bar"
+    test "sidebar is present on scheduling pages", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
+      assert html =~ "dashboard-sidebar"
     end
 
-    test "renders mode tab bar on calendar page", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ "mode-tab-bar"
-    end
-
-    test "sidebar is present in scheduling mode", %{conn: conn} do
+    test "sidebar is present on the calendar page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
       assert html =~ "dashboard-sidebar"
     end
 
-    test "sidebar is absent in calendar mode", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar")
-      refute html =~ "dashboard-sidebar"
+    test "the same sidebar renders on every dashboard page", %{conn: conn} do
+      # The calendar used to swap the sidebar for a slim icon rail, so moving
+      # between the two reflowed the whole layout. Both must now carry the
+      # identical set of nav destinations.
+      {:ok, _view, calendar_html} = live(conn, ~p"/dashboard")
+      {:ok, _view, overview_html} = live(conn, ~p"/dashboard/overview")
+
+      assert sidebar_hrefs(calendar_html) == sidebar_hrefs(overview_html)
     end
 
-    test "scheduling tab is active on non-calendar pages", %{conn: conn} do
+    test "the Calendar item is active on the dashboard landing page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
-      doc = Floki.parse_document!(html)
-      [scheduling_tab] = Floki.find(doc, "[data-testid='mode-tab-scheduling']")
-      classes = scheduling_tab |> Floki.attribute("class") |> List.first() |> String.split()
-      assert "mode-tab--active" in classes
+      assert "dashboard-nav-link--active" in nav_link_classes(html, "/dashboard")
     end
 
-    test "calendar tab is active on /dashboard/calendar", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar")
-      doc = Floki.parse_document!(html)
-      [calendar_tab] = Floki.find(doc, "[data-testid='mode-tab-calendar']")
-      classes = calendar_tab |> Floki.attribute("class") |> List.first() |> String.split()
-      assert "mode-tab--active" in classes
+    test "the Overview item is active on the overview page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
+      assert "dashboard-nav-link--active" in nav_link_classes(html, "/dashboard/overview")
     end
+
+    test "the mode tab bar is gone", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      refute html =~ "mode-tab-bar"
+      refute html =~ "calendar-rail"
+    end
+  end
+
+  defp sidebar_hrefs(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#dashboard-sidebar a")
+    |> Enum.flat_map(&Floki.attribute(&1, "href"))
+  end
+
+  defp nav_link_classes(html, href) do
+    [link] =
+      html
+      |> Floki.parse_document!()
+      |> Floki.find("#dashboard-sidebar a[href='#{href}']")
+
+    link |> Floki.attribute("class") |> List.first() |> String.split()
   end
 
   describe "overview - nil full name" do
@@ -301,7 +318,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
 
     test "shows welcome banner without name when full_name is nil", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Welcome back!"
     end
@@ -335,7 +352,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
 
     test "greets a first-time visitor with 'Welcome' rather than 'Welcome back'", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
 
       assert html =~ "Welcome, First Timer"
       refute html =~ "Welcome back"
@@ -444,7 +461,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       send(view.pid, {:completely_unknown_message, "some data"})
 
       # Should not crash, should still render the dashboard
-      assert render(view) =~ "Welcome back"
+      assert render(view) =~ "calendar-grid"
     end
   end
 end
