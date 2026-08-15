@@ -40,6 +40,29 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
   end
 
   @doc """
+  Every enabled link that mirrors *out of* this integration.
+
+  The inbound sync path's question, asked once per synced calendar rather than
+  once per event. `enabled` is filtered in SQL rather than by the caller so a
+  paused link costs nothing beyond the index scan that skipped it — and, more
+  importantly, so that "paused means no writes" is enforced at the one place the
+  sync path looks for work rather than at each of the places that act on it.
+
+  No preloads. The caller enqueues jobs keyed on `id`, so loading two
+  integrations per link would fetch rows nothing reads, on a path that runs
+  after every sync of every calendar.
+  """
+  @spec list_enabled_for_source(integer()) :: [CalendarSyncLinkSchema.t()]
+  def list_enabled_for_source(source_integration_id) when is_integer(source_integration_id) do
+    CalendarSyncLinkSchema
+    |> where([l], l.source_integration_id == ^source_integration_id and l.enabled == true)
+    |> order_by([l], asc: l.id)
+    |> Repo.all()
+  end
+
+  def list_enabled_for_source(_source_integration_id), do: []
+
+  @doc """
   One link by id, with both integrations preloaded.
 
   Answers `{:error, :not_found}` for a missing row and for an id that is not an

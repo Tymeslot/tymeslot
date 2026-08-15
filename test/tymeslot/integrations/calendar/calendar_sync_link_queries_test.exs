@@ -95,6 +95,52 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueriesTest do
     end
   end
 
+  describe "list_enabled_for_source/1" do
+    test "returns the links mirroring out of this integration", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+
+      assert [found] = CalendarSyncLinkQueries.list_enabled_for_source(ctx.source.id)
+      assert found.id == link.id
+    end
+
+    test "does not return a link whose target this integration is", ctx do
+      {:ok, _link} = CalendarSyncLinkQueries.create(attrs(ctx))
+
+      assert CalendarSyncLinkQueries.list_enabled_for_source(ctx.target.id) == []
+    end
+
+    # A paused link must not produce work, and filtering it here rather than at
+    # the enqueue site is what makes "paused means no writes" true at the one
+    # place the sync path looks for work.
+    test "excludes a paused link", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+      {:ok, _paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})
+
+      assert CalendarSyncLinkQueries.list_enabled_for_source(ctx.source.id) == []
+    end
+
+    test "returns every link fanning out of one source", ctx do
+      third = insert(:calendar_integration, user: ctx.user, provider: "google")
+
+      {:ok, first} = CalendarSyncLinkQueries.create(attrs(ctx))
+
+      {:ok, second} =
+        CalendarSyncLinkQueries.create(attrs(ctx, %{target_integration_id: third.id}))
+
+      assert ctx.source.id
+             |> CalendarSyncLinkQueries.list_enabled_for_source()
+             |> Enum.map(& &1.id) == [first.id, second.id]
+    end
+
+    test "returns an empty list for an integration that is nobody's source", ctx do
+      assert CalendarSyncLinkQueries.list_enabled_for_source(ctx.source.id) == []
+    end
+
+    test "answers an id that is not an integer without raising" do
+      assert CalendarSyncLinkQueries.list_enabled_for_source("7") == []
+    end
+  end
+
   describe "get/1" do
     test "returns the link with both integrations preloaded", ctx do
       {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))

@@ -27,6 +27,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Repo
 
+  @type write_result ::
+          {:ok, CalendarSyncMirrorSchema.t()} | {:error, Ecto.Changeset.t()}
+
   @doc """
   The mapping this link holds for one source event, if it has mirrored it.
   """
@@ -73,4 +76,37 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
     |> Repo.all()
     |> MapSet.new()
   end
+
+  @doc """
+  Records a placeholder the engine has just written onto a target.
+
+  Returning the changeset error rather than raising is what makes orphan
+  compensation possible: the engine sees the failure, deletes the provider event
+  it created a moment ago, and lets the retry start from nothing.
+  """
+  @spec create(map()) :: write_result()
+  def create(attrs) do
+    %CalendarSyncMirrorSchema{}
+    |> CalendarSyncMirrorSchema.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @spec update(CalendarSyncMirrorSchema.t(), map()) :: write_result()
+  def update(%CalendarSyncMirrorSchema{} = mirror, attrs) do
+    mirror
+    |> CalendarSyncMirrorSchema.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Drops the mapping once the provider has confirmed the placeholder is gone.
+
+  Deleting the row is what ends the mirror's life, so it must not happen before
+  the provider delete succeeds: the row holds the only record of which provider
+  event to remove, and losing it strands the placeholder on the target with
+  nothing owning it. `pending_delete` is the state for the interval between the
+  source disappearing and the provider confirming.
+  """
+  @spec delete(CalendarSyncMirrorSchema.t()) :: write_result()
+  def delete(%CalendarSyncMirrorSchema{} = mirror), do: Repo.delete(mirror)
 end

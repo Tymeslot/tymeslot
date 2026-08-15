@@ -1,0 +1,303 @@
+defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
+  @moduledoc """
+  The mirror write itself: create, update, delete, and what happens when a
+  provider call succeeds but the bookkeeping does not.
+
+  Orphan compensation is the test that earns its keep. Google and Outlook assign
+  event ids server-side, so a create that lands on the provider while the mirror
+  row fails to persist leaves a placeholder nothing points at — and the Oban
+  retry, finding no mapping, creates a second one. Deleting the just-created
+  event before surfacing the error is what keeps the retry idempotent, and the
+  only way to see it happen is to assert the delete call.
+  """
+  use Tymeslot.DataCase, async: false
+
+  @moduletag :calendar
+  @moduletag :sync_links
+
+  import Mox
+  import Tymeslot.Factory
+  import Tymeslot.SyncLinkTestHelpers
+
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
+  alias Tymeslot.Integrations.Calendar.SyncLink.Engine
+
+  setup :verify_on_exit!
+
+  setup do
+    linked_pair()
+  end
+
+  defp source_event(source, attrs \\ %{}) do
+    CalendarEvent.new!(
+      Map.merge(
+        %{
+          uid: "source-uid-1",
+          calendar_integration_id: source.id,
+          provider: :google,
+          provider_calendar_id: "primary",
+          provider_event_id: "source-pid-1",
+          summary: "Board meeting",
+          all_day: false,
+          start_at: ~U[2026-07-03 09:00:00Z],
+          end_at: ~U[2026-07-03 10:00:00Z],
+          synced_at: ~U[2026-07-01 00:00:00Z]
+        },
+        attrs
+      )
+    )
+  end
+
+  describe "target_uid_for/2" do
+    test "is deterministic in the link and the source UID, so a PUT converges", %{link: link} do
+      first = Engine.target_uid_for(link.id, "source-uid-1")
+      again = Engine.target_uid_for(link.id, "source-uid-1")
+
+      assert first == again
+    end
+
+    test "differs per source event and per link", %{link: link} do
+      other = insert(:calendar_sync_link)
+
+      refute Engine.target_uid_for(link.id, "a") == Engine.target_uid_for(link.id, "b")
+      refute Engine.target_uid_for(link.id, "a") == Engine.target_uid_for(other.id, "a")
+    end
+  end
+
+  describe "mirror/3 — first write" do
+    test "creates the placeholder and records the mapping", %{
+      user: user,
+      source: source,
+      target: target,
+      link: link
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, context ->
+        assert context == {target.id, user.id}
+        assert event_data.summary == "Busy"
+        assert event_data.start_time == ~U[2026-07-03 09:00:00Z]
+        refute Map.has_key?(event_data, :description)
+        {:ok, %{provider_event_id: "target-pid-1", uid: event_data.uid}}
+      end)
+
+      assert :ok == Engine.mirror(link, source_event(source), user.id)
+
+      assert {:ok, mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      assert mirror.target_integration_id == target.id
+      assert mirror.target_uid == Engine.target_uid_for(link.id, "source-uid-1")
+      assert mirror.target_provider_event_id == "target-pid-1"
+      assert mirror.state == "active"
+      assert mirror.last_synced_at
+    end
+
+    test "an all-day source produces a date-valued placeholder", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      event =
+        source_event(source, %{
+          all_day: true,
+          start_at: nil,
+          end_at: nil,
+          start_date: ~D[2026-07-03],
+          end_date: ~D[2026-07-06]
+        })
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.all_day == true
+        assert event_data.start_time == ~D[2026-07-03]
+        assert event_data.end_time == ~D[2026-07-06]
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok == Engine.mirror(link, event, user.id)
+    end
+
+    test "a provider failure surfaces as an error and writes no mapping", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        {:error, :rate_limited}
+      end)
+
+      assert {:error, :rate_limited} == Engine.mirror(link, source_event(source), user.id)
+
+      assert {:error, :not_found} ==
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+    end
+  end
+
+  describe "mirror/3 — orphan compensation" do
+    test "deletes the just-created provider event when the mapping cannot be persisted", %{
+      user: user,
+      source: source,
+      target: target,
+      link: link
+    } do
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        {:ok, %{provider_event_id: "orphan-pid"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, context ->
+        send(test_pid, {:compensated, uid, context})
+        :ok
+      end)
+
+      # A link id that no longer exists makes the mirror insert fail on its
+      # foreign key — the same class of failure as the database being
+      # unavailable, without needing to take it away.
+      doomed = %{link | id: link.id + 10_000}
+
+      assert {:error, _reason} = Engine.mirror(doomed, source_event(source), user.id)
+
+      assert_received {:compensated, orphan_uid, {target_id, user_id}}
+      assert target_id == target.id
+      assert user_id == user.id
+      assert orphan_uid == Engine.target_uid_for(doomed.id, "source-uid-1")
+    end
+
+    test "a failed compensating delete does not mask the persistence error", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        {:ok, %{provider_event_id: "orphan-pid"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+        {:error, :service_unavailable}
+      end)
+
+      doomed = %{link | id: link.id + 10_000}
+
+      assert {:error, reason} = Engine.mirror(doomed, source_event(source), user.id)
+      refute reason == :service_unavailable
+    end
+  end
+
+  describe "mirror/3 — subsequent writes" do
+    test "updates the existing placeholder rather than creating a second", %{
+      user: user,
+      source: source,
+      target: target,
+      link: link
+    } do
+      target_uid = Engine.target_uid_for(link.id, "source-uid-1")
+
+      mirror_for_link(link,
+        source_uid: "source-uid-1",
+        target_uid: target_uid,
+        target_provider_event_id: "target-pid-1"
+      )
+
+      expect(Tymeslot.CalendarMock, :update_event, fn uid, event_data, context ->
+        assert uid == target_uid
+        assert context == {target.id, user.id}
+        assert event_data.summary == "Busy"
+        assert event_data.start_time == ~U[2026-07-03 09:00:00Z]
+        :ok
+      end)
+
+      assert :ok == Engine.mirror(link, source_event(source), user.id)
+
+      assert {:ok, mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      assert mirror.state == "active"
+    end
+
+    test "an update failure marks the mapping failed and surfaces the error", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      mirror_for_link(link,
+        source_uid: "source-uid-1",
+        target_uid: Engine.target_uid_for(link.id, "source-uid-1")
+      )
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, :timeout} == Engine.mirror(link, source_event(source), user.id)
+
+      assert {:ok, mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      assert mirror.state == "failed"
+    end
+  end
+
+  describe "unmirror/3" do
+    test "deletes the placeholder and drops the mapping", %{
+      user: user,
+      target: target,
+      link: link
+    } do
+      target_uid = Engine.target_uid_for(link.id, "source-uid-1")
+      mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn uid, context ->
+        assert uid == target_uid
+        assert context == {target.id, user.id}
+        :ok
+      end)
+
+      assert :ok == Engine.unmirror(link, "source-uid-1", user.id)
+
+      assert {:error, :not_found} ==
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+    end
+
+    test "a placeholder the provider no longer has still drops the mapping", %{
+      user: user,
+      link: link
+    } do
+      mirror_for_link(link,
+        source_uid: "source-uid-1",
+        target_uid: Engine.target_uid_for(link.id, "source-uid-1")
+      )
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context -> {:error, :not_found} end)
+
+      assert :ok == Engine.unmirror(link, "source-uid-1", user.id)
+
+      assert {:error, :not_found} ==
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+    end
+
+    test "a failed delete leaves the mapping behind so the placeholder can be found again", %{
+      user: user,
+      link: link
+    } do
+      mirror_for_link(link,
+        source_uid: "source-uid-1",
+        target_uid: Engine.target_uid_for(link.id, "source-uid-1")
+      )
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context ->
+        {:error, :service_unavailable}
+      end)
+
+      assert {:error, :service_unavailable} == Engine.unmirror(link, "source-uid-1", user.id)
+
+      assert {:ok, mirror} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      assert mirror.state == "pending_delete"
+    end
+
+    test "nothing to unmirror is not an error", %{user: user, link: link} do
+      assert :ok == Engine.unmirror(link, "never-mirrored", user.id)
+    end
+  end
+end

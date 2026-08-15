@@ -427,6 +427,10 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
     do: socket |> CalendarEventHandlers.handle_calendar_events_updated() |> rebuild_agenda()
 
+  # Sent by the grid's Refresh, which reloads the events inside its own
+  # component and so cannot rebuild the agenda the parent owns.
+  def handle_info(:rebuild_agenda, socket), do: {:noreply, refresh_agenda(socket)}
+
   def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket),
     do: CalendarEventHandlers.handle_calendar_sync_complete(socket)
 

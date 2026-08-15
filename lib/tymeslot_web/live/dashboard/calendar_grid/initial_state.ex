@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       calendar_colors: %{},
       calendar_colour_keys: %{},
       hidden_calendar_keys: MapSet.new(),
+      mirror_uids: MapSet.new(),
       preferences: nil,
       show_calendar_list: false,
       show_view_menu: false,

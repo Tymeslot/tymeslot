@@ -13,6 +13,7 @@ defmodule Tymeslot.Agenda do
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
   alias Tymeslot.Meetings
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -80,19 +81,34 @@ defmodule Tymeslot.Agenda do
       |> Enum.reject(&is_nil/1)
       |> MapSet.new()
 
+    # The same set the calendar grid filters on, from the same authority: a
+    # placeholder is a mirror because a row in the mirrors table points at it,
+    # never because of a flag on the event.
+    mirror_uids = CalendarSyncMirrorQueries.mirror_uids_for_integrations(integration_ids)
+
     external =
       integration_ids
       |> CalendarGrid.list_events_for_range(now, window_end, limit: @external_event_limit)
-      |> Enum.reject(&drop_external?(&1, booked_event_ids))
+      |> Enum.reject(&drop_external?(&1, booked_event_ids, mirror_uids))
 
     Enum.map(meetings, &entry_from_meeting(&1, tz, overrides)) ++
       Enum.map(external, &entry_from_event(&1, tz, calendar_names, overrides))
   end
 
-  # An external event is dropped when it is one of our own synced bookings, a
-  # cancellation, a free/transparent block, or a timed event missing its start.
-  defp drop_external?(event, booked_event_ids) do
+  # An external event is dropped when it is a busy-block mirror, one of our own
+  # synced bookings, a cancellation, a free/transparent block, or a timed event
+  # missing its start.
+  #
+  # The mirror test is keyed on `{integration_id, uid}` from the mirrors table,
+  # matching `CalendarGrid` — and deliberately not on `created_by_tymeslot`.
+  # That flag says Tymeslot wrote the event, which is equally true of a booking
+  # it synced, so filtering the agenda on it would take the organiser's own
+  # appointments off their agenda. It also masked the missing check: a mirror
+  # carrying the flag was dropped for the wrong reason, and one that did not
+  # carry it was drawn in the "Up next" strip beside the source it mirrors.
+  defp drop_external?(event, booked_event_ids, mirror_uids) do
     event.created_by_tymeslot or
+      MapSet.member?(mirror_uids, {event.calendar_integration_id, Map.get(event, :uid)}) or
       event.status == "cancelled" or
       event.transparency == "transparent" or
       (not event.all_day and is_nil(event.start_at)) or

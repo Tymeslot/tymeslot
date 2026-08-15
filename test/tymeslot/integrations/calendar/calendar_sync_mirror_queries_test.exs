@@ -101,4 +101,61 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueriesTest do
                MapSet.new([{link.target_integration_id, mirror.target_uid}])
     end
   end
+
+  describe "create/1" do
+    test "records a placeholder the engine has written", %{link: link} do
+      assert {:ok, mirror} =
+               CalendarSyncMirrorQueries.create(%{
+                 sync_link_id: link.id,
+                 source_uid: "src-1",
+                 target_integration_id: link.target_integration_id,
+                 target_uid: "tymeslot-mirror-1",
+                 target_provider_event_id: "pid-1",
+                 state: "active"
+               })
+
+      assert mirror.state == "active"
+
+      assert {:ok, _found} =
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "src-1")
+    end
+
+    # Orphan compensation depends on this: the engine has to see the failure to
+    # know it must delete the provider event it just created.
+    test "returns the changeset rather than raising when the row cannot be written" do
+      assert {:error, %Ecto.Changeset{}} =
+               CalendarSyncMirrorQueries.create(%{source_uid: "src-1"})
+    end
+  end
+
+  describe "update/2" do
+    test "moves a mirror's state", %{link: link} do
+      mirror = mirror_for_link(link)
+
+      assert {:ok, updated} =
+               CalendarSyncMirrorQueries.update(mirror, %{state: "pending_delete"})
+
+      assert updated.state == "pending_delete"
+    end
+
+    test "rejects a state outside the vocabulary", %{link: link} do
+      mirror = mirror_for_link(link)
+
+      assert {:error, changeset} = CalendarSyncMirrorQueries.update(mirror, %{state: "vanished"})
+      assert %{state: [_message]} = errors_on(changeset)
+    end
+  end
+
+  describe "delete/1" do
+    test "drops the mapping once the provider has confirmed the placeholder is gone", %{
+      link: link
+    } do
+      mirror = mirror_for_link(link, source_uid: "src-1")
+
+      assert {:ok, _deleted} = CalendarSyncMirrorQueries.delete(mirror)
+
+      assert {:error, :not_found} ==
+               CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "src-1")
+    end
+  end
 end

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Appearance
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Timezones
@@ -34,8 +35,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     |> assign(:preferences, prefs)
     |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
     |> assign(:video_integrations, video_integrations)
+    |> assign_mirror_uids(integrations)
     |> assign_calendar_appearances(user_id)
     |> check_staleness()
+  end
+
+  @doc """
+  Assigns the set of cached events that are busy-block mirrors of an event on
+  another of the organiser's calendars.
+
+  A mirror exists for external tools reading the target calendar; drawing it in
+  the organiser's own grid would double-draw every synchronised event beside its
+  source, which is noise rather than information.
+
+  Loaded here, with the other visibility assigns, rather than in
+  `precompute_derived/1`: the answer depends only on which integrations are on
+  screen, and `precompute_derived/1` runs on every navigation, every inline
+  edit and every live cache update. Querying there would put a database round
+  trip in front of each of them.
+
+  The set is keyed on `{integration_id, uid}` from the mirrors table, never on
+  `created_by_tymeslot`. That flag means "Tymeslot wrote this", which is equally
+  true of an event a booking created, so filtering on it would hide the
+  organiser's own bookings.
+  """
+  @spec assign_mirror_uids(Phoenix.LiveView.Socket.t(), [map()]) :: Phoenix.LiveView.Socket.t()
+  def assign_mirror_uids(socket, integrations) do
+    mirror_uids =
+      integrations
+      |> Enum.map(& &1.id)
+      |> CalendarSyncMirrorQueries.mirror_uids_for_integrations()
+
+    assign(socket, :mirror_uids, mirror_uids)
   end
 
   @doc """
@@ -127,7 +158,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
       do_visible_events(
         assigns.events,
         assigns.hidden_integration_ids,
-        Map.get(assigns, :hidden_calendar_keys, MapSet.new())
+        Map.get(assigns, :hidden_calendar_keys, MapSet.new()),
+        Map.get(assigns, :mirror_uids, MapSet.new())
       )
 
     v_days = visible_days(assigns)
@@ -186,25 +218,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   # Private helpers
 
-  # An event is hidden when its whole account is hidden, or when the organiser
-  # has hidden the single calendar it sits in. The two are separate controls
+  # An event is hidden when its whole account is hidden, when the organiser has
+  # hidden the single calendar it sits in, or when it is a busy-block mirror of
+  # an event on another of their calendars. The first two are separate controls
   # over separate stores, so both are consulted rather than one deriving the
   # other: hiding an account must not erase the per-calendar choices underneath
-  # it, which the organiser gets back when they show the account again.
-  defp do_visible_events(events, hidden_ids, hidden_keys) do
-    if hidden_ids == [] and MapSet.size(hidden_keys) == 0 do
+  # it, which the organiser gets back when they show the account again. The
+  # third is not a control at all — a mirror is never shown.
+  #
+  # The cheap-exit test names all three sources. Leaving the mirror set out of
+  # it would return every event untouched whenever no account and no calendar
+  # is hidden, which is the ordinary case, so mirrors would leak into the grid
+  # for almost every organiser while the filter below looked correct.
+  defp do_visible_events(events, hidden_ids, hidden_keys, mirror_uids) do
+    if hidden_ids == [] and MapSet.size(hidden_keys) == 0 and MapSet.size(mirror_uids) == 0 do
       events
     else
-      Enum.reject(events, &hidden_event?(&1, hidden_ids, hidden_keys))
+      Enum.reject(events, &hidden_event?(&1, hidden_ids, hidden_keys, mirror_uids))
     end
   end
 
-  defp hidden_event?(event, hidden_ids, hidden_keys) do
+  defp hidden_event?(event, hidden_ids, hidden_keys, mirror_uids) do
     event.calendar_integration_id in hidden_ids or
       MapSet.member?(
         hidden_keys,
         {event.calendar_integration_id, Map.get(event, :provider_calendar_id)}
-      )
+      ) or
+      MapSet.member?(mirror_uids, {event.calendar_integration_id, Map.get(event, :uid)})
   end
 
   defp visible_days(%{view: :week, date: date} = assigns) do

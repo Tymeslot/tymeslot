@@ -156,6 +156,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
       {:ok, result} ->
         socket = Helpers.load_events(socket)
 
+        # `load_events/1` reloads the grid's own mirror set, but the Up-next
+        # strip and the overview agenda run their own query in the parent and
+        # would keep serving the answer from before this refresh. That is the
+        # moment it matters most: a refresh is what discovers a placeholder a
+        # sync has just written, so the strip would advertise the organiser's
+        # own mirror beside the source it mirrors.
+        send(self(), :rebuild_agenda)
+
         cond do
           result.errors != [] ->
             error_count = length(result.errors)

@@ -20,9 +20,13 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
+  alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
   alias Tymeslot.Meetings
 
   @typep integration_id :: integer()
@@ -121,12 +125,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   @doc """
   Side effects that must run after the cache upsert transaction commits:
-  invalidating the availability cache, the PubSub broadcast, and the
-  linked-meeting time-change reconciliation.
+  invalidating the availability cache, the PubSub broadcast, the
+  linked-meeting time-change reconciliation, and enqueueing cross-calendar
+  mirror write-backs.
 
   Safe to call outside any transaction. Idempotent — availability cache
-  invalidation, a PubSub re-broadcast, and time-change reconciliation are
-  all safe to repeat.
+  invalidation, a PubSub re-broadcast, time-change reconciliation and a
+  write-back enqueue (which collapses onto any pending job for the same event)
+  are all safe to repeat.
   """
   @spec post_commit_reconciliation(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) :: :ok
   def post_commit_reconciliation(_integration, []), do: :ok
@@ -147,7 +153,34 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       Meetings.list_meetings_by_provider_event_ids(integration.id, provider_event_ids)
 
     Enum.each(calendar_events, &maybe_reconcile_time_change(integration, &1, meetings_by_id))
+    enqueue_mirror_write_backs(integration, calendar_events)
     :ok
+  end
+
+  # Cross-calendar mirroring joins the pipeline here, and only ever as an
+  # enqueue. A provider call at this point would put the *target* calendar's
+  # latency inside the *source* calendar's sync, so a target that is slow, down
+  # or over quota could stall an inbound sync it has nothing to do with. The
+  # Oban job absorbs that instead, with its own retries and its own backoff.
+  #
+  # The mirror set is fetched once for the whole batch rather than per event.
+  # It is the loop-prevention input: an event on this calendar that is itself a
+  # placeholder must not spawn another, and asking per event would issue a query
+  # per synced event on every sync of every calendar.
+  defp enqueue_mirror_write_backs(integration, calendar_events) do
+    case CalendarSyncLinkQueries.list_enabled_for_source(integration.id) do
+      [] ->
+        :ok
+
+      links ->
+        mirrors = CalendarSyncMirrorQueries.mirror_uids_for_integrations([integration.id])
+
+        calendar_events
+        |> Enum.filter(&Eligibility.worth_enqueueing?(&1, mirrors))
+        |> Enum.each(fn event ->
+          Enum.each(links, &WriteBack.enqueue(&1.id, event.uid, :upsert))
+        end)
+    end
   end
 
   defp maybe_reconcile_time_change(
