@@ -36,13 +36,32 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
 
   describe "uuid_to_google_event_id/1 — SHA-256 fallback path" do
     test "hashes a UID containing characters outside base32hex (e.g. g-z)" do
-      # 'g' is outside a-v0-9, so this must fall back to SHA-256 + Base.encode32
+      # 'g' is outside a-v0-9, so this must fall back to a hash.
       uid = "meeting-slug-with-words"
       result = EventMapper.uuid_to_google_event_id(uid)
 
-      # Base.encode32 uses lowercase a-z and 2-7; result is truncated to 32 chars
       assert String.length(result) == 32
-      assert String.match?(result, ~r/^[a-z2-7]+$/)
+      assert String.match?(result, ~r/^[a-v0-9]+$/)
+    end
+
+    # The fallback exists to guarantee a valid id for input that is not already
+    # one, so producing an invalid id is the one thing it must never do.
+    #
+    # It did. `Base.encode32/2` is *standard* base32 — a-z and 2-7 — while
+    # Google requires base32hex, a-v and 0-9. Every hash containing w, x, y or
+    # z was rejected with "Invalid resource id value", and at 32 characters
+    # almost all of them contain one. Mirror UIDs are hashed twice, so they
+    # always took this path: cross-calendar sync onto a Google target failed
+    # 98.7% of the time, and the assertion that should have caught it asserted
+    # the wrong alphabet.
+    test "never emits a character Google rejects, over a large sample" do
+      offending =
+        1..2000
+        |> Enum.map(&EventMapper.uuid_to_google_event_id("tymeslot-mirror-sample-#{&1}"))
+        |> Enum.reject(&String.match?(&1, ~r/^[a-v0-9]{5,1024}$/))
+
+      assert offending == [],
+             "#{length(offending)}/2000 ids used characters outside base32hex, e.g. #{inspect(Enum.take(offending, 3))}"
     end
 
     test "is deterministic — same UID always produces the same Google event ID" do
@@ -64,7 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
 
       # Must be a valid 32-char hash of the FULL uid (not just "ab")
       assert String.length(result) == 32
-      assert String.match?(result, ~r/^[a-z2-7]+$/)
+      assert String.match?(result, ~r/^[a-v0-9]+$/)
     end
 
     test "hashes the full UID (not just the local part) to avoid collisions" do

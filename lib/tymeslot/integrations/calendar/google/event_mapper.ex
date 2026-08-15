@@ -80,8 +80,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     else
       # Input is not a valid base32hex ID (e.g. arbitrary string UID) —
       # hash the FULL uid to produce a deterministic, valid Google event ID.
-      :crypto.hash(:sha256, uid)
-      |> Base.encode32(case: :lower, padding: false)
+      #
+      # `hex_encode32/2`, not `encode32/2`. Standard base32 is a-z and 2-7;
+      # base32hex — the alphabet Google's event ids actually require — is a-v
+      # and 0-9. The two differ in exactly the characters that make an id
+      # invalid, so the fallback that exists to guarantee validity was emitting
+      # w, x, y and z and Google answered "Invalid resource id value" with a
+      # 400. At 32 characters nearly every hash contains one.
+      :sha256
+      |> :crypto.hash(uid)
+      |> Base.hex_encode32(case: :lower, padding: false)
       |> String.slice(0, 32)
     end
   end
