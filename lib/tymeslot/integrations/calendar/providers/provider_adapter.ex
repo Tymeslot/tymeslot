@@ -215,9 +215,27 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
   @doc """
   Updates an existing event in the calendar.
+
+  Answers `{:ok, updated}` when the provider returned the event and a bare
+  `:ok` when it did not, rather than flattening both to `:ok`.
+
+  The distinction is the caller's only way to learn what identifier the event
+  is actually filed under, and the two provider families genuinely differ.
+  Google is handed a UID and files the event under
+  `EventMapper.uuid_to_google_event_id/1` of it — a hash — then answers with
+  the event so converted that its own id sits under `uid`. The CalDAV family
+  stores the UID it was given unchanged and answers a bare `:ok`, so for it
+  the UID the caller already holds *is* the identifier.
+
+  Collapsing the two meant a caller could only ever assume the CalDAV
+  answer. For Google that assumption records an id the provider does not know,
+  which is how mirror placeholders became both unrecognisable to loop
+  prevention and undeletable by teardown. Returning what the provider said
+  keeps the difference visible without any caller having to know which family
+  it is talking to.
   """
   @spec update_event(adapter_client(), String.t(), map()) ::
-          :ok | {:error, atom(), term()} | {:error, term()}
+          :ok | {:ok, term()} | {:error, atom(), term()} | {:error, term()}
   def update_event(adapter_client, uid, event_data) do
     Metrics.time_operation(
       :calendar_update_event,
@@ -233,10 +251,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             Logger.info("Successfully updated event", uid: uid)
             :ok
 
-          {:ok, _updated} ->
-            # Be tolerant of providers that return {:ok, event}
+          {:ok, _updated} = result ->
             Logger.info("Successfully updated event", uid: uid)
-            :ok
+            result
 
           {:error, type, reason} = error ->
             Logger.error("Failed to update event",

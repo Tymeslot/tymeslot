@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.PrimarySelection
+  alias Tymeslot.Integrations.Calendar.SyncLink.WriteEtag
   alias Tymeslot.Integrations.Common.ConfigManager
 
   # Type definitions
@@ -111,6 +112,54 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
     end
   end
 
+  @doc """
+  Wraps a *write* API call, keeping the version marker the provider stamped on
+  the event it just wrote.
+
+  The same handling as `handle_api_call/2`, plus one thing the read path has no
+  use for. `convert_event/1` builds the shape the availability layer consumes,
+  and no provider's version of it carries an etag — so by the time a write
+  response reaches the caller, the only record of what the provider made of that
+  write has been discarded. That is what left the cross-calendar mirror unable
+  to tell its own writes from an organiser's hand edits: see
+  `SyncLink.WriteEtag`, which is the sole reader of the key added here.
+
+  The etag is merged onto the converted map rather than returned beside it,
+  because every existing caller pattern-matches `{:ok, event}` and destructures
+  the event; widening the tuple would break all of them to serve one. An extra
+  key is additive — a caller that does not know about it is unaffected — and a
+  provider that reports no etag has none merged, so the key's *absence* stays a
+  faithful report rather than becoming a `nil` that looks like an answer.
+
+  Reads deliberately keep going through `handle_api_call/2`. An etag on a read
+  describes the event as fetched, which is what the cache column already holds;
+  duplicating it onto the converted shape would offer callers a second source
+  for the same fact, and the two would drift.
+  """
+  @spec handle_write_api_call((-> any()), (any() -> any())) ::
+          {:ok, any()} | {:error, any()} | :ok
+  def handle_write_api_call(api_call_fn, conversion_fn)
+      when is_function(api_call_fn, 0) and is_function(conversion_fn, 1) do
+    case api_call_fn.() do
+      {:ok, raw} -> {:ok, merge_write_etag(conversion_fn.(raw), raw)}
+      :ok -> :ok
+      {:error, type, message} -> log_typed_error(type, message)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Only onto a map, and only when the raw body actually carried one. A
+  # conversion that answered something other than a map is left exactly as it
+  # was rather than being coerced into one to make room for a key.
+  defp merge_write_etag(converted, raw) when is_map(converted) do
+    case WriteEtag.extract(raw) do
+      etag when is_binary(etag) -> Map.put(converted, :etag, etag)
+      nil -> converted
+    end
+  end
+
+  defp merge_write_etag(converted, _raw), do: converted
+
   defp log_typed_error(type, message) do
     Logger.warning("Calendar provider API call failed",
       error_type: type,
@@ -203,9 +252,13 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         OAuthBase.validate_config(config, &validate_oauth_scope/1)
       end
 
+      # Both writes go through `handle_write_api_call/2` rather than
+      # `handle_api_call/2`, which keeps the provider's etag on the converted
+      # event. It is the placeholder's version marker *as written*, and the only
+      # moment it exists outside the provider — see `SyncLink.WriteEtag`.
       @impl Tymeslot.Integrations.Calendar.Provider
       def create_event(integration, event_attrs) do
-        OAuthBase.handle_api_call(
+        OAuthBase.handle_write_api_call(
           fn -> call_create_event(integration, event_attrs) end,
           &convert_event/1
         )
@@ -213,7 +266,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
 
       @impl Tymeslot.Integrations.Calendar.Provider
       def update_event(integration, event_id, event_attrs) do
-        OAuthBase.handle_api_call(
+        OAuthBase.handle_write_api_call(
           fn -> call_update_event(integration, event_id, event_attrs) end,
           &convert_event/1
         )

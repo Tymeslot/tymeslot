@@ -35,36 +35,58 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
   divergences in a history that is mostly noise. A conflict is logged only when
   two values were compared and found to differ.
 
-  ## KNOWN GAP: the three etag-based kinds do not currently fire
+  ## The three etag-based kinds: closed for Google, off by design elsewhere
 
-  `mirror_edited`, `both_changed` and `delete_race` all require a stored
-  `target_etag` to compare against, and nothing can currently supply one, so in
-  production none of them is ever written. This is a real gap, stated here
-  rather than left for the next reader to discover from an audit that is quietly
-  empty. `write_failed` and `occurrence_moved` are unaffected and do fire.
+  `mirror_edited`, `both_changed` and `delete_race` each need a stored
+  `target_etag` describing the placeholder *as written*. For a long time nothing
+  could supply one and all three were dead in production. That is now closed for
+  the providers that report an etag, and the shape of what remains is worth
+  stating precisely, because "does not fire" means two different things
+  depending on the provider.
 
-  The cause is that the engine has no way to learn the placeholder's etag *after*
-  it writes it. The provider returns it in the write response, but
-  `Events.update_event/3` narrows its contract to `:ok` and the body is dropped
-  before the engine sees it. Reading it back from the target's cache instead
-  records the *pre*-write value, which then reports the engine's own change as a
-  stranger's edit — a false row per write per series, which is worse than none:
-  this log is read when someone is trying to find out why a calendar looks
-  wrong, and it is worth nothing if most of what it holds is the engine
-  reporting itself.
+  The write response carries the etag, and `SyncLink.WriteEtag` reads it out of
+  whatever shape the write answered with. `OAuthBase.handle_write_api_call/2`
+  is what keeps it: `convert_event/1` builds the availability layer's shape and
+  drops every key it does not name, so the etag had to be preserved *before*
+  that conversion narrowed the response. The engine then stamps it on the
+  mapping row at every point a write lands — create, update, the 409
+  create→update fallback, and the recreate of a hand-deleted placeholder.
 
-  Falling back to timestamps alone does not close it either. Our write stamps
-  `last_synced_at`; the provider stamps `provider_updated_at` when it applies
-  that same write, necessarily later. So "changed after our write" is true of
-  our own write as much as of a stranger's, and the two are indistinguishable
-  without an etag. Both directions were built and measured; each trades a false
-  positive for a false negative.
+  Per provider:
 
-  Closing it properly means carrying the write response's etag back to the
-  engine — widening `Events.update_event/3` and the shared provider behaviour,
-  which 89 references across six modules depend on. That is a deliberate piece
-  of work rather than a patch, and it is the one thing that would make these
-  three kinds real.
+  - **Google** reports `etag` on every write response, so all three kinds fire.
+  - **Outlook** sends `@odata.etag` on the raw Graph body and is read the same
+    way; it is untested against the live API, so treat it as expected-to-work
+    rather than confirmed.
+  - **The CalDAV family** answers a bare `:ok` from a PUT whose response ETag
+    the HTTP layer does not surface. It records `nil`.
+
+  A `nil` baseline is a **stated rule, not an accident**: `mirror_edited?/2`
+  below requires two binary etags, so the three etag-based kinds are simply off
+  for a provider that reports none, and no arrangement of the cached placeholder
+  can produce a row. That under-reporting is deliberate. The alternative is a
+  false row per write per series, and this log is read when someone is trying to
+  find out why a calendar looks wrong — it is worth less than nothing if most of
+  what it holds is the engine reporting itself.
+
+  Two shortcuts remain wrong, and are recorded so they are not retried:
+
+  - **Reading the etag back from the cache.** That row holds what the target's
+    last *inbound* sync fetched, which is the placeholder from *before* this
+    write. Stamping it means the next pass compares our own change against a
+    pre-change value and files the engine's write as a stranger's edit.
+  - **Falling back to timestamps.** Our write stamps `last_synced_at`; the
+    provider stamps `provider_updated_at` when it applies that same write,
+    necessarily later. "Changed after our write" is therefore true of our own
+    write as much as of a stranger's.
+
+  `write_failed` and `occurrence_moved` never depended on a baseline and fire
+  for every provider, unchanged.
+
+  Closing the CalDAV remainder means surfacing the PUT response's ETag header
+  through `CalDAV.Events.do_conditional_put/6` and the retry and circuit-breaker
+  wrappers it sits behind, all of which currently narrow to `:ok`. That is a
+  separate piece of work in the HTTP layer, not a change here.
 
   ## Why `series_exceptions` is no longer produced
 

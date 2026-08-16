@@ -81,17 +81,25 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   @doc """
   Updates an existing event by UID.
   Accepts optional context (MeetingSchema, user_id, or {integration_id, user_id}) to use specific calendar.
+
+  Success is `{:ok, updated}` when the provider returned the event and a bare
+  `:ok` when it did not — see `ProviderAdapter.update_event/3`, which explains
+  why the two provider families differ and why flattening them loses the only
+  record of the identifier the event was actually filed under. Callers that
+  only care whether the write landed match both; a caller that needs the id
+  reads it from the returned event.
   """
   @spec update_event(event_uid(), event_data(), context() | {integration_id(), user_id()}) ::
-          :ok | {:error, term()}
+          :ok | {:ok, term()} | {:error, term()}
   def update_event(uid, event_data, context \\ nil) do
     Metrics.time_operation(:update_event, %{uid: uid}, fn ->
       Logger.info("Updating calendar event", uid: uid)
 
       with %{} = client <- ClientManager.resolve_client(context),
-           :ok <- ProviderAdapter.update_event(client, uid, event_data) do
+           result when result == :ok or (is_tuple(result) and elem(result, 0) == :ok) <-
+             ProviderAdapter.update_event(client, uid, event_data) do
         Logger.info("Successfully updated calendar event", uid: uid)
-        :ok
+        result
       else
         nil ->
           Logger.error("No calendar integration found for update", context: log_context(context))

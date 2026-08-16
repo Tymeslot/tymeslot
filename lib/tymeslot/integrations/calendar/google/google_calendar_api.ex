@@ -282,7 +282,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
-  Fetches the incremental event list for the integration using the stored sync token.
+  Fetches the incremental event list for the integration using the stored sync
+  token, paginating until the page that carries the next sync token.
 
   Returns `{:ok, %{events: [...], next_sync_token: token}}` on success,
   `{:error, :gone, message}` when the sync token has expired (HTTP 410),
@@ -302,31 +303,57 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     sync_token = integration.google_sync_token
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      result =
-        CalendarCircuitBreaker.call(:google, fn ->
-          make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, %{
-            "syncToken" => sync_token
-          })
-        end)
-
-      case result do
-        {:ok, response} when is_map(response) ->
-          {:ok,
-           %{
-             events: response["items"] || [],
-             next_sync_token: response["nextSyncToken"]
-           }}
-
-        {:ok, error} ->
-          error
-
-        {:error, :circuit_open} = error ->
-          error
-
-        other ->
-          other
-      end
+      fetch_incremental_page(token, calendar_id, sync_token, nil, [])
     end)
+  end
+
+  # A delta is paginated exactly like the bootstrap listing: Google caps a page
+  # at `maxResults` and answers with `nextPageToken`, withholding
+  # `nextSyncToken` until the final page. Reading only the first page therefore
+  # loses every later page *and* returns a nil token, which the worker declines
+  # to persist — so the stale token replays that same first page on every
+  # subsequent sync and no new event ever reaches the cache. The failure is
+  # silent: the fetch succeeds and no job fails.
+  #
+  # `singleEvents` must match the listing that minted the token; `timeMin` and
+  # `timeMax` are rejected outright alongside a `syncToken`, so the window is
+  # applied by the bootstrap that seeds the token rather than here.
+  defp fetch_incremental_page(token, calendar_id, sync_token, page_token, acc) do
+    base = %{
+      "syncToken" => sync_token,
+      "singleEvents" => "true",
+      "maxResults" => "2500"
+    }
+
+    params = maybe_put_page_token(base, page_token)
+
+    result =
+      CalendarCircuitBreaker.call(:google, fn ->
+        make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, params)
+      end)
+
+    case result do
+      {:ok, response} when is_map(response) ->
+        items = response["items"] || []
+        acc = Enum.reverse(items, acc)
+
+        case response["nextPageToken"] do
+          nil ->
+            {:ok, %{events: Enum.reverse(acc), next_sync_token: response["nextSyncToken"]}}
+
+          next_page ->
+            fetch_incremental_page(token, calendar_id, sync_token, next_page, acc)
+        end
+
+      {:ok, error} ->
+        error
+
+      {:error, :circuit_open} = error ->
+        error
+
+      other ->
+        other
+    end
   end
 
   @doc """
@@ -503,7 +530,43 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     {:error, :gone, "Resource no longer available"}
   end
 
+  # Most of Google's metering arrives as the 403 above, carrying
+  # `rateLimitExceeded` in its reasons — but some quota conditions answer a
+  # plain 429, which had no clause and so reached the shared catch-all as
+  # `:network_error`.
+  #
+  # That difference decides whether a write survives a burst. `:rate_limited`
+  # snoozes the write-back job *without spending an Oban attempt*; a
+  # `:network_error` spends one, so a backlog answered with 429 exhausted all
+  # five and discarded itself over a condition that clears within the minute.
+  # `Retry-After` travels in the message the same way Graph's does, for the
+  # snooze to honour.
+  defp google_status({:ok, %Req.Response{status: 429} = response}) do
+    case retry_after_seconds(response) do
+      seconds when is_integer(seconds) ->
+        {:error, :rate_limited, "retry_after:" <> Integer.to_string(seconds)}
+
+      nil ->
+        {:error, :rate_limited, "Too many requests"}
+    end
+  end
+
   defp google_status(_response), do: :default
+
+  defp retry_after_seconds(response) do
+    headers = Map.get(response, :headers, %{})
+
+    case Map.get(headers, "retry-after") do
+      [value | _rest] ->
+        case Integer.parse(value) do
+          {seconds, _remainder} -> seconds
+          _parse_error -> nil
+        end
+
+      _no_header ->
+        nil
+    end
+  end
 
   # --- Error classification ---
 

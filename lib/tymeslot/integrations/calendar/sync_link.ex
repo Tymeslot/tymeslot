@@ -41,9 +41,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   no second query to pay for.
   """
 
+  import Ecto.Changeset, only: [force_change: 3]
+
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
+  alias Tymeslot.Integrations.Calendar.SyncLink.Remirror
+  alias Tymeslot.Integrations.Calendar.SyncLink.TargetMove
   alias Tymeslot.Integrations.Calendar.SyncLink.Teardown
 
   @type result ::
@@ -137,18 +141,81 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   The target may move, so ownership is re-verified against the target the
   attributes ask for rather than the one already stored, and the provider
   handed to the changeset is that new target's.
+
+  ## Why an edit can withdraw placeholders
+
+  Re-pointing a link is `delete_link/2`'s hazard reached by another route. The
+  placeholders are on the calendar the link *used to* name, and the mapping
+  rows go on pointing at them while the link points somewhere else — so nothing
+  will ever remove them, and a busy block is deliberately indistinguishable
+  from an ordinary one, so the organiser will not know what it is. An edit that
+  invalidates the mappings therefore withdraws them first, through the same
+  `SyncLink.Teardown` that link removal uses. `SyncLink.TargetMove` decides
+  which edits those are.
+
+  ## The order, and what a failure leaves behind
+
+  Teardown reads the link *as it stands*, so it must run before the row is
+  written — a withdrawal aimed at the new target would ask a calendar that
+  never held the placeholders, draw a 404 that reads as "already gone", and
+  drop the only rows naming them. And it must succeed before the row is
+  written: a failed withdrawal followed by a successful re-point is exactly the
+  orphan this exists to prevent, arrived at with the evidence destroyed.
+
+  So a provider that refuses the delete surfaces its own reason — the same
+  `{:error, term()}` `delete_link/2` answers with — and the link keeps its old
+  target untouched. The organiser's edit did not happen and they are told so;
+  the mappings are left in `pending_delete`, which is the state the reconcile
+  sweep retries, so the withdrawal finishes on its own and the edit can be
+  saved again.
+
+  Validation comes before all of it. An invalid changeset — a target that is a
+  read-only subscription, say — returns the changeset and withdraws nothing:
+  the link is not moving, so its placeholders are still exactly where the
+  mappings say they are, and emptying the target for a save that was refused
+  would be destruction in exchange for nothing.
+
+  ## What refills the new target
+
+  Nothing here. A successful teardown drops the mapping rows, so the link
+  starts empty, and `Workers.SyncLinkReconcileWorker` enqueues an `:upsert` for
+  every eligible source event it finds without one — which, with no mappings
+  left, is all of them. That is why `enabled` is restored below: teardown
+  pauses the link on its way through, and
+  `CalendarSyncLinkQueries.list_due_for_reconcile/1` skips a disabled link
+  holding no `pending_delete` rows, so a move that left it paused would leave
+  the new target permanently empty. Restoring the *stored* value rather than
+  forcing `true` keeps a deliberately paused link paused.
+
+  The refill therefore arrives on the next sweep rather than immediately. No
+  job is enqueued for a move.
+
+  ## Why an edit can rewrite placeholders instead
+
+  The edits that are not moves divide again. A tier, a label or a colour leaves
+  every placeholder where it is and changes what it *says*, and nothing else in
+  the system notices: the push path fires on a source event changing, and the
+  reconcile sweep compares the source's timestamp against the mapping's, so a
+  link switched to `generic_label` kept saying "Busy" until somebody happened
+  to edit the source. `SyncLink.Remirror` decides which edits those are and
+  enqueues an `:upsert` per mapping, each rebuilding its payload from the link
+  as saved.
+
+  Only one of the two ever runs. A save that both re-points and re-labels tears
+  the mappings down, which leaves nothing to rewrite — see `apply_edit/3`.
   """
-  @spec update_link(integer(), integer() | any(), map()) :: result()
+  @spec update_link(integer(), integer() | any(), map()) :: result() | {:error, term()}
   def update_link(user_id, link_id, attrs) when is_integer(user_id) do
     with {:ok, link} <- owned_link(user_id, link_id) do
       source_id = fetch_id(attrs, :source_integration_id) || link.source_integration_id
       target_id = fetch_id(attrs, :target_integration_id) || link.target_integration_id
 
       with_owned_pair(user_id, source_id, target_id, fn target_provider ->
-        CalendarSyncLinkQueries.update(
-          link,
+        link
+        |> CalendarSyncLinkQueries.change(
           normalise(attrs, user_id, source_id, target_id, target_provider)
         )
+        |> apply_edit(link, user_id)
       end)
     end
   end
@@ -203,6 +270,58 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   @spec change_link(CalendarSyncLinkSchema.t(), map()) :: Ecto.Changeset.t()
   def change_link(%CalendarSyncLinkSchema{} = link, attrs \\ %{}),
     do: CalendarSyncLinkQueries.change(link, attrs)
+
+  # An invalid changeset is returned before anything is withdrawn — see the
+  # docstring. `Repo.update/1` would answer the same error, but only after the
+  # teardown had already emptied the target for a save that never landed.
+  defp apply_edit(%Ecto.Changeset{valid?: false} = changeset, _link, _user_id),
+    do: {:error, changeset}
+
+  # The two classes of edit are exclusive, and the re-point wins when one save
+  # is both. Teardown drops every mapping row, so a re-mirror afterwards would
+  # have nothing to iterate — and if it did, each job would name a mapping that
+  # no longer exists. The sweep refills the new target from scratch, under the
+  # presentation this same save stored, so the placeholders arrive saying the
+  # new thing without a second mechanism aiming at rows that are gone.
+  defp apply_edit(changeset, link, user_id) do
+    if TargetMove.repoint?(link, changeset) do
+      with :ok <- Teardown.tear_down_link(link, user_id) do
+        changeset
+        |> restore_enabled(link)
+        |> CalendarSyncLinkQueries.update_changeset()
+      end
+    else
+      changeset
+      |> CalendarSyncLinkQueries.update_changeset()
+      |> remirror_when_presentation_changed(link, changeset)
+    end
+  end
+
+  # After the write, never before. The rewrite is for placeholders that
+  # disagree with a link as *stored*, so an edit the database refused has
+  # nothing to answer for, and the saved struct is what decides whether a
+  # paused link is asked to write.
+  defp remirror_when_presentation_changed({:ok, saved}, link, changeset) do
+    if Remirror.presentation_change?(link, changeset), do: Remirror.enqueue_remirror(saved)
+
+    {:ok, saved}
+  end
+
+  defp remirror_when_presentation_changed(outcome, _link, _changeset), do: outcome
+
+  # Teardown paused the link in the database; the changeset was built from the
+  # struct as it was before that and so carries no `enabled` change at all,
+  # which means `Repo.update/1` would write every other field and leave the row
+  # disabled. Putting the pre-teardown value back makes the pause last exactly
+  # as long as the withdrawal it was there to protect.
+  #
+  # `force_change/3` rather than `put_change/3`, and that is the whole point of
+  # the line: the changeset's data still holds the value the row carried before
+  # teardown, so `put_change/3` sees "same as data", records no change, and
+  # writes nothing — leaving the link disabled by exactly the route this is
+  # here to close.
+  defp restore_enabled(changeset, %CalendarSyncLinkSchema{enabled: enabled}),
+    do: force_change(changeset, :enabled, enabled)
 
   # Both ends must belong to the acting user. The target's check is
   # `provider_for_owner/2` rather than `owned_by?/2` because the same query

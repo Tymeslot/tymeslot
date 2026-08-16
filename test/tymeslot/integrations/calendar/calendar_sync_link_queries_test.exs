@@ -241,6 +241,56 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueriesTest do
 
       assert CalendarSyncLinkQueries.list_due_for_reconcile(1800) == []
     end
+
+    # This selection is the *whole* of what a resume does.
+    # `SyncLink.toggle_enabled/3` flips `enabled` and enqueues nothing — no
+    # write-back, no reconcile — so a link rejoining this list is the only route
+    # by which the placeholders that went stale during the pause are ever
+    # repaired. Pinning the round trip pins that route.
+    test "a link leaves this selection when paused and rejoins it when resumed", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+
+      assert Enum.map(CalendarSyncLinkQueries.list_due_for_reconcile(1800), & &1.id) == [link.id]
+
+      {:ok, paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})
+      assert CalendarSyncLinkQueries.list_due_for_reconcile(1800) == []
+
+      {:ok, _resumed} = CalendarSyncLinkQueries.update(paused, %{enabled: true})
+
+      assert Enum.map(CalendarSyncLinkQueries.list_due_for_reconcile(1800), & &1.id) == [link.id]
+    end
+
+    # The gap in the resume path, pinned rather than fixed.
+    #
+    # `last_reconciled_at` is written only by `SyncLinkReconcileWorker`'s stamp;
+    # nothing on the pause or resume path touches it. So the interval is
+    # measured from a reconcile that happened *before* the pause began, and a
+    # link paused for a month carries a timestamp from just before the pause
+    # through to the resume — which leaves it not yet due, for the remainder of
+    # an interval that elapsed while it was doing nothing.
+    #
+    # The organiser has just said they want the link live again, and its target
+    # can stay stale for up to the sweep's full interval (1740s, just under the
+    # 30-minute cron) before anything looks at it. It does converge, so this is
+    # bounded latency and not a permanent hole — which is why it is recorded
+    # here rather than repaired. Clearing `last_reconciled_at` on resume is the
+    # one-line fix if the delay is ever judged too long, and this test is what
+    # will notice that it changed.
+    test "a resumed link is still not due if it was reconciled just before the pause", ctx do
+      {:ok, link} = CalendarSyncLinkQueries.create(attrs(ctx))
+
+      {:ok, reconciled} =
+        CalendarSyncLinkQueries.update(link, %{last_reconciled_at: DateTime.utc_now(:microsecond)})
+
+      {:ok, paused} = CalendarSyncLinkQueries.update(reconciled, %{enabled: false})
+      {:ok, resumed} = CalendarSyncLinkQueries.update(paused, %{enabled: true})
+
+      # The clock kept running through the pause rather than restarting at the
+      # resume: neither write moved it.
+      assert resumed.last_reconciled_at == reconciled.last_reconciled_at
+
+      assert CalendarSyncLinkQueries.list_due_for_reconcile(1800) == []
+    end
   end
 
   describe "change/2" do

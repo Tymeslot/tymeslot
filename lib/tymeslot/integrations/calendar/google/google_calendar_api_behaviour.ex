@@ -12,6 +12,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
            | :rate_limited
            | :network_error
            | :authentication_error
+           | :invalid_request
+           | :already_exists
            | :gone, String.t()}
 
   @callback list_calendars(CalendarIntegrationSchema.t()) ::

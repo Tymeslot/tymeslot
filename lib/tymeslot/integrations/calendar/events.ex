@@ -169,13 +169,20 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   @doc """
   Update an event with optional target integration, meeting context, or user_id.
+
+  Success is `{:ok, updated}` when the provider returned the event and a bare
+  `:ok` when it did not. A caller that only needs to know the write landed
+  matches both; one that needs the identifier the provider filed the event
+  under — which for Google is a hash of the UID it was handed, not the UID
+  itself — reads it from the returned event. See
+  `ProviderAdapter.update_event/3`.
   """
   @spec update_event(
           String.t(),
           map(),
           pos_integer() | MeetingSchema.t() | {pos_integer(), pos_integer()} | nil
         ) ::
-          :ok | {:error, term()}
+          :ok | {:ok, term()} | {:error, term()}
   def update_event(uid, event_data, context \\ nil) do
     behaviour_module().update_event(uid, event_data, context)
   end

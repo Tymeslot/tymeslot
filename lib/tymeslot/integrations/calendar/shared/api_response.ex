@@ -89,12 +89,40 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ApiResponse do
     decode_body(body)
   end
 
+  # Named for the same reason as 409 below: a caller can act on it. A 400 is the
+  # provider refusing this request as written, so no number of retries changes
+  # the answer — but as `:network_error` it was retried five times across twenty
+  # minutes, then re-derived by the reconcile sweep and retried again, forever.
+  #
+  # The body is logged rather than returned. It carries the field that was
+  # rejected, which is what a diagnosis needs and what an error category cannot
+  # hold; the caller only needs to know retrying is futile.
+  defp default_handle({:ok, %{status: 400, body: body}}, label) do
+    Logger.error("Calendar API rejected the request",
+      provider: label,
+      status: 400,
+      body: Redactor.redact_and_truncate(body)
+    )
+
+    {:error, :invalid_request, "HTTP 400 (see logs for details)"}
+  end
+
   defp default_handle({:ok, %{status: 401}}, _label) do
     {:error, :unauthorized, "Token expired or invalid"}
   end
 
   defp default_handle({:ok, %{status: 404}}, _label) do
     {:error, :not_found, "Calendar not found"}
+  end
+
+  # Named rather than left to the catch-all, because a caller can act on it and
+  # cannot act on `:network_error`. A 409 means the identifier asked for is
+  # already taken — and Google reserves a deleted event's id, so a placeholder
+  # that was withdrawn and is being rewritten under the same deterministic id
+  # collides with its own tombstone. Retrying is futile: the id will still be
+  # taken, by us, forever. The caller updates the existing identifier instead.
+  defp default_handle({:ok, %{status: 409}}, _label) do
+    {:error, :already_exists, "The requested identifier already exists"}
   end
 
   # The only path that sees an unrecognised provider body, and so the only one

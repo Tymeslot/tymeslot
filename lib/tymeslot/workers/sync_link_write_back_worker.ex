@@ -24,8 +24,14 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
 
   - `:link_not_found` — the organiser deleted the link after the job was
     enqueued. There is no target to write to.
-  - `:link_disabled` — the link is paused. Pausing deliberately leaves existing
-    placeholders alone, so there is nothing to do and nothing to undo.
+  - `:link_disabled` — the link is paused, and the job is not a withdrawal.
+    Pausing deliberately leaves existing placeholders alone, so there is
+    nothing to do and nothing to undo. A `delete` is the exception and runs:
+    `Teardown` disables a link *before* withdrawing its placeholders, so a
+    provider that refused one leaves a disabled link still holding
+    `pending_delete` rows, and `SyncLinkReconcileWorker.finish_withdrawals/1`
+    re-enqueues exactly those. Discarding them strands the placeholder for
+    good — nothing else revisits a `pending_delete` mapping.
   - `:target_is_read_only` — a subscription feed. `create_event` returns
     `{:error, :read_only}` for these *always*. The changeset already refuses
     such a target at configuration time; this catches the link configured
@@ -164,6 +170,18 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
     end
   end
 
+  # A snooze always clears Google's rolling-minute quota window, then spreads
+  # over the following four minutes. Fifty jobs land across ~240 distinct
+  # seconds rather than one, which is well under the per-second write quota
+  # even with the queue's ten concurrent slots all busy.
+  @snooze_floor_seconds 60
+  @snooze_spread_seconds 240
+
+  # Five writes a second against a documented ceiling of about ten. See
+  # `budget_spent?/1` for why it sits below the published limit.
+  @writes_per_window 5
+  @write_window_ms 1_000
+
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
@@ -172,6 +190,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
   alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Security.RateLimiter.Helpers, as: RateLimitHelpers
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, attempt: attempt, max_attempts: max_attempts}) do
@@ -185,6 +204,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
       {:ok, link} ->
         link
         |> dispatch(source_uid, operation, attempt)
+        |> snooze_when_throttled()
         |> surface_exhausted_failure(link, attempt, max_attempts)
 
       {:error, :not_found} ->
@@ -196,6 +216,37 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   # ever get that their target calendar is refusing mirrors — see the moduledoc.
   # A discard is deliberately excluded: it means the write was never attempted,
   # which says nothing about the target's health.
+  # A rate limit is the one failure that is not this job's fault and not this
+  # job's to survive: it says the *account* is over quota, which every other
+  # job writing to the same calendar is about to discover too. Spending an
+  # attempt on it means a backlog exhausts five attempts each and discards
+  # every one — for a condition that clears within the minute. That is exactly
+  # what happened on the first backfill: fifty queued mirrors, all refused, all
+  # discarded together.
+  #
+  # `{:snooze, seconds}` reschedules without consuming an attempt, so a write
+  # outlives a burst however long the burst lasts.
+  #
+  # The delay is jittered because the jobs are refused within the same second
+  # or two. A fixed snooze would reschedule the whole backlog onto one instant
+  # and rebuild the burst that caused the refusal; spreading them over several
+  # minutes is what actually drains the queue against a per-second quota.
+  defp snooze_when_throttled({:error, :rate_limited}) do
+    {:snooze, @snooze_floor_seconds + :rand.uniform(@snooze_spread_seconds)}
+  end
+
+  defp snooze_when_throttled(outcome), do: outcome
+
+  # The provider refused the request as written, and will refuse it identically
+  # on every retry. Discarding costs one placeholder; retrying costs five
+  # attempts across twenty minutes and then the sweep's re-derivation, forever.
+  #
+  # It also must not mark the target unhealthy: the badge reports a target that
+  # cannot receive writes, and a payload the provider dislikes says nothing
+  # about the target. Matched before the exhaustion clause for that reason.
+  defp surface_exhausted_failure({:error, :invalid_request}, _link, _attempt, _max_attempts),
+    do: {:discard, :invalid_request}
+
   defp surface_exhausted_failure({:error, _reason} = outcome, link, attempt, max_attempts)
        when attempt >= max_attempts do
     HealthCheck.mark_write_failure(:calendar, link.target_integration_id, link.user_id)
@@ -204,18 +255,70 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
 
   defp surface_exhausted_failure(outcome, _link, _attempt, _max_attempts), do: outcome
 
-  # A paused link writes nothing, in either direction. Matched before the target
-  # is even looked at: whether the target could receive a write is irrelevant
-  # once the organiser has said not to send one.
+  # A withdrawal outlives the pause that a teardown caused. `Teardown` disables
+  # the link *before* deleting its placeholders, so a provider that refused a
+  # delete leaves a disabled link still holding `pending_delete` rows — and
+  # `SyncLinkReconcileWorker.finish_withdrawals/1` re-enqueues exactly these
+  # jobs to finish it. Discarding them is what strands the placeholder for
+  # good: nothing else revisits a `pending_delete` mapping, so the block stays
+  # on the organiser's calendar and the row stays in the table, while the sweep
+  # re-enqueues a job that can never land.
+  #
+  # A user-paused link reaches this clause too, and should: pausing leaves
+  # existing placeholders standing, and no withdrawal is enqueued for one.
+  defp dispatch(%CalendarSyncLinkSchema{enabled: false} = link, source_uid, "delete", attempt),
+    do: run(link, source_uid, "delete", attempt)
+
+  # Anything else a paused link is asked to write, it does not. Matched before
+  # the target is even looked at: whether the target could receive a write is
+  # irrelevant once the organiser has said not to send one.
   defp dispatch(%CalendarSyncLinkSchema{enabled: false}, _source_uid, _operation, _attempt),
     do: {:discard, :link_disabled}
 
   defp dispatch(%CalendarSyncLinkSchema{} = link, source_uid, operation, attempt) do
-    if read_only_target?(link) do
-      {:discard, :target_is_read_only}
-    else
-      run(link, source_uid, operation, attempt)
+    cond do
+      read_only_target?(link) ->
+        {:discard, :target_is_read_only}
+
+      # Asked before the write rather than learned from its refusal. The snooze
+      # below survives a rate limit; this stops the burst that causes one from
+      # ever leaving the machine.
+      budget_spent?(link) ->
+        {:error, :rate_limited}
+
+      true ->
+        run(link, source_uid, operation, attempt)
     end
+  end
+
+  # A per-account budget for provider writes.
+  #
+  # The queue runs ten jobs at once and nine other workers share it, so pacing
+  # by queue concurrency would throttle bookings and inbound syncs to fix a
+  # background feature. The budget is charged here instead: it meters exactly
+  # this traffic and nothing else.
+  #
+  # Keyed on the *target integration* because that is the granularity Google
+  # enforces at — a per-user quota on the account being written to. Two
+  # organisers backfilling at once must not share a budget; two links pointing
+  # at one calendar must.
+  #
+  # Backed by the same ETS sliding window as the dashboard limiter, so the
+  # count is shared across the queue's workers rather than per-process. It is
+  # per-machine, which is exact here: `fly.toml` fixes this app at one machine
+  # because a volume cannot be shared. A second machine would need a shared
+  # backend, and this comment is the reminder.
+  #
+  # Deliberately under Google's documented ceiling. The published limit is
+  # about ten writes a second per user, and a limit set at the ceiling is one
+  # that is regularly exceeded — the window is a local approximation of a
+  # counter Google keeps elsewhere, and requests in flight are not yet counted.
+  defp budget_spent?(%CalendarSyncLinkSchema{target_integration_id: target_id}) do
+    RateLimitHelpers.check_rate_limit(
+      "calendar_mirror_write:#{target_id}",
+      @writes_per_window,
+      @write_window_ms
+    ) == {:error, :rate_limited}
   end
 
   # `target_integration` is preloaded by `CalendarSyncLinkQueries.get/1`. A link

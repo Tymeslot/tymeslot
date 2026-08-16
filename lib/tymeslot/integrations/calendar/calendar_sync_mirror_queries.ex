@@ -72,9 +72,58 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   def mirror_uids_for_integrations(integration_ids) when is_list(integration_ids) do
     CalendarSyncMirrorSchema
     |> where([m], m.target_integration_id in ^integration_ids)
-    |> select([m], {m.target_integration_id, m.target_uid})
+    |> select([m], {m.target_integration_id, m.target_uid, m.target_provider_event_id})
     |> Repo.all()
+    |> Enum.flat_map(&identifiers_for/1)
     |> MapSet.new()
+  end
+
+  # Every identity a placeholder can be cached under, because the two provider
+  # families disagree about whose UID survives a write.
+  #
+  # The CalDAV family stores the UID it is handed, so `target_uid` comes back
+  # unchanged. Google does not: a create sends `id`, and Google answers with an
+  # iCalUID of its own making — `{id}@google.com` — which is what the next
+  # inbound sync caches. The UID we asked for is then nowhere in the cache, and
+  # a set built only from `target_uid` recognises none of our own placeholders.
+  #
+  # That is not a theoretical gap. Every one of 317 cached placeholders on a
+  # live installation was unrecognisable this way, which disabled loop
+  # prevention completely: each placeholder read as an ordinary event, was
+  # mirrored back across the link, and one real event accumulated a second and
+  # third "Busy" on the calendar it started on.
+  #
+  # A mirror whose write never landed has no provider id, and `nil` is dropped
+  # rather than added — a set containing it would match every cached event
+  # whose uid is also absent.
+  #
+  # The stored provider id is Google's bare event id, because that is what the
+  # write answered with: `convert_event/1` reads the response's `"id"`. The
+  # *cache* is filled by the normaliser, which prefers `"iCalUID"` — the same
+  # id with `@google.com` appended. So the id as recorded never equals the uid
+  # as cached, and the suffixed form has to be in the set too or the row still
+  # recognises nothing. Adding the variant here rather than at the write keeps
+  # every mapping already in the database working, including the ones written
+  # before the id was recorded correctly.
+  defp identifiers_for({integration_id, target_uid, provider_event_id}) do
+    [target_uid, provider_event_id]
+    |> Enum.filter(&is_binary/1)
+    |> Enum.flat_map(&google_variants/1)
+    |> Enum.uniq()
+    |> Enum.map(&{integration_id, &1})
+  end
+
+  # An identifier that already carries the domain is left alone; anything else
+  # gains the suffixed form alongside the bare one. Both go in because a target
+  # is Google or it is not, and the set is asked the same question either way —
+  # a CalDAV uid with `@google.com` appended matches nothing, which costs a
+  # MapSet entry and no correctness.
+  defp google_variants(identifier) do
+    if String.ends_with?(identifier, "@google.com") do
+      [identifier]
+    else
+      [identifier, identifier <> "@google.com"]
+    end
   end
 
   @doc """

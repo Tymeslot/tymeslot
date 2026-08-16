@@ -24,6 +24,23 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
   grid re-renders on navigation, on live cache updates, and on every appearance
   change.
 
+  `target_calendar_id` records which calendar *within* that integration the
+  placeholder actually landed on, and it is not the same question as
+  `target_integration_id`. Google and Outlook honour a `calendar_id` on write,
+  so a link naming a secondary calendar puts its placeholders there rather than
+  on the integration's default booking calendar. Every write and delete used to
+  build that id from the link's *current* `target_calendar_id`, which holds only
+  while the link never moves: re-pointing a link leaves the existing
+  placeholders where they were and makes the delete address a calendar that
+  never held them, drawing a 404 read as "already gone" — the row dropped, the
+  busy block stranded with nothing able to name it.
+
+  `nil` means "wherever the link points" rather than "no calendar", which is
+  what makes the column safe to add without a backfill: it is what every row
+  written before it holds, and what the delete paths already did for them. It is
+  also the permanently correct value for a CalDAV target, which ignores
+  `calendar_id` and always writes to the primary path.
+
   `state` is not a substitute for the row's existence. `pending_delete` marks a
   mirror whose source is gone but whose placeholder is still on the provider:
   deleting the row first would lose the `target_provider_event_id` needed to
@@ -44,6 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
           sync_link_id: integer() | nil,
           source_uid: String.t() | nil,
           target_integration_id: integer() | nil,
+          target_calendar_id: String.t() | nil,
           target_provider_event_id: String.t() | nil,
           target_uid: String.t() | nil,
           source_updated_at: DateTime.t() | nil,
@@ -60,6 +78,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
 
   schema "calendar_sync_mirrors" do
     field(:source_uid, :string)
+    field(:target_calendar_id, :string)
     field(:target_provider_event_id, :string)
     field(:target_uid, :string)
     field(:source_updated_at, :utc_datetime_usec)
@@ -84,6 +103,35 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
   @spec states() :: [String.t()]
   def states, do: @states
 
+  @doc """
+  Where this placeholder lives, in the shape the delete and colour-patch opts
+  take, falling back to `link` when the row records nothing.
+
+  Both the sync path and teardown ask this, and they must agree: they take turns
+  on the same placeholder, teardown attempting the delete and the reconcile
+  sweep retrying whatever it could not finish. Two readings of the fallback is
+  how the first attempt and its retry end up addressing different calendars.
+
+  The fallback is the whole reason this is not a bare field read. `nil` means
+  "wherever the link points" — see the moduledoc — so a row written before the
+  column existed keeps being deleted exactly as it was, from the link's current
+  calendar, rather than from no calendar at all.
+  """
+  @spec target_calendar_opts(t(), CalendarSyncLinkSchema.t()) :: keyword()
+  def target_calendar_opts(%__MODULE__{target_calendar_id: nil}, link),
+    do: link_calendar_opts(link)
+
+  def target_calendar_opts(%__MODULE__{target_calendar_id: calendar_id}, _link),
+    do: [calendar_id: calendar_id]
+
+  # An empty list is the correct instruction for a link naming no calendar, not
+  # a missing one: such a link writes to the target integration's default
+  # booking calendar, which is where a call naming none already goes.
+  defp link_calendar_opts(%CalendarSyncLinkSchema{target_calendar_id: nil}), do: []
+
+  defp link_calendar_opts(%CalendarSyncLinkSchema{target_calendar_id: calendar_id}),
+    do: [calendar_id: calendar_id]
+
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(mirror, attrs) do
     mirror
@@ -91,6 +139,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
       :sync_link_id,
       :source_uid,
       :target_integration_id,
+      :target_calendar_id,
       :target_provider_event_id,
       :target_uid,
       :source_updated_at,

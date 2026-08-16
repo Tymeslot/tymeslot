@@ -11,6 +11,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTargetCalendarTest do
   placeholder actually is — so the busy block is stranded on the organiser's
   calendar with nothing left that can name it.
 
+  Reading the calendar off the link closes that gap only while the link never
+  moves. An organiser who re-points a link at a different calendar leaves every
+  existing placeholder on the old one, and a delete built from the link's
+  *current* value then strands them by the same route — a 404 from a calendar
+  that never held the placeholder, read as "already gone". So the mapping row
+  records the calendar each placeholder was actually written to, and the delete
+  prefers it; the link is consulted only for a row that predates the column.
+
   The assertions here are on the calendar id reaching the provider, not on the
   mapping row alone: a test that only checked the row would pass against
   exactly the broken behaviour this file exists to prevent.
@@ -26,6 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTargetCalendarTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
   alias Tymeslot.Repo
@@ -116,6 +125,94 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTargetCalendarTest do
       # The 404 only means "gone" because it came from the right calendar.
       assert_received {:calendar_id, @secondary}
       refute Repo.get(CalendarSyncMirrorSchema, mirror.id)
+    end
+  end
+
+  describe "recording where the placeholder went" do
+    test "a create stamps the link's target calendar onto the mapping", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      link = secondary_link(link)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok == Engine.mirror(link, source_event(source), user.id)
+
+      assert %{target_calendar_id: @secondary} =
+               Repo.get_by(CalendarSyncMirrorSchema, sync_link_id: link.id)
+    end
+
+    test "a create on a link naming no calendar records none", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      # `nil` on the row has to keep meaning "wherever the link points": it is
+      # what every row written before the column existed holds, and inventing a
+      # calendar id here would make those two cases indistinguishable.
+      {:ok, link} = CalendarSyncLinkQueries.get(link.id)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok == Engine.mirror(link, source_event(source), user.id)
+
+      assert %{target_calendar_id: nil} =
+               Repo.get_by(CalendarSyncMirrorSchema, sync_link_id: link.id)
+    end
+  end
+
+  describe "unmirror/4 when the link has been re-pointed since the placeholder was written" do
+    test "deletes from the calendar the mapping records, not the link's current one", %{
+      user: user,
+      link: link
+    } do
+      # The organiser moved the link to a third calendar after the placeholder
+      # was written. Only the mapping row still knows where the block is.
+      link = %{secondary_link(link) | target_calendar_id: "moved-to@group.calendar.google.com"}
+      target_uid = Engine.target_uid_for(link.id, "source-uid-1")
+      mirror = mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
+
+      {:ok, _stamped} =
+        CalendarSyncMirrorQueries.update(mirror, %{target_calendar_id: @secondary})
+
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, opts ->
+        send(test_pid, {:calendar_id, opts[:calendar_id]})
+        :ok
+      end)
+
+      assert :ok == Engine.unmirror(link, "source-uid-1", user.id)
+
+      assert_received {:calendar_id, @secondary},
+                      "the delete must address the calendar the placeholder was written to"
+    end
+
+    test "a mapping recording no calendar falls back to the link's current one", %{
+      user: user,
+      link: link
+    } do
+      # The pre-existing row: written before the column, so it says nothing
+      # about where the placeholder is and the link remains the best guess.
+      link = secondary_link(link)
+      target_uid = Engine.target_uid_for(link.id, "source-uid-1")
+      mirror_row(link, target_uid)
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, opts ->
+        send(test_pid, {:calendar_id, opts[:calendar_id]})
+        :ok
+      end)
+
+      assert :ok == Engine.unmirror(link, "source-uid-1", user.id)
+
+      assert_received {:calendar_id, @secondary}
     end
   end
 

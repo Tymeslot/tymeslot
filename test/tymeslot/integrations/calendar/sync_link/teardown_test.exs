@@ -140,6 +140,68 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.TeardownTest do
     end
   end
 
+  describe "tear_down_link/2 and the calendar the placeholder is actually on" do
+    test "addresses the calendar the mapping records, not the link's current one", %{
+      user: user,
+      link: link
+    } do
+      # The link was re-pointed after this placeholder was written. Reading the
+      # calendar off the link would ask a calendar that never held the block,
+      # draw a 404, and read it as "already gone" — dropping the only row that
+      # names the block and stranding it.
+      {:ok, link} =
+        CalendarSyncLinkQueries.update(link, %{
+          "target_calendar_id" => "moved-to@group.calendar.google.com"
+        })
+
+      mirror =
+        mirror_for_link(link,
+          source_uid: "src-1",
+          target_uid: "mirror-uid-1",
+          target_calendar_id: "written-to@group.calendar.google.com"
+        )
+
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, opts ->
+        send(test_pid, {:calendar_id, opts[:calendar_id]})
+        :ok
+      end)
+
+      assert :ok == Teardown.tear_down_link(link, user.id)
+
+      assert_received {:calendar_id, "written-to@group.calendar.google.com"}
+      refute Repo.get(CalendarSyncMirrorSchema, mirror.id)
+    end
+
+    test "a mapping recording no calendar falls back to the link's current one", %{
+      user: user,
+      link: link
+    } do
+      {:ok, link} =
+        CalendarSyncLinkQueries.update(link, %{
+          "target_calendar_id" => "team@group.calendar.google.com"
+        })
+
+      mirror_for_link(link,
+        source_uid: "src-1",
+        target_uid: "mirror-uid-1",
+        target_calendar_id: nil
+      )
+
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, opts ->
+        send(test_pid, {:calendar_id, opts[:calendar_id]})
+        :ok
+      end)
+
+      assert :ok == Teardown.tear_down_link(link, user.id)
+
+      assert_received {:calendar_id, "team@group.calendar.google.com"}
+    end
+  end
+
   describe "tear_down_for_integration/2 — as the target" do
     test "withdraws the placeholders living on the integration being disconnected", %{
       user: user,

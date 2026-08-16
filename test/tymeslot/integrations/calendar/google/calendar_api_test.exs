@@ -1,5 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
-  use Tymeslot.DataCase, async: true
+  # The circuit breaker wrapping bootstrap_sync/1 is a singleton GenServer
+  # shared across the suite, so the mock must be visible from a process other
+  # than the test's. Global mode requires async: false.
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Tymeslot.Factory
@@ -351,13 +354,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
   describe "bootstrap_sync/1" do
     # bootstrap_sync/1 passes the HTTP call through CalendarCircuitBreaker, which
     # runs the function inside the GenServer process. Mox expectations are
-    # process-scoped, so we must explicitly allow the circuit breaker process to
-    # use the mock before each test in this describe block.
-    setup do
-      breaker_pid = Process.whereis(:calendar_breaker_google)
-      Mox.allow(Tymeslot.HTTPClientMock, self(), breaker_pid)
-      :ok
-    end
+    # process-scoped, so the mock must be visible from that process.
+    setup :set_mox_global
 
     test "single-page response returns events and sync token with correct time params" do
       user = insert(:user)
@@ -508,6 +506,70 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
         )
 
       %{integration: integration}
+    end
+
+    # Google meters per user over a rolling minute and answers most of it as a
+    # 403 carrying `rateLimitExceeded` in `error.errors[].reason` — which
+    # `classify_403/2` already reads. It also answers a plain 429 for some quota
+    # conditions, and that had no clause at all, so it reached the shared
+    # catch-all as `:network_error`.
+    #
+    # The distinction is not cosmetic: `:rate_limited` snoozes the write-back
+    # job *without spending an Oban attempt*, while `:network_error` spends one.
+    # A burst answered with 429 therefore exhausted all five attempts and
+    # discarded itself over a condition that clears in a minute — the incident
+    # the worker's backoff ladder was written for, reachable by a second route.
+    test "429 from the Google API surfaces as :rate_limited", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 429,
+           body: Jason.encode!(%{"error" => %{"message" => "Too many requests"}})
+         }}
+      end)
+
+      assert {:error, :rate_limited, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "a 403 naming a rate limit still surfaces as :rate_limited", %{integration: integration} do
+      # The path that already worked, asserted alongside so a change to one
+      # cannot silently take the other with it.
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 403,
+           body:
+             Jason.encode!(%{
+               "error" => %{
+                 "message" => "Rate Limit Exceeded",
+                 "errors" => [%{"reason" => "rateLimitExceeded"}]
+               }
+             })
+         }}
+      end)
+
+      assert {:error, :rate_limited, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    # A 400 is the provider refusing the request itself, not the network
+    # dropping it. Left to the catch-all it arrived as `:network_error`, which
+    # the write-back worker retries five times across twenty minutes before the
+    # reconcile sweep re-derives it and starts again — indefinitely, for a body
+    # the provider will never accept.
+    #
+    # This was met live: a recurring create failed as `:network_error` when the
+    # real answer was 400, because Google rejects a recurring event carrying no
+    # IANA timeZone. The category named the network; the cause was the payload.
+    test "400 from the Google API surfaces as :invalid_request", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body: Jason.encode!(%{"error" => %{"message" => "Invalid recurrence rule"}})
+         }}
+      end)
+
+      assert {:error, :invalid_request, _msg} = CalendarAPI.list_calendars(integration)
     end
 
     test "404 from the Google API surfaces as :not_found", %{integration: integration} do

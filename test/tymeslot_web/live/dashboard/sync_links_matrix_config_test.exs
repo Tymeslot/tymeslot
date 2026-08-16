@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
   @moduletag :sync_links
   @moduletag :utils
 
+  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
   alias Tymeslot.Security.RateLimiter
 
   setup :setup_dashboard_user
+  setup :verify_on_exit!
 
   setup do
     RateLimiter.clear_all()
@@ -137,6 +139,41 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
       # A save that closed the panel would make a second change to the same
       # link a fresh hunt for its cell.
       assert html =~ "sync-link-settings"
+    end
+
+    test "reports a re-point the provider refused rather than dropping the socket", ctx do
+      %{conn: conn, user: user} = ctx
+      {_work, personal, link} = linked_pair(user)
+      mirror_for_link(link, source_uid: "src-1", target_uid: "mirror-uid-1")
+
+      # Moving the link's calendar withdraws the placeholders from the old one
+      # first, and this provider refuses. `update_link/3` then answers the
+      # provider's own reason — neither a changeset nor `:not_found` — which
+      # the save had no clause for, so the panel died with "Connection Lost"
+      # instead of saying the save had not landed.
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :service_unavailable}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+      select_cell(view, link)
+
+      html =
+        view
+        |> element("#sync-link-settings-form")
+        |> render_submit(%{
+          "sync_link" => %{
+            "privacy_tier" => "busy_only",
+            "target_calendar_id" => "moved-to@group.calendar.google.com"
+          }
+        })
+
+      assert html =~ "sync-link-settings"
+      assert html =~ "could not be linked"
+
+      {:ok, unmoved} = CalendarSyncLinkQueries.get(link.id)
+      assert is_nil(unmoved.target_calendar_id)
+      assert unmoved.target_integration_id == personal.id
     end
 
     test "refuses a link the organiser does not own", ctx do

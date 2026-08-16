@@ -154,6 +154,56 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
     end
   end
 
+  # `provider_calendar_id` records which of an integration's calendars a row was
+  # synced from, and it is read to route provider calls — `RecurringSeries`
+  # fetches a series master from the calendar its instances live on, because
+  # asking the integration's booking calendar instead draws a 404 for an event
+  # that is plainly there.
+  #
+  # It was pinned at insert and never updated, so an event moved between two
+  # calendars of one integration kept naming the calendar it left. The master
+  # fetch then 404s for as long as the series exists, and the skip is a discard
+  # rather than an error, so no job fails and nothing is logged above info: a
+  # recurring mirror silently stops updating.
+  #
+  # The column was held back from `replace_fields/0` against partial cache-update
+  # maps writing EXCLUDED — NULL — over a good value. That cannot happen: the
+  # column is NOT NULL, so such a row fails at insert rather than reaching the
+  # conflict clause, and the one partial caller
+  # (`CalendarGrid.update_cached_event/1`) builds its row through
+  # `build_cache_row/2`, which always carries the existing `provider_calendar_id`
+  # forward. The guard cost a real behaviour and prevented nothing.
+  describe "upsert_batch/1 and the calendar a row was synced from" do
+    test "follows an event moved to another calendar of the same integration" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      attrs = build_event_attrs(integration, %{uid: "moved-1", provider_calendar_id: "primary"})
+      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_batch([attrs])
+
+      moved = Map.put(attrs, :provider_calendar_id, "work@example.com")
+      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_batch([moved])
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "moved-1")
+      assert row.provider_calendar_id == "work@example.com"
+    end
+
+    test "a row omitting the calendar is refused rather than stored without one" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      attrs = build_event_attrs(integration, %{uid: "partial-1"})
+      partial = Map.delete(attrs, :provider_calendar_id)
+
+      # The NOT NULL constraint, asserted so the reasoning above stays true: if
+      # the column ever became nullable, replacing it would need the conditional
+      # update the comment on `replace_fields/0` was written to avoid.
+      assert_raise Postgrex.Error, fn ->
+        ProviderCalendarEventQueries.upsert_batch([partial])
+      end
+    end
+  end
+
   describe "get_by_uid/2" do
     test "returns {:ok, event} when the uid exists for the integration" do
       user = insert(:user)

@@ -20,6 +20,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
               | nil
             ) ::
               {:ok, any()} | {:error, any()}
+  # Success is `{:ok, updated}` when the provider returned the event and a bare
+  # `:ok` when it did not. Google files an event under a hash of the UID it is
+  # handed and answers with the event; the CalDAV family stores the UID
+  # unchanged and answers `:ok`. Flattening the two hid the only record of the
+  # identifier the event is really filed under — see
+  # `ProviderAdapter.update_event/3`.
   @callback update_event(
               binary(),
               map(),
@@ -29,7 +35,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
               | {pos_integer(), pos_integer()}
               | nil
             ) ::
-              :ok | {:error, any()}
+              :ok | {:ok, any()} | {:error, any()}
   @callback delete_event(
               binary(),
               pos_integer()

@@ -580,17 +580,31 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     count
   end
 
-  # Fields updated on conflict — everything except the surrogate key, inserted_at,
-  # the identity fields :provider and :provider_calendar_id (set at insert time from
-  # the integration and must never be overwritten with EXCLUDED values from partial
-  # cache-update maps that may omit them), Tymeslot-owned fields that are written
-  # independently of provider data (:ical_sequence, :last_notified_state,
-  # :video_link, :video_integration_id), and the offline write queue columns
-  # (:sync_state, :sync_attempts, :sync_last_attempt_at, :sync_last_error) which
-  # must survive a server-sourced upsert so OfflineQueue can still replay the
-  # local change after the cache row has been refreshed.
+  # Fields updated on conflict — everything except the surrogate key,
+  # inserted_at, :provider, Tymeslot-owned fields that are written independently
+  # of provider data (:ical_sequence, :last_notified_state, :video_link,
+  # :video_integration_id), and the offline write queue columns (:sync_state,
+  # :sync_attempts, :sync_last_attempt_at, :sync_last_error) which must survive
+  # a server-sourced upsert so OfflineQueue can still replay the local change
+  # after the cache row has been refreshed.
+  #
+  # :provider_calendar_id *is* replaced, and has to be. It records which of an
+  # integration's calendars the row was synced from, and `RecurringSeries` reads
+  # it to fetch a series master from the calendar its instances live on — asking
+  # the integration's booking calendar instead draws a 404 for an event that is
+  # plainly there. Pinning it at insert meant an event moved between two
+  # calendars of one integration went on naming the calendar it had left, so the
+  # master fetch 404'd for as long as the series existed. That skip is a discard
+  # rather than an error, so no job failed and a recurring mirror silently
+  # stopped updating.
+  #
+  # It was held back against partial cache-update maps overwriting it with a
+  # NULL EXCLUDED value. They cannot: the column is NOT NULL, so a row omitting
+  # it fails at insert rather than reaching this clause, and the one partial
+  # caller builds its row from the existing event's own value.
   defp replace_fields do
     [
+      :provider_calendar_id,
       :provider_event_id,
       :summary,
       :description,

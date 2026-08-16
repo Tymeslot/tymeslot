@@ -143,8 +143,11 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
     end
 
     test "surfaces a Graph rejection of an inverted time range", %{integration: integration} do
-      # Graph, not Tymeslot, validates the range: start after end comes back
-      # as a 400 that the API maps to a network error.
+      # Graph, not Tymeslot, validates the range: start after end comes back as
+      # a 400. It is `:invalid_request` rather than `:network_error` because
+      # nothing about it is transient — Graph rejects an inverted range
+      # identically on every attempt, so a caller retrying is retrying a request
+      # that cannot succeed.
       invalid_start = DateTime.add(DateTime.utc_now(), 7, :day)
       invalid_end = DateTime.add(DateTime.utc_now(), -7, :day)
 
@@ -163,7 +166,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       end)
 
       assert CalendarAPI.list_primary_events(integration, invalid_start, invalid_end) ==
-               {:error, :network_error, "HTTP 400 (see logs for details)"}
+               {:error, :invalid_request, "HTTP 400 (see logs for details)"}
     end
   end
 

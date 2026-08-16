@@ -254,4 +254,81 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorkerTest do
       refute_enqueued(worker: SyncLinkWriteBackWorker)
     end
   end
+
+  describe "perform/1 — after a resume" do
+    # Resuming a link enqueues nothing — `SyncLink.toggle_enabled/3` flips the
+    # row and stops — so everything that changed on the source calendar during
+    # the pause is repaired here or nowhere. This is the other end of that
+    # contract, and the reason the resume is allowed to be as quiet as it is.
+    #
+    # Three kinds of drift accumulate across a pause and the sweep must answer
+    # all three: a source created while paused has no placeholder, one edited
+    # while paused has a stale one, and one deleted while paused has a
+    # placeholder still blocking time for a meeting that is not happening.
+    test "repairs everything that changed on the source while the link was paused", %{
+      source: source,
+      link: link
+    } do
+      {:ok, paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})
+
+      # Created during the pause: cached, eligible, and never mirrored, because
+      # the write-back the push path enqueued was discarded as `:link_disabled`.
+      cached_event(source, uid: "created-while-paused")
+
+      # Edited during the pause: the mapping is older than the source event.
+      cached_event(source,
+        uid: "edited-while-paused",
+        provider_updated_at: ~U[2026-07-02 09:00:00.000000Z]
+      )
+
+      mirror_for_link(paused,
+        source_uid: "edited-while-paused",
+        source_updated_at: ~U[2026-07-01 09:00:00.000000Z]
+      )
+
+      # Deleted during the pause: the mapping outlived its source entirely.
+      mirror_for_link(paused, source_uid: "deleted-while-paused")
+
+      # While still paused, none of it is the sweep's business — that is what
+      # pausing means, and the discard is asserted rather than assumed so the
+      # repair below is demonstrably the resume's doing.
+      assert {:discard, :link_disabled} =
+               perform_job(SyncLinkReconcileWorker, %{"sync_link_id" => paused.id})
+
+      refute_enqueued(worker: SyncLinkWriteBackWorker)
+
+      {:ok, _resumed} = CalendarSyncLinkQueries.update(paused, %{enabled: true})
+
+      assert :ok = perform_job(SyncLinkReconcileWorker, %{"sync_link_id" => link.id})
+
+      assert operations() ==
+               MapSet.new([
+                 {link.id, "created-while-paused", "upsert"},
+                 {link.id, "edited-while-paused", "upsert"},
+                 {link.id, "deleted-while-paused", "delete"}
+               ])
+    end
+
+    # The placeholders a pause deliberately left alone are not rewritten on the
+    # way back. A pause is not a teardown — the busy blocks stayed on the target
+    # and stayed correct — so a source untouched across the pause is untouched
+    # after it, and a resume costs no provider write for a calendar that already
+    # says the right thing.
+    test "leaves a placeholder whose source did not change during the pause alone", %{
+      source: source,
+      link: link
+    } do
+      updated_at = ~U[2026-07-01 09:00:00.000000Z]
+
+      cached_event(source, uid: "steady-uid", provider_updated_at: updated_at)
+      mirror_for_link(link, source_uid: "steady-uid", source_updated_at: updated_at)
+
+      {:ok, paused} = CalendarSyncLinkQueries.update(link, %{enabled: false})
+      {:ok, _resumed} = CalendarSyncLinkQueries.update(paused, %{enabled: true})
+
+      assert :ok = perform_job(SyncLinkReconcileWorker, %{"sync_link_id" => link.id})
+
+      refute_enqueued(worker: SyncLinkWriteBackWorker)
+    end
+  end
 end

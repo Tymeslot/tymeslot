@@ -235,6 +235,20 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
 
       {:error, :not_found} ->
         {:noreply, clear_selection(socket)}
+
+      # A re-point withdraws the placeholders from the old target first, so a
+      # provider that refuses the delete surfaces its own reason here — neither
+      # a changeset nor `:not_found`. Without this clause the save raised a
+      # `CaseClauseError` and the organiser got "Connection Lost" for what is
+      # an ordinary, recoverable refusal: the link kept its old target, the
+      # mappings are in `pending_delete` for the reconcile sweep to finish, and
+      # saving again once it has will work. The submission is kept so the panel
+      # still holds what they typed.
+      {:error, _provider_refused} ->
+        {:noreply,
+         socket
+         |> assign(:settings_values, params)
+         |> assign(:settings_error, generic_error())}
     end
   end
 

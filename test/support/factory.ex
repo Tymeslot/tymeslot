@@ -241,6 +241,11 @@ defmodule Tymeslot.Factory do
       sync_link_id: link.id,
       source_uid: sequence(:mirror_source_uid, &"source-uid-#{&1}"),
       target_integration_id: link.target_integration_id,
+      # `nil` is the legacy row: written before the column existed, saying
+      # nothing about which calendar within the integration holds the
+      # placeholder. A test about a link pointing at a secondary calendar must
+      # set it, or it is asserting on the fallback rather than on the record.
+      target_calendar_id: nil,
       target_uid: sequence(:mirror_target_uid, &"tymeslot-mirror-#{&1}"),
       target_provider_event_id: sequence(:mirror_event_id, &"provider-event-#{&1}"),
       last_synced_at: DateTime.utc_now(:microsecond),

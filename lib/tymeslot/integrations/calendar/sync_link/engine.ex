@@ -48,12 +48,21 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   nothing will ever clean up. A delete that fails leaves the row behind in
   `pending_delete`, which is exactly the state the reconcile sweep looks for.
 
-  Every call the link makes — write, delete, colour patch — carries its own
-  `target_calendar_id`. A delete falling back to the integration's default
-  booking calendar asked the wrong calendar about a placeholder written to a
-  secondary one and drew a 404, which was then read as "already gone": the
-  mapping row, the only record of where the placeholder was, was dropped and
-  the block stranded. A 404 from the right calendar genuinely means gone.
+  Every call — write, delete, colour patch — names the calendar the placeholder
+  is on, because asking the wrong one draws a 404 that this module reads as
+  "already gone": the mapping row, the only record of where the placeholder was,
+  is dropped and the block stranded. A 404 from the right calendar genuinely
+  means gone. The write takes that calendar from the link; the delete takes it
+  from the *mapping row*, which recorded it at write time — a link re-pointed
+  since leaves its existing placeholders where they were, so it names only where
+  the next write would go.
+
+  ## The identifier a write files under
+
+  Which id a mapping row records is decided by `SyncLink.ProviderEventId`, not
+  here: the answer differs per provider family and per write verb, and getting
+  it wrong produces a row addressing an event no provider holds. See that
+  module.
 
   ## Conflicts, and why they are recorded here
 
@@ -78,6 +87,18 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   after the placeholder is written, and deliberately cannot fail the write —
   see that module for why a patch swallows its own failure.
 
+  ## The mapping row, after the write
+
+  Advancing the row once a provider write has landed belongs to
+  `SyncLink.MirrorRow`, and it is split out for the same reason the colour is:
+  it runs under the opposite rule to everything else here. This module returns
+  its failures so Oban retries them; that one swallows its own, because by the
+  time it runs the placeholder is already correct on the target and a retry
+  would rewrite an event that needs nothing to fix a bookkeeping entry the
+  reconcile sweep would have corrected anyway. Reading a `case` that drops its
+  error inline here made that look like a missing branch rather than a
+  decision.
+
   ## The attempt count
 
   `write_failed` is the one conflict that turns on something the domain cannot
@@ -97,7 +118,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   alias Tymeslot.Integrations.Calendar.SyncLink.ConflictLog
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorColour
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
+  alias Tymeslot.Integrations.Calendar.SyncLink.MirrorRow
+  alias Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId
   alias Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries
+  alias Tymeslot.Integrations.Calendar.SyncLink.WriteEtag
 
   @uid_prefix "tymeslot-mirror-"
 
@@ -105,6 +129,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # attempt is not running under Oban — a sweep, a console, a test — and has no
   # retry pending, so its failure is terminal where it stands.
   @final_attempt 5
+
+  # Both shapes a landed write answers with — see `ProviderEventId`. One guard
+  # because the two clauses needing it sit a hundred lines apart, and drifted
+  # when they were written out separately.
+  defguardp wrote?(result) when result == :ok or (is_tuple(result) and elem(result, 0) == :ok)
 
   @typedoc "What the worker maps straight onto Oban's return vocabulary."
   @type result :: :ok | {:error, term()} | {:discard, term()}
@@ -252,6 +281,53 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
 
         paint(result, link, target_uid, provider_event_id(created), user_id)
 
+      # The identifier is already taken, and it is taken by a placeholder of
+      # ours: Google reserves a deleted event's id, so a mirror that was
+      # withdrawn and is being rewritten under the same deterministic id
+      # collides with its own tombstone. No number of retries frees it, and
+      # the event the id names is exactly the one this write wants to exist —
+      # so the write becomes an update. The same create→update fallback the
+      # booking path in `Meetings.CalendarEventSync` has always had.
+      {:error, :already_exists} ->
+        adopt_existing_placeholder(link, source_event, target_uid, user_id, final?, series_opts)
+
+      {:error, reason} ->
+        record_write_failure(link, source_event.uid, :create, reason, final?)
+        {:error, reason}
+    end
+  end
+
+  defp adopt_existing_placeholder(link, source_event, target_uid, user_id, final?, series_opts) do
+    payload = payload_for(link, source_event, target_uid, series_opts)
+
+    case CalendarEvents.update_event(
+           target_uid,
+           payload,
+           {link.target_integration_id, user_id}
+         ) do
+      # Google files the event under a hash of `target_uid` and answers with it;
+      # CalDAV keeps `target_uid` and answers `:ok`. `ProviderEventId` holds the
+      # rule, so no provider-specific mapper is reached from here.
+      updated when wrote?(updated) ->
+        provider_id = ProviderEventId.for_update(updated, target_uid)
+
+        # The id is resolved here because `for_update/2` has to see the bare
+        # `:ok` case, but the response itself travels on: it is the only carrier
+        # of the etag this write produced, and collapsing it to `%{uid: id}`
+        # here is what would drop the baseline on the 409 create→update
+        # fallback alone — a path that is exercised on every rebuild after a
+        # bulk withdrawal, so the gap would have looked intermittent.
+        result =
+          persist_or_compensate(
+            link,
+            source_event,
+            target_uid,
+            %{provider_event_id: provider_id, etag: WriteEtag.extract(updated)},
+            user_id
+          )
+
+        paint(result, link, target_uid, provider_id, user_id)
+
       {:error, reason} ->
         record_write_failure(link, source_event.uid, :create, reason, final?)
         {:error, reason}
@@ -265,9 +341,17 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
       sync_link_id: link.id,
       source_uid: source_event.uid,
       target_integration_id: link.target_integration_id,
+      # Where the placeholder actually went, captured at write time rather than
+      # re-derived from the link later: a link that is re-pointed afterwards
+      # leaves this placeholder behind on the calendar named here, and this is
+      # then the only record of it. See the schema's moduledoc.
+      target_calendar_id: link.target_calendar_id,
       target_uid: target_uid,
       target_provider_event_id: provider_event_id(created),
-      target_etag: baseline_after_write(),
+      # The placeholder as this write left it, read from the write's own
+      # response. `nil` for a provider that reports none, which switches the
+      # etag-based conflict kinds off for it rather than inventing a baseline.
+      target_etag: WriteEtag.extract(created),
       source_updated_at: Map.get(source_event, :provider_updated_at),
       source_etag: Map.get(source_event, :etag),
       last_synced_at: DateTime.utc_now(),
@@ -351,7 +435,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
     payload = payload_for(link, source_event, target_uid, series_opts)
 
     case CalendarEvents.update_event(target_uid, payload, {link.target_integration_id, user_id}) do
-      :ok ->
+      # Both success shapes, for the reason given at
+      # `adopt_existing_placeholder/6`. Matching only the CalDAV `:ok` here
+      # crashed every Google and Outlook rewrite with a `CaseClauseError`,
+      # hidden because every test of this path returned the CalDAV shape.
+      updated when wrote?(updated) ->
         # Recorded only once the overwrite has actually landed. A conflict is a
         # resolution, and a write that failed resolved nothing — logging before
         # the call would append a row per retry for a divergence still
@@ -361,15 +449,26 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         # write does not touch.
         ConflictLog.record_overwrite(mirror, source_event)
 
-        mark(mirror, %{
+        # The id the provider filed this write under, which need not be what
+        # the row already holds. `for_update/2` falls back to the uid the write
+        # was addressed to, so a CalDAV `:ok` keeps what it always kept.
+        provider_id = ProviderEventId.for_update(updated, target_uid)
+
+        # The new baseline is this write's own etag, replacing the one the
+        # divergence above was just read against. A write that reports none
+        # clears it rather than leaving the previous one standing: a stale
+        # baseline describes a placeholder two writes ago, so comparing against
+        # it would report an edit nobody made.
+        MirrorRow.mark(mirror, %{
           state: "active",
           last_synced_at: DateTime.utc_now(),
-          target_etag: baseline_after_write(),
+          target_etag: WriteEtag.extract(updated),
+          target_provider_event_id: provider_id,
           source_updated_at: Map.get(source_event, :provider_updated_at),
           source_etag: Map.get(source_event, :etag)
         })
 
-        paint(:ok, link, target_uid, mirror.target_provider_event_id, user_id)
+        paint(:ok, link, target_uid, provider_id, user_id)
 
       # The placeholder is gone from the target — almost always because the
       # organiser deleted the unexplained "Busy" block by hand. The source event
@@ -383,13 +482,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
       # converges: `target_uid` is derived from the link and source uid, so the
       # replacement carries the identity the mapping already names.
       {:error, :not_found} ->
-        recreate_missing(link, mirror, source_event, target_uid, user_id)
+        recreate_missing(link, mirror, source_event, target_uid, user_id, series_opts)
 
       {:error, reason} ->
         # The placeholder on the target is now out of step with its source, and
         # only the row records that. Marking it here is what lets the reconcile
         # sweep find it after Oban has exhausted its attempts.
-        mark(mirror, %{state: "failed"})
+        MirrorRow.mark(mirror, %{state: "failed"})
         record_write_failure(link, mirror.source_uid, :update, reason, final?)
         {:error, reason}
     end
@@ -399,14 +498,25 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # lives rather than a fresh mirror: dropping the row and re-creating would
   # lose the source state the conflict log compares against, and would race the
   # sweep, which reads a missing mapping as "never mirrored".
-  defp recreate_missing(link, mirror, source_event, target_uid, user_id) do
-    payload = payload_for(link, source_event, target_uid, [])
+  #
+  # The resolved `series_opts` travel here for the same reason they travel to
+  # every other write. Recreating without them rebuilds a recurring source as a
+  # single block at the cached row's time — which under `singleEvents=true` is
+  # the *last* occurrence, months from where the series starts — and then marks
+  # the row active, so the sweep sees a fresh mapping and never corrects it.
+  defp recreate_missing(link, mirror, source_event, target_uid, user_id, series_opts) do
+    payload = payload_for(link, source_event, target_uid, series_opts)
 
     case CalendarEvents.create_event(payload, {link.target_integration_id, user_id}) do
       {:ok, created} ->
-        mark(mirror, %{
+        # Re-baselined like any other write. The row survives a recreate, so
+        # without this it would keep the etag of the placeholder the organiser
+        # deleted — a baseline for an event that no longer exists, which the
+        # next pass would compare against the replacement and read as an edit.
+        MirrorRow.mark(mirror, %{
           state: "active",
           last_synced_at: DateTime.utc_now(),
+          target_etag: WriteEtag.extract(created),
           target_provider_event_id: provider_event_id(created),
           source_updated_at: Map.get(source_event, :provider_updated_at),
           source_etag: Map.get(source_event, :etag)
@@ -415,7 +525,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         :ok
 
       {:error, reason} ->
-        mark(mirror, %{state: "failed"})
+        MirrorRow.mark(mirror, %{state: "failed"})
         {:error, reason}
     end
   end
@@ -428,21 +538,21 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
     case CalendarEvents.delete_event(
            mirror.target_uid,
            {link.target_integration_id, user_id},
-           target_calendar_opts(link)
+           CalendarSyncMirrorSchema.target_calendar_opts(mirror, link)
          ) do
       :ok ->
-        drop_mapping(mirror)
+        MirrorRow.drop(mirror)
 
       # Already gone on the provider. The mapping is the only thing left, and
       # keeping it would make the sweep retry a delete that can never succeed.
       # Sound only because the delete above names the link's own calendar; see
       # the moduledoc's "Deleting".
       {:error, :not_found} ->
-        drop_mapping(mirror)
+        MirrorRow.drop(mirror)
 
       {:error, reason} ->
         record_write_failure(link, mirror.source_uid, :delete, reason, final?)
-        mark_pending_delete(mirror, reason)
+        MirrorRow.mark_pending_delete(mirror, reason)
     end
   end
 
@@ -454,40 +564,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # compare, and there was never a second race to describe.
   defp consume_delete_race(mirror) do
     case ConflictLog.record_delete_race(mirror) do
-      :recorded -> mark(mirror, %{target_etag: ConflictLog.consumed_baseline()})
+      :recorded -> MirrorRow.mark(mirror, %{target_etag: ConflictLog.consumed_baseline()})
       :nothing_to_record -> mirror
     end
   end
-
-  # The etag the target's own sync currently holds for the placeholder, taken as
-  # the baseline a later direct edit is measured against. Read from the cache
-  # rather than from the write's response because no provider returns one
-  # uniformly there — CalDAV echoes the payload it PUT, Google and Outlook their
-  # own event body — while the target's inbound sync stores an etag for every
-  # event it fetches, this one included.
-  # Cleared, not read back from the cache, and the difference is a bug's worth.
-  #
-  # The baseline exists to answer "has anybody touched the placeholder since we
-  # wrote it?", so it has to describe the placeholder *as written*. The only
-  # copy of the new etag lives on the provider: our cache still holds whatever
-  # the target's last inbound sync fetched, which is the state from *before*
-  # this write. Storing that reads the engine's own change back as a stranger's
-  # the moment the target syncs — the placeholder's `provider_updated_at` is
-  # when the provider applied our write, necessarily later than the baseline we
-  # stamped, so the `changed_after_write?` guard sees a later change and lets it
-  # through as a hand edit.
-  #
-  # `nil` says "no baseline" and `mirror_edited?/2` requires two etags to
-  # compare, so an edit is simply not reported until the next write establishes
-  # a real baseline from a re-synced cache. Under-reporting for one cycle is the
-  # right trade against a spurious row per write per series: a conflict log is
-  # read when someone is trying to find out why a calendar looks wrong, and it
-  # is worth nothing if most of what it holds is the engine reporting itself.
-  #
-  # Fetching the written etag from the provider would be exact and costs a
-  # request per mirror write; that is the trade to revisit if under-reporting
-  # turns out to matter.
-  defp baseline_after_write, do: nil
 
   # Only the last attempt records a failure; see the moduledoc. A caller that
   # names no attempt has no retry pending and is treated as final.
@@ -497,37 +577,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
 
   defp record_write_failure(link, source_uid, operation, reason, true),
     do: ConflictLog.record_write_failure(link.id, source_uid, operation, reason)
-
-  defp drop_mapping(mirror) do
-    case CalendarSyncMirrorQueries.delete(mirror) do
-      {:ok, _deleted} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp mark_pending_delete(mirror, reason) do
-    mark(mirror, %{state: "pending_delete"})
-    {:error, reason}
-  end
-
-  # Bookkeeping that must not turn a successful provider write into a failure:
-  # the placeholder is already correct on the target, and the row falling behind
-  # is a state the sweep reconciles. Logged so it is not invisible.
-  defp mark(%CalendarSyncMirrorSchema{} = mirror, attrs) do
-    case CalendarSyncMirrorQueries.update(mirror, attrs) do
-      {:ok, updated} ->
-        updated
-
-      {:error, changeset} ->
-        Logger.warning("Failed to update mirror mapping state",
-          sync_link_id: mirror.sync_link_id,
-          source_uid: mirror.source_uid,
-          reason: inspect(changeset.errors)
-        )
-
-        mirror
-    end
-  end
 
   # --- Colour ---
 
@@ -582,8 +631,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # — the mapping is still written, keyed on the deterministic `target_uid`,
   # which is what every subsequent update and delete addresses. The provider id
   # is recorded for diagnosis and for the reconcile sweep, not for addressing.
-  defp provider_event_id(%{provider_event_id: id}) when is_binary(id), do: id
-  defp provider_event_id(%{"id" => id}) when is_binary(id), do: id
-  defp provider_event_id(%{id: id}) when is_binary(id), do: id
-  defp provider_event_id(_other), do: nil
+  # The id the provider filed the placeholder under, which is the only handle
+  # teardown has for withdrawing it later. Four shapes because the write path
+  # crosses three layers that each describe an event differently.
+  #
+  defp provider_event_id(shape), do: ProviderEventId.extract(shape)
 end
