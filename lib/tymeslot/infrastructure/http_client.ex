@@ -359,9 +359,11 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     end
   end
 
+  # Req 0.7 moved the Finch adapter's settings under a keyword list; the bare
+  # `finch: name` form still works but is deprecated and goes away in 0.8.
   defp req_transport_option do
     case Application.get_env(:tymeslot, :req_test_plug) do
-      nil -> {:finch, Tymeslot.Finch}
+      nil -> {:finch, [name: Tymeslot.Finch]}
       plug -> {:plug, plug}
     end
   end
