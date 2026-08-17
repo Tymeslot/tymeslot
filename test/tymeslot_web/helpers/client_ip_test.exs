@@ -305,4 +305,62 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
       assert ClientIP.get_from_mount(socket) == "203.0.113.99"
     end
   end
+
+  # Every case above hands `peer_data` a 4-element tuple, which is the one shape
+  # production never produces: the endpoint listens dual-stack, so an IPv4
+  # reverse proxy arrives IPv4-mapped as `::ffff:172.18.0.1`, an 8-element
+  # tuple. While those went unmapped the proxy read as untrusted, the forwarded
+  # headers were discarded, and every visitor resolved to the proxy's own
+  # address — one shared identity behind every IP-keyed rate limit.
+  describe "get_from_mount/1 with an IPv4-mapped peer (dual-stack listener)" do
+    @mapped_proxy %{address: {0, 0, 0, 0, 0, 0xFFFF, 0xAC12, 0x0001}, port: 0, ssl_cert: nil}
+
+    test "the mapped peer really is the address production reports" do
+      # Guards the fixture itself: if this stops parsing to the tuple below, the
+      # cases in this block would silently stop covering the production shape.
+      assert :inet.parse_address(~c"::ffff:172.18.0.1") == {:ok, @mapped_proxy.address}
+      assert tuple_size(@mapped_proxy.address) == 8
+    end
+
+    test "trusts forwarded headers when the peer is an IPv4-mapped private address" do
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: @mapped_proxy,
+            x_headers: [{"x-forwarded-for", "203.0.113.99"}]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "203.0.113.99"
+    end
+
+    test "still ignores forwarded headers when the mapped peer is public" do
+      # The mapping must not become a way to be trusted: a client connecting
+      # directly over a dual-stack socket is as untrusted as over IPv4.
+      mapped_public = %{address: {0, 0, 0, 0, 0, 0xFFFF, 0xCB00, 0x7132}, port: 0, ssl_cert: nil}
+
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: mapped_public,
+            x_headers: [{"x-forwarded-for", "1.2.3.4"}, {"x-real-ip", "5.6.7.8"}]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "203.0.113.50"
+    end
+
+    test "reports a mapped peer in plain IPv4 form so both paths share one bucket" do
+      # Falling back to the peer must yield the same string `get/1` returns for
+      # that client on the conn path, or one visitor occupies two rate-limit
+      # buckets depending on whether they arrived over HTTP or the socket.
+      mapped_public = %{address: {0, 0, 0, 0, 0, 0xFFFF, 0xCB00, 0x7132}, port: 0, ssl_cert: nil}
+      socket = mock_socket(connect_info: %{peer_data: mapped_public, x_headers: []})
+
+      assert ClientIP.get_from_mount(socket) == "203.0.113.50"
+
+      assert ClientIP.get_from_mount(socket) ==
+               ClientIP.get(mock_conn(remote_ip: {203, 0, 113, 50}))
+    end
+  end
 end

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   alias Phoenix.LiveView
   alias Plug.Conn
+  alias Tymeslot.Security.PrivateIPv6
 
   @doc """
   Extracts the client IP address from a Plug.Conn or Phoenix.LiveView.Socket.
@@ -209,10 +210,14 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   end
 
   # Only call from get_from_mount/1
+  #
+  # The address is unmapped before formatting so a dual-stack listener yields
+  # "203.0.113.5" rather than "::ffff:203.0.113.5" — the same string the conn
+  # path produces for that client, so both paths share one rate-limit bucket.
   defp get_from_connect_info(socket) do
     case LiveView.get_connect_info(socket, :peer_data) do
       %{address: address} ->
-        address |> :inet.ntoa() |> to_string()
+        address |> PrivateIPv6.unmap() |> :inet.ntoa() |> to_string()
 
       _other ->
         "unknown"
@@ -248,9 +253,25 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     end
   end
 
-  # Returns true when address is a loopback or RFC-1918/4193 private range —
+  # Returns true when address is a loopback or RFC-1918/4193 private range,
   # the same ranges that Plug.RemoteIp trusts on the conn path in production.
+  #
+  # The peer is normalised first: a dual-stack listener reports an IPv4 proxy as
+  # the IPv4-mapped `::ffff:172.18.0.1`, an 8-element tuple that matches none of
+  # the IPv4 clauses below. Left unmapped, every socket-path request behind the
+  # reverse proxy is treated as untrusted, the forwarded headers are dropped and
+  # `get_from_mount/1` falls back to the proxy's own address — collapsing every
+  # IP-keyed rate limit into a single bucket shared by all visitors.
+  #
+  # Deliberately narrower than `PrivateIPv4.private?/1`, which also covers
+  # 0.0.0.0/8, 100.64/10 and 169.254/16: that predicate answers "is this
+  # unroutable?" for SSRF, whereas this one answers "may this peer speak for
+  # someone else?". Trusting a CGNAT or link-local peer would let a client
+  # forge `x-forwarded-for` and evade the rate limits keyed on it.
   defp trusted_peer?(nil), do: false
+
+  defp trusted_peer?({0, 0, 0, 0, 0, 0xFFFF, _hi, _lo} = address),
+    do: address |> PrivateIPv6.unmap() |> trusted_peer?()
 
   # IPv4 loopback: 127.0.0.0/8
   defp trusted_peer?({127, _b, _c, _d}), do: true
