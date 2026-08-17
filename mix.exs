@@ -108,9 +108,7 @@ defmodule Tymeslot.MixProject do
       # Required by Swoosh's Mailgun adapter (multipart request bodies).
       {:multipart, "~> 0.4"},
       {:finch, "~> 0.20"},
-      # Pinned to 0.6.x: 0.7's bare-atom finch: option triggers a deprecation
-      # warning on every outbound request until http_client.ex is migrated.
-      {:req, "~> 0.6.0"},
+      {:req, "~> 0.7"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.3"},
       {:gettext, "~> 1.0"},
