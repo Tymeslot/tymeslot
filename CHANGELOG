@@ -1,4 +1,11 @@
 
+[1.10.0]
+* Stop retrying webhook deliveries the endpoint will always reject
+* Keep signup usable when the verification email is rate limited
+* Stop one visitor's rate limit from blocking everyone behind a proxy
+* Set availability per meeting type with named schedules
+
+
 [1.9.0]
 * Prevent calendar crash when opening an event with a reminder
 * Stop alerting every cycle while a CalDAV server is down
