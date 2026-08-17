@@ -116,6 +116,9 @@ config :tymeslot, Oban,
        {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
        # Run daily at 04:00 UTC
        {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
+       # Run daily at 04:15 UTC, after the cache prune at 03:30, to report
+       # mirror placeholders no mapping row claims
+       {"15 4 * * *", Tymeslot.Workers.MirrorOrphanScanWorker},
        # Run every 6 hours to detect silent/dead webhook channels
        {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
        # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync

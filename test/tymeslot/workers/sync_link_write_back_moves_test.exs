@@ -62,21 +62,13 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackMovesTest do
     # dropped them would write the placeholder back at the time the occurrence
     # left, which is the state the correction exists to undo.
     test "moves carried on the job reach the payload", %{source: source, link: link} do
-      cached_event(source,
-        uid: "series-uid",
-        recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
-        recurring_event_id: "master_abc123",
-        timezone: "Europe/Tallinn"
+      cached_event(
+        source,
+        [uid: "series-uid", timezone: "Europe/Tallinn"] ++ google_series_markers()
       )
 
       expect(GoogleCalendarAPIMock, :get_event, fn _integration, _calendar_id, _event_id ->
-        {:ok,
-         %{
-           "id" => "master_abc123",
-           "recurrence" => ["RRULE:FREQ=WEEKLY;BYDAY=TU"],
-           "start" => %{"dateTime" => "2026-03-03T09:00:00Z"},
-           "end" => %{"dateTime" => "2026-03-03T09:30:00Z"}
-         }}
+        {:ok, google_series_master()}
       end)
 
       test_pid = self()

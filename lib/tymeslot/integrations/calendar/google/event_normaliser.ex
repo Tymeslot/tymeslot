@@ -80,6 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
         reminders: map_reminders(raw["reminders"]),
         colour: EventColour.from_google_color_id(raw["colorId"]),
         etag: raw["etag"],
+        provider_updated_at: parse_provider_updated_at(raw["updated"], raw["id"], context),
         original_start_at: parse_original_start(raw["originalStartTime"]),
         recurrence_rule: map_recurrence_rule(raw["recurrence"]),
         provider_metadata: Map.put(raw, "recurringEventId", raw["recurringEventId"]),
@@ -200,6 +201,54 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
   end
 
   defp parse_original_start(_absent), do: nil
+
+  # Google's own account of when it last wrote the event, RFC3339 with
+  # milliseconds. Every staleness comparison downstream is written against it —
+  # `SyncLinkReconcileWorker.stale?/2`, `ConflictLog`'s
+  # `compared_by => "provider_updated_at"` path, the baseline `Engine` stamps as
+  # a mapping's `source_updated_at` — and all of them read `nil` as "cannot
+  # tell" and stand down. Dropping the field therefore does not fail loudly; it
+  # switches those checks off and looks exactly like a calendar that never
+  # changes, which is how it went unnoticed until the column was found empty
+  # across every cached row.
+  #
+  # Shifted to UTC so it is directly comparable with the stored column and with
+  # a mapping's baseline, both `:utc_datetime_usec`.
+  #
+  # An absent value is ordinary — a provider need not report one, and `nil` is
+  # the documented reading — so it passes quietly. A value that is *present and
+  # unreadable* is not ordinary: it means Google's format moved, or something
+  # upstream mangled it, and every one of those checks is silently disarmed for
+  # that event. That is worth a log line naming the value, since the symptom on
+  # its own is indistinguishable from a calendar sitting still. It is still only
+  # a log: this runs inside a sync over a whole calendar, and a bookkeeping
+  # marker must never be the reason an event, or the batch around it, is lost.
+  defp parse_provider_updated_at(nil, _event_id, _context), do: nil
+
+  defp parse_provider_updated_at(value, event_id, context) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, at, _offset} ->
+        DateTime.shift_zone!(at, "Etc/UTC")
+
+      {:error, reason} ->
+        log_unparseable_update(value, reason, event_id, context)
+        nil
+    end
+  end
+
+  defp parse_provider_updated_at(value, event_id, context) do
+    log_unparseable_update(value, :not_a_string, event_id, context)
+    nil
+  end
+
+  defp log_unparseable_update(value, reason, event_id, context) do
+    Logger.warning("Ignoring unparseable Google event `updated` timestamp",
+      value: inspect(value),
+      reason: reason,
+      event_id: event_id,
+      calendar_integration_id: context.calendar_integration_id
+    )
+  end
 
   defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}}) do
     case Timezones.sanitize(tz) do

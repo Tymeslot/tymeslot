@@ -33,7 +33,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineSeriesExceptionConflictT
 
   alias Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
   alias Tymeslot.Integrations.Calendar.SyncLink.SeriesMasterCache
 
@@ -46,24 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineSeriesExceptionConflictT
   end
 
   defp weekly_instance(source, attrs \\ %{}) do
-    Map.merge(
-      %ProviderCalendarEventSchema{
-        uid: "weekly-series@google.com",
-        calendar_integration_id: source.id,
-        provider: "google",
-        provider_calendar_id: "primary",
-        provider_event_id: "master_abc123_20261215T090000Z",
-        summary: "Weekly standup",
-        transparency: "opaque",
-        status: "confirmed",
-        all_day: false,
-        start_at: ~U[2026-12-15 09:00:00Z],
-        end_at: ~U[2026-12-15 09:30:00Z],
-        recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
-        recurring_event_id: "master_abc123"
-      },
-      attrs
-    )
+    google_series_instance(source, attrs)
   end
 
   defp expect_master(recurrence, times \\ 1) do
@@ -85,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineSeriesExceptionConflictT
       ])
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -104,7 +86,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineSeriesExceptionConflictT
       ])
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -137,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineSeriesExceptionConflictT
       expect_master(["RRULE:FREQ=WEEKLY;BYDAY=TU"])
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)

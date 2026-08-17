@@ -137,7 +137,13 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
     end
 
     test "keeps Outlook's @odata.etag on the converted event" do
-      # Graph's own key, on the raw body Outlook's API module answers with.
+      # A shape assembled to exercise the `"@odata.etag"` clause of
+      # `WriteEtag.extract/1`, and deliberately *not* a claim about what
+      # Outlook's API module answers with. It does not answer this: it narrows
+      # every write through `convert_to_common_format/1` first, so the wrapper
+      # sees an atom-keyed map and never this string key. Reading this test as
+      # end-to-end cover for Outlook is what let the narrowing drop the etag
+      # unnoticed; `Outlook.ProviderWriteEtagTest` is where that path is pinned.
       raw = %{
         "@odata.etag" => "W/\"CQAAABYAAAD\"",
         id: "outlook-event-id",

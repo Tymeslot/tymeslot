@@ -82,23 +82,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
     )
   end
 
-  # The master's own start is March, the series' first occurrence. Every cached
-  # instance the engine ever sees is later than this — that gap is the whole
-  # point of fetching the master, so the fixture carries it.
-  @master_start "2026-03-03T09:00:00Z"
-  @master_end "2026-03-03T09:30:00Z"
-
   defp expect_master(recurrence, times \\ 1) do
     expect(GoogleCalendarAPIMock, :get_event, times, fn _integration, _calendar_id, event_id ->
       assert event_id == "master_abc123"
 
-      {:ok,
-       %{
-         "id" => "master_abc123",
-         "recurrence" => recurrence,
-         "start" => %{"dateTime" => @master_start},
-         "end" => %{"dateTime" => @master_end}
-       }}
+      {:ok, google_series_master(recurrence: recurrence)}
     end)
   end
 
@@ -114,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -139,6 +127,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       assert mirror.target_uid == Engine.target_uid_for(link.id, "weekly-series@google.com")
       assert [_only_one] = CalendarSyncMirrorQueries.list_for_link(link.id)
+
+      # A series is withdrawn by this id like any other placeholder, so a row
+      # recording `nil` strands the whole series rather than one occurrence.
+      assert mirror.target_provider_event_id == "target-pid-1"
     end
 
     test "the placeholder starts where the series starts, not where the cached row does", %{
@@ -152,7 +144,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       instance = weekly_instance(source)
@@ -192,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       instance =
@@ -232,7 +224,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -257,7 +249,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       instance = weekly_instance(source, %{visibility: "private"})
@@ -282,7 +274,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
       expect_master(["RRULE:FREQ=WEEKLY;BYDAY=TU"], 1)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -336,7 +328,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, ordinary, user.id)
@@ -371,7 +363,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, instance, user.id)
@@ -446,7 +438,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -477,7 +469,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -535,7 +527,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -563,7 +555,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, weekly_instance(source), user.id)
@@ -632,7 +624,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
       expect_master(["RRULE:FREQ=WEEKLY;BYDAY=TU"])
 
       expect(Tymeslot.CalendarMock, :create_event, 2, fn _event_data, _context ->
-        {:ok, %{provider_event_id: "target-pid"}}
+        oauth_write_response("target-pid")
       end)
 
       instance = weekly_instance(source)

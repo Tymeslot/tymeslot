@@ -185,4 +185,94 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.OrphanScanTest do
       assert [] == OrphanScan.orphans_for_user(insert(:user).id)
     end
   end
+
+  describe "the cost of a scan" do
+    # The scan derives three candidate identities per cached source event, and
+    # originally looked each one up on its own. That is ~6,000 sequential
+    # single-row queries for a link over a 2,000-event calendar — affordable
+    # only while nothing but a test ever called it, and this is the schedule
+    # that would have run it daily.
+    #
+    # The query count is asserted rather than the wall clock: a timing
+    # assertion on a loaded machine measures the machine. Reverting
+    # `list_by_uids/2` to a lookup per candidate fails this and leaves every
+    # correctness test above green, which is precisely why it is here.
+    test "asks the target a bounded number of times, not once per candidate", %{
+      user: user,
+      source: source
+    } do
+      for index <- 1..40 do
+        cached(source, "source-uid-#{index}", summary: "Meeting #{index}")
+      end
+
+      {_orphans, queries} = count_queries(fn -> OrphanScan.orphans_for_user(user.id) end)
+
+      # 40 sources derive 120 identities. The per-candidate shape issued one
+      # query each; the batched shape issues one for the whole link, so the
+      # total stays in single digits regardless of how big the calendar is.
+      assert queries < 20,
+             "expected a bounded number of queries, got #{queries} for 120 derived identities"
+    end
+
+    test "batching finds exactly what a lookup per candidate found", %{
+      user: user,
+      source: source,
+      target: target,
+      link: link
+    } do
+      # Equivalence, stated against the identities themselves rather than
+      # against the old implementation: whatever the batch matches must be the
+      # same set the individual `uid ==` lookups would have matched. Two
+      # placeholders among forty sources, one cached under the CalDAV identity
+      # and one under Google's, so a batch that quietly dropped either form
+      # would show up here.
+      for index <- 1..40 do
+        cached(source, "source-uid-#{index}", summary: "Meeting #{index}")
+      end
+
+      caldav_uid = Engine.target_uid_for(link.id, "source-uid-7")
+      cached(target, caldav_uid)
+
+      google_id =
+        link.id
+        |> Engine.target_uid_for("source-uid-23")
+        |> EventMapper.uuid_to_google_event_id()
+
+      cached(target, google_id <> "@google.com", provider_event_id: google_id)
+
+      found = user.id |> OrphanScan.orphans_for_user() |> MapSet.new(& &1.uid)
+
+      assert found == MapSet.new([caldav_uid, google_id <> "@google.com"])
+    end
+  end
+
+  # Counts the queries the repo issues while `fun` runs, via Ecto's own
+  # telemetry event. Scoped to this process so a concurrently running async test
+  # cannot inflate the count.
+  defp count_queries(fun) do
+    test_pid = self()
+    handler_id = {__MODULE__, System.unique_integer()}
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, _metadata, _config ->
+        if self() == test_pid, do: send(test_pid, {handler_id, :query})
+      end,
+      nil
+    )
+
+    result = fun.()
+    :telemetry.detach(handler_id)
+
+    {result, drain_queries(handler_id, 0)}
+  end
+
+  defp drain_queries(handler_id, count) do
+    receive do
+      {^handler_id, :query} -> drain_queries(handler_id, count + 1)
+    after
+      0 -> count
+    end
+  end
 end

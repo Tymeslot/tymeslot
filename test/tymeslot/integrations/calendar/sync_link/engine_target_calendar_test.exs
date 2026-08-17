@@ -137,7 +137,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTargetCalendarTest do
       link = secondary_link(link)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTargetCalendarTest do
       {:ok, link} = CalendarSyncLinkQueries.get(link.id)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
@@ -238,7 +238,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTargetCalendarTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn data, _context ->
         assert data.calendar_id == @secondary
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context, opts ->
@@ -262,7 +262,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTargetCalendarTest do
       test_pid = self()
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, event_data, _context ->

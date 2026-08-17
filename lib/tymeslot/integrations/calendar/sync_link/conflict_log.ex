@@ -26,6 +26,24 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
   conflict noticed a sync later is still recorded with the values that were
   compared.
 
+  ## Which cache row, and in what form its etag arrives
+
+  Two facts about the target side make that lookup and that comparison harder
+  than they look, and both were wrong here at once — the first hiding the
+  second, so fixing either alone would have been worse than fixing neither.
+
+  The placeholder is not cached under the UID the write was addressed to.
+  Google mints its own iCalUID as `{id}@google.com` and the normaliser caches
+  that, so `target_uid` names a row that exists only for the CalDAV family,
+  which keeps the UID it is handed. Both identities are tried, through the one
+  statement of that expansion in `SyncLink.ProviderEventId`.
+
+  And the two etags are not in the same form. The mirror's is cleaned on the way
+  in by `SyncLink.WriteEtag`; the cache's is Google's raw entity tag, quotes
+  included. They are cleaned to a common form at the moment of comparison, in
+  the single function that performs it — see `etags_differ?/2` below for why
+  that side and not the cache column.
+
   ## Why absence of evidence is never a conflict
 
   A missing etag on either side, or a missing cache row, produces no conflict
@@ -55,9 +73,23 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
   Per provider:
 
   - **Google** reports `etag` on every write response, so all three kinds fire.
-  - **Outlook** sends `@odata.etag` on the raw Graph body and is read the same
-    way; it is untested against the live API, so treat it as expected-to-work
-    rather than confirmed.
+  - **Outlook** supplies the write half only, and the three kinds stay off for
+    it. Graph annotates every entity with `@odata.etag`, and the write path now
+    keeps it — `CalendarAPI.convert_to_common_format/1` narrows a write response
+    to a fixed atom-keyed map before `handle_write_api_call/2` ever sees it, so
+    the key had to be named there or it was gone one layer too early. It was
+    not, and every Outlook mirror row stored a `nil` baseline.
+
+    That is necessary but not sufficient. `mirror_edited?/2` needs *two* binary
+    etags plus a `provider_updated_at`, and the cache side supplies neither:
+    `Outlook.EventNormaliser` maps no `etag` and no `provider_updated_at`
+    (contrast `Google.EventNormaliser`'s `event_normaliser.ex:82-83`), and the
+    inbound `$select` (`outlook_calendar_api.ex:29`) requests
+    `lastModifiedDateTime` no more than it does the etag. Closing the read half
+    means both a `$select` change and new normaliser mappings, verifiable only
+    against a live tenant. Until then Outlook behaves like the CalDAV family
+    here — off, by absence of a baseline on the observed side rather than the
+    written one.
   - **The CalDAV family** answers a bare `:ok` from a PUT whose response ETag
     the HTTP layer does not surface. It records `nil`.
 
@@ -141,9 +173,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId
 
   # Written into `target_etag` once a divergence has been logged, so the retry
   # that follows does not log it again. A real etag is a provider value and
@@ -307,11 +341,28 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
   # The placeholder as the target's own sync last cached it. A target that has
   # not synced since the placeholder was written has no row, which is not
   # evidence of anything.
+  #
+  # Looked up under every identity the placeholder could be cached under rather
+  # than under `target_uid` alone, because Google does not keep the UID a write
+  # was addressed to — it mints `{id}@google.com` and the normaliser caches that.
+  # `target_uid` therefore names a row that exists only for the CalDAV family,
+  # and asking for it alone found nothing at all on a live installation: 0 of 105
+  # active mirrors resolved, all 105 resolved by the suffixed provider id. Every
+  # etag-based kind was dead for a Google target as a result, and the suite was
+  # green because its fixtures cached the placeholder under the uid we asked for.
+  #
+  # `ProviderEventId.cache_identities/2` is the one statement of that expansion,
+  # shared with loop prevention in `CalendarSyncMirrorQueries`. Its order puts
+  # the form live rows actually carry first, so the ordinary case is one query.
   defp observed_placeholder(%CalendarSyncMirrorSchema{} = mirror) do
-    case ProviderCalendarEventQueries.get_by_uid(mirror.target_integration_id, mirror.target_uid) do
-      {:ok, event} -> event
-      {:error, :not_found} -> nil
-    end
+    mirror.target_uid
+    |> ProviderEventId.cache_identities(mirror.target_provider_event_id)
+    |> Enum.find_value(fn uid ->
+      case ProviderCalendarEventQueries.get_by_uid(mirror.target_integration_id, uid) do
+        {:ok, event} -> event
+        {:error, :not_found} -> nil
+      end
+    end)
   end
 
   # Both etags must be present to differ. A provider reporting none gives
@@ -331,9 +382,37 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
 
   defp mirror_edited?(%{target_etag: written} = mirror, %{etag: observed} = placeholder)
        when is_binary(written) and is_binary(observed),
-       do: written != observed and changed_after_write?(mirror, placeholder)
+       do: etags_differ?(written, observed) and changed_after_write?(mirror, placeholder)
 
   defp mirror_edited?(_mirror, _observed), do: false
+
+  # The only place the two target etags are compared, which is the point of it
+  # existing rather than a `!=` at the call site above.
+  #
+  # They arrive in different forms and always have. `WriteEtag.extract/1` cleans
+  # the write response's entity tag before it reaches `target_etag`, so the
+  # mirror row holds `3573898397004446`; `Google.EventNormaliser` stores
+  # `raw["etag"]` untouched (`event_normaliser.ex:82`), so the cache row holds
+  # `"3573898397004446"` with Google's quotes. On a live installation all 105
+  # mirror rows carried the bare form and all 224 cached events the quoted one,
+  # so a raw `!=` is unequal for every pair including the matching ones — a
+  # conflict row per mirror per sweep, the entire log filled with the engine
+  # reporting its own writes.
+  #
+  # Normalised here rather than on the way into the cache for two reasons. The
+  # rows already written are the ones that matter: 224 of them hold the quoted
+  # form, and cleaning only new writes would leave every existing placeholder
+  # comparing unequal until its calendar next re-syncs — which for an unchanged
+  # event under Google's delta sync may be never. And the cache's `etag` is a
+  # provider value read by paths that are not this one, so trimming it there
+  # changes what they see to fix a comparison that is local to here.
+  #
+  # `clean_etag/1` is the same function `WriteEtag` delegates to, so the two
+  # sides cannot drift into disagreeing about what "cleaned" means — including
+  # over a weak tag like Graph's `W/"abc"`, which it trims untidily but trims
+  # identically on both sides.
+  defp etags_differ?(written, observed),
+    do: EventProcessor.clean_etag(written) != EventProcessor.clean_etag(observed)
 
   defp changed_after_write?(%{last_synced_at: %DateTime{} = written_at}, %{
          provider_updated_at: %DateTime{} = observed_at

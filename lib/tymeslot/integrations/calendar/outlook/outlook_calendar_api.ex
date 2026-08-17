@@ -35,7 +35,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           location: String.t() | nil,
           start: map(),
           end: map(),
-          status: String.t() | nil
+          status: String.t() | nil,
+          etag: String.t() | nil
         }
 
   @type api_error :: CalendarAPIBehaviour.api_error()
@@ -505,7 +506,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
         is_all_day: event["isAllDay"] || false,
         status: if(event["isCancelled"], do: "cancelled", else: "confirmed"),
         show_as: event["showAs"],
-        response_status: get_in(event, ["responseStatus", "response"])
+        response_status: get_in(event, ["responseStatus", "response"]),
+        # Graph annotates every event entity with `@odata.etag`, and this is the
+        # only layer it exists at: a write answers
+        # `List.first(convert_to_common_format([response]))`, so a key not named
+        # here is gone before `OAuthBase.handle_write_api_call/2` can keep it.
+        # Without this the mirror's `target_etag` was `nil` for every Outlook
+        # target and the three etag-based conflict kinds could not fire at all —
+        # `SyncLink.WriteEtag` explains why that baseline has no other source.
+        etag: event["@odata.etag"]
       }
     end)
   end

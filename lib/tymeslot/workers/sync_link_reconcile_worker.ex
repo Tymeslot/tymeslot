@@ -58,7 +58,9 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
   - a mapping whose source is cached but no longer an eligible source —
     cancelled, transparent, or now itself a mirror → `:delete`
   - a mapping whose source `provider_updated_at` is newer than the mapping's
-    `source_updated_at` → `:upsert`
+    `source_updated_at` → `:upsert`. Both sides must be present: a source that
+    reports no timestamp, and a mapping that recorded none when it was written,
+    each leave the comparison with nothing to stand on, and neither is enqueued.
   - a mapping in `pending_delete` → `:delete`, retried. This is the state
     `Engine.unmirror/3` leaves behind when the provider delete fails, and Oban's
     attempts on the original job are long exhausted by the time a sweep runs.
@@ -119,10 +121,17 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
+  alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
+
+  # An attribute rather than a call because `reconcile_mapped/3` matches it in a
+  # function head, and a pattern admits no call. A misspelt literal there would
+  # not raise — it would fall through to the clause below, which re-enqueues an
+  # upsert for a placeholder that is being withdrawn.
+  @state_pending_delete CalendarSyncMirrorSchema.state_pending_delete()
 
   @typedoc "What Oban is handed back, unchanged from the other sync-link workers."
   @type result :: :ok | {:error, term()} | {:discard, term()}
@@ -222,7 +231,7 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
   # A teardown already in progress outranks any edit to the source. Checked
   # first so an unrelated change to a cancelled meeting cannot flip a mapping
   # out of `pending_delete` and rewrite the placeholder that was being removed.
-  defp reconcile_mapped(link, %{state: "pending_delete", source_uid: uid}, _event),
+  defp reconcile_mapped(link, %{state: @state_pending_delete, source_uid: uid}, _event),
     do: WriteBack.enqueue(link.id, uid, :delete)
 
   defp reconcile_mapped(link, mapping, event) do
@@ -239,7 +248,25 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
   # unbounded standing load for a provider that simply does not report the
   # field. The push path still catches genuine edits to these events.
   defp stale?(_mapping, %{provider_updated_at: nil}), do: false
-  defp stale?(%{source_updated_at: nil}, _event), do: true
+
+  # A mapping with no baseline is the mirror image of the rule above, and it is
+  # the same absence of evidence: nothing records what the source looked like
+  # when the placeholder was written, so nothing here can say it has changed
+  # since. Treating "no baseline" as changed compares a timestamp against a hole
+  # and calls the hole older, which is true of every such mapping simultaneously.
+  #
+  # That distinction only became reachable when the normalisers began reporting
+  # `provider_updated_at` at all. Before then no source carried one, the clause
+  # above answered first for every event, and this one was dead. Every mapping
+  # written in that period stamped a `source_updated_at` of nil, so reading it as
+  # stale would re-mirror a link's entire history on the first sweep afterwards —
+  # a write-back storm against real calendars triggered by the bookkeeping
+  # starting to work, not by any event having moved.
+  #
+  # So it stands down, and the gap closes on its own: the next write-back for
+  # that mapping — from the push path, an edit, or an eligibility change —
+  # records a real baseline, and the sweep after that compares properly.
+  defp stale?(%{source_updated_at: nil}, _event), do: false
 
   defp stale?(%{source_updated_at: mapped}, %{provider_updated_at: source}),
     do: DateTime.compare(source, mapped) == :gt

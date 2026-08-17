@@ -93,21 +93,32 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
     end
   end
 
+  # The mark a recurring source actually carries. `singleEvents=true` returns
+  # expanded instances, and an instance carries no `recurrence` array — only the
+  # master does — so `recurrence_rule` is nil on every Google row and
+  # `recurring_event_id` is the only sign of a series.
+  #
+  # This is the default here because the clause it exercises,
+  # `recurring?(%{recurring_event_id: id})`, is the one that fires on real
+  # traffic. The coverage used to run the other way: nine tests marked recurrence
+  # with a bare rule and one with the master id, so the clause that never fires
+  # in production was pinned nine times over and the clause that always fires was
+  # pinned once. That is not a stricter suite than no suite, it is a suite
+  # describing a different system.
+  defp series_instance(attrs \\ []),
+    do: event([recurring_event_id: "master_abc123"] ++ attrs)
+
   describe "mirror_source?/3 — recurrence turns on the target" do
     # The write gate is the only place the target's provider is known, and a
     # recurring source is the one case whose answer depends on it: Google
     # expands a series it is handed, so one placeholder carries the whole
     # thing, while a target that cannot would receive a single block at
     # whichever occurrence the cache happened to keep.
-    # The shape a Google recurring source actually has. `singleEvents=true`
-    # returns expanded instances, and an instance carries no `recurrence` array
-    # — only the master does — so `recurrence_rule` is always nil and
-    # `recurring_event_id` is the only mark of a series. Every test below that
-    # marks recurrence with a rule describes a row no Google sync can produce,
-    # which is how a rule-based guard passed them all while never firing on a
-    # real event.
     test "a Google instance is recognised as recurring by its master id" do
-      instance = event(recurrence_rule: nil, recurring_event_id: "master_abc123")
+      instance = series_instance()
+
+      assert instance.recurrence_rule == nil,
+             "a Google instance carries no rule — see the note above"
 
       assert Eligibility.mirror_source?(instance, MapSet.new(), "google")
 
@@ -125,30 +136,35 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
     end
 
     test "a recurring source is eligible for a target that expands a series" do
-      assert Eligibility.mirror_source?(
-               event(recurrence_rule: "FREQ=WEEKLY;COUNT=10"),
-               MapSet.new(),
-               "google"
-             )
+      assert Eligibility.mirror_source?(series_instance(), MapSet.new(), "google")
     end
 
     test "the same recurring source is skipped for an Outlook target" do
-      refute Eligibility.mirror_source?(
-               event(recurrence_rule: "FREQ=WEEKLY;COUNT=10"),
-               MapSet.new(),
-               "outlook"
-             )
+      refute Eligibility.mirror_source?(series_instance(), MapSet.new(), "outlook")
     end
 
     test "and for a CalDAV target" do
       for provider <- ~w(caldav nextcloud radicale apple) do
-        refute Eligibility.mirror_source?(
-                 event(recurrence_rule: "FREQ=WEEKLY;COUNT=10"),
-                 MapSet.new(),
-                 provider
-               ),
+        refute Eligibility.mirror_source?(series_instance(), MapSet.new(), provider),
                "#{provider} must not be handed a recurring source"
       end
+    end
+
+    # The one rule-only case, and the only ingest that produces it: a row
+    # carrying an RRULE and no master id comes from a non-Google source — an ICS
+    # subscription, a CalDAV server that returns masters unexpanded — or from a
+    # Google row cached before expansion was turned on. It is still a series and
+    # still refused by a target that cannot expand one, which is what the second
+    # `recurring?/1` clause exists for.
+    #
+    # It stays a single test deliberately. Marking recurrence this way is the
+    # exception, and a suite that spreads it across every case describes the
+    # ingest nobody has rather than the one everybody does.
+    test "a rule with no master id is still a series: the non-Google ingest path" do
+      rule_only = event(recurrence_rule: "FREQ=WEEKLY;COUNT=10", recurring_event_id: nil)
+
+      assert Eligibility.mirror_source?(rule_only, MapSet.new(), "google")
+      refute Eligibility.mirror_source?(rule_only, MapSet.new(), "outlook")
     end
 
     # Omitting the target is how every non-recurrence caller asks the question,
@@ -156,17 +172,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
     # caller that does not know where the placeholder is going cannot have
     # established that the destination expands series.
     test "a recurring source is skipped when no target provider is named" do
-      refute Eligibility.mirror_source?(
-               event(recurrence_rule: "FREQ=WEEKLY;COUNT=10"),
-               MapSet.new()
-             )
+      refute Eligibility.mirror_source?(series_instance(), MapSet.new())
     end
 
     # The target's capability never rescues an event refused for another
     # reason. A recurring mirror is still a leaf; a recurring cancelled event
     # still takes no time.
     test "a recurrence-capable target does not override the other refusals" do
-      recurring = [recurrence_rule: "FREQ=WEEKLY"]
+      recurring = [recurring_event_id: "master_abc123"]
 
       refute Eligibility.mirror_source?(
                event(recurring),
@@ -213,7 +226,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
     # cancelled one is — the answer differs per link, and only the worker holds
     # the link.
     test "a recurring event is worth a job: whether it can be mirrored is per link" do
-      assert Eligibility.worth_enqueueing?(event(recurrence_rule: "FREQ=DAILY"), MapSet.new())
+      assert Eligibility.worth_enqueueing?(series_instance(), MapSet.new())
     end
 
     test "an event that has stopped blocking time is still worth a job" do
@@ -239,7 +252,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
       refute Eligibility.mirror_source?(%{row | status: "cancelled"}, MapSet.new())
       refute Eligibility.mirror_source?(%{row | transparency: "transparent"}, MapSet.new())
 
-      recurring = %{row | recurrence_rule: "FREQ=DAILY"}
+      recurring = %{row | recurring_event_id: "master_abc123"}
       refute Eligibility.mirror_source?(recurring, MapSet.new(), "outlook")
       assert Eligibility.mirror_source?(recurring, MapSet.new(), "google")
     end

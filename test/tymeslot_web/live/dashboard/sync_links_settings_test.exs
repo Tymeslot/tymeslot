@@ -21,12 +21,15 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
   @moduletag :sync_links
   @moduletag :utils
 
+  import Ecto.Query, only: [from: 2]
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.SyncLink
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
   setup :setup_dashboard_user
@@ -46,6 +49,19 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       is_active: true,
       calendar_list: calendars
     )
+  end
+
+  # An integration reconnected as a published feed keeps its row and its id, so
+  # every link already pointing at it goes on doing so. `create_link/2` would
+  # have refused an ICS target outright, so the only way to reach this state is
+  # the way production reaches it: the provider changes underneath a link that
+  # already exists.
+  defp reconnect_as_subscription(integration_id) do
+    {1, _no_returning} =
+      Repo.update_all(
+        from(i in CalendarIntegrationSchema, where: i.id == ^integration_id),
+        set: [provider: "ics_url"]
+      )
   end
 
   # The dot under a ticked cell is what opens that link's settings; there is no
@@ -312,6 +328,53 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
         |> render_click()
 
       assert html =~ "Paused"
+      assert [%{enabled: false}] = SyncLink.list_links(user.id)
+    end
+
+    # Both directions of the pause/resume asymmetry, read off the panel rather
+    # than off the row. The button is the same button either way, so what
+    # distinguishes the two cases is entirely what the page says afterwards.
+    test "pauses a link whose target was reconnected as a subscription", %{
+      conn: conn,
+      user: user,
+      link: link
+    } do
+      reconnect_as_subscription(link.target_integration_id)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      html =
+        view
+        |> element("button[phx-click='toggle_sync_link'][phx-value-id='#{link.id}']")
+        |> render_click()
+
+      # The one control an organiser has over a link that can no longer write
+      # anywhere has to keep working, or a broken link is unstoppable.
+      assert html =~ "Paused"
+      assert [%{enabled: false}] = SyncLink.list_links(user.id)
+    end
+
+    test "refuses to resume a link whose target was reconnected as a subscription", %{
+      conn: conn,
+      user: user,
+      link: link
+    } do
+      {:ok, _paused} = SyncLink.toggle_enabled(user.id, link.id, false)
+      reconnect_as_subscription(link.target_integration_id)
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+      assert html =~ "Paused"
+
+      html =
+        view
+        |> element("button[phx-click='toggle_sync_link'][phx-value-id='#{link.id}']")
+        |> render_click()
+
+      # Storing the row is not the feature: the panel still has to say the link
+      # is paused, and still offer "Resume" rather than the "Pause" it would
+      # render for a link it believed had come back.
+      assert html =~ "Paused"
+      assert html =~ "Resume"
       assert [%{enabled: false}] = SyncLink.list_links(user.id)
     end
 

@@ -79,7 +79,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackSettingsTest do
 
     expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
       send(test_pid, {:payload, event_data})
-      {:ok, %{provider_event_id: "target-pid-1"}}
+      oauth_write_response("target-pid-1")
     end)
   end
 

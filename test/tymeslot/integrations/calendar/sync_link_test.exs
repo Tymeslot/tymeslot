@@ -535,6 +535,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLinkTest do
       refute_enqueued(worker: SyncLinkWriteBackWorker)
       refute_enqueued(worker: SyncLinkReconcileWorker)
     end
+
+    # What a resume additionally refuses, and what it must not, is
+    # `SyncLinkResumeWritabilityTest`.
   end
 
   describe "delete_link/2" do

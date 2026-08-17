@@ -13,8 +13,20 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.OrphanScan do
 
   Reaching that state takes a provider write landing, its row write failing,
   *and* `Engine.persist_or_compensate/5`'s compensating delete failing too — or
-  a row removed outside the application, by a restore or by hand. It is narrow,
-  which is why this reports rather than repairs.
+  a row removed outside the application, by a restore or by hand.
+
+  It is also one `Repo.delete` away at all times. Both of a mirror's foreign
+  keys are `on_delete: :delete_all`
+  (`20260813090100_create_calendar_sync_mirrors.exs`), so deleting a link or
+  either integration drops the rows while the placeholders stay on the
+  provider. `Calendar.Deletion` withdraws first and abandons the disconnect if
+  it cannot, which is what makes the disconnect path safe — but that is a guard
+  on one path rather than a property of the schema.
+
+  `Workers.MirrorOrphanScanWorker` runs this daily, per organiser. Until it
+  existed the module had no caller outside its own tests, which meant the
+  question below could not be asked of a running system at all — and a detector
+  nothing invokes is silent in exactly the way a healthy system is.
 
   ## Why it reports and does not repair
 
@@ -62,7 +74,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.OrphanScan do
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
   alias Tymeslot.Integrations.Calendar.SyncLink.OrphanScanQueries
 
@@ -112,26 +123,32 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.OrphanScan do
   # Every identity a link's placeholders could be cached under, looked up on the
   # target. Derived forward from the link and the sources it still holds,
   # because Google's is a hash of ours and cannot be recovered from the cache.
+  #
+  # The whole link's identities are derived before anything is looked up, so the
+  # target is asked once rather than once per candidate. Asking per candidate is
+  # what this replaces: three identities per source event, each its own
+  # single-row query, is ~6,000 sequential round trips for a link over a
+  # 2,000-event calendar — a cost that only stayed invisible while the scan had
+  # no caller but its tests. The answer is identical either way; a `uid in ^list`
+  # matches exactly the rows the individual lookups found.
   defp derived_candidates(links) do
     Enum.flat_map(links, fn link ->
       link.source_integration_id
       |> OrphanScanQueries.list_uids_for_integration()
-      |> Enum.flat_map(&candidates_for(link, &1))
+      |> Enum.flat_map(&identities_for(link, &1))
+      |> then(&OrphanScanQueries.list_by_uids(link.target_integration_id, &1))
     end)
   end
 
-  defp candidates_for(link, source_uid) do
+  # The three identities one source event's placeholder could be cached under:
+  # the UID the write would be addressed to, which the CalDAV family keeps; the
+  # id Google hashes that to; and the iCalUID Google mints from it, which is
+  # what a Google target's own inbound sync actually caches.
+  defp identities_for(link, source_uid) do
     target_uid = Engine.target_uid_for(link.id, source_uid)
     google_id = EventMapper.uuid_to_google_event_id(target_uid)
 
-    [target_uid, google_id, google_id <> "@google.com"]
-    |> Enum.uniq()
-    |> Enum.flat_map(fn uid ->
-      case ProviderCalendarEventQueries.get_by_uid(link.target_integration_id, uid) do
-        {:ok, event} -> [event]
-        {:error, :not_found} -> []
-      end
-    end)
+    Enum.uniq([target_uid, google_id, google_id <> "@google.com"])
   end
 
   @doc """

@@ -224,16 +224,38 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   Pauses or resumes one link.
 
   Pausing leaves the placeholders already written on the target in place; only
-  deleting the link tears the mapping rows down. Routed through `update_link/3`
-  so a paused link is re-validated against its target's provider — an
-  integration reconnected as a subscription while a link pointed at it should
-  not be resumable.
+  deleting the link tears the mapping rows down.
+
+  ## Why the two directions do not share a changeset
+
+  Not routed through `update_link/3`, and deliberately so. Pausing is the
+  control an organiser reaches for when a link is misbehaving, so it has to
+  work on a link that is misbehaving — including a row whose stored attributes
+  no longer satisfy a validation added after it was written.
+  `CalendarSyncLinkSchema.enabled_changeset/2` records what that cost: routing
+  the pause through the full changeset turned "pause this" into an error about
+  a label the write never touches, and the one thing an organiser could do
+  about a bad link was the thing that failed.
+
+  Resuming is the other operation. It starts writes rather than stopping them,
+  and one property of the target decides whether they can land at all: an
+  integration reconnected as a subscription while a link pointed at it answers
+  `{:error, :read_only}` to every create, so a resume would schedule a write
+  that fails forever. `CalendarSyncLinkSchema.resume_changeset/2` therefore
+  applies that single rule and no other — the target's provider is loaded here
+  for it, the way `create_link/2` and `update_link/3` load it, since a
+  changeset cannot read the integration row itself.
+
+  So a read-only target refuses the resume and still permits the pause. The
+  asymmetry is the point: a link whose target went read-only is exactly a
+  misbehaving link, and refusing to pause it would leave the organiser holding
+  one they can neither fix nor stop.
   """
   @spec toggle_enabled(integer(), integer() | any(), boolean()) :: result()
   def toggle_enabled(user_id, link_id, enabled) when is_boolean(enabled) do
     with {:ok, link} <- owned_link(user_id, link_id) do
       link
-      |> CalendarSyncLinkSchema.enabled_changeset(enabled)
+      |> toggle_changeset(user_id, enabled)
       |> CalendarSyncLinkQueries.update_changeset()
     end
   end
@@ -264,12 +286,53 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   end
 
   @doc """
-  A changeset for the dashboard form, carrying the target's provider so the
-  form re-renders under the same rules the write will apply.
+  A changeset for rendering a link's fields, validated without a target
+  provider.
+
+  It carries no `:target_provider` and does not load one. The two rules that
+  depend on it — a read-only subscription cannot be a mirror target, and the
+  CalDAV family ignores a chosen calendar id — are the ones
+  `CalendarSyncLinkSchema` skips when the field is absent, so this changeset
+  answers under *fewer* rules than the write that follows it will apply. A
+  caller using it to decide whether a save will be accepted will be told yes on
+  configurations `create_link/2` and `update_link/3` refuse.
+
+  That is survivable only because nothing renders a form from it: the dashboard
+  panel builds its fields from the submitted params and reports errors from the
+  changeset the *write* returned, which is the one carrying the provider. A
+  caller that does need the write's verdict should ask for it through
+  `update_link/3` rather than pre-flighting it here.
   """
   @spec change_link(CalendarSyncLinkSchema.t(), map()) :: Ecto.Changeset.t()
   def change_link(%CalendarSyncLinkSchema{} = link, attrs \\ %{}),
     do: CalendarSyncLinkQueries.change(link, attrs)
+
+  # A pause asks nothing of the target, so it loads nothing: the extra query
+  # would buy a fact no rule reads, on the one operation that has to work when
+  # everything else about the link is wrong.
+  defp toggle_changeset(link, _user_id, false),
+    do: CalendarSyncLinkSchema.enabled_changeset(link, false)
+
+  # A resume needs the provider the target has *now*, not the one it had when
+  # the link was configured, which is the entire scenario the rule exists for.
+  # `provider_for_owner/2` rather than a bare lookup, for the reason the
+  # moduledoc gives: nothing in this module reads an integration row without
+  # first proving the acting organiser owns it.
+  #
+  # A target that answers nothing — deleted, or moved to another owner — hands
+  # `nil` to a changeset that skips the rule for a missing provider, so the
+  # resume proceeds. That is the same position `enabled_changeset/2` takes: the
+  # write is refused by the engine's own provider guard and the foreign key, and
+  # neither is worth pre-empting at the cost of a toggle that cannot run.
+  defp toggle_changeset(link, user_id, true) do
+    target_provider =
+      case CalendarIntegrationQueries.provider_for_owner(link.target_integration_id, user_id) do
+        {:ok, provider} -> provider
+        {:error, :not_found} -> nil
+      end
+
+    CalendarSyncLinkSchema.resume_changeset(link, target_provider)
+  end
 
   # An invalid changeset is returned before anything is withdrawn — see the
   # docstring. `Repo.update/1` would answer the same error, but only after the

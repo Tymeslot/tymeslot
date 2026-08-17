@@ -30,6 +30,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorColour do
   and a redundant write — to correct a hue.
 
   So the patch logs its own failure and returns the write's result untouched.
+  That log is the only signal this path emits, which makes recognising success
+  the whole of its correctness: `wrote?/1` from `ProviderEventId` decides, not a
+  match written out here. Google is the sole provider that reaches the patch,
+  and its answer is `{:ok, event}` — `patch_event_colour/4` returns the body and
+  `OAuthBase.handle_write_api_call/2` converts it — so a match on the bare `:ok`
+  recognised only the short-circuit for a colour Google has no id for, and
+  reported every patch that actually landed as a failure.
+
   The next mirror write for that source repaints, because the patch is
   unconditional rather than diffed against a stored colour: no column records
   what colour the placeholder currently carries, and adding one to save a
@@ -44,6 +52,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorColour do
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.SyncLink.Capability
+
+  import Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId, only: [wrote?: 1]
 
   @doc """
   Whether this link's placeholders can be painted, and with what.
@@ -131,7 +141,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorColour do
            event_data,
            {link.target_integration_id, user_id}
          ) do
-      :ok ->
+      landed when wrote?(landed) ->
         :ok
 
       other ->

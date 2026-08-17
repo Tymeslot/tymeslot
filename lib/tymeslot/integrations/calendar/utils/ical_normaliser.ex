@@ -165,6 +165,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         recurrence_id: raw[:recurrence_id],
         recurrence_id_range: raw[:recurrence_id_range],
         etag: raw[:etag],
+        provider_updated_at: provider_updated_at(raw[:last_modified]),
         colour: EventColour.nearest_key(raw[:colour]),
         provider_metadata: Map.drop(raw, [:raw_ical, :href, :_occ_start, :_occ_end, :_recurring]),
         raw_ical: raw[:raw_ical],
@@ -319,6 +320,17 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp build_uid(raw), do: raw[:uid]
 
   # --- Field mappers ---
+
+  # LAST-MODIFIED is specified as a UTC DATE-TIME, and a DateTime is the only
+  # thing `provider_updated_at` can hold. `ICalParser` parses it with the same
+  # helper it uses for DTSTART, which falls back to a `Date` for a bare
+  # `YYYYMMDD` — legitimate for an all-day start, meaningless as a modification
+  # instant, and rejected by the `:utc_datetime_usec` column. A publisher that
+  # writes one, or anything else the parser could not resolve, records no
+  # baseline rather than a wrong one: `nil` reads as "cannot tell", which every
+  # consumer already handles by standing down.
+  defp provider_updated_at(%DateTime{} = last_modified), do: last_modified
+  defp provider_updated_at(_absent_or_unusable), do: nil
 
   defp tymeslot_origin?(raw) do
     uid = raw[:uid] || ""

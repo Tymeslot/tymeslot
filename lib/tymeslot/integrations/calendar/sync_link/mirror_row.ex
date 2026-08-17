@@ -119,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MirrorRow do
   """
   @spec mark_pending_delete(CalendarSyncMirrorSchema.t(), term()) :: {:error, term()}
   def mark_pending_delete(%CalendarSyncMirrorSchema{} = mirror, reason) do
-    mark(mirror, %{state: "pending_delete"})
+    mark(mirror, %{state: CalendarSyncMirrorSchema.state_pending_delete()})
     {:error, reason}
   end
 end

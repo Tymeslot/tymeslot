@@ -130,13 +130,37 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries do
 
     pending_delete =
       from(m in CalendarSyncMirrorSchema,
-        where: m.sync_link_id == parent_as(:link).id and m.state == "pending_delete"
+        where:
+          m.sync_link_id == parent_as(:link).id and
+            m.state == ^CalendarSyncMirrorSchema.state_pending_delete()
       )
 
     from(l in CalendarSyncLinkSchema, as: :link)
     |> where([l], l.enabled == true or exists(subquery(pending_delete)))
     |> where([l], is_nil(l.last_reconciled_at) or l.last_reconciled_at < ^cutoff)
     |> order_by([l], asc: l.id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Every user id that has at least one link configured, ascending.
+
+  The orphan scan's selection. It asks its question per organiser — a
+  placeholder is unclaimed relative to everything that organiser owns, not
+  relative to one link — so the sweep needs the set of organisers rather than
+  the set of links.
+
+  Links are counted whether enabled or not. A disabled link's placeholders are
+  still on the target, and a link disabled by a teardown that could not finish
+  is the case most likely to have left one behind; filtering on `enabled` would
+  hide exactly the organiser worth scanning.
+  """
+  @spec list_user_ids_with_links() :: [integer()]
+  def list_user_ids_with_links do
+    CalendarSyncLinkSchema
+    |> select([l], l.user_id)
+    |> distinct(true)
+    |> order_by([l], asc: l.user_id)
     |> Repo.all()
   end
 

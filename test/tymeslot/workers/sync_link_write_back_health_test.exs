@@ -145,7 +145,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackHealthTest do
       cached_event(source)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok ==

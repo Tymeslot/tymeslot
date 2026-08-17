@@ -317,6 +317,10 @@ if config_env() == :prod do
          {"20,50 * * * *", Tymeslot.Workers.SyncLinkReconcileSweepWorker},
          # Run daily at 04:00 UTC for cross-domain data retention pruning
          {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
+         # Run daily at 04:15 UTC, after the cache prune at 03:30, to report
+         # mirror placeholders no mapping row claims — the one state teardown,
+         # the reconcile sweep and loop prevention are all blind to
+         {"15 4 * * *", Tymeslot.Workers.MirrorOrphanScanWorker},
          # Run every 6 hours to detect silent/dead webhook channels
          {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
          # Run daily at 03:30 UTC to prune old/inactive calendar event cache

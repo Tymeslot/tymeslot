@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineColourTest do
   @moduletag :calendar
   @moduletag :sync_links
 
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.Factory
   import Tymeslot.SyncLinkTestHelpers
@@ -79,7 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineColourTest do
       link = %{link | mirror_colour: "peacock"}
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       expect(Tymeslot.CalendarMock, :update_event, fn uid, event_data, context ->
@@ -104,10 +105,75 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineColourTest do
       # No `update_event` expectation: `verify_on_exit!` fails the test if the
       # engine patches a colour that was never configured.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
+    end
+
+    # Google's patch answers `{:ok, event}`, not a bare `:ok`.
+    # `patch_event_colour/4` returns the provider body, `handle_write_api_call/2`
+    # pipes it through `convert_event/1` — atom keys, the provider's id under
+    # `:uid` — and hands back `{:ok, converted}`. A bare `:ok` comes back only
+    # from the short-circuit for a colour that maps to no Google `colorId`, so a
+    # patch that actually reached the API and worked never looks like one.
+    #
+    # Google is also the only provider that reaches this path at all
+    # (`Capability.supports?/2` on `:per_event_colour`), which makes `{:ok, _}`
+    # the shape a *successful* patch has in production and the bare `:ok` the
+    # rare one. Matching only the bare `:ok` therefore logged every real success
+    # as a failure, and the log is the only thing this path emits.
+    test "a Google patch answering {:ok, event} is not logged as a failure", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      link = %{link | mirror_colour: "peacock"}
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        oauth_write_response("target-pid-1")
+      end)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
+        {:ok,
+         %{
+           uid: "target-pid-1",
+           summary: "Busy",
+           start_time: ~U[2026-07-03 09:00:00Z],
+           end_time: ~U[2026-07-03 10:00:00Z],
+           etag: "\"3141592653589793\""
+         }}
+      end)
+
+      log =
+        capture_log(fn ->
+          assert :ok == Engine.mirror(link, source_event(source), user.id)
+        end)
+
+      refute log =~ "Mirror colour patch failed"
+    end
+
+    test "a colour patch that really fails is still reported", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      link = %{link | mirror_colour: "peacock"}
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        oauth_write_response("target-pid-1")
+      end)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
+        {:error, :rate_limited}
+      end)
+
+      log =
+        capture_log(fn ->
+          assert :ok == Engine.mirror(link, source_event(source), user.id)
+        end)
+
+      assert log =~ "Mirror colour patch failed"
     end
 
     test "a failing colour patch still leaves the mirror successful", %{
@@ -118,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineColourTest do
       link = %{link | mirror_colour: "peacock"}
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
@@ -203,7 +269,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineColourTest do
       # Only the mirror write itself is expected. Microsoft Graph exposes no
       # per-event colour, so a patch could never succeed and is never sent.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
@@ -215,7 +281,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineColourTest do
       outlook_link: link
     } do
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)

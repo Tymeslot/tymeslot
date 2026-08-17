@@ -123,6 +123,33 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorkerTest do
       assert operations() == MapSet.new([{link.id, "moved-uid", "upsert"}])
     end
 
+    # Every mapping written before the normalisers reported `provider_updated_at`
+    # carries `source_updated_at: nil`, because the engine only ever had nil to
+    # stamp. Once the field starts arriving, "no baseline" must not read as "the
+    # source is newer": that comparison is true of every such mapping at once, so
+    # the first sweep after the field wakes up would re-mirror the entire link —
+    # a write-back storm against the organiser's real calendar, caused by the
+    # bookkeeping changing rather than by anything on the calendar changing.
+    #
+    # A missing baseline is an absence of evidence, so nothing is enqueued and
+    # the mapping's own next write records a baseline for the sweep after this
+    # one. The push path still carries any genuine edit in the meantime.
+    test "a mapping with no recorded baseline is not enqueued when the source reports one", %{
+      source: source,
+      link: link
+    } do
+      cached_event(source,
+        uid: "pre-baseline-uid",
+        provider_updated_at: ~U[2026-07-02 09:00:00.000000Z]
+      )
+
+      mirror_for_link(link, source_uid: "pre-baseline-uid", source_updated_at: nil)
+
+      assert :ok = perform_job(SyncLinkReconcileWorker, %{"sync_link_id" => link.id})
+
+      refute_enqueued(worker: SyncLinkWriteBackWorker)
+    end
+
     test "a mapping stuck in pending_delete has its delete retried", %{
       source: source,
       link: link

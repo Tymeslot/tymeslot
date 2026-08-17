@@ -80,13 +80,18 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, context ->
         assert context == {target.id, user.id}
         assert event_data.summary == "Busy"
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
 
-      assert {:ok, _mirror} =
+      assert {:ok, mirror} =
                CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, "source-uid-1")
+
+      # The id the provider filed the placeholder under, off the write response.
+      # A mapping recording `nil` here looks active and names nothing, which is
+      # the state 420 live rows were in.
+      assert mirror.target_provider_event_id == "target-pid-1"
     end
 
     test "a provider failure is an error, so Oban retries it", %{source: source, link: link} do
@@ -135,7 +140,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       # The budget is what bounds the provider calls, so the mock is told to
       # accept any number: the assertion is that far fewer than twelve arrive.
       stub(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "target-pid"}}
+        oauth_write_response("target-pid")
       end)
 
       outcomes =
@@ -301,10 +306,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
           target_integration_id: outlook_target.id
         )
 
-      cached_event(source,
-        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
-        recurring_event_id: "master_abc123"
-      )
+      cached_event(source, google_series_markers())
 
       # No provider expectation of any kind, and that is the assertion: the
       # refusal must come before the master fetch as well as before the write.
@@ -324,10 +326,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
           target_integration_id: caldav_target.id
         )
 
-      cached_event(source,
-        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
-        recurring_event_id: "master_abc123"
-      )
+      cached_event(source, google_series_markers())
 
       assert {:discard, :not_an_eligible_source} ==
                perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
@@ -337,10 +336,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
       source: source,
       link: link
     } do
-      cached_event(source,
-        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
-        recurring_event_id: "master_abc123"
-      )
+      cached_event(source, google_series_markers())
 
       expect(GoogleCalendarAPIMock, :get_event, fn _integration, _calendar_id, event_id ->
         assert event_id == "master_abc123"
@@ -351,7 +347,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         send(test_pid, {:payload, event_data})
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
@@ -382,10 +378,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
           target_integration_id: outlook_target.id
         )
 
-      cached_event(source,
-        recurrence_rule: "RRULE:FREQ=WEEKLY;COUNT=4",
-        recurring_event_id: "master_abc123"
-      )
+      cached_event(source, google_series_markers())
 
       target_uid = Engine.target_uid_for(link.id, "source-uid-1")
       mirror_for_link(link, source_uid: "source-uid-1", target_uid: target_uid)
@@ -466,7 +459,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         assert event_data.summary == "Quarterly review with the board"
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))

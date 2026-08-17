@@ -54,7 +54,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
 
-  @states ~w(active pending_delete failed)
+  # Each state is named once and referenced everywhere it is written or matched,
+  # rather than spelled as a literal at each site. The engine's withdrawal guard
+  # (`SyncLink.Engine.update_mirror/7`) matches `@state_pending_delete` in a
+  # *function head*, and that is what makes the naming a correctness measure
+  # rather than tidiness: a misspelt literal there does not raise, it simply
+  # fails to match and falls through to the next clause — which rewrites the
+  # placeholder a teardown is mid-way through withdrawing, the exact race that
+  # clause exists to prevent. A misspelt attribute is a compile error.
+  @state_active "active"
+  @state_pending_delete "pending_delete"
+  @state_failed "failed"
+
+  @states [@state_active, @state_pending_delete, @state_failed]
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -85,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
     field(:source_etag, :string)
     field(:target_etag, :string)
     field(:last_synced_at, :utc_datetime_usec)
-    field(:state, :string, default: "active")
+    field(:state, :string, default: @state_active)
 
     belongs_to(:sync_link, CalendarSyncLinkSchema)
     belongs_to(:target_integration, CalendarIntegrationSchema)
@@ -102,6 +114,27 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
   """
   @spec states() :: [String.t()]
   def states, do: @states
+
+  @doc """
+  A placeholder in step with its source.
+  """
+  @spec state_active() :: String.t()
+  def state_active, do: @state_active
+
+  @doc """
+  A placeholder whose source is gone but which is still on the provider.
+
+  Set by a teardown whose provider delete did not land, and the one state the
+  reconcile sweep hunts for on an otherwise disabled link.
+  """
+  @spec state_pending_delete() :: String.t()
+  def state_pending_delete, do: @state_pending_delete
+
+  @doc """
+  A placeholder whose last write did not land.
+  """
+  @spec state_failed() :: String.t()
+  def state_failed, do: @state_failed
 
   @doc """
   Where this placeholder lives, in the shape the delete and colour-patch opts
@@ -150,6 +183,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema do
     ])
     |> validate_required([:sync_link_id, :source_uid, :target_integration_id, :target_uid])
     |> validate_inclusion(:state, @states)
+    # The database enforces the same set, because `update_all` writes bypass
+    # this changeset entirely. Naming it here turns the raise into an error on
+    # the field for anything that does come through the changeset, so the two
+    # layers report the same failure the same way.
+    |> check_constraint(:state,
+      name: :calendar_sync_mirrors_state_check,
+      message: "is invalid"
+    )
     |> foreign_key_constraint(:sync_link_id)
     |> foreign_key_constraint(:target_integration_id)
     |> unique_constraint([:sync_link_id, :source_uid],

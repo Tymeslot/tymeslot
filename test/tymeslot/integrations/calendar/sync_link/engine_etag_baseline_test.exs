@@ -72,12 +72,27 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
 
   defp target_uid(link), do: Engine.target_uid_for(link.id, "source-uid-1")
 
-  # The raw Google response body a write answers with — string-keyed, etag
-  # quoted, exactly as the API module hands it up. The engine sees the etag at
-  # all only because `handle_write_api_call/2` keeps it across
-  # `convert_event/1`, which names no etag key and would otherwise drop it.
+  # A write result as the *engine* receives one, which is not the provider's raw
+  # body. `Tymeslot.CalendarMock` stands in for `Calendar.Operations`, and that
+  # sits above `OAuthBase.handle_write_api_call/2`: by the time `engine.ex:360`
+  # calls `WriteEtag.extract/1`, the body has been through `convert_event/1` and
+  # the etag has been merged on under the atom key `:etag`, already stripped of
+  # its quotes by `WriteEtag.extract/1` inside the wrapper.
+  #
+  # This fixture used to hand the engine `%{"id" => ..., "etag" => "\"...\""}` —
+  # string keys, quotes intact — and claimed to be "exactly as the API module
+  # hands it up". It is, but no API module hands anything up to a mock that has
+  # replaced the layer above it. The engine passed because `WriteEtag.extract/1`
+  # reads the string key too, so the tests were exercising the raw-body clause
+  # while production takes the atom one, and the quote-stripping they appeared to
+  # prove was being done here rather than in the code that does it live.
+  #
+  # The raw body, its `@odata.etag` sibling, and the quote stripping are covered
+  # where that shape genuinely occurs: `oauth_base_test.exs`'s
+  # "handle_write_api_call/2" describe block and `provider_write_etag_test.exs`.
   defp google_write_response(etag) do
-    %{"id" => "target-pid-1", "etag" => etag, "summary" => "Busy"}
+    {:ok, converted} = oauth_write_response("target-pid-1", etag: etag)
+    converted
   end
 
   # The placeholder as the target's own inbound sync later caches it. This is
@@ -112,7 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       %{user: user, source: source, link: link} = ctx
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, google_write_response("\"3573625707763998\"")}
+        {:ok, google_write_response("3573625707763998")}
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
@@ -132,7 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       )
 
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
-        {:ok, google_write_response("\"etag-from-this-write\"")}
+        {:ok, google_write_response("etag-from-this-write")}
       end)
 
       assert :ok ==
@@ -146,15 +161,20 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       assert row.target_etag == "etag-from-this-write"
     end
 
-    test "the stored form is stripped of the quotes the provider embeds", ctx do
+    test "the stored baseline is the same form the cache holds", ctx do
       %{user: user, source: source, target: target, link: link} = ctx
 
-      # Pinned deliberately: the value is compared against the cache's `etag`
-      # column, which the inbound sync populates in cleaned form. Storing the
-      # quoted form would make a matching pair compare unequal, and every pass
-      # over an untouched placeholder would log a conflict.
+      # The two sides have to compare equal, and this is the assertion that they
+      # do: the mirror's `target_etag` and the cache's `etag` column are read
+      # against each other on every pass, so a difference in form between them
+      # would log a conflict over an untouched placeholder.
+      #
+      # The quote stripping that makes them agree happens above this layer —
+      # `handle_write_api_call/2` cleans the etag before the engine sees it — and
+      # is asserted in `oauth_base_test.exs`. What is pinned here is that the
+      # engine stores what it was given without reformatting it.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, google_write_response("\"quoted-etag\"")}
+        {:ok, google_write_response("quoted-etag")}
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
@@ -177,7 +197,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       # The write establishes the baseline. Nothing hand-inserts it: this is the
       # step that was missing, and without it none of the rest can happen.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, google_write_response("\"etag-as-written\"")}
+        {:ok, google_write_response("etag-as-written")}
       end)
 
       assert :ok ==
@@ -198,7 +218,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       )
 
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
-        {:ok, google_write_response("\"etag-after-the-overwrite\"")}
+        {:ok, google_write_response("etag-after-the-overwrite")}
       end)
 
       assert :ok ==
@@ -230,7 +250,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       # stamped the row. Read from the cache, that looks exactly like a
       # stranger's edit. Read from the write's own response, it matches.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, google_write_response("\"etag-our-write-produced\"")}
+        {:ok, google_write_response("etag-our-write-produced")}
       end)
 
       assert :ok ==
@@ -248,7 +268,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       )
 
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
-        {:ok, google_write_response("\"etag-our-write-produced\"")}
+        {:ok, google_write_response("etag-our-write-produced")}
       end)
 
       assert :ok ==
@@ -267,7 +287,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       %{user: user, source: source, target: target, link: link} = ctx
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, google_write_response("\"etag-as-written\"")}
+        {:ok, google_write_response("etag-as-written")}
       end)
 
       assert :ok ==
@@ -294,7 +314,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       )
 
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context ->
-        {:ok, google_write_response("\"etag-after-the-overwrite\"")}
+        {:ok, google_write_response("etag-after-the-overwrite")}
       end)
 
       assert :ok ==
@@ -321,7 +341,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       %{user: user, source: source, target: target, link: link} = ctx
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, google_write_response("\"etag-as-written\"")}
+        {:ok, google_write_response("etag-as-written")}
       end)
 
       assert :ok ==
@@ -450,7 +470,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineEtagBaselineTest do
       # and report an edit nobody made. `nil` says "no baseline", which is the
       # honest answer and switches the kinds off until a real one arrives.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, google_write_response("\"etag-from-the-first-write\"")}
+        {:ok, google_write_response("etag-from-the-first-write")}
       end)
 
       assert :ok ==

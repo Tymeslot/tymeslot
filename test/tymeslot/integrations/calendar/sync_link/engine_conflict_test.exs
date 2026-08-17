@@ -398,7 +398,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineConflictTest do
       test_pid = self()
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "orphan-pid"}}
+        oauth_write_response("orphan-pid")
       end)
 
       expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context, _opts ->

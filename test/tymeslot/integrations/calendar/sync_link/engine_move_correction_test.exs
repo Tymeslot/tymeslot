@@ -21,7 +21,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineMoveCorrectionTest do
   import Tymeslot.SyncLinkTestHelpers
 
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
 
   setup :verify_on_exit!
@@ -32,36 +31,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineMoveCorrectionTest do
     %{context | link: link}
   end
 
-  defp weekly_instance(source) do
-    %ProviderCalendarEventSchema{
-      uid: "weekly-series@google.com",
-      calendar_integration_id: source.id,
-      provider: "google",
-      provider_calendar_id: "primary",
-      provider_event_id: "master_abc123_20261215T090000Z",
-      summary: "Weekly standup",
-      transparency: "opaque",
-      status: "confirmed",
-      all_day: false,
-      timezone: "Europe/Tallinn",
-      start_at: ~U[2026-12-15 09:00:00Z],
-      end_at: ~U[2026-12-15 09:30:00Z],
-      recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
-      recurring_event_id: "master_abc123"
-    }
-  end
+  defp weekly_instance(source), do: google_series_instance(source)
 
   defp expect_master(exdates \\ []) do
     expect(GoogleCalendarAPIMock, :get_event, fn _integration, _calendar_id, event_id ->
       assert event_id == "master_abc123"
 
-      {:ok,
-       %{
-         "id" => "master_abc123",
-         "recurrence" => ["RRULE:FREQ=WEEKLY;BYDAY=TU"] ++ exdates,
-         "start" => %{"dateTime" => "2026-03-03T09:00:00Z"},
-         "end" => %{"dateTime" => "2026-03-03T09:30:00Z"}
-       }}
+      {:ok, google_series_master(exception_lines: exdates)}
     end)
   end
 

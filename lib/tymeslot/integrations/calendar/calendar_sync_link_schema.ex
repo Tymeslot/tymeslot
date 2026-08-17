@@ -110,6 +110,32 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema do
   def enabled_changeset(link, enabled) when is_boolean(enabled),
     do: cast(link, %{enabled: enabled}, [:enabled])
 
+  @doc """
+  `enabled_changeset/2` plus the one rule a resume cannot skip.
+
+  Pausing and resuming are not the same operation and only look alike. Pausing
+  stops writes, so nothing it could be validated against can make it wrong.
+  Resuming *starts* them, and starting them at a target that answers
+  `{:error, :read_only}` to every create — an integration reconnected as a
+  subscription while a link pointed at it — schedules a write that will fail for
+  as long as the link lives.
+
+  So the writability rule applies here and nothing else does. Widening it to the
+  full `changeset/2` would restore precisely the failure `enabled_changeset/2`
+  documents: a stored label or colour that no longer satisfies a later
+  validation turning a control the organiser reaches for into an error about a
+  field the write never touches. The property that must hold is that pausing
+  works on a link that is broken, whatever way it is broken — which is why this
+  is the resume's changeset alone, and why `target_provider` is cast for the
+  rule to read and then discarded with the rest of the virtual field.
+  """
+  @spec resume_changeset(t(), String.t() | nil) :: Ecto.Changeset.t()
+  def resume_changeset(link, target_provider) do
+    link
+    |> cast(%{enabled: true, target_provider: target_provider}, [:enabled, :target_provider])
+    |> validate_target_writable()
+  end
+
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(link, attrs) do
     link

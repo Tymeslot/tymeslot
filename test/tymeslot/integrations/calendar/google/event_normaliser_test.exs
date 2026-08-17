@@ -44,9 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
             "overrides" => [%{"method" => "popup", "minutes" => 10}]
           },
           "colorId" => "5",
-          "etag" => "\"etag-abc\"",
-          "recurrence" => ["RRULE:FREQ=DAILY"],
-          "recurringEventId" => "recurring-123"
+          "etag" => "\"etag-abc\""
         }
       ]
 
@@ -83,8 +81,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
 
       assert event.colour == "banana"
       assert event.etag == "\"etag-abc\""
-      assert event.recurrence_rule == "RRULE:FREQ=DAILY"
-      assert event.provider_metadata["recurringEventId"] == "recurring-123"
+      assert event.recurrence_rule == nil
+      assert event.recurring_event_id == nil
     end
 
     test "normalises an all-day event" do
@@ -280,6 +278,101 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
     end
   end
 
+  # Google splits a recurring series across two kinds of event, and puts the two
+  # recurrence fields on opposite sides of that split: `recurrence` (the RRULE
+  # array) on the series **master**, `recurringEventId` (the master's id) on each
+  # expanded **instance**. No single event carries both — measured on a live
+  # installation, 0 of 224 cached Google rows do — so the pair is not a rare
+  # shape to be tolerant of, it is one that does not occur.
+  #
+  # `GoogleCalendarApi.list_events/4` sends `singleEvents=true`
+  # (`google_calendar_api.ex:60`), so a sync only ever sees the instance side and
+  # the master is never normalised by this module at all. The master case below
+  # is covered because `get_event/3` fetches one directly — that is the single
+  # place a Google recurrence rule exists in the system — not because a listing
+  # could produce it.
+  describe "recurrence markers, which Google splits across master and instance" do
+    defp series_event(attrs) do
+      Map.merge(
+        %{
+          "iCalUID" => "weekly-series@google.com",
+          "id" => "master_abc123",
+          "summary" => "Weekly standup",
+          "start" => %{"dateTime" => "2026-12-15T09:00:00Z"},
+          "end" => %{"dateTime" => "2026-12-15T09:30:00Z"}
+        },
+        attrs
+      )
+    end
+
+    test "a series master carries the rule and names no master of its own" do
+      raw = [series_event(%{"recurrence" => ["RRULE:FREQ=WEEKLY;BYDAY=TU"]})]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.recurrence_rule == "RRULE:FREQ=WEEKLY;BYDAY=TU"
+      assert event.recurring_event_id == nil
+    end
+
+    test "a series master keeps the first line when Google appends exceptions" do
+      raw = [
+        series_event(%{
+          "recurrence" => [
+            "RRULE:FREQ=WEEKLY;BYDAY=TU",
+            "EXDATE;TZID=Europe/Tallinn:20261215T090000"
+          ]
+        })
+      ]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.recurrence_rule == "RRULE:FREQ=WEEKLY;BYDAY=TU"
+    end
+
+    test "a series instance names its master and carries no rule" do
+      raw = [
+        series_event(%{
+          "id" => "master_abc123_20261215T090000Z",
+          "recurringEventId" => "master_abc123"
+        })
+      ]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.recurring_event_id == "master_abc123"
+      assert event.recurrence_rule == nil
+    end
+
+    # THE INVARIANT. Every Google row that reaches the cache comes from a
+    # `singleEvents=true` listing, so it is an expanded instance: it names its
+    # master and its `recurrence_rule` is nil. `RecurringSeries.recurring?/1`
+    # gates on `recurring_event_id` for exactly this reason, and a regression
+    # flipping that gate back to reading `recurrence_rule` answers "not
+    # recurring" for every row that has ever existed — which makes the master
+    # fetch unreachable and mirrors each series as one busy block at the last
+    # occurrence's date. That defect shipped once. Nothing else in the suite
+    # pins that the rule side of the pair is empty on a listed row, so this test
+    # is what stands between the gate and its own history.
+    test "every event from a singleEvents listing names a master and carries no rule" do
+      raw =
+        for offset <- 0..2 do
+          series_event(%{
+            "id" => "master_abc123_2026121#{5 + offset}T090000Z",
+            "start" => %{"dateTime" => "2026-12-1#{5 + offset}T09:00:00Z"},
+            "end" => %{"dateTime" => "2026-12-1#{5 + offset}T09:30:00Z"},
+            "recurringEventId" => "master_abc123"
+          })
+        end
+
+      assert {:ok, events} = EventNormaliser.normalise_events(raw, @context)
+      assert length(events) == 3
+
+      for event <- events do
+        assert event.recurring_event_id == "master_abc123"
+
+        assert event.recurrence_rule == nil,
+               "a listed Google row carried a recurrence_rule: #{inspect(event.recurrence_rule)}"
+      end
+    end
+  end
+
   # Google records a moved occurrence as its own exception instance carrying
   # `originalStartTime` — where the occurrence used to sit. Without it, the
   # instance is indistinguishable from an ordinary one, because the master's
@@ -375,6 +468,58 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
         assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
         assert event.original_start_at == nil, "expected nil for #{inspect(bad)}"
         assert event.start_at == ~U[2026-12-15 11:00:00Z]
+      end
+    end
+  end
+
+  # Google reports its own last-write time as `updated`, an RFC3339 instant with
+  # milliseconds. It is what every staleness comparison downstream is written
+  # against — `SyncLinkReconcileWorker.stale?/2`, `ConflictLog`'s
+  # `compared_by => "provider_updated_at"` path — and none of them can fire
+  # while the normaliser drops the field.
+  describe "normalise_events/2 provider_updated_at" do
+    defp updatable(attrs) do
+      Map.merge(
+        %{
+          "iCalUID" => "updated@google.com",
+          "id" => "updated-1",
+          "summary" => "Review",
+          "start" => %{"dateTime" => "2026-08-17T09:00:00Z"},
+          "end" => %{"dateTime" => "2026-08-17T09:30:00Z"}
+        },
+        attrs
+      )
+    end
+
+    test "maps Google's `updated` onto provider_updated_at" do
+      raw = [updatable(%{"updated" => "2026-08-17T14:32:11.123Z"})]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.provider_updated_at == ~U[2026-08-17 14:32:11.123Z]
+    end
+
+    test "shifts an offset-bearing value to UTC" do
+      raw = [updatable(%{"updated" => "2026-08-17T16:32:11.000+02:00"})]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+      assert event.provider_updated_at == ~U[2026-08-17 14:32:11.000Z]
+      assert event.provider_updated_at.time_zone == "Etc/UTC"
+    end
+
+    test "leaves an absent value nil" do
+      assert {:ok, [event]} = EventNormaliser.normalise_events([updatable(%{})], @context)
+      assert event.provider_updated_at == nil
+    end
+
+    # Same trade as `parse_original_start/1`: a marker that could not be read is
+    # never worth the event it rode in on, let alone the batch around it.
+    test "leaves a malformed value nil without dropping the event" do
+      for bad <- ["not-a-timestamp", "2026-13-45T00:00:00Z", 1_234_567_890, %{"dateTime" => "x"}] do
+        raw = [updatable(%{"updated" => bad})]
+
+        assert {:ok, [event]} = EventNormaliser.normalise_events(raw, @context)
+        assert event.provider_updated_at == nil, "expected nil for #{inspect(bad)}"
+        assert event.start_at == ~U[2026-08-17 09:00:00Z]
       end
     end
   end

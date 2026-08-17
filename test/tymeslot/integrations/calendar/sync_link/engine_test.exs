@@ -78,7 +78,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         assert event_data.summary == "Busy"
         assert event_data.start_time == ~U[2026-07-03 09:00:00Z]
         refute Map.has_key?(event_data, :description)
-        {:ok, %{provider_event_id: "target-pid-1", uid: event_data.uid}}
+
+        # Google files the event under an id of its own rather than the UID it
+        # was handed, which is what the last assertion below turns on.
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
@@ -94,16 +97,18 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
       assert mirror.last_synced_at
     end
 
-    # The shape every other mock in this file returns — `%{provider_event_id:
-    # ...}` — is one the OAuth providers never produce. `create_event` pipes
-    # the provider's response through `convert_event/1`, which lands the id in
-    # `uid:` and offers no `provider_event_id` at all, so the extractor matched
-    # nothing and stored `nil`.
+    # The direct pin on the extractor, written out rather than taken from
+    # `oauth_write_response/2` so that what the engine reads is visible at the
+    # point it is asserted.
     #
-    # On a live installation that meant all 420 mirror rows recorded no
-    # provider id while claiming to be active, which left every placeholder
-    # they named unreachable: teardown deletes by provider id, so the busy
-    # blocks could never be withdrawn by any path.
+    # Every mock in this suite used to answer `%{provider_event_id: ...}`, a key
+    # no OAuth provider produces: `create_event` pipes the response through
+    # `convert_event/1`, which lands the id under `uid` and offers no
+    # `provider_event_id` at all, so `extract/1` matched nothing and stored
+    # `nil`. On a live installation all 420 mirror rows recorded no provider id
+    # while claiming to be active, which left every placeholder they named
+    # unreachable: teardown deletes by provider id, so the busy blocks could
+    # never be withdrawn by any path.
     test "records the provider id from the shape an OAuth provider actually returns", %{
       user: user,
       source: source,
@@ -148,7 +153,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         assert event_data.all_day == true
         assert event_data.start_time == ~D[2026-07-03]
         assert event_data.end_time == ~D[2026-07-06]
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok == Engine.mirror(link, event, user.id)
@@ -183,7 +188,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
       test_pid = self()
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "orphan-pid"}}
+        oauth_write_response("orphan-pid")
       end)
 
       expect(Tymeslot.CalendarMock, :delete_event, fn uid, context, _opts ->
@@ -210,7 +215,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
       link: link
     } do
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "orphan-pid"}}
+        oauth_write_response("orphan-pid")
       end)
 
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
@@ -411,7 +416,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
       end)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
-        {:ok, %{provider_event_id: "recreated-pid"}}
+        oauth_write_response("recreated-pid")
       end)
 
       assert :ok == Engine.mirror(link, source_event(source), user.id)
@@ -474,7 +479,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         assert event_data.summary == "Busy"
         refute Map.has_key?(event_data, :description)
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok ==
@@ -497,7 +502,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         assert event_data.summary == "Personal commitment"
         refute Map.has_key?(event_data, :description)
         refute inspect(event_data) =~ "Board meeting"
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok ==
@@ -517,7 +522,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         assert event_data.summary == "Board meeting"
         assert event_data.description == "Agenda"
         assert event_data.location == "Room 4"
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok ==
@@ -541,7 +546,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         assert event_data.summary == "Busy"
         refute Map.has_key?(event_data, :description)
         refute inspect(event_data) =~ "Board meeting"
-        {:ok, %{provider_event_id: "target-pid-1"}}
+        oauth_write_response("target-pid-1")
       end)
 
       assert :ok ==
@@ -565,7 +570,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineTest do
         expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
           refute Map.has_key?(event_data, :attendees)
           refute inspect(event_data) =~ "colleague@example.com"
-          {:ok, %{provider_event_id: "target-pid-1"}}
+          oauth_write_response("target-pid-1")
         end)
 
         event =

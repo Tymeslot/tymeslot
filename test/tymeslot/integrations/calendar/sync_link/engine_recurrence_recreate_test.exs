@@ -23,7 +23,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceRecreateTest d
   import Tymeslot.SyncLinkTestHelpers
 
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
 
   setup :verify_on_exit!
@@ -37,24 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceRecreateTest d
   # The series as the cache holds it: one row carrying the LAST occurrence's
   # times, which is what a naive recreate would mirror.
   defp weekly_instance(source, attrs \\ %{}) do
-    Map.merge(
-      %ProviderCalendarEventSchema{
-        uid: "weekly-series@google.com",
-        calendar_integration_id: source.id,
-        provider: "google",
-        provider_calendar_id: "primary",
-        provider_event_id: "master_abc123_20261215T090000Z",
-        summary: "Weekly standup",
-        transparency: "opaque",
-        status: "confirmed",
-        all_day: false,
-        start_at: ~U[2026-12-15 09:00:00Z],
-        end_at: ~U[2026-12-15 09:30:00Z],
-        recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
-        recurring_event_id: "master_abc123"
-      },
-      attrs
-    )
+    google_series_instance(source, attrs)
   end
 
   # The master's own start is March, the series' first occurrence.

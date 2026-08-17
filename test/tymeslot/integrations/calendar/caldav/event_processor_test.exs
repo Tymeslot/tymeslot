@@ -170,6 +170,36 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       assert event.provider_metadata == raw
     end
 
+    # The CalDAV half of the same staleness input Google's `updated` supplies.
+    # `ICalParser` surfaces LAST-MODIFIED as `:last_modified`; the normaliser is
+    # what carries it onto the field every consumer reads.
+    test "carries LAST-MODIFIED through to provider_updated_at" do
+      raw = %{
+        uid: "modified-001@example.com",
+        summary: "Team Standup",
+        dtstart: ~U[2030-06-15 09:00:00Z],
+        dtend: ~U[2030-06-15 09:30:00Z],
+        last_modified: ~U[2026-08-17 14:32:11Z]
+      }
+
+      assert {:ok, [%CalendarEvent{} = event]} = EventProcessor.normalise_events([raw], @context)
+
+      assert event.provider_updated_at == ~U[2026-08-17 14:32:11Z]
+    end
+
+    test "leaves provider_updated_at nil when the VEVENT carried no LAST-MODIFIED" do
+      raw = %{
+        uid: "unmodified-001@example.com",
+        summary: "Team Standup",
+        dtstart: ~U[2030-06-15 09:00:00Z],
+        dtend: ~U[2030-06-15 09:30:00Z]
+      }
+
+      assert {:ok, [%CalendarEvent{} = event]} = EventProcessor.normalise_events([raw], @context)
+
+      assert event.provider_updated_at == nil
+    end
+
     test "normalises an all-day event with Date dtstart/dtend" do
       raw = %{
         uid: "allday-001@example.com",

@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   import Ecto.Query
 
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
+  alias Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId
   alias Tymeslot.Repo
 
   @type write_result ::
@@ -102,28 +103,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   # *cache* is filled by the normaliser, which prefers `"iCalUID"` — the same
   # id with `@google.com` appended. So the id as recorded never equals the uid
   # as cached, and the suffixed form has to be in the set too or the row still
-  # recognises nothing. Adding the variant here rather than at the write keeps
-  # every mapping already in the database working, including the ones written
-  # before the id was recorded correctly.
+  # recognises nothing. Expanding here rather than at the write keeps every
+  # mapping already in the database working, including the ones written before
+  # the id was recorded correctly.
+  #
+  # `ProviderEventId.cache_identities/2` is where that expansion is stated, and
+  # it is stated once: `SyncLink.ConflictLog` asks the same question of the same
+  # two columns, and the version of it that was written out separately looked up
+  # `target_uid` alone and resolved none of 105 live mirrors.
   defp identifiers_for({integration_id, target_uid, provider_event_id}) do
-    [target_uid, provider_event_id]
-    |> Enum.filter(&is_binary/1)
-    |> Enum.flat_map(&google_variants/1)
-    |> Enum.uniq()
+    target_uid
+    |> ProviderEventId.cache_identities(provider_event_id)
     |> Enum.map(&{integration_id, &1})
-  end
-
-  # An identifier that already carries the domain is left alone; anything else
-  # gains the suffixed form alongside the bare one. Both go in because a target
-  # is Google or it is not, and the set is asked the same question either way —
-  # a CalDAV uid with `@google.com` appended matches nothing, which costs a
-  # MapSet entry and no correctness.
-  defp google_variants(identifier) do
-    if String.ends_with?(identifier, "@google.com") do
-      [identifier]
-    else
-      [identifier, identifier <> "@google.com"]
-    end
   end
 
   @doc """
@@ -161,7 +152,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
     {count, _returned} =
       CalendarSyncMirrorSchema
       |> where([m], m.sync_link_id == ^sync_link_id)
-      |> Repo.update_all(set: [state: "pending_delete", updated_at: DateTime.utc_now()])
+      |> Repo.update_all(
+        set: [
+          state: CalendarSyncMirrorSchema.state_pending_delete(),
+          updated_at: DateTime.utc_now()
+        ]
+      )
 
     count
   end
@@ -177,7 +173,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   @spec list_pending_delete_for_link(integer()) :: [CalendarSyncMirrorSchema.t()]
   def list_pending_delete_for_link(sync_link_id) when is_integer(sync_link_id) do
     CalendarSyncMirrorSchema
-    |> where([m], m.sync_link_id == ^sync_link_id and m.state == "pending_delete")
+    |> where(
+      [m],
+      m.sync_link_id == ^sync_link_id and
+        m.state == ^CalendarSyncMirrorSchema.state_pending_delete()
+    )
     |> order_by([m], asc: m.id)
     |> Repo.all()
   end

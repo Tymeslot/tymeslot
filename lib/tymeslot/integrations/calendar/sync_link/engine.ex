@@ -124,17 +124,25 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   alias Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteEtag
 
+  import Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId, only: [wrote?: 1]
+
   @uid_prefix "tymeslot-mirror-"
+
+  # Bound at compile time from the schema, which is where the set is stated.
+  # Attributes rather than direct calls because `update_mirror/7` matches
+  # `@state_pending_delete` in a function head, and a pattern admits no call.
+  # That head is the reason these are named at all: a literal misspelt there
+  # falls through to the rewrite clause instead of raising, resurrecting a
+  # placeholder a teardown is mid-way through withdrawing. A misspelt attribute
+  # does not compile.
+  @state_active CalendarSyncMirrorSchema.state_active()
+  @state_pending_delete CalendarSyncMirrorSchema.state_pending_delete()
+  @state_failed CalendarSyncMirrorSchema.state_failed()
 
   # Matches `SyncLinkWriteBackWorker`'s `max_attempts`. A caller passing no
   # attempt is not running under Oban — a sweep, a console, a test — and has no
   # retry pending, so its failure is terminal where it stands.
   @final_attempt 5
-
-  # Both shapes a landed write answers with — see `ProviderEventId`. One guard
-  # because the two clauses needing it sit a hundred lines apart, and drifted
-  # when they were written out separately.
-  defguardp wrote?(result) when result == :ok or (is_tuple(result) and elem(result, 0) == :ok)
 
   @typedoc "What the worker maps straight onto Oban's return vocabulary."
   @type result :: :ok | {:error, term()} | {:discard, term()}
@@ -361,7 +369,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
       source_updated_at: Map.get(source_event, :provider_updated_at),
       source_etag: Map.get(source_event, :etag),
       last_synced_at: DateTime.utc_now(),
-      state: "active"
+      state: @state_active
     }
 
     case CalendarSyncMirrorQueries.create(attrs) do
@@ -418,7 +426,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # removed, a calendar disconnected, an account deleted — and the reconcile
   # sweep is already retrying it. Meanwhile the push path can still reach the
   # same mapping: the source event is unchanged, so an ordinary sync enqueues an
-  # upsert for it. Writing `state: "active"` there resurrects a mapping whose
+  # upsert for it. Writing the active state there resurrects a mapping whose
   # placeholder is being removed, and the two paths then fight — the sweep
   # enqueueing a delete while the push path rewrites what it just deleted, for
   # as long as both keep running.
@@ -428,7 +436,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # decision outranks a sync that has not noticed yet.
   defp update_mirror(
          _link,
-         %CalendarSyncMirrorSchema{state: "pending_delete"},
+         %CalendarSyncMirrorSchema{state: @state_pending_delete},
          _source_event,
          _target_uid,
          _user_id,
@@ -466,7 +474,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         # baseline describes a placeholder two writes ago, so comparing against
         # it would report an edit nobody made.
         MirrorRow.mark(mirror, %{
-          state: "active",
+          state: @state_active,
           last_synced_at: DateTime.utc_now(),
           target_etag: WriteEtag.extract(updated),
           target_provider_event_id: provider_id,
@@ -494,7 +502,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         # The placeholder on the target is now out of step with its source, and
         # only the row records that. Marking it here is what lets the reconcile
         # sweep find it after Oban has exhausted its attempts.
-        MirrorRow.mark(mirror, %{state: "failed"})
+        MirrorRow.mark(mirror, %{state: @state_failed})
         record_write_failure(link, mirror.source_uid, :update, reason, final?)
         {:error, reason}
     end
@@ -520,7 +528,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         # deleted — a baseline for an event that no longer exists, which the
         # next pass would compare against the replacement and read as an edit.
         MirrorRow.mark(mirror, %{
-          state: "active",
+          state: @state_active,
           last_synced_at: DateTime.utc_now(),
           target_etag: WriteEtag.extract(created),
           target_provider_event_id: provider_event_id(created),
@@ -531,7 +539,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         :ok
 
       {:error, reason} ->
-        MirrorRow.mark(mirror, %{state: "failed"})
+        MirrorRow.mark(mirror, %{state: @state_failed})
         {:error, reason}
     end
   end

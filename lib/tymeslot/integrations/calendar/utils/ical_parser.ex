@@ -164,6 +164,17 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         # `Tymeslot.Integrations.Calendar.ICalNormaliser.expand_event/3`). `nil` for UTC, floating, and
         # DATE-valued events, none of which have a zone to restore.
         timezone: dtstart_timezone(dtstart),
+        # RFC 5545 §3.8.7.3. The server's own record of when it last changed the
+        # VEVENT, and the only thing a CalDAV collection offers in place of
+        # Google's `updated` — without it the reconcile sweep's staleness check
+        # has nothing to compare and stands down for the whole provider family.
+        # Specified as UTC, so it is parsed through the same helper as
+        # DTSTART/DTEND and lands directly comparable with the stored column.
+        last_modified:
+          parse_datetime_property(
+            extract_datetime_property(lines, "LAST-MODIFIED"),
+            vtimezones
+          ),
         transparency: normalize_transp(extract_property(lines, "TRANSP")),
         status: extract_property(lines, "STATUS"),
         class: extract_property(lines, "CLASS"),

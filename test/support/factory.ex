@@ -249,7 +249,7 @@ defmodule Tymeslot.Factory do
       target_uid: sequence(:mirror_target_uid, &"tymeslot-mirror-#{&1}"),
       target_provider_event_id: sequence(:mirror_event_id, &"provider-event-#{&1}"),
       last_synced_at: DateTime.utc_now(:microsecond),
-      state: "active"
+      state: CalendarSyncMirrorSchema.state_active()
     }
   end
 

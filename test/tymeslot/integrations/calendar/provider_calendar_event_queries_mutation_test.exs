@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
   @moduletag :database
   @moduletag :queries
 
+  alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
 
@@ -32,6 +33,60 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
   describe "upsert_batch/1" do
     test "returns {:ok, 0} for empty list" do
       assert {:ok, 0} = ProviderCalendarEventQueries.upsert_batch([])
+    end
+
+    # Storing the row is the feature here: every consumer of
+    # `provider_updated_at` reads it back off the cache, never off the in-flight
+    # struct. A normaliser test passing while the column is dropped somewhere
+    # between `from_calendar_event/1` and the conflict target's `replace_fields`
+    # is precisely the shape of defect that left this field empty in production,
+    # so the round trip is asserted from the raw provider payload to the
+    # persisted row and back — including the update path, where `replace_fields`
+    # is what decides whether a second sync can ever move the value.
+    test "carries provider_updated_at from a raw Google payload through to the stored row" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      context = %{
+        calendar_integration_id: integration.id,
+        provider_calendar_id: "primary",
+        synced_at: DateTime.utc_now(:microsecond)
+      }
+
+      raw = fn updated ->
+        %{
+          "iCalUID" => "round-trip@google.com",
+          "id" => "round-trip",
+          "summary" => "Review",
+          "updated" => updated,
+          "start" => %{"dateTime" => "2026-08-17T09:00:00Z"},
+          "end" => %{"dateTime" => "2026-08-17T09:30:00Z"}
+        }
+      end
+
+      {:ok, [event]} =
+        EventNormaliser.normalise_events([raw.("2026-08-17T14:32:11.123Z")], context)
+
+      assert {:ok, 1} =
+               ProviderCalendarEventQueries.upsert_batch([
+                 ProviderCalendarEventSchema.from_calendar_event(event)
+               ])
+
+      stored = Repo.get_by!(ProviderCalendarEventSchema, uid: "round-trip@google.com")
+      assert stored.provider_updated_at == ~U[2026-08-17 14:32:11.123000Z]
+
+      # A later sync must be able to move it, which only holds while
+      # :provider_updated_at stays in replace_fields/0.
+      {:ok, [later]} =
+        EventNormaliser.normalise_events([raw.("2026-08-18T08:00:00.000Z")], context)
+
+      assert {:ok, 1} =
+               ProviderCalendarEventQueries.upsert_batch([
+                 ProviderCalendarEventSchema.from_calendar_event(later)
+               ])
+
+      refreshed = Repo.get_by!(ProviderCalendarEventSchema, uid: "round-trip@google.com")
+      assert refreshed.provider_updated_at == ~U[2026-08-18 08:00:00.000000Z]
     end
 
     test "inserts new events" do
