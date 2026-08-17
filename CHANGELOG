@@ -1,4 +1,8 @@
 
+[1.10.1]
+* Reject login redirect targets containing tab or newline characters
+
+
 [1.10.0]
 * Stop retrying webhook deliveries the endpoint will always reject
 * Keep signup usable when the verification email is rate limited
