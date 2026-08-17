@@ -598,3 +598,8 @@ msgstr "Accepter les réservations le %{day}"
 #, elixir-autogen, elixir-format
 msgid "Schedule duplicated. Its date overrides were not copied."
 msgstr "Planning dupliqué. Ses exceptions de date n'ont pas été copiées."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{meeting_types}, and by every meeting type that has no schedule of its own."
+msgstr "Utilisé par %{meeting_types}, et par tous les types de réunion qui n'ont pas leur propre planning."

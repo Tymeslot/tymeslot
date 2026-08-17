@@ -2,6 +2,7 @@ defmodule TymeslotWeb.OnboardingLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Profiles
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
@@ -139,19 +140,19 @@ defmodule TymeslotWeb.OnboardingLive do
           />
         <% :buffer_time -> %>
           <PreferencesStep.buffer_time_step
-            availability_schedule={@availability_schedule}
+            buffer_minutes={policy_value(@availability_schedule, :buffer_minutes)}
             form_errors={@form_errors}
             custom_input_mode={@custom_input_mode}
           />
         <% :booking_window -> %>
           <PreferencesStep.booking_window_step
-            availability_schedule={@availability_schedule}
+            advance_booking_days={policy_value(@availability_schedule, :advance_booking_days)}
             form_errors={@form_errors}
             custom_input_mode={@custom_input_mode}
           />
         <% :minimum_notice -> %>
           <PreferencesStep.minimum_notice_step
-            availability_schedule={@availability_schedule}
+            min_advance_hours={policy_value(@availability_schedule, :min_advance_hours)}
             form_errors={@form_errors}
             custom_input_mode={@custom_input_mode}
           />
@@ -338,7 +339,8 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   # The booking policy lives on the profile's default availability schedule,
-  # which is absent during the disconnected render.
-  defp policy_value(nil, _field), do: nil
-  defp policy_value(schedule, field), do: Map.get(schedule, field)
+  # which is absent during the disconnected render. `Schedules.policy/2` answers
+  # a nil schedule with the same defaults a freshly created one is given, so the
+  # steps and the summary always show a real number rather than a blank.
+  defp policy_value(schedule, field), do: Schedules.policy(schedule, field)
 end

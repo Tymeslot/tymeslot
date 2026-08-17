@@ -1110,3 +1110,8 @@ msgstr "La password deve contenere almeno un carattere speciale"
 #, elixir-autogen, elixir-format
 msgid "Password must contain at least one uppercase letter"
 msgstr "La password deve contenere almeno una lettera maiuscola"
+
+#: lib/tymeslot/auth/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
+msgstr "Il tuo account è stato creato, ma l'email di verifica non è ancora stata inviata. Attendi qualche minuto, poi usa il link per inviarla di nuovo."

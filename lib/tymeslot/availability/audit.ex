@@ -22,6 +22,7 @@ defmodule Tymeslot.Availability.Audit do
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -41,7 +42,7 @@ defmodule Tymeslot.Availability.Audit do
 
   @type result :: %{
           required(:profile_id) => pos_integer(),
-          required(:schedule_id) => pos_integer(),
+          required(:schedule_id) => pos_integer() | nil,
           required(:username) => String.t() | nil,
           required(:horizon) => {Date.t(), Date.t()},
           required(:duration_minutes) => pos_integer(),
@@ -94,27 +95,25 @@ defmodule Tymeslot.Availability.Audit do
 
     # The audit reads the profile's default schedule, which is the one the public
     # booking page falls back to when a meeting type names no schedule of its own.
+    # Every profile owns one, but a database that has lost it must be reported
+    # on rather than crashed on: a nil schedule id is exactly what the engine
+    # already treats as "no schedule resolvable", so the audit then measures the
+    # fallback hours a visitor would actually be offered.
     schedule = AvailabilityScheduleQueries.get_default(profile.id)
+    schedule_id = schedule && schedule.id
 
-    weekly_schedule = WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule.id)
-
-    overrides =
-      AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
-        schedule.id,
-        start_date,
-        end_date
+    config =
+      Map.merge(
+        %{
+          schedule_id: schedule_id,
+          duration_minutes: duration_minutes,
+          buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
+          max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
+          min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+          owner_timezone: timezone
+        },
+        prefetched(schedule_id, start_date, end_date)
       )
-
-    config = %{
-      schedule_id: schedule.id,
-      duration_minutes: duration_minutes,
-      buffer_minutes: schedule.buffer_minutes,
-      max_advance_booking_days: schedule.advance_booking_days,
-      min_advance_hours: schedule.min_advance_hours,
-      owner_timezone: timezone,
-      weekly_schedule: weekly_schedule,
-      overrides: overrides
-    }
 
     range_events = CalendarEventQueries.in_range(integration_ids, {start_date, end_date})
 
@@ -128,12 +127,30 @@ defmodule Tymeslot.Availability.Audit do
 
     %{
       profile_id: profile.id,
-      schedule_id: schedule.id,
+      schedule_id: schedule_id,
       username: profile.username,
       horizon: {start_date, end_date},
       duration_minutes: duration_minutes,
       checked_days: Date.diff(end_date, start_date) + 1,
       disagreements: disagreements
+    }
+  end
+
+  # Preloaded so the per-date walk below does not re-query. Left out entirely
+  # when there is no schedule: the engine reads both keys only after a non-nil
+  # schedule id, and seeding them empty would claim a closed week rather than
+  # let the fallback hours apply.
+  defp prefetched(nil, _start_date, _end_date), do: %{}
+
+  defp prefetched(schedule_id, start_date, end_date) do
+    %{
+      weekly_schedule: WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule_id),
+      overrides:
+        AvailabilityOverrideQueries.get_overrides_by_schedule_and_date_range(
+          schedule_id,
+          start_date,
+          end_date
+        )
     }
   end
 

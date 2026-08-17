@@ -17,6 +17,7 @@ defmodule Tymeslot.Availability.Schedules do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Validation.Constraints
 
   @default_schedule_name "Working hours"
 
@@ -257,6 +258,19 @@ defmodule Tymeslot.Availability.Schedules do
   """
   @spec default_schedule_name() :: String.t()
   def default_schedule_name, do: @default_schedule_name
+
+  @doc """
+  One scheduling policy value for a resolved schedule.
+
+  A nil schedule means none could be resolved (a profile mid-creation, or demo
+  data) and falls back to `Tymeslot.Validation.Constraints`, which is the same
+  table the engine and the schema's column defaults use. Every caller that can
+  hold a nil schedule reads through here, so the offered slots and the
+  booking-time re-check cannot disagree about what applies when there is none.
+  """
+  @spec policy(schedule() | nil, atom()) :: integer()
+  def policy(nil, key), do: Map.fetch!(Constraints.scheduling_policy_defaults(), key)
+  def policy(schedule, key), do: Map.fetch!(schedule, key)
 
   defp check_limit(profile_id) do
     if can_create?(profile_id), do: :ok, else: {:error, :schedule_limit_reached}

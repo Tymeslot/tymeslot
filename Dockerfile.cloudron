@@ -58,7 +58,7 @@ RUN mix release tymeslot --overwrite --path /opt/release && \
     cp config/runtime.exs /opt/release/config/
 
 # --- Runtime Stage ---
-FROM cloudron/base:5.0.0 AS runtime
+FROM cloudron/base:5.1.0@sha256:1c0666c9abe9e2090d33686826d4e97769b799124573118d41e0d7485135748e AS runtime
 
 ENV LANG=C.UTF-8 \
     MIX_ENV=prod \

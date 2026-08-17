@@ -144,29 +144,56 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
+  # The profile and the registration broadcast complete the account; the
+  # verification email only notifies the user about it. They are ordered that
+  # way deliberately: a send that fails or is rate limited must not leave a
+  # committed user row with no profile and no broadcast, because the address is
+  # then rejected as a duplicate on retry and the account can never be reached.
   defp verify_and_notify_user(user, validated_params, socket_or_conn, opts) do
+    case create_profile_and_announce(user, opts) do
+      :ok -> send_verification_email(user, validated_params, socket_or_conn)
+      {:error, _reason, _message} = error -> error
+    end
+  end
+
+  defp create_profile_and_announce(user, opts) do
+    case Profiles.create_profile(user.id) do
+      {:ok, _profile} ->
+        Logger.info("Created profile", user_id: user.id)
+
+        # Notify apps about successful registration via PubSub
+        metadata = Keyword.get(opts, :metadata, %{})
+        PubSub.broadcast_user_registered(user, metadata)
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Profile creation failed", user_id: user.id, reason: inspect(reason))
+
+        {:error, :profile_creation,
+         dgettext("auth", "Account created but profile creation failed: %{reason}",
+           reason: inspect(reason)
+         )}
+    end
+  end
+
+  defp send_verification_email(user, validated_params, socket_or_conn) do
     verification = verification_module()
 
     case verification.verify_user_email(socket_or_conn, user, validated_params) do
       {:ok, _updated_user} ->
-        # Create user profile with default settings
-        case Profiles.create_profile(user.id) do
-          {:ok, _profile} ->
-            Logger.info("Created profile", user_id: user.id)
+        {:ok, user}
 
-            # Notify apps about successful registration via PubSub
-            metadata = Keyword.get(opts, :metadata, %{})
-            PubSub.broadcast_user_registered(user, metadata)
-            {:ok, user}
+      # `Tymeslot.Infrastructure.VerificationBehaviour` declares this three-element
+      # member alongside the two-element one; the account is complete, only the
+      # email was withheld, so point the user at the resend rather than an error.
+      {:error, :rate_limited, _message} ->
+        Logger.warning("Verification email rate limited during signup", user_id: user.id)
 
-          {:error, reason} ->
-            Logger.error("Profile creation failed", user_id: user.id, reason: inspect(reason))
-
-            {:error, :profile_creation,
-             dgettext("auth", "Account created but profile creation failed: %{reason}",
-               reason: inspect(reason)
-             )}
-        end
+        {:error, :rate_limited,
+         dgettext(
+           "auth",
+           "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
+         )}
 
       {:error, reason} ->
         Logger.error("Verification failed", user_id: user.id, reason: inspect(reason))

@@ -193,13 +193,23 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
   defp tab_label(%{name: name}), do: name
 
   # Spelling out where a schedule takes effect, because that is decided on the
-  # meeting type and is otherwise invisible from this page.
+  # meeting type and is otherwise invisible from this page. The default's
+  # catch-all applies whether or not anything also names it explicitly, so it is
+  # stated in both of its branches rather than only when the list is empty.
   defp usage_summary(nil, _names), do: nil
 
   defp usage_summary(%{is_default: true}, []) do
     dgettext(
       "dashboard_availability",
       "Used by every meeting type that has no schedule of its own."
+    )
+  end
+
+  defp usage_summary(%{is_default: true}, names) do
+    dgettext(
+      "dashboard_availability",
+      "Used by %{meeting_types}, and by every meeting type that has no schedule of its own.",
+      meeting_types: Enum.join(names, ", ")
     )
   end
 

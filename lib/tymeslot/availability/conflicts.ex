@@ -48,9 +48,12 @@ defmodule Tymeslot.Availability.Conflicts do
           Calculate.availability_config()
         ) :: [String.t()]
   def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config \\ %{}) do
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-    min_advance_hours = Map.get(config, :min_advance_hours, 3)
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+    %{
+      buffer_minutes: buffer_minutes,
+      min_advance_hours: min_advance_hours,
+      max_advance_booking_days: max_advance_booking_days
+    } = Calculate.config_policy(config)
+
     ignore_event_uids = Map.get(config, :ignore_event_uids, MapSet.new())
 
     current_time = DateTimeUtils.now_in_timezone(timezone)
@@ -193,9 +196,12 @@ defmodule Tymeslot.Availability.Conflicts do
   end
 
   defp slot_bookable?(slot, date, user_timezone, duration_minutes, now, nearby_events, config) do
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-    min_advance_hours = Map.get(config, :min_advance_hours, 3)
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+    %{
+      buffer_minutes: buffer_minutes,
+      min_advance_hours: min_advance_hours,
+      max_advance_booking_days: max_advance_booking_days
+    } = Calculate.config_policy(config)
+
     ignore_event_uids = Map.get(config, :ignore_event_uids, MapSet.new())
 
     slot_time = TimeSlots.parse_time_slot(slot)

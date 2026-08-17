@@ -1113,3 +1113,8 @@ msgstr "Heslo musí obsahovat alespoň jeden speciální znak"
 #, elixir-autogen, elixir-format
 msgid "Password must contain at least one uppercase letter"
 msgstr "Heslo musí obsahovat alespoň jedno velké písmeno"
+
+#: lib/tymeslot/auth/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
+msgstr "Váš účet byl vytvořen, ale ověřovací e-mail se zatím nepodařilo odeslat. Počkejte prosím několik minut a poté použijte odkaz pro opětovné odeslání."

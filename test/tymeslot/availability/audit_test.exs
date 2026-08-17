@@ -111,5 +111,21 @@ defmodule Tymeslot.Availability.AuditTest do
       assert result.horizon == {start_date, Date.add(start_date, 5)}
       assert result.checked_days == 6
     end
+
+    test "reports on a profile with no default schedule instead of crashing" do
+      # Every profile gains a default schedule on creation and cannot delete it,
+      # so this is a database that has lost one. The audit is the tool reached
+      # for when availability is behaving oddly, which is exactly the situation
+      # such a database produces: it has to survive the state it is diagnosing.
+      profile = insert(:profile, username: "audit-nodefault", timezone: "Etc/UTC")
+
+      result = Audit.audit(profile, start_date: future_monday(), horizon_days: 3)
+
+      assert result.schedule_id == nil
+      assert result.checked_days == 4
+      # The engine's hard-coded fallback hours apply, and both halves of it read
+      # the same nil schedule, so they still have to agree with each other.
+      assert result.disagreements == []
+    end
   end
 end
