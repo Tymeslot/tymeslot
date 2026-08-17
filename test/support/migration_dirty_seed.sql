@@ -31,7 +31,8 @@
 --
 -- Tables seeded: users, profiles, user_sessions, calendar_integrations,
 --                video_integrations, connect_accounts, payment_transactions,
---                booking_payments, meetings
+--                booking_payments, meetings, weekly_availability,
+--                availability_breaks, availability_overrides
 
 -- ============================================================================
 -- USERS
@@ -410,3 +411,61 @@ VALUES (gen_random_uuid(), 'seed-mtg-utm-5', 'Seed Meeting 5', NOW(), NOW() + IN
 -- must not choke on it.
 INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, utm_source, inserted_at, updated_at)
 VALUES (gen_random_uuid(), 'seed-mtg-utm-6', 'Seed Meeting 6', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-6@example.com', NULL, 'direct', NOW(), NOW());
+
+-- ============================================================================
+-- PROFILE WITH NULL SCHEDULING POLICY
+-- ============================================================================
+--
+-- buffer_minutes, advance_booking_days and min_advance_hours were created with
+-- column defaults but never NOT NULL, so a database that wrote them explicitly
+-- as NULL is reachable. 20260811180804_create_availability_schedules COALESCEs
+-- each one while copying it onto the profile's new default schedule; without a
+-- row like this the COALESCE is never executed and a regression to a bare copy
+-- would pass. Seeded on user 3, whose profile is created here rather than above
+-- so the NULL policy stays next to the reason for it.
+INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, min_advance_hours, inserted_at, updated_at)
+SELECT id, 'America/New_York', NULL, NULL, NULL, NOW(), NOW() FROM users WHERE email = 'seed-user-3@example.com';
+
+-- ============================================================================
+-- WEEKLY AVAILABILITY, BREAKS AND OVERRIDES
+-- ============================================================================
+--
+-- 20260811181002_rekey_availability_to_schedules moves both child tables off
+-- profile_id and onto the schedule_id of their profile's new default schedule,
+-- then makes the column NOT NULL and drops profile_id. The backfill can only be
+-- shown to preserve rows against a populated table: on an empty one the UPDATEs
+-- match nothing, the orphan sweep deletes nothing, and the migration passes
+-- having proved only that the DDL parses.
+--
+-- Every profile above is seeded, including the NULL-policy one, so the rekey is
+-- exercised across more than one schedule and cannot pass by re-pointing
+-- everything at whichever schedule it found first.
+
+-- A full seven-day week per profile: five available weekdays with hours, two
+-- unavailable weekend days with NULL times. day_of_week is unique per profile
+-- before the migration and must stay unique per schedule after it, so this also
+-- covers the index swap carrying real duplicates-per-profile across.
+INSERT INTO weekly_availability (profile_id, day_of_week, is_available, start_time, end_time, inserted_at, updated_at)
+SELECT p.id, d, d <= 5,
+       CASE WHEN d <= 5 THEN TIME '09:00' END,
+       CASE WHEN d <= 5 THEN TIME '17:30' END,
+       NOW(), NOW()
+FROM profiles p CROSS JOIN generate_series(1, 7) AS d;
+
+-- Breaks hang off weekly_availability, not off the schedule, so they are only
+-- reachable after the rekey if their parent row survived it with its id intact.
+INSERT INTO availability_breaks (weekly_availability_id, start_time, end_time, label, sort_order, inserted_at, updated_at)
+SELECT wa.id, TIME '12:00', TIME '13:00', 'Lunch', 0, NOW(), NOW()
+FROM weekly_availability wa WHERE wa.day_of_week = 1;
+
+-- One override of each type the check constraint allows. 'custom_hours' is the
+-- only one carrying times, and the (profile_id, date) unique index becomes
+-- (schedule_id, date), so three dates per profile prove the swap keeps them.
+INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
+SELECT p.id, DATE '2026-12-24', 'unavailable', NULL, NULL, 'Christmas Eve', NOW(), NOW() FROM profiles p;
+
+INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
+SELECT p.id, DATE '2026-12-31', 'custom_hours', TIME '10:00', TIME '14:00', 'Short day', NOW(), NOW() FROM profiles p;
+
+INSERT INTO availability_overrides (profile_id, date, override_type, start_time, end_time, reason, inserted_at, updated_at)
+SELECT p.id, DATE '2027-01-02', 'available', NULL, NULL, NULL, NOW(), NOW() FROM profiles p;

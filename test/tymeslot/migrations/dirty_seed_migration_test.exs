@@ -104,9 +104,12 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
         Migrator.run(Tymeslot.Repo, migrations_path(), :up, to: @seed_schema_version)
 
         load_seed!()
+        seeded = seeded_availability!()
 
         # Run everything after the pin — this is the actual test.
         assert run_remaining_migrations!() == versions_under_test
+
+        assert_availability_rekeyed!(seeded)
       after
         # Always restore clean state for other tests
         reset_database!()
@@ -186,6 +189,77 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
         #{Exception.message(error)}
         """)
     end
+  end
+
+  # The availability rows as the seed left them, keyed by profile: this is the
+  # "before" half of the only assertion in the suite that can prove the schedule
+  # rekey preserved data, because it is the only place the rekey ever meets a
+  # populated table.
+  defp seeded_availability! do
+    census = %{
+      weekly: count_by_profile!("weekly_availability"),
+      overrides: count_by_profile!("availability_overrides"),
+      breaks: scalar!("SELECT COUNT(*) FROM availability_breaks")
+    }
+
+    # Without this the comparison after the migration could hold two empty
+    # results against each other and pass having proved nothing — the exact
+    # weakness that made an empty database useless for testing the rekey.
+    assert map_size(census.weekly) > 1 and map_size(census.overrides) > 1 and
+             census.breaks > 0,
+           """
+           The dirty seed left no availability rows across at least two profiles,
+           so the schedule rekey assertions would compare empty against empty.
+
+           Restore the WEEKLY AVAILABILITY, BREAKS AND OVERRIDES section of
+           test/support/migration_dirty_seed.sql rather than relaxing this check.
+
+           #{inspect(census)}
+           """
+
+    census
+  end
+
+  defp assert_availability_rekeyed!(seeded) do
+    # Every profile gained exactly one default schedule carrying the policy it
+    # used to hold on the profile itself, NULLs included (COALESCEd to the
+    # column defaults) — the values a self-hoster's booking rules survive as.
+    assert scalar!("SELECT COUNT(*) FROM availability_schedules WHERE is_default") ==
+             scalar!("SELECT COUNT(*) FROM profiles")
+
+    # Re-counted per schedule rather than in total, so the rekey cannot pass by
+    # collapsing every profile's rows onto one schedule.
+    assert count_by_default_schedule!("weekly_availability") == seeded.weekly
+    assert count_by_default_schedule!("availability_overrides") == seeded.overrides
+
+    # Breaks are reached only through their weekly row's id, so an unchanged
+    # count proves the rekey updated those rows rather than replacing them.
+    assert scalar!("SELECT COUNT(*) FROM availability_breaks") == seeded.breaks
+  end
+
+  defp count_by_profile!(table) do
+    rows!("SELECT profile_id, COUNT(*) FROM #{table} GROUP BY profile_id")
+  end
+
+  # Joins back to the owning profile so the result is comparable with the
+  # profile-keyed counts taken before the rekey dropped the column.
+  defp count_by_default_schedule!(table) do
+    rows!("""
+    SELECT s.profile_id, COUNT(*)
+    FROM #{table} AS t
+    JOIN availability_schedules AS s ON s.id = t.schedule_id AND s.is_default
+    GROUP BY s.profile_id
+    """)
+  end
+
+  defp rows!(sql) do
+    %{rows: rows} = SQL.query!(Tymeslot.Repo, sql, [])
+    Map.new(rows, fn [key, count] -> {key, count} end)
+  end
+
+  defp scalar!(sql) do
+    %{rows: [[value]]} = SQL.query!(Tymeslot.Repo, sql, [])
+    value
   end
 
   defp run_remaining_migrations! do
