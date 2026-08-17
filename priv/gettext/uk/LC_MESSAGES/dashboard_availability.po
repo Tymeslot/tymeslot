@@ -597,3 +597,8 @@ msgstr "Приймати бронювання в %{day}"
 #, elixir-autogen, elixir-format
 msgid "Schedule duplicated. Its date overrides were not copied."
 msgstr "Розклад продубльовано. Його винятки за датами не скопійовано."
+
+#: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{meeting_types}, and by every meeting type that has no schedule of its own."
+msgstr "Використовується: %{meeting_types}, а також кожним типом зустрічі, який не має власного розкладу."
