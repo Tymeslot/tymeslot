@@ -203,7 +203,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
     case CalendarSyncLinkQueries.get(sync_link_id) do
       {:ok, link} ->
         link
-        |> dispatch(source_uid, operation, attempt)
+        |> dispatch(source_uid, operation, attempt, Map.get(args, "moved", []))
         |> snooze_when_throttled()
         |> surface_exhausted_failure(link, attempt, max_attempts)
 
@@ -266,16 +266,28 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   #
   # A user-paused link reaches this clause too, and should: pausing leaves
   # existing placeholders standing, and no withdrawal is enqueued for one.
-  defp dispatch(%CalendarSyncLinkSchema{enabled: false} = link, source_uid, "delete", attempt),
-    do: run(link, source_uid, "delete", attempt)
+  defp dispatch(
+         %CalendarSyncLinkSchema{enabled: false} = link,
+         source_uid,
+         "delete",
+         attempt,
+         _moved
+       ),
+       do: run(link, source_uid, "delete", attempt, [])
 
   # Anything else a paused link is asked to write, it does not. Matched before
   # the target is even looked at: whether the target could receive a write is
   # irrelevant once the organiser has said not to send one.
-  defp dispatch(%CalendarSyncLinkSchema{enabled: false}, _source_uid, _operation, _attempt),
-    do: {:discard, :link_disabled}
+  defp dispatch(
+         %CalendarSyncLinkSchema{enabled: false},
+         _source_uid,
+         _operation,
+         _attempt,
+         _moved
+       ),
+       do: {:discard, :link_disabled}
 
-  defp dispatch(%CalendarSyncLinkSchema{} = link, source_uid, operation, attempt) do
+  defp dispatch(%CalendarSyncLinkSchema{} = link, source_uid, operation, attempt, moved) do
     cond do
       read_only_target?(link) ->
         {:discard, :target_is_read_only}
@@ -287,7 +299,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
         {:error, :rate_limited}
 
       true ->
-        run(link, source_uid, operation, attempt)
+        run(link, source_uid, operation, attempt, moved)
     end
   end
 
@@ -338,13 +350,13 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   # provider failure is the end of the road, and so a conflict worth recording,
   # or a write Oban is about to try again. That is the worker's knowledge — it
   # owns the *when* — and the engine cannot obtain it any other way.
-  defp run(link, source_uid, "delete", attempt),
+  defp run(link, source_uid, "delete", attempt, _moved),
     do: Engine.unmirror(link, source_uid, link.user_id, attempt: attempt)
 
-  defp run(link, source_uid, "upsert", attempt) do
+  defp run(link, source_uid, "upsert", attempt, moved) do
     case ProviderCalendarEventQueries.get_by_uid(link.source_integration_id, source_uid) do
       {:ok, event} ->
-        upsert(link, event, source_uid, attempt)
+        upsert(link, event, source_uid, attempt, moved)
 
       # The source has vanished from the cache. If it left a placeholder behind,
       # that placeholder is now blocking time for an event that no longer
@@ -355,9 +367,9 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
     end
   end
 
-  defp upsert(link, event, source_uid, attempt) do
+  defp upsert(link, event, source_uid, attempt, moved) do
     if Eligibility.mirror_source?(event, mirror_set(link), target_provider(link)) do
-      Engine.mirror(link, event, link.user_id, attempt: attempt)
+      Engine.mirror(link, event, link.user_id, attempt: attempt, moved: moved)
     else
       # Ineligible now, but it may have been eligible when the placeholder was
       # written — a cancelled meeting, an event switched to free, an event this

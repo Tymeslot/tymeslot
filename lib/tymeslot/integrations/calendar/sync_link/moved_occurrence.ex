@@ -1,7 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
   @moduledoc """
   Reports a single occurrence of a mirrored series that has been dragged to a
-  different time, and does nothing whatsoever to correct it.
+  different time, and enqueues the rewrite that puts the block where it went.
 
   ## What is broken, in both directions
 
@@ -21,16 +21,32 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
   over-blocking; it is a busy block in the wrong place, which is a different
   and more damaging failure than a busy block too many.
 
-  ## Why this only detects
+  ## How it is corrected, and why that took a third approach
 
-  Correcting a move needs either a per-instance override written onto the
-  target, or a listing of the source series' instances to diff against the rule.
-  Both were costed and deferred. Detection exists so that the decision about
-  whether to pay for them has evidence — how often this actually happens, and
-  on which series — instead of an argument. Nothing here writes to a provider,
-  and the absence of a provider call is a property to preserve: a per-series
-  request added here would put the cost that got correction deferred into the
-  step that exists to measure it.
+  Correction was deferred once, and the two approaches costed then both bought
+  instance-level fidelity with provider traffic: listing a series' instances on
+  every sync, or writing a separate placeholder event per moved occurrence.
+  Detection was built first so the decision would have evidence rather than an
+  argument, and the evidence arrived — real moves, on real series.
+
+  What closes it is neither of those. `SyncLink.MoveCorrection` renders an
+  `EXDATE` at the instant the occurrence left and an `RDATE` at the instant it
+  went to, and both travel on the placeholder the engine already rewrites: no
+  extra request, no second mirror row, still one placeholder per series. Google
+  expands both, which was confirmed against the live API before any of this was
+  written.
+
+  The property that made the deferral right is therefore kept. Nothing here
+  calls a provider — the moves are attached to an enqueue, and the write that
+  was already going to happen carries them.
+
+  ## Why the report survives the correction
+
+  The row is still appended, because the two answer different questions. The
+  write puts the block in the right place; the row is what the organiser reads
+  when a calendar looked wrong and they want to know what happened to it. A
+  correction that left no trace would be a busy block silently moving on someone
+  else's calendar.
 
   ## Why the post-commit seam, and not the cache
 
@@ -84,6 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
   alias Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Capability
+  alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
 
   @kind "occurrence_moved"
 
@@ -186,6 +203,15 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
           %{"original_start" => move.original_start, "new_start" => move.new_start}
         end)
     }
+
+    # The rewrite is enqueued whether or not the row is new. The row is
+    # deduplicated because a log repeating an unchanged divergence every sync is
+    # unreadable; the write is not, because `WriteBack`'s uniqueness already
+    # collapses repeats into the one pending job, and skipping it on a
+    # second sighting would leave a correction unmade whenever the first
+    # enqueue was lost — which is exactly what a plain enqueue arriving after
+    # it does. Re-sending is cheap and idempotent; not sending is neither.
+    WriteBack.enqueue(link.id, uid, :upsert, moved: detail["occurrences"])
 
     if already_recorded?(link.id, uid, detail) do
       :ok

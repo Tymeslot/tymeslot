@@ -119,6 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorColour
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorRow
+  alias Tymeslot.Integrations.Calendar.SyncLink.MoveCorrection
   alias Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId
   alias Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteEtag
@@ -165,7 +166,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
     target_uid = target_uid_for(link.id, source_uid)
     final? = final_attempt?(opts)
 
-    case resolve_series(link, source_event) do
+    case resolve_series(link, source_event, opts) do
       {:ok, series_opts} ->
         write(link, source_event, source_uid, target_uid, user_id, final?, series_opts)
 
@@ -206,18 +207,19 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # recorded as a gap. A *moved* occurrence still diverges and still cannot be
   # seen from here — the cache holds one row per series, so the new time is not
   # in it — which is why nothing is logged in its name; see `ConflictLog`.
-  defp resolve_series(link, source_event) do
+  defp resolve_series(link, source_event, opts) do
     case RecurringSeries.resolve(source_event, link.source_integration) do
       :not_recurring ->
         {:ok, []}
 
       {:ok, series} ->
-        {:ok,
-         [
-           recurrence_rule: series.recurrence_rule,
-           exceptions: series.exceptions,
-           timing: Map.take(series, [:all_day, :start_at, :end_at, :start_date, :end_date])
-         ]}
+        [
+          recurrence_rule: series.recurrence_rule,
+          exceptions: series.exceptions,
+          timing: Map.take(series, [:all_day, :start_at, :end_at, :start_date, :end_date])
+        ]
+        |> MoveCorrection.apply_to(source_event, Keyword.get(opts, :moved, []))
+        |> then(&{:ok, &1})
 
       {:skip, reason} ->
         Logger.info("Skipping the mirror for a series whose master could not be read",
@@ -247,6 +249,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
       {:ok, mirror} -> delete_mirror(link, mirror, user_id, final_attempt?(opts))
     end
   end
+
+  @doc "The prefix every placeholder UID carries; see `SyncLink.OrphanScan`."
+  @spec uid_prefix() :: String.t()
+  def uid_prefix, do: @uid_prefix
 
   @doc """
   The UID a placeholder carries on the target, derived from the link and the
