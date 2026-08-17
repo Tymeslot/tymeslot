@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Webhooks
 
@@ -67,6 +68,17 @@ defmodule Tymeslot.Workers.WebhookWorker do
   # Translate every known error from the `with` pipeline in `perform/1` into the
   # correct Oban result — either `{:discard, reason}` for deterministic failures
   # that should never be retried, or `{:error, reason}` for transient ones.
+
+  # `http_failure/3` already reached a terminal verdict; pass it through rather
+  # than letting a `{:discard, _}` fall past every `{:error, _}` clause below.
+  defp handle_delivery_error(
+         {:discard, _reason} = discard,
+         _webhook_id,
+         _meeting_id,
+         _event_type
+       ),
+       do: discard
+
   defp handle_delivery_error({:error, :not_found}, webhook_id, meeting_id, _event_type) do
     Logger.warning("Webhook or meeting not found",
       webhook_id: webhook_id,
@@ -294,8 +306,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
             {:ok, delivery}
 
           {:ok, status, _body} ->
-            if attempt == 1, do: Webhooks.record_delivery_failure(webhook, "HTTP #{status}")
-            {:error, {:http_error, status}}
+            http_failure(webhook, status, attempt)
 
           {:error, reason} ->
             if attempt == 1, do: Webhooks.record_delivery_failure(webhook, to_string(reason))
@@ -305,6 +316,31 @@ defmodule Tymeslot.Workers.WebhookWorker do
       {:error, reason} ->
         Logger.warning("Failed to create webhook delivery log", error: inspect(reason))
         {:error, :delivery_log_failed}
+    end
+  end
+
+  # A non-2xx response is only worth another attempt if a later one could
+  # plausibly differ. A 404 or 401 from a subscriber's endpoint is settled: the
+  # remaining attempts post the same body to the same URL, fail identically,
+  # and then Oban raises `PerformError`, which pages an operator about a
+  # subscriber's own misconfiguration. `ErrorAnalysis.classify_error/1` is the
+  # existing shared answer to that question (5xx, 408, 425 and 429 transient;
+  # 401, 403 and 404 hard), already relied on by the integration health checks,
+  # so the retry policy stays in one place instead of drifting per worker.
+  defp http_failure(webhook, status, attempt) do
+    reason = "HTTP #{status}"
+
+    case ErrorAnalysis.classify_error({:http_error, status, reason}) do
+      :transient ->
+        # Recorded on the first attempt only, so one failing delivery advances
+        # the circuit breaker by one rather than once per retry.
+        if attempt == 1, do: Webhooks.record_delivery_failure(webhook, reason)
+        {:error, {:http_error, status}}
+
+      :hard ->
+        # No retries follow, so this is the only chance to record the failure.
+        Webhooks.record_delivery_failure(webhook, reason)
+        {:discard, reason}
     end
   end
 
