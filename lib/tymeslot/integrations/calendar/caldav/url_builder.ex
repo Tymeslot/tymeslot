@@ -100,11 +100,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
   # (e.g., /dav/user@example.com or /remote.php/dav/calendars/user).
   defp full_caldav_url?(base_url) do
     case URI.parse(base_url).path do
-      nil -> false
-      "/" -> false
-      path -> length(String.split(path, "/", trim: true)) >= 2
+      nil ->
+        false
+
+      "/" ->
+        false
+
+      path ->
+        segments = String.split(path, "/", trim: true)
+        length(segments) >= 2 and not caldav_service_root?(segments)
     end
   end
+
+  # `Shared.PathUtils.normalize_url/2` turns a bare Nextcloud host into
+  # `.../remote.php/dav` before this module ever sees it (see
+  # `Nextcloud.Provider.new/1`). That path has depth 2, so it used to satisfy
+  # `full_caldav_url?/1` and get treated as an already-specific calendar
+  # collection — skipping the `/calendars/{username}/` this module would
+  # otherwise append. The resulting request queried the CalDAV *service
+  # root*, whose PROPFIND response lists top-level collections
+  # (files/, addressbooks/, calendars/, ...) that never carry a
+  # `<cal:calendar/>` resourcetype, so discovery silently returned zero
+  # calendars for every Nextcloud account — no error, no log, just an empty
+  # list indistinguishable from "this user really has no calendars".
+  defp caldav_service_root?(["remote.php", "dav"]), do: true
+  defp caldav_service_root?(_segments), do: false
 
   # Only include port when it differs from the scheme default.
   # URI.parse/1 always fills in the default port (443 for https, 80 for http),
