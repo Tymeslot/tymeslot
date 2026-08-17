@@ -20,6 +20,7 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.Validation
 
   # A Wednesday, far enough ahead that minimum notice never trims the day.
   @date ~D[2026-09-16]
@@ -130,6 +131,38 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
 
     assert slots_for(evenings, 60) == []
     refute slots_for(mornings, 60) == []
+  end
+
+  test "a date one type can be booked on is refused when submitted against the other", %{
+    user: user,
+    evenings: evenings,
+    evening_type: evening_type,
+    morning_type: morning_type
+  } do
+    # The two halves of "if it is offered, it can be booked" have to agree per
+    # meeting type, not per account. Booking-time validation re-checks the
+    # advance window, so widening it on one schedule and not the other is the
+    # dimension where a disagreement is actually observable end to end.
+    {:ok, _widened} = Schedules.update_policy(evenings, %{advance_booking_days: 300})
+
+    far_ahead = Date.add(Date.utc_today(), 200)
+    {:ok, submitted} = DateTime.new(far_ahead, ~T[18:00:00], "Etc/UTC")
+
+    assert :ok =
+             Validation.validate_booking_time(
+               submitted,
+               "Etc/UTC",
+               Policy.scheduling_config(user.id, evening_type)
+             )
+
+    assert {:error, message} =
+             Validation.validate_booking_time(
+               submitted,
+               "Etc/UTC",
+               Policy.scheduling_config(user.id, morning_type)
+             )
+
+    assert message =~ "in advance"
   end
 
   test "booking-time policy resolves the same schedule as slot computation", %{

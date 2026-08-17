@@ -35,12 +35,8 @@ defmodule Tymeslot.Security.PrivateIPv6 do
   def private?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
 
   # ::ffff:x.x.x.x — IPv4-mapped; classify the embedded IPv4 address
-  def private?({0, 0, 0, 0, 0, 0xFFFF, hi, lo}) do
-    a = bsr(hi, 8)
-    b = band(hi, 0xFF)
-    c = bsr(lo, 8)
-    d = band(lo, 0xFF)
-    PrivateIPv4.private?({a, b, c, d})
+  def private?({0, 0, 0, 0, 0, 0xFFFF, _hi, _lo} = address) do
+    address |> unmap() |> PrivateIPv4.private?()
   end
 
   # fe80::/10 — link-local (first hextet 0xFE80..0xFEBF)
@@ -54,4 +50,19 @@ defmodule Tymeslot.Security.PrivateIPv6 do
       do: true
 
   def private?(_other), do: false
+
+  @doc """
+  Decodes an IPv4-mapped IPv6 address (`::ffff:x.x.x.x`) into its 4-element
+  IPv4 tuple, returning any other address unchanged.
+
+  A dual-stack listener reports an IPv4 peer in this mapped form, so callers
+  that match on IPv4 ranges must normalise through this function first or
+  their 4-element clauses silently never match.
+  """
+  @spec unmap(:inet.ip_address()) :: :inet.ip_address()
+  def unmap({0, 0, 0, 0, 0, 0xFFFF, hi, lo}) do
+    {bsr(hi, 8), band(hi, 0xFF), bsr(lo, 8), band(lo, 0xFF)}
+  end
+
+  def unmap(address), do: address
 end

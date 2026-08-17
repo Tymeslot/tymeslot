@@ -8,6 +8,7 @@ defmodule Tymeslot.Availability.Calculate do
   alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots}
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Validation.Constraints
 
   @type availability_config :: %{
           optional(:schedule_id) => pos_integer(),
@@ -20,6 +21,13 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:owner_timezone) => String.t(),
           optional(:min_advance_hours) => non_neg_integer(),
           optional(:limit_checker) => (DateTime.t() -> boolean()) | nil
+        }
+
+  @typedoc "The three scheduling policy values an `availability_config` carries."
+  @type policy_values :: %{
+          buffer_minutes: non_neg_integer(),
+          min_advance_hours: non_neg_integer(),
+          max_advance_booking_days: pos_integer()
         }
 
   @type calendar_day :: %{
@@ -141,7 +149,7 @@ defmodule Tymeslot.Availability.Calculate do
     now = DateTimeUtils.now_in_timezone(user_timezone)
     today = DateTime.to_date(now)
 
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+    max_advance_booking_days = config_policy(config).max_advance_booking_days
     max_booking_date = Date.add(today, max_advance_booking_days)
     duration_minutes = Map.get(config, :duration_minutes, 30)
 
@@ -292,6 +300,28 @@ defmodule Tymeslot.Availability.Calculate do
     end
   end
 
+  @doc """
+  The three scheduling policy values an `availability_config` carries, falling
+  back to `Tymeslot.Validation.Constraints.scheduling_policy_defaults/0` for any
+  the caller left out.
+
+  Callers build config from a resolved availability schedule. A config assembled
+  without one has to behave like a default schedule rather than carry a third
+  set of numbers of its own, because the offered slots and the booking-time
+  re-check read the policy through different paths and must not disagree.
+  """
+  @spec config_policy(availability_config()) :: policy_values()
+  def config_policy(config) do
+    defaults = Constraints.scheduling_policy_defaults()
+
+    %{
+      buffer_minutes: Map.get(config, :buffer_minutes, defaults.buffer_minutes),
+      min_advance_hours: Map.get(config, :min_advance_hours, defaults.min_advance_hours),
+      max_advance_booking_days:
+        Map.get(config, :max_advance_booking_days, defaults.advance_booking_days)
+    }
+  end
+
   # Private functions
 
   # Prefetches the schedule's weekly pattern and overrides into config to avoid
@@ -334,7 +364,7 @@ defmodule Tymeslot.Availability.Calculate do
 
   defp fallback_day_available?(date, today, now, config) do
     schedule_id = Map.get(config, :schedule_id)
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+    max_advance_booking_days = config_policy(config).max_advance_booking_days
 
     is_business_day = BusinessHours.business_day?(date, schedule_id, config)
     is_future = Date.compare(date, today) == :gt
@@ -367,7 +397,7 @@ defmodule Tymeslot.Availability.Calculate do
 
     case result do
       {:ok, %{end_datetime: %DateTime{} = end_dt}} ->
-        min_advance_hours = Map.get(config, :min_advance_hours, 3)
+        min_advance_hours = config_policy(config).min_advance_hours
         latest_start = DateTime.add(end_dt, -min_advance_hours * 60, :minute)
         DateTime.compare(now, latest_start) != :gt
 

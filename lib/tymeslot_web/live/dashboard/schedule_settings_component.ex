@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Utils.ChangesetUtils
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.Dashboard.Availability.{DeleteScheduleModal, ScheduleFormModal}
   alias TymeslotWeb.CustomInputModeHelper
 
@@ -43,8 +44,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   # Query-string key carrying the schedule the page is editing.
   @schedule_param "schedule"
-
-  @policy_defaults %{buffer_minutes: "0", advance_booking_days: "90", min_advance_hours: "24"}
 
   # {preset values, value used when switching a preset into custom mode}
   @policy_presets %{
@@ -374,8 +373,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     do: {:noreply, socket}
 
   defp update_policy_setting(socket, field, params) do
-    submitted =
-      params[Atom.to_string(field)] || params["value"] || Map.fetch!(@policy_defaults, field)
+    submitted = params[Atom.to_string(field)] || params["value"] || policy_default(field)
 
     metadata = DashboardHelpers.get_security_metadata(socket)
 
@@ -430,6 +428,14 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     socket
     |> assign(:schedules, schedules)
     |> assign(:selected_schedule, schedule)
+  end
+
+  # Only reached when an event arrives carrying no value at all. Read from the
+  # same table the schema's column defaults and the engine's fallbacks use, so a
+  # value-less event lands on the rules the rest of the system already assumes.
+  # `validate_policy/3` sanitises its input as a string, hence the conversion.
+  defp policy_default(field) do
+    Constraints.scheduling_policy_defaults() |> Map.fetch!(field) |> to_string()
   end
 
   defp validate_policy(:buffer_minutes, value, opts),

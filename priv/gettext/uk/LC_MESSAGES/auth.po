@@ -1113,3 +1113,8 @@ msgstr "Пароль має містити щонайменше один спе�
 #, elixir-autogen, elixir-format
 msgid "Password must contain at least one uppercase letter"
 msgstr "Пароль має містити щонайменше одну велику літеру"
+
+#: lib/tymeslot/auth/registration.ex
+#, elixir-autogen, elixir-format
+msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
+msgstr "Ваш обліковий запис створено, але лист для підтвердження ще не вдалося надіслати. Зачекайте кілька хвилин, а потім скористайтеся посиланням для повторного надсилання."

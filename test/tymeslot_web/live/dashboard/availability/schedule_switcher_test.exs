@@ -234,6 +234,30 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
 
       assert render(view) =~ "Used by every meeting type that has no schedule of its own."
     end
+
+    test "the default still says it catches everything unassigned when named explicitly", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      # Naming the default on a meeting type does not stop it applying to the
+      # ones that name nothing, so listing only the explicit user would
+      # understate what editing these hours affects.
+      default = Schedules.get_default(profile.id)
+
+      insert(:meeting_type,
+        user: user,
+        name: "Standing Review",
+        availability_schedule_id: default.id
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=#{default.id}")
+
+      html = render(view)
+
+      assert html =~ "Used by Standing Review, and by every meeting type"
+      assert html =~ "that has no schedule of its own."
+    end
   end
 
   describe "deleting a schedule" do
