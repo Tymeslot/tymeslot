@@ -41,6 +41,23 @@ defmodule Tymeslot.Validation.Constraints do
   def booking_limit_fields,
     do: [:max_bookings_per_day, :max_bookings_per_week, :max_bookings_per_month]
 
+  @doc """
+  The scheduling policy applied when no availability schedule can be resolved.
+
+  These are also the column defaults on `availability_schedules`, pinned by
+  `Tymeslot.Availability.AvailabilityScheduleSchemaTest`. A caller with no
+  schedule and a schedule saved without explicit values must agree on what the
+  rules are, or the slots offered on a half-configured account would differ from
+  the ones its bookings are validated against.
+  """
+  @spec scheduling_policy_defaults() :: %{
+          buffer_minutes: non_neg_integer(),
+          min_advance_hours: non_neg_integer(),
+          advance_booking_days: pos_integer()
+        }
+  def scheduling_policy_defaults,
+    do: %{buffer_minutes: 15, min_advance_hours: 3, advance_booking_days: 90}
+
   # Ecto-ready options (for validate_number/3)
 
   @spec buffer_minutes_opts() :: keyword()

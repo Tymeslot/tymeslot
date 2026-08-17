@@ -36,6 +36,10 @@ defmodule Tymeslot.Availability.AvailabilityScheduleSchema do
   schema "availability_schedules" do
     field(:name, :string)
     field(:is_default, :boolean, default: false)
+    # These three mirror `Constraints.scheduling_policy_defaults/0` and the
+    # column defaults in the migration. They stay literal here so the schema
+    # carries no compile-time dependency on `Constraints`; the three are pinned
+    # together by `AvailabilityScheduleSchemaTest`.
     field(:buffer_minutes, :integer, default: 15)
     field(:min_advance_hours, :integer, default: 3)
     field(:advance_booking_days, :integer, default: 90)

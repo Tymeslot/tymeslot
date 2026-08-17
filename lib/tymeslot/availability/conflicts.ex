@@ -39,9 +39,11 @@ defmodule Tymeslot.Availability.Conflicts do
           Calculate.availability_config()
         ) :: [String.t()]
   def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config \\ %{}) do
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-    min_advance_hours = Map.get(config, :min_advance_hours, 3)
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+    %{
+      buffer_minutes: buffer_minutes,
+      min_advance_hours: min_advance_hours,
+      max_advance_booking_days: max_advance_booking_days
+    } = Calculate.config_policy(config)
 
     current_time = DateTimeUtils.now_in_timezone(timezone)
 
@@ -114,9 +116,13 @@ defmodule Tymeslot.Availability.Conflicts do
         config \\ %{}
       ) do
     duration_minutes = config |> Map.get(:duration_minutes, 30) |> max(1) |> min(1440)
-    buffer_minutes = Map.get(config, :buffer_minutes, 15)
-    min_advance_hours = Map.get(config, :min_advance_hours, 3)
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
+
+    %{
+      buffer_minutes: buffer_minutes,
+      min_advance_hours: min_advance_hours,
+      max_advance_booking_days: max_advance_booking_days
+    } = Calculate.config_policy(config)
+
     schedule_id = Map.get(config, :schedule_id)
 
     # Pre-filter to events within ±2 days of target_date so the inner

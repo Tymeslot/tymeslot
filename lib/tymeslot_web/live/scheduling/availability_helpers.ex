@@ -73,9 +73,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
             config = %{
               schedule_id: schedule && schedule.id,
-              max_advance_booking_days: policy(schedule, :advance_booking_days),
-              min_advance_hours: policy(schedule, :min_advance_hours),
-              buffer_minutes: policy(schedule, :buffer_minutes),
+              max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
+              min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+              buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
               limit_checker:
                 build_limit_checker(organizer_user_id, organizer_profile, context, date, date)
             }
@@ -173,9 +173,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
               config = %{
                 schedule_id: schedule && schedule.id,
-                max_advance_booking_days: policy(schedule, :advance_booking_days),
-                min_advance_hours: policy(schedule, :min_advance_hours),
-                buffer_minutes: policy(schedule, :buffer_minutes),
+                max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
+                min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+                buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
                 duration_minutes: duration_minutes,
                 limit_checker:
                   build_limit_checker(user_id, organizer_profile, context, start_date, end_date)
@@ -371,14 +371,6 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
   # Returns nil when the host has no booking limits configured, keeping the
   # common path free of extra queries.
-  # Policy values live on the resolved schedule. A nil schedule means none could
-  # be resolved (a profile mid-creation, or demo data); fall back to the same
-  # defaults the engine applies when the key is absent, so the two agree.
-  @policy_defaults %{advance_booking_days: 90, min_advance_hours: 3, buffer_minutes: 15}
-
-  defp policy(nil, key), do: Map.fetch!(@policy_defaults, key)
-  defp policy(schedule, key), do: Map.fetch!(schedule, key)
-
   defp build_limit_checker(organizer_user_id, organizer_profile, context, start_date, end_date) do
     Checker.build_slot_checker(
       organizer_user_id,

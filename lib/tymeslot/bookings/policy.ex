@@ -35,23 +35,25 @@ defmodule Tymeslot.Bookings.Policy do
   def scheduling_config(organizer_user_id \\ nil, meeting_type \\ nil)
 
   def scheduling_config(nil, _meeting_type) do
-    %{
-      buffer_minutes: 15,
-      min_advance_hours: 3,
-      max_advance_booking_days: 90,
-      owner_timezone: Profiles.get_default_timezone()
-    }
+    Map.put(policy_values(nil), :owner_timezone, Profiles.get_default_timezone())
   end
 
   def scheduling_config(organizer_user_id, meeting_type) do
     settings = Profiles.get_profile_settings(organizer_user_id)
-    schedule = resolve_schedule(organizer_user_id, meeting_type)
 
+    organizer_user_id
+    |> resolve_schedule(meeting_type)
+    |> policy_values()
+    |> Map.put(:owner_timezone, settings.timezone)
+  end
+
+  # `max_advance_booking_days` is this map's name for the schedule's
+  # `advance_booking_days`; every other key is carried through unrenamed.
+  defp policy_values(schedule) do
     %{
-      buffer_minutes: policy(schedule, :buffer_minutes, 15),
-      min_advance_hours: policy(schedule, :min_advance_hours, 3),
-      max_advance_booking_days: policy(schedule, :advance_booking_days, 90),
-      owner_timezone: settings.timezone
+      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
+      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days)
     }
   end
 
@@ -65,9 +67,6 @@ defmodule Tymeslot.Bookings.Policy do
       {:error, :not_found} -> nil
     end
   end
-
-  defp policy(nil, _key, default), do: default
-  defp policy(schedule, key, _default), do: Map.fetch!(schedule, key)
 
   @typedoc "A single reminder entry with a numeric value and a unit string (e.g. \"minutes\")."
   @type reminder :: %{required(:value) => integer(), required(:unit) => String.t()}
