@@ -103,14 +103,21 @@ defmodule Tymeslot.Precommit.RunnerTest do
     end
   end
 
-  # Dialyzer sizes its worker pool to the number of online schedulers, so
-  # uncapped it scales its memory with the host's core count rather than with
-  # the project. Left alone on a 16-core machine that has been enough to push
-  # the desktop into an OOM kill, so the cap failing silently is the failure
-  # mode worth a test: nothing else in a `mix precommit` run would report it.
+  # The scheduler count is a measured speed setting (see `step_env/1` for the
+  # numbers), and losing it is the kind of regression nothing else in a `mix
+  # precommit` run would report: the gate would simply get slower, silently and
+  # by about a fifth. Hence a test on the flag itself.
   describe "step_env/1" do
     test "caps schedulers for the dialyzer step" do
-      assert Runner.step_env(["dialyzer"]) == [{"ERL_FLAGS", "+S 4:4"}]
+      assert Runner.step_env(["dialyzer"]) == [{"ERL_FLAGS", "+S 8:8"}]
+    end
+
+    # The gate runs the incremental task and keeps `dialyzer` as the cross-check.
+    # Both need the cap, and the clause that applies it matches on the task name,
+    # so a step reworded to one and not the other would silently lose it.
+    test "caps schedulers for the incremental dialyzer step too" do
+      assert Runner.step_env(["dialyzer.incremental", "--list-unused-filters"]) ==
+               [{"ERL_FLAGS", "+S 8:8"}]
     end
 
     test "leaves every other step's environment alone" do

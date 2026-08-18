@@ -7,9 +7,10 @@ defmodule Mix.Tasks.Dialyzer.Incremental do
       $ mix dialyzer.incremental
       $ mix dialyzer.incremental --metrics-file /tmp/iplt-metrics.txt
 
-  This exists alongside `mix dialyzer`, which is unchanged and remains the
-  gate. Run both and compare before considering a switch; see *Warning parity*
-  below.
+  This is what `mix precommit` and both CI workflows run. `mix dialyzer` is
+  unchanged and stays available as the cross-check to reach for when a warning
+  here looks wrong; see *Warning parity* below for what the two were compared
+  on.
 
   ## Why
 
@@ -30,6 +31,12 @@ defmodule Mix.Tasks.Dialyzer.Incremental do
   changed, which is exactly the missing capability. Measured against a
   one-module edit, `--metrics-file` reported one module of 4475 re-analysed.
 
+  End to end, with nothing changed since the previous run: 78.7s against 4.5s
+  in Core, and 451.8s against 12.0s in the repo that consumes Core as a path
+  dependency, where the classic PLT is invalidated by every Core commit. A
+  change big enough to move 312 of that repo's modules at once still came in at
+  173s.
+
   ## Why a separate task rather than a flag on `mix dialyzer`
 
   Dialyxir cannot reach incremental mode: `Mix.Tasks.Dialyzer` builds a fixed
@@ -45,11 +52,17 @@ defmodule Mix.Tasks.Dialyzer.Incremental do
 
   ## Warning parity
 
-  Adopting this is gated on the two modes reporting the same warnings. This
-  project skips 86 of them via `.dialyzer_ignore.exs`; if incremental mode
-  reports even slightly differently, those filters go stale and
-  `list_unused_filters` starts failing the gate for reasons unrelated to the
-  code under analysis. Diff the two before switching anything.
+  Adoption was gated on the two modes reporting the same warnings, because the
+  filters in `.dialyzer_ignore.exs` are matched against whatever is reported: if
+  incremental mode reported even slightly differently, those filters would go
+  stale and `list_unused_filters` would start failing the gate for reasons
+  unrelated to the code under analysis.
+
+  They agree. On a clean tree both report the same error and skip counts in each
+  repo, with no unused filters; against a deliberately mismatched `@spec` both
+  produce byte-identical warning text and the same exit status. Re-check with a
+  plain diff of the two outputs if a warning here ever looks like an artefact of
+  the mode rather than a fact about the code.
 
   `--metrics-file` (incremental mode only) reports how much was skipped, which
   is how to confirm the incrementality is real rather than assumed.

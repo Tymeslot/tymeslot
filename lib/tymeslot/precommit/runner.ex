@@ -64,22 +64,31 @@ defmodule Tymeslot.Precommit.Runner do
 
   # Dialyzer sizes its analysis worker pool to
   # `erlang:system_info(schedulers_online)` (`dialyzer_utils:parallelism/0`,
-  # consumed by the regulator in `dialyzer_coordinator`), so its peak memory is
-  # a function of the host's core count rather than of project size. On a
-  # 16-core machine that is sixteen concurrent workers each holding module
-  # code, callgraph slices and inferred types, measured at roughly 13G, which
-  # is enough for systemd-oomd to start killing desktop applications.
+  # consumed by the regulator in `dialyzer_coordinator`), so the count decides
+  # how much of the analysis runs at once.
   #
-  # Capping schedulers makes dialyzer *use* less, where a memory cap alone only
-  # makes it thrash or get killed once it has already asked for too much. The
-  # cap is keyed off the command rather than the step's display name, and set
+  # It was pinned to 4 as a memory guard, on a 13G figure measured while
+  # building a PLT from scratch. This step does that on the days a dependency or
+  # the toolchain moves and on no others; the warm run it performs the rest of
+  # the time holds 4.2G to 5.4G whether it is handed 4 schedulers or 16. So the
+  # number is a speed setting, and the memory guard is the systemd scope in the
+  # workspace `mix.sh`, which bounds the whole process tree however much
+  # dialyzer asks for. Measured on Core, three runs each, median wall clock: 92s
+  # at 4, 77s at 8, 92s at 16, the last losing to coordination overhead.
+  #
+  # The cap is keyed off the command rather than the step's display name, and set
   # here rather than for the run as a whole, so the test suite in the same
   # `mix precommit` keeps every core. `MIX_DIALYZER_SCHEDULERS` overrides it,
   # matching the flag of the same name in the workspace `mix.sh`.
+  #
+  # Both task names are matched. The gate runs `dialyzer.incremental`, while
+  # `dialyzer` remains available as the cross-check the incremental mode was
+  # adopted against, and a cap that quietly stopped applying to either would be
+  # invisible: the run would simply get slower.
   @doc false
   @spec step_env([String.t()]) :: [{String.t(), String.t()}]
-  def step_env(["dialyzer" | _rest]) do
-    schedulers = System.get_env("MIX_DIALYZER_SCHEDULERS", "4")
+  def step_env([command | _rest]) when command in ~w[dialyzer dialyzer.incremental] do
+    schedulers = System.get_env("MIX_DIALYZER_SCHEDULERS", "8")
     [{"ERL_FLAGS", "+S #{schedulers}:#{schedulers}"}]
   end
 
