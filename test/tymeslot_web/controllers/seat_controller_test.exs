@@ -2,6 +2,7 @@ defmodule TymeslotWeb.SeatControllerTest do
   # Uses the global ETS rate limiter; must not run concurrently.
   use TymeslotWeb.ConnCase, async: false
   @moduletag :controllers
+  @moduletag :bookings
 
   import Mox
   import Tymeslot.Factory
