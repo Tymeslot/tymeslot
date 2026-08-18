@@ -264,30 +264,72 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec handle_schedule_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_schedule_entry(socket, params) do
-    # Validate slug against meeting types if username context
-    slug = normalize_duration_param(params)
+    case resolve_slug_meeting_type(socket, normalize_duration_param(params)) do
+      {:unresolvable, socket} -> socket
+      {:ok, socket} -> do_handle_schedule_entry(socket, params)
+    end
+  end
 
-    with {:username_context, true} <-
-           {:username_context, is_binary(socket.assigns[:username_context])},
-         {:slug, slug} when is_binary(slug) <- {:slug, slug},
-         {:meeting_type, nil} <-
-           {:meeting_type,
-            ThemeFlow.resolve_meeting_type_for_slug(socket.assigns[:organizer_user_id], slug)} do
-      socket
-      |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
-      |> redirect(to: ~p"/#{socket.assigns[:username_context]}")
+  # Resolves the slug in the URL into `:meeting_type`, the record whose rules
+  # the submission is validated against. Every entry point into the flow has to
+  # do this: a booking that reaches the submit without it persists with
+  # `meeting_type_id: nil`, which the domain waves through, dropping the type's
+  # custom-field snapshot, schedule, buffers and booking limits, and leaving
+  # the duration to an unbounded parse of the slug itself.
+  #
+  # Returns `{:unresolvable, socket}` — already flashed and redirected — when
+  # the organiser has no type for this slug.
+  defp resolve_slug_meeting_type(socket, slug) do
+    if is_binary(socket.assigns[:username_context]) and is_binary(slug) do
+      socket.assigns[:organizer_user_id]
+      |> ThemeFlow.resolve_meeting_type_for_slug(slug)
+      |> assign_resolved_meeting_type(socket)
     else
-      {:meeting_type, meeting_type} ->
-        defs = CustomFields.snapshot_for(meeting_type)
+      {:ok, socket}
+    end
+  end
 
-        socket
-        |> assign(:meeting_type, meeting_type)
-        |> assign(:engine, QEngine.init(defs))
-        |> OrganizerHelpers.assign_booking_window()
-        |> do_handle_schedule_entry(params)
+  defp assign_resolved_meeting_type(nil, socket) do
+    {:unresolvable,
+     socket
+     |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
+     |> redirect(to: invalid_meeting_type_redirect_path(socket))}
+  end
+
+  defp assign_resolved_meeting_type(meeting_type, socket) do
+    {:ok, assign_meeting_type(socket, meeting_type)}
+  end
+
+  # Carries the reschedule context across the redirect so a bad slug doesn't
+  # silently turn a reschedule into a new, duplicate booking.
+  defp invalid_meeting_type_redirect_path(socket) do
+    base = ~p"/#{socket.assigns[:username_context]}"
+
+    case socket.assigns[:reschedule_meeting_uid] do
+      uid when is_binary(uid) and uid != "" ->
+        "#{base}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
 
       _other ->
-        do_handle_schedule_entry(socket, params)
+        base
+    end
+  end
+
+  defp assign_meeting_type(socket, meeting_type) do
+    socket
+    |> assign(:meeting_type, meeting_type)
+    |> assign(:engine, refreshed_engine(socket, meeting_type))
+    |> OrganizerHelpers.assign_booking_window()
+  end
+
+  # Re-initialise only when the definitions actually changed, so re-entering a
+  # step (or landing on `/book` directly, which resolves the same type again)
+  # preserves answers already given. Mirrors the `:questions` entry handler.
+  defp refreshed_engine(socket, meeting_type) do
+    defs = CustomFields.snapshot_for(meeting_type)
+
+    case socket.assigns[:engine] do
+      %QEngine{definitions: ^defs} = engine -> engine
+      _changed -> QEngine.init(defs)
     end
   end
 
@@ -336,7 +378,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         is_binary(params["reschedule_meeting_uid"])
 
     if has_selection || is_reschedule do
-      do_handle_booking_entry(socket, params)
+      case resolve_booking_meeting_type(socket, params, is_reschedule) do
+        {:unresolvable, socket} -> socket
+        {:ok, socket} -> do_handle_booking_entry(socket, params)
+      end
     else
       username = socket.assigns[:username_context]
       slug = socket.assigns[:selected_duration] || params["slug"]
@@ -346,6 +391,28 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       else
         redirect(socket, to: ~p"/")
       end
+    end
+  end
+
+  # `/:username/:slug/book` is directly enterable, so the booking step cannot
+  # assume an earlier step already resolved the type.
+  #
+  # A reschedule is committed to the original meeting's type (see
+  # `ThemeFlow.resolve_meeting_type_for_reschedule/2`) and must never be bounced
+  # on a slug that no longer names a live type, so it never redirects.
+  defp resolve_booking_meeting_type(socket, params, false = _is_reschedule) do
+    resolve_slug_meeting_type(socket, normalize_duration_param(params))
+  end
+
+  defp resolve_booking_meeting_type(socket, params, true = _is_reschedule) do
+    reschedule_uid = socket.assigns[:reschedule_meeting_uid] || params["reschedule_meeting_uid"]
+
+    case ThemeFlow.resolve_meeting_type_for_reschedule(
+           reschedule_uid,
+           socket.assigns[:organizer_user_id]
+         ) do
+      nil -> {:ok, socket}
+      meeting_type -> {:ok, assign_meeting_type(socket, meeting_type)}
     end
   end
 
