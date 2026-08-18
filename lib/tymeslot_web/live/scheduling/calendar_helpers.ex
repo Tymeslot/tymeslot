@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   """
 
   alias Phoenix.Component
-  alias Tymeslot.Availability.{BusinessHours, Calculate, Schedules}
+  alias Tymeslot.Availability.{Calculate, Schedules}
   alias Tymeslot.Demo
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       # Resolved once rather than inside the loop: the fallback branch below runs
       # for all seven days and would otherwise repeat the same lookup each time.
       schedule = fallback_schedule(organizer_profile, availability_map, meeting_type)
-      schedule_data = prefetched_schedule_data(schedule, week_start)
+      fallback_config = fallback_config(schedule, organizer_profile, week_start)
 
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
@@ -134,7 +134,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
               {Map.get(availability_map, date_string, false), false}
 
             true ->
-              {day_available?(date, schedule, schedule_data, today), false}
+              {Calculate.day_bookable_by_business_hours?(date, user_timezone, fallback_config),
+               false}
           end
 
         %{
@@ -207,24 +208,23 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     end
   end
 
-  # This runs inside the template render of a public page, so the seven
-  # per-day business-hours lookups must not each hit the database.
-  defp prefetched_schedule_data(nil, _week_start), do: %{}
-
-  defp prefetched_schedule_data(schedule, week_start) do
-    Calculate.prefetch_schedule_data(
-      %{},
-      schedule.id,
+  # The same config the month grid builds, so the week strip answers the
+  # availability question with the domain's rule rather than a second copy of
+  # it. Prefetched because this runs inside the template render of a public
+  # page: without it the seven per-day business-hours lookups each hit the
+  # database.
+  defp fallback_config(schedule, organizer_profile, week_start) do
+    %{
+      schedule_id: schedule && schedule.id,
+      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
+      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
+      owner_timezone: organizer_profile.timezone
+    }
+    |> Calculate.prefetch_schedule_data(
+      schedule && schedule.id,
       Date.add(week_start, -1),
       Date.add(week_start, 7)
     )
-  end
-
-  defp day_available?(date, schedule, schedule_data, today) do
-    is_weekday = BusinessHours.business_day?(date, schedule && schedule.id, schedule_data)
-    is_future = Date.compare(date, today) != :lt
-    is_within_limit = Date.diff(date, today) <= Schedules.policy(schedule, :advance_booking_days)
-
-    is_weekday && is_future && is_within_limit
   end
 end

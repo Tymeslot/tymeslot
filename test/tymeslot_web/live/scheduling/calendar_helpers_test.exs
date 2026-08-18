@@ -80,6 +80,59 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
     end
   end
 
+  # The week strip used to answer this with its own copy of the rule, which
+  # treated today as unconditionally bookable. In Rhythm, which has no month
+  # grid, that divergent copy was the only rule a visitor ever saw.
+  describe "get_week_days/5 agrees with the month grid about today" do
+    test "today is not offered when it cannot clear the minimum notice" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+
+      schedule =
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
+          min_advance_hours: 240
+        )
+
+      for day_of_week <- 1..7 do
+        insert(:weekly_availability,
+          schedule: schedule,
+          day_of_week: day_of_week,
+          start_time: ~T[00:00:00],
+          end_time: ~T[23:59:00],
+          is_available: true
+        )
+      end
+
+      today = Date.utc_today()
+      week_start = Date.add(today, -Date.day_of_week(today, :sunday) + 1)
+
+      week = CalendarHelpers.get_week_days(week_start, profile, nil, "Etc/UTC")
+
+      grid =
+        Calculate.get_calendar_days("Etc/UTC", today.year, today.month, month_config(schedule))
+
+      today_string = Date.to_string(today)
+      week_today = Enum.find(week, &(&1.date == today_string))
+      grid_today = Enum.find(grid, &(&1.date == today_string))
+
+      assert week_today, "expected the week strip to contain today"
+      assert grid_today, "expected the month grid to contain today"
+      refute grid_today.available
+      assert week_today.available == grid_today.available
+    end
+
+    defp month_config(schedule) do
+      %{
+        schedule_id: schedule.id,
+        max_advance_booking_days: schedule.advance_booking_days,
+        min_advance_hours: schedule.min_advance_hours,
+        buffer_minutes: schedule.buffer_minutes,
+        owner_timezone: "Etc/UTC"
+      }
+    end
+  end
+
   defp drain_query_sources(ref, acc) do
     receive do
       {:query_source, ^ref, source} -> drain_query_sources(ref, [source | acc])

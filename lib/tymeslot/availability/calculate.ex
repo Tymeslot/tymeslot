@@ -386,6 +386,22 @@ defmodule Tymeslot.Availability.Calculate do
     end
   end
 
+  @doc """
+  Whether a date can be offered when no conflict-aware availability map has
+  been fetched yet.
+
+  This is the rule the calendar grid falls back to: business hours, the
+  advance-booking window, and — for today alone — whether the hours still to
+  come clear the minimum notice. Public so the week strip answers the same
+  question the month grid does; the two used to disagree about today, and the
+  web copy treated it as unconditionally bookable.
+  """
+  @spec day_bookable_by_business_hours?(Date.t(), String.t(), availability_config()) :: boolean()
+  def day_bookable_by_business_hours?(date, user_timezone, config) do
+    now = DateTimeUtils.now_in_timezone(user_timezone)
+    fallback_day_available?(date, DateTime.to_date(now), now, config)
+  end
+
   defp fallback_day_available?(date, today, now, config) do
     schedule_id = Map.get(config, :schedule_id)
     max_advance_booking_days = config_policy(config).max_advance_booking_days
