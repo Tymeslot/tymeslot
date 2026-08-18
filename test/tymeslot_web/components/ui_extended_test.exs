@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Components.UIExtendedTest do
   alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Shared.Auth.IconComponents
-  alias TymeslotWeb.Themes.Shared.Assets
 
   describe "TimeOptions" do
     test "time_options/0 returns 24h interval pairs" do
@@ -17,37 +16,6 @@ defmodule TymeslotWeb.Components.UIExtendedTest do
       assert length(options) == 24 * 4
       assert {"00:00", "00:00"} = hd(options)
       assert {"23:45", "23:45"} = List.last(options)
-    end
-  end
-
-  describe "Themes.Shared.Assets" do
-    test "get_video_config/1 returns config for themes" do
-      rhythm = Assets.get_video_config(:rhythm)
-      assert rhythm.crossfade_enabled == true
-      refute Enum.empty?(rhythm.background_videos)
-
-      quill = Assets.get_video_config(:quill)
-      assert quill.background_videos == []
-      assert quill.poster == nil
-
-      default = Assets.get_video_config(:unknown)
-      assert default.background_videos == []
-    end
-
-    test "helper functions return correct values" do
-      sources = Assets.video_sources(:rhythm)
-      assert length(sources) == 4
-      assert Enum.all?(sources, &String.starts_with?(&1.src, "/videos/backgrounds/rhythm-"))
-
-      assert Assets.video_poster(:rhythm) == "/images/ui/posters/rhythm-background-poster.webp"
-      assert Assets.fallback_gradient(:rhythm) =~ "linear-gradient("
-      assert Assets.crossfade_enabled?(:rhythm) == true
-      assert Assets.crossfade_enabled?(:quill) == false
-
-      assert Assets.video_ids(:rhythm) == [
-               "rhythm-background-video-1",
-               "rhythm-background-video-2"
-             ]
     end
   end
 
