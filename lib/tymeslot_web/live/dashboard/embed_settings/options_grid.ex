@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
+  alias TymeslotWeb.Live.Shared.DocsUrl
 
   @doc """
   Renders the embed options grid.
@@ -269,14 +270,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       </div>
     </div>
 
-    <%!-- Hardcoded link to the cloud docs hub (slash-docs is not available in standalone Core) --%>
+    <%!-- Links to the docs hub; standalone Core does not serve /docs itself. --%>
     <p class="mt-6 text-center text-token-sm text-tymeslot-500">
       {raw(
         dgettext(
           "dashboard_embed",
           "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options.",
           guide:
-            ~s(<a href="https://tymeslot.app/docs/embed" target="_blank" rel="noopener noreferrer" class="text-turquoise-600 hover:text-turquoise-700 font-medium underline">) <>
+            ~s(<a href="#{DocsUrl.article_url("embed")}" target="_blank" rel="noopener noreferrer" class="text-turquoise-600 hover:text-turquoise-700 font-medium underline">) <>
               dgettext("dashboard_embed", "embedding guide") <> ~s(</a>)
         )
       )}

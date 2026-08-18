@@ -135,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
         assert decoded_body["source"] == %{
                  "title" => "Tymeslot",
-                 "url" => "https://tymeslot.app"
+                 "url" => TymeslotWeb.Endpoint.url()
                }
 
         assert decoded_body["extendedProperties"] == %{
@@ -329,7 +329,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
         assert decoded_body["source"] == %{
                  "title" => "Tymeslot",
-                 "url" => "https://tymeslot.app"
+                 "url" => TymeslotWeb.Endpoint.url()
                }
 
         assert decoded_body["extendedProperties"] == %{
