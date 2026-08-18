@@ -11,21 +11,6 @@ defmodule TymeslotWeb.Components.Icons.IconComponents do
   use Phoenix.Component
 
   @doc """
-  Returns the list of supported brand/product icon names.
-  """
-  @spec supported_icons() :: [atom()]
-  def supported_icons do
-    [
-      :cloudron,
-      :docker,
-      :n8n,
-      :slack,
-      :telegram,
-      :webhook
-    ]
-  end
-
-  @doc """
   Renders a brand/product logo as inline SVG.
 
   ## Examples
