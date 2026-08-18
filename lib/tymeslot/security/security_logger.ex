@@ -105,6 +105,12 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   If `details[:email]` is present it is masked before logging so no raw
   email (PII) reaches Logger sinks or the monitoring webhook.
+
+  Only the keys listed in the `Logger.info` call below reach Logger; anything
+  else an event builder assembles is carried to the monitoring webhook via
+  `:additional_data` but not to the log line. Raw identifiers are deliberately
+  not among them — an event that needs to name an account puts it under
+  `:email` so it is masked first.
   """
   @spec log_security_event(String.t(), event_metadata()) :: :ok
   def log_security_event(event_type, details \\ %{}) do
@@ -116,7 +122,9 @@ defmodule Tymeslot.Security.SecurityLogger do
       email_masked: masked_email,
       ip_address: details[:ip_address],
       user_agent: details[:user_agent],
-      session_id: details[:session_id]
+      session_id: details[:session_id],
+      provider: details[:provider],
+      lockout_type: details[:lockout_type]
     )
 
     # Also send to external monitoring if configured
@@ -226,12 +234,17 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   @doc """
   Logs account lockout events.
+
+  The identifier is an email address, so it is carried under `:email` and
+  masked before it reaches Logger.
   """
   @spec log_account_lockout(String.t(), String.t(), event_metadata()) :: :ok
   def log_account_lockout(identifier, lockout_type, metadata \\ %{}) do
     event_details = %{
       identifier: identifier,
+      email: identifier,
       lockout_type: lockout_type,
+      user_id: metadata[:user_id],
       ip_address: metadata[:ip_address],
       user_agent: metadata[:user_agent],
       additional_data: %{

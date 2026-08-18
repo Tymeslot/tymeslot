@@ -254,4 +254,60 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
       assert meta.session_id == nil
     end
   end
+
+  describe "log_account_lockout/3" do
+    test "names the locked-out account as a masked email and records its kind" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_account_lockout("alice@example.com", "locked", %{
+          user_id: 7,
+          ip_address: "203.0.113.9",
+          user_agent: "curl/8.0"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "account_lockout"} = meta}}
+      assert meta.email_masked == "a***@example.com"
+      assert meta.lockout_type == "locked"
+      assert meta.user_id == 7
+      assert meta.ip_address == "203.0.113.9"
+      assert meta.user_agent == "curl/8.0"
+      refute inspect(meta) =~ "alice@example.com"
+    end
+
+    test "distinguishes a throttle from a lock" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_account_lockout("bob@example.com", "throttled", %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "account_lockout"} = meta}}
+      assert meta.lockout_type == "throttled"
+      assert meta.user_id == nil
+    end
+  end
+
+  describe "log_social_auth_event/3" do
+    test "records which provider the attempt was against" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_social_auth_event("google", true, %{
+          email: "carol@example.com",
+          ip_address: "203.0.113.4"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "social_auth_success"} = meta}}
+      assert meta.provider == "google"
+      assert meta.email_masked == "c***@example.com"
+      assert meta.ip_address == "203.0.113.4"
+    end
+
+    test "records the provider on a failure with no email available" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_social_auth_event("github", false, %{ip_address: "203.0.113.5"})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "social_auth_failure"} = meta}}
+      assert meta.provider == "github"
+      assert meta.email_masked == nil
+    end
+  end
 end
