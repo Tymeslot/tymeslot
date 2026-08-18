@@ -191,20 +191,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Returns the count of meetings with a specific status.
-
-  ## Examples
-
-      iex> count_meetings_by_status("confirmed")
-      5
-
-  """
-  @spec count_meetings_by_status(String.t()) :: non_neg_integer()
-  def count_meetings_by_status(status) do
-    Repo.aggregate(from(m in Meeting, where: m.status == ^status), :count, :id)
-  end
-
-  @doc """
   Counts upcoming live bookings holding a provider room created by the given
   integration.
 
@@ -323,34 +309,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
       converting_visitors: count(m.visitor_hash, :distinct)
     })
     |> Repo.all()
-  end
-
-  @doc """
-  Returns the count of meetings for a specific attendee.
-
-  ## Examples
-
-      iex> count_meetings_by_attendee_email("attendee@example.com")
-      3
-
-  """
-  @spec count_meetings_by_attendee_email(String.t()) :: non_neg_integer()
-  def count_meetings_by_attendee_email(email) do
-    Repo.aggregate(from(m in Meeting, where: m.attendee_email == ^email), :count, :id)
-  end
-
-  @doc """
-  Returns the count of meetings for a specific organizer.
-
-  ## Examples
-
-      iex> count_meetings_by_organizer_email("organizer@example.com")
-      10
-
-  """
-  @spec count_meetings_by_organizer_email(String.t()) :: non_neg_integer()
-  def count_meetings_by_organizer_email(email) do
-    Repo.aggregate(from(m in Meeting, where: m.organizer_email == ^email), :count, :id)
   end
 
   @doc """

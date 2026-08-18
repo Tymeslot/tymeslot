@@ -172,7 +172,6 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate to_slug(meeting_type), to: Slugs
   defdelegate to_duration_string(meeting_type), to: Slugs
   defdelegate generate_random_slug(user_id), to: Slugs
-  defdelegate normalize_slug(slug), to: Slugs
   defdelegate update_slug(meeting_type, slug), to: Slugs
 
   # Duration parsing, normalisation, and booking-flow validation live in the

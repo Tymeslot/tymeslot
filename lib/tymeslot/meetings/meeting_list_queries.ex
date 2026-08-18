@@ -46,9 +46,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp order_by_start_desc(query), do: from(m in query, order_by: [desc: m.start_time])
   defp order_by_start_asc(query), do: from(m in query, order_by: [asc: m.start_time])
 
-  defp paginate_offset(query, page, per_page),
-    do: from(m in query, limit: ^per_page, offset: ^((page - 1) * per_page))
-
   defp apply_limit(query, limit), do: from(m in query, limit: ^limit)
 
   defp apply_time_filter(query, nil, _now), do: query
@@ -316,19 +313,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
-  Get all past meetings across all users.
-  """
-  @spec list_past_meetings() :: [Meeting.t()]
-  def list_past_meetings do
-    now = DateTime.utc_now()
-
-    Meeting
-    |> past(now)
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
   Get past meetings for a specific user with proper database filtering.
   Replaces the N+1 pattern of loading all meetings and filtering in memory.
   """
@@ -359,29 +343,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> for_user_email(user_email)
     |> order_by_start_desc()
     |> apply_limit(limit)
-    |> Repo.all()
-  end
-
-  @doc """
-  Get meetings for a user with pagination support and proper filtering.
-  This is a more flexible version that supports different statuses and time filters.
-  """
-  @spec list_meetings_for_user_paginated(String.t(), Keyword.t()) :: [Meeting.t()]
-  def list_meetings_for_user_paginated(user_email, opts \\ []) do
-    page = Keyword.get(opts, :page, 1)
-    per_page = Keyword.get(opts, :per_page, 20)
-    status = Keyword.get(opts, :status)
-    # :upcoming, :past, or nil for all
-    time_filter = Keyword.get(opts, :time_filter)
-
-    now = DateTime.utc_now()
-
-    Meeting
-    |> for_user_email(user_email)
-    |> with_status(status)
-    |> apply_time_filter(time_filter, now)
-    |> order_by_start_desc()
-    |> paginate_offset(page, per_page)
     |> Repo.all()
   end
 

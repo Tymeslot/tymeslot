@@ -267,14 +267,6 @@ defmodule Tymeslot.Meetings do
     as: :list_for_organizer_in_range
 
   @doc """
-  Lists all past meetings.
-  """
-  @spec list_past_meetings() :: [MeetingSchema.t()]
-  def list_past_meetings do
-    MeetingListQueries.list_past_meetings()
-  end
-
-  @doc """
   Lists past meetings for a specific user.
   """
   @spec list_past_meetings_for_user(String.t()) :: [MeetingSchema.t()]
