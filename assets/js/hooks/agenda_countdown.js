@@ -18,7 +18,7 @@ const JOIN_LEAD_MS = 10 * 60 * 1000;
 function relative(ms) {
   if (ms <= 0) return "now";
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `in ${minutes}m`;
+  if (minutes < 60) return `in ${Math.max(minutes, 1)}m`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
     const rem = minutes % 60;

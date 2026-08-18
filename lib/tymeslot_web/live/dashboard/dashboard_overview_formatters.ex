@@ -17,13 +17,26 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
   def relative_hint(entry) do
     diff = DateTime.diff(entry.start_at, DateTime.utc_now(), :second)
 
-    cond do
-      diff <= 0 -> dgettext("dashboard_home", "now")
-      diff < 3600 -> dgettext("dashboard_home", "in %{minutes}m", minutes: div(diff, 60))
-      diff < 86_400 -> dgettext("dashboard_home", "in %{hours}h", hours: div(diff, 3600))
-      true -> dgettext("dashboard_home", "in %{days}d", days: div(diff, 86_400))
-    end
+    if diff <= 0, do: dgettext("dashboard_home", "now"), else: countdown(diff)
   end
+
+  @doc """
+  The countdown text for an entry `seconds` away.
+
+  Shared with `AgendaDetailModal`, which renders the same entry: the two used
+  to carry the same gettext msgid and disagree below a minute, one showing
+  "in 0m" where the other clamped to "in 1m". A countdown that reads zero is
+  the wrong one.
+  """
+  @spec countdown(integer()) :: String.t()
+  def countdown(seconds) when seconds < 3600,
+    do: dgettext("dashboard_home", "in %{minutes}m", minutes: max(div(seconds, 60), 1))
+
+  def countdown(seconds) when seconds < 86_400,
+    do: dgettext("dashboard_home", "in %{hours}h", hours: div(seconds, 3600))
+
+  def countdown(seconds),
+    do: dgettext("dashboard_home", "in %{days}d", days: div(seconds, 86_400))
 
   @spec day_label(Entry.t(), String.t()) :: String.t()
   def day_label(entry, timezone) do
