@@ -106,14 +106,5 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     {:cont, socket}
   end
 
-  # Whether the host can reach the payments dashboard. Mirrors the gate in
-  # `PaymentsHandlers`: both `:ok` and `{:error, :stripe_required}` mean the
-  # feature is on (Stripe just isn't connected yet), so the sidebar link shows.
-  defp payments_allowed?(user_id) do
-    case Features.check_access(user_id, :meeting_payments) do
-      :ok -> true
-      {:error, :stripe_required} -> true
-      _other -> false
-    end
-  end
+  defp payments_allowed?(user_id), do: Features.meeting_payments_allowed?(user_id)
 end
