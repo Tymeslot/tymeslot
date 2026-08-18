@@ -120,6 +120,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       # Resolved once rather than inside the loop: the fallback branch below runs
       # for all seven days and would otherwise repeat the same lookup each time.
       schedule = fallback_schedule(organizer_profile, availability_map, meeting_type)
+      schedule_data = prefetched_schedule_data(schedule, week_start)
 
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
@@ -134,7 +135,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
               {Map.get(availability_map, date_string, false), false}
 
             true ->
-              {day_available?(date, schedule, today), false}
+              {day_available?(date, schedule, schedule_data, today), false}
           end
 
         %{
@@ -262,8 +263,21 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     end
   end
 
-  defp day_available?(date, schedule, today) do
-    is_weekday = BusinessHours.business_day?(date, schedule && schedule.id)
+  # This runs inside the template render of a public page, so the seven
+  # per-day business-hours lookups must not each hit the database.
+  defp prefetched_schedule_data(nil, _week_start), do: %{}
+
+  defp prefetched_schedule_data(schedule, week_start) do
+    Calculate.prefetch_schedule_data(
+      %{},
+      schedule.id,
+      Date.add(week_start, -1),
+      Date.add(week_start, 7)
+    )
+  end
+
+  defp day_available?(date, schedule, schedule_data, today) do
+    is_weekday = BusinessHours.business_day?(date, schedule && schedule.id, schedule_data)
     is_future = Date.compare(date, today) != :lt
     is_within_limit = Date.diff(date, today) <= Schedules.policy(schedule, :advance_booking_days)
 

@@ -36,6 +36,56 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
       assert Enum.at(days, 2).available == false
       assert Enum.at(days, 3).available == true
     end
+
+    # Both themes call this from inside the schedule template, so the seven-day
+    # business-hours fallback must not cost a query per day.
+    test "reads the weekly schedule and overrides once for the whole week" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
+      for day_of_week <- 1..5 do
+        insert(:weekly_availability,
+          schedule: schedule,
+          day_of_week: day_of_week,
+          start_time: ~T[09:00:00],
+          end_time: ~T[17:00:00],
+          is_available: true
+        )
+      end
+
+      parent = self()
+      ref = make_ref()
+      handler_id = "week-days-query-spy-#{inspect(ref)}"
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :repo, :query],
+        # The handler runs in the process that issued the query, so this is
+        # what keeps a concurrently running async test's queries out.
+        fn _event, _measurements, %{source: source}, _config ->
+          if self() == parent, do: send(parent, {:query_source, ref, source})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      # No availability map, so every day takes the business-hours fallback.
+      assert length(CalendarHelpers.get_week_days(~D[2027-06-07], profile, nil, "Etc/UTC")) == 7
+
+      sources = drain_query_sources(ref, [])
+
+      assert Enum.count(sources, &(&1 == "weekly_availability")) <= 1
+      assert Enum.count(sources, &(&1 == "availability_overrides")) <= 1
+    end
+  end
+
+  defp drain_query_sources(ref, acc) do
+    receive do
+      {:query_source, ^ref, source} -> drain_query_sources(ref, [source | acc])
+    after
+      0 -> acc
+    end
   end
 
   describe "display_range/2" do

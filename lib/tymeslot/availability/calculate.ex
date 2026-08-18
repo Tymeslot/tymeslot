@@ -264,7 +264,21 @@ defmodule Tymeslot.Availability.Calculate do
     now = DateTimeUtils.now_in_timezone(user_timezone)
     today = DateTime.to_date(now)
 
-    {first_display_date, _end_date} = display_range(year, month)
+    {first_display_date, end_date} = display_range(year, month)
+
+    # Prefetch once for the whole grid, as `available_slots/6` and
+    # `range_availability/6` already do. Without it the per-day fallback runs an
+    # uncached override lookup and a weekly-availability lookup for every
+    # non-past day in the grid — up to 42 of each, from inside the template
+    # render of a public page. Padded by a day at each end for the adjacent-day
+    # lookups `check_today_fallback_availability/3` performs.
+    config =
+      prefetch_schedule_data(
+        config,
+        Map.get(config, :schedule_id),
+        Date.add(first_display_date, -1),
+        Date.add(end_date, 1)
+      )
 
     Enum.map(0..41, fn offset ->
       date = Date.add(first_display_date, offset)
@@ -327,9 +341,19 @@ defmodule Tymeslot.Availability.Calculate do
   # Prefetches the schedule's weekly pattern and overrides into config to avoid
   # N+1 queries. A nil schedule id means no schedule could be resolved, and the
   # hard-coded fallback hours are used instead.
-  defp prefetch_schedule_data(config, nil, _start_date, _end_date), do: config
+  @doc """
+  Loads the schedule's weekly days and date overrides into `config` once, so
+  that per-date lookups read them from memory instead of the database.
 
-  defp prefetch_schedule_data(config, schedule_id, start_date, end_date) do
+  `BusinessHours` falls back to a query per date whenever the key is absent, so
+  any caller iterating dates has to prefetch or pay a round trip per day.
+  Existing keys win, so a caller that already has the data can pass it through.
+  """
+  @spec prefetch_schedule_data(availability_config(), integer() | nil, Date.t(), Date.t()) ::
+          availability_config()
+  def prefetch_schedule_data(config, nil, _start_date, _end_date), do: config
+
+  def prefetch_schedule_data(config, schedule_id, start_date, end_date) do
     config
     |> Map.put_new_lazy(:weekly_schedule, fn ->
       WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(schedule_id)
