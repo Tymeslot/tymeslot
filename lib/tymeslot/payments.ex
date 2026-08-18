@@ -6,18 +6,14 @@ defmodule Tymeslot.Payments do
 
   require Logger
 
-  alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
-
   alias Tymeslot.Payments.{
     DatabaseOperations,
-    PaymentQueries,
     SubscriptionFlow,
     SubscriptionInvoice,
     SubscriptionInvoices,
     Subscriptions
   }
 
-  @type transaction :: PaymentTransaction.t()
   @type stripe_id :: String.t()
 
   @doc """
@@ -35,21 +31,6 @@ defmodule Tymeslot.Payments do
   def process_failed_payment(stripe_id) do
     Logger.info("Processing failed payment", stripe_id: stripe_id)
     DatabaseOperations.process_failed_payment(stripe_id)
-  end
-
-  @doc """
-  Retrieves a transaction by its Stripe ID.
-
-  ## Parameters
-    * stripe_id - The Stripe session ID
-
-  ## Returns
-    * `{:ok, transaction}` - If the transaction is found
-    * `{:error, :transaction_not_found}` - If no transaction is found
-  """
-  @spec get_transaction(stripe_id()) :: {:ok, transaction()} | {:error, :transaction_not_found}
-  def get_transaction(stripe_id) do
-    PaymentQueries.get_transaction_by_stripe_id(stripe_id)
   end
 
   @doc """

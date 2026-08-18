@@ -234,24 +234,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
-  Preloads associations for a profile.
-
-  ## Parameters
-  - profile: The profile struct
-  - associations: An atom or list of atoms representing the associations to preload
-
-  ## Returns
-  - The profile with preloaded associations
-  """
-  @spec preload_associations(ProfileSchema.t(), atom() | [atom()]) :: ProfileSchema.t()
-  def preload_associations(%ProfileSchema{} = profile, associations) do
-    Repo.preload(profile, associations)
-  end
-
-  @spec preload_associations(nil, any()) :: nil
-  def preload_associations(nil, _associations), do: nil
-
-  @doc """
   Updates a profile's avatar filename.
   """
   @spec update_avatar(ProfileSchema.t(), String.t()) ::

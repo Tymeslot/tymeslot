@@ -6,7 +6,6 @@ defmodule Tymeslot.Security.Security do
 
   require Logger
 
-  alias Phoenix.LiveView
   alias Tymeslot.Profiles
   alias Tymeslot.Security.FieldValidators.TLDList
   alias Tymeslot.Security.RateLimiter
@@ -98,72 +97,6 @@ defmodule Tymeslot.Security.Security do
   def validate_timezone(timezone) do
     Logger.warning("Timezone validation failed: not a string", value_type: inspect(timezone))
     {:error, "Invalid timezone"}
-  end
-
-  @doc """
-  Enhanced IP tracking for better rate limiting.
-  """
-  @spec get_client_identifier(Phoenix.LiveView.Socket.t()) :: String.t()
-  def get_client_identifier(socket) do
-    # Combine multiple factors for better tracking
-    ip = get_real_ip(socket)
-    user_agent = get_user_agent(socket)
-
-    Logger.debug("Creating client identifier")
-
-    # Create a hash to avoid storing full user agent
-    identifier_string = "#{ip}:#{hash_user_agent(user_agent)}"
-    Base.encode16(:crypto.hash(:sha256, identifier_string))
-  end
-
-  defp get_real_ip(socket) do
-    case LiveView.get_connect_info(socket, :peer_data) do
-      %{address: address} ->
-        to_string(:inet.ntoa(address))
-
-      _no_peer_data ->
-        # Check headers for forwarded IP
-        case LiveView.get_connect_info(socket, :x_headers) do
-          headers when is_list(headers) ->
-            get_forwarded_ip(headers) || "unknown"
-
-          _no_headers ->
-            "unknown"
-        end
-    end
-  end
-
-  defp get_user_agent(socket) do
-    with headers when is_list(headers) <- LiveView.get_connect_info(socket, :x_headers),
-         ua when is_binary(ua) <- find_header(headers, "user-agent") do
-      ua
-    else
-      _no_user_agent -> "unknown"
-    end
-  end
-
-  defp find_header(headers, name) when is_list(headers) and is_binary(name) do
-    lname = String.downcase(name)
-
-    Enum.find_value(headers, fn
-      {key, value} when is_binary(key) ->
-        if String.downcase(key) == lname, do: value, else: nil
-
-      _invalid_header ->
-        nil
-    end)
-  end
-
-  defp hash_user_agent(user_agent) do
-    String.slice(Base.encode16(:crypto.hash(:md5, user_agent)), 0, 8)
-  end
-
-  defp get_forwarded_ip(headers) do
-    Enum.find_value(headers, fn {key, value} ->
-      if String.downcase(key) in ["x-real-ip", "x-forwarded-for", "cf-connecting-ip"] do
-        String.trim(List.first(String.split(value, ",")))
-      end
-    end)
   end
 
   @doc """
