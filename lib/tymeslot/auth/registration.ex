@@ -17,7 +17,7 @@ defmodule Tymeslot.Auth.Registration do
 
   # Use function instead of compile-time module attribute to allow test-time mocking
   defp verification_module,
-    do: Application.get_env(:auth, :verification_module, Tymeslot.Auth.Verification)
+    do: Application.get_env(:tymeslot, :verification_module, Tymeslot.Auth.Verification)
 
   @doc """
   Registers a new user with the provided parameters.

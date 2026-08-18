@@ -348,7 +348,9 @@ config :tz, :iana_version, "2026c"
 config :tymeslot, :tz_watch_enabled, false
 
 # Authentication configuration
-config :tymeslot, :auth, success_redirect_path: "/dashboard"
+config :tymeslot, :auth,
+  success_redirect_path: "/dashboard",
+  login_path: "/auth/login"
 
 # Input validation configuration
 config :tymeslot, :field_validation,
