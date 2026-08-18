@@ -205,62 +205,11 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   @doc """
-  Returns the business hours range for a specific day of week.
-
-  Accepts preloaded data via `config` to avoid per-date DB queries.
-  """
-  @spec business_hours_range(integer() | nil, integer(), Calculate.availability_config()) ::
-          {Time.t() | nil, Time.t() | nil}
-  def business_hours_range(schedule_id, day_of_week, config \\ %{})
-
-  def business_hours_range(nil, _day_of_week, _config) do
-    {@fallback_start_time, @fallback_end_time}
-  end
-
-  def business_hours_range(schedule_id, day_of_week, config) do
-    day_availability = lookup_day_availability(day_of_week, schedule_id, config)
-
-    case day_availability do
-      %{is_available: true, start_time: start_time, end_time: end_time} ->
-        {start_time, end_time}
-
-      _other ->
-        {nil, nil}
-    end
-  end
-
-  @doc """
   Returns the fallback business hours used when no schedule is resolvable.
   """
   @spec fallback_business_hours_range() :: {Time.t(), Time.t()}
   def fallback_business_hours_range do
     {@fallback_start_time, @fallback_end_time}
-  end
-
-  @doc """
-  Determines if month navigation should be disabled.
-  """
-  @spec month_navigation_disabled?(
-          atom(),
-          integer(),
-          integer(),
-          String.t(),
-          Calculate.availability_config()
-        ) :: boolean()
-  def month_navigation_disabled?(type, year, month, timezone, config \\ %{}) do
-    current_date = timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
-
-    case type do
-      :prev ->
-        target_date = Date.new!(year, month, 1)
-        Date.compare(target_date, current_date) != :gt
-
-      :next ->
-        last_day = year |> Date.new!(month, 1) |> Date.end_of_month()
-        max_booking_date = Date.add(current_date, max_advance_booking_days)
-        Date.compare(last_day, max_booking_date) != :lt
-    end
   end
 
   # Data lookup — uses preloaded collections when available, falls back to DB queries

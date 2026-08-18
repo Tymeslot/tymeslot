@@ -65,7 +65,4 @@ defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
     max = Constraints.override_reason_max_length()
     validate_length(changeset, :reason, max: max, message: "must be #{max} characters or less")
   end
-
-  @spec override_types() :: [String.t()]
-  def override_types, do: @override_types
 end
