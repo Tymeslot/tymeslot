@@ -81,12 +81,12 @@ defmodule Tymeslot.Auth.Authentication do
     cond do
       user.provider not in [nil, "email"] ->
         log_auth_attempt(user, :oauth_user, opts)
-        RateLimiter.record_auth_attempt(user.email, false)
+        record_auth_attempt(user, false, opts)
         {:error, :oauth_user, ErrorFormatter.format_auth_error(:oauth_user)}
 
       user.verified_at == nil ->
         log_auth_attempt(user, :email_not_verified, opts)
-        RateLimiter.record_auth_attempt(user.email, false)
+        record_auth_attempt(user, false, opts)
         {:error, :email_not_verified, ErrorFormatter.format_auth_error(:email_not_verified)}
 
       verify_password(user, password) ->
@@ -96,13 +96,35 @@ defmodule Tymeslot.Auth.Authentication do
           method: "password"
         })
 
-        RateLimiter.record_auth_attempt(user.email, true)
+        record_auth_attempt(user, true, opts)
         {:ok, user, dgettext("auth", "Login successful.")}
 
       true ->
         log_auth_attempt(user, :invalid_password, opts)
-        RateLimiter.record_auth_attempt(user.email, false)
+        record_auth_attempt(user, false, opts)
         {:error, :invalid_password, ErrorFormatter.format_auth_error(:invalid_password)}
+    end
+  end
+
+  # Records the attempt against the account lockout tracker and audits the
+  # moment the account crosses a lockout threshold.
+  #
+  # The transition is observable only here: `check_auth_rate_limit/2` runs
+  # before password verification, so once an account is throttled or locked
+  # this path is never reached again. The audit entry therefore fires once per
+  # lockout rather than once per subsequent attempt.
+  defp record_auth_attempt(user, success, opts) do
+    case RateLimiter.record_auth_attempt(user.email, success) do
+      {:error, lockout_type, _message}
+      when lockout_type in [:account_locked, :account_throttled] ->
+        SecurityLogger.log_account_lockout(user.email, to_string(lockout_type), %{
+          user_id: user.id,
+          ip_address: opts[:ip_address],
+          user_agent: opts[:user_agent]
+        })
+
+      _other ->
+        :ok
     end
   end
 
