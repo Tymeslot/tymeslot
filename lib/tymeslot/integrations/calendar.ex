@@ -348,23 +348,6 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
-  Discover calendars and merge with existing selection state for an integration.
-  """
-  @spec discover_calendars_with_selection(integration()) :: {:ok, list()} | {:error, any()}
-  def discover_calendars_with_selection(integration) do
-    Selection.discover_with_selection(integration)
-  end
-
-  @doc """
-  Validate a connection with a timeout wrapper.
-  """
-  @spec validate_connection_with_timeout(integration(), user_id(), keyword()) ::
-          {:ok, integration()} | {:error, any()}
-  def validate_connection_with_timeout(integration, user_id, opts \\ []) do
-    Connection.validate(integration, user_id, opts)
-  end
-
-  @doc """
   Delete integration while reassigning/clearing primary as needed.
   """
   @spec delete_with_primary_reassignment(user_id(), integration_id()) ::
