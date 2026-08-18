@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
@@ -38,6 +39,24 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @spec list_active_calendar_integrations(user_id()) :: [CalendarIntegrationSchema.t()]
   def list_active_calendar_integrations(user_id) do
     CalendarIntegrationQueries.list_active_for_user(user_id)
+  end
+
+  @doc """
+  The user's calendar display preferences. Returns the stored row if one
+  exists, otherwise an unsaved struct populated with defaults — callers that
+  need the defaults persisted must call `save_preferences/2` themselves.
+  """
+  @spec get_or_create_preferences(user_id()) :: struct()
+  def get_or_create_preferences(user_id) do
+    CalendarPreferencesQueries.get_or_create(user_id)
+  end
+
+  @doc """
+  Upserts the user's calendar display preferences.
+  """
+  @spec save_preferences(user_id(), map()) :: {:ok, struct()} | {:error, Ecto.Changeset.t()}
+  def save_preferences(user_id, attrs) do
+    CalendarPreferencesQueries.upsert(user_id, attrs)
   end
 
   @doc """
