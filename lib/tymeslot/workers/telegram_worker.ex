@@ -164,8 +164,12 @@ defmodule Tymeslot.Workers.TelegramWorker do
         auto_disable(integration, "Unauthorized (invalid bot token)")
         {:discard, "Unauthorized"}
 
-      {:ok, 400, body} ->
-        handle_400_error(integration, body, attempt)
+      # Telegram answers both "bot was blocked by the user" and "bot was kicked"
+      # with 403, deriving the body's `Forbidden:` prefix from that same code.
+      # 400 stays matched too: the description is the reliable signal, and an
+      # intermediary can rewrite the transport status.
+      {:ok, status, body} when status in [400, 403] ->
+        handle_rejection(integration, body, attempt)
 
       {:ok, 429, body} ->
         handle_rate_limit(body)
@@ -180,7 +184,20 @@ defmodule Tymeslot.Workers.TelegramWorker do
     end
   end
 
-  defp handle_400_error(integration, body, attempt) do
+  defp auto_disable(integration, reason) do
+    case Telegram.auto_disable(integration, reason) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning("Failed to auto-disable Telegram integration",
+          integration_id: integration.id,
+          reason: inspect(changeset)
+        )
+    end
+  end
+
+  defp handle_rejection(integration, body, attempt) do
     description = extract_error_description(body)
 
     cond do
@@ -208,14 +225,6 @@ defmodule Tymeslot.Workers.TelegramWorker do
       end
 
     {:snooze, retry_after}
-  end
-
-  defp auto_disable(integration, reason) do
-    TelegramQueries.update_integration(integration, %{
-      is_active: false,
-      disabled_at: DateTime.utc_now(),
-      disabled_reason: reason
-    })
   end
 
   defp extract_error_description(body) when is_binary(body) do

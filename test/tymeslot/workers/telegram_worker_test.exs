@@ -159,13 +159,18 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert updated.disabled_reason =~ "Unauthorized"
     end
 
+    # Telegram answers a blocked bot with 403, and derives the body's
+    # `Forbidden:` prefix from that same code — the 400/`Forbidden:` pairing
+    # this test used to assert is one the API cannot emit, so it passed while
+    # every real block fell through to the retry-then-discard catch-all and
+    # the integration was never disabled.
     test "auto-disables when bot is blocked by user", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
          %{
-           status: 400,
+           status: 403,
            body: ~s({"ok":false,"description":"Forbidden: bot was blocked by the user"})
          }}
       end)
@@ -180,6 +185,51 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       updated = Repo.get(TelegramIntegrationSchema, integration.id)
       refute updated.is_active
       assert updated.disabled_reason =~ "blocked"
+    end
+
+    test "auto-disables when the bot is kicked from the group", %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 403,
+           body: ~s({"ok":false,"description":"Forbidden: bot was kicked from the group chat"})
+         }}
+      end)
+
+      assert {:discard, "Bot kicked"} =
+               perform_job(TelegramWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      updated = Repo.get(TelegramIntegrationSchema, integration.id)
+      refute updated.is_active
+      assert updated.disabled_reason =~ "kicked"
+    end
+
+    test "leaves the integration active on a 403 that is not a block or kick",
+         %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 403,
+           body: ~s({"ok":false,"description":"Forbidden: message can't be sent"})
+         }}
+      end)
+
+      assert {:error, {:bad_request, _description}} =
+               perform_job(TelegramWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      assert Repo.get(TelegramIntegrationSchema, integration.id).is_active
     end
 
     test "snoozes on 429 rate limit with retry_after", %{user: user, meeting: meeting} do
