@@ -96,6 +96,11 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
       # succeed while the calendar picker silently found nothing, because the
       # guessed discovery path became `<base_url>/calendars/<user>/` instead
       # of the CalDAV-mounted `/remote.php/dav/calendars/<user>/`.
+      #
+      # The probed URL is asserted down to the calendar home rather than to
+      # `/remote.php/dav/`: the service root the discovery fix exists to avoid
+      # ends in exactly that prefix, so the looser assertion passed either way
+      # and this case could not tell the bug from the fix.
       integration =
         insert(:calendar_integration,
           provider: "nextcloud",
@@ -105,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
         )
 
       stub(Tymeslot.HTTPClientMock, :request, fn :propfind, url, _body, _headers, _opts ->
-        assert url =~ "/remote.php/dav/", "probed wrong URL: #{url}"
+        assert url =~ "/remote.php/dav/calendars/alice/", "probed wrong URL: #{url}"
 
         {:ok,
          %Req.Response{

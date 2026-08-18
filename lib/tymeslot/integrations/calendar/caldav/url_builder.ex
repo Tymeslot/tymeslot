@@ -10,7 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
   Builds the initial discovery URL for a CalDAV client.
 
   If `base_url` already looks like a full CalDAV principal URL (path depth ≥ 2),
-  it is used as-is. Otherwise a provider-specific path is appended.
+  it is used as-is. A CalDAV *service root* is excluded from that test, however
+  deep it sits: it addresses the DAV mount rather than a calendar collection, so
+  the provider-specific path is still appended to it.
   """
   @spec build_discovery_url(map()) :: String.t()
   def build_discovery_url(client) do
@@ -123,8 +125,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
   # `<cal:calendar/>` resourcetype, so discovery silently returned zero
   # calendars for every Nextcloud account — no error, no log, just an empty
   # list indistinguishable from "this user really has no calendars".
-  defp caldav_service_root?(["remote.php", "dav"]), do: true
-  defp caldav_service_root?(_segments), do: false
+  #
+  # Matched as a suffix, not an exact path: Nextcloud is frequently installed in
+  # a subdirectory, where the same normalisation yields `/nextcloud/remote.php/dav`.
+  # An exact two-segment match would leave those installations on the original
+  # broken path.
+  defp caldav_service_root?(segments), do: Enum.take(segments, -2) == ["remote.php", "dav"]
 
   # Only include port when it differs from the scheme default.
   # URI.parse/1 always fills in the default port (443 for https, 80 for http),

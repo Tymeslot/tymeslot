@@ -31,6 +31,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilderTest do
                "https://cloud.example.com/remote.php/dav/calendars/alice/"
     end
 
+    # Nextcloud is frequently installed in a subdirectory rather than at the
+    # domain root, where the same normalisation yields
+    # "/nextcloud/remote.php/dav", a three-segment path. Matching the service
+    # root as an exact path rather than a suffix would miss those installations
+    # and leave them on the broken path described above.
+    test "appends /calendars/{username}/ for a subdirectory Nextcloud install" do
+      client =
+        NextcloudProvider.new(%{
+          base_url: "https://example.com/nextcloud/remote.php/dav",
+          username: "alice",
+          password: "x"
+        })
+
+      assert UrlBuilder.build_discovery_url(client) ==
+               "https://example.com/nextcloud/remote.php/dav/calendars/alice/"
+    end
+
     test "does not double-append when base_url already includes /calendars/{username}" do
       client = %{
         base_url: "https://cloud.example.com/remote.php/dav/calendars/alice",
