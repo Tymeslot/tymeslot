@@ -83,6 +83,44 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert broadcast_id == poll.id
     end
 
+    test "breaks a same-second registration tie deterministically",
+         %{user: user, poll: poll, slot: slot} do
+      # `inserted_at` is second-precision, so two strangers following the same
+      # poll link routinely share one. Inserted in the order that puts the
+      # tie-break at odds with physical row order: without a total ordering,
+      # the preload hands back whatever the table scan produces, and the
+      # primary attendee becomes a coin flip between two people who both voted
+      # for the slot.
+      registered_at =
+        DateTime.utc_now() |> DateTime.add(-60, :second) |> DateTime.truncate(:second)
+
+      bob =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Bob",
+          email: "bob@example.com",
+          inserted_at: registered_at
+        )
+
+      ada =
+        insert(:poll_participant,
+          poll: poll,
+          name: "Ada",
+          email: "ada@example.com",
+          inserted_at: registered_at
+        )
+
+      insert(:poll_vote, participant: bob, time_slot: slot, response: :yes)
+      insert(:poll_vote, participant: ada, time_slot: slot, response: :yes)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+
+      assert meeting.attendee_email == "ada@example.com"
+
+      guest_emails = meeting.id |> Meetings.list_meeting_guests() |> Enum.map(& &1.email)
+      assert guest_emails == ["bob@example.com"]
+    end
+
     test "falls back to the timezone of the poll when the primary has none",
          %{user: user, poll: poll, slot: slot} do
       participant =

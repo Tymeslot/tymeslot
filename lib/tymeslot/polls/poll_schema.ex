@@ -38,9 +38,15 @@ defmodule Tymeslot.Polls.PollSchema do
       preload_order: [asc: :position]
     )
 
+    # `:email` breaks the tie rather than `:id`, which is a v4 UUID and so
+    # orders randomly. `inserted_at` alone is not a total order here: the
+    # timestamps are second-precision, and two strangers following the same
+    # poll link land in the same second often enough that the arbitrary winner
+    # reached `Confirm.pick_primary/2`, which promotes the first available
+    # voter to primary attendee.
     has_many(:participants, PollParticipantSchema,
       foreign_key: :poll_id,
-      preload_order: [asc: :inserted_at]
+      preload_order: [asc: :inserted_at, asc: :email]
     )
 
     timestamps(type: :utc_datetime)
