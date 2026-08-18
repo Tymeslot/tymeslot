@@ -23,22 +23,6 @@ defmodule Tymeslot.Infrastructure.Config do
     get_module(:user_token_queries_module, Tymeslot.Auth.UserTokenQueries)
   end
 
-  @doc """
-  Gets the user schema module configured for the application.
-  """
-  @spec user_schema_module() :: module()
-  def user_schema_module do
-    get_module(:user_schema_module, Tymeslot.Auth.UserSchema)
-  end
-
-  @doc """
-  Gets the user session queries module configured for the application.
-  """
-  @spec user_session_queries_module() :: module()
-  def user_session_queries_module do
-    get_module(:user_session_queries_module, Tymeslot.Auth.UserSessionQueries)
-  end
-
   # Authentication Modules
 
   # Service Modules
@@ -110,14 +94,6 @@ defmodule Tymeslot.Infrastructure.Config do
   @spec success_redirect_path() :: String.t()
   def success_redirect_path do
     get_auth_config(:success_redirect_path, "/dashboard")
-  end
-
-  @doc """
-  Gets the login path.
-  """
-  @spec login_path() :: String.t()
-  def login_path do
-    get_auth_config(:login_path, "/auth/login")
   end
 
   # Provider settings (single source of truth)

@@ -60,14 +60,6 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
 
   def filter(event, _extra), do: event
 
-  @doc """
-  Returns the list of substrings that mark a metadata key as sensitive.
-
-  Exposed for tests.
-  """
-  @spec sensitive_substrings() :: [String.t()]
-  def sensitive_substrings, do: @sensitive_substrings
-
   defp redact_meta(meta) do
     if Enum.any?(meta, fn {k, _v} -> sensitive_key?(k) end) do
       Map.new(meta, fn {key, value} ->
