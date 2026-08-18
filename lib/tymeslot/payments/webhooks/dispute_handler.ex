@@ -85,7 +85,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
             dispute: dispute
           })
 
-          Logger.info("DISPUTE FORWARDED - Subscription dispute sent to SaaS",
+          Logger.info("DISPUTE FORWARDED - Subscription dispute broadcast to subscribers",
             dispute_id: dispute_id,
             charge_id: charge_id
           )

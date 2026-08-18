@@ -37,8 +37,8 @@ defmodule Mix.Tasks.Tymeslot.PromoteAdmin do
 
       {:error, :admin_ui_disabled} ->
         Mix.raise(
-          "Admin UI is disabled in this deployment (enable_admin_ui = false). " <>
-            "This is expected in SaaS mode; promote_admin is Core-only."
+          "Admin UI is disabled in this deployment (enable_admin_ui = false), " <>
+            "so there is no admin role for promote_admin to change."
         )
 
       {:error, %Changeset{} = changeset} ->
