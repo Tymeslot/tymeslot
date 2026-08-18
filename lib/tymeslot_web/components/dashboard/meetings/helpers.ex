@@ -31,23 +31,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
     end
   end
 
-  @spec action_tooltip(Ecto.Schema.t(), :cancel | :reschedule) :: String.t() | nil
-  def action_tooltip(meeting, action) do
-    case action do
-      :cancel ->
-        case Policy.can_cancel_meeting?(meeting) do
-          :ok -> nil
-          {:error, reason} -> reason
-        end
-
-      :reschedule ->
-        case Policy.can_reschedule_meeting?(meeting) do
-          :ok -> nil
-          {:error, reason} -> reason
-        end
-    end
-  end
-
   # Timezone + formatting helpers
   @spec get_meeting_timezone(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil) :: String.t()
   def get_meeting_timezone(nil, _profile), do: "UTC"

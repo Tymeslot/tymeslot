@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """
@@ -223,26 +222,4 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   """
   @spec form_level_error(map()) :: String.t() | nil
   def form_level_error(form_errors), do: Map.get(form_errors, :base)
-
-  @doc """
-  Renders the standard form header with close button.
-  """
-  attr :title, :string, required: true
-  attr :icon, :string, required: true
-  attr :target, :any, required: true
-
-  @spec form_header(map()) :: Phoenix.LiveView.Rendered.t()
-  def form_header(assigns) do
-    ~H"""
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center">
-        <div class="text-turquoise-600 mr-3">
-          {Phoenix.HTML.raw(@icon)}
-        </div>
-        <h3 class="text-lg font-semibold text-tymeslot-800">{@title}</h3>
-      </div>
-      <UIComponents.close_button target={@target} />
-    </div>
-    """
-  end
 end
