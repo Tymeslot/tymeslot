@@ -14,6 +14,7 @@ defmodule Tymeslot.Security.PrivateIPv4 do
   - `127.0.0.0/8` — loopback (RFC 1122)
   - `169.254.0.0/16` — link-local / cloud-metadata (RFC 3927)
   - `172.16.0.0/12` — class B private (RFC 1918)
+  - `192.0.0.0/24` — IETF protocol assignments (RFC 6890)
   - `192.168.0.0/16` — class C private (RFC 1918)
   """
 
@@ -34,6 +35,8 @@ defmodule Tymeslot.Security.PrivateIPv4 do
   def private?({169, 254, _c, _d}), do: true
   # 172.16.0.0/12 — class B private
   def private?({172, b, _c, _d}) when b >= 16 and b <= 31, do: true
+  # 192.0.0.0/24 — IETF protocol assignments
+  def private?({192, 0, 0, _d}), do: true
   # 192.168.0.0/16 — class C private
   def private?({192, 168, _c, _d}), do: true
   def private?(_other), do: false

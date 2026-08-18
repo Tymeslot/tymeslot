@@ -36,6 +36,12 @@ defmodule Tymeslot.Security.PrivateIPv4Test do
       assert PrivateIPv4.private?({0, 0, 0, 0})
     end
 
+    test "IETF protocol assignments 192.0.0.0/24" do
+      assert PrivateIPv4.private?({192, 0, 0, 0})
+      assert PrivateIPv4.private?({192, 0, 0, 255})
+      refute PrivateIPv4.private?({192, 0, 1, 0})
+    end
+
     test "public addresses" do
       refute PrivateIPv4.private?({8, 8, 8, 8})
       refute PrivateIPv4.private?({1, 1, 1, 1})
