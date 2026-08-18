@@ -10,21 +10,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   # ========== CARDS & CONTAINERS ==========
 
   @doc """
-  Renders a brand-styled card container.
-  """
-  attr :class, :string, default: ""
-  slot :inner_block, required: true
-
-  @spec brand_card(map()) :: Phoenix.LiveView.Rendered.t()
-  def brand_card(assigns) do
-    ~H"""
-    <div class={["brand-card", @class]}>
-      {render_slot(@inner_block)}
-    </div>
-    """
-  end
-
-  @doc """
   Renders a glass-morphism card container.
   """
   attr :class, :string, default: ""
