@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.OAuthTokenManager
@@ -438,7 +439,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         {:error, error_message}
 
       _other ->
-        {:error, "Failed to create meeting with status #{status}: #{body}"}
+        # Undecodable body: still bounded and scrubbed before it reaches a log
+        # line, so a provider that answers with something unexpected cannot
+        # write an unbounded blob (or whatever it happens to contain) to disk.
+        {:error,
+         "Failed to create meeting with status #{status}: " <>
+           Redactor.redact_and_truncate(body)}
     end
   end
 end
