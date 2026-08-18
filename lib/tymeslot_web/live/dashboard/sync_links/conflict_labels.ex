@@ -77,6 +77,25 @@ defmodule TymeslotWeb.Dashboard.SyncLinks.ConflictLabels do
         "The repeating busy block did not reflect cancelled occurrences at the time."
       )
 
+  # The refusal that used to be an Oban discard reason and nothing else. Both
+  # halves are stated because either alone misleads: "not mirrored" on its own
+  # reads as a cosmetic gap, when the consequence is that every occurrence of a
+  # meeting that is genuinely happening sits in a slot the organiser's booking
+  # page will happily sell.
+  #
+  # Deliberately does not name which end or which provider, though the row
+  # carries both. The sentence has to be true for every reader, and "your
+  # Outlook calendar cannot do this" invites an organiser to go looking for a
+  # setting to change on a calendar where none exists. What they can act on is
+  # which repeating event is unprotected, and the source UID beside this line is
+  # that.
+  def conflict_kind_label("series_unsupported"),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "This repeating event is not being mirrored: one of the two calendars on this link cannot handle a repeating event. None of its occurrences is blocked on the target calendar, so those times can be booked over."
+      )
+
   # A kind this version does not know how to name is still shown, because the
   # row's date and event are useful on their own and a silently dropped entry
   # would make the history lie about how many there were.

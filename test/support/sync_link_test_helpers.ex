@@ -108,6 +108,10 @@ defmodule Tymeslot.SyncLinkTestHelpers do
   end
 
   @default_master_id "master_abc123"
+  @default_outlook_master_id "AAMkAGI2master="
+  @default_outlook_series_uid "040000008200E00074C5B7101A82E008_weekly"
+  @default_caldav_master_uid "weekly-standup@nextcloud.example"
+  @default_caldav_rule "FREQ=WEEKLY;BYDAY=TU"
   @default_series_uid "weekly-series@google.com"
   @default_rule "RRULE:FREQ=WEEKLY;BYDAY=TU"
 
@@ -205,6 +209,155 @@ defmodule Tymeslot.SyncLinkTestHelpers do
       "start" => %{"dateTime" => "2026-03-03T09:00:00Z"},
       "end" => %{"dateTime" => "2026-03-03T09:30:00Z"}
     }
+  end
+
+  @doc """
+  The cache row a recurring **Outlook** series actually produces: one expanded
+  occurrence, marked by the id of the master it belongs to and carrying no rule.
+
+  Mirrors `Outlook.EventNormaliser.build_calendar_event/2`, which maps
+  `raw["seriesMasterId"]` to `recurring_event_id` (`event_normaliser.ex:57`) and
+  `raw["recurrence"]` to `recurrence_rule` through
+  `RecurrenceConverter.outlook_to_rrule/1` (`:68`, `:137`).
+
+  The two are mutually exclusive on a cached row for the same structural reason
+  they are on Google, reached by a different route. Every list and delta path
+  Tymeslot uses is `calendarView` — `list_events/4` (`outlook_calendar_api.ex:71`),
+  `list_primary_events/3` (`:83`) and `GraphSubscription`'s
+  `/me/calendarView/delta` (`graph_subscription.ex:41`) — and `calendarView`
+  returns *occurrences*, never the seriesMaster. Graph puts `recurrence` on the
+  master alone and `seriesMasterId` on the occurrences alone, so a synced
+  Outlook row carries the master id and a `nil` rule.
+
+  `recurrence_rule` is therefore fixed at `nil` and is not overridable through
+  `attrs`, exactly as `google_series_instance/2` fixes it: a test wanting the
+  impossible pair has to write the struct out itself.
+
+  Unlike Google, the uid is Graph's `iCalUId`, which every occurrence of a
+  series shares — so the cache dedupes to the last occurrence here too, and the
+  times below are December's for a series that began in March.
+  """
+  @spec outlook_series_instance(
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
+          keyword() | map()
+        ) :: ProviderCalendarEventSchema.t()
+  def outlook_series_instance(source, attrs \\ %{}) do
+    attrs = Map.new(attrs)
+    {master_id, attrs} = Map.pop(attrs, :master_id, @default_outlook_master_id)
+
+    instance = %ProviderCalendarEventSchema{
+      uid: @default_outlook_series_uid,
+      calendar_integration_id: source.id,
+      provider: "outlook",
+      provider_calendar_id: "AAMkAGI2primary=",
+      provider_event_id: "#{master_id}_20261215T090000Z",
+      summary: "Weekly standup",
+      transparency: "opaque",
+      status: "confirmed",
+      all_day: false,
+      timezone: "Europe/Tallinn",
+      start_at: ~U[2026-12-15 09:00:00Z],
+      end_at: ~U[2026-12-15 09:30:00Z],
+      recurring_event_id: master_id
+    }
+
+    struct!(instance, Map.delete(attrs, :recurrence_rule))
+  end
+
+  @doc """
+  The Outlook series master as `OutlookCalendarAPI.get_event/3` answers it: the
+  raw, string-keyed Graph body with `recurrence` as a **structured object**
+  rather than an RRULE string.
+
+  This is the shape difference that makes Outlook's series path its own rather
+  than a copy of Google's. Graph does not accept or emit RRULE — it carries a
+  `pattern`/`range` pair — so the rule has to come back through
+  `RecurrenceConverter.outlook_to_rrule/1`, the read direction that already
+  exists for the normaliser (`recurrence_converter.ex:63`).
+
+  Mirrors what `get_event_raw/2` returns for `/me/events/{id}`
+  (`outlook_calendar_api.ex:312-320`) under `@event_sync_select_fields`
+  (`:29`), which requests `recurrence`, `seriesMasterId`, `start`, `end` and
+  `type`. A master answers `type: "seriesMaster"` and a `null` `seriesMasterId`.
+
+  The start and end are March — the series' first occurrence — deliberately
+  earlier than any cached instance, because `calendarView` dedupes the cache to
+  the *last* occurrence and that gap is the whole reason the master is fetched.
+  """
+  @spec outlook_series_master(keyword()) :: map()
+  def outlook_series_master(opts \\ []) do
+    master_id = Keyword.get(opts, :master_id, @default_outlook_master_id)
+
+    recurrence =
+      Keyword.get(opts, :recurrence, %{
+        "pattern" => %{"type" => "weekly", "interval" => 1, "daysOfWeek" => ["tuesday"]},
+        "range" => %{"type" => "noEnd", "startDate" => "2026-03-03"}
+      })
+
+    %{
+      "id" => master_id,
+      "type" => "seriesMaster",
+      "seriesMasterId" => nil,
+      "iCalUId" => @default_outlook_series_uid,
+      "subject" => "Weekly standup",
+      "recurrence" => recurrence,
+      "isAllDay" => false,
+      "start" => %{"dateTime" => "2026-03-03T09:00:00.0000000", "timeZone" => "UTC"},
+      "end" => %{"dateTime" => "2026-03-03T09:30:00.0000000", "timeZone" => "UTC"}
+    }
+  end
+
+  @doc """
+  The cache row a recurring **CalDAV** source produces, which is not a series
+  handle at all but one fully-formed occurrence.
+
+  Mirrors `ICalNormaliser.build_calendar_event/3`, and it is the fixture that
+  states why CalDAV needs no master fetch:
+
+  - `expand_event/3` (`ical_normaliser.ex:81`) expands the RRULE locally and
+    emits one raw map per occurrence, each stamped `_occ_start`/`_occ_end`;
+  - `build_uid/1` (`:301`) gives each occurrence a **distinct** uid,
+    `"<master UID>_<occurrence stamp>"`, so `upsert_batch/1` does not collapse
+    the series into one row the way it does for Google and Outlook;
+  - `resolve_timing/1` (`:206`) times the row from `_occ_start`, so the row
+    holds **its own** occurrence's start rather than the master's DTSTART;
+  - `recurrence_rule` (`:163`) is copied from the master onto *every*
+    occurrence, so a rule on a CalDAV row does not mean the row is a master;
+  - `recurring_event_id` is never set anywhere in the CalDAV or iCal paths, so
+    it is always `nil`.
+
+  Together those mean each cached CalDAV row is already a correctly-timed,
+  uniquely-keyed one-off. Passing the master's rule through would describe a
+  whole series starting at this occurrence — once per occurrence.
+  """
+  @spec caldav_series_occurrence(
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
+          keyword() | map()
+        ) :: ProviderCalendarEventSchema.t()
+  def caldav_series_occurrence(source, attrs \\ %{}) do
+    attrs = Map.new(attrs)
+    {occurrence_start, attrs} = Map.pop(attrs, :occurrence_start, ~U[2026-03-10 09:00:00Z])
+
+    stamp = Calendar.strftime(occurrence_start, "%Y%m%dT%H%M%SZ")
+
+    occurrence = %ProviderCalendarEventSchema{
+      uid: "#{@default_caldav_master_uid}_#{stamp}",
+      calendar_integration_id: source.id,
+      provider: "nextcloud",
+      provider_calendar_id: "/calendars/organiser/personal/",
+      provider_event_id: "#{@default_caldav_master_uid}.ics",
+      summary: "Weekly standup",
+      transparency: "opaque",
+      status: "confirmed",
+      all_day: false,
+      timezone: "Europe/Tallinn",
+      start_at: occurrence_start,
+      end_at: DateTime.add(occurrence_start, 1800, :second),
+      recurrence_rule: @default_caldav_rule,
+      recurring_event_id: nil
+    }
+
+    struct!(occurrence, Map.delete(attrs, :recurring_event_id))
   end
 
   @doc """
@@ -392,4 +545,81 @@ defmodule Tymeslot.SyncLinkTestHelpers do
   """
   @spec caldav_create_response(String.t()) :: {:ok, String.t()}
   def caldav_create_response(uid \\ "target-uid-1"), do: {:ok, uid}
+
+  @doc """
+  The VEVENT a live Radicale stores when Tymeslot mirrors a recurring series
+  onto it, captured from an actual round-trip rather than composed here.
+
+  Taken from `radicale_recurrence_integration_test.exs` running against Radicale
+  on port 8800: the document below is what a `GET` of the created `.ics`
+  returned, with the UID and DTSTAMP made stable. Everything else is verbatim,
+  including the property *order* — Radicale re-serialises what it is given
+  alphabetically rather than preserving the order Tymeslot wrote, which is worth
+  having in a fixture because a parser test written against Tymeslot's own
+  output order would not be testing what the server sends back.
+
+  Mirrors what `ICalBuilder.build_simple_event/2` produces and
+  `CaldavCommon.create_event/2` PUTs — the two halves whose disagreement was the
+  bug: the builder emitted the RRULE and dropped the EXDATE beside it, so this
+  fixture's exception lines are precisely the part that used to be missing.
+
+  Note DTSTART is UTC while the EXDATE carries `TZID=Europe/Tallinn`. That is
+  not an inconsistency: 12:00 Tallinn *is* 09:00Z on these dates, and RFC 5545
+  matches an EXDATE against the instants DTSTART generates. The live server was
+  asked directly and drops the occurrence for this exact pairing; an EXDATE
+  naming a different instant is stored and excludes nothing, which is the trap
+  this fixture is shaped to keep out of tests.
+  """
+  @spec radicale_stored_series_ical(keyword()) :: String.t()
+  def radicale_stored_series_ical(opts \\ []) do
+    uid = Keyword.get(opts, :uid, "tymeslot-series-1")
+
+    joined_lines =
+      opts
+      |> Keyword.get(:exception_lines, ["EXDATE;TZID=Europe/Tallinn:20260915T120000"])
+      |> Enum.join("\r\n")
+
+    exception_lines = if joined_lines == "", do: "", else: joined_lines <> "\r\n"
+
+    "BEGIN:VCALENDAR\r\n" <>
+      "VERSION:2.0\r\n" <>
+      "PRODID:-//Tymeslot//CalDAV Client//EN\r\n" <>
+      "BEGIN:VEVENT\r\n" <>
+      "UID:#{uid}\r\n" <>
+      "DTSTART:20260901T090000Z\r\n" <>
+      "DTEND:20260901T093000Z\r\n" <>
+      "DESCRIPTION:\r\n" <>
+      "DTSTAMP:20260818T133600Z\r\n" <>
+      exception_lines <>
+      "LOCATION:\r\n" <>
+      "RRULE:FREQ=WEEKLY;COUNT=5\r\n" <>
+      "STATUS:CONFIRMED\r\n" <>
+      "SUMMARY:Busy\r\n" <>
+      "TRANSP:OPAQUE\r\n" <>
+      "END:VEVENT\r\n" <>
+      "END:VCALENDAR\r\n"
+  end
+
+  @doc """
+  The exception lines a mirror payload carries for a series with one cancelled
+  occurrence, in the timezone-consistent form the live server honours.
+
+  Mirrors what `SyncLink.RecurringSeries` forwards off a Google master and what
+  `SyncLink.MoveCorrection.lines_for/2` builds for a moved one. Pass
+  `moved: true` for the `EXDATE`/`RDATE` pair a move produces — both halves,
+  because an EXDATE alone frees the slot the occurrence left without booking
+  the one it moved to, which widens the double-booking window instead of
+  closing it.
+  """
+  @spec series_exception_lines(keyword()) :: [String.t()]
+  def series_exception_lines(opts \\ []) do
+    if Keyword.get(opts, :moved, false) do
+      [
+        "EXDATE;TZID=Europe/Tallinn:20260915T120000",
+        "RDATE;TZID=Europe/Tallinn:20260916T120000"
+      ]
+    else
+      ["EXDATE;TZID=Europe/Tallinn:20260915T120000"]
+    end
+  end
 end

@@ -92,22 +92,83 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
   which cannot express an exception at a given time in a given zone. A weekly
   09:00 meeting with one Tuesday cancelled needs the instant, not the day.
 
-  ## Google only, and why that is not a `Capability` question
+  ## Two providers, two master shapes, and one that needs no master
 
-  `Capability`'s `:recurrence` describes what a **target** can be handed.
-  This is the **source** side, and the two are independent: the target must
-  expand a series it receives, while the source must be able to produce the
-  series' rule. Google is the only provider with a single-event GET
-  (`CalendarAPI.get_event/3`) reachable from here, so every other source
-  skips — a recurring Outlook or CalDAV source is refused before it ever
-  reaches this module, by `Eligibility`, but the clause here means adding a
-  second source provider is a clause rather than a rediscovery.
+  Google and Outlook both need the fetch, for the same structural reason: each
+  is synced through a path that expands a series before it is cached —
+  `singleEvents=true` for Google, `calendarView` for Outlook — so the cached row
+  is an occurrence carrying the master's id and no rule.
+
+  What they do not share is the master's shape, which is why `read_recurrence/3`
+  dispatches on the provider rather than generalising. Google answers a list of
+  whole iCalendar property lines: an RRULE, and any EXDATEs beside it. Graph
+  answers a structured `recurrence` object of a `pattern` and a `range`, which
+  is converted back through `RecurrenceConverter.outlook_to_rrule/1` — the same
+  converter the inbound normaliser uses, so a series described through this path
+  and one described through an ordinary sync agree.
+
+  Graph also carries **no exceptions on the master**: a cancelled occurrence is
+  a separate `exception`-type event rather than an EXDATE line, and
+  `calendarView` does not return it beside the master. So an Outlook series
+  resolves with an empty exception list, and a cancelled Outlook occurrence goes
+  on blocking its slot on the target until that is built. It is a bounded wrong
+  — one occurrence, not a whole series at the wrong date — and it is recorded
+  here rather than left for a reader to discover from an empty list.
+
+  **The CalDAV family needs no master at all**, and that is a finding rather
+  than unfinished work. `ICalNormaliser` expands a CalDAV series locally:
+  `expand_event/3` emits one raw map per occurrence, `build_uid/1` gives each
+  occurrence its own uid — so `upsert_batch/1` never collapses the series into
+  one row the way it does for the other two — and `resolve_timing/1` times each
+  row from its own occurrence rather than from the master's DTSTART. Every
+  cached CalDAV row is therefore already the correctly-timed one-off this module
+  would otherwise have to reconstruct, and the ordinary mirror path handles it
+  without ever reaching here. `recurring_event_id` is never set anywhere in the
+  CalDAV or iCal paths, so no such row can.
+
+  The one thing to be careful of is that a CalDAV row *does* carry a
+  `recurrence_rule` — `build_calendar_event/3` copies the master's onto every
+  occurrence. A rule on a CalDAV row therefore does not mean the row describes a
+  series, and passing it through to a placeholder would write a whole series
+  starting at that occurrence, once per occurrence.
+
+  ## Which `Capability` question this is
+
+  `Capability` holds both ends, as two rows rather than one. `:recurrence`
+  describes what a **target** can be handed; `:series_lookup` describes what a
+  **source** can have fetched from it, which is this module's question. The two
+  are independent — the target must expand a series it receives, while the
+  source must be able to produce the series' rule — and they no longer name the
+  same providers: the source side admits Google and Outlook, while the target
+  side remains Google's alone, because only Google's outbound mapper carries the
+  EXDATE lines a series' cancellations live in.
+
+  `api_module/1` reads `:series_lookup` rather than matching providers itself,
+  so adding a second source provider is one cell in that table rather than a
+  clause here plus a rediscovery of everywhere else the fact is stated.
+
+  This section previously claimed that `Eligibility` refuses a recurring
+  Outlook or CalDAV source before it reaches this module. **It did not**, and
+  the gap was a silent data-loss path rather than a documentation error.
+  `Eligibility.recurrence_supported?/2` asked only whether the *target* could
+  expand a series, so an Outlook or CalDAV source pointed at a Google target
+  passed the gate, arrived here, and left with
+  `{:skip, :provider_has_no_series_lookup}`. The write-back worker read that as
+  an ineligible source and discarded the job: no placeholder was ever written,
+  nothing retried, and the organiser's recurring meetings went on being
+  bookable over with no indication anywhere that they were unmirrored.
+
+  The gate now asks both ends, so the claim is true — but the refusal it makes
+  is recorded and rendered rather than merely silent, because a link that
+  cannot mirror is something the organiser has to be told about.
   """
 
   require Logger
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
+  alias Tymeslot.Integrations.Calendar.SyncLink.Capability
   alias Tymeslot.Integrations.Calendar.SyncLink.SeriesMasterCache
 
   @typedoc """
@@ -221,7 +282,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
   defp request_master(api, integration, calendar_id, master_id) do
     case cached_master(api, integration, calendar_id, master_id) do
       {:ok, master} ->
-        read_recurrence(master, master_id)
+        read_recurrence(master, master_id, integration.provider)
 
       error ->
         # Logged rather than surfaced: the caller's answer is "no placeholder
@@ -262,13 +323,24 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
     )
   end
 
+  # The two providers describe a series in shapes that share no structure, so
+  # this dispatches rather than generalising. A single reader would have to
+  # branch on the value's type to tell a list of iCalendar lines from a
+  # `pattern`/`range` map, which is the same dispatch written less legibly and
+  # with the provider — the thing that actually decides — left implicit.
+  defp read_recurrence(master, master_id, provider) when provider in [:outlook, "outlook"],
+    do: read_graph_recurrence(master, master_id)
+
+  defp read_recurrence(master, master_id, _provider),
+    do: read_ical_recurrence(master, master_id)
+
   # Google sends `recurrence` as a list of iCalendar property lines in no
   # guaranteed order, so the RRULE is found by prefix rather than by position.
   # A master with no RRULE is not a series master — most likely the id pointed
   # at a single event — and is skipped rather than mirrored with an empty rule,
   # which would write a plain one-off block at the last occurrence's time: the
   # same wrong answer, arrived at by a different route.
-  defp read_recurrence(master, master_id) do
+  defp read_ical_recurrence(master, master_id) do
     lines = List.wrap(Map.get(master, "recurrence"))
 
     case Enum.find(lines, &String.starts_with?(&1, "RRULE")) do
@@ -290,6 +362,98 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
          )}
     end
   end
+
+  # Graph does not speak RRULE. A master carries a structured `recurrence`
+  # object — a `pattern` and a `range` — which `RecurrenceConverter` already
+  # translates in both directions for the normaliser and the outbound mapper.
+  # The read direction is reused here rather than reimplemented, so a series
+  # arriving through the mirror path and one arriving through an ordinary sync
+  # produce the same rule.
+  #
+  # `outlook_to_rrule/1` answers `nil` for a pattern outside its coverage —
+  # Graph's `relativeMonthly`/`relativeYearly` forms — and that is treated as
+  # the same skip as a master with no rule at all. It is the one that matters
+  # most to get right: a `nil` rule reaching the payload writes a plain one-off
+  # block at the series' first occurrence and leaves every later one bookable,
+  # which is precisely the confidently-wrong placeholder nothing retries.
+  #
+  # There are no exception lines. Graph does not express a cancelled occurrence
+  # on the master: it carries the deletion as a separate `exception`-type event
+  # that `calendarView` never returns alongside the master. So the list is
+  # empty rather than absent — the same shape the Google path produces for a
+  # series with nothing cancelled — and a cancelled Outlook occurrence goes on
+  # blocking its slot on the target until that is built. That is a known and
+  # bounded wrong, unlike a whole series at the wrong date, and it is stated in
+  # the moduledoc rather than left for a reader to discover.
+  defp read_graph_recurrence(master, master_id) do
+    with recurrence when is_map(recurrence) <- Map.get(master, "recurrence"),
+         rrule when is_binary(rrule) and rrule != "" <-
+           RecurrenceConverter.outlook_to_rrule(recurrence) do
+      {:ok, Map.merge(%{recurrence_rule: rrule, exceptions: []}, graph_timing(master))}
+    else
+      _unreadable ->
+        Logger.warning(
+          "Series master carries no recurrence Graph can express; skipping the mirror",
+          recurring_event_id: master_id
+        )
+
+        {:skip, :master_has_no_recurrence_rule}
+    end
+  end
+
+  # Graph's own timing shape, which is not Google's. Every value is a
+  # `%{"dateTime" => ..., "timeZone" => ...}` pair — there is no `"date"` key
+  # even for an all-day event, which is marked by `isAllDay` and carries
+  # midnight-to-midnight datetimes instead.
+  #
+  # The datetimes are also not ISO-8601 instants: Graph writes
+  # `2026-03-03T09:00:00.0000000` with the zone in a sibling key, so they are
+  # parsed against that zone rather than through `DateTime.from_iso8601/1`,
+  # which would reject the value outright for having no offset.
+  defp graph_timing(master) do
+    all_day = Map.get(master, "isAllDay") == true
+
+    case {parse_graph_point(Map.get(master, "start")), parse_graph_point(Map.get(master, "end"))} do
+      {%DateTime{} = start_at, %DateTime{} = end_at} when all_day ->
+        %{
+          all_day: true,
+          start_at: nil,
+          end_at: nil,
+          start_date: DateTime.to_date(start_at),
+          end_date: DateTime.to_date(end_at)
+        }
+
+      {%DateTime{} = start_at, %DateTime{} = end_at} ->
+        %{all_day: false, start_at: start_at, end_at: end_at, start_date: nil, end_date: nil}
+
+      _unreadable ->
+        %{all_day: nil, start_at: nil, end_at: nil, start_date: nil, end_date: nil}
+    end
+  end
+
+  # A malformed value answers nil rather than raising, for the reason
+  # `parse_point/1` does: this runs inside a sync job, where a raise is a
+  # crashed worker and a nil is a skipped mirror the sweep retries.
+  defp parse_graph_point(%{"dateTime" => value} = point) when is_binary(value) do
+    zone = Map.get(point, "timeZone") || "Etc/UTC"
+
+    with {:ok, naive} <- NaiveDateTime.from_iso8601(value),
+         {:ok, at} <- DateTime.from_naive(naive, zone_name(zone)) do
+      DateTime.shift_zone!(at, "Etc/UTC")
+    else
+      _error -> nil
+    end
+  end
+
+  defp parse_graph_point(_other), do: nil
+
+  # Graph answers `UTC` for a request carrying the `outlook.timezone="UTC"`
+  # preference every read in this codebase sends, and that is not an IANA name
+  # the datetime database knows. Anything else is passed through: Graph is
+  # asked for UTC, so a different value means the caller has been given the
+  # event's own zone and it is already an IANA name.
+  defp zone_name("UTC"), do: "Etc/UTC"
+  defp zone_name(zone), do: zone
 
   # The master's own start and end, and they are not optional decoration.
   #
@@ -354,13 +518,43 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
   defp calendar_id(_source, integration),
     do: integration.default_booking_calendar_id || "primary"
 
-  # Resolved from the *integration*, not the cached row's `provider` string: the
-  # integration is what the API client is handed and what holds the token, and a
-  # row whose provider disagreed with its integration's would otherwise pick a
-  # client that cannot authenticate against it.
-  defp api_module(%CalendarIntegrationSchema{provider: provider})
-       when provider in [:google, "google"],
-       do: Config.google_calendar_api_module()
+  @doc """
+  The API module a series master can be fetched from, or `nil` for a source
+  whose provider has no single-event lookup wired up.
 
-  defp api_module(_integration), do: nil
+  Resolved from the *integration*, not the cached row's `provider` string: the
+  integration is what the API client is handed and what holds the token, and a
+  row whose provider disagreed with its integration's would otherwise pick a
+  client that cannot authenticate against it.
+
+  Which providers answer is `Capability`'s `:series_lookup` to state, not this
+  module's. Matching providers here as well would make two lists of one fact,
+  and the drift has a direction: `Eligibility` admits a recurring source it
+  believes resolvable, this answers `nil`, and the mirror is discarded with no
+  placeholder written and the organiser's time left bookable. Asking the table
+  means the gate and the fetch cannot disagree. Public so that the capability
+  test can assert exactly that, provider by provider.
+  """
+  @spec api_module(CalendarIntegrationSchema.t() | any()) :: module() | nil
+  def api_module(%CalendarIntegrationSchema{provider: provider}) do
+    if Capability.supports?(provider, :series_lookup) do
+      client_for(provider)
+    end
+  end
+
+  def api_module(_integration), do: nil
+
+  # Reached only for a provider the table has already admitted, so this is a
+  # *dispatch* among the admitted rather than a second membership test. The
+  # difference matters: a provider added to `:series_lookup` and forgotten here
+  # falls to the final clause and answers `nil`, which the capability test
+  # catches as a disagreement rather than letting it become the silent discard
+  # the one-list rule exists to prevent.
+  defp client_for(provider) when provider in [:google, "google"],
+    do: Config.google_calendar_api_module()
+
+  defp client_for(provider) when provider in [:outlook, "outlook"],
+    do: Config.outlook_calendar_api_module()
+
+  defp client_for(_provider), do: nil
 end

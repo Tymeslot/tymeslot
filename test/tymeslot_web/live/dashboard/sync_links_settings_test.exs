@@ -497,6 +497,85 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       assert html =~ "quarterly-review-uid"
     end
 
+    # The visibility half of the recurrence gate, asserted where it has to land.
+    # A recurring source on a link that cannot carry a series is refused, and
+    # the refusal used to be `{:discard, :not_an_eligible_source}` and nothing
+    # else — an Oban outcome the organiser never sees. Their repeating meetings
+    # went unmirrored, the slots stayed bookable, and the dashboard said
+    # nothing.
+    #
+    # Recording the row is not the feature; the organiser reading the sentence
+    # is. A conflict row nobody renders is exactly the failure this suite's
+    # rule about rendered output was written for, so this asserts the painted
+    # page rather than the stored row.
+    test "warns that a repeating event is not being mirrored", %{conn: conn, link: link} do
+      insert(:calendar_sync_conflict,
+        sync_link_id: link.id,
+        source_uid: "weekly-standup-uid",
+        kind: "series_unsupported",
+        resolution: "skipped",
+        detail: %{
+          "unsupported_end" => "source",
+          "source_provider" => "outlook",
+          "target_provider" => "google"
+        }
+      )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      assert has_element?(view, "#sync-link-conflicts-#{link.id}")
+
+      # The two things an organiser has to be able to act on: that this is a
+      # repeating event which is *not* being mirrored, and which event it is.
+      assert html =~ "repeating event"
+      assert html =~ "weekly-standup-uid"
+
+      # And the consequence spelled out, because "not mirrored" alone reads as
+      # a cosmetic gap rather than as time that can be double-booked.
+      assert html =~ "booked over"
+
+      # It must not fall through to the catch-all, which says only that the two
+      # calendars differed — true of every kind and actionable for none.
+      refute html =~ "The two calendars differed."
+    end
+
+    # The same sentence for the other end of the link, and the case an organiser
+    # with an Outlook target actually hits. Microsoft Graph has no EXDATE
+    # analogue — `patternedRecurrence` is `pattern` and `range` and nothing else
+    # — so a series mirrored there would keep blocking occurrences the organiser
+    # had cancelled. The link is refused instead, and this is the assertion that
+    # the refusal is legible rather than merely recorded.
+    #
+    # Asserted separately from the source-side row above because the rendered
+    # sentence is deliberately end-agnostic: a version that rendered only the
+    # detail it recognised, or that named the failing provider, would pass the
+    # test above and leave this one blank or wrong.
+    test "warns for an unmirrorable series when the TARGET is the incapable end", ctx do
+      %{conn: conn, link: link} = ctx
+
+      insert(:calendar_sync_conflict,
+        sync_link_id: link.id,
+        source_uid: "outlook-target-standup-uid",
+        kind: "series_unsupported",
+        resolution: "skipped",
+        detail: %{
+          "unsupported_end" => "target",
+          "source_provider" => "google",
+          "target_provider" => "outlook"
+        }
+      )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      assert has_element?(view, "#sync-link-conflicts-#{link.id}")
+
+      assert html =~ "repeating event"
+      assert html =~ "outlook-target-standup-uid"
+      assert html =~ "booked over"
+
+      refute html =~ "The two calendars differed."
+    end
+
     test "never shows another organiser's history, however the id arrives", ctx do
       %{conn: conn, link: link} = ctx
 

@@ -298,11 +298,23 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeriesTest do
   end
 
   describe "resolve/2 — providers without a master lookup" do
-    test "a non-Google source skips: there is no single-event GET to read", %{user: user} do
-      outlook = insert(:calendar_integration, user: user, provider: "outlook")
+    # The CalDAV family, and it is a refusal about the *cache shape* rather than
+    # a missing HTTP call. `ICalNormaliser` expands a CalDAV series locally:
+    # `build_uid/1` gives every occurrence its own uid so the cache never
+    # collapses the series to one row, and `resolve_timing/1` times each row
+    # from its own `_occ_start`. Every cached CalDAV row is therefore already a
+    # correctly-timed one-off, and there is no master to look up.
+    #
+    # It cannot be reached from `resolve/2` by an honest row either:
+    # `recurring_event_id` is never set anywhere in the CalDAV or iCal paths, so
+    # a real row answers `:not_recurring` first. The id is written out here to
+    # reach the clause at all, which is what makes this a test of the refusal
+    # rather than of the gate in front of it.
+    test "a CalDAV source skips: there is no single-event GET to read", %{user: user} do
+      caldav = insert(:calendar_integration, user: user, provider: "nextcloud")
 
       assert {:skip, :provider_has_no_series_lookup} ==
-               RecurringSeries.resolve(instance(%{provider: "outlook"}), outlook)
+               RecurringSeries.resolve(instance(%{provider: "nextcloud"}), caldav)
     end
   end
 

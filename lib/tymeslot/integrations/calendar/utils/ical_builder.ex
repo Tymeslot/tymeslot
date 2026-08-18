@@ -190,6 +190,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           Properties.build_colour_line(event_data),
           Properties.build_rrule_line(event_data),
           Properties.build_exdate(event_data),
+          Properties.build_exception_lines(event_data),
           Properties.build_organizer_line(event_data),
           Properties.build_attendee_lines(event_data),
           Alarms.build_reminders(event_data),

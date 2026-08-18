@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   @behaviour Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
 
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
@@ -299,6 +300,60 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc false
   @spec tymeslot_property_id() :: String.t()
   def tymeslot_property_id, do: @outlook_tymeslot_property_id
+
+  @doc """
+  Fetches a single raw Graph event, with token refresh and the circuit breaker
+  around it.
+
+  The series-master lookup's entry point, and the counterpart of
+  `Google.CalendarAPI.get_event/3`. `get_event_raw/2` below is the same request
+  without either, and takes a bare token because its caller — the webhook sync
+  worker — runs its own preflight so that a 404 or a 401 does not count against
+  the breaker. A caller that holds an integration rather than a token has no
+  such preflight to do, so the refresh and the breaker belong here rather than
+  being repeated at every call site.
+
+  Through the breaker for the reason the Google one is: this is issued once per
+  recurring source per link, so a calendar with fifty series on three links asks
+  for a hundred and fifty masters in a sweep. Unwrapped, a 429 means the next
+  sweep re-issues all of them at full rate against a quota already exhausted.
+
+  The raw map is returned rather than a normalised `CalendarEvent` because the
+  caller wants Graph's structured `recurrence` object — a `pattern`/`range`
+  pair the normaliser would have already flattened to an RRULE string, losing
+  the range's own `startDate` in the process.
+
+  `calendar_id` is accepted and ignored: Graph addresses an event by id alone
+  (`/me/events/{id}`), and the argument exists so the series path can call
+  Google and Outlook through one shape.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+          {:ok, map()} | api_error()
+  def get_event(%CalendarIntegrationSchema{} = integration, _calendar_id, event_id) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      result =
+        CalendarCircuitBreaker.call(:outlook, fn ->
+          # The breaker counts only 2-tuple errors as failures, so the client's
+          # `{:error, type, message}` is flattened for it and restored below.
+          case get_event_raw(token, event_id) do
+            {:ok, event} -> {:ok, event}
+            {:error, type, message} -> {:error, {type, message}}
+          end
+        end)
+
+      # The breaker reports whether the *call* happened, so a request that
+      # completed and answered an error arrives wrapped. Unwrapped here so
+      # callers keep seeing the provider's own answer rather than having to know
+      # a breaker is in the way.
+      case result do
+        {:ok, {:ok, event}} -> {:ok, event}
+        {:ok, {:error, {type, message}}} -> {:error, type, message}
+        {:error, :circuit_open} -> {:error, :network_error, "Outlook circuit breaker open"}
+        {:error, reason} -> {:error, :network_error, inspect(reason)}
+      end
+    end)
+  end
 
   @doc """
   Fetches a single raw Graph event by its provider event ID.

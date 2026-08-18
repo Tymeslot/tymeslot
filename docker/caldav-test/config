@@ -1,0 +1,13 @@
+[server]
+hosts = 0.0.0.0:5232
+
+[auth]
+# htpasswd, not `none`: the live integration test asserts that a wrong
+# password is rejected, and `type = none` accepts every password — which
+# makes that assertion pass for no reason at all.
+type = htpasswd
+htpasswd_filename = /etc/radicale/users
+htpasswd_encryption = bcrypt
+
+[storage]
+filesystem_folder = /var/lib/radicale/collections

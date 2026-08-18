@@ -202,7 +202,14 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
 
     sources =
       events
-      |> Enum.filter(&Eligibility.mirror_source?(&1, mirrors, target_provider(link)))
+      |> Enum.filter(
+        &Eligibility.mirror_source?(
+          &1,
+          mirrors,
+          target_provider(link),
+          source_provider(link)
+        )
+      )
       |> Map.new(&{&1.uid, &1})
 
     {MapSet.new(events, & &1.uid), sources}
@@ -216,6 +223,14 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
   # and the one that leaves a wrong placeholder off the calendar.
   defp target_provider(%{target_integration: %{provider: provider}}), do: provider
   defp target_provider(_link), do: nil
+
+  # The source end of the same question: whether this link's source can have a
+  # series master fetched from it. Both ends have to answer before a recurring
+  # source is eligible, and the sweep must ask exactly what the write-back
+  # worker asks — a sweep that admitted a source the worker refuses would
+  # re-enqueue the same discarded job on every pass.
+  defp source_provider(%{source_integration: %{provider: provider}}), do: provider
+  defp source_provider(_link), do: nil
 
   defp enqueue_missing_and_stale(link, sources, mappings) do
     by_uid = Map.new(mappings, &{&1.source_uid, &1})

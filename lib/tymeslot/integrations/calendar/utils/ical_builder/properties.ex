@@ -217,6 +217,51 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
 
   def build_exdate(_event), do: nil
 
+  # The *other* exception shape, and the reason there are two.
+  #
+  # `build_exdate/1` above serialises `:recurrence_exceptions`, a `[Date.t()]`
+  # read off the cache, and derives the value type from DTSTART because a bare
+  # date carries no clue which it should be. What arrives here is different in
+  # kind: `:recurrence_exception_lines` is a `[String.t()]` of whole RFC 5545
+  # property lines, and they are already correct. `SyncLink.RecurringSeries`
+  # keeps the series master's own lines verbatim and `SyncLink.MoveCorrection`
+  # writes them in the same form, so each line arrives already prefixed and
+  # already carrying whichever `TZID` or `VALUE=DATE` parameter states the
+  # instant the occurrence was cancelled at.
+  #
+  # They are therefore passed through rather than parsed and re-emitted. The
+  # parameters sit between the property name and the colon, so a strip-and-
+  # re-add would either be a no-op or would discard the timezone — and a
+  # cancellation that loses its timezone cancels a different occurrence than
+  # the organiser cancelled. This is the same passthrough, for the same reason,
+  # that `Google.EventMapper.maybe_add_recurrence/2` performs; the two mappers
+  # agreeing is what lets one payload describe a series to either family.
+  #
+  # `RDATE` travels with `EXDATE` and is not filtered out. A moved occurrence
+  # is corrected by the pair — the `EXDATE` frees the slot it left, the `RDATE`
+  # books the one it moved to — and emitting only the first widens the
+  # double-booking window instead of closing it.
+  #
+  # Gated on a rule being present, like Google's. Exception lines without an
+  # RRULE describe exclusions from a series that is not there; RFC 5545 has
+  # nothing for them to match against, and servers are entitled to reject the
+  # component outright.
+  @spec build_exception_lines(map()) :: String.t() | nil
+  def build_exception_lines(%{recurrence_exception_lines: lines} = event) when is_list(lines) do
+    case build_rrule_line(event) do
+      nil ->
+        nil
+
+      _rrule ->
+        case Enum.filter(lines, &(is_binary(&1) and &1 != "")) do
+          [] -> nil
+          kept -> Enum.join(kept, "\r\n")
+        end
+    end
+  end
+
+  def build_exception_lines(_event), do: nil
+
   # Issue #41: Zimbra (and likely other CalDAV servers) silently strips
   # `SCHEDULE-AGENT` from incoming events and runs iTIP scheduling for any
   # event that carries an `ATTENDEE` block — re-emailing the attendee on top

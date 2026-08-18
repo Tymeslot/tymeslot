@@ -1,0 +1,32 @@
+# Seeded CalDAV server for the live integration tests.
+#
+# Radicale is used rather than Baikal because Baikal's account and calendar are
+# created by a web installer, so no published image arrives with them already
+# present. Radicale takes its users from an htpasswd file and its collections
+# from the filesystem, both of which are checked in beside this file — which is
+# what makes the server reproducible from a clone.
+#
+#   docker compose -f docker/caldav-test/compose.yml up -d
+#
+# Then, from a nix shell:
+#
+#   mix test --only calendar_integration \
+#     test/tymeslot/integrations/calendar/caldav_live_integration_test.exs
+#
+# See README.md in this directory.
+services:
+  caldav:
+    image: tomsquest/docker-radicale:latest
+    container_name: radicale-test
+    # The image's entrypoint runs `radicale --config /config/config`, so the
+    # config must be mounted at *that* path. Mounting it at Radicale's
+    # documented default (/etc/radicale/config) leaves it unread: the server
+    # then starts with `[auth] type=none` and accepts every password, and the
+    # "wrong password is rejected" test passes without testing anything.
+    volumes:
+      - ./config:/config/config:ro
+      - ./users:/etc/radicale/users:ro
+      - ./seed:/var/lib/radicale/collections
+    ports:
+      - "8800:5232"
+    restart: unless-stopped

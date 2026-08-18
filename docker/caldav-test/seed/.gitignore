@@ -1,0 +1,8 @@
+# Radicale writes live event data and lock/cache files here while the tests
+# run. Only the seeded collection layout is checked in.
+*
+!.gitignore
+!collection-root/
+!collection-root/testuser/
+!collection-root/testuser/default/
+!collection-root/testuser/default/.Radicale.props

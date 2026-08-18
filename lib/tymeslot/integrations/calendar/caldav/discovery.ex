@@ -10,7 +10,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   ## Discovery Strategy
 
   1. Attempts the provider-specific guessed path (e.g., `/calendars/{user}/`).
-  2. On `:not_found` or `:server_error`, follows the full RFC 4791 chain:
+     Only a 207 Multi-Status counts as proof the credentials were accepted;
+     any other success falls through to the chain below.
+  2. On a non-multistatus success, `:not_found`, `:forbidden` or
+     `:server_error`, follows the full RFC 4791 chain:
      - PROPFIND `/` → `current-user-principal` href
      - PROPFIND principal URL → `calendar-home-set` href
      - PROPFIND calendar-home-set → calendar list
@@ -58,9 +61,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   @doc """
   Tests connectivity to a CalDAV server.
 
-  Attempts to reach the provider-specific discovery path. If it returns
-  `:not_found` or `:server_error`, falls back to an RFC 4791
-  `current-user-principal` probe which verifies credentials are valid even
+  Attempts to reach the provider-specific discovery path. Only a 207
+  Multi-Status is treated as proof of authentication — a PROPFIND answered
+  with any other status has not demonstrated the credentials are valid.
+  Anything else falls back to the full RFC 4791 discovery chain, which
+  verifies credentials *and* that a calendar collection is reachable even
   when the guessed path is wrong (e.g., Zimbra).
 
   Pure I/O: rate limiting the connection test is the caller's job
@@ -78,8 +83,37 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
                depth: "0",
                max_retries: 0
              ) do
-          {:ok, %Req.Response{}} ->
+          # Only a 207 Multi-Status proves the credentials were accepted. A
+          # PROPFIND is a WebDAV method: a server that authenticated the
+          # request answers it with a multistatus document, so any other 2xx
+          # is a response from something that never evaluated the credentials
+          # — a proxy or captive portal answering 200 with a login page, say.
+          # Accepting a bare 2xx reported a wrong password as a working
+          # connection, and every later sync then failed for a reason the
+          # connection check had called fine.
+          #
+          # 3xx never reaches here as a success (`propfind` declares
+          # `success: 200..299`), and redirects are not followed, so a
+          # redirect to a login page already surfaces as an error.
+          {:ok, %Req.Response{status: 207}} ->
             :ok
+
+          # A 2xx that is not 207 proves nothing about the credentials. Fall
+          # through to the full RFC 4791 chain rather than failing outright:
+          # the guessed path may simply be wrong, and the chain below is what
+          # decides — exactly as it does for :not_found and :forbidden.
+          {:ok, %Req.Response{status: status}} ->
+            Logger.debug(
+              "CalDAV discovery path answered a non-multistatus success; " <>
+                "verifying via full RFC 4791 discovery",
+              status: status,
+              base_url: client.base_url
+            )
+
+            case discover_via_rfc4791(client) do
+              {:ok, _calendars} -> :ok
+              {:error, _reason} = error -> error
+            end
 
           {:error, reason} when reason in [:not_found, :forbidden, :server_error] ->
             Logger.debug(

@@ -32,6 +32,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictSchema do
   the wrong place. Recording a move under it would make the historical rows and
   the new ones mean two different things under one name.
 
+  `series_unsupported` is a seventh, and it shares `occurrence_moved`'s shape
+  rather than the first four's: it records a divergence the engine has decided
+  not to resolve. A recurring source needs two separate capabilities before it
+  can be mirrored — the **source** must be able to have its series master
+  fetched, and the **target** must expand the series it is handed — and a link
+  missing either simply does not mirror that event.
+
+  It exists because that refusal used to be invisible. The write-back worker
+  answered `{:discard, :not_an_eligible_source}`, which is an Oban outcome and
+  reaches no organiser, so a repeating meeting went unmirrored with no
+  placeholder, nothing retrying, and no sign anywhere on the dashboard. The
+  slots stayed bookable and the first symptom would have been a double booking.
+  A row here is the difference between a skip an organiser can act on and one
+  they cannot see. `SyncLink.UnmirrorableSeries` writes it, once per series per
+  link rather than once per pass.
+
   Append-only, and separate from the mirror row on purpose. A mirror holds
   current state and is overwritten on every successful write, so a conflict
   noted there is erased by the very next sync — which is precisely when an
@@ -54,7 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictSchema do
 
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
 
-  @kinds ~w(both_changed mirror_edited delete_race write_failed occurrence_moved series_exceptions)
+  @kinds ~w(both_changed mirror_edited delete_race write_failed occurrence_moved series_exceptions series_unsupported)
   @resolutions ~w(source_won deletion_won skipped)
 
   @type t :: %__MODULE__{

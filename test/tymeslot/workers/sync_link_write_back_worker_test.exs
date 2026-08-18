@@ -316,7 +316,16 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
                perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
     end
 
-    test "and for a CalDAV target", %{user: user, source: source} do
+    # The CalDAV counterpart used to assert the same discard as Outlook above,
+    # and no longer can: a CalDAV target expands a series, verified against a
+    # live Radicale which stored the RRULE and the EXDATE beside it and dropped
+    # the cancelled occurrence from its own expansion. So the job runs through
+    # to the write, and the master fetch that the Outlook case must *not* make
+    # is exactly the one this case must.
+    test "but a CalDAV target is mirrored through, master fetch and all", %{
+      user: user,
+      source: source
+    } do
       caldav_target = insert(:calendar_integration, user: user, provider: "nextcloud")
 
       link =
@@ -328,8 +337,34 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorkerTest do
 
       cached_event(source, google_series_markers())
 
-      assert {:discard, :not_an_eligible_source} ==
-               perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+      expect(GoogleCalendarAPIMock, :get_event, fn _integration, _calendar_id, event_id ->
+        assert event_id == "master_abc123"
+
+        {:ok,
+         %{
+           "recurrence" => [
+             "RRULE:FREQ=WEEKLY;COUNT=5",
+             "EXDATE;TZID=Europe/Tallinn:20260915T120000"
+           ]
+         }}
+      end)
+
+      test_pid = self()
+
+      # `{:ok, uid}` — a bare string, which is what a CalDAV create answers.
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        send(test_pid, {:payload, event_data})
+        {:ok, event_data.uid}
+      end)
+
+      assert :ok == perform_job(SyncLinkWriteBackWorker, args(link, "source-uid-1", "upsert"))
+
+      assert_received {:payload, payload}
+      assert payload.recurrence_rule == "RRULE:FREQ=WEEKLY;COUNT=5"
+
+      assert payload.recurrence_exception_lines == [
+               "EXDATE;TZID=Europe/Tallinn:20260915T120000"
+             ]
     end
 
     test "a recurring source IS mirrored when the target expands a series", %{

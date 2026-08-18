@@ -40,7 +40,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
     never reaches the provider at all.
   - `:source_not_cached` — the source event is gone from the cache and there is
     no mapping to withdraw either. Nothing to mirror and nothing to clean up.
-  - `:not_an_eligible_source` — the event fails `Eligibility.mirror_source?/3`:
+  - `:not_an_eligible_source` — the event fails `Eligibility.mirror_source?/4`:
     it is itself a mirror, transparent, cancelled, or a recurring series on a
     link whose target cannot expand one. The one nuance is that an event which
     *became* ineligible after having been mirrored is not a discard — its
@@ -189,6 +189,7 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   alias Tymeslot.Integrations.Calendar.SyncLink.Capability
   alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
+  alias Tymeslot.Integrations.Calendar.SyncLink.UnmirrorableSeries
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Security.RateLimiter.Helpers, as: RateLimitHelpers
 
@@ -368,14 +369,29 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   end
 
   defp upsert(link, event, source_uid, attempt, moved) do
-    if Eligibility.mirror_source?(event, mirror_set(link), target_provider(link)) do
+    if Eligibility.mirror_source?(
+         event,
+         mirror_set(link),
+         target_provider(link),
+         source_provider(link)
+       ) do
       Engine.mirror(link, event, link.user_id, attempt: attempt, moved: moved)
     else
       # Ineligible now, but it may have been eligible when the placeholder was
       # written — a cancelled meeting, an event switched to free, an event this
       # link's counterpart has since mirrored onto the source calendar, or a
-      # recurring series on a link whose target cannot expand one. Whatever the
+      # recurring series on a link that cannot carry one. Whatever the
       # reason, the placeholder must stop blocking time.
+      #
+      # One of those reasons gets a voice before the discard. A series refused
+      # because an end of this link cannot handle it is not a transient state
+      # the organiser will see resolve: nothing retries it, no placeholder is
+      # ever written, and the discard reason below reaches Oban and nobody
+      # else. `UnmirrorableSeries` decides for itself whether this is that case
+      # and whether it has already been said, so an ordinary refusal passes
+      # through here recording nothing.
+      UnmirrorableSeries.record(link, event)
+
       unmirror_or_discard(link, source_uid, :not_an_eligible_source, attempt)
     end
   end
@@ -388,6 +404,16 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   # takes for the same shape.
   defp target_provider(%{target_integration: %{provider: provider}}), do: provider
   defp target_provider(_link), do: nil
+
+  # The other half of the recurrence question, and the half whose absence was a
+  # silent discard. `Eligibility` needs it to ask whether this source's series
+  # master can be fetched at all — an Outlook or CalDAV source has no lookup
+  # wired up, so a series from one could never be described however capable the
+  # target was. Preloaded by `CalendarSyncLinkQueries.get/1`; `nil` for a link
+  # whose association could not be loaded, which `Capability` refuses like any
+  # unrecognised provider.
+  defp source_provider(%{source_integration: %{provider: provider}}), do: provider
+  defp source_provider(_link), do: nil
 
   defp unmirror_or_discard(link, source_uid, reason, attempt) do
     case CalendarSyncMirrorQueries.get_by_link_and_source_uid(link.id, source_uid) do

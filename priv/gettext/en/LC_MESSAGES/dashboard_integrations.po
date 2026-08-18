@@ -1524,3 +1524,8 @@ msgstr "Save settings"
 #, elixir-autogen, elixir-format
 msgid "Settings for this link"
 msgstr "Settings for this link"
+
+#: lib/tymeslot_web/live/dashboard/sync_links/conflict_labels.ex
+#, elixir-autogen, elixir-format
+msgid "This repeating event is not being mirrored: one of the two calendars on this link cannot handle a repeating event. None of its occurrences is blocked on the target calendar, so those times can be booked over."
+msgstr "This repeating event is not being mirrored: one of the two calendars on this link cannot handle a repeating event. None of its occurrences is blocked on the target calendar, so those times can be booked over."

@@ -13,7 +13,7 @@ mix test --only oauth_integration
 mix test --only calendar_integration test/tymeslot_web/integration/outlook_calendar_integration_test.exs
 ```
 
-Scope the `calendar_integration` run to a path as shown. The tag is also on `test/tymeslot/integrations/calendar/baikal_integration_test.exs`, which is the one genuinely live suite: it drives a Baikal CalDAV server on `localhost:8800`, set up as described in its own `@moduledoc`.
+Scope the `calendar_integration` run to a path as shown. The tag is also on `test/tymeslot/integrations/calendar/caldav_live_integration_test.exs` and `.../radicale_recurrence_integration_test.exs`, which are the genuinely live suites: they drive a CalDAV server on `localhost:8800`, reproducible with `docker compose -f docker/caldav-test/compose.yml up -d` (see `docker/caldav-test/README.md`). Both skip themselves when no server is listening.
 
 The other modules here carry tags that run by default, so a plain `mix test test/tymeslot_web/integration/` picks them up.
 

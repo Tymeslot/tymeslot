@@ -100,6 +100,65 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
     end
   end
 
+  describe "test_connection/2 proof-of-authentication" do
+    # A PROPFIND that proves authentication is a 207 Multi-Status carrying a
+    # DAV response body. These pin the statuses that must NOT count as proof:
+    # a server (or a reverse proxy in front of one) that answers the guessed
+    # discovery path with a redirect or a bare 200 has told us nothing about
+    # the credentials, and reporting "connection successful" there hands the
+    # organiser a working connection whose every later sync fails.
+
+    test "a 302 redirect on the discovery path is not proof of authentication" do
+      # A reverse proxy bouncing an unauthenticated request to a login page.
+      # Redirects are never followed (`redirect: false` in guarded_request/5),
+      # so the 3xx itself reaches the status check.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("location", "https://caldav.example.com/login")
+        |> Conn.send_resp(302, "")
+      end)
+
+      refute match?(
+               {:ok, _message},
+               Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
+             )
+    end
+
+    test "a 200 with no DAV multistatus body is not proof of authentication" do
+      # A proxy or captive portal answering 200 with an HTML login page. The
+      # old check accepted any 2xx, so this reported a working connection.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("content-type", "text/html")
+        |> Conn.send_resp(200, "<html><body>Please sign in</body></html>")
+      end)
+
+      refute match?(
+               {:ok, _message},
+               Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
+             )
+    end
+
+    test "a 207 multistatus is proof of authentication" do
+      # Transcribed from a live Radicale 3.7.6 round-trip: PROPFIND / with
+      # Depth: 0 and correct credentials, which answers 207 Multi-Status.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("content-type", "text/xml; charset=utf-8")
+        |> Conn.send_resp(207, """
+        <?xml version='1.0' encoding='utf-8'?>
+        <multistatus xmlns="DAV:"><response><href>/testuser/</href>\
+        <propstat><prop><current-user-principal><href>/testuser/</href>\
+        </current-user-principal><resourcetype><principal /><collection />\
+        </resourcetype></prop><status>HTTP/1.1 200 OK</status></propstat>\
+        </response></multistatus>
+        """)
+      end)
+
+      assert {:ok, _message} = Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # discover_calendars/2 — RFC 4791 discovery chain
   # ---------------------------------------------------------------------------

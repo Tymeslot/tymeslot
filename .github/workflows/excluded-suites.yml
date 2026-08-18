@@ -71,14 +71,24 @@ jobs:
         if: ${{ !cancelled() }}
         run: mix test --only oauth_integration
       # Only the hermetic half of `:calendar_integration` runs here, hence the
-      # explicit path. The other module tagged with it,
-      # test/tymeslot/integrations/calendar/baikal_integration_test.exs, drives
-      # a live Baikal CalDAV server on localhost:8800 and expects it to already
-      # hold a `testuser` account and a calendar named "Test Calendar". A plain
-      # `ckulka/baikal:latest` service container has neither — they come from
-      # the web installer — so there is no image to point this at. Until one
-      # exists, running that module here would fail every night for a reason
-      # nobody can act on. Widen this step the moment a seeded image lands.
+      # explicit path. Two other modules carry the tag and drive a live CalDAV
+      # server on localhost:8800:
+      # test/tymeslot/integrations/calendar/caldav_live_integration_test.exs
+      # and .../radicale_recurrence_integration_test.exs.
+      #
+      # A seeded server is no longer the obstacle it was. Baikal's account and
+      # calendar come from its web installer, so no published image arrives
+      # with them; Radicale takes both from files, and docker/caldav-test/
+      # checks in a compose file, an htpasswd user and a seeded collection that
+      # reproduce the server from a clone. Running those modules locally is now
+      # a single `docker compose up -d`.
+      #
+      # They are still not run here, deliberately: the recipe has been proven
+      # locally but not as a CI service container, and a nightly job failing
+      # for an environmental reason is worse than an honest exclusion. The
+      # live modules skip themselves when nothing is listening, so widening
+      # this step is safe to try — do it once the service container is proven,
+      # not before.
       - name: calendar_integration
         if: ${{ !cancelled() }}
         run: mix test --only calendar_integration test/tymeslot_web/integration/outlook_calendar_integration_test.exs

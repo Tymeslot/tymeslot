@@ -50,14 +50,28 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
   The other three refusals are narrower, and each keeps a wrong placeholder off
   the target rather than preventing a loop:
 
-  - **A recurrence rule the target cannot take.** A recurring series is one
+  - **A series one end of the link cannot handle.** A recurring series is one
     cache row, not one row per occurrence: `upsert_batch/1` deduplicates by
     `{calendar_integration_id, uid}` keeping the last entry, because Google
     returns many expanded instances sharing a single iCalUID. Mirroring that row
     onto a target that cannot expand a series would write one busy block, at the
-    last occurrence's date, where a whole series belongs. A target that *can* —
-    `Capability.supports?(provider, :recurrence)` — receives the series as one
-    recurring placeholder instead, built from the master's rule.
+    last occurrence's date, where a whole series belongs.
+
+    Two capabilities have to hold, one at each end, and they are separate facts.
+    The **source** must be able to have its series master fetched
+    (`Capability.supports?(provider, :series_lookup)`), because the cached row is
+    an expanded instance carrying no rule and the rule lives on the master alone.
+    The **target** must expand a series it is handed
+    (`Capability.supports?(provider, :recurrence)`).
+
+    Only the target half was asked for a while, and the gap was not cosmetic. An
+    Outlook or CalDAV source with a Google target passed the gate, reached
+    `SyncLink.RecurringSeries`, and left with
+    `{:skip, :provider_has_no_series_lookup}`; the worker read that as an
+    ineligible source and discarded the job. No placeholder was written, nothing
+    retried it, and the organiser's recurring meetings stayed bookable with
+    nothing anywhere saying so. A refusal made *here* is recorded and rendered
+    instead — see `SyncLink.UnmirrorableSeries`.
   - **Transparent.** The event does not consume the owner's time, so a
     placeholder for it would block availability that is genuinely free.
   - **Cancelled or declined.** The time is not taken. This matches
@@ -88,15 +102,15 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
 
   Recurrence used to be shared too, and stopped being when a target could take
   a series. The reason is not that recurrence became less of a scoping rule but
-  that its answer became **per link**, and only one of the two questions is
-  asked per link. `Sync.enqueue_mirror_write_backs/2` filters one batch of
+  that its answer became **per link** — it turns on both of the link's ends —
+  and only one of the two questions is asked per link. `Sync.enqueue_mirror_write_backs/2` filters one batch of
   events for *every* link out of the source calendar at once — the per-link loop
-  is inside the filter — so the target whose capability decides the answer is
-  not in hand there. Both `mirror_source?/3` callers, the write-back worker and
-  the reconcile sweep, hold the link.
+  is inside the filter — so the target whose capability decides half the answer
+  is not in hand there. Both `mirror_source?/4` callers, the write-back worker
+  and the reconcile sweep, hold the link and therefore both its ends.
 
-  So the target capability lives on the write gate alone, which was already the
-  single gate the write passes through, and the enqueue gate answers the
+  So both provider capabilities live on the write gate alone, which was already
+  the single gate the write passes through, and the enqueue gate answers the
   question it can: this event's mirroring state may need changing on *some*
   link. That leaves a recurring source enqueued for a link whose target cannot
   take it, which resolves at the worker exactly as a cancelled event does — the
@@ -130,22 +144,37 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
   judged is a mirror — correct only when the caller has established that
   separately, and never a safe default on the sync path.
 
-  `target_provider` is the provider of the link's target, in either the atom or
-  the string form `calendar_integrations.provider` holds. It decides exactly one
-  thing: whether a recurring source may be mirrored, since only a target that
-  expands a series can be handed one. Every other refusal is a property of the
-  source alone and is unchanged by it.
+  `target_provider` and `source_provider` are the providers of the link's two
+  ends, in either the atom or the string form `calendar_integrations.provider`
+  holds. Between them they decide exactly one thing: whether a *recurring*
+  source may be mirrored. Every other refusal is a property of the event alone
+  and is unchanged by either.
 
-  It defaults to `nil`, which answers `false` for `:recurrence` like any
+  Both are consulted because mirroring a series needs both to be true, and they
+  are different facts. The master's rule has to be fetchable from the **source**
+  (`Capability`'s `:series_lookup`) before there is any rule to send, and the
+  **target** has to expand the series it is handed (`:recurrence`) rather than
+  writing one block at one occurrence's date. Asking only the target admitted an
+  Outlook or CalDAV source onto a Google target, where `RecurringSeries` could
+  fetch no master and the write-back worker discarded the job — no placeholder,
+  no retry, and no sign to the organiser that a recurring meeting was going
+  unmirrored.
+
+  Both default to `nil`, which answers `false` for every feature like any
   unrecognised provider. That is the conservative reading and the right one: a
-  caller that names no target has not established that the destination expands
-  series, and a wrong single block is precisely the outcome this rule exists to
-  prevent.
+  caller that names neither end has established nothing about either, and a
+  wrong single block — or a mirror silently discarded — is precisely what this
+  rule exists to prevent.
   """
-  @spec mirror_source?(source(), mirror_set(), String.t() | atom() | nil) :: boolean()
-  def mirror_source?(event, mirrors, target_provider \\ nil) do
+  @spec mirror_source?(
+          source(),
+          mirror_set(),
+          String.t() | atom() | nil,
+          String.t() | atom() | nil
+        ) :: boolean()
+  def mirror_source?(event, mirrors, target_provider \\ nil, source_provider \\ nil) do
     not already_a_mirror?(event, mirrors) and
-      recurrence_supported?(event, target_provider) and
+      recurrence_supported?(event, target_provider, source_provider) and
       not transparent?(event) and
       not off_the_calendar?(event)
   end
@@ -153,17 +182,17 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
   @doc """
   Whether this event is worth a write-back job at all.
 
-  The sync path's gate. Narrower than `mirror_source?/3` on purpose — see the
+  The sync path's gate. Narrower than `mirror_source?/4` on purpose — see the
   moduledoc: an event that has stopped blocking time, or that no link's target
   can take, still needs a job, because the placeholder it may already have must
   be withdrawn, and only the worker can tell whether one exists.
 
   Recurrence is deliberately *not* asked here even though it is a scoping rule,
-  because its answer depends on the link's target and this gate is asked once
+  because its answer depends on the link's two ends and this gate is asked once
   for a batch shared across every link. The narrower question it can answer —
   "could this event's mirroring state need changing?" — is `true` for a
-  recurring event, since one link's target may expand a series while another's
-  cannot.
+  recurring event, since one link may be able to carry a series while another
+  out of the same calendar cannot.
 
   A mirror is refused here as firmly as it is at the write. Enqueueing a job for
   a placeholder is how the loop begins, and the enqueue is the cheapest place to
@@ -182,14 +211,23 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
   # treating it as an ordinary event lets the write proceed and fail loudly.
   defp already_a_mirror?(_event, _mirrors), do: false
 
-  # Only a recurring source consults the target at all, so a non-recurring one
-  # is eligible whatever the target is — including for the callers that name no
-  # target. Written as "is this refusal inapplicable, or does the target lift
-  # it?" rather than as a negated conjunction, because the latter reads as
-  # though a capable target could rescue an event refused for another reason,
-  # which it cannot: the other clauses in `mirror_source?/3` still apply.
-  defp recurrence_supported?(event, target_provider) do
-    not recurring?(event) or Capability.supports?(target_provider, :recurrence)
+  # Only a recurring source consults the providers at all, so a non-recurring one
+  # is eligible whatever they are — including for the callers that name neither.
+  # Written as "is this refusal inapplicable, or do both ends lift it?" rather
+  # than as a negated conjunction, because the latter reads as though a capable
+  # pair could rescue an event refused for another reason, which it cannot: the
+  # other clauses in `mirror_source?/4` still apply.
+  #
+  # Both ends, and the source end is the one that was missing. Mirroring a
+  # series needs two separate things to be true, and asking only the second
+  # admitted a source nothing downstream could serve: the master has to be
+  # *fetchable from the source* before any rule exists, and the target has to
+  # *expand* the series it is then handed. `Capability` states each as its own
+  # row, so neither is inferred from the other.
+  defp recurrence_supported?(event, target_provider, source_provider) do
+    not recurring?(event) or
+      (Capability.supports?(source_provider, :series_lookup) and
+         Capability.supports?(target_provider, :recurrence))
   end
 
   # The master's id, not the row's rule, for the reason `SyncLink.RecurringSeries`
