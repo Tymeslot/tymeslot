@@ -19,6 +19,8 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Security.SecurityLogger
+  alias TymeslotWeb.Helpers.ClientIP
 
   @type provider :: :github | :google | :oauth
   @type flow_result :: HelperBehaviour.flow_result()
@@ -42,7 +44,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   """
   @spec handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
   def handle_oauth_callback(conn, %{code: code, state: state, provider: provider}) do
-    with {:ok, conn} <- validate_oauth_state(conn, state),
+    with {:ok, conn} <- validate_oauth_state(conn, state, provider),
          {:ok, conn, user} <- process_oauth_response(conn, code, provider) do
       complete_oauth_flow(conn, user, provider)
     end
@@ -50,15 +52,38 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   # Private helpers
 
-  defp validate_oauth_state(conn, state) do
+  # The provider is threaded in purely so the audit entry can name it: a
+  # social auth failure that cannot distinguish Google from GitHub is not much
+  # of an audit trail.
+  defp validate_oauth_state(conn, state, provider) do
     case State.validate_state(conn, state) do
       :ok ->
         {:ok, State.clear_oauth_state(conn)}
 
       {:error, :invalid_state} ->
         Logger.warning("OAuth callback received with invalid or missing state parameter")
+
+        log_social_auth(provider, false, conn, %{
+          oauth_state_valid: false,
+          error_reason: "invalid_state"
+        })
+
         {:error, :invalid_state, conn}
     end
+  end
+
+  # No email is available in the CSRF-state and early-error branches; the
+  # masking helper drops a nil address cleanly. The OAuth code, state and
+  # client tokens are never recorded.
+  defp log_social_auth(provider, success, conn, details) do
+    SecurityLogger.log_social_auth_event(
+      to_string(provider),
+      success,
+      Map.merge(
+        %{ip_address: ClientIP.get(conn), user_agent: ClientIP.get_user_agent(conn)},
+        details
+      )
+    )
   end
 
   defp process_oauth_response(conn, code, provider) do
@@ -73,6 +98,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     else
       {:error, %OAuth2.Error{} = error} ->
         Logger.error("OAuth error", provider: to_string(provider), error: inspect(error))
+        log_social_auth(provider, false, conn, %{error_reason: "oauth_error"})
         {:error, :oauth_error, provider, conn}
 
       {:error, reason} ->
@@ -81,6 +107,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
           reason: inspect(reason)
         )
 
+        log_social_auth(provider, false, conn, %{error_reason: "general_error"})
         {:error, :general_error, provider, conn}
     end
   end
@@ -97,7 +124,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   defp create_user_session(conn, user, provider) do
     case Session.create_session(conn, %{id: user.id}) do
-      {:ok, conn, _token} ->
+      {:ok, session_conn, _token} ->
         # Funnel: count OAuth logins alongside password logins. Categorical only
         # (method + provider) — never any user identifier.
         :telemetry.execute([:tymeslot, :auth, :login_completed], %{count: 1}, %{
@@ -105,13 +132,26 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
           provider: to_string(provider)
         })
 
-        {:ok, conn, provider}
+        # Map.get/2 rather than user.email: create_user_session/3 is reached
+        # with whatever find_existing_user/2 returned, and an audit line must
+        # never be the thing that fails an otherwise successful login.
+        log_social_auth(provider, true, session_conn, %{
+          email: Map.get(user, :email),
+          oauth_state_valid: true
+        })
+
+        {:ok, session_conn, provider}
 
       {:error, reason, _message} ->
         Logger.error("Failed to create session after OAuth auth",
           provider: to_string(provider),
           reason: inspect(reason)
         )
+
+        log_social_auth(provider, false, conn, %{
+          email: Map.get(user, :email),
+          error_reason: "session_failed"
+        })
 
         {:error, :session_failed, provider, conn}
     end
