@@ -197,6 +197,32 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Finds an active calendar integration for a user and provider whose
+  `provider_account_id` is NULL.
+
+  This is the set the `unique_active_calendar_null_account_per_user` index
+  covers, so it is what a reactivation of a legacy row has to be checked
+  against.
+  """
+  @spec get_active_null_account_for_user(integer(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_active_null_account_for_user(user_id, provider)
+      when is_integer(user_id) and is_binary(provider) do
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and c.provider == ^provider and
+        is_nil(c.provider_account_id) and c.is_active == true
+    )
+    |> limit(1)
+    |> Repo.one()
+    |> null_account_result()
+  end
+
+  defp null_account_result(nil), do: {:error, :not_found}
+  defp null_account_result(integration), do: {:ok, integration}
+
+  @doc """
   Finds any calendar integration (active or inactive) by provider and account ID for a user.
   Used to detect inactive duplicates before creating a new row.
   """
@@ -375,30 +401,47 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
 
   When reactivating, checks that no other active integration exists for the same
   `(user_id, provider, provider_account_id)` to prevent a unique-constraint violation.
+
+  The `:duplicate_account` refusal is returned bare, unlike a changeset failure —
+  deliberately, and unlike its `VideoIntegrationQueries` twin. This function's only
+  production caller, `CalendarManagement.toggle_with_primary_rebalance/1`, runs inside
+  a `Repo.transaction/1` and forwards whatever isn't `{:ok, _}` straight to
+  `Repo.rollback/1`, which itself wraps its argument in `{:error, reason}`. Returning
+  `{:error, :duplicate_account}` here would arrive at the LiveView as
+  `{:error, {:error, :duplicate_account}}`, past the clause it matches on.
   """
   @spec toggle_active(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :duplicate_account}
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()} | :duplicate_account
   def toggle_active(%CalendarIntegrationSchema{} = integration) do
     if integration.is_active do
       integration
-      |> Changeset.change(%{is_active: false})
+      |> CalendarIntegrationSchema.activation_changeset(false)
       |> Repo.update()
     else
       case check_reactivation_conflict(integration) do
         :ok ->
           integration
-          |> Changeset.change(%{is_active: true})
+          |> CalendarIntegrationSchema.activation_changeset(true)
           |> Repo.update()
 
-        {:error, :duplicate_account} = err ->
-          err
+        {:error, :duplicate_account} ->
+          :duplicate_account
       end
     end
   end
 
-  defp check_reactivation_conflict(%{provider_account_id: nil}), do: :ok
-
-  defp check_reactivation_conflict(%{provider_account_id: ""}), do: :ok
+  # Every uniqueness index here is predicated on `is_active = true`, so
+  # reactivating a row moves it *into* the index. A row whose account id is
+  # NULL falls under the legacy-row index on `(user_id, provider)`, and one
+  # whose account id is the empty string falls under the account index, because
+  # `''` is not NULL. Waving both through returned `:ok` for exactly the rows
+  # that contend, with no concurrency involved at all.
+  defp check_reactivation_conflict(%{provider_account_id: nil} = integration) do
+    case get_active_null_account_for_user(integration.user_id, integration.provider) do
+      {:ok, _existing} -> {:error, :duplicate_account}
+      {:error, :not_found} -> :ok
+    end
+  end
 
   defp check_reactivation_conflict(integration) do
     case get_by_account_for_user(

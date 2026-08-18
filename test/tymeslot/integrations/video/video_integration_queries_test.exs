@@ -224,4 +224,68 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
       assert {:error, :not_found} = VideoIntegrationQueries.toggle_active(soft)
     end
   end
+
+  # Every uniqueness index is predicated on `is_active = true`, so reactivating
+  # a row moves it into the index. The nil and "" account ids used to be waved
+  # through, which is exactly the pair the legacy-row and account indexes
+  # cover, so the reactivation raised `Ecto.ConstraintError` rather than
+  # returning a refusal the dashboard can render.
+  describe "toggle_active/1 reactivation conflicts" do
+    test "refuses to reactivate a legacy null-account row beside an active one" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "zoom",
+        provider_account_id: nil,
+        is_active: true
+      )
+
+      dormant =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: nil,
+          is_active: false
+        )
+
+      assert {:error, :duplicate_account} = VideoIntegrationQueries.toggle_active(dormant)
+    end
+
+    test "refuses to reactivate an empty-account row beside an active one" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "zoom",
+        provider_account_id: "",
+        is_active: true
+      )
+
+      dormant =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: "",
+          is_active: false
+        )
+
+      assert {:error, :duplicate_account} = VideoIntegrationQueries.toggle_active(dormant)
+    end
+
+    test "reactivates a null-account row when nothing else is active" do
+      user = insert(:user)
+
+      dormant =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: nil,
+          is_active: false
+        )
+
+      assert {:ok, reactivated} = VideoIntegrationQueries.toggle_active(dormant)
+      assert reactivated.is_active
+    end
+  end
 end

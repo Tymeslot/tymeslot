@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   Schema for video conferencing integrations (MiroTalk).
   """
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Integrations.Video.ProviderConfig
@@ -113,11 +114,38 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     |> foreign_key_constraint(:user_id)
     |> unique_constraint([:user_id, :provider, :provider_account_id],
       name: :unique_active_video_account_per_user,
-      message: "an integration for this account already exists"
+      # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
+      # through the "errors" domain at render time, so the changeset must
+      # carry the untranslated msgid — hence `dgettext_noop/2`, not
+      # `dgettext/2`, which would translate here and miss the lookup there.
+      message: dgettext_noop("errors", "an integration for this account already exists")
     )
     |> unique_constraint([:user_id, :provider],
       name: :unique_active_video_null_account_per_user,
-      message: "an integration for this provider already exists"
+      message: dgettext_noop("errors", "an integration for this provider already exists")
+    )
+  end
+
+  @doc """
+  Changeset for flipping `is_active`.
+
+  Carries the same uniqueness declarations as the main changeset, because both
+  partial indexes are predicated on `is_active = true`: reactivating a row moves
+  it *into* the index and genuinely contends. A bare `Ecto.Changeset.change/2`
+  declares none of them, so a violation raises `Ecto.ConstraintError` instead of
+  returning an invalid changeset the caller can render.
+  """
+  @spec activation_changeset(t(), boolean()) :: Ecto.Changeset.t()
+  def activation_changeset(%__MODULE__{} = integration, is_active) do
+    integration
+    |> change(%{is_active: is_active})
+    |> unique_constraint([:user_id, :provider, :provider_account_id],
+      name: :unique_active_video_account_per_user,
+      message: dgettext_noop("errors", "an integration for this account already exists")
+    )
+    |> unique_constraint([:user_id, :provider],
+      name: :unique_active_video_null_account_per_user,
+      message: dgettext_noop("errors", "an integration for this provider already exists")
     )
   end
 
