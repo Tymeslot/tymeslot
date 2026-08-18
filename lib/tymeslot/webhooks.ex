@@ -116,7 +116,7 @@ defmodule Tymeslot.Webhooks do
           {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t() | :not_found}
   def record_delivery_failure(webhook, reason) do
     with {:ok, updated} <- WebhookQueries.increment_failure_count(webhook, reason) do
-      if updated.failure_count >= 10 do
+      if updated.failure_count >= WebhookSchema.max_failure_count() do
         WebhookQueries.disable_webhook(updated, "Too many consecutive failures: #{reason}")
       else
         {:ok, updated}

@@ -29,6 +29,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
+  alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
   alias Tymeslot.Integrations.Video.RoomData
 
   @capabilities Capabilities.new!(
@@ -241,28 +242,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def build_config(integration, decrypted, _opts) do
-    %{
-      access_token: decrypted.access_token,
-      refresh_token: decrypted.refresh_token,
-      token_expires_at: integration.token_expires_at,
-      oauth_scope: integration.oauth_scope,
-      integration_id: integration.id,
-      user_id: integration.user_id
-    }
-  end
+  defdelegate build_config(integration, decrypted, opts), to: OAuthCredentials
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def credential_spec do
-    %{
-      required: [],
-      credential_pairs: [
-        {:access_token, :access_token_encrypted},
-        {:refresh_token, :refresh_token_encrypted}
-      ],
-      url_fields: []
-    }
-  end
+  defdelegate credential_spec, to: OAuthCredentials
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def url_patterns, do: ["meet.google.com"]
