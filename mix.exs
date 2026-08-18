@@ -62,6 +62,7 @@ defmodule Tymeslot.MixProject do
     [
       preferred_envs: [
         "test.e2e": :test,
+        "test.affected": :test,
         coveralls: :test,
         "coveralls.cobertura": :test,
         "coveralls.detail": :test,
