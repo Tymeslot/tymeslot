@@ -60,8 +60,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
       {:ok, _view, _html} = live(conn, ~p"/#{ctx.username}/#{ctx.slug}")
 
-      :ok = wait_quiet()
-      assert Repo.aggregate(EventSchema, :count, :id) == 0
+      assert_only_control_event_logged!(ctx)
     end
 
     test "does not log on the static (non-connected) render", %{conn: conn, ctx: ctx} do
@@ -69,8 +68,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
       _resp = get(conn, ~p"/#{ctx.username}/#{ctx.slug}")
 
-      :ok = wait_quiet()
-      assert Repo.aggregate(EventSchema, :count, :id) == 0
+      assert_only_control_event_logged!(ctx)
     end
   end
 
@@ -166,16 +164,26 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
     )
   end
 
-  # Asserts that no analytics event is written within a short window.
-  # Bot detection and the static-render guard both short-circuit before
-  # any async work, so the poll simply confirms the table stays empty.
-  defp wait_quiet do
+  # Asserts that the preceding page visit logged nothing.
+  #
+  # A bare count check would pass instantly against the table cleared in setup,
+  # even against a regression that does spawn the logging Task — the Task simply
+  # would not have written yet. So issue a control visit that IS logged and wait
+  # for it to land: once the control event is in the table, any Task the guarded
+  # visit spawned has had its chance to write too. The table must then hold the
+  # control event and nothing else.
+  defp assert_only_control_event_logged!(ctx) do
+    {:ok, _view, _html} =
+      build_conn()
+      |> put_req_header("user-agent", "Mozilla/5.0 (Macintosh) Chrome/126.0.0.0")
+      |> live(~p"/#{ctx.username}/#{ctx.slug}?utm_source=control")
+
     eventually(
-      fn -> Repo.aggregate(EventSchema, :count, :id) == 0 end,
-      timeout: 500,
+      fn -> Enum.any?(Repo.all(EventSchema), &(&1.utm_source == "control")) end,
+      timeout: 2_000,
       interval: 50
     )
 
-    :ok
+    assert Enum.map(Repo.all(EventSchema), & &1.utm_source) == ["control"]
   end
 end

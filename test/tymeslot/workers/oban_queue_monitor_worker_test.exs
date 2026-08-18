@@ -1,14 +1,20 @@
 defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
-  use Tymeslot.DataCase, async: true
+  # async: false — the batching test swaps the global :admin_alerts_impl so it can
+  # inspect the aggregated alert payload.
+  use Tymeslot.DataCase, async: false
 
   @moduletag :workers
 
   use Oban.Testing, repo: Tymeslot.Repo
 
   alias Ecto.Changeset
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.ObanQueueMonitorWorker
 
   import ExUnit.CaptureLog
+  import Tymeslot.AdminAlertsCaptureHelpers
+
+  setup :capture_admin_alerts
 
   describe "perform/1" do
     test "completes successfully with no unhealthy queues" do
@@ -134,7 +140,8 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
       refute log =~ "stuck retryable jobs"
     end
 
-    test "batches alerts for multiple unhealthy queues" do
+    @tag :capture_log
+    test "batches every unhealthy queue into one alert naming all of them" do
       # Create accumulation in 3 different queues
       for queue <- ["queue_1", "queue_2", "queue_3"] do
         for _i <- 1..101 do
@@ -142,13 +149,17 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
         end
       end
 
-      log =
-        capture_log(fn ->
-          assert :ok = perform_job(ObanQueueMonitorWorker, %{})
-        end)
+      assert :ok = perform_job(ObanQueueMonitorWorker, %{})
 
-      # Should log a single batched alert for all unhealthy queues
-      assert log =~ "Oban queues accumulating jobs"
+      # One alert, carrying all three queues — not three separate alerts.
+      assert_receive {:send_alert, :oban_jobs_accumulating, payload}
+      refute_receive {:send_alert, :oban_jobs_accumulating, _other}
+
+      assert payload.total_affected == 3
+
+      assert payload.affected_queues
+             |> Enum.map(fn {queue, _count} -> queue end)
+             |> Enum.sort() == ["queue_1", "queue_2", "queue_3"]
     end
 
     test "ignores jobs older than 7 days for performance" do
@@ -164,24 +175,15 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
         })
       end
 
-      log =
-        capture_log(fn ->
-          assert :ok = perform_job(ObanQueueMonitorWorker, %{})
-        end)
+      LogCapture.attach()
 
-      # Should not alert for very old jobs (they're filtered out for performance)
-      refute log =~ "old_queue"
-    end
-
-    test "handles empty jobs table gracefully" do
-      # No jobs in database
       assert :ok = perform_job(ObanQueueMonitorWorker, %{})
-    end
 
-    test "worker can retry on failure" do
-      # The worker has max_attempts: 3, so it should retry
-      changeset = ObanQueueMonitorWorker.new(%{})
-      assert changeset.changes.max_attempts == 3
+      # Should not alert for very old jobs (they're filtered out for
+      # performance). The queue names travel as list-valued metadata, which the
+      # console formatter drops entirely, so this must be asserted against the
+      # captured records rather than `capture_log` output.
+      refute Enum.map_join(LogCapture.drain(), " ", &LogCapture.dump/1) =~ "old_queue"
     end
   end
 

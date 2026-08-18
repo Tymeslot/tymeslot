@@ -36,10 +36,20 @@ defmodule TymeslotWeb.UploadsStaticEndpointTest do
     refute conn.resp_body =~ "<script>"
   end
 
-  test "refuses .svg uploads (can embed script tags)", %{conn: conn, url_segment: segment} do
+  test "refuses .svg uploads (can embed script tags)", %{
+    conn: conn,
+    test_dir: test_dir,
+    url_segment: segment
+  } do
+    File.write!(
+      Path.join(test_dir, "logo.svg"),
+      ~s|<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>|
+    )
+
     conn = get(conn, "/uploads/#{segment}/logo.svg")
 
     assert conn.status == 404
+    refute conn.resp_body =~ "<svg"
   end
 
   test "serves an allowlisted image with nosniff header", %{

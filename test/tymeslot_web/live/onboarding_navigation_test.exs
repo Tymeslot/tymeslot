@@ -18,7 +18,6 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
   import TymeslotWeb.OnboardingTestHelpers
 
   alias Tymeslot.Repo
-  alias TymeslotWeb.OnboardingLive.StepConfig
 
   setup :verify_on_exit!
 
@@ -84,17 +83,23 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
     end
 
     test "next button shows correct text on each step", %{conn: conn} do
+      # The expected labels are written out rather than read back from
+      # StepConfig, and each is asserted on the button itself: the middle
+      # steps all read "Continue", so a match anywhere in the page would say
+      # nothing about which step the wizard is actually on.
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
-      # Welcome — button text is "Let's go"
-      assert has_element?(view, "button[phx-click='next_step']")
+      # Welcome — the opening step has its own label.
+      assert has_element?(view, "button[phx-click='next_step']", "Let's go")
 
       # Navigate to profile
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      assert render(view) =~ StepConfig.next_button_text(:profile)
+      assert has_element?(view, "#profile-form")
+      assert has_element?(view, "button[phx-click='next_step']", "Continue")
+      refute has_element?(view, "button[phx-click='next_step']", "Let's go")
 
       # Fill profile and navigate to connect_calendar
       fill_basic_settings(view, "Test", "test123")
@@ -103,7 +108,8 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      assert render(view) =~ StepConfig.next_button_text(:connect_calendar)
+      assert has_element?(view, ".onboarding-provider-cards")
+      assert has_element?(view, "button[phx-click='next_step']", "Continue")
 
       # Navigate to buffer_time — forced choice, select "Not right now" first
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
@@ -115,14 +121,16 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       # Continuing without a calendar opens a nudge modal — confirm to advance.
       render_click(view, "confirm_skip_calendar")
 
-      assert render(view) =~ StepConfig.next_button_text(:buffer_time)
+      assert has_element?(view, "button[phx-value-buffer_minutes]")
+      assert has_element?(view, "button[phx-click='next_step']", "Continue")
 
       # Navigate through booking_window and minimum_notice to ready
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      assert render(view) =~ StepConfig.next_button_text(:ready)
+      assert has_element?(view, "button[phx-click='next_step']", "Go to dashboard")
+      refute has_element?(view, "button[phx-click='next_step']", "Continue")
     end
   end
 

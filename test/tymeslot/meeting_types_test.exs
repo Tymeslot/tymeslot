@@ -457,10 +457,16 @@ defmodule Tymeslot.MeetingTypesTest do
       assert Enum.at(types, 1).id == mt2.id
     end
 
-    test "handles empty meeting type list" do
+    test "an empty list is a no-op that leaves the user's existing order untouched" do
       user = insert(:user)
+      mt1 = insert(:meeting_type, user: user, name: "Alpha", sort_order: 0)
+      mt2 = insert(:meeting_type, user: user, name: "Beta", sort_order: 1)
 
-      assert {:ok, _result} = MeetingTypes.reorder_meeting_types(user.id, [])
+      assert {:ok, []} = MeetingTypes.reorder_meeting_types(user.id, [])
+
+      types = MeetingTypes.get_all_meeting_types(user.id)
+      assert Enum.map(types, & &1.id) == [mt1.id, mt2.id]
+      assert Enum.map(types, & &1.sort_order) == [0, 1]
     end
   end
 

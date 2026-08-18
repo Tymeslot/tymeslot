@@ -158,12 +158,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
     end
   end
 
-  describe "refund_revocation_threshold_percent/0" do
-    test "returns default threshold of 90%" do
-      assert RefundHandler.refund_revocation_threshold_percent() == 90.0
-    end
-  end
-
   describe "validate/1" do
     test "accepts valid refund object with required fields" do
       refund = %{"id" => "re_test_123"}

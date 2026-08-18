@@ -75,12 +75,13 @@ defmodule Tymeslot.Emails.Shared.Buttons do
     safe_text = Sanitise.sanitize_for_email(text)
     safe_url = sanitize_button_url(url)
     css_class = if full_width, do: "mobile-button", else: ""
+    accent_deep = Styles.intent_accent_deep(intent)
 
     """
     <mj-button
       href="#{safe_url}"
-      background-color="#{Styles.intent_accent(intent)}"
-      color="#{Styles.button_text_color()}"
+      background-color="#{accent_deep}"
+      color="#{Styles.button_text_color(accent_deep)}"
       border-radius="#{Styles.button_radius()}"
       font-size="#{Styles.font_size(:md)}"
       inner-padding="#{Styles.button_padding(size)}"

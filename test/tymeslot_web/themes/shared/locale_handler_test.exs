@@ -39,21 +39,6 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       assert socket.assigns.locale == "en"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "en"
     end
-
-    test "sets Gettext locale for current process" do
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{locale: "uk", __changed__: %{}},
-        endpoint: TymeslotWeb.Endpoint
-      }
-
-      # Initial state
-      Gettext.put_locale("en")
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "en"
-
-      # After assign_locale
-      _socket = LocaleHandler.assign_locale(socket)
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "uk"
-    end
   end
 
   describe "handle_locale_change/2" do
@@ -62,15 +47,6 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
 
       assert updated_socket.assigns.locale == "de"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
-    end
-
-    test "persists locale to session", %{socket: socket} do
-      # Mock put_session for verification
-      # In real LiveView, this is handled by the framework
-      updated_socket = LocaleHandler.handle_locale_change(socket, "de")
-
-      # Verify locale is in assigns (session persistence is tested in integration tests)
-      assert updated_socket.assigns.locale == "de"
     end
 
     test "is idempotent - no change when locale already set", %{socket: socket} do
@@ -131,37 +107,6 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
   end
 
   describe "edge cases and concurrency" do
-    test "handles rapid locale changes without race conditions", %{socket: socket} do
-      # Simulate rapid changes
-      socket = LocaleHandler.handle_locale_change(socket, "de")
-      socket = LocaleHandler.handle_locale_change(socket, "uk")
-      socket = LocaleHandler.handle_locale_change(socket, "en")
-      socket = LocaleHandler.handle_locale_change(socket, "de")
-
-      assert socket.assigns.locale == "de"
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
-    end
-
-    test "locale is process-local via Gettext", %{socket: socket} do
-      # Set locale in this process
-      LocaleHandler.handle_locale_change(socket, "de")
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
-
-      # Spawn another process and verify it has default locale
-      task =
-        Task.async(fn ->
-          Gettext.get_locale(TymeslotWeb.Gettext)
-        end)
-
-      other_process_locale = Task.await(task)
-
-      # Other process should have default locale
-      assert other_process_locale == "en"
-
-      # Current process should still have de
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
-    end
-
     test "handles socket without locale assign gracefully" do
       socket =
         %Phoenix.LiveView.Socket{

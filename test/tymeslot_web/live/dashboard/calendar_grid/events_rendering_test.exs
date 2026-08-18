@@ -318,16 +318,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
     test "renders events with nil summary gracefully", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      insert_event(integration, %{
-        summary: nil,
-        start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
-        end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
-        all_day: false
-      })
+      event =
+        insert_event(integration, %{
+          summary: nil,
+          start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
+          all_day: false
+        })
 
-      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
-      # Page renders without crashing — the event slot is present in the grid
-      assert html =~ "calendar"
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # The event still renders, titled with the untitled-event fallback.
+      block = lv |> element("[id^='event-#{event.id}-']") |> render()
+
+      assert block =~ "(No title)"
     end
 
     test "renders events with nil description gracefully", %{conn: conn, user: user} do

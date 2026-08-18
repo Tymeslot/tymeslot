@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
       @tag theme: theme_id
       test "theme #{theme_id} handles edge cases", %{conn: conn} do
         # No meeting types
-        user1 = insert(:user)
+        user1 = insert(:user, name: "Empty Owner")
 
         profile1 =
           insert(:profile,
@@ -69,8 +69,17 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
         # Add calendar integration to pass readiness check
         insert(:calendar_integration, user: nil, user_id: user1.id, is_active: true)
 
-        {:ok, view1, _html} = live(conn, ~p"/#{profile1.username}")
-        assert view1, "Theme must handle users with no meeting types"
+        {:ok, _view1, html1} = live(conn, ~p"/#{profile1.username}")
+
+        # The owner's name also sits in <title>/og:title, so a body-only check
+        # is what proves the visitor can still see whose page this is.
+        [_head1, body1] = String.split(html1, "<body", parts: 2)
+
+        assert body1 =~ user1.name,
+               "Theme #{unquote(theme_id)} must still name the owner with no meeting types"
+
+        refute html1 =~ "data-testid=\"duration-option\"",
+               "Theme #{unquote(theme_id)} must not render duration options with no meeting types"
 
         # Very long meeting name
         user2 = insert(:user)
@@ -86,15 +95,18 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
         # Add calendar integration to pass readiness check
         insert(:calendar_integration, user: nil, user_id: user2.id, is_active: true)
 
-        insert(:meeting_type,
-          user: nil,
-          user_id: user2.id,
-          name:
-            "This is an extremely long meeting type name that could potentially break layouts if the theme doesn't handle text overflow properly"
-        )
+        long_name =
+          "This is an extremely long meeting type name that could potentially break layouts when a theme fails to handle text overflow properly"
 
-        {:ok, view2, _html} = live(conn, ~p"/#{profile2.username}")
-        assert view2, "Theme must handle very long meeting names"
+        insert(:meeting_type, user: nil, user_id: user2.id, name: long_name)
+
+        {:ok, _view2, html2} = live(conn, ~p"/#{profile2.username}")
+
+        assert html2 =~ long_name,
+               "Theme #{unquote(theme_id)} must render the full long meeting type name"
+
+        assert html2 =~ "data-testid=\"duration-option\"",
+               "Theme #{unquote(theme_id)} must offer the long meeting type as a duration option"
       end
 
       @tag theme: theme_id
@@ -114,6 +126,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
         insert(:meeting_type, user: nil, user_id: user.id, name: "Test Type")
 
         {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
+
+        # Without a device-width viewport the page renders at the desktop
+        # fallback width on a phone, so every responsive rule is bypassed.
+        assert html =~ ~s(<meta name="viewport" content="width=device-width, initial-scale=1")
 
         # Basic functional check for the core booking UI
         assert html =~ "data-testid=\"duration-option\""

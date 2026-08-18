@@ -21,6 +21,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   import Swoosh.Email
 
   alias Swoosh.Attachment
+  alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Mailer
@@ -103,23 +104,28 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   # is the only value that renders correctly across all four.
   @logo_cid "tymeslot-logo.png"
 
-  @doc "The Content-ID used for the inline Tymeslot logo attachment."
+  @doc "The Content-ID used for the inline logo attachment."
   @spec logo_cid() :: String.t()
   def logo_cid, do: @logo_cid
 
   @doc """
-  Attaches the Tymeslot logo as an inline image. Swallowed silently if the
-  PNG can't be read — the email still sends, the logo simply won't render.
+  Attaches the instance logo as an inline image — the custom logo when a
+  self-hosted instance has uploaded one, the stock Tymeslot logo otherwise.
+  Swallowed silently if neither PNG can be read: the email still sends, the
+  logo simply won't render.
+
+  The filename and cid stay fixed regardless of which logo is attached, for
+  the ESP-compatibility reason documented on `@logo_cid`.
   """
   @spec attach_logo(Swoosh.Email.t()) :: Swoosh.Email.t()
   def attach_logo(email) do
-    case logo_bytes() do
+    case Branding.logo_bytes() do
       {:ok, bytes} ->
         attachment(
           email,
           Attachment.new(
             {:data, bytes},
-            filename: "tymeslot-logo.png",
+            filename: @logo_cid,
             content_type: "image/png",
             type: :inline,
             cid: @logo_cid
@@ -128,21 +134,11 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
 
       :error ->
         Logger.warning(
-          "Tymeslot logo not found — emails will render without inline logo",
-          path: Application.app_dir(:tymeslot, "priv/static/images/brand/logo-with-text.png")
+          "No email logo could be read — emails will render without inline logo",
+          path: Branding.stock_logo_path()
         )
 
         email
-    end
-  end
-
-  @spec logo_bytes() :: {:ok, binary()} | :error
-  defp logo_bytes do
-    path = Application.app_dir(:tymeslot, "priv/static/images/brand/logo-with-text.png")
-
-    case File.read(path) do
-      {:ok, bytes} -> {:ok, bytes}
-      {:error, _reason} -> :error
     end
   end
 
@@ -179,14 +175,18 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     organizer_avatar_url = resolve_avatar(organizer_details[:avatar_url], organizer_name)
 
     organizer_title =
-      Sanitise.sanitize_for_email(organizer_details[:title] || "Tymeslot")
+      Sanitise.sanitize_for_email(organizer_details[:title] || Branding.brand_name())
 
     stage_title = organizer_details[:stage_title] || raw_organizer_name
     stage_subtitle = organizer_details[:stage_subtitle]
 
     Frame.wrap(%{
       title: dgettext("emails", "Message from %{name}", name: organizer_name),
-      preview: dgettext("emails", "%{name} via Tymeslot", name: organizer_name),
+      preview:
+        dgettext("emails", "%{name} via %{brand}",
+          name: organizer_name,
+          brand: Sanitise.sanitize_for_email(Branding.brand_name())
+        ),
       pre_card: logo_header(),
       stage: Stage.stage_band(intent, stage_eyebrow, stage_title, stage_subtitle),
       header: organizer_strip(organizer_avatar_url, organizer_name, organizer_title),
@@ -212,7 +212,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
       <mj-column>
         <mj-image
           src="cid:#{@logo_cid}"
-          alt="Tymeslot"
+          alt="#{Sanitise.sanitize_for_email(Branding.brand_name())}"
           href="#{Urls.get_app_url()}"
           width="150px"
           align="center"

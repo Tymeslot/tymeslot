@@ -108,7 +108,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
   end
 
   describe "token operations" do
-    test "exchange_code_for_tokens uses TokenExchange" do
+    test "exchange_code_for_tokens falls back to the calendar scope when the response omits it" do
+      # Microsoft may answer without `refresh_token` or `scope`. The requested
+      # calendar scope is then the recorded one, otherwise the integration would
+      # be stored as having no permissions at all.
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %{
@@ -121,7 +124,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
          }}
       end)
 
-      assert {:ok, _result} = OAuthHelper.exchange_code_for_tokens("code", "uri")
+      assert {:ok, tokens} = OAuthHelper.exchange_code_for_tokens("code", "uri")
+      assert tokens.access_token == "at"
+      assert is_nil(tokens.refresh_token)
+      assert tokens.scope =~ "https://graph.microsoft.com/Calendars.ReadWrite"
     end
 
     test "refresh_access_token uses TokenExchange" do

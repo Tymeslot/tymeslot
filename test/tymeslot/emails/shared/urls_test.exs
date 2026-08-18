@@ -3,7 +3,11 @@ defmodule Tymeslot.Emails.Shared.UrlsTest do
   @moduletag :emails
 
   alias Tymeslot.Emails.Shared.Urls
-  alias TymeslotWeb.Endpoint
+
+  # config/test.exs serves the endpoint on TEST_PORT, defaulting to 4002. The
+  # expected URLs are pinned rather than rebuilt from `Endpoint.url/0`, which
+  # is the call under test and so can never disagree with itself.
+  @app_url "http://localhost:#{System.get_env("TEST_PORT") || "4002"}"
 
   describe "get_app_url/0" do
     test "returns a valid URL string" do
@@ -12,43 +16,28 @@ defmodule Tymeslot.Emails.Shared.UrlsTest do
       assert url =~ ~r/^https?:\/\//
     end
 
-    test "returns URL from endpoint configuration" do
-      url = Urls.get_app_url()
-
-      # Should be the same as calling Endpoint.url/0 directly
-      assert url == Endpoint.url()
+    test "returns the configured scheme, host and port, with no trailing slash" do
+      assert Urls.get_app_url() == @app_url
     end
   end
 
   describe "build_url/1" do
     test "builds URL with root path" do
-      url = Urls.build_url("/")
-
-      assert url =~ ~r/^https?:\/\//
-      assert String.ends_with?(url, "/")
+      assert Urls.build_url("/") == "#{@app_url}/"
     end
 
     test "builds URL with specific path" do
-      url = Urls.build_url("/meetings/123")
-
-      assert url =~ ~r/^https?:\/\//
-      assert String.ends_with?(url, "/meetings/123")
+      assert Urls.build_url("/meetings/123") == "#{@app_url}/meetings/123"
     end
 
-    test "handles paths without leading slash" do
-      url = Urls.build_url("meetings/123")
-
-      assert url =~ ~r/^https?:\/\//
-      assert String.ends_with?(url, "meetings/123")
+    test "adds the missing leading slash rather than gluing the path to the host" do
+      # Without normalisation this yields "http://localhost:4002meetings/123",
+      # which is a broken link no assertion on the suffix alone would catch.
+      assert Urls.build_url("meetings/123") == "#{@app_url}/meetings/123"
     end
 
-    test "combines app URL and path correctly" do
-      app_url = Urls.get_app_url()
-      path = "/test/path"
-
-      url = Urls.build_url(path)
-
-      assert url == "#{app_url}#{path}"
+    test "does not double the slash on a path that already has one" do
+      refute Urls.build_url("/meetings/123") =~ "//meetings"
     end
   end
 

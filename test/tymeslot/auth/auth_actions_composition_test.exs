@@ -4,17 +4,18 @@ defmodule Tymeslot.Auth.AuthActionsCompositionTest do
   `Tymeslot.Auth.AuthActions`.
 
   The unit suite (`auth_actions_test.exs`) covers pure helpers —
-  `convert_terms_accepted/1`, validation, and socket assign helpers.
-  This file pins the three user-visible branches that only AuthActions
-  enforces:
+  `convert_terms_accepted/1`, validation, socket assign helpers — and the
+  password-auth-disabled short-circuits on `request_password_reset/2` and
+  `reset_password/4`. This file pins the signup branches, where the flag must
+  also be shown to leave the database untouched:
 
-    * `password_auth_enabled?() == false` blocks `register_user/2`,
-      `request_password_reset/2`, and `reset_password/4`.
     * `registration_enabled?() == false` blocks `register_user/2` —
       this is the toggle a self-hoster flips to run a closed instance.
+    * `password_auth_enabled?() == false` blocks `register_user/2` too, and
+      wins over the registration flag.
 
   When either flag is off the user must receive the documented message,
-  and no user row / password-reset token may be created.
+  and no user row may be created.
   """
 
   use Tymeslot.DataCase, async: false
@@ -74,26 +75,6 @@ defmodule Tymeslot.Auth.AuthActionsCompositionTest do
         assert {:error, message} = AuthActions.register_user(params, fake_socket())
         assert message == AuthActions.password_auth_disabled_message()
         refute Repo.get_by(UserSchema, email: email)
-      end)
-    end
-  end
-
-  describe "password-auth-disabled short-circuits password reset flows" do
-    test "request_password_reset/2 returns the password-auth-disabled message" do
-      with_flag_off(:password_auth_enabled, fn ->
-        assert {:error, message} =
-                 AuthActions.request_password_reset("any@example.com", fake_socket())
-
-        assert message == AuthActions.password_auth_disabled_message()
-      end)
-    end
-
-    test "reset_password/4 returns the password-auth-disabled message" do
-      with_flag_off(:password_auth_enabled, fn ->
-        assert {:error, message} =
-                 AuthActions.reset_password("any-token", "new-pass", "new-pass", fake_socket())
-
-        assert message == AuthActions.password_auth_disabled_message()
       end)
     end
   end

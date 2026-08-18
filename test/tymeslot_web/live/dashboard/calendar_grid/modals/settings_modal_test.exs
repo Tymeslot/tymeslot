@@ -60,10 +60,45 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModalTest do
     assert html =~ "Month"
   end
 
-  test "handles atom preference values" do
-    prefs = %{@preferences | week_start_day: :monday, time_format: :"12h", default_view: :week}
+  test "string preference values mark the stored option as active" do
+    prefs = %{@preferences | week_start_day: "sunday", time_format: "24h", default_view: "month"}
     html = render_component(&SettingsModal.settings_modal/1, base_assigns(%{preferences: prefs}))
 
-    assert html =~ "Calendar Settings"
+    assert active_option(html, "week-start-toggle") == "sunday"
+    assert active_option(html, "time-format-toggle") == "24h"
+    assert active_option(html, "default-view-toggle") == "month"
+  end
+
+  # Characterises current behaviour: `safe_to_atom/2` only maps binaries, so an
+  # atom preference falls through its catch-all and is silently replaced by the
+  # default. Values differing from the defaults are used deliberately — with
+  # `:monday`/`:"12h"`/`:week` the discard is invisible.
+  test "atom preference values are discarded and fall back to the defaults" do
+    prefs = %{@preferences | week_start_day: :sunday, time_format: :"24h", default_view: :month}
+    html = render_component(&SettingsModal.settings_modal/1, base_assigns(%{preferences: prefs}))
+
+    assert active_option(html, "week-start-toggle") == "monday"
+    assert active_option(html, "time-format-toggle") == "12h"
+    assert active_option(html, "default-view-toggle") == "week"
+  end
+
+  # The active toggle option is the button carrying `btn-primary`; its id is
+  # "<toggle-id>-<value>".
+  defp active_option(html, toggle_id) do
+    active =
+      html
+      |> Floki.parse_fragment!()
+      |> Floki.find("button[id^='#{toggle_id}-'].btn-primary")
+      |> Enum.map(fn button ->
+        button
+        |> Floki.attribute("id")
+        |> hd()
+        |> String.replace_prefix("#{toggle_id}-", "")
+      end)
+
+    case active do
+      [value] -> value
+      other -> other
+    end
   end
 end

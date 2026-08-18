@@ -35,12 +35,6 @@ defmodule Tymeslot.Webhooks.WebhookEventSchemaTest do
       assert changeset.valid?
     end
 
-    test "valid without payload" do
-      changeset = WebhookEventSchema.changeset(%WebhookEventSchema{}, @valid_attrs)
-      assert changeset.valid?
-      refute Map.has_key?(errors_on(changeset), :payload)
-    end
-
     test "unique constraint on stripe_event_id" do
       {:ok, _existing} =
         %WebhookEventSchema{}

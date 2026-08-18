@@ -2,6 +2,7 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :utils
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.ConfigTestHelpers
 
@@ -101,6 +102,7 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
     test "prevents duplicate processing of same event", %{conn: _conn} do
       session = PaymentTestHelpers.mock_stripe_checkout_session()
       event = PaymentTestHelpers.mock_stripe_webhook_event("checkout.session.completed", session)
+      event_id = event["id"] || event[:id]
 
       payload = Jason.encode!(event)
 
@@ -112,6 +114,9 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
         |> post("/webhooks/stripe", payload)
 
       assert response(conn1, 200) == ""
+      # The fresh delivery reached the controller: the plug handed the decoded
+      # event on rather than halting.
+      assert Map.has_key?(conn1.assigns, :stripe_event)
 
       # Process second time - should be rejected as duplicate (halted in plug)
       conn2 =
@@ -120,8 +125,19 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
         |> assign(:raw_body, payload)
         |> post("/webhooks/stripe", payload)
 
-      # The plug halts with 200 for already processed events
+      # The duplicate is answered with a byte-identical `200 ""`, so the response
+      # alone cannot tell the two deliveries apart. What distinguishes them is
+      # that the plug halted the pipeline before the controller ran: no
+      # `:stripe_event` assign, and no second row in `webhook_events`.
       assert response(conn2, 200) == ""
+      assert conn2.halted
+      refute Map.has_key?(conn2.assigns, :stripe_event)
+
+      assert Repo.aggregate(
+               from(w in WebhookEvent, where: w.stripe_event_id == ^event_id),
+               :count,
+               :id
+             ) == 1
     end
 
     test "returns 200 when subscription manager is not configured", %{conn: conn} do

@@ -35,15 +35,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ShiftZoneFallbackTest do
       assert Timezones.validate_or_utc("") == "Etc/UTC"
     end
 
-    test "emits a stable warning message when falling back" do
-      log =
-        capture_log(fn ->
-          Timezones.validate_or_utc(@bad_tz, user_id: 42)
-        end)
-
-      assert log =~ "Invalid user timezone"
-    end
-
     test "logs exactly once per call (not per downstream use)" do
       logs =
         capture_log(fn ->

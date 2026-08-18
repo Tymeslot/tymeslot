@@ -47,14 +47,8 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
                CalendarManagement.get_calendar_integration(integration2.id, user.id)
 
       # Primary should still be the first integration
-      case CalendarPrimary.get_primary_calendar_integration(user.id) do
-        {:ok, primary} ->
-          assert primary.id == integration1.id
-
-        {:error, :not_found} ->
-          # Profile may not exist
-          :ok
-      end
+      assert {:ok, primary} = CalendarPrimary.get_primary_calendar_integration(user.id)
+      assert primary.id == integration1.id
     end
 
     test "deletes primary integration and promotes next one", %{user: user} do
@@ -112,9 +106,11 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
     end
 
     test "handles deletion of multiple integrations sequentially", %{user: user} do
-      integration1 = insert(:calendar_integration, user: user)
-      integration2 = insert(:calendar_integration, user: user)
-      integration3 = insert(:calendar_integration, user: user)
+      # Names are explicit because promotion orders by name; the factory's
+      # generated names sort unstably once its counter crosses a digit boundary.
+      integration1 = insert(:calendar_integration, user: user, name: "A")
+      integration2 = insert(:calendar_integration, user: user, name: "B")
+      integration3 = insert(:calendar_integration, user: user, name: "C")
 
       # Set first as primary
       CalendarPrimary.set_primary_calendar_integration(user.id, integration1.id)
@@ -166,29 +162,39 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
                CalendarManagement.get_calendar_integration(integration.id, user.id)
     end
 
-    test "promotes most recently created integration when deleting primary", %{user: user} do
-      # Create integrations in specific order
-      integration1 =
-        insert(:calendar_integration, user: user, inserted_at: ~N[2024-01-01 10:00:00])
+    test "promotes the first remaining integration by name when deleting primary", %{user: user} do
+      # Promotion takes the head of `list_all_for_user/1`, ordered
+      # `desc: is_active, asc: name`. Name decides, not recency: the candidate
+      # created last is deliberately the one sorting last by name.
+      current_primary =
+        insert(:calendar_integration,
+          user: user,
+          name: "A primary",
+          inserted_at: ~N[2024-01-01 10:00:00]
+        )
 
-      integration2 =
-        insert(:calendar_integration, user: user, inserted_at: ~N[2024-01-02 10:00:00])
+      first_by_name =
+        insert(:calendar_integration,
+          user: user,
+          name: "B candidate",
+          inserted_at: ~N[2024-01-02 10:00:00]
+        )
 
-      integration3 =
-        insert(:calendar_integration, user: user, inserted_at: ~N[2024-01-03 10:00:00])
+      _newest =
+        insert(:calendar_integration,
+          user: user,
+          name: "C candidate",
+          inserted_at: ~N[2024-01-03 10:00:00]
+        )
 
-      # Set first as primary
-      CalendarPrimary.set_primary_calendar_integration(user.id, integration1.id)
+      CalendarPrimary.set_primary_calendar_integration(user.id, current_primary.id)
 
-      # Delete primary
-      result = Deletion.delete_with_primary_reassignment(user.id, integration1.id)
-
-      assert {:ok, {:deleted_promoted, promoted_id}} = result
-      assert promoted_id in [integration2.id, integration3.id]
+      assert {:ok, {:deleted_promoted, first_by_name.id}} ==
+               Deletion.delete_with_primary_reassignment(user.id, current_primary.id)
 
       # The promoted integration is the one now recorded as primary
       assert {:ok, primary} = CalendarPrimary.get_primary_calendar_integration(user.id)
-      assert primary.id == promoted_id
+      assert primary.id == first_by_name.id
     end
 
     test "deleting the primary with a subscription and a writable integration promotes the writable one",
@@ -239,10 +245,18 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
 
       results = Task.await_many([task1, task2], 5000)
 
-      # Both should complete successfully (one deletes, other may get not_found)
-      assert Enum.all?(results, fn result ->
-               match?({:ok, _}, result) or match?({:error, :not_found}, result)
-             end)
+      # Each task owns a distinct integration, so both deletions must succeed
+      # whatever order they interleave in.
+      assert [{:ok, _first}, {:ok, _second}] = results
+
+      # And both rows really are gone — the point of the exercise.
+      assert CalendarManagement.list_calendar_integrations(user.id) == []
+
+      assert {:error, :not_found} =
+               CalendarManagement.get_calendar_integration(integration1.id, user.id)
+
+      assert {:error, :not_found} =
+               CalendarManagement.get_calendar_integration(integration2.id, user.id)
     end
   end
 end

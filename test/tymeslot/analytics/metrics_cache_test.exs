@@ -38,8 +38,4 @@ defmodule Tymeslot.Analytics.MetricsCacheTest do
     assert MetricsCache.fetch(@user_a, "7d", fn -> :seven end) == :seven
     assert MetricsCache.fetch(@user_a, "30d", fn -> :thirty end) == :thirty
   end
-
-  test "key/2 always includes the user_id and range" do
-    assert MetricsCache.key(42, "90d") == {:analytics_metrics, 42, "90d"}
-  end
 end

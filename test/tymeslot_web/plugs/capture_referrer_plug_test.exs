@@ -31,12 +31,6 @@ defmodule TymeslotWeb.Plugs.CaptureReferrerPlugTest do
     if referer, do: put_req_header(conn, "referer", referer), else: conn
   end
 
-  describe "init/1" do
-    test "passes options through unchanged" do
-      assert CaptureReferrerPlug.init(foo: :bar) == [foo: :bar]
-    end
-  end
-
   describe "call/2" do
     test "captures a cross-origin referrer on the initial GET" do
       conn = "https://www.google.com/search?q=tymeslot" |> build() |> CaptureReferrerPlug.call([])

@@ -128,12 +128,6 @@ defmodule Tymeslot.Integrations.Calendar.DebugScheduleTest do
   end
 
   describe "events/5 range filtering" do
-    test "excludes events outside the requested window" do
-      # Ask only for Thursday (free) — Monday's events must not leak in.
-      {start_dt, end_dt} = range(@thursday, Date.add(@thursday, 1))
-      assert [] = DebugSchedule.events(:default, [], start_dt, end_dt, @timezone)
-    end
-
     test "includes an event that overlaps the window boundary" do
       # Window starts mid-way through the Wednesday all-hands (09:00–17:00).
       start_dt = DateTime.new!(@wednesday, ~T[12:00:00], @timezone)

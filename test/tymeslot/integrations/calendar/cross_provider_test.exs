@@ -15,6 +15,36 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
   # List of providers to test (excluding debug/demo providers)
   @production_providers [:caldav, :nextcloud, :radicale]
 
+  @display_names %{caldav: "CalDAV", nextcloud: "Nextcloud", radicale: "Radicale"}
+
+  # A public host that passes the SSRF guard, so the stubbed HTTP client is
+  # what decides each provider's result below.
+  @reachable_url "https://cal.example.com"
+
+  # Every provider maps HTTP 401 onto its own copy, but all of them must
+  # report it as an authentication problem rather than a generic failure.
+  @unauthorized_results %{
+    caldav: {:error, :unauthorized},
+    nextcloud:
+      {:error,
+       "Authentication failed. Check your Nextcloud username and password. Consider using an app password."},
+    radicale: {:error, "Authentication failed. Check your Radicale username and password."}
+  }
+
+  @success_results %{
+    caldav: {:ok, "CalDAV connection successful"},
+    nextcloud: {:ok, "Nextcloud connection successful"},
+    radicale: {:ok, "Radicale connection successful"}
+  }
+
+  # The transport failure arrives as `%Mint.TransportError{reason: :timeout}`;
+  # no provider may hand that struct back to its caller.
+  @transport_error_results %{
+    caldav: {:error, :timeout},
+    nextcloud: {:error, :timeout},
+    radicale: {:error, "Radicale error: :timeout"}
+  }
+
   # Get production providers from registry (exclude debug/demo)
   defp production_providers do
     Enum.filter(ProviderRegistry.list_providers(), fn provider ->
@@ -28,7 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
     end
 
     test "all providers return display_name" do
-      assert_providers_return_display_name(ProviderRegistry, production_providers())
+      assert_providers_return_display_name(ProviderRegistry, @display_names)
     end
 
     test "all providers return config_schema" do
@@ -85,22 +115,24 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
   end
 
   describe "connection validation consistency" do
-    test "perform_connection_test returns error for invalid credentials" do
+    test "perform_connection_test reports rejected credentials as an auth failure" do
       Enum.each(@production_providers, fn provider_type ->
         {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
 
+        stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 401, body: ""}}
+        end)
+
         invalid_config = %{
-          base_url: "http://localhost:1",
+          base_url: @reachable_url,
           username: "invalid",
           password: "invalid",
           calendar_paths: [],
           provider: provider_type
         }
 
-        result = provider_module.perform_connection_test(invalid_config)
-
-        # Should return error tuple
-        assert match?({:error, _reason}, result)
+        assert provider_module.perform_connection_test(invalid_config) ==
+                 @unauthorized_results[provider_type]
       end)
     end
 
@@ -108,20 +140,22 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
       Enum.each(@production_providers, fn provider_type ->
         {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
 
+        stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 207, body: ""}}
+        end)
+
         config = %{
-          base_url: "http://localhost:1",
+          base_url: @reachable_url,
           username: "test",
           password: "test",
           calendar_paths: [],
           provider: provider_type
         }
 
-        result = provider_module.perform_connection_test(config)
-
-        # The arity is the point: the call above passes the config alone. The
-        # port is closed, so the probe reaches the network and fails there
-        # rather than being rejected for a missing options argument.
-        assert match?({:error, _reason}, result)
+        # The arity is the point: the call below passes the config alone, and
+        # the stubbed PROPFIND proves the probe really was issued rather than
+        # the call being rejected for a missing options argument.
+        assert provider_module.perform_connection_test(config) == @success_results[provider_type]
       end)
     end
   end
@@ -146,20 +180,23 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
   end
 
   describe "provider behavior consistency" do
-    test "all providers handle network errors gracefully" do
+    test "all providers reduce a transport failure to a sanitised reason" do
       Enum.each(@production_providers, fn provider_type ->
         {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
 
         config = %{
-          base_url: "http://localhost:1",
+          base_url: @reachable_url,
           username: "test",
           password: "test",
           calendar_paths: [],
           provider: provider_type
         }
 
-        # Nothing listens on port 1, so every provider surfaces an error tuple.
-        assert {:error, _reason} = provider_module.perform_connection_test(config)
+        # The shared stub answers with %Mint.TransportError{reason: :timeout};
+        # what each provider returns must be the reduced form pinned above,
+        # never the raw struct, which would leak Mint internals into the UI.
+        assert provider_module.perform_connection_test(config) ==
+                 @transport_error_results[provider_type]
       end)
     end
 

@@ -74,8 +74,12 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       ics_content = IcsGenerator.generate_ics(meeting_details)
 
-      # Should still generate valid ICS without attendee
+      # Should still generate valid ICS, and the ATTENDEE property must be
+      # absent rather than emitted empty: a blank ATTENDEE line makes some
+      # clients treat the invitation as addressed to nobody.
       assert ics_content =~ "BEGIN:VCALENDAR"
+      assert ics_content =~ "ORGANIZER"
+      refute ics_content =~ "ATTENDEE"
     end
 
     test "includes location when provided" do

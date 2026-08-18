@@ -7,7 +7,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
   @moduletag :unit
 
   import Mox
+  import Tymeslot.Factory
 
+  alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.WebhookProcessor
 
@@ -50,10 +52,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
     test "dispatches to the registered handler when type is known" do
       now = System.os_time(:second)
 
+      # A matching row must exist, otherwise `apply_account_event/2` takes its
+      # `nil -> :ok` branch and the dispatch is indistinguishable from the
+      # unknown-event case above.
+      account =
+        insert(:connect_account,
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+          disabled_reason: nil,
+          last_account_event_at: nil
+        )
+
       expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
-        # account.updated dispatches to AccountUpdated which delegates to
-        # ConnectAccounts.apply_account_event/2; with no row in the DB it
-        # short-circuits to :ok without needing a sandbox connection.
         {:ok,
          %{
            "id" => "evt_OK",
@@ -61,14 +72,26 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
            "created" => now,
            "data" => %{
              "object" => %{
-               "id" => "acct_NEVER_EXISTS_#{System.unique_integer([:positive])}",
-               "created" => now
+               "id" => account.stripe_account_id,
+               "created" => now,
+               "charges_enabled" => true,
+               "payouts_enabled" => true,
+               "details_submitted" => true,
+               "requirements" => %{"disabled_reason" => "requirements.past_due"}
              }
            }
          }}
       end)
 
       assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+
+      reloaded = Repo.get!(ConnectAccountSchema, account.id)
+
+      assert reloaded.charges_enabled
+      assert reloaded.payouts_enabled
+      assert reloaded.details_submitted
+      assert reloaded.disabled_reason == "requirements.past_due"
+      assert DateTime.to_unix(reloaded.last_account_event_at) == now
     end
 
     test "dispatches events with missing created timestamp to handlers" do

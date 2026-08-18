@@ -7,93 +7,9 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
   use Tymeslot.DataCase, async: true
   @moduletag :auth
 
-  alias Plug.Conn
-  alias Plug.Test, as: PlugTest
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.State
   alias Tymeslot.Auth.OAuth.UserProcessor
   alias Tymeslot.Auth.SocialAuthentication
-
-  # =====================================
-  # OAuth State Management Behaviors
-  # =====================================
-
-  describe "when generating OAuth state for CSRF protection" do
-    test "generates unique state for each request" do
-      conn = build_test_conn()
-
-      {_conn1, state1} = State.generate_and_store_state(conn)
-      {_conn2, state2} = State.generate_and_store_state(conn)
-
-      assert state1 != state2
-      assert String.length(state1) > 20
-      assert String.length(state2) > 20
-    end
-
-    test "stores state in session" do
-      conn = build_test_conn()
-
-      {conn, state} = State.generate_and_store_state(conn)
-
-      {stored_state, _timestamp} = Conn.get_session(conn, "_oauth_state")
-      assert stored_state == state
-    end
-  end
-
-  describe "when validating OAuth state" do
-    test "accepts valid matching state" do
-      conn = build_test_conn()
-      {conn, state} = State.generate_and_store_state(conn)
-
-      result = State.validate_state(conn, state)
-
-      assert result == :ok
-    end
-
-    test "rejects mismatching state" do
-      conn = build_test_conn()
-      {conn, _state} = State.generate_and_store_state(conn)
-
-      result = State.validate_state(conn, "wrong-state")
-
-      assert {:error, :invalid_state} = result
-    end
-
-    test "rejects nil state parameter" do
-      conn = build_test_conn()
-      {conn, _state} = State.generate_and_store_state(conn)
-
-      result = State.validate_state(conn, nil)
-
-      assert {:error, :invalid_state} = result
-    end
-
-    test "rejects empty state parameter" do
-      conn = build_test_conn()
-      {conn, _state} = State.generate_and_store_state(conn)
-
-      result = State.validate_state(conn, "")
-
-      assert {:error, :invalid_state} = result
-    end
-  end
-
-  describe "when clearing OAuth state" do
-    test "removes state from session" do
-      conn = build_test_conn()
-      {conn, state} = State.generate_and_store_state(conn)
-
-      # Verify state exists — stored alongside the issue timestamp
-      assert {^state, issued_at} = Conn.get_session(conn, "_oauth_state")
-      assert is_integer(issued_at)
-
-      # Clear state
-      conn = State.clear_oauth_state(conn)
-
-      # Verify state is removed
-      assert Conn.get_session(conn, "_oauth_state") == nil
-    end
-  end
 
   # =====================================
   # Email Availability Behaviors
@@ -119,23 +35,6 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
   # =====================================
 
   describe "when processing GitHub user info" do
-    test "extracts user data from GitHub response" do
-      github_response = %{
-        "id" => 12_345,
-        "email" => "github_user@example.com",
-        "name" => "GitHub User"
-      }
-
-      result = UserProcessor.process_user(:github, github_response)
-
-      assert {:ok, user} = result
-      assert user.email == "github_user@example.com"
-      assert user.github_user_id == 12_345
-      assert user.name == "GitHub User"
-      assert user.is_verified == true
-      assert user.email_from_provider == true
-    end
-
     test "handles GitHub response without email" do
       github_response = %{
         "id" => 12_345,
@@ -167,29 +66,15 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
     end
   end
 
-  describe "when processing Google user info" do
-    test "extracts user data from Google response" do
-      google_response = %{
-        "id" => "google_id_123",
-        "email" => "google_user@gmail.com",
-        "name" => "Google User"
-      }
-
-      result = UserProcessor.process_user(:google, google_response)
-
-      assert {:ok, user} = result
-      assert user.email == "google_user@gmail.com"
-      assert user.google_user_id == "google_id_123"
-      assert user.name == "Google User"
-      assert user.is_verified == true
-      assert user.email_from_provider == true
-    end
-  end
-
   # =====================================
   # OAuth Client Building Behaviors
   # =====================================
 
+  # These two are the only tests that run the real `Client.build/3` and
+  # `OAuth2.Client.new/1`; every other OAuth test stubs the helper through Mox.
+  # They therefore have to pin the whole client, not just the state parameter:
+  # a wrong authorize_url or token_url silently sends users to the wrong
+  # provider, and a missing User-Agent makes GitHub reject the request.
   describe "when building OAuth client" do
     test "builds GitHub OAuth client with state" do
       redirect_uri = "http://localhost:4000/auth/github/callback"
@@ -197,7 +82,16 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
 
       client = OAuthHelper.build_oauth_client(:github, redirect_uri, state)
 
-      assert %OAuth2.Client{redirect_uri: ^redirect_uri, params: %{"state" => ^state}} = client
+      assert %OAuth2.Client{
+               strategy: OAuth2.Strategy.AuthCode,
+               redirect_uri: ^redirect_uri,
+               params: %{"state" => ^state},
+               site: "https://github.com",
+               authorize_url: "https://github.com/login/oauth/authorize",
+               token_url: "https://github.com/login/oauth/access_token"
+             } = client
+
+      assert {"User-Agent", "Tymeslot-Scheduler"} in client.headers
     end
 
     test "builds Google OAuth client with state" do
@@ -206,7 +100,16 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
 
       client = OAuthHelper.build_oauth_client(:google, redirect_uri, state)
 
-      assert %OAuth2.Client{redirect_uri: ^redirect_uri, params: %{"state" => ^state}} = client
+      assert %OAuth2.Client{
+               strategy: OAuth2.Strategy.AuthCode,
+               redirect_uri: ^redirect_uri,
+               params: %{"state" => ^state},
+               site: "https://accounts.google.com",
+               authorize_url: "https://accounts.google.com/o/oauth2/v2/auth",
+               token_url: "https://oauth2.googleapis.com/token"
+             } = client
+
+      assert {"User-Agent", "Tymeslot-Scheduler"} in client.headers
     end
   end
 
@@ -224,13 +127,5 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
       assert path =~ "google"
       assert path =~ "callback"
     end
-  end
-
-  # =====================================
-  # Helper Functions
-  # =====================================
-
-  defp build_test_conn do
-    PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
   end
 end

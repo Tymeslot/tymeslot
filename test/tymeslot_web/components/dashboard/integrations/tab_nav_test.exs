@@ -31,13 +31,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.TabNavTest do
       assert html =~ "Payments"
     end
 
-    test "marks the active tab with aria-selected=true and inactive tabs false" do
-      html = render_nav(active_tab: :video, tabs: tabs())
+    test "marks the active tab, and only it, as selected and underlined" do
+      doc = Floki.parse_fragment!(render_nav(active_tab: :video, tabs: tabs()))
 
-      # The video link is active, so its aria-selected is true. Only one is true.
-      assert html =~ ~s(aria-selected="true")
-      assert html =~ ~s(aria-selected="false")
-      assert html =~ "text-turquoise-700"
+      # "some tab is true and some tab is false" is equally true of an inverted
+      # comparison, so each tab's own value is pinned.
+      assert Floki.attribute(doc, "#tab-video", "aria-selected") == ["true"]
+      assert Floki.attribute(doc, "#tab-calendars", "aria-selected") == ["false"]
+      assert Floki.attribute(doc, "#tab-payments", "aria-selected") == ["false"]
+
+      # The turquoise underline must land on the same tab.
+      assert [video_class] = Floki.attribute(doc, "#tab-video", "class")
+      assert video_class =~ "text-turquoise-700"
+      assert [calendars_class] = Floki.attribute(doc, "#tab-calendars", "class")
+      refute calendars_class =~ "text-turquoise-700"
     end
 
     test "renders an amber dot for a :warning tab" do

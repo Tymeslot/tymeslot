@@ -26,28 +26,38 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       assert customization.background_value == "gradient_1"
     end
 
-    test "allows different background types" do
+    test "persists gradient and colour backgrounds with their own value formats" do
       profile = insert(:profile)
 
-      # Gradient background
-      {:ok, _gradient} =
-        ThemeCustomizationQueries.create(%{
-          profile_id: profile.id,
-          theme_id: "1",
-          color_scheme: "default",
-          background_type: "gradient",
-          background_value: "gradient_1"
-        })
+      assert {:ok, gradient} =
+               ThemeCustomizationQueries.create(%{
+                 profile_id: profile.id,
+                 theme_id: "1",
+                 color_scheme: "default",
+                 background_type: "gradient",
+                 background_value: "gradient_1"
+               })
 
-      # Color background
-      {:ok, _color} =
-        ThemeCustomizationQueries.create(%{
-          profile_id: profile.id,
-          theme_id: "2",
-          color_scheme: "turquoise",
-          background_type: "color",
-          background_value: "#06b6d4"
-        })
+      assert {:ok, color} =
+               ThemeCustomizationQueries.create(%{
+                 profile_id: profile.id,
+                 theme_id: "2",
+                 color_scheme: "turquoise",
+                 background_type: "color",
+                 background_value: "#06b6d4"
+               })
+
+      assert gradient.background_type == "gradient"
+      assert gradient.background_value == "gradient_1"
+      assert color.background_type == "color"
+      assert color.background_value == "#06b6d4"
+
+      # Both survive the round trip; neither overwrites the other's row.
+      assert %{background_type: "gradient", background_value: "gradient_1"} =
+               ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "1")
+
+      assert %{background_type: "color", background_value: "#06b6d4"} =
+               ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "2")
     end
 
     test "prevents duplicate theme customizations for same profile and theme" do

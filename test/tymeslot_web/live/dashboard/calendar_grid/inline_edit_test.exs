@@ -66,8 +66,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         |> element("#calendar-grid")
         |> render_hook("update_event_title", %{"value" => "Team Standup"})
 
-      refute html =~ "error"
       assert html =~ "Team Standup"
+
+      # A save reports itself with the "Changes saved." flash; an unchanged
+      # value must short-circuit before any write.
+      refute render(lv) =~ "Changes saved."
     end
 
     test "preserves benign angle-bracket symbols in title", %{conn: conn, event: event} do
@@ -146,6 +149,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         |> render_hook("update_event_location", %{"value" => "Room 101"})
 
       assert html =~ "Room 101"
+
+      # No save happened, so no "Changes saved." flash.
+      refute render(lv) =~ "Changes saved."
     end
 
     test "shows placeholder when event has no location", %{conn: conn, user: user} do
@@ -226,6 +232,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         |> render_hook("update_event_description", %{"value" => "Original notes"})
 
       assert html =~ "Original notes"
+
+      # No save happened, so no "Changes saved." flash.
+      refute render(lv) =~ "Changes saved."
     end
 
     test "shows placeholder when event has no description", %{conn: conn, user: user} do
@@ -329,20 +338,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "skips save when times are unchanged", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("[id^='event-#{event.id}-']") |> render_click()
-      today_iso = Date.to_iso8601(Date.utc_today())
+      opened = lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
-      html =
-        lv
-        |> element("#calendar-grid")
-        |> render_hook("update_event_time", %{
-          "start-date" => today_iso,
-          "start-time" => "10:00",
-          "end-date" => today_iso,
-          "end-time" => "11:00"
-        })
+      # Echo back exactly what the form shows. The inputs carry the organiser's
+      # local times, which are not the stored UTC ones, so hard-coding the UTC
+      # values here would submit a genuine change.
+      unchanged = %{
+        "start-date" => input_value(opened, "event-start-date"),
+        "start-time" => input_value(opened, "event-start-time"),
+        "end-date" => input_value(opened, "event-end-date"),
+        "end-time" => input_value(opened, "event-end-time")
+      }
 
-      refute html =~ "error"
+      html = lv |> element("#calendar-grid") |> render_hook("update_event_time", unchanged)
+
+      # The form still shows the original window …
+      assert input_value(html, "event-start-time") == unchanged["start-time"]
+      assert input_value(html, "event-end-time") == unchanged["end-time"]
+
+      # … and no save was performed.
+      refute render(lv) =~ "Changes saved."
     end
 
     test "triggers recurrence prompt for recurring events", %{conn: conn, user: user} do
@@ -562,17 +577,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         "video_integration_id" => to_string(video_integration.id)
       })
 
-      # Then clear it.
-      html =
-        lv
-        |> element("#calendar-grid")
-        |> render_hook("update_edit_video", %{"video_integration_id" => ""})
+      # The provider button is the active one while it is selected.
+      assert has_element?(
+               lv,
+               ~s|button[phx-value-video_integration_id="#{video_integration.id}"].border-turquoise-400|
+             )
 
-      # After clearing, the None button should be the active (turquoise-400) one,
-      # which we verify by checking it appears in the DOM alongside the selector.
-      assert html =~ "None"
-      assert html =~ "update_edit_video"
+      # Then clear it.
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{"video_integration_id" => ""})
+
+      # After clearing, None is the active (turquoise-400) button and the
+      # provider button is no longer active.
+      assert has_element?(lv, ~s|button[phx-value-video_integration_id=""].border-turquoise-400|)
+
+      refute has_element?(
+               lv,
+               ~s|button[phx-value-video_integration_id="#{video_integration.id}"].border-turquoise-400|
+             )
     end
+  end
+
+  defp input_value(html, id) do
+    html
+    |> Floki.parse_fragment!()
+    |> Floki.attribute("##{id}", "value")
+    |> hd()
   end
 
   defp insert_event(integration, attrs) do

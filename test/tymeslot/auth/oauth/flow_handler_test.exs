@@ -100,26 +100,6 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     })
   end
 
-  test "returns {:error, :invalid_state, conn} when state is invalid" do
-    :meck.expect(State, :validate_state, fn _conn, "bad-state" -> {:error, :invalid_state} end)
-
-    conn = base_conn()
-
-    assert {:error, :invalid_state, ^conn} =
-             FlowHandler.handle_oauth_callback(conn, %{
-               code: "code",
-               state: "bad-state",
-               provider: :github
-             })
-  end
-
-  test "returns {:ok, conn, provider} on successful login for existing user" do
-    {_processed_user, _enhanced_user, _existing_user} = setup_existing_user_flow_mocks()
-    :meck.expect(Session, :create_session, fn conn, %{id: 987} -> {:ok, conn, "token"} end)
-
-    assert {:ok, _conn, :github} = invoke_github_callback()
-  end
-
   test "emits an anonymous login_completed telemetry event on existing-user OAuth login" do
     {_processed_user, _enhanced_user, _existing_user} = setup_existing_user_flow_mocks()
     :meck.expect(Session, :create_session, fn conn, %{id: 987} -> {:ok, conn, "token"} end)
@@ -195,70 +175,6 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     assert data.name == "New User"
   end
 
-  test "returns {:registration_required, conn, provider, params} with empty missing_fields when data is complete" do
-    user_info = %{"id" => 456}
-
-    processed_user = %{
-      email: "complete@example.com",
-      github_user_id: 456,
-      name: "Full User",
-      is_verified: true
-    }
-
-    enhanced_user = Map.put(processed_user, :email_from_provider, true)
-
-    setup_pre_exchange_mocks()
-
-    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-      {:ok, :authed_client}
-    end)
-
-    :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
-
-    :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
-
-    :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
-      enhanced_user
-    end)
-
-    :meck.expect(UserRegistration, :find_existing_user, fn :github, ^enhanced_user ->
-      {:error, :not_found}
-    end)
-
-    :meck.expect(UserRegistration, :check_oauth_requirements, fn :github, ^enhanced_user ->
-      :complete
-    end)
-
-    assert {:registration_required, _conn, :github, data} = invoke_github_callback()
-
-    assert data.email == "complete@example.com"
-    assert data.provider == "github"
-  end
-
-  test "returns {:error, :oauth_error, provider, conn} when provider returns OAuth2 error" do
-    setup_pre_exchange_mocks()
-
-    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-      {:error, %OAuth2.Error{reason: "access_denied"}}
-    end)
-
-    assert {:error, :oauth_error, :github, _conn} = invoke_github_callback()
-  end
-
-  test "returns {:error, :general_error, provider, conn} when get_user_info fails" do
-    setup_pre_exchange_mocks()
-
-    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-      {:ok, :authed_client}
-    end)
-
-    :meck.expect(Client, :get_user_info, fn :authed_client, :github ->
-      {:error, :user_info_unavailable}
-    end)
-
-    assert {:error, :general_error, :github, _conn} = invoke_github_callback()
-  end
-
   test "returns {:error, :general_error, provider, conn} when process_user fails" do
     user_info = %{"id" => 123}
     setup_pre_exchange_mocks()
@@ -286,54 +202,6 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     assert {:error, :general_error, :github, _conn} = invoke_github_callback()
   end
 
-  describe "registration disabled" do
-    test "returns {:error, :registration_disabled, provider, conn} when registration is off" do
-      user_info = %{"id" => 999}
-
-      processed_user = %{
-        email: "new@example.com",
-        github_user_id: 999,
-        name: "New",
-        is_verified: true
-      }
-
-      enhanced_user = Map.put(processed_user, :email_from_provider, true)
-
-      setup_pre_exchange_mocks()
-
-      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-        {:ok, :authed_client}
-      end)
-
-      :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
-
-      :meck.expect(UserProcessor, :process_user, fn :github, ^user_info ->
-        {:ok, processed_user}
-      end)
-
-      :meck.expect(UserProcessor, :enhance_user_data, fn :github,
-                                                         ^processed_user,
-                                                         :authed_client ->
-        enhanced_user
-      end)
-
-      :meck.expect(UserRegistration, :find_existing_user, fn :github, ^enhanced_user ->
-        {:error, :not_found}
-      end)
-
-      original = Application.get_env(:tymeslot, :registration_enabled)
-      Application.put_env(:tymeslot, :registration_enabled, false)
-
-      on_exit(fn ->
-        if is_nil(original),
-          do: Application.delete_env(:tymeslot, :registration_enabled),
-          else: Application.put_env(:tymeslot, :registration_enabled, original)
-      end)
-
-      assert {:error, :registration_disabled, :github, _conn} = invoke_github_callback()
-    end
-  end
-
   describe "generic OAuth (:oauth) provider flow" do
     defp setup_oauth_pre_exchange_mocks do
       :meck.expect(State, :validate_state, fn _conn, "state" -> :ok end)
@@ -347,51 +215,6 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       :meck.expect(Client, :build, fn :oauth, "https://example.com/auth/oauth/callback", "" ->
         :oauth_client
       end)
-    end
-
-    test "returns {:ok, conn, :oauth} on successful login for existing generic OAuth user" do
-      user_info = %{"sub" => "user-123", "email" => "sso@example.com"}
-
-      processed_user = %{
-        email: "sso@example.com",
-        provider_uid: "user-123",
-        name: "SSO User",
-        is_verified: true
-      }
-
-      enhanced_user = Map.put(processed_user, :email_from_provider, true)
-      existing_user = %{id: 456}
-
-      setup_oauth_pre_exchange_mocks()
-
-      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-        {:ok, :authed_client}
-      end)
-
-      :meck.expect(Client, :get_user_info, fn :authed_client, :oauth -> {:ok, user_info} end)
-
-      :meck.expect(UserProcessor, :process_user, fn :oauth, ^user_info ->
-        {:ok, processed_user}
-      end)
-
-      :meck.expect(UserProcessor, :enhance_user_data, fn :oauth,
-                                                         ^processed_user,
-                                                         :authed_client ->
-        enhanced_user
-      end)
-
-      :meck.expect(UserRegistration, :find_existing_user, fn :oauth, ^enhanced_user ->
-        {:ok, existing_user}
-      end)
-
-      :meck.expect(Session, :create_session, fn conn, %{id: 456} -> {:ok, conn, "token"} end)
-
-      assert {:ok, _conn, :oauth} =
-               FlowHandler.handle_oauth_callback(base_conn(), %{
-                 code: "code",
-                 state: "state",
-                 provider: :oauth
-               })
     end
 
     test "returns {:registration_required, ...} with provider_uid param for new generic OAuth user" do

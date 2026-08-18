@@ -257,14 +257,6 @@ defmodule Tymeslot.TelegramTest do
     end
   end
 
-  describe "available_events/0" do
-    test "returns event definitions" do
-      events = Telegram.available_events()
-      assert length(events) == 3
-      assert Enum.all?(events, &Map.has_key?(&1, :value))
-    end
-  end
-
   describe "TelegramQueries.list_active_integrations_for_event/2 — chat_id exclusion" do
     test "excludes integrations with chat_id nil even when otherwise active" do
       user = insert(:user)

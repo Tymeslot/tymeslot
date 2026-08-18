@@ -1,10 +1,12 @@
 defmodule Tymeslot.Security.InputProcessorTest do
-  use ExUnit.Case, async: true
+  # Not async: the security-log guard below lowers the primary Logger level
+  # (config/test.exs pins :warning, and SecurityLogger emits at :info) and
+  # asserts on the *absence* of a log event. Both are global.
+  use ExUnit.Case, async: false
   @moduletag :security
 
-  import ExUnit.CaptureLog
-
   alias Tymeslot.Security.InputProcessor
+  alias Tymeslot.Test.LogCapture
 
   defmodule AlwaysOkValidator do
     @spec validate(any()) :: :ok
@@ -88,63 +90,59 @@ defmodule Tymeslot.Security.InputProcessorTest do
   end
 
   # Regression guard: a phx-change-driven LiveView form flooded the security log
-  # with one "Validation failure" entry per keystroke because every business-rule
-  # failure (required / length / format) was routed through SecurityLogger.
-  # Business-rule validation outcomes are UX signals, not security events, and
-  # must not reach the security log. Sanitiser-triggered events (SQL injection,
-  # path traversal, oversize input, invalid encoding) are logged separately by
-  # UniversalSanitizer and are covered in universal_sanitizer_test.exs.
+  # with one entry per keystroke because every business-rule failure (required /
+  # length / format) was routed through SecurityLogger. Business-rule validation
+  # outcomes are UX signals, not security events, and must not reach the security
+  # log. Sanitiser-triggered events (SQL injection, path traversal, oversize
+  # input, invalid encoding) are logged separately by UniversalSanitizer and are
+  # covered in universal_sanitizer_test.exs.
+  #
+  # The assertion is on log events rather than on `capture_log` output for two
+  # reasons: SecurityLogger.log_security_event/2 emits at :info, below the
+  # :warning level config/test.exs pins, so the console formatter never renders
+  # it; and the event carries its identity in metadata (`event_type`), which the
+  # formatter's metadata whitelist drops. Both make a string match on captured
+  # console output blind to exactly the regression this guards.
   describe "does not emit security log lines for business-rule failures" do
-    test "validate_form/3 with a required-field failure produces no log output" do
-      log =
-        capture_log(fn ->
-          assert {:error, %{username: _reason}} =
-                   InputProcessor.validate_form(
-                     %{"username" => ""},
-                     [{"username", :username}]
-                   )
-        end)
+    setup do
+      LogCapture.attach(logger_level: :info)
+      :ok
+    end
 
-      refute log =~ "Validation failure"
-      refute log =~ "Validation successful"
+    test "validate_form/3 with a required-field failure produces no log output" do
+      assert {:error, %{username: _reason}} =
+               InputProcessor.validate_form(
+                 %{"username" => ""},
+                 [{"username", :username}]
+               )
+
+      assert [] == logs_emitted_here()
     end
 
     test "validate_form/3 with a format failure produces no log output" do
-      log =
-        capture_log(fn ->
-          assert {:error, %{username: _reason}} =
-                   InputProcessor.validate_form(
-                     %{"username" => "_bad start"},
-                     [{"username", :username}]
-                   )
-        end)
+      assert {:error, %{username: _reason}} =
+               InputProcessor.validate_form(
+                 %{"username" => "_bad start"},
+                 [{"username", :username}]
+               )
 
-      refute log =~ "Validation failure"
-      refute log =~ "Validation successful"
+      assert [] == logs_emitted_here()
     end
 
     test "validate_form/3 on the happy path produces no log output" do
-      log =
-        capture_log(fn ->
-          assert {:ok, _result} =
-                   InputProcessor.validate_form(
-                     %{"email" => "user@example.com"},
-                     [{"email", :email}]
-                   )
-        end)
+      assert {:ok, _result} =
+               InputProcessor.validate_form(
+                 %{"email" => "user@example.com"},
+                 [{"email", :email}]
+               )
 
-      refute log =~ "Validation failure"
-      refute log =~ "Validation successful"
+      assert [] == logs_emitted_here()
     end
 
     test "validate_field/3 with a business-rule failure produces no log output" do
-      log =
-        capture_log(fn ->
-          assert {:error, _reason} = InputProcessor.validate_field("ab", :username)
-        end)
+      assert {:error, _reason} = InputProcessor.validate_field("ab", :username)
 
-      refute log =~ "Validation failure"
-      refute log =~ "Validation successful"
+      assert [] == logs_emitted_here()
     end
   end
 
@@ -215,5 +213,15 @@ defmodule Tymeslot.Security.InputProcessorTest do
 
       assert result["g-recaptcha-response"] == "../../etc/passwd"
     end
+  end
+
+  # Every log event the code under test emitted, rendered so a failure names the
+  # offending line. A :logger handler is global, so events are narrowed to those
+  # logged by this process; validation logs synchronously in its caller, and the
+  # handler callback runs there too, so everything has arrived by now.
+  defp logs_emitted_here do
+    LogCapture.drain()
+    |> Enum.filter(&(&1.meta.pid == self()))
+    |> Enum.map(&LogCapture.dump/1)
   end
 end

@@ -452,16 +452,23 @@ defmodule TymeslotWeb.AdminLiveTest do
 
     test "users tab renders a placeholder for users without a profile", %{
       conn: conn,
+      admin: admin,
+      other_admin: other_admin,
       regular: regular
     } do
-      # `regular` is inserted without a profile in the setup block.
+      # Give every other user a profile, so `regular` — inserted without one in
+      # the setup block — is the only source of placeholders.
+      insert(:profile, user: admin, full_name: "Grace Hopper", username: "grace-hopper")
+      insert(:profile, user: other_admin, full_name: "Alan Turing", username: "alan-turing")
+
       {:ok, _lv, html} = live(conn, ~p"/admin/users")
 
-      # Each profile-less user contributes two em-dash placeholders (one per
-      # column). At least one admin + the regular user above are profile-less,
-      # so we expect the placeholder to render at least twice.
       assert html =~ regular.email
-      assert html =~ "—"
+      assert html =~ "Grace Hopper"
+      assert html =~ "Alan Turing"
+
+      # Exactly two placeholders: display name and booking slug for `regular`.
+      assert length(Regex.scan(~r/—/, html)) == 2
     end
 
     test "promote sets is_admin to true", %{conn: conn, regular: regular} do

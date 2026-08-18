@@ -501,9 +501,18 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert get_resp_header(conn, "content-security-policy") != []
       assert get_resp_header(conn, "x-content-type-options") != []
       assert get_resp_header(conn, "referrer-policy") != []
-      assert get_resp_header(conn, "permissions-policy") != []
       assert get_resp_header(conn, "strict-transport-security") != []
       assert get_resp_header(conn, "x-frame-options") != []
+    end
+
+    test "permissions-policy denies camera, microphone and geolocation outright", %{conn: conn} do
+      conn = SecurityHeadersPlug.call(conn, allow_embedding: false)
+
+      # The empty allowlist `()` is what denies the feature; `self` or `*`
+      # would silently hand it back, so the value is pinned exactly.
+      assert get_resp_header(conn, "permissions-policy") == [
+               "camera=(), microphone=(), geolocation=()"
+             ]
     end
 
     test "CSP frame-ancestors is the sole embedding authority for configured domains", %{

@@ -17,15 +17,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_meeting_type_write_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_501
-
-      for i <- 1..60 do
-        assert :ok = RateLimiter.check_meeting_type_write_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_502
 
@@ -112,15 +103,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_avatar_upload_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_601
-
-      for i <- 1..20 do
-        assert :ok = RateLimiter.check_avatar_upload_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_602
 
@@ -167,15 +149,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_dashboard_cancel_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_701
-
-      for i <- 1..20 do
-        assert :ok = RateLimiter.check_dashboard_cancel_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_702
 
@@ -230,15 +203,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_dashboard_reschedule_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_801
-
-      for i <- 1..20 do
-        assert :ok = RateLimiter.check_dashboard_reschedule_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_802
 

@@ -12,7 +12,9 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthyTest do
       html = IntegrationUnhealthy.render(user, integration, :calendar)
 
       assert html =~ "<!doctype html>"
-      assert String.length(html) > 500
+      assert html =~ "Integration may need attention"
+      assert html =~ "Google calendar calendar integration have been failing"
+      assert html =~ "Check Integration Settings"
     end
 
     test "generates valid HTML output for video type" do
@@ -22,7 +24,9 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthyTest do
       html = IntegrationUnhealthy.render(user, integration, :video)
 
       assert html =~ "<!doctype html>"
-      assert String.length(html) > 500
+      assert html =~ "Integration may need attention"
+      assert html =~ "Zoom video integration have been failing"
+      assert html =~ "Check Integration Settings"
     end
 
     test "includes humanized provider label" do
@@ -77,7 +81,10 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthyTest do
       html = IntegrationUnhealthy.render(user, integration, :other)
 
       assert html =~ "<!doctype html>"
-      assert String.length(html) > 500
+      # An unrecognised type falls back to its own string form rather than
+      # dropping the provider/type wording altogether.
+      assert html =~ "Custom service other integration have been failing"
+      assert html =~ "Check Integration Settings"
     end
   end
 

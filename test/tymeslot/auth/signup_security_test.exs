@@ -12,6 +12,7 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
 
   alias Tymeslot.Auth.SignupSecurity
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
 
   @meta %{ip: "203.0.113.5", user_agent: "tymeslot-test/1.0"}
 
@@ -151,12 +152,30 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
   end
 
   describe "log_honeypot_resend/1" do
-    test "returns :ok when given full metadata" do
-      assert :ok = SignupSecurity.log_honeypot_resend(@meta)
+    setup do
+      # The event is emitted at :info while config/test.exs pins the primary
+      # Logger level to :warning, so lower it for the duration of the test.
+      LogCapture.attach(logger_level: :info)
+      :ok
     end
 
-    test "tolerates missing user_agent" do
+    test "emits a signup_honeypot_resend security event carrying the request context" do
+      assert :ok = SignupSecurity.log_honeypot_resend(@meta)
+
+      assert_receive {:captured_log,
+                      %{meta: %{event_type: "signup_honeypot_resend"} = meta, msg: {:string, msg}}}
+
+      assert IO.iodata_to_binary(msg) == "Security event"
+      assert meta.ip_address == "203.0.113.5"
+      assert meta.user_agent == "tymeslot-test/1.0"
+    end
+
+    test "still emits the event when user_agent is absent" do
       assert :ok = SignupSecurity.log_honeypot_resend(%{ip: "127.0.0.1"})
+
+      assert_receive {:captured_log, %{meta: %{event_type: "signup_honeypot_resend"} = meta}}
+      assert meta.ip_address == "127.0.0.1"
+      assert meta.user_agent == nil
     end
   end
 

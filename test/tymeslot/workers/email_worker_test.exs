@@ -92,16 +92,6 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
       assert length(jobs) == 1
     end
-
-    test "uses emails queue" do
-      user = insert(:user)
-      meeting = insert(:meeting, organizer_user: user)
-
-      assert :ok = EmailScheduler.schedule_cancellation_emails(meeting.id)
-
-      job = List.first(all_enqueued(worker: EmailWorker))
-      assert job.queue == "emails"
-    end
   end
 
   describe "schedule_reminder_emails/4" do
@@ -165,9 +155,8 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       assert :ok =
                EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
 
-      # In production, this would delete the existing job and create a new one with new_scheduled_at.
-      # In Oban.Testing (manual mode), deletion from the DB won't affect the memory-enqueued job,
-      # and the second insert will be treated as a unique duplicate by the code.
+      # The scheduler deletes the existing reminder job before inserting the new
+      # one, so the replacement must carry the new time — not the original.
       assert :ok =
                EmailScheduler.schedule_reminder_emails(
                  meeting.id,
@@ -176,10 +165,10 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
                  new_scheduled_at
                )
 
-      jobs = all_enqueued(worker: EmailWorker)
-      assert length(jobs) == 1
-      # We skip the time comparison as Oban.Testing mailbox won't reflect the "replacement"
-      # done via DB deletion in worker code.
+      assert [job] = all_enqueued(worker: EmailWorker)
+
+      assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), new_scheduled_at) ==
+               :eq
     end
   end
 

@@ -1,240 +1,257 @@
 defmodule Tymeslot.Security.SecurityLoggerTest do
   @moduledoc false
 
-  # async: false is required because ExUnit.CaptureLog temporarily redirects the
-  # Logger backend; running concurrently would cause captures to bleed across tests.
+  # async: false is required because these tests attach a global :logger handler
+  # and lower the primary Logger level; running concurrently would leak both.
   use ExUnit.Case, async: false
-
-  import ExUnit.CaptureLog
 
   @moduletag :security
 
+  alias Tymeslot.Infrastructure.Logging.MetadataRedactor
   alias Tymeslot.Security.SecurityLogger
+  alias Tymeslot.Test.LogCapture
 
-  describe "email masking via log_authentication_attempt/4" do
-    # mask_email/1 is a private helper; its contract is verified here by
-    # asserting that raw email addresses never appear in log output when
-    # log_authentication_attempt/4 is called. The console formatter does not
-    # include structured metadata keywords in its output string, so we can
-    # only assert on absence — the same pattern used throughout this file.
+  # SecurityLogger emits at :info, while config/test.exs pins the primary level
+  # to :warning. Lower it for the duration of the call and restore afterwards.
+  #
+  # MetadataRedactor is installed as a primary :logger filter and rewrites every
+  # metadata key containing "session_id" to "[REDACTED]" before any handler sees
+  # it. Lift it here so these tests observe what SecurityLogger itself emits;
+  # that global belt-and-braces layer has its own tests.
+  defp capture_security_logs(fun) do
+    _previous = :logger.remove_primary_filter(:tymeslot_metadata_redactor)
 
-    test "raw email is never emitted in log output" do
-      original_level = Logger.level()
-      Logger.configure(level: :info)
-
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_authentication_attempt(
-            "alice@example.com",
-            false,
-            "bad_password",
-            %{ip_address: "203.0.113.1"}
-          )
-        end)
-
-      Logger.configure(level: original_level)
-
-      refute log =~ "alice@example.com"
-      assert log =~ "Security event"
-    end
-
-    test "raw email with mixed case and whitespace is never emitted" do
-      original_level = Logger.level()
-      Logger.configure(level: :info)
-
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_authentication_attempt(
-            " Alice@Example.COM ",
-            false,
-            "bad_password",
-            %{}
-          )
-        end)
-
-      Logger.configure(level: original_level)
-
-      refute log =~ "Alice@Example.COM"
-      refute log =~ "alice@example.com"
-      assert log =~ "Security event"
-    end
-
-    test "nil email is tolerated without crashing" do
-      original_level = Logger.level()
-      Logger.configure(level: :info)
-
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_authentication_attempt(nil, false, "missing_email", %{})
-        end)
-
-      Logger.configure(level: original_level)
-
-      assert log =~ "Security event"
-    end
-
-    test "malformed email (no @ sign) is tolerated without crashing" do
-      original_level = Logger.level()
-      Logger.configure(level: :info)
-
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_authentication_attempt(
-            "no-at-sign",
-            false,
-            "malformed",
-            %{}
-          )
-        end)
-
-      Logger.configure(level: original_level)
-
-      refute log =~ "no-at-sign"
-      assert log =~ "Security event"
-    end
-
-    test "unicode email local part is tolerated without crashing" do
-      original_level = Logger.level()
-      Logger.configure(level: :info)
-
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_authentication_attempt(
-            "漢字@example.com",
-            false,
-            "test",
-            %{}
-          )
-        end)
-
-      Logger.configure(level: original_level)
-
-      refute log =~ "漢字@example.com"
-      assert log =~ "Security event"
+    try do
+      LogCapture.with_capture([logger_level: :info], fun)
+    after
+      MetadataRedactor.attach()
     end
   end
 
-  describe "log_authentication_attempt/4 (smoke)" do
-    test "returns :ok for a typical failed login" do
-      assert :ok =
-               SecurityLogger.log_authentication_attempt(
-                 "johndoe@example.com",
-                 false,
-                 "bad_password",
-                 %{ip_address: "203.0.113.1", user_agent: "curl/8.0"}
-               )
+  describe "email masking via log_authentication_attempt/4" do
+    # mask_email/1 is a private helper; its contract is verified here through the
+    # public entry point by asserting on the :email_masked metadata key that
+    # reaches Logger, and that no raw address reaches it under any key.
+
+    test "masks the local part and keeps the domain" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_authentication_attempt(
+          "alice@example.com",
+          false,
+          "bad_password",
+          %{ip_address: "203.0.113.1"}
+        )
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "authentication_failure"} = meta}}
+      assert meta.email_masked == "a***@example.com"
+      assert meta.ip_address == "203.0.113.1"
     end
 
-    test "tolerates nil and malformed emails without crashing" do
-      assert :ok =
-               SecurityLogger.log_authentication_attempt(nil, false, "missing_email", %{})
+    test "trims and downcases before masking" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_authentication_attempt(
+          " Alice@Example.COM ",
+          false,
+          "bad_password",
+          %{}
+        )
+      end)
 
-      assert :ok =
-               SecurityLogger.log_authentication_attempt("not-an-email", false, "malformed", %{})
+      assert_receive {:captured_log, %{meta: %{event_type: "authentication_failure"} = meta}}
+      assert meta.email_masked == "a***@example.com"
     end
 
-    test "tolerates nil metadata" do
-      assert :ok =
-               SecurityLogger.log_authentication_attempt("x@y.com", true, nil, %{})
+    test "drops a nil email rather than logging a placeholder" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_authentication_attempt(nil, false, "missing_email", %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "authentication_failure"} = meta}}
+      assert meta.email_masked == nil
+    end
+
+    test "drops a malformed email (no @ sign) entirely" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_authentication_attempt("no-at-sign", false, "malformed", %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "authentication_failure"} = meta}}
+      assert meta.email_masked == nil
+      refute inspect(meta) =~ "no-at-sign"
+    end
+
+    test "masks a unicode local part without crashing" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_authentication_attempt("漢字@example.com", false, "test", %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "authentication_failure"} = meta}}
+      assert meta.email_masked == "漢***@example.com"
+      refute inspect(meta) =~ "漢字@example.com"
+    end
+  end
+
+  describe "log_authentication_attempt/4" do
+    test "records the caller-supplied request context alongside the failure event" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_authentication_attempt(
+          "johndoe@example.com",
+          false,
+          "bad_password",
+          %{ip_address: "203.0.113.1", user_agent: "curl/8.0"}
+        )
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "authentication_failure"} = meta}}
+      assert meta.email_masked == "j***@example.com"
+      assert meta.ip_address == "203.0.113.1"
+      assert meta.user_agent == "curl/8.0"
+    end
+
+    test "logs the success event type and leaves absent context nil" do
+      # The third positional argument is `reason`, not metadata: it is recorded
+      # in the event details but never reaches a Logger metadata key, so the
+      # only observable difference a successful attempt makes is the event type.
+      capture_security_logs(fn ->
+        SecurityLogger.log_authentication_attempt("x@y.com", true, nil, %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "authentication_success"} = meta}}
+      assert meta.email_masked == "x***@y.com"
+      assert meta.ip_address == nil
+      assert meta.user_agent == nil
     end
   end
 
   describe "log_security_event/2" do
-    test "accepts sparse details without crashing" do
-      assert :ok = SecurityLogger.log_security_event("custom_event", %{})
-      assert :ok = SecurityLogger.log_security_event("custom_event", %{email: "a@b.com"})
+    test "emits the event type with every detail key nil when details are sparse" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("sparse_event", %{})
+      end)
 
-      assert :ok =
-               SecurityLogger.log_security_event("custom_event", %{
-                 user_id: 1,
-                 ip_address: "1.2.3.4",
-                 user_agent: "test",
-                 session_id: "abcdef12345678",
-                 email: "c@d.com"
-               })
+      assert_receive {:captured_log, %{meta: %{event_type: "sparse_event"} = meta}}
+      assert meta.user_id == nil
+      assert meta.email_masked == nil
+      assert meta.ip_address == nil
+      assert meta.user_agent == nil
+      assert meta.session_id == nil
     end
 
-    test "raw email never appears in Logger output" do
+    test "forwards every supplied detail as structured metadata" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("full_event", %{
+          user_id: 1,
+          ip_address: "1.2.3.4",
+          user_agent: "test",
+          session_id: "abcdef12345678",
+          email: "c@d.com"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "full_event"} = meta}}
+      assert meta.user_id == 1
+      assert meta.ip_address == "1.2.3.4"
+      assert meta.user_agent == "test"
+      assert meta.session_id == "abcdef12345678"
+      assert meta.email_masked == "c***@d.com"
+    end
+
+    test "the raw email never reaches Logger under any key" do
       raw = "alice@example.com"
 
-      # log_security_event/2 emits at :info level. The test environment sets the
-      # global Logger level to :warning, so we lower it for the duration of this
-      # capture and restore it afterwards. async: false ensures this is safe.
-      #
-      # The console formatter does not include structured metadata keywords in its
-      # output string — those are consumed by structured backends (logger_json in
-      # production). What we can assert here is that the raw address is absent from
-      # any emitted log line, confirming log_security_event/2 never passes it
-      # directly to Logger. The masking invariant itself is covered by mask_email/1
-      # unit tests above.
-      original_level = Logger.level()
-      Logger.configure(level: :info)
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{email: raw})
+      end)
 
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_security_event("test_event", %{email: raw})
-        end)
-
-      Logger.configure(level: original_level)
-
-      refute log =~ raw
-      assert log =~ "Security event"
+      assert_receive {:captured_log, %{msg: {:string, message}, meta: meta}}
+      assert IO.iodata_to_binary(message) == "Security event"
+      assert meta.email_masked == "a***@example.com"
+      refute inspect(meta) =~ raw
     end
 
-    test "raw email with mixed case and whitespace never appears in Logger output" do
-      original_level = Logger.level()
-      Logger.configure(level: :info)
+    test "a mixed-case raw email never reaches Logger under any key" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{email: " Alice@Example.COM "})
+      end)
 
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_security_event("test_event", %{email: " Alice@Example.COM "})
-        end)
-
-      Logger.configure(level: original_level)
-
-      refute log =~ "Alice@Example.COM"
-      refute log =~ "alice@example.com"
-      assert log =~ "Security event"
+      assert_receive {:captured_log, %{meta: %{event_type: "test_event"} = meta}}
+      assert meta.email_masked == "a***@example.com"
+      refute inspect(meta) =~ "Alice@Example.COM"
+      refute inspect(meta) =~ "alice@example.com"
     end
   end
 
   describe "log_blocked_input/3" do
-    test "emits a warning log with the expected message" do
-      original_level = Logger.level()
-      Logger.configure(level: :warning)
+    test "logs the field, the check that fired and the sanitised context" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_blocked_input(:email, "sql_injection", %{
+          ip: "1.2.3.4",
+          user_id: 42,
+          user_agent: "curl/8.0"
+        })
+      end)
 
-      log =
-        capture_log(fn ->
-          SecurityLogger.log_blocked_input(:email, "sql_injection", %{ip: "1.2.3.4"})
-        end)
+      assert_receive {:captured_log,
+                      %{level: :warning, msg: {:string, message}, meta: %{check: _check} = meta}}
 
-      Logger.configure(level: original_level)
-
-      assert log =~ "Suspicious input sanitised"
+      assert IO.iodata_to_binary(message) == "Suspicious input sanitised"
+      assert meta.field == :email
+      assert meta.check == "sql_injection"
+      assert meta.ip_address == "1.2.3.4"
+      assert meta.user_id == 42
+      assert meta.user_agent == "curl/8.0"
     end
 
-    test "returns :ok" do
-      assert :ok =
-               SecurityLogger.log_blocked_input(:email, "sql_injection", %{ip: "1.2.3.4"})
-    end
+    test "accepts a string field name and drops context that fails validation" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_blocked_input("email", "path_traversal", %{
+          ip: "not-an-ip",
+          user_id: "not-an-integer"
+        })
+      end)
 
-    test "accepts a string field name" do
-      assert :ok = SecurityLogger.log_blocked_input("email", "path_traversal", %{})
+      assert_receive {:captured_log, %{meta: %{check: "path_traversal"} = meta}}
+      assert meta.field == "email"
+      assert meta.ip_address == nil
+      assert meta.user_id == nil
     end
   end
 
-  describe "log_session_event/4 (smoke)" do
-    test "accepts long and short session ids" do
-      assert :ok =
-               SecurityLogger.log_session_event(
-                 "created",
-                 1,
-                 "super_secret_session_token_abcdef12",
-                 %{}
-               )
+  describe "log_session_event/4" do
+    test "redacts a long session id down to its last eight characters" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_session_event(
+          "created",
+          1,
+          "super_secret_session_token_abcdef12",
+          %{}
+        )
+      end)
 
-      assert :ok = SecurityLogger.log_session_event("created", 1, "short", %{})
-      assert :ok = SecurityLogger.log_session_event("created", 1, nil, %{})
+      assert_receive {:captured_log, %{meta: %{event_type: "session_created"} = meta}}
+      assert meta.user_id == 1
+      assert meta.session_id == "…abcdef12"
+      refute inspect(meta) =~ "super_secret_session_token"
+    end
+
+    test "replaces a session id shorter than eight characters outright" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_session_event("created", 1, "short", %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "session_created"} = meta}}
+      assert meta.session_id == "…REDACTED"
+      refute inspect(meta) =~ "short"
+    end
+
+    test "tolerates a nil session id" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_session_event("destroyed", 1, nil, %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "session_destroyed"} = meta}}
+      assert meta.session_id == nil
     end
   end
 end

@@ -1,5 +1,6 @@
 defmodule Tymeslot.WebhooksTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :security
 
@@ -7,6 +8,7 @@ defmodule Tymeslot.WebhooksTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Webhooks
+  alias Tymeslot.Workers.WebhookWorker
 
   # WebhookSchema.generate_secure_token/0: "ts_" plus 24 random bytes in
   # unpadded Base64.
@@ -562,7 +564,19 @@ defmodule Tymeslot.WebhooksTest do
 
       meeting = insert(:meeting, organizer_user: user)
 
+      # `schedule_delivery/3` answers :ok for a fresh insert and for a
+      # unique-constraint conflict alike, so the enqueued job is what proves a
+      # delivery was actually scheduled.
       assert :ok = Webhooks.trigger_webhook(webhook, "meeting.created", meeting)
+
+      assert_enqueued(
+        worker: WebhookWorker,
+        args: %{
+          "webhook_id" => webhook.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        }
+      )
     end
 
     test "returns error for an inactive webhook" do

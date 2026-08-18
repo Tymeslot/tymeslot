@@ -53,8 +53,14 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorEscapingTest do
       assert ics_content =~ "Thinking... 🤔"
     end
 
-    test "handles extremely long strings gracefully" do
-      long_description = String.duplicate("This is a very long description. ", 100)
+    test "escapes special characters throughout an extremely long description" do
+      # A value this long is folded across dozens of content lines. Unfolding
+      # it must yield exactly the escaped description, which proves the
+      # escaping is applied to the whole value rather than only its opening
+      # segment, and that folding never eats or duplicates a character.
+      chunk = "Backslash: \\ Semicolon: ; Comma: , End."
+      long_description = String.duplicate(chunk, 100)
+      expected = String.duplicate("Backslash: \\\\ Semicolon: \\; Comma: \\, End.", 100)
 
       meeting_details = %{
         title: "Long String Test",
@@ -67,7 +73,18 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorEscapingTest do
 
       ics_content = IcsGenerator.generate_ics(meeting_details)
 
-      assert String.length(ics_content) > 3000
+      description_value =
+        ics_content
+        |> String.replace("\r\n ", "")
+        |> String.split("\n")
+        |> Enum.find_value(fn line ->
+          case String.split(line, ":", parts: 2) do
+            ["DESCRIPTION" <> _params, value] -> value
+            _other -> nil
+          end
+        end)
+
+      assert description_value == expected
     end
   end
 

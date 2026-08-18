@@ -99,27 +99,6 @@ defmodule Tymeslot.Integrations.Common.ConfigManagerTest do
     end
   end
 
-  describe "common schemas" do
-    test "oauth_schema/0 returns standard oauth fields" do
-      schema = ConfigManager.oauth_schema()
-      assert schema.access_token.required
-      assert schema.refresh_token.required
-      assert schema.token_expires_at.type == :datetime
-    end
-
-    test "http_client_schema/0 returns standard http fields" do
-      schema = ConfigManager.http_client_schema()
-      assert schema.timeout.default == 30_000
-      assert schema.base_url.required
-    end
-
-    test "provider_metadata_schema/0 returns standard metadata fields" do
-      schema = ConfigManager.provider_metadata_schema()
-      assert schema.name.required
-      assert schema.is_active.default == true
-    end
-  end
-
   describe "extract_provider_config/3" do
     test "extracts and processes provider-specific config" do
       user_config = %{

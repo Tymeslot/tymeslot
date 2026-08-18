@@ -22,6 +22,8 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
   crashes the grid.
   """
 
+  alias Tymeslot.Utils.Colour
+
   use Gettext, backend: TymeslotWeb.Gettext
 
   @typedoc "A palette colour key, e.g. `\"tomato\"`."
@@ -404,32 +406,16 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
 
   defp class_map, do: Map.new(@palette)
 
+  # A bare value is only resolved through `@css_name_hex`, never parsed as hex:
+  # CalDAV sends colour names unprefixed, and treating an unknown name as hex
+  # would snap typos to an arbitrary palette entry instead of falling back.
   defp to_rgb(value) do
     value = value |> String.trim() |> String.downcase()
 
     cond do
-      String.starts_with?(value, "#") -> hex_to_rgb(String.trim_leading(value, "#"))
-      Map.has_key?(@css_name_hex, value) -> hex_to_rgb(Map.fetch!(@css_name_hex, value))
+      String.starts_with?(value, "#") -> Colour.parse_hex(value)
+      Map.has_key?(@css_name_hex, value) -> Colour.parse_hex(Map.fetch!(@css_name_hex, value))
       true -> nil
     end
   end
-
-  defp hex_to_rgb(hex) when byte_size(hex) == 3 do
-    hex
-    |> String.graphemes()
-    |> Enum.map_join(&String.duplicate(&1, 2))
-    |> hex_to_rgb()
-  end
-
-  defp hex_to_rgb(hex) when byte_size(hex) in [6, 8] do
-    with {r, ""} <- Integer.parse(binary_part(hex, 0, 2), 16),
-         {g, ""} <- Integer.parse(binary_part(hex, 2, 2), 16),
-         {b, ""} <- Integer.parse(binary_part(hex, 4, 2), 16) do
-      {r, g, b}
-    else
-      _other -> nil
-    end
-  end
-
-  defp hex_to_rgb(_other), do: nil
 end

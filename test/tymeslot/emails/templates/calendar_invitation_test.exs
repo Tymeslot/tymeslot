@@ -135,19 +135,33 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       end
     end
 
-    test "renders without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr", "it"] do
+    test "translates the subject and the invitation heading for every supported locale" do
+      for {locale, subject_fragment, heading} <- [
+            {"en", "Calendar Invitation", "You're Invited"},
+            {"de", "Kalendereinladung", "Sie sind eingeladen"},
+            {"uk", "Запрошення до календаря", "Вас запрошено"},
+            {"fr", "Invitation :", "Vous êtes invité(e)"},
+            {"it", "Invito di calendario", "Hai ricevuto un invito"}
+          ] do
         details = build_invitation_details(%{attendee_locale: locale})
         email = CalendarInvitation.render("guest@example.com", details)
 
-        assert %Swoosh.Email{} = email,
-               "Expected valid Swoosh email for locale #{locale}"
+        assert email.subject =~ subject_fragment,
+               "Expected #{locale} subject to contain #{inspect(subject_fragment)}, got: #{email.subject}"
 
-        assert is_binary(email.html_body),
-               "Expected html_body for locale #{locale}"
+        assert email.text_body =~ heading,
+               "Expected #{locale} text body to contain #{inspect(heading)}"
 
-        assert is_binary(email.text_body),
-               "Expected text_body for locale #{locale}"
+        # The event title is never translated, so it must survive every locale.
+        assert email.subject =~ "Team Sync"
+
+        if locale != "en" do
+          refute email.subject =~ "Calendar Invitation",
+                 "Expected #{locale} subject to drop the English wording"
+
+          refute email.text_body =~ "You're Invited",
+                 "Expected #{locale} text body to drop the English heading"
+        end
       end
     end
 

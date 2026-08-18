@@ -144,19 +144,6 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
   end
 
   describe "format_error/1" do
-    test "produces a function-specific message" do
-      assert ErrorBoundary.format_error(%{function: :mount}) == "Failed to load theme"
-
-      assert ErrorBoundary.format_error(%{function: :handle_params}) ==
-               "Navigation error in theme"
-
-      assert ErrorBoundary.format_error(%{function: :handle_event}) ==
-               "Event handling error in theme"
-
-      assert ErrorBoundary.format_error(%{function: :handle_info}) ==
-               "Message handling error in theme"
-    end
-
     test "falls back to a generic message" do
       assert ErrorBoundary.format_error(%{function: :something_else}) ==
                "An error occurred in the theme"

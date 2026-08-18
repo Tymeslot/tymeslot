@@ -1,8 +1,12 @@
 defmodule Tymeslot.Mailer.SMTPConfigTest do
-  use ExUnit.Case, async: true
+  # async: false is required by the logging test below: it lowers the primary
+  # Logger level for the duration, which is global, so no other test may run
+  # alongside it. See `Tymeslot.Test.LogCapture`.
+  use ExUnit.Case, async: false
   @moduletag :mailer
 
   alias Tymeslot.Mailer.SMTPConfig
+  alias Tymeslot.Test.LogCapture
 
   describe "build/1" do
     test "creates valid SMTP configuration for port 587 (STARTTLS)" do
@@ -302,38 +306,28 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
   end
 
   describe "logging" do
-    import ExUnit.CaptureLog
+    test "logs SMTP configuration at startup, password in neither message nor metadata" do
+      LogCapture.attach(level: :info, logger_level: :info)
 
-    @tag :capture_log
-    test "logs SMTP configuration at startup" do
-      # Temporarily set logger level to :info to capture the log message
-      original_level = Logger.level()
-      Logger.configure(level: :info)
+      SMTPConfig.build(
+        host: "smtp.example.com",
+        port: 587,
+        username: "user@example.com",
+        password: "secret123"
+      )
 
-      try do
-        log =
-          capture_log([level: :info], fn ->
-            SMTPConfig.build(
-              host: "smtp.example.com",
-              port: 587,
-              username: "user@example.com",
-              password: "secret123"
-            )
-          end)
+      %{msg: msg, meta: meta} = LogCapture.await_log("SMTP mailer configured")
 
-        # Verify configuration is logged (now at :info level)
-        # In test environment, logs may not be captured, so only assert if log is present
-        if log != "" do
-          assert log =~ "SMTP mailer configured"
-          # Structured metadata (host, username) is passed to Logger but not embedded
-          # in the formatted message string captured by capture_log
-          # Password should never appear in logs
-          refute log =~ "secret123"
-        end
-      after
-        # Restore original logger level
-        Logger.configure(level: original_level)
-      end
+      # Anchor the metadata assertions: if the handler ever stopped delivering
+      # metadata, these fail rather than letting the refutes below pass vacuously.
+      assert meta.host == "smtp.example.com"
+      assert meta.username == "user@example.com"
+      assert meta.port == 587
+
+      # The password must appear neither in the rendered message nor anywhere
+      # in the structured metadata the formatter would omit.
+      refute LogCapture.message_text(msg) =~ "secret123"
+      refute inspect(meta, limit: :infinity, printable_limit: :infinity) =~ "secret123"
     end
   end
 end

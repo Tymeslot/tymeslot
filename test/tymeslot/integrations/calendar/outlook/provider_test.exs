@@ -386,12 +386,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
     end
   end
 
-  describe "get_calendar_api_module/0" do
-    test "returns the configured Outlook CalendarAPI mock" do
-      assert Provider.get_calendar_api_module() == OutlookCalendarAPIMock
-    end
-  end
-
   describe "CRUD operations delegation" do
     test "call_create_event uses default booking calendar when set" do
       user = insert(:user)
@@ -479,18 +473,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
     test "returns skipped status for any input" do
       assert {:ok, %{status: :skipped, reason: "OAuth providers use token-based auth"}} =
                Provider.check_connectivity(%{})
-    end
-
-    test "returns skipped status when called with an integration struct" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "outlook"
-        )
-
-      assert {:ok, %{status: :skipped}} = Provider.check_connectivity(integration)
     end
   end
 

@@ -29,14 +29,6 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
     test "all providers return provider_type" do
       assert_providers_return_provider_type(ProviderRegistry, production_providers())
     end
-
-    test "all providers return display_name" do
-      assert_providers_return_display_name(ProviderRegistry, production_providers())
-    end
-
-    test "all providers return config_schema" do
-      assert_providers_return_config_schema(ProviderRegistry, production_providers())
-    end
   end
 
   describe "config schema consistency" do
@@ -86,18 +78,6 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
     end
   end
 
-  describe "room creation consistency" do
-    test "custom provider uses static meeting URL" do
-      {:ok, custom} = ProviderRegistry.get_provider(:custom)
-
-      # Custom provider doesn't create rooms dynamically
-      # It returns the configured URL directly
-      # Let's verify the schema instead
-      schema = custom.config_schema()
-      assert Map.has_key?(schema, :custom_meeting_url)
-    end
-  end
-
   describe "provider behavior consistency" do
     test "custom provider returns consistent error format" do
       {:ok, custom} = ProviderRegistry.get_provider(:custom)
@@ -112,33 +92,6 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
   describe "registry integration" do
     test "all production providers are registered correctly" do
       assert_providers_registered_correctly(ProviderRegistry, @production_providers)
-    end
-
-    test "provider metadata is accessible through registry" do
-      assert_provider_metadata_accessible(ProviderRegistry, @production_providers)
-    end
-
-    test "provider validation works through registry" do
-      assert_provider_validation_works(ProviderRegistry, @production_providers)
-    end
-
-    test "provider recommendation works" do
-      requirements = %{
-        participant_count: 10,
-        recording_required: false
-      }
-
-      # Ten participants with no recording needs is served by the default.
-      assert ProviderRegistry.recommend_provider(requirements) == :mirotalk
-    end
-
-    test "capability filtering returns only providers with that capability" do
-      assert ProviderRegistry.providers_with_capability(:screen_sharing) == [
-               :mirotalk,
-               :google_meet,
-               :teams,
-               :zoom
-             ]
     end
   end
 

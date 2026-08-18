@@ -22,12 +22,17 @@ defmodule Tymeslot.Auth.SocialAuthenticationTest do
       assert message =~ "already registered"
     end
 
-    test "matches email exactly (case-sensitive in query)" do
+    test "normalises case and surrounding whitespace before the lookup" do
       insert(:user, email: "test@example.com")
 
-      # Note: email matching depends on database collation/citext usage
-      # Test the actual behavior - exact match should return error
-      assert {:error, _msg} = SocialAuthentication.check_email_availability("test@example.com")
+      # The lookup downcases and trims its input, so a social provider handing
+      # back a differently-cased or padded address must still be recognised as
+      # taken — otherwise a second account would be created for the same person
+      # and the lower(email) unique index would reject it at insert time.
+      assert {:error, _msg} = SocialAuthentication.check_email_availability("TEST@Example.com")
+
+      assert {:error, _msg} =
+               SocialAuthentication.check_email_availability("  test@example.com  ")
     end
 
     test "returns error for invalid email format (nil)" do

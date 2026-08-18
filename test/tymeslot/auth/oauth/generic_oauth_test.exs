@@ -60,8 +60,10 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuthTest do
   end
 
   describe "get_callback_url/0" do
-    test "returns generic OAuth callback path" do
-      expect(HelperMock, :get_callback_url, fn :oauth -> "/auth/oauth/callback" end)
+    test "asks the helper for the :oauth provider" do
+      # The stub derives its answer from the provider it is handed, so the
+      # assertion below fails if this module ever asks for a different provider.
+      expect(HelperMock, :get_callback_url, fn provider -> "/auth/#{provider}/callback" end)
 
       assert GenericOAuth.get_callback_url() == "/auth/oauth/callback"
     end

@@ -146,12 +146,18 @@ defmodule Tymeslot.Auth.UserQueriesTest do
       assert %DateTime{} = updated.dashboard_tour_seen_at
     end
 
-    test "is idempotent — calling twice does not error" do
-      user = insert(:user, dashboard_tour_seen_at: nil)
+    test "overwrites an existing timestamp — this write is unconditional" do
+      # Idempotence is not a property of this query: it lives one layer up in
+      # Onboarding.mark_dashboard_tour_seen/1, which short-circuits when the
+      # tour has already been seen. Here a stale stamp is always replaced.
+      previously_seen = DateTime.add(DateTime.utc_now(:second), -365, :day)
+      user = insert(:user, dashboard_tour_seen_at: previously_seen)
 
-      assert {:ok, first} = UserQueries.mark_dashboard_tour_seen(user)
-      assert {:ok, second} = UserQueries.mark_dashboard_tour_seen(first)
-      assert second.dashboard_tour_seen_at
+      assert {:ok, updated} = UserQueries.mark_dashboard_tour_seen(user)
+
+      assert DateTime.compare(updated.dashboard_tour_seen_at, previously_seen) == :gt
+      assert DateTime.diff(DateTime.utc_now(), updated.dashboard_tour_seen_at, :second) <= 5
+      assert Repo.reload!(user).dashboard_tour_seen_at == updated.dashboard_tour_seen_at
     end
   end
 

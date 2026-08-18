@@ -135,10 +135,16 @@ defmodule CredoChecks.GettextDomainBoundaryTest do
       |> refute_issues()
     end
 
-    test "a local function named gettext_comment is not flagged" do
+    test "a call named gettext_comment is not flagged" do
+      # The check matches call names exactly, so a translator-comment macro
+      # whose name merely starts with "gettext" must not be mistaken for a
+      # bare `gettext/1`.
       """
       defmodule TymeslotWeb.Page do
-        def note, do: dgettext("common", "x")
+        def note do
+          gettext_comment("Shown above the confirmation button")
+          dgettext("booking", "Confirm your booking")
+        end
       end
       """
       |> to_source_file("lib/tymeslot_web/page.ex")

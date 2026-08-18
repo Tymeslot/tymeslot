@@ -116,10 +116,28 @@ defmodule Tymeslot.Utils.TimeRangePropertyTest do
   end
 
   describe "duration_minutes/2" do
-    property "matches DateTime.diff in minutes" do
-      check all({start_dt, end_dt} <- ordered_datetime_pair_gen()) do
-        assert TimeRange.duration_minutes(start_dt, end_dt) ==
-                 DateTime.diff(end_dt, start_dt, :minute)
+    property "recovers the number of minutes the end time was moved by" do
+      # The expected value comes from constructing the range, not from calling
+      # `DateTime.diff/3` a second time: an implementation that measured in
+      # seconds, or that swapped its arguments, would agree with itself.
+      check all(
+              start_dt <- datetime_gen(),
+              minutes <- integer(0..10_080)
+            ) do
+        end_dt = DateTime.add(start_dt, minutes, :minute)
+
+        assert TimeRange.duration_minutes(start_dt, end_dt) == minutes
+      end
+    end
+
+    property "counts a range backwards as negative minutes" do
+      check all(
+              start_dt <- datetime_gen(),
+              minutes <- integer(1..10_080)
+            ) do
+        earlier = DateTime.add(start_dt, -minutes, :minute)
+
+        assert TimeRange.duration_minutes(start_dt, earlier) == -minutes
       end
     end
 

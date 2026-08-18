@@ -166,25 +166,32 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
         args: %{}
       })
 
-      # Old but still executing
+      # Inserted long ago but picked up recently, so it is genuinely running
+      # rather than stuck — the retention sweep must still leave it alone.
       Repo.insert!(%Oban.Job{
         state: "executing",
         inserted_at: old_date,
-        attempted_at: old_date,
+        attempted_at: DateTime.utc_now(),
         worker: "ExecutingWorker",
         queue: "default",
         args: %{},
         errors: []
       })
 
-      initial_count = Repo.one(from j in Oban.Job, select: count(j.id))
+      assert {:ok, result} = perform_job(ObanMaintenanceWorker, %{})
+      assert result.old_deleted == 0
 
-      assert {:ok, _cleanup_result} = perform_job(ObanMaintenanceWorker, %{})
+      # The worker enqueues its own next run, so a row count cannot tell a
+      # survivor from a replacement. Name the rows instead.
+      survivors =
+        Repo.all(
+          from j in Oban.Job,
+            where: j.worker in ["PendingWorker", "ExecutingWorker"],
+            select: {j.worker, j.state},
+            order_by: j.worker
+        )
 
-      final_count = Repo.one(from j in Oban.Job, select: count(j.id))
-
-      # Should have added the scheduled maintenance job
-      assert final_count >= initial_count
+      assert survivors == [{"ExecutingWorker", "executing"}, {"PendingWorker", "available"}]
     end
 
     test "handles empty job table gracefully" do
@@ -211,10 +218,6 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
       # Job with extra fields from future version
       assert {:ok, _cleanup_result} =
                perform_job(ObanMaintenanceWorker, %{"future_option" => true})
-    end
-
-    test "handles empty args" do
-      assert {:ok, _cleanup_result} = perform_job(ObanMaintenanceWorker, %{})
     end
   end
 

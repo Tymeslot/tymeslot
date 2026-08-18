@@ -168,13 +168,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
       assert message =~ "{{meeting_id}}"
     end
 
-    test "detects another unknown variable" do
-      url = "https://jitsi.org/{{session_id}}"
-
-      assert {:warning, :unknown_variable, _preview, message} = TemplateAnalyzer.analyze(url)
-      assert message =~ "{{meeting_id}}"
-    end
-
     test "only {{meeting_id}} is supported - rejects {{user_id}}" do
       url = "https://jitsi.org/{{user_id}}"
 
@@ -238,14 +231,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
       assert {:ok, :valid_template, _preview, _message} = TemplateAnalyzer.analyze(url)
     end
 
-    test "prioritizes valid template over other issues" do
-      # If URL contains valid {{meeting_id}}, it should be recognized as valid
-      # even if there are other patterns in the URL
-      url = "https://jitsi.org/{{meeting_id}}/room"
-
-      assert {:ok, :valid_template, _preview, _message} = TemplateAnalyzer.analyze(url)
-    end
-
     test "treats unknown variable with wrong brackets as static" do
       # {room_id} with single brackets and unknown variable is treated as static
       # because error checks are specific to "meeting_id"
@@ -306,16 +291,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
       assert {:ok, :valid_template, preview, _message} = TemplateAnalyzer.analyze(url)
       # Should process template in path and keep static fragment
       assert preview =~ ~r|/[a-f0-9]{16}#config$|
-    end
-
-    test "fragment check has priority over other syntax errors" do
-      # Even with wrong syntax, fragment position should be detected first
-      url = ~S"https://jitsi.org/room#{{meeting_id}}"
-
-      assert {:warning, :template_in_fragment, _preview, message} =
-               TemplateAnalyzer.analyze(url)
-
-      assert message =~ "fragment"
     end
   end
 end

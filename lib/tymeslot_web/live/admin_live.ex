@@ -22,10 +22,20 @@ defmodule TymeslotWeb.AdminLive do
 
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
+  alias Tymeslot.Emails.Branding
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.AdminLive.Components.{Layout, Settings, Users}
   alias TymeslotWeb.AdminLive.Formatters
+
+  require Logger
+
+  # A 300px-wide PNG lands far under this; the cap is a backstop against a
+  # client that ignores the hook and posts something else entirely. The sole
+  # declaration of the limit: it feeds `allow_upload/3` below, the interpolated
+  # "too large" message, and (via `Settings.email_logo_row/1`'s `max_bytes`
+  # attr) the client-side guard in the upload hook.
+  @logo_max_bytes 2_000_000
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -34,7 +44,16 @@ defmodule TymeslotWeb.AdminLive do
      |> assign(:page_title, dgettext("dashboard_admin", "Admin"))
      |> assign(:profile, nil)
      |> assign(:pending_action, nil)
-     |> assign(:role_change_submitting, false)}
+     |> assign(:role_change_submitting, false)
+     |> assign(:accent_draft, nil)
+     |> assign(:max_logo_bytes, @logo_max_bytes)
+     |> allow_upload(:email_logo,
+       accept: ~w(.png),
+       max_entries: 1,
+       max_file_size: @logo_max_bytes,
+       auto_upload: true,
+       progress: &handle_logo_progress/3
+     )}
   end
 
   @impl Phoenix.LiveView
@@ -68,8 +87,12 @@ defmodule TymeslotWeb.AdminLive do
          :changed <- detect_change(socket, atom_key, value) do
       handle_typed_setting_update(socket, atom_key, value)
     else
+      # Submitting the value already in effect (e.g. a built-in default the
+      # field was pre-populated with) is a legitimate no-op, not an error -
+      # acknowledge it with the same saved pulse a real write gets so the
+      # button doesn't look like it did nothing.
       :unchanged ->
-        {:noreply, socket}
+        {:noreply, push_event(socket, "ts:setting-saved", %{key: key})}
 
       :invalid ->
         {:noreply, put_flash(socket, :error, value_invalid_message(key))}
@@ -77,6 +100,59 @@ defmodule TymeslotWeb.AdminLive do
       _other ->
         {:noreply,
          put_flash(socket, :error, dgettext("dashboard_admin", "Could not update setting."))}
+    end
+  end
+
+  # The accent swatch is preview-only: picking a colour never writes to
+  # `AppSettings` directly. It only updates `accent_draft`, which the hex
+  # field mirrors, so the hex form's submit remains the single writer for
+  # `email_brand_accent` - see the comment on `Settings.brand_accent_row/1`.
+  def handle_event("preview_accent", %{"value" => value}, socket) do
+    case Branding.normalise_accent(value) do
+      nil -> {:noreply, socket}
+      hex -> {:noreply, assign(socket, :accent_draft, hex)}
+    end
+  end
+
+  # --- Email branding: logo upload ---
+
+  # Required by the upload form's phx-change. The work happens in
+  # `handle_logo_progress/3` once the auto-upload completes; this only needs
+  # to re-render so validation errors reach the page.
+  def handle_event("validate_email_logo", _params, socket), do: {:noreply, socket}
+
+  # Pushed by the upload hook when the browser cannot decode the file the
+  # admin picked — a corrupt PNG, or an SVG that references resources the
+  # canvas render cannot resolve. Nothing was uploaded, so this only reports.
+  def handle_event("email_logo_conversion_failed", _params, socket) do
+    {:noreply,
+     put_flash(
+       socket,
+       :error,
+       dgettext("dashboard_admin", "That image could not be read. Try a PNG or JPEG.")
+     )}
+  end
+
+  # Pushed by the upload hook when the picked source file is too large to be
+  # worth rasterising at all. Rejected before `readAsDataURL`, so nothing was
+  # read or uploaded.
+  def handle_event("email_logo_too_large", _params, socket) do
+    {:noreply, put_flash(socket, :error, logo_too_large_message())}
+  end
+
+  def handle_event("remove_email_logo", _params, socket) do
+    case Branding.remove_logo() do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, dgettext("dashboard_admin", "Email logo removed."))
+         |> load_data()}
+
+      {:error, reason} ->
+        Logger.warning("Failed to remove email logo", reason: inspect(reason))
+
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_admin", "Could not remove the logo."))}
     end
   end
 
@@ -98,6 +174,44 @@ defmodule TymeslotWeb.AdminLive do
 
   def handle_event("demote_user", %{"id" => id}, socket) do
     with_user_id(id, socket, &handle_demote(&1, assign(socket, :role_change_submitting, true)))
+  end
+
+  # --- Email branding helpers ---
+
+  # Auto-upload progress callback. Consumes the entry only once it is fully
+  # uploaded; `consume_uploaded_entry/3` also releases the temporary file, so
+  # a rejected PNG leaves nothing behind.
+  defp handle_logo_progress(:email_logo, entry, socket) do
+    if entry.done? do
+      {:noreply, store_uploaded_logo(socket, entry)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  defp store_uploaded_logo(socket, entry) do
+    result =
+      consume_uploaded_entry(socket, entry, fn %{path: path} ->
+        {:ok, Branding.store_logo(path)}
+      end)
+
+    case result do
+      {:ok, _relative} ->
+        socket
+        |> put_flash(:info, dgettext("dashboard_admin", "Email logo updated."))
+        |> load_data()
+
+      {:error, :not_a_png} ->
+        put_flash(
+          socket,
+          :error,
+          dgettext("dashboard_admin", "That file is not a valid image and was not saved.")
+        )
+
+      {:error, reason} ->
+        Logger.warning("Failed to store email logo", reason: inspect(reason))
+        put_flash(socket, :error, dgettext("dashboard_admin", "Could not save the logo."))
+    end
   end
 
   defp handle_setting_update(socket, atom_key, parsed, state) do
@@ -168,7 +282,9 @@ defmodule TymeslotWeb.AdminLive do
     case Formatters.kind(key) do
       :score -> parse_score(raw)
       :email -> parse_email(raw)
-      :boolean -> :invalid
+      :colour -> parse_colour(raw)
+      :text -> parse_text(raw)
+      kind when kind in [:boolean, :logo] -> :invalid
     end
   end
 
@@ -199,12 +315,43 @@ defmodule TymeslotWeb.AdminLive do
 
   defp parse_score(_other), do: :invalid
 
+  # Normalised here as well as in the changeset so `detect_change/3` compares
+  # like with like: the native colour picker submits "#14B8A6" where the row
+  # holds "#14b8a6", and an unnormalised comparison would read as a change and
+  # flash "updated" on every tab-through.
+  defp parse_colour(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> {:ok, nil}
+      trimmed -> normalised_colour(trimmed)
+    end
+  end
+
+  defp parse_colour(_other), do: :invalid
+
+  defp normalised_colour(value) do
+    case Branding.normalise_accent(value) do
+      nil -> :invalid
+      hex -> {:ok, hex}
+    end
+  end
+
+  defp parse_text(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> {:ok, nil}
+      trimmed -> {:ok, trimmed}
+    end
+  end
+
+  defp parse_text(_other), do: :invalid
+
   defp value_invalid_message(key) do
     case parse_setting_key(key) do
       {:ok, atom_key} ->
         case Formatters.kind(atom_key) do
           :score -> dgettext("dashboard_admin", "Enter a number between 0.0 and 1.0.")
           :email -> dgettext("dashboard_admin", "Enter a valid email address.")
+          :colour -> dgettext("dashboard_admin", "Enter a hex colour such as #14b8a6.")
+          :text -> dgettext("dashboard_admin", "That value is too long.")
           _other -> dgettext("dashboard_admin", "Could not update setting.")
         end
 
@@ -332,14 +479,59 @@ defmodule TymeslotWeb.AdminLive do
   defp load_data(socket) do
     user = socket.assigns.current_user
     profile = Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
+    effective_values = AppSettings.effective_values()
+    accent = Map.fetch!(effective_values, :email_brand_accent).value
 
     socket
     |> assign(:profile, profile)
-    |> assign(:effective_values, AppSettings.effective_values())
+    |> assign(:effective_values, effective_values)
+    |> assign(:email_logo_url, Branding.logo_url())
+    |> assign(:stock_accent, Branding.stock_accent())
+    |> assign(:accent_preview, Branding.accent_preview(accent))
+    |> assign(:accent_draft, nil)
     |> assign(:users, Auth.list_users())
     |> assign(:user_count, Auth.count_users())
     |> assign(:admin_count, Auth.count_admins())
   end
+
+  # Config-level errors (`:too_many_files`) come from `upload_errors/1`; a
+  # rejected entry (`:too_large`, `:not_accepted`, or a disk-level
+  # `{:writer_failure, reason}`) only shows up per-entry via `upload_errors/2`
+  # - without iterating entries those never reach the admin at all.
+  defp logo_error_messages(upload) do
+    config_errors = upload |> upload_errors() |> Enum.map(&upload_error_message/1)
+
+    entry_errors =
+      upload.entries
+      |> Enum.flat_map(&upload_errors(upload, &1))
+      |> Enum.map(&upload_error_message/1)
+
+    config_errors ++ entry_errors
+  end
+
+  defp upload_error_message(:too_large), do: logo_too_large_message()
+
+  defp upload_error_message(:not_accepted),
+    do: dgettext("dashboard_admin", "That file type is not supported.")
+
+  defp upload_error_message(:too_many_files),
+    do: dgettext("dashboard_admin", "Upload one logo at a time.")
+
+  defp upload_error_message(_other),
+    do: dgettext("dashboard_admin", "The logo could not be uploaded.")
+
+  # Shared by the framework-level `:too_large` upload error and the hook's
+  # client-side pre-check, so both phrase the limit identically and neither
+  # hardcodes it - `@logo_max_bytes` is the only place the number lives.
+  defp logo_too_large_message do
+    dgettext(
+      "dashboard_admin",
+      "That image is too large. Pick one under %{limit}.",
+      limit: logo_max_size_label()
+    )
+  end
+
+  defp logo_max_size_label, do: "#{div(@logo_max_bytes, 1_000_000)} MB"
 
   # --- Render: each tab is a thin shell around its component module ---
 
@@ -351,7 +543,16 @@ defmodule TymeslotWeb.AdminLive do
       current_user={@current_user}
       profile={@profile}
     >
-      <Settings.settings_tab effective_values={@effective_values} />
+      <Settings.settings_tab
+        effective_values={@effective_values}
+        email_logo_url={@email_logo_url}
+        upload={@uploads.email_logo}
+        logo_errors={logo_error_messages(@uploads.email_logo)}
+        stock_accent={@stock_accent}
+        accent_preview={@accent_preview}
+        accent_draft={@accent_draft}
+        max_logo_bytes={@max_logo_bytes}
+      />
     </Layout.admin_layout>
     """
   end

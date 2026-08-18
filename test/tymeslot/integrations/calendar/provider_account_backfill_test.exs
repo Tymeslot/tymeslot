@@ -1,12 +1,14 @@
 defmodule Tymeslot.Integrations.Calendar.ProviderAccountBackfillTest do
   @moduledoc """
-  Tests that the provider_account_id backfill logic correctly handles
-  pre-existing calendar integrations, including duplicate CalDAV rows
-  that would violate the null-guard unique index.
+  Tests that the provider_account_id backfill correctly handles pre-existing
+  calendar integrations, including duplicate CalDAV rows that would violate
+  the null-guard unique index.
 
-  These tests exercise the SQL from the repair migration
-  (20260329000001_backfill_calendar_provider_account_id) to ensure it is
-  safe for all data shapes an open-source user might have.
+  These tests drive the repair migration itself
+  (20260329000001_backfill_calendar_provider_account_id) to ensure it is safe
+  for all data shapes an open-source user might have. The migration module is
+  loaded from `priv` and run through `Ecto.Migrator`; see
+  `Tymeslot.Test.MigrationRunner`.
 
   Tests run non-async because they temporarily drop unique indexes to
   simulate the pre-migration database state.
@@ -18,35 +20,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAccountBackfillTest do
   @moduletag :database
 
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MigrationRunner
 
-  # The single-UPDATE backfill SQL from the repair migration.
-  # Uses a window function to assign base_url to the first row per group
-  # and base_url||id to subsequent duplicates, all in one atomic operation.
-  @backfill_sql """
-  UPDATE calendar_integrations ci
-  SET provider_account_id = CASE
-    WHEN sub.rn = 1 THEN sub.base_url
-    ELSE sub.base_url || '||' || ci.id
-  END
-  FROM (
-    SELECT id, base_url,
-      ROW_NUMBER() OVER (
-        PARTITION BY user_id, provider, base_url
-        ORDER BY id
-      ) AS rn
-    FROM calendar_integrations
-    WHERE provider IN ('caldav', 'radicale', 'nextcloud', 'zimbra')
-      AND base_url IS NOT NULL
-      AND provider_account_id IS NULL
-  ) sub
-  WHERE ci.id = sub.id
-  """
-
-  @create_null_guard_index_sql """
-  CREATE UNIQUE INDEX IF NOT EXISTS unique_active_calendar_null_account_per_user
-  ON calendar_integrations (user_id, provider)
-  WHERE is_active = true AND provider_account_id IS NULL
-  """
+  @version 20_260_329_000_001
 
   setup do
     # Drop both provider_account_id-related indexes to simulate the
@@ -151,24 +127,35 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAccountBackfillTest do
       assert get_provider_account_id(second_id) == "#{url}||#{second_id}"
     end
 
-    test "null-guard index can be created after backfill with former duplicates" do
+    test "recreates the null-guard index over former duplicates" do
       user = insert(:user)
 
       insert_raw_calendar_integration(user.id, "caldav", "https://dav.example.com")
       insert_raw_calendar_integration(user.id, "caldav", "https://dav.example.com")
 
+      # Creating the index is the migration's own second step, and the step
+      # that failed for the reporting user: it only survives duplicate rows
+      # because the backfill above it disambiguated them.
       run_backfill!()
 
-      # This is the step that failed for the reporting user — verify it succeeds
-      # after the backfill has disambiguated the rows.
-      assert {:ok, _result} = Repo.query(@create_null_guard_index_sql)
+      assert index_exists?("unique_active_calendar_null_account_per_user")
     end
   end
 
   # -- Helpers ----------------------------------------------------------------
 
+  # `down/0` is a deliberate no-op and every step of `up/0` is idempotent (the
+  # UPDATE only touches NULL rows, the index is `IF NOT EXISTS`), so the
+  # version is dropped from the ledger and the migration re-applied.
   defp run_backfill! do
-    Repo.query!(@backfill_sql)
+    MigrationRunner.replay!(@version)
+  end
+
+  defp index_exists?(name) do
+    %{rows: [[exists]]} =
+      Repo.query!("SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = $1)", [name])
+
+    exists
   end
 
   defp insert_raw_calendar_integration(user_id, provider, base_url, opts \\ []) do

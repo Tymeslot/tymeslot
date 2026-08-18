@@ -154,38 +154,50 @@ defmodule Tymeslot.Availability.AvailabilityIntegrationTest do
           advance_booking_days: 30
         )
 
-      today = Date.utc_today()
-
-      # Set availability for today
-      if Date.day_of_week(today) in 1..5 do
+      # Availability on every weekday, so which weekday the suite runs on cannot
+      # decide whether the assertions below are exercised.
+      for day_of_week <- 1..7 do
         insert(:weekly_availability,
           schedule: schedule,
-          day_of_week: Date.day_of_week(today),
+          day_of_week: day_of_week,
           is_available: true,
           start_time: ~T[09:00:00],
           end_time: ~T[17:00:00]
         )
-
-        config = %{
-          schedule_id: schedule.id,
-          min_advance_hours: schedule.min_advance_hours,
-          max_advance_booking_days: schedule.advance_booking_days
-        }
-
-        # Should return no slots for today due to 24 hour minimum advance
-        {:ok, slots} =
-          Calculate.available_slots(
-            today,
-            30,
-            "America/New_York",
-            "America/New_York",
-            [],
-            config
-          )
-
-        # Should return empty slots due to advance booking restriction
-        assert slots == []
       end
+
+      config = %{
+        schedule_id: schedule.id,
+        min_advance_hours: schedule.min_advance_hours,
+        max_advance_booking_days: schedule.advance_booking_days
+      }
+
+      # Control: a day sitting inside the booking window does offer slots, so an
+      # empty list below means the restriction bit, not that setup went missing.
+      {:ok, future_slots} =
+        Calculate.available_slots(
+          next_monday(),
+          30,
+          "America/New_York",
+          "America/New_York",
+          [],
+          config
+        )
+
+      refute future_slots == []
+
+      # Today, by contrast, lies wholly within the 24-hour minimum notice.
+      {:ok, today_slots} =
+        Calculate.available_slots(
+          Date.utc_today(),
+          30,
+          "America/New_York",
+          "America/New_York",
+          [],
+          config
+        )
+
+      assert today_slots == []
     end
   end
 

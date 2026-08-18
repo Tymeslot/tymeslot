@@ -1,9 +1,11 @@
 defmodule Tymeslot.Profiles.BookingPagePublishedAtBackfillTest do
   @moduledoc """
-  Verifies the backfill SQL from
-  `20260629084457_backfill_booking_page_published_at` stamps exactly the booking
-  pages that were already live (username + active meeting type) and leaves
-  everything else untouched.
+  Verifies `20260629084457_backfill_booking_page_published_at` stamps exactly
+  the booking pages that were already live (username + active meeting type)
+  and leaves everything else untouched.
+
+  The migration module is loaded from `priv` and run through `Ecto.Migrator`;
+  see `Tymeslot.Test.MigrationRunner`.
   """
   use Tymeslot.DataCase, async: false
 
@@ -13,21 +15,9 @@ defmodule Tymeslot.Profiles.BookingPagePublishedAtBackfillTest do
 
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MigrationRunner
 
-  @backfill_sql """
-  UPDATE profiles p
-  SET booking_page_published_at = sub.first_active_mt
-  FROM (
-    SELECT mt.user_id, MIN(mt.inserted_at)::timestamp(0) AS first_active_mt
-    FROM meeting_types mt
-    WHERE mt.is_active = true
-    GROUP BY mt.user_id
-  ) sub
-  WHERE p.user_id = sub.user_id
-    AND p.username IS NOT NULL
-    AND p.username <> ''
-    AND p.booking_page_published_at IS NULL
-  """
+  @version 20_260_629_084_457
 
   test "stamps live pages to their earliest active meeting type and skips the rest" do
     # Live: username + two active meeting types — should stamp to the EARLIEST.
@@ -72,7 +62,9 @@ defmodule Tymeslot.Profiles.BookingPagePublishedAtBackfillTest do
 
     insert(:meeting_type, user: published_user, is_active: true)
 
-    Repo.query!(@backfill_sql)
+    # `down/0` is a deliberate no-op and `up/0` only touches NULL rows, so the
+    # version is dropped from the ledger and the migration re-applied.
+    MigrationRunner.replay!(@version)
 
     assert DateTime.to_naive(profile_for(live_user).booking_page_published_at) == earliest
     refute profile_for(inactive_user).booking_page_published_at

@@ -93,7 +93,10 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :migrations,
       # Needs the git-cliff binary — excluded only where it isn't installed
       # (see Tymeslot.Test.SuiteConfig)
-      :git_cliff
+      :git_cliff,
+      # Needs a real outbound HTTP proxy plus internet access — run with
+      # HTTPS_PROXY=... mix test --only proxy_integration
+      :proxy_integration
     ]
   }
 

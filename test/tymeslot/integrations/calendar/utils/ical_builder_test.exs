@@ -70,7 +70,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       ical = ICalBuilder.build_event(event_data)
 
-      assert String.contains?(ical, "DTSTAMP:")
+      # The stamp is when the event was written, not when it starts — a hard
+      # coded epoch, an empty value, or the event's own start time would all
+      # satisfy "contains DTSTAMP:".
+      assert [_line, stamp] = Regex.run(~r/DTSTAMP:(\d{8}T\d{6}Z)/, ical)
+      assert {:ok, stamped_at, 0} = DateTime.from_iso8601(stamp, Calendar.ISO, :basic)
+      assert DateTime.diff(DateTime.utc_now(), stamped_at) in 0..5
     end
 
     test "includes optional description" do

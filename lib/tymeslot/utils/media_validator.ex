@@ -18,6 +18,31 @@ defmodule Tymeslot.Utils.MediaValidator do
   def valid_image?(_other), do: false
 
   @doc """
+  Validates if a binary is specifically a PNG image using ExImageInfo.
+  """
+  @spec valid_png?(binary()) :: boolean()
+  def valid_png?(binary) when is_binary(binary) do
+    case ExImageInfo.info(binary) do
+      {"image/png", _width, _height, _variant} -> true
+      _other -> false
+    end
+  end
+
+  @spec valid_png?(any()) :: boolean()
+  def valid_png?(_other), do: false
+
+  @doc """
+  Validates if a file at the given path is a PNG image.
+  """
+  @spec valid_png_file?(String.t()) :: boolean()
+  def valid_png_file?(path) when is_binary(path) do
+    case read_header(path) do
+      {:ok, binary} -> valid_png?(binary)
+      _other -> false
+    end
+  end
+
+  @doc """
   Validates if a binary is a supported video format using magic bytes.
   Supports MP4, WebM/MKV, and AVI.
   """
@@ -57,11 +82,8 @@ defmodule Tymeslot.Utils.MediaValidator do
   """
   @spec valid_image_file?(String.t()) :: boolean()
   def valid_image_file?(path) when is_binary(path) do
-    with {:ok, file} <- File.open(path, [:read, :binary]),
-         binary when is_binary(binary) <- IO.binread(file, 2048),
-         :ok <- File.close(file) do
-      valid_image?(binary)
-    else
+    case read_header(path) do
+      {:ok, binary} -> valid_image?(binary)
       _other -> false
     end
   end
@@ -71,12 +93,28 @@ defmodule Tymeslot.Utils.MediaValidator do
   """
   @spec valid_video_file?(String.t()) :: boolean()
   def valid_video_file?(path) when is_binary(path) do
-    with {:ok, file} <- File.open(path, [:read, :binary]),
-         binary when is_binary(binary) <- IO.binread(file, 2048),
-         :ok <- File.close(file) do
-      valid_video?(binary)
-    else
+    case read_header(path) do
+      {:ok, binary} -> valid_video?(binary)
       _other -> false
+    end
+  end
+
+  # Reads up to 2048 header bytes from `path`, always closing the handle,
+  # including when `IO.binread/2` returns `:eof` or `{:error, _}`.
+  @spec read_header(String.t()) :: {:ok, binary()} | {:error, term()}
+  defp read_header(path) do
+    open_result =
+      File.open(path, [:read, :binary], fn file ->
+        case IO.binread(file, 2048) do
+          binary when is_binary(binary) -> binary
+          other -> {:error, other}
+        end
+      end)
+
+    case open_result do
+      {:ok, {:error, reason}} -> {:error, reason}
+      {:ok, binary} -> {:ok, binary}
+      {:error, reason} -> {:error, reason}
     end
   end
 

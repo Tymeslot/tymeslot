@@ -1,24 +1,11 @@
-defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest.LogCapture do
-  @moduledoc false
-  # Minimal :logger handler that forwards each log event (with full
-  # metadata) to a test process. The test-env default formatter only prints
-  # a whitelisted subset of metadata keys, so this is what lets a test
-  # assert on metadata fields the formatter would otherwise hide.
-  @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
-  def log(event, %{config: %{pid: pid}}) do
-    send(pid, {:captured_log, event})
-    :ok
-  end
-end
-
 defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.ProviderAdapterTest.LogCapture
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
+  alias Tymeslot.Test.LogCapture
 
   defmodule ErroringProvider do
     @spec list_events(any(), keyword()) :: {:error, :boom}
@@ -109,9 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
       client: %{calendar_path: "/cal/partial-success"}
     }
 
-    handler_id = :provider_adapter_test_partial_success_handler
-    :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-    on_exit(fn -> :logger.remove_handler(handler_id) end)
+    LogCapture.attach()
 
     assert {:error, %Outcome{}} =
              ProviderAdapter.get_events(client, DateTime.utc_now(), DateTime.utc_now())

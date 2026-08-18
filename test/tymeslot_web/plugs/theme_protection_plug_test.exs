@@ -67,12 +67,6 @@ defmodule TymeslotWeb.Plugs.ThemeProtectionPlugTest do
     end)
   end
 
-  describe "init/1" do
-    test "passes options through unchanged" do
-      assert ThemeProtectionPlug.init(foo: :bar) == [foo: :bar]
-    end
-  end
-
   describe "call/2" do
     test "passes conn through when no plugs configured", %{conn: conn} do
       Application.delete_env(:tymeslot, :extra_theme_protection_plugs)

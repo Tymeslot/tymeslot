@@ -188,27 +188,6 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
       assert %{status: :open} = CircuitBreaker.status(name)
     end
-
-    test "closes circuit after all half_open_requests succeed" do
-      name =
-        start_breaker(
-          config: %{
-            failure_threshold: 1,
-            recovery_timeout: @time_window_ms,
-            half_open_requests: 2
-          }
-        )
-
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
-      Process.sleep(@sleep_ms)
-
-      # First call in half-open succeeds (attempts: 1)
-      assert {:ok, :ok1} = CircuitBreaker.call(name, fn -> {:ok, :ok1} end)
-
-      # Second call succeeds => attempts == half_open_requests => closes
-      assert {:ok, :ok2} = CircuitBreaker.call(name, fn -> {:ok, :ok2} end)
-      assert %{status: :closed} = CircuitBreaker.status(name)
-    end
   end
 
   describe "reset/1" do

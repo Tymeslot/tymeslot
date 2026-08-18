@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
   import Tymeslot.Factory
   import Mox
   alias Tymeslot.Integrations.Calendar.Connection
+  alias Tymeslot.Integrations.Calendar.Nextcloud.Provider, as: NextcloudProvider
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
@@ -15,7 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
       %{user: user}
     end
 
-    test "validates CalDAV connection within timeout", %{user: user} do
+    test "surfaces the CalDAV connection failure when it lands inside the timeout", %{user: user} do
       integration = %{
         provider: "caldav",
         base_url: "http://localhost:1",
@@ -24,29 +25,38 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
         calendar_paths: []
       }
 
-      assert {:error, reason} = Connection.validate(integration, user.id, timeout: 5_000)
-
-      # Localhost port failures can manifest as either timeout or network_error
-      # depending on OS/network timing; both are legitimate outcomes here.
-      assert reason in [:network_error, :timeout]
+      # Nothing listens on port 1, so the connection is refused immediately and
+      # the task finishes well inside the 5s budget: the timeout branch is not
+      # in play, the underlying failure is what must come back.
+      assert Connection.validate(integration, user.id, timeout: 5_000) ==
+               {:error, :network_error}
     end
 
     test "returns timeout error when validation exceeds timeout", %{user: user} do
+      # A CalDAV target cannot produce this branch: an unreachable host is
+      # refused far faster than any timeout, and SSRF protection rejects a
+      # local stub server before a byte is sent. The mocked Google boundary is
+      # the one call this module makes that can be told to hang, so that is
+      # what the timeout is measured against.
       integration = %{
-        provider: "caldav",
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass"
+        id: 1,
+        user_id: user.id,
+        provider: "google",
+        access_token: "access_token",
+        refresh_token: "refresh_token",
+        # Still valid, so the token-refresh call is not part of this test.
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      # Very short timeout to force timeout error
-      assert {:error, reason} = Connection.validate(integration, user.id, timeout: 1)
+      stub(GoogleCalendarAPIMock, :list_primary_events, fn _int, _start, _end ->
+        # Never returns; the task is shut down when the budget is exceeded.
+        Process.sleep(:infinity)
+      end)
 
-      # DNS resolution can fail faster than the timeout, yielding network_error.
-      assert reason in [:timeout, :network_error]
+      assert Connection.validate(integration, user.id, timeout: 100) == {:error, :timeout}
     end
 
-    test "validates Nextcloud connection", %{user: user} do
+    test "collapses a Nextcloud discovery refusal to :network_error", %{user: user} do
       integration = %{
         provider: "nextcloud",
         base_url: "http://localhost:1",
@@ -54,11 +64,15 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
         password: "pass"
       }
 
-      assert {:error, reason} = Connection.validate(integration, user.id)
+      # Two halves, because `validate_connection/2` maps every discovery error
+      # onto the same atom and so cannot tell them apart on its own. The first
+      # assertion names the actual cause — the SSRF guard refuses the loopback
+      # URL before a socket opens — and the second pins the collapse: none of
+      # that wording is allowed to reach the caller.
+      assert NextcloudProvider.discover_calendars(Map.put(integration, :calendar_paths, [])) ==
+               {:error, "Private or local network addresses are not allowed"}
 
-      # Localhost port failures can manifest as either network_error or timeout
-      # depending on OS/network timing and load (matches the sibling tests).
-      assert reason in [:network_error, :timeout]
+      assert Connection.validate(integration, user.id) == {:error, :network_error}
     end
 
     test "uses default timeout when not specified", %{user: user} do

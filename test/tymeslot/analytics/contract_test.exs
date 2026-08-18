@@ -5,6 +5,7 @@ defmodule Tymeslot.Analytics.ContractTest do
   import ExUnit.CaptureLog
 
   alias Tymeslot.Analytics.Contract
+  alias Tymeslot.Test.LogCapture
 
   test "event names are snake_case and prop keys are atoms" do
     for {name, keys} <- Contract.registry() do
@@ -47,16 +48,19 @@ defmodule Tymeslot.Analytics.ContractTest do
     end
 
     test "returns {:error, _} and logs a warning for an undeclared prop — does not raise" do
-      log =
-        capture_log(fn ->
-          assert {:error, _reason} =
-                   Contract.validate!("onboarding_step_completed", %{user_id: 99})
-        end)
+      LogCapture.attach()
 
-      assert log =~ "analytics event dropped"
-      assert log =~ "onboarding_step_completed"
-      # Prop values must not appear in the log — only the key name
-      refute log =~ "99"
+      assert {:error, _reason} = Contract.validate!("onboarding_step_completed", %{user_id: 99})
+
+      # Prop values must not appear in the log — only the key name. Asserted
+      # against the captured record rather than formatted output, which drops
+      # metadata and would make the refutation vacuous.
+      event = LogCapture.await_log("analytics event dropped")
+      meta = LogCapture.user_metadata(event)
+
+      assert meta[:event] == "onboarding_step_completed"
+      assert meta[:keys] == [:user_id]
+      refute LogCapture.dump(event) =~ "99"
     end
 
     test "returns {:error, _} for an unknown event — does not raise" do

@@ -171,5 +171,26 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
                "#{inspect(p)} listed but its metadata disables circuit breakers"
       end)
     end
+
+    test "omits no provider whose metadata enables circuit breakers" do
+      breakers = ProviderConfig.providers_with_circuit_breakers()
+
+      # Walking the list itself can only show that nothing extra is in it. The
+      # direction that matters is the other one: a provider that should be
+      # monitored and silently isn't. The candidates come from the static
+      # constraint list, which no runtime toggle can shorten.
+      wanted =
+        ProviderConfig.provider_constraint_list()
+        |> Enum.map(fn name ->
+          {:ok, provider} = ProviderConfig.parse_known(name)
+          provider
+        end)
+        |> Enum.filter(&ProviderConfig.circuit_breaker_enabled?/1)
+
+      Enum.each(wanted, fn p ->
+        assert p in breakers,
+               "#{inspect(p)} enables circuit breakers in its metadata but is not listed"
+      end)
+    end
   end
 end

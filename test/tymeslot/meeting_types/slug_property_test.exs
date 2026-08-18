@@ -93,27 +93,46 @@ defmodule Tymeslot.MeetingTypes.SlugPropertyTest do
   end
 
   describe "slug generation properties via validate_field" do
-    property "valid names produce slugs containing only lowercase alphanumerics and hyphens" do
+    property "an accepted name derives a URL-safe slug that keeps every alphanumeric word" do
+      # Separators and padding that must all collapse away: a run of them becomes
+      # a single hyphen, and leading/trailing runs disappear entirely.
+      separators = [" ", "  ", " - ", " / ", "_", ", ", " & "]
+      padding = ["", " ", "  ", "!", " ...", "?", " -"]
+
       check all(
-              alpha <- string(:alphanumeric, min_length: 2, max_length: 50),
-              prefix <- string(:alphanumeric, min_length: 1, max_length: 3)
+              first <- string(:alphanumeric, min_length: 2, max_length: 20),
+              second <- string(:alphanumeric, min_length: 2, max_length: 20),
+              separator <- member_of(separators),
+              leading <- member_of(padding),
+              trailing <- member_of(padding)
             ) do
-        # Ensure at least 2 chars by prepending a letter
-        input = prefix <> " " <> alpha
+        input = leading <> first <> separator <> second <> trailing
 
-        case InputValidation.validate_field(:name, input, %{}) do
-          {:ok, sanitized} ->
-            slug =
-              sanitized
-              |> String.downcase()
-              |> String.replace(~r/[^a-z0-9]+/, "-")
-              |> String.trim("-")
+        assert {:ok, sanitized} = InputValidation.validate_field(:name, input, %{})
 
-            assert slug =~ ~r/\A[a-z0-9-]+\z/,
-                   "Slug #{inspect(slug)} contains invalid characters (input: #{inspect(input)})"
+        slug = Slugs.to_slug(%{name: sanitized})
 
-          {:error, _reason} ->
-            :ok
+        # One hyphen between words, never at either end and never doubled.
+        assert slug =~ ~r/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/,
+               "Slug #{inspect(slug)} is not URL-safe (input: #{inspect(input)})"
+
+        # Slugification lowercases; it never drops alphanumeric content.
+        assert String.contains?(slug, String.downcase(first)),
+               "Slug #{inspect(slug)} lost #{inspect(first)} (input: #{inspect(input)})"
+
+        assert String.contains?(slug, String.downcase(second)),
+               "Slug #{inspect(slug)} lost #{inspect(second)} (input: #{inspect(input)})"
+      end
+    end
+
+    property "the slug of an accepted name is never empty" do
+      # The guard in validate_meeting_name/2 exists so that every accepted name
+      # yields a reachable booking URL; this pins that contract to the real
+      # slug derivation rather than to a copy of it.
+      check all(name <- string(:printable, min_length: 2, max_length: 100)) do
+        case InputValidation.validate_field(:name, name, %{}) do
+          {:ok, sanitized} -> assert Slugs.to_slug(%{name: sanitized}) != ""
+          {:error, %{name: _msg}} -> :ok
         end
       end
     end

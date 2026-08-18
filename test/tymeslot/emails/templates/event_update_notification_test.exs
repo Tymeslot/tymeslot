@@ -93,14 +93,33 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       assert email.html_body =~ "(updated)"
     end
 
-    test "renders without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr", "it"] do
+    test "translates the subject, heading and change summary for every supported locale" do
+      for {locale, subject_fragment, heading, changed_heading} <- [
+            {"en", "Updated:", "Event Updated", "What Changed"},
+            {"de", "Aktualisiert:", "Termin aktualisiert", "Was hat sich geändert"},
+            {"uk", "Оновлено:", "Подію оновлено", "Що змінилося"},
+            {"fr", "Mise à jour :", "Événement mis à jour", "Ce qui a changé"},
+            {"it", "Aggiornato:", "Evento aggiornato", "Cosa è cambiato"}
+          ] do
         details = build_event_update_details(%{attendee_locale: locale})
         email = EventUpdateNotification.render("a@example.com", details)
 
-        assert %Swoosh.Email{} = email, "Failed for locale: #{locale}"
-        assert email.html_body != nil, "No HTML body for locale: #{locale}"
-        assert email.text_body != nil, "No text body for locale: #{locale}"
+        assert email.subject =~ subject_fragment,
+               "Expected #{locale} subject to contain #{inspect(subject_fragment)}, got: #{email.subject}"
+
+        assert email.text_body =~ heading,
+               "Expected #{locale} text body to contain #{inspect(heading)}"
+
+        assert email.text_body =~ changed_heading,
+               "Expected #{locale} text body to contain #{inspect(changed_heading)}"
+
+        if locale != "en" do
+          refute email.subject =~ "Updated:",
+                 "Expected #{locale} subject to drop the English wording"
+
+          refute email.text_body =~ "Event Updated",
+                 "Expected #{locale} text body to drop the English heading"
+        end
       end
     end
 

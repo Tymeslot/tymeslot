@@ -26,6 +26,9 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def humanise(:admin_alert_email), do: dgettext("dashboard_admin", "Admin alert recipient")
   def humanise(:meeting_payments_enabled), do: dgettext("dashboard_admin", "Meeting payments")
   def humanise(:booking_analytics_enabled), do: dgettext("dashboard_admin", "Booking analytics")
+  def humanise(:email_brand_accent), do: dgettext("dashboard_admin", "Email accent colour")
+  def humanise(:email_brand_name), do: dgettext("dashboard_admin", "Email brand name")
+  def humanise(:email_logo_path), do: dgettext("dashboard_admin", "Email logo")
 
   def humanise(key),
     do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -129,6 +132,27 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     )
   end
 
+  def describe(:email_brand_accent) do
+    dgettext(
+      "dashboard_admin",
+      "Accent colour used across transactional emails: buttons, links, the confirmation banner, and badge backgrounds. The darker and lighter shades of the family are derived from it. Amber and red are not affected - they signal \"needs attention\" and \"cancelled\", and recolouring them would make a cancellation read as a confirmation. Leave blank for the stock turquoise."
+    )
+  end
+
+  def describe(:email_brand_name) do
+    dgettext(
+      "dashboard_admin",
+      "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
+    )
+  end
+
+  def describe(:email_logo_path) do
+    dgettext(
+      "dashboard_admin",
+      "Logo shown at the top of every transactional email. Converted to a PNG in your browser before upload and attached inline, so it renders even in clients that block remote images. SVG, PNG, JPEG, and WebP sources are all accepted."
+    )
+  end
+
   def describe(_other), do: ""
 
   @doc """
@@ -151,18 +175,30 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     * `:boolean` — two-state Enabled/Disabled toggle (existing pattern).
     * `:score` — numeric input bounded 0.0–1.0 (reCAPTCHA thresholds).
     * `:email` — text input with email validation.
+    * `:colour` — hex colour input with a native swatch picker.
+    * `:text` — free-text input.
+    * `:logo` — image upload with a preview and a remove action.
   """
-  @spec kind(atom()) :: :boolean | :score | :email
+  @spec kind(atom()) :: :boolean | :score | :email | :colour | :text | :logo
   def kind(:recaptcha_signup_min_score), do: :score
   def kind(:recaptcha_booking_min_score), do: :score
   def kind(:admin_alert_email), do: :email
+  def kind(:email_brand_accent), do: :colour
+  def kind(:email_brand_name), do: :text
+  def kind(:email_logo_path), do: :logo
   def kind(_other), do: :boolean
 
   @doc """
   Section heading a setting row belongs under. Used to group the settings
   page into Authentication / reCAPTCHA / Admin alerts blocks.
   """
-  @spec section(atom()) :: :authentication | :recaptcha | :payments | :analytics | :admin_alerts
+  @spec section(atom()) ::
+          :authentication
+          | :recaptcha
+          | :payments
+          | :analytics
+          | :admin_alerts
+          | :email_branding
   def section(:registration_enabled), do: :authentication
   def section(:password_auth_enabled), do: :authentication
   def section(:google_auth_enabled), do: :authentication
@@ -176,6 +212,9 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def section(:booking_analytics_enabled), do: :analytics
   def section(:admin_alerts_enabled), do: :admin_alerts
   def section(:admin_alert_email), do: :admin_alerts
+  def section(:email_brand_accent), do: :email_branding
+  def section(:email_brand_name), do: :email_branding
+  def section(:email_logo_path), do: :email_branding
 
   @doc "Human-readable label for a section."
   @spec section_label(atom()) :: String.t()
@@ -184,6 +223,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def section_label(:payments), do: dgettext("dashboard_admin", "Payments")
   def section_label(:analytics), do: dgettext("dashboard_admin", "Analytics")
   def section_label(:admin_alerts), do: dgettext("dashboard_admin", "Admin alerts")
+  def section_label(:email_branding), do: dgettext("dashboard_admin", "Email branding")
 
   @doc """
   When a setting is only meaningful while another setting is enabled, this

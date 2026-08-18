@@ -12,6 +12,8 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Utils.Colour
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           registration_enabled: boolean() | nil,
@@ -27,6 +29,9 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
           admin_alert_email: String.t() | nil,
           meeting_payments_enabled: boolean() | nil,
           booking_analytics_enabled: boolean() | nil,
+          email_brand_accent: String.t() | nil,
+          email_brand_name: String.t() | nil,
+          email_logo_path: String.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -44,15 +49,40 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     :admin_alerts_enabled,
     :admin_alert_email,
     :meeting_payments_enabled,
-    :booking_analytics_enabled
+    :booking_analytics_enabled,
+    :email_brand_accent,
+    :email_brand_name,
+    :email_logo_path
   ]
 
   @score_fields [:recaptcha_signup_min_score, :recaptcha_booking_min_score]
+
+  # Free-text overrides where an empty input means "clear the override"
+  # rather than "store an empty string", so the UI can submit a blanked
+  # field without special-casing it.
+  @blankable_fields [
+    :admin_alert_email,
+    :email_brand_accent,
+    :email_brand_name,
+    :email_logo_path
+  ]
 
   # Pragmatic email pattern — same shape as the user-facing validation in
   # Tymeslot.Auth. Catches obvious typos; the upstream mail adapter does the
   # rest.
   @email_regex ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  # A brand name lands in the inbox preview line and the organiser strip, both
+  # of which are truncated by mail clients well before this; the cap only stops
+  # an accidental paste of something enormous.
+  @max_brand_name_length 60
+
+  # The column is a bare `:string`, i.e. `varchar(255)` — a byte limit, not a
+  # grapheme limit. `validate_length/3` counts graphemes by default, so a
+  # 60-grapheme multi-byte name (emoji, Devanagari, Thai, ...) can pass the
+  # display cap above yet still overflow storage. Validate bytes too so that
+  # case is rejected with a changeset error instead of a Postgres crash.
+  @max_brand_name_bytes 255
 
   schema "app_settings" do
     field(:registration_enabled, :boolean)
@@ -68,6 +98,9 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     field(:admin_alert_email, :string)
     field(:meeting_payments_enabled, :boolean)
     field(:booking_analytics_enabled, :boolean)
+    field(:email_brand_accent, :string)
+    field(:email_brand_name, :string)
+    field(:email_logo_path, :string)
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -89,20 +122,29 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     |> cast(normalise(attrs), @editable_fields)
     |> validate_scores()
     |> validate_admin_alert_email()
+    |> validate_brand_accent()
+    |> validate_brand_name()
+    |> validate_logo_path()
   end
 
-  # Treat a blank string for the email override as "clear the override" so
-  # the UI does not have to special-case the empty input.
+  # Trim every free-text override, treating a blank result as "clear the
+  # override" so the UI does not have to special-case an emptied input.
   defp normalise(attrs) do
-    case Map.fetch(attrs, :admin_alert_email) do
-      {:ok, value} when is_binary(value) ->
-        case String.trim(value) do
-          "" -> Map.put(attrs, :admin_alert_email, nil)
-          trimmed -> Map.put(attrs, :admin_alert_email, trimmed)
-        end
+    Enum.reduce(@blankable_fields, attrs, fn field, acc ->
+      case Map.fetch(acc, field) do
+        {:ok, value} when is_binary(value) ->
+          Map.put(acc, field, blank_to_nil(value))
 
-      _other ->
-        attrs
+        _absent_or_already_nil ->
+          acc
+      end
+    end)
+  end
+
+  defp blank_to_nil(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
     end
   end
 
@@ -122,4 +164,55 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
       :error -> changeset
     end
   end
+
+  # Stored normalised to lowercase `#rrggbb` so everything downstream — the
+  # derivation cache key, the colour input, the preview swatch — compares and
+  # renders one form rather than three.
+  defp validate_brand_accent(changeset) do
+    case fetch_change(changeset, :email_brand_accent) do
+      {:ok, nil} ->
+        changeset
+
+      {:ok, value} ->
+        case Colour.normalise_hex(value) do
+          nil ->
+            add_error(changeset, :email_brand_accent, "must be a hex colour such as #14b8a6")
+
+          hex ->
+            put_change(changeset, :email_brand_accent, hex)
+        end
+
+      :error ->
+        changeset
+    end
+  end
+
+  defp validate_brand_name(changeset) do
+    changeset
+    |> validate_length(:email_brand_name, max: @max_brand_name_length)
+    |> validate_length(:email_brand_name, max: @max_brand_name_bytes, count: :bytes)
+  end
+
+  # The stored path is relative to the configured upload directory and is
+  # written only by `Tymeslot.Emails.Branding`. Rejecting absolute paths and
+  # traversal here is defence in depth: it means no value that could escape
+  # the upload directory can reach the row at all, whatever writes it.
+  defp validate_logo_path(changeset) do
+    case fetch_change(changeset, :email_logo_path) do
+      {:ok, nil} ->
+        changeset
+
+      {:ok, path} ->
+        if Path.type(path) == :relative and not traversal?(path) do
+          changeset
+        else
+          add_error(changeset, :email_logo_path, "must be a relative path inside the upload dir")
+        end
+
+      :error ->
+        changeset
+    end
+  end
+
+  defp traversal?(path), do: ".." in Path.split(path)
 end

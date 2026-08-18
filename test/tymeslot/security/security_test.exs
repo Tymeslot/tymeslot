@@ -118,6 +118,8 @@ defmodule Tymeslot.Security.SecurityTest do
       assert {:ok, "example.com"} = Security.validate_domain("example.com")
       assert {:ok, "sub.example.co.uk"} = Security.validate_domain("sub.example.co.uk")
       assert {:ok, "my-domain.com"} = Security.validate_domain("my-domain.com")
+      assert {:ok, "example.co.uk"} = Security.validate_domain("example.co.uk")
+      assert {:ok, "example.de"} = Security.validate_domain("example.de")
     end
 
     test "accepts local development hosts" do
@@ -169,18 +171,6 @@ defmodule Tymeslot.Security.SecurityTest do
   end
 
   describe "validate_domain/1 TLD validation" do
-    test "accepts domains with valid TLDs" do
-      assert {:ok, "example.com"} = Security.validate_domain("example.com")
-      assert {:ok, "example.co.uk"} = Security.validate_domain("example.co.uk")
-      assert {:ok, "example.de"} = Security.validate_domain("example.de")
-    end
-
-    test "still accepts localhost and special development domains" do
-      assert {:ok, "localhost"} = Security.validate_domain("localhost")
-      assert {:ok, "127.0.0.1"} = Security.validate_domain("127.0.0.1")
-      assert {:ok, "none"} = Security.validate_domain("none")
-    end
-
     test "rejects domains with invalid TLDs" do
       {:error, msg} = Security.validate_domain("example.or")
       assert msg =~ "unrecognised"

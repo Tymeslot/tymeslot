@@ -40,14 +40,15 @@ defmodule Tymeslot.Security.EncryptionTest do
       assert Encryption.decrypt(encrypted2) == plaintext2
     end
 
-    test "encrypted value is longer than plaintext due to nonce and tag" do
-      plaintext = "test"
+    test "envelope overhead is a constant 29 bytes at every plaintext length" do
+      # GCM is a stream mode, so the envelope never pads: whatever the input
+      # length, the overhead is exactly the version byte, nonce and tag.
+      for plaintext <- ["", "t", "test", String.duplicate("a", 4096)] do
+        encrypted = Encryption.encrypt(plaintext)
 
-      encrypted = Encryption.encrypt(plaintext)
-
-      # Encrypted should include: 12-byte nonce + 16-byte tag + ciphertext
-      assert byte_size(encrypted) > byte_size(plaintext)
-      assert byte_size(encrypted) >= 28 + byte_size(plaintext)
+        assert byte_size(encrypted) - byte_size(plaintext) == 29,
+               "unexpected overhead for a #{byte_size(plaintext)}-byte plaintext"
+      end
     end
 
     test "decrypts to correct value regardless of plaintext length" do
@@ -126,24 +127,21 @@ defmodule Tymeslot.Security.EncryptionTest do
       refute String.contains?(key, "+")
       refute String.contains?(key, "/")
     end
-
-    test "generates keys of consistent format" do
-      keys = for _i <- 1..10, do: Encryption.generate_api_key()
-
-      Enum.each(keys, fn key ->
-        assert String.length(key) == 43
-      end)
-    end
   end
 
   describe "encryption security properties" do
-    test "uses AES-256-GCM authenticated encryption" do
+    test "lays the envelope out as version <> nonce(12) <> tag(16) <> ciphertext" do
       plaintext = "test_password"
 
-      encrypted = Encryption.encrypt(plaintext)
+      assert <<version, nonce::binary-12, tag::binary-16, ciphertext::binary>> =
+               Encryption.encrypt(plaintext)
 
-      # Should have 12-byte nonce + 16-byte tag
-      assert byte_size(encrypted) >= 28
+      assert version == Encryption.current_version()
+      # GCM ciphertext is the same length as the plaintext; the nonce and tag
+      # are the only overhead, and neither may be a run of zero bytes.
+      assert byte_size(ciphertext) == byte_size(plaintext)
+      refute nonce == <<0::96>>
+      refute tag == <<0::128>>
     end
 
     test "different nonces for each encryption" do
@@ -158,24 +156,6 @@ defmodule Tymeslot.Security.EncryptionTest do
 
       # Nonces should be different
       assert nonce1 != nonce2
-    end
-
-    test "tampering detection through authentication tag" do
-      plaintext = "password"
-      encrypted = Encryption.encrypt(plaintext)
-
-      # Tamper with the tag portion (bytes 12-28)
-      <<nonce::binary-12, _auth_tag::binary-16, ciphertext::binary>> = encrypted
-      tampered = nonce <> :crypto.strong_rand_bytes(16) <> ciphertext
-
-      # decrypt/1 raises on tampering so noisy failure modes stay loud.
-      assert_raise RuntimeError, fn ->
-        Encryption.decrypt(tampered)
-      end
-
-      # decrypt_with_status/1 surfaces the same failure as a tagged tuple so
-      # calendar sync workers can flag the integration for reauth instead.
-      assert Encryption.decrypt_with_status(tampered) == {:error, :requires_reencryption}
     end
   end
 

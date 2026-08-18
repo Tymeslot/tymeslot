@@ -7,16 +7,46 @@ defmodule Tymeslot.Payments.PaymentModulesTest do
   alias Tymeslot.Payments.Errors.WebhookError.ProcessingError
   alias Tymeslot.Payments.Errors.WebhookError.SignatureError
   alias Tymeslot.Payments.Errors.WebhookError.ValidationError
+  alias Tymeslot.Test.LogCapture
 
   describe "ErrorHandler" do
-    test "handle_payment_error returns :ok" do
-      assert {:ok, :error_handled} =
-               ErrorHandler.handle_payment_error("stripe_123", "some error", 1)
+    setup do
+      LogCapture.attach()
+      :ok
     end
 
-    test "handle_subscription_error returns :ok" do
+    test "handle_payment_error logs the stripe id, user and error at :error level" do
       assert {:ok, :error_handled} =
-               ErrorHandler.handle_subscription_error("sub_123", "some error", 1)
+               ErrorHandler.handle_payment_error("stripe_123", :card_declined, 1)
+
+      assert_receive {:captured_log,
+                      %{
+                        level: :error,
+                        msg: {:string, message},
+                        meta: %{stripe_id: _stripe_id} = meta
+                      }}
+
+      assert IO.iodata_to_binary(message) == "Payment error"
+      assert meta.stripe_id == "stripe_123"
+      assert meta.user_id == 1
+      assert meta.error == ":card_declined"
+    end
+
+    test "handle_subscription_error logs the subscription id, user and error at :error level" do
+      assert {:ok, :error_handled} =
+               ErrorHandler.handle_subscription_error("sub_123", :payment_failed, 1)
+
+      assert_receive {:captured_log,
+                      %{
+                        level: :error,
+                        msg: {:string, message},
+                        meta: %{subscription_id: _subscription_id} = meta
+                      }}
+
+      assert IO.iodata_to_binary(message) == "Subscription error"
+      assert meta.subscription_id == "sub_123"
+      assert meta.user_id == 1
+      assert meta.error == ":payment_failed"
     end
   end
 

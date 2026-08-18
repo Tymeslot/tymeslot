@@ -38,7 +38,10 @@ defmodule TymeslotWeb.Components.ContainersTest do
     doc = Floki.parse_document!(html)
 
     assert Floki.text(doc) =~ "My Availability"
-    refute html =~ "Saving..."
+    # The saving indicator renders the string "Saving changes..." (asserted in
+    # the test above); refuting anything else can never fire.
+    refute html =~ "Saving changes..."
+    refute html =~ "spinner"
     assert Floki.find(doc, "span.bg-turquoise-100") == []
   end
 

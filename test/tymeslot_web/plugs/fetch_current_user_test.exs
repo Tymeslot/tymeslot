@@ -66,10 +66,4 @@ defmodule TymeslotWeb.Plugs.FetchCurrentUserTest do
       assert conn.assigns.user_token == "does-not-exist-in-the-db"
     end
   end
-
-  describe "init/1" do
-    test "passes opts through unchanged" do
-      assert FetchCurrentUser.init(foo: :bar) == [foo: :bar]
-    end
-  end
 end

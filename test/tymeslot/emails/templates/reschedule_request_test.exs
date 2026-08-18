@@ -52,8 +52,9 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
 
       email = RescheduleRequest.render(meeting)
 
-      # Should contain substantial meeting information
-      assert String.length(email.html_body) > 1000
+      assert email.html_body =~ "Video Conference"
+      assert email.html_body =~ "Consultation"
+      assert email.html_body =~ "45 minutes"
     end
 
     test "includes reschedule URL" do

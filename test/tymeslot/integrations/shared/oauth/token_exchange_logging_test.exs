@@ -4,9 +4,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
 
   @moduletag :integrations
 
-  import ExUnit.CaptureLog
-
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Test.LogCapture
 
   import Mox
   setup :verify_on_exit!
@@ -20,13 +19,13 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
         {:ok, %Req.Response{status: 400, body: secret_body}}
       end)
 
-      log =
-        capture_log(fn ->
-          TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"})
-        end)
+      LogCapture.attach()
 
-      assert log =~ "OAuth token refresh failed"
-      refute log =~ "secret-123"
+      TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"})
+
+      # The body goes to metadata, which the console formatter drops, so this
+      # must be asserted against the captured record rather than `capture_log`.
+      refute LogCapture.dump(LogCapture.await_log("OAuth token refresh failed")) =~ "secret-123"
     end
 
     test "truncates extremely long error bodies" do
@@ -36,14 +35,15 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
         {:ok, %Req.Response{status: 500, body: long_error}}
       end)
 
-      log =
-        capture_log(fn ->
-          TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"})
-        end)
+      LogCapture.attach()
 
-      assert log =~ "OAuth token refresh failed"
+      TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"})
+
+      event = LogCapture.await_log("OAuth token refresh failed")
+
       # Verify the full body isn't logged verbatim
-      assert byte_size(log) < 5000
+      assert byte_size(LogCapture.user_metadata(event)[:body]) < byte_size(long_error)
+      assert byte_size(LogCapture.dump(event)) < 5000
     end
   end
 end

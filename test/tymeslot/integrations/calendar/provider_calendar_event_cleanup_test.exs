@@ -1,13 +1,19 @@
 defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
   @moduledoc """
-  Tests the SQL from the cleanup migration that:
+  Drives `20260415192059_cleanup_calendar_event_duplicates_and_add_status_constraints`,
+  which:
 
   - Remaps `status='free'` rows to `(status='confirmed', transparency='transparent')`
   - De-duplicates `(calendar_integration_id, summary, start_at, end_at)` clusters
   - Enforces CHECK constraints on `status` and `transparency`
 
   Runs non-async because it temporarily drops the CHECK constraints to
-  simulate the pre-migration database state and insert adversarial rows.
+  simulate the pre-migration database state and insert adversarial rows; the
+  migration puts them back, so the constraint tests exercise the constraints
+  the migration installs rather than hand-written copies of them.
+
+  The migration module is loaded from `priv` and run through `Ecto.Migrator`;
+  see `Tymeslot.Test.MigrationRunner`.
   """
 
   use Tymeslot.DataCase, async: false
@@ -19,50 +25,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MigrationRunner
 
-  @normalise_free_sql """
-  UPDATE provider_calendar_events
-     SET status = 'confirmed',
-         transparency = 'transparent'
-   WHERE status = 'free'
-  """
-
-  @dedupe_timed_sql """
-  WITH ranked AS (
-    SELECT id,
-           ROW_NUMBER() OVER (
-             PARTITION BY calendar_integration_id, summary, start_at, end_at
-             ORDER BY synced_at DESC NULLS LAST, id DESC
-           ) AS rn
-      FROM provider_calendar_events
-     WHERE summary IS NOT NULL
-       AND start_at IS NOT NULL
-       AND end_at IS NOT NULL
-  )
-  DELETE FROM provider_calendar_events
-   WHERE id IN (SELECT id FROM ranked WHERE rn > 1)
-  """
-
-  @dedupe_all_day_sql """
-  WITH ranked AS (
-    SELECT id,
-           ROW_NUMBER() OVER (
-             PARTITION BY calendar_integration_id, summary, start_date, end_date
-             ORDER BY synced_at DESC NULLS LAST, id DESC
-           ) AS rn
-      FROM provider_calendar_events
-     WHERE all_day = true
-       AND summary IS NOT NULL
-       AND start_date IS NOT NULL
-       AND end_date IS NOT NULL
-  )
-  DELETE FROM provider_calendar_events
-   WHERE id IN (SELECT id FROM ranked WHERE rn > 1)
-  """
+  @version 20_260_415_192_059
 
   setup do
     # Drop the CHECK constraints so we can insert adversarial rows that
-    # the migration is supposed to clean up.
+    # the migration is supposed to clean up. The sandbox rolls the DDL back
+    # with the test, and the migration re-adds them on its way through.
     Repo.query!(
       "ALTER TABLE provider_calendar_events DROP CONSTRAINT IF EXISTS provider_calendar_events_status_check"
     )
@@ -93,7 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
           [integration.id]
         )
 
-      Repo.query!(@normalise_free_sql)
+      run_migration!()
 
       row = Repo.get_by(ProviderCalendarEventSchema, uid: "free-uid-1")
       assert row.status == "confirmed"
@@ -131,17 +101,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
         synced_at: ~U[2026-04-05 09:00:00Z]
       })
 
-      Repo.query!(@dedupe_timed_sql)
+      run_migration!()
 
       # Only the newest survivor remains.
-      survivors =
-        Repo.all(
-          from p in ProviderCalendarEventSchema,
-            where: p.calendar_integration_id == ^integration.id and p.summary == "Dup event",
-            select: p.uid
-        )
-
-      assert survivors == ["dup-uid-newest"]
+      assert surviving_uids(integration, "Dup event") == ["dup-uid-newest"]
     end
 
     test "de-duplicates all-day clusters by (summary, start_date, end_date)",
@@ -162,16 +125,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
         synced_at: ~U[2026-04-10 09:00:00Z]
       })
 
-      Repo.query!(@dedupe_all_day_sql)
+      run_migration!()
 
-      survivors =
-        Repo.all(
-          from p in ProviderCalendarEventSchema,
-            where: p.calendar_integration_id == ^integration.id and p.summary == "Holiday",
-            select: p.uid
-        )
-
-      assert survivors == ["allday-new"]
+      assert surviving_uids(integration, "Holiday") == ["allday-new"]
     end
 
     test "preserves all-day rows with NULL end_date — cannot safely merge them",
@@ -195,7 +151,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
         [integration.id]
       )
 
-      Repo.query!(@dedupe_all_day_sql)
+      run_migration!()
 
       assert Repo.get_by(ProviderCalendarEventSchema, uid: "null-end-a")
       assert Repo.get_by(ProviderCalendarEventSchema, uid: "null-end-b")
@@ -218,7 +174,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
         synced_at: ~U[2026-04-10 09:00:00Z]
       })
 
-      Repo.query!(@dedupe_timed_sql)
+      run_migration!()
 
       assert Repo.get_by(ProviderCalendarEventSchema, uid: "unique-a")
       assert Repo.get_by(ProviderCalendarEventSchema, uid: "unique-b")
@@ -242,7 +198,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
         synced_at: ~U[2026-04-10 09:00:00Z]
       })
 
-      Repo.query!(@dedupe_timed_sql)
+      run_migration!()
 
       assert Repo.get_by(ProviderCalendarEventSchema, uid: "null-summary-a")
       assert Repo.get_by(ProviderCalendarEventSchema, uid: "null-summary-b")
@@ -251,17 +207,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
 
   describe "CHECK constraints" do
     test "reject invalid status values once installed", %{integration: integration} do
-      Repo.query!("""
-      ALTER TABLE provider_calendar_events
-        ADD CONSTRAINT provider_calendar_events_status_check
-        CHECK (status IS NULL OR status IN ('confirmed', 'tentative', 'cancelled', 'declined'))
-      """)
-
-      on_exit(fn ->
-        Repo.query!(
-          "ALTER TABLE provider_calendar_events DROP CONSTRAINT IF EXISTS provider_calendar_events_status_check"
-        )
-      end)
+      run_migration!()
 
       assert_raise Postgrex.Error, ~r/status_check/, fn ->
         Repo.query!(
@@ -280,17 +226,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
     end
 
     test "reject invalid transparency values once installed", %{integration: integration} do
-      Repo.query!("""
-      ALTER TABLE provider_calendar_events
-        ADD CONSTRAINT provider_calendar_events_transparency_check
-        CHECK (transparency IS NULL OR transparency IN ('opaque', 'transparent'))
-      """)
-
-      on_exit(fn ->
-        Repo.query!(
-          "ALTER TABLE provider_calendar_events DROP CONSTRAINT IF EXISTS provider_calendar_events_transparency_check"
-        )
-      end)
+      run_migration!()
 
       assert_raise Postgrex.Error, ~r/transparency_check/, fn ->
         Repo.query!(
@@ -311,6 +247,23 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
 
   # ---------------------------------------------------------------------------
   # Helpers
+
+  # Every step of `up/0` is idempotent (NULL-guarded UPDATE, rank-based DELETE,
+  # `DROP CONSTRAINT IF EXISTS` before each `ADD`), so the version is dropped
+  # from the ledger and the migration re-applied over the migrated schema.
+  # `down/0` only removes the constraints; it cannot restore the deleted rows.
+  defp run_migration! do
+    MigrationRunner.replay!(@version)
+  end
+
+  defp surviving_uids(integration, summary) do
+    Repo.all(
+      from(p in ProviderCalendarEventSchema,
+        where: p.calendar_integration_id == ^integration.id and p.summary == ^summary,
+        select: p.uid
+      )
+    )
+  end
 
   defp insert_raw_timed(integration, attrs) do
     Repo.query!(

@@ -5,6 +5,7 @@ defmodule Tymeslot.AuthTest do
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
@@ -55,7 +56,7 @@ defmodule Tymeslot.AuthTest do
         )
 
       # Create session before password change
-      _old_session = insert(:user_session, user: user)
+      old_session = insert(:user_session, user: user)
 
       # Change password
       {:ok, _updated_user} =
@@ -66,7 +67,12 @@ defmodule Tymeslot.AuthTest do
           "NewPassword123!"
         )
 
-      # Verify new password works (sessions handled internally)
+      # The pre-change session is revoked, so the old cookie no longer resolves
+      # to a user
+      refute Repo.reload(old_session)
+      refute UserSessionQueries.get_user_by_session_token(old_session.token)
+
+      # Verify new password works
       assert {:ok, _user, _conn} = Auth.authenticate_user(user.email, "NewPassword123!")
     end
   end

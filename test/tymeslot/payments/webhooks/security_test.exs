@@ -58,15 +58,15 @@ defmodule Tymeslot.Payments.Webhooks.SecurityTest do
       assert {:error, %{reason: :invalid_signature}} = SignatureVerifier.verify("body", "sig")
     end
 
-    test "verify/2 succeeds and returns event" do
+    test "verify/2 normalises the verified Stripe struct into a plain string-keyed map" do
       expect(Tymeslot.Payments.StripeMock, :webhook_secret, fn -> "secret" end)
 
-      # Use a map - normalize_event only normalizes structs, so maps pass through unchanged
-      event = %{
+      # Stripe hands back a struct; downstream handlers index the event with
+      # string keys, so the verifier must flatten it rather than pass it on.
+      event = %Stripe.Event{
         id: "evt_123",
-        data: %{
-          object: %{id: "obj_123", amount: 1000}
-        }
+        type: "customer.subscription.updated",
+        data: %{object: %{id: "obj_123", amount: 1000}}
       }
 
       expect(Tymeslot.Payments.StripeMock, :construct_webhook_event, fn "body", "sig", "secret" ->
@@ -74,9 +74,12 @@ defmodule Tymeslot.Payments.Webhooks.SecurityTest do
       end)
 
       assert {:ok, verified_event} = SignatureVerifier.verify("body", "sig")
-      assert verified_event.id == "evt_123"
-      assert verified_event.data.object.id == "obj_123"
-      assert verified_event.data.object.amount == 1000
+
+      assert Enum.all?(Map.keys(verified_event), &is_binary/1)
+      assert verified_event["id"] == "evt_123"
+      assert verified_event["type"] == "customer.subscription.updated"
+      assert verified_event["data"]["object"]["id"] == "obj_123"
+      assert verified_event["data"]["object"]["amount"] == 1000
     end
   end
 end

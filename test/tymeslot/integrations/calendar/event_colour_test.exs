@@ -195,6 +195,10 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
       assert EventColour.nearest_key("#4169E1FF") == "blueberry"
     end
 
+    test "returns nil when the alpha pair itself is not valid hex" do
+      assert EventColour.nearest_key("#4169E1ZZ") == nil
+    end
+
     test "expands 3-digit shorthand hex before snapping" do
       assert EventColour.nearest_key("#f00") == "tomato"
       assert EventColour.nearest_key("#F00") == "tomato"

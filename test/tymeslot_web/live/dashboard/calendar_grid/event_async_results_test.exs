@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
   alias Plug.Test
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Repo
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -266,24 +267,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
   end
 
   describe "integration lifecycle messages" do
-    test "integration_added keeps the dashboard rendering", %{conn: conn, user: user} do
-      _integration = insert(:calendar_integration, user: user, is_active: true)
-
+    # Both messages exist to invalidate the cached integration status and
+    # reassign it. The setup checklist above the grid is where that status
+    # surfaces: its "done of total" badge counts "Connect a calendar" as done
+    # exactly when the host has an active calendar integration.
+    test "integration_added re-reads the status a stale cache would have hidden", %{
+      conn: conn,
+      user: user
+    } do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      assert ["0", total] = checklist_progress(lv)
 
-      send(lv.pid, {:integration_added, nil})
+      insert(:calendar_integration, user: user, is_active: true)
+      send(lv.pid, {:integration_added, :calendar})
 
-      assert render(lv) =~ "calendar"
+      assert ["1", ^total] = checklist_progress(lv)
     end
 
-    test "integration_removed keeps the dashboard rendering", %{conn: conn, user: user} do
-      _integration = insert(:calendar_integration, user: user, is_active: true)
+    test "integration_removed re-reads the status after the calendar is deleted", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      assert ["1", total] = checklist_progress(lv)
 
-      send(lv.pid, {:integration_removed, nil})
+      Repo.delete!(integration)
+      send(lv.pid, {:integration_removed, :calendar})
 
-      assert render(lv) =~ "calendar"
+      assert ["0", ^total] = checklist_progress(lv)
+    end
+
+    defp checklist_progress(lv) do
+      lv
+      |> element("[data-testid='onboarding-checklist']")
+      |> render()
+      |> then(&Regex.run(~r{(\d+)/(\d+)}, &1, capture: :all_but_first))
     end
   end
 

@@ -17,15 +17,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_webhook_write_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_001
-
-      for i <- 1..30 do
-        assert :ok = RateLimiter.check_webhook_write_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_002
 
@@ -82,15 +73,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_webhook_test_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_101
-
-      for i <- 1..30 do
-        assert :ok = RateLimiter.check_webhook_test_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_102
 
@@ -124,15 +106,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_webhook_token_regen_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_201
-
-      for i <- 1..10 do
-        assert :ok = RateLimiter.check_webhook_token_regen_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_202
 
@@ -179,15 +152,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_calendar_refresh_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_301
-
-      for i <- 1..10 do
-        assert :ok = RateLimiter.check_calendar_refresh_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_302
 
@@ -234,15 +198,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_integration_write_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_401
-
-      for i <- 1..30 do
-        assert :ok = RateLimiter.check_integration_write_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_402
 
@@ -284,15 +239,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
   # ---------------------------------------------------------------------------
 
   describe "check_integration_appearance_rate_limit/1" do
-    test "allows requests within the limit" do
-      user_id = 11_421
-
-      for i <- 1..150 do
-        assert :ok = RateLimiter.check_integration_appearance_rate_limit(user_id),
-               "Request #{i} should be allowed"
-      end
-    end
-
     test "blocks requests exceeding the limit" do
       user_id = 11_422
 

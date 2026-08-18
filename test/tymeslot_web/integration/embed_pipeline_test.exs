@@ -223,11 +223,16 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       # Static render succeeds (origin check happens on WebSocket connect)
       assert conn.status == 200
 
-      # But CSP headers should block the iframe from loading for non-localhost
+      # The sentinel resolves through `dev_local_or_deny/0`, which in dev/test
+      # allows the local origins instead of denying outright ('none' + DENY is
+      # the production result). Assert the value that is actually served.
       csp = conn |> get_resp_header("content-security-policy") |> List.first()
 
-      # In test env, dev_local_or_deny allows localhost
-      assert csp =~ "frame-ancestors"
+      assert csp =~ "frame-ancestors 'self' http://localhost:* http://127.0.0.1:*;"
+      refute csp =~ "frame-ancestors 'none'"
+
+      # With frame-ancestors present, X-Frame-Options is deliberately omitted.
+      assert get_resp_header(conn, "x-frame-options") == []
     end
 
     test "?embed=1 without a layout sets data-embed-layout=\"default\" (back-compat)", %{

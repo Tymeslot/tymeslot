@@ -127,7 +127,9 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
 
       assert user.github_user_id == 123
       assert user.email == "gh@example.com"
+      assert user.name == "GH User"
       assert user.is_verified == true
+      assert user.email_from_provider == true
     end
 
     test ":google with valid user info" do
@@ -137,6 +139,9 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
 
       assert user.google_user_id == "g-123"
       assert user.email == "g@example.com"
+      assert user.name == "G User"
+      assert user.is_verified == true
+      assert user.email_from_provider == true
     end
 
     test "unknown provider returns error" do
@@ -177,20 +182,6 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
   describe "UserRegistration.registration_complete? edge cases" do
     alias Tymeslot.Auth.OAuth.UserRegistration
 
-    test ":oauth rejects empty email" do
-      refute UserRegistration.registration_complete?(:oauth, %{
-               email: "",
-               provider_uid: "sub-123"
-             })
-    end
-
-    test ":oauth rejects empty provider_uid" do
-      refute UserRegistration.registration_complete?(:oauth, %{
-               email: "test@example.com",
-               provider_uid: ""
-             })
-    end
-
     test ":oauth rejects nil email" do
       refute UserRegistration.registration_complete?(:oauth, %{
                email: nil,
@@ -202,20 +193,6 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       refute UserRegistration.registration_complete?(:oauth, %{
                email: "test@example.com",
                provider_uid: nil
-             })
-    end
-
-    test ":github rejects empty email" do
-      refute UserRegistration.registration_complete?(:github, %{
-               email: "",
-               github_user_id: "123"
-             })
-    end
-
-    test ":google rejects empty email" do
-      refute UserRegistration.registration_complete?(:google, %{
-               email: "",
-               google_user_id: "123"
              })
     end
   end

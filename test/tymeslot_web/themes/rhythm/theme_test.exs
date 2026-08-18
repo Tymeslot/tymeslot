@@ -42,20 +42,6 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
     end
   end
 
-  describe "theme_config/0" do
-    test "provides theme metadata and capabilities" do
-      config = Theme.theme_config()
-
-      assert config.name == "Rhythm"
-      assert config.flow_steps == 4
-      assert config.design_system == :video_background
-      assert config.supports_duration_selection == true
-      assert config.supports_inline_booking == false
-      assert String.contains?(config.description, "video background")
-      assert String.contains?(config.preview_image, "rhythm-theme-preview")
-    end
-  end
-
   describe "validate_theme/0" do
     test "returns :ok when all required components are loadable" do
       assert Theme.validate_theme() == :ok

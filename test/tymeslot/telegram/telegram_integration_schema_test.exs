@@ -34,7 +34,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
              } = errors_on(changeset)
     end
 
-    test "validates name minimum length" do
+    test "an empty name is cast to nil and reported as blank, not as a length error" do
       user = insert(:user)
 
       changeset =
@@ -45,7 +45,11 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         })
 
       refute changeset.valid?
-      assert "can't be blank" in errors_on(changeset).name
+      # cast/3 treats "" as an empty value and drops it, so validate_required
+      # fires and the minimum-length rule is never reached. The single error is
+      # what the user sees, so it must not be a confusing length complaint.
+      assert is_nil(get_change(changeset, :name))
+      assert errors_on(changeset).name == ["can't be blank"]
     end
 
     test "validates name maximum length" do

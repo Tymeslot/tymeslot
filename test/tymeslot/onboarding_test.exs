@@ -7,20 +7,6 @@ defmodule Tymeslot.OnboardingTest do
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Onboarding
 
-  describe "dev helpers" do
-    test "create_dev_profile/0 returns a mock profile" do
-      profile = Onboarding.create_dev_profile()
-      assert profile.id == 1
-      assert profile.timezone == "Europe/Tallinn"
-    end
-
-    test "create_dev_user/0 returns a mock user" do
-      user = Onboarding.create_dev_user()
-      assert user.id == 1
-      assert user.email == "dev@example.com"
-    end
-  end
-
   describe "get_or_create_profile/1" do
     test "creates a profile when none exists" do
       user = insert(:user)

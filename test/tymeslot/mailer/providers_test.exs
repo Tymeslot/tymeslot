@@ -52,7 +52,16 @@ defmodule Tymeslot.Mailer.ProvidersTest do
     test "all/0 returns every entry keyed by its EMAIL_ADAPTER name" do
       all = Providers.all()
 
-      assert Enum.sort(Map.keys(all)) == Providers.names()
+      assert Enum.sort(Map.keys(all)) == [
+               "ahasend",
+               "local",
+               "mailgun",
+               "postmark",
+               "sendgrid",
+               "smtp",
+               "test"
+             ]
+
       assert %{label: "Postmark", adapter: Swoosh.Adapters.Postmark} = all["postmark"]
     end
 

@@ -2,10 +2,12 @@ defmodule Tymeslot.Emails.Shared.Styles do
   @moduledoc """
   Public facade for the Tymeslot email design system — 2026 redesign.
 
-  The system is split across two focused sub-modules:
+  The system is split across three focused sub-modules:
 
   - `Tymeslot.Emails.Shared.Styles.Tokens` — design-token data and lookups
     (palette, intents, typography, radius).
+  - `Tymeslot.Emails.Shared.Styles.BrandPalette` — derives the `:confirmed`
+    brand colour family from a configured accent, for `Tokens` to consume.
   - `Tymeslot.Emails.Shared.Styles.CSS` — MJML attribute defaults and the
     embedded CSS stylesheet, including mobile and dark-mode variants.
 
@@ -27,7 +29,8 @@ defmodule Tymeslot.Emails.Shared.Styles do
   An intent is a semantic category describing the purpose of an email. There
   are exactly three:
 
-  - `:confirmed` — brand turquoise. The default for every informational,
+  - `:confirmed` — the brand accent (turquoise by default; a self-hosted
+    instance can configure its own). The default for every informational,
     welcome, reminder, invitation, trial, subscription, or confirmation email.
   - `:alert` — amber. The "attention needed" signal.
   - `:cancelled` — rose. The "something is wrong" signal.
@@ -36,6 +39,7 @@ defmodule Tymeslot.Emails.Shared.Styles do
   """
 
   alias Tymeslot.Emails.Shared.Styles.{CSS, Tokens}
+  alias Tymeslot.Utils.Colour
 
   # ============================================================================
   # TOKEN FACADE — delegates to Styles.Tokens
@@ -82,9 +86,24 @@ defmodule Tymeslot.Emails.Shared.Styles do
   def border_color(:subtle), do: Tokens.hairline_soft()
   def border_color(_other), do: Tokens.hairline()
 
-  @doc "Button text colour — always white, since every intent accent carries enough contrast."
-  @spec button_text_color() :: String.t()
-  def button_text_color, do: "#ffffff"
+  @doc """
+  Button text colour for the given background, chosen for contrast rather
+  than assumed. Intent accents range from pale (a light custom brand colour)
+  to dark, so a single fixed text colour cannot serve all of them — this
+  picks whichever of the palette's near-white surface token and dark ink
+  token clears more contrast against `background_hex`.
+  """
+  @spec button_text_color(String.t()) :: String.t()
+  def button_text_color(background_hex) do
+    light = Tokens.surface()
+    dark = Tokens.ink()
+
+    if Colour.contrast_ratio(background_hex, dark) >= Colour.contrast_ratio(background_hex, light) do
+      dark
+    else
+      light
+    end
+  end
 
   @doc "Button padding by size."
   @spec button_padding(atom()) :: String.t()

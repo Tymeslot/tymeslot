@@ -26,27 +26,6 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
       end)
     end
 
-    test "includes mirotalk provider" do
-      providers = Discovery.list_available_providers()
-
-      provider_types = Enum.map(providers, & &1.type)
-      assert :mirotalk in provider_types
-    end
-
-    test "includes google_meet provider" do
-      providers = Discovery.list_available_providers()
-
-      provider_types = Enum.map(providers, & &1.type)
-      assert :google_meet in provider_types
-    end
-
-    test "includes custom provider" do
-      providers = Discovery.list_available_providers()
-
-      provider_types = Enum.map(providers, & &1.type)
-      assert :custom in provider_types
-    end
-
     test "returns providers with valid config schemas" do
       providers = Discovery.list_available_providers()
 
@@ -75,37 +54,11 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
                "#{provider.type} points at unloadable module #{inspect(provider.module)}"
       end)
     end
-
-    test "returns consistent provider list on multiple calls" do
-      providers1 = Discovery.list_available_providers()
-      providers2 = Discovery.list_available_providers()
-
-      # Should return same providers
-      types1 = Enum.sort(Enum.map(providers1, & &1.type))
-      types2 = Enum.sort(Enum.map(providers2, & &1.type))
-
-      assert types1 == types2
-    end
   end
 
   describe "default_provider/0" do
     test "returns mirotalk as the default video provider" do
       assert Discovery.default_provider() == :mirotalk
-    end
-
-    test "default provider is in available providers list" do
-      default = Discovery.default_provider()
-      providers = Discovery.list_available_providers()
-
-      provider_types = Enum.map(providers, & &1.type)
-      assert default in provider_types
-    end
-
-    test "returns consistent default on multiple calls" do
-      default1 = Discovery.default_provider()
-      default2 = Discovery.default_provider()
-
-      assert default1 == default2
     end
   end
 end

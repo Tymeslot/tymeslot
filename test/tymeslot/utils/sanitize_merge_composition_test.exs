@@ -1,14 +1,13 @@
 defmodule Tymeslot.Utils.SanitizeMergeCompositionTest do
   @moduledoc """
-  Regression coverage for the five refactored sanitise-merge sites
+  Regression coverage for the refactored sanitise-merge sites
   (Calendar.Creation, VideoSettingsComponent add_integration,
-  ServiceSettingsComponent meeting type form, EditVideoIntegrationModal
-  save, CalendarSettingsComponent selection merge).
+  ServiceSettingsComponent meeting type form).
 
   Each test pairs the real validator / helper output with
   `SanitizeMerge.merge/2` to prove the refactor preserves the happy-path
-  merged value and does the right thing when the right-hand side carries a
-  drop-signal sentinel.
+  merged value. The merge function's own semantics — drop signals, empty
+  strings, key precedence — are covered by `sanitize_merge_test.exs`.
   """
 
   use ExUnit.Case, async: true
@@ -86,55 +85,6 @@ defmodule Tymeslot.Utils.SanitizeMergeCompositionTest do
       assert merged["name"] == "Consultation"
       assert merged["duration"] == "30"
       assert merged["calendar_integration_id"] == ""
-    end
-
-    test "preserves user-selected calendar_integration_id against a nil drop-signal" do
-      # Regression-critical: if any future sanitiser returned nil for a
-      # populated optional field, SanitizeMerge keeps the user's value.
-      params = %{
-        "name" => "Consultation",
-        "duration" => "30",
-        "calendar_integration_id" => 42
-      }
-
-      sanitized = %{
-        "name" => "Consultation",
-        "duration" => "30",
-        "calendar_integration_id" => nil
-      }
-
-      merged = SanitizeMerge.merge(params, sanitized)
-
-      assert merged["calendar_integration_id"] == 42
-    end
-  end
-
-  describe "EditVideoIntegrationModal save" do
-    test "preserves populated api_key through the merge" do
-      params = %{
-        "provider" => "mirotalk",
-        "name" => "My Mirotalk",
-        "api_key" => "newkey12345678",
-        "base_url" => "https://mirotalk.example.com"
-      }
-
-      assert {:ok, sanitized} =
-               VideoInputValidation.validate_video_integration_form(params, metadata: %{})
-
-      merged = SanitizeMerge.merge(params, sanitized)
-
-      assert merged["api_key"] == "newkey12345678"
-    end
-
-    test "HTML-stripped sanitiser output still overwrites raw params" do
-      # Complement of the drop-signal preservation: if a sanitiser strips a
-      # malicious payload down to `""`, that empty string must still win —
-      # otherwise the raw `<script>` would survive. SanitizeMerge's empty
-      # string is deliberately **not** a drop-signal.
-      params = %{"description" => "<script></script>"}
-      sanitized = %{"description" => ""}
-
-      assert SanitizeMerge.merge(params, sanitized) == %{"description" => ""}
     end
   end
 end

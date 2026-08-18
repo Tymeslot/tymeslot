@@ -58,6 +58,9 @@ defmodule Tymeslot.AppSettings do
           | :admin_alert_email
           | :meeting_payments_enabled
           | :booking_analytics_enabled
+          | :email_brand_name
+          | :email_brand_accent
+          | :email_logo_path
 
   @type effective_source :: :db | :config | :default
   @type effective_value :: %{
@@ -92,6 +95,18 @@ defmodule Tymeslot.AppSettings do
   """
   @spec get!() :: AppSettingsSchema.t()
   def get!, do: AppSettingsQueries.get_settings()
+
+  @doc """
+  Effective value for a single setting, without touching the database.
+
+  DB overrides are pushed into the Application env by `load!/0` at boot and by
+  `update/1` on change, so reading the env layer here already accounts for
+  them; the built-in default fills in when neither layer has a value. Use this
+  rather than `Application.get_env/3` at call sites, so a setting whose default
+  is meaningful (rather than `nil`) resolves in one place.
+  """
+  @spec get(setting_key()) :: term()
+  def get(key) when is_atom(key), do: Env.read(key)
 
   @doc """
   Returns a map of `key -> %{value, source, db_value, locked_states}` for

@@ -221,7 +221,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         end_at: ~U[2026-03-12 15:30:00Z]
       }
 
-      assert Helpers.format_time_range(event, "12h") =~ "PM"
+      assert Helpers.format_time_range(event, "12h") == "2:00 PM \u2013 3:30 PM"
     end
 
     test "24-hour format" do

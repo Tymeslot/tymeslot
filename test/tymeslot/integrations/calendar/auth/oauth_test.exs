@@ -6,24 +6,24 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
   import Mox
 
   alias Tymeslot.Integrations.Calendar.OAuth
+  alias TymeslotWeb.Endpoint
 
   # Make sure mocks are verified
   setup :verify_on_exit!
 
   describe "initiate_google_oauth/2" do
-    test "generates valid authorization URL with user ID using mock" do
+    test "passes the user ID and the Google callback redirect URI to the helper" do
       user = insert(:user)
 
-      expected_url =
-        "https://accounts.google.com/o/oauth2/v2/auth?client_id=test&state=#{user.id}"
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn user_id, redirect_uri, opts ->
+        assert user_id == user.id
+        assert redirect_uri == "#{Endpoint.url()}/auth/google/calendar/callback"
+        assert opts == []
 
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id,
-                                                                    _redirect_uri,
-                                                                    _opts ->
-        expected_url
+        "https://accounts.google.com/o/oauth2/v2/auth?client_id=test"
       end)
 
-      assert {:ok, ^expected_url} = OAuth.initiate_google_oauth(user.id)
+      assert {:ok, _url} = OAuth.initiate_google_oauth(user.id)
     end
 
     test "returns error when mock helper raises configuration error" do
@@ -57,19 +57,20 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
   end
 
   describe "initiate_outlook_oauth/2" do
-    test "generates valid authorization URL with user ID using mock" do
+    test "passes the user ID and the Outlook callback redirect URI to the helper" do
       user = insert(:user)
 
-      expected_url =
-        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=test"
+      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn user_id,
+                                                                     redirect_uri,
+                                                                     opts ->
+        assert user_id == user.id
+        assert redirect_uri == "#{Endpoint.url()}/auth/outlook/calendar/callback"
+        assert opts == []
 
-      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id,
-                                                                     _redirect_uri,
-                                                                     _opts ->
-        expected_url
+        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=test"
       end)
 
-      assert {:ok, ^expected_url} = OAuth.initiate_outlook_oauth(user.id)
+      assert {:ok, _url} = OAuth.initiate_outlook_oauth(user.id)
     end
 
     test "returns error when mock helper raises configuration error" do

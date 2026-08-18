@@ -16,6 +16,7 @@ import { ConfirmDelete, PageReload, VideoHoverPreview, StopClickPropagation, Mod
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
+import { EmailLogoUpload } from "../hooks/email_logo_upload"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
@@ -61,7 +62,13 @@ const CoreHooks = {
   RecaptchaV3: RecaptchaV3Hook,
 
   // Analytics (view-on-mount beacon; click tracking is delegated, not a hook)
-  AnalyticsView
+  AnalyticsView,
+
+  // Self-hosted admin email-branding logo picker. It lives in core because
+  // /admin has no route bundle of its own, and pulling in the dashboard
+  // bundle for one hook would cost far more than the hook does. It mounts
+  // only on the element carrying phx-hook, so every other page ignores it.
+  EmailLogoUpload
 }
 
 // Use /embed-live in cross-site iframes to avoid session cookie dependency

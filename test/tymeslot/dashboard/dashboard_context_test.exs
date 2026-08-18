@@ -42,11 +42,12 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
     end
   end
 
-  describe "default_integration_status/0" do
-    test "returns all-false, all-zero defaults" do
-      result = DashboardContext.default_integration_status()
-
-      assert result == %{
+  describe "get_integration_status/1" do
+    # Pins the full six-key default shape as well as the nil branch: every other
+    # default assertion compares against `default_integration_status/0` itself,
+    # so this is the only place the key set is spelled out. Keep it spelled out.
+    test "returns the all-false, all-zero six-key defaults for nil user_id" do
+      assert DashboardContext.get_integration_status(nil) == %{
                has_calendar: false,
                has_video: false,
                has_meeting_types: false,
@@ -54,13 +55,6 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
                video_count: 0,
                meeting_types_count: 0
              }
-    end
-  end
-
-  describe "get_integration_status/1" do
-    test "returns defaults for nil user_id" do
-      assert DashboardContext.get_integration_status(nil) ==
-               DashboardContext.default_integration_status()
     end
 
     test "returns defaults for non-integer user_id" do

@@ -78,8 +78,8 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSection do
         </mj-text>
         <mj-button
           href="#{safe_url}"
-          background-color="#{tokens.accent}"
-          color="#ffffff"
+          background-color="#{tokens.accent_deep}"
+          color="#{Styles.button_text_color(tokens.accent_deep)}"
           font-weight="700"
           font-size="15px"
           align="left"

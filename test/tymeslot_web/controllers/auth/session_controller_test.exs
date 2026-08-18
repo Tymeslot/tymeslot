@@ -104,8 +104,7 @@ defmodule TymeslotWeb.SessionControllerTest do
         })
 
       assert redirected_to(conn) == "/auth/login"
-      error = Flash.get(conn.assigns.flash, :error)
-      assert is_binary(error), "expected a string flash, got: #{inspect(error)}"
+      assert Flash.get(conn.assigns.flash, :error) == "Please enter your email and password."
       refute get_session(conn, :user_token)
     end
 

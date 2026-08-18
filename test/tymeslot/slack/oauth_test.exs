@@ -50,15 +50,6 @@ defmodule Tymeslot.Slack.OAuthTest do
   end
 
   describe "verify_state/1" do
-    test "round-trips a state token signed by authorize_url/2" do
-      url = OAuth.authorize_url(7, "https://example.test/cb")
-
-      state =
-        url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query() |> Map.fetch!("state")
-
-      assert {:ok, 7} = OAuth.verify_state(state)
-    end
-
     test "returns :invalid_state for malformed input" do
       assert {:error, :invalid_state} = OAuth.verify_state("not-a-real-token")
     end

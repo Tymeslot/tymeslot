@@ -43,8 +43,10 @@ defmodule Tymeslot.Auth.OAuth.GoogleTest do
     assert url =~ "prompt=select_account"
   end
 
-  test "get_callback_url/0 returns Google callback path" do
-    expect(HelperMock, :get_callback_url, fn :google -> "/auth/google/callback" end)
+  test "get_callback_url/0 asks the helper for the :google provider" do
+    # The stub derives its answer from the provider it is handed, so the
+    # assertion below fails if this module ever asks for a different provider.
+    expect(HelperMock, :get_callback_url, fn provider -> "/auth/#{provider}/callback" end)
 
     assert Google.get_callback_url() == "/auth/google/callback"
   end

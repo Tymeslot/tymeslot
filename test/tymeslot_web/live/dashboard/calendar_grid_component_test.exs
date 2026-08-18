@@ -21,13 +21,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
 
   describe "navigation" do
     test "renders calendar grid page", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ "Calendar"
+      {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
+
+      # "Calendar" alone is the sidebar nav label, present on every dashboard
+      # page — assert the grid itself, with a full week of day columns.
+      assert has_element?(lv, "#calendar-grid")
+      assert length(Regex.scan(~r/data-day-col=/, html)) == 7
     end
 
     test "shows current week period label containing the current year", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ to_string(Date.utc_today().year)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # The year appears in every `data-day-col` ISO date, so scope the
+      # assertion to the element that actually shows the period.
+      label = lv |> element("#calendar-period-label") |> render()
+
+      assert label =~ to_string(Date.utc_today().year)
     end
   end
 

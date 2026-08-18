@@ -4,6 +4,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   """
 
   import ExUnit.Assertions
+  import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
 
   @doc """
   Tests the standard 4-step state machine structure.
@@ -92,22 +93,42 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   def test_render_meeting_action(theme_module, build_assigns_fn) do
     assigns = build_assigns_fn.()
 
-    # Test reschedule action
-    result = theme_module.render_meeting_action(assigns, :reschedule)
-    assert result.__struct__ == Phoenix.LiveView.Rendered
+    reschedule = render_meeting_action_html(theme_module, assigns, :reschedule)
+    assert reschedule =~ "Reschedule Appointment"
+    assert reschedule =~ "Select a new time for your meeting"
+    refute reschedule =~ "Yes, Cancel Meeting"
 
-    # Test cancel action
-    result = theme_module.render_meeting_action(assigns, :cancel)
-    assert result.__struct__ == Phoenix.LiveView.Rendered
+    cancel = render_meeting_action_html(theme_module, assigns, :cancel)
+    assert cancel =~ "Cancel Appointment"
+    assert cancel =~ "Are you sure you want to cancel this appointment?"
+    assert cancel =~ "Yes, Cancel Meeting"
+    assert cancel =~ "Keep Meeting"
 
-    # Test cancel_confirmed action
-    result = theme_module.render_meeting_action(assigns, :cancel_confirmed)
-    assert result.__struct__ == Phoenix.LiveView.Rendered
+    kept =
+      render_meeting_action_html(theme_module, Map.put(assigns, :meeting_kept, true), :cancel)
+
+    assert kept =~ "Meeting Confirmed"
+    assert kept =~ "Great! Your meeting is still scheduled as planned."
+    refute kept =~ "Yes, Cancel Meeting"
+
+    cancel_confirmed = render_meeting_action_html(theme_module, assigns, :cancel_confirmed)
+    assert cancel_confirmed =~ "Meeting Cancelled"
+    assert cancel_confirmed =~ "Your meeting has been successfully cancelled."
+    assert cancel_confirmed =~ "Schedule a New Meeting"
+    refute cancel_confirmed =~ "Are you sure you want to cancel this appointment?"
 
     # Test unsupported action raises error
     assert_raise RuntimeError, "Unsupported meeting action: invalid", fn ->
       theme_module.render_meeting_action(assigns, :invalid)
     end
+
+    :ok
+  end
+
+  defp render_meeting_action_html(theme_module, assigns, action) do
+    result = theme_module.render_meeting_action(assigns, action)
+    assert %Phoenix.LiveView.Rendered{} = result
+    rendered_to_string(result)
   end
 
   @doc """
@@ -132,7 +153,9 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
       },
       custom_css: nil,
       locale: "en",
-      language_dropdown_open: false
+      language_dropdown_open: false,
+      loading: false,
+      meeting_kept: false
     }
   end
 end

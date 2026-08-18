@@ -79,8 +79,17 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       assert Enum.any?(errors, &String.contains?(&1, "Field :icon must be a string"))
     end
 
-    test "accepts all available icons" do
-      for icon <- ExtensionSchema.available_icons() do
+    test "accepts a real heroicon name in each of the four styles" do
+      # Named rather than read back from `available_icons/0`, which is the same
+      # source the validation consults: an icon set that lost the mini or micro
+      # style would still agree with itself.
+      for icon <- [
+            "hero-home",
+            "hero-credit-card",
+            "hero-calendar-days-solid",
+            "hero-bell-mini",
+            "hero-clock-micro"
+          ] do
         extension = %{
           id: :test,
           label: "Test",
