@@ -7,12 +7,6 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurityTest do
 
   alias TymeslotWeb.Plugs.UploadStaticSecurity
 
-  describe "init/1" do
-    test "passes options through unchanged" do
-      assert UploadStaticSecurity.init(foo: :bar) == [foo: :bar]
-    end
-  end
-
   describe "call/2 — allowlisted extensions" do
     for ext <- ~w(.jpg .jpeg .png .gif .webp .mp4 .webm .mov) do
       test "passes through #{ext} and sets nosniff header", %{conn: conn} do

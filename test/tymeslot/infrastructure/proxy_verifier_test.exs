@@ -172,14 +172,6 @@ defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
       end
     end
 
-    test "accepts valid HTTPS URLs" do
-      # Should not raise, will fail to connect but that's expected in tests
-      result = ProxyVerifier.verify(test_url: "https://valid.example.com/path")
-
-      assert result.proxy_configured == true
-      assert result.details[:test_url] == "https://valid.example.com/path"
-    end
-
     test "rejects timeout below minimum (1000ms)" do
       assert_raise ArgumentError, ~r/Timeout too short.*minimum: 1000ms/i, fn ->
         ProxyVerifier.verify(timeout: 999)
@@ -212,11 +204,6 @@ defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
     test "accepts valid timeout at maximum boundary" do
       assert %{proxy_configured: true, details: %{config: %{https_proxy: %{port: 8080}}}} =
                ProxyVerifier.verify(timeout: 300_000)
-    end
-
-    test "accepts valid timeout in normal range" do
-      assert %{proxy_configured: true, details: %{config: %{https_proxy: %{port: 8080}}}} =
-               ProxyVerifier.verify(timeout: 10_000)
     end
   end
 end

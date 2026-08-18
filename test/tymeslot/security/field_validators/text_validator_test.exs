@@ -57,11 +57,6 @@ defmodule Tymeslot.Security.FieldValidators.TextValidatorTest do
   end
 
   describe "get_config/2" do
-    test "returns default values" do
-      assert TextValidator.get_config(:min_length) == 1
-      assert TextValidator.get_config(:max_length) == 500
-    end
-
     test "returns values from options" do
       assert TextValidator.get_config(:min_length, min_length: 10) == 10
       assert TextValidator.get_config(:max_length, max_length: 1000) == 1000

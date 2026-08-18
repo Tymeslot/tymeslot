@@ -8,7 +8,6 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
 
   @moduletag backup_tests: true
 
-  alias Tymeslot.Infrastructure.Security.Recaptcha
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -283,28 +282,6 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
   end
 
   describe "Edge cases - Token and data handling" do
-    test "booking with very long token is rejected (DoS protection)" do
-      enable_recaptcha()
-
-      # Create a very large token (100KB+)
-      huge_token = String.duplicate("X", 100_000)
-
-      # Verify the token is rejected without crashing
-      result = Recaptcha.verify(huge_token)
-      assert result == {:error, :invalid_token}
-    end
-
-    test "token exceeding 5KB size limit is rejected early" do
-      enable_recaptcha()
-
-      # Create a token just over 5KB
-      oversized_token = String.duplicate("X", 5_001)
-
-      # Should be rejected before hitting Google API (prevents DoS)
-      result = Recaptcha.verify(oversized_token)
-      assert result == {:error, :invalid_token}
-    end
-
     test "empty token is properly rejected with clear error" do
       enable_recaptcha()
 

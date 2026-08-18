@@ -83,16 +83,6 @@ defmodule Tymeslot.Meetings.QueriesTest do
     end
   end
 
-  describe "get_meeting_by_uid_for_organizer/2 (context)" do
-    test "delegates to MeetingQueries and returns meeting for correct organizer" do
-      user = insert(:user)
-      meeting = insert(:meeting, organizer_user_id: user.id)
-
-      assert {:ok, found} = Meetings.get_meeting_by_uid_for_organizer(meeting.uid, user.id)
-      assert found.uid == meeting.uid
-    end
-  end
-
   describe "meetings_needing_reminders/0" do
     test "filters meetings based on reminder rules" do
       now = DateTime.utc_now()

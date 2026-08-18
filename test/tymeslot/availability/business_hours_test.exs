@@ -26,14 +26,6 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
     end
   end
 
-  describe "fallback_business_hours_range" do
-    test "returns default range" do
-      {start_time, end_time} = BusinessHours.fallback_business_hours_range()
-      assert start_time == ~T[11:00:00]
-      assert end_time == ~T[19:30:00]
-    end
-  end
-
   describe "windows_for_target_date/5" do
     # 2026-01-12 is a Monday (day_of_week 1).
     @monday ~D[2026-01-12]

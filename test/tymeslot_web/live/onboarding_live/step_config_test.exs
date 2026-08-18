@@ -7,13 +7,10 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
   use ExUnit.Case, async: true
   @moduletag :utils
 
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   describe "buffer_time_values/0" do
-    test "returns correct preset values for buffer time" do
-      assert StepConfig.buffer_time_values() == [0, 15, 30, 45, 60]
-    end
-
     test "returned values match buffer_time_options/0 values" do
       option_values = Enum.map(StepConfig.buffer_time_options(), fn {_label, value} -> value end)
       assert StepConfig.buffer_time_values() == option_values
@@ -21,10 +18,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
   end
 
   describe "advance_booking_values/0" do
-    test "returns correct preset values for advance booking" do
-      assert StepConfig.advance_booking_values() == [7, 14, 30, 90, 180, 365]
-    end
-
     test "returned values match advance_booking_options/0 values" do
       option_values =
         Enum.map(StepConfig.advance_booking_options(), fn {_label, value} -> value end)
@@ -34,10 +27,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
   end
 
   describe "min_advance_values/0" do
-    test "returns correct preset values for minimum advance notice" do
-      assert StepConfig.min_advance_values() == [0, 1, 3, 6, 12, 24, 48]
-    end
-
     test "returned values match min_advance_options/0 values" do
       option_values = Enum.map(StepConfig.min_advance_options(), fn {_label, value} -> value end)
       assert StepConfig.min_advance_values() == option_values
@@ -80,6 +69,42 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
                {"24 hours", 24},
                {"48 hours", 48}
              ]
+    end
+  end
+
+  describe "presets against the range the schema validates against" do
+    # The presets and each slider's `default_custom` are plain literals in
+    # StepConfig, while the changeset that validates what onboarding submits
+    # reads its bounds from `Constraints`. Nothing tied the two together, so a
+    # preset outside the range would render as a normal one-click choice and
+    # then be rejected on submit, with the user blamed for a value we offered.
+
+    test "every buffer time preset and the custom default are bookable" do
+      range = Constraints.buffer_minutes_range()
+      presets = StepConfig.buffer_time_values()
+
+      # Anchor: an empty preset list would make the rejection below vacuous.
+      assert presets != []
+      assert Enum.reject(presets, &(&1 in range)) == []
+      assert StepConfig.buffer_minutes_constraints().default_custom in range
+    end
+
+    test "every advance booking preset and the custom default are bookable" do
+      range = Constraints.advance_booking_days_range()
+      presets = StepConfig.advance_booking_values()
+
+      assert presets != []
+      assert Enum.reject(presets, &(&1 in range)) == []
+      assert StepConfig.advance_booking_constraints().default_custom in range
+    end
+
+    test "every minimum notice preset and the custom default are bookable" do
+      range = Constraints.min_advance_hours_range()
+      presets = StepConfig.min_advance_values()
+
+      assert presets != []
+      assert Enum.reject(presets, &(&1 in range)) == []
+      assert StepConfig.min_advance_constraints().default_custom in range
     end
   end
 end

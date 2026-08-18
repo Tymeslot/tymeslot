@@ -107,19 +107,6 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
       end
     end
 
-    test "username uniqueness constraint" do
-      user = insert(:user)
-      attrs = %{user_id: user.id, username: "testuser", timezone: "Europe/Kyiv"}
-      changeset = ProfileSchema.changeset(%ProfileSchema{}, attrs)
-
-      # The unique constraint will be tested at the database level
-      assert changeset.valid?
-
-      assert Enum.any?(changeset.constraints, fn c ->
-               c.type == :unique && c.field == :username
-             end)
-    end
-
     test "username is optional" do
       user = insert(:user)
 

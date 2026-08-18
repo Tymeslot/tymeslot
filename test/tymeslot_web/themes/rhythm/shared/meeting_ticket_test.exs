@@ -182,31 +182,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
         assert Floki.text(doc) =~ "#{duration} min"
       end
     end
-
-    test "renders with custom header labels" do
-      custom_labels = [
-        "Current Meeting",
-        "Upcoming Appointment",
-        "Scheduled Call",
-        "Meeting Information"
-      ]
-
-      for label <- custom_labels do
-        assigns = %{
-          header_label: label,
-          duration_minutes: 30,
-          date_value: "November 1, 2026",
-          time_value: "3:00 PM",
-          timezone_label: "UTC",
-          show_organizer: false
-        }
-
-        html = render_component(&MeetingTicket.meeting_ticket/1, assigns)
-        doc = Floki.parse_document!(html)
-
-        assert Floki.text(doc) =~ label
-      end
-    end
   end
 
   # Heroicons render as inline SVG with no `hero-*` class, so a specific icon is

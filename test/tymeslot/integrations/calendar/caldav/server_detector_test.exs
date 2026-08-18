@@ -360,276 +360,114 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
     end
   end
 
-  describe "get_server_profile/1" do
-    test "returns Radicale profile with correct paths" do
-      profile = ServerDetector.get_server_profile(:radicale)
+  # Every server type `get_server_profile/1` answers for, paired with the URLs
+  # the three builders must produce for it. A table because the behaviour is
+  # identical across servers and only the data varies: written out per server it
+  # ran to ~130 lines that covered five of the ten profiles, leaving ownCloud,
+  # SabreDAV, Baikal, mailbox.org and Apple with no pin on their paths at all. A
+  # typo in one of those would have shipped, and a self-hoster's calendar would
+  # 404 with nothing red here.
+  #
+  # `{server_type, username, calendar, discovery_url, calendar_url, event_url}`.
+  @base_url "https://cal.example.com"
+  @server_urls [
+    {:radicale, "user", "personal", "https://cal.example.com/user/",
+     "https://cal.example.com/user/personal/",
+     "https://cal.example.com/user/personal/event-123.ics"},
+    {:nextcloud, "user", "personal", "https://cal.example.com/remote.php/dav/calendars/user/",
+     "https://cal.example.com/remote.php/dav/calendars/user/personal/",
+     "https://cal.example.com/remote.php/dav/calendars/user/personal/event-123.ics"},
+    {:owncloud, "user", "personal", "https://cal.example.com/remote.php/dav/calendars/user/",
+     "https://cal.example.com/remote.php/dav/calendars/user/personal/",
+     "https://cal.example.com/remote.php/dav/calendars/user/personal/event-123.ics"},
+    {:baikal, "user", "personal", "https://cal.example.com/dav.php/calendars/user/",
+     "https://cal.example.com/dav.php/calendars/user/personal/",
+     "https://cal.example.com/dav.php/calendars/user/personal/event-123.ics"},
+    {:baikal_legacy, "user", "personal", "https://cal.example.com/cal.php/calendars/user/",
+     "https://cal.example.com/cal.php/calendars/user/personal/",
+     "https://cal.example.com/cal.php/calendars/user/personal/event-123.ics"},
+    {:sabredav, "user", "personal", "https://cal.example.com/calendars/user/",
+     "https://cal.example.com/calendars/user/personal/",
+     "https://cal.example.com/calendars/user/personal/event-123.ics"},
+    {:zimbra, "user@example.com", "Calendar", "https://cal.example.com/dav/user@example.com/",
+     "https://cal.example.com/dav/user@example.com/Calendar/",
+     "https://cal.example.com/dav/user@example.com/Calendar/event-123.ics"},
+    # mailbox.org and Apple ignore the username: the path carries no {username}
+    # placeholder, because calendars are reached through discovery rather than
+    # guessed from the account name.
+    {:mailbox_org, "user", "personal", "https://cal.example.com/caldav/",
+     "https://cal.example.com/caldav/personal/",
+     "https://cal.example.com/caldav/personal/event-123.ics"},
+    {:apple, "user", "personal", "https://cal.example.com/", "https://cal.example.com/personal/",
+     "https://cal.example.com/personal/event-123.ics"},
+    # Anything unrecognised falls through to the generic profile, which appends
+    # nothing but the calendar: the user supplied the full principal URL.
+    {:generic, "user", "personal", "https://cal.example.com/",
+     "https://cal.example.com/personal/", "https://cal.example.com/personal/event-123.ics"}
+  ]
 
-      assert profile.type == :radicale
-      assert profile.discovery_path == "/{username}/"
-      assert profile.calendar_path_pattern == "/{username}/{calendar}/"
-      assert profile.event_path_pattern == "/{username}/{calendar}/{uid}.ics"
-      refute profile.supports_oauth
-      assert profile.supports_calendar_color == true
-      assert profile.requires_calendar_suffix == true
+  describe "build_discovery_url/3, build_calendar_url/4 and build_event_url/5" do
+    for {server_type, username, calendar, discovery_url, calendar_url, event_url} <- @server_urls do
+      test "builds every URL from the #{server_type} profile's path patterns" do
+        assert ServerDetector.build_discovery_url(
+                 @base_url,
+                 unquote(username),
+                 unquote(server_type)
+               ) == unquote(discovery_url)
+
+        assert ServerDetector.build_calendar_url(
+                 @base_url,
+                 unquote(username),
+                 unquote(calendar),
+                 unquote(server_type)
+               ) == unquote(calendar_url)
+
+        assert ServerDetector.build_event_url(
+                 @base_url,
+                 unquote(username),
+                 unquote(calendar),
+                 "event-123",
+                 unquote(server_type)
+               ) == unquote(event_url)
+      end
     end
 
-    test "returns Nextcloud profile with correct paths" do
-      profile = ServerDetector.get_server_profile(:nextcloud)
+    test "an unrecognised server type falls back to the generic profile" do
+      # `get_server_profile/1` ends in a catch-all clause, so this is the path a
+      # server we have never heard of takes.
+      assert ServerDetector.build_discovery_url(@base_url, "user", :not_a_caldav_server) ==
+               "#{@base_url}/"
 
-      assert profile.type == :nextcloud
-      assert profile.discovery_path == "/remote.php/dav/calendars/{username}/"
-
-      assert profile.calendar_path_pattern ==
-               "/remote.php/dav/calendars/{username}/{calendar}/"
-
-      assert profile.event_path_pattern ==
-               "/remote.php/dav/calendars/{username}/{calendar}/{uid}.ics"
-
-      assert profile.supports_oauth == true
-      assert profile.supports_calendar_color == true
-      refute profile.requires_calendar_suffix
+      assert ServerDetector.build_calendar_url(
+               @base_url,
+               "user",
+               "personal",
+               :not_a_caldav_server
+             ) ==
+               "#{@base_url}/personal/"
     end
 
-    test "returns ownCloud profile with correct paths" do
-      profile = ServerDetector.get_server_profile(:owncloud)
+    test "trims a trailing slash from the base URL before joining" do
+      assert ServerDetector.build_discovery_url("#{@base_url}/", "user", :radicale) ==
+               "#{@base_url}/user/"
 
-      assert profile.type == :owncloud
-      assert profile.discovery_path == "/remote.php/dav/calendars/{username}/"
-      assert profile.supports_oauth == true
+      assert ServerDetector.build_calendar_url("#{@base_url}/", "user", "personal", :radicale) ==
+               "#{@base_url}/user/personal/"
     end
 
-    test "returns Baikal profile with correct paths" do
-      profile = ServerDetector.get_server_profile(:baikal)
-
-      assert profile.type == :baikal
-      assert profile.discovery_path == "/dav.php/calendars/{username}/"
-      assert profile.calendar_path_pattern == "/dav.php/calendars/{username}/{calendar}/"
-      refute profile.supports_oauth
+    test "adds the .ics extension to a bare event uid" do
+      assert ServerDetector.build_event_url(@base_url, "user", "personal", "event-123", :generic) ==
+               "#{@base_url}/personal/event-123.ics"
     end
 
-    test "returns Baikal legacy profile with correct paths" do
-      profile = ServerDetector.get_server_profile(:baikal_legacy)
-
-      assert profile.type == :baikal_legacy
-      assert profile.discovery_path == "/cal.php/calendars/{username}/"
-      assert profile.calendar_path_pattern == "/cal.php/calendars/{username}/{calendar}/"
-      assert profile.event_path_pattern == "/cal.php/calendars/{username}/{calendar}/{uid}.ics"
-      refute profile.supports_oauth
-    end
-
-    test "returns SabreDAV profile with correct paths" do
-      profile = ServerDetector.get_server_profile(:sabredav)
-
-      assert profile.type == :sabredav
-      assert profile.discovery_path == "/calendars/{username}/"
-      assert profile.calendar_path_pattern == "/calendars/{username}/{calendar}/"
-    end
-
-    test "returns Zimbra profile with correct paths" do
-      profile = ServerDetector.get_server_profile(:zimbra)
-
-      assert profile.type == :zimbra
-      assert profile.discovery_path == "/dav/{username}/"
-      assert profile.calendar_path_pattern == "/dav/{username}/{calendar}/"
-      assert profile.event_path_pattern == "/dav/{username}/{calendar}/{uid}.ics"
-      refute profile.supports_oauth
-      assert profile.supports_calendar_color == true
-    end
-
-    test "returns generic CalDAV profile for unknown types" do
-      profile = ServerDetector.get_server_profile(:unknown)
-
-      assert profile.type == :generic
-      assert profile.discovery_path == "/"
-      assert profile.calendar_path_pattern == "/{calendar}/"
-      refute profile.supports_oauth
-      assert profile.supports_calendar_color
-    end
-  end
-
-  describe "build_discovery_url/3" do
-    test "builds correct URL for Radicale" do
-      url = ServerDetector.build_discovery_url("https://radicale.example.com", "user", :radicale)
-      assert url == "https://radicale.example.com/user/"
-    end
-
-    test "builds correct URL for Nextcloud" do
-      url = ServerDetector.build_discovery_url("https://cloud.example.com", "user", :nextcloud)
-      assert url == "https://cloud.example.com/remote.php/dav/calendars/user/"
-    end
-
-    test "builds correct URL for Baikal" do
-      url = ServerDetector.build_discovery_url("https://cal.example.com", "user", :baikal)
-      assert url == "https://cal.example.com/dav.php/calendars/user/"
-    end
-
-    test "builds correct URL for Baikal legacy" do
-      url = ServerDetector.build_discovery_url("https://cal.example.com", "user", :baikal_legacy)
-      assert url == "https://cal.example.com/cal.php/calendars/user/"
-    end
-
-    test "builds correct URL for Zimbra" do
-      url =
-        ServerDetector.build_discovery_url(
-          "https://mail.example.com",
-          "user@example.com",
-          :zimbra
-        )
-
-      assert url == "https://mail.example.com/dav/user@example.com/"
-    end
-
-    test "builds correct URL for generic CalDAV" do
-      url = ServerDetector.build_discovery_url("https://caldav.example.com", "user", :generic)
-      assert url == "https://caldav.example.com/"
-    end
-
-    test "removes trailing slash from base URL" do
-      url = ServerDetector.build_discovery_url("https://radicale.example.com/", "user", :radicale)
-      assert url == "https://radicale.example.com/user/"
-    end
-  end
-
-  describe "build_calendar_url/4" do
-    test "builds correct calendar URL for Radicale" do
-      url =
-        ServerDetector.build_calendar_url(
-          "https://radicale.example.com",
-          "user",
-          "personal",
-          :radicale
-        )
-
-      assert url == "https://radicale.example.com/user/personal/"
-    end
-
-    test "builds correct calendar URL for Nextcloud" do
-      url =
-        ServerDetector.build_calendar_url(
-          "https://cloud.example.com",
-          "user",
-          "personal",
-          :nextcloud
-        )
-
-      assert url == "https://cloud.example.com/remote.php/dav/calendars/user/personal/"
-    end
-
-    test "builds correct calendar URL for Baikal legacy" do
-      url =
-        ServerDetector.build_calendar_url(
-          "https://cal.example.com",
-          "user",
-          "personal",
-          :baikal_legacy
-        )
-
-      assert url == "https://cal.example.com/cal.php/calendars/user/personal/"
-    end
-
-    test "builds correct calendar URL for Zimbra" do
-      url =
-        ServerDetector.build_calendar_url(
-          "https://mail.example.com",
-          "user@example.com",
-          "Calendar",
-          :zimbra
-        )
-
-      assert url == "https://mail.example.com/dav/user@example.com/Calendar/"
-    end
-
-    test "builds correct calendar URL for generic CalDAV" do
-      url =
-        ServerDetector.build_calendar_url(
-          "https://caldav.example.com",
-          "user",
-          "personal",
-          :generic
-        )
-
-      assert url == "https://caldav.example.com/personal/"
-    end
-  end
-
-  describe "build_event_url/5" do
-    test "builds correct event URL for Radicale" do
-      url =
-        ServerDetector.build_event_url(
-          "https://radicale.example.com",
-          "user",
-          "personal",
-          "event-123",
-          :radicale
-        )
-
-      assert url == "https://radicale.example.com/user/personal/event-123.ics"
-    end
-
-    test "builds correct event URL for Nextcloud" do
-      url =
-        ServerDetector.build_event_url(
-          "https://cloud.example.com",
-          "user",
-          "personal",
-          "event-123",
-          :nextcloud
-        )
-
-      assert url ==
-               "https://cloud.example.com/remote.php/dav/calendars/user/personal/event-123.ics"
-    end
-
-    test "builds correct event URL for Baikal legacy" do
-      url =
-        ServerDetector.build_event_url(
-          "https://cal.example.com",
-          "user",
-          "personal",
-          "event-123",
-          :baikal_legacy
-        )
-
-      assert url == "https://cal.example.com/cal.php/calendars/user/personal/event-123.ics"
-    end
-
-    test "builds correct event URL for Zimbra" do
-      url =
-        ServerDetector.build_event_url(
-          "https://mail.example.com",
-          "user@example.com",
-          "Calendar",
-          "event-123",
-          :zimbra
-        )
-
-      assert url == "https://mail.example.com/dav/user@example.com/Calendar/event-123.ics"
-    end
-
-    test "adds .ics extension if not present" do
-      url =
-        ServerDetector.build_event_url(
-          "https://caldav.example.com",
-          "user",
-          "personal",
-          "event-123",
-          :generic
-        )
-
-      assert url == "https://caldav.example.com/personal/event-123.ics"
-    end
-
-    test "does not duplicate .ics extension" do
-      url =
-        ServerDetector.build_event_url(
-          "https://caldav.example.com",
-          "user",
-          "personal",
-          "event-123.ics",
-          :generic
-        )
-
-      assert url == "https://caldav.example.com/personal/event-123.ics"
+    test "does not duplicate the .ics extension" do
+      assert ServerDetector.build_event_url(
+               @base_url,
+               "user",
+               "personal",
+               "event-123.ics",
+               :generic
+             ) == "#{@base_url}/personal/event-123.ics"
     end
   end
 end

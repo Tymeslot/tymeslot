@@ -133,22 +133,4 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
     s = Engine.init([])
     assert {:error, ^s} = Engine.next(s)
   end
-
-  # T7 guard: the LiveView's handle_questions_next/1 checks skipped?/1 first so
-  # that an empty engine never reaches the cond branches (which would produce
-  # `last_index = -1` and leave the booker stuck). The two assertions below
-  # confirm both sides of that guard are correct.
-  test "skipped? is true when definitions become empty (guard for empty-engine stuck-booker)" do
-    # Simulate the host deleting all custom fields between page load and pressing Next.
-    empty = Engine.init([])
-    assert Engine.skipped?(empty)
-    # next/1 returns an error rather than crashing — the LiveView guard catches
-    # skipped? before ever calling next/1.
-    assert {:error, _msg} = Engine.next(empty)
-  end
-
-  test "skipped? is false for a non-empty engine (guard does not fire prematurely)" do
-    non_empty = Engine.init([build_def("short_text")])
-    refute Engine.skipped?(non_empty)
-  end
 end

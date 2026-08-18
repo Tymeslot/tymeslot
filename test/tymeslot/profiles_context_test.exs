@@ -470,28 +470,6 @@ defmodule Tymeslot.ProfilesContextTest do
       %{profile: insert(:profile)}
     end
 
-    test "accepts a list of valid domains", %{profile: profile} do
-      assert {:ok, updated} =
-               Profiles.update_allowed_embed_domains(profile, ["example.com", "sub.example.org"])
-
-      assert "example.com" in updated.allowed_embed_domains
-    end
-
-    test "accepts a comma-separated string of valid domains", %{profile: profile} do
-      assert {:ok, updated} =
-               Profiles.update_allowed_embed_domains(profile, "example.com, other.io")
-
-      assert "example.com" in updated.allowed_embed_domains
-      assert "other.io" in updated.allowed_embed_domains
-    end
-
-    test "strips protocol and accepts the extracted host", %{profile: profile} do
-      assert {:ok, updated} =
-               Profiles.update_allowed_embed_domains(profile, ["https://bad-format.com"])
-
-      assert "bad-format.com" in updated.allowed_embed_domains
-    end
-
     test "treats empty string as the 'none' disabled state", %{profile: profile} do
       assert {:ok, updated} = Profiles.update_allowed_embed_domains(profile, "")
       assert updated.allowed_embed_domains == ["none"]

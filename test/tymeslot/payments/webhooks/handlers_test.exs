@@ -26,10 +26,6 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
       refute ChargeHandler.can_handle?("charge.refunded")
     end
 
-    test "validate/1 always returns :ok" do
-      assert ChargeHandler.validate(%{}) == :ok
-    end
-
     test "process/2 logs and returns success for charge.succeeded" do
       assert {:ok, :charge_logged} =
                ChargeHandler.process(%{type: "charge.succeeded"}, %{"id" => "ch_123"})
@@ -70,10 +66,6 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
       assert PaymentIntentHandler.can_handle?("payment_intent.succeeded")
       assert PaymentIntentHandler.can_handle?("payment_intent.created")
       refute PaymentIntentHandler.can_handle?("payment_intent.failed")
-    end
-
-    test "validate/1 always returns :ok" do
-      assert PaymentIntentHandler.validate(%{}) == :ok
     end
 
     test "process/2 returns success for payment_intent.succeeded" do

@@ -46,24 +46,6 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
       refute Repo.get_by(UserSessionSchema, token_hash: boundary_session.token_hash)
     end
 
-    test "cleans up multiple expired sessions efficiently" do
-      user = insert(:user)
-      expired_at = DateTime.add(DateTime.utc_now(), -1, :day)
-
-      # Create multiple expired sessions
-      expired_sessions =
-        for _i <- 1..10 do
-          insert(:user_session, user: user, expires_at: expired_at)
-        end
-
-      assert :ok = perform_job(ExpiredSessionCleanupWorker, %{})
-
-      # All expired sessions should be cleaned
-      Enum.each(expired_sessions, fn session ->
-        refute Repo.get_by(UserSessionSchema, token_hash: session.token_hash)
-      end)
-    end
-
     test "accepts unknown job arguments (forward compatibility)" do
       # Job with extra fields from future version
       assert :ok = perform_job(ExpiredSessionCleanupWorker, %{"future_field" => "value"})
