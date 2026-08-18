@@ -208,17 +208,6 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   end
 
   @doc """
-  Updates a webhook delivery log entry.
-  """
-  @spec update_delivery(WebhookDeliverySchema.t(), map()) ::
-          {:ok, WebhookDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_delivery(%WebhookDeliverySchema{} = delivery, attrs) do
-    delivery
-    |> WebhookDeliverySchema.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
   Gets delivery statistics for a webhook.
   """
   @spec get_delivery_stats(integer(), keyword()) :: map()

@@ -20,22 +20,6 @@ defmodule Tymeslot.Utils.DateTimeUtils.ICal do
   end
 
   @doc """
-  Formats a DateTime for CalDAV time-range queries.
-  Similar to iCal format but removes milliseconds.
-  """
-  @spec format_caldav_datetime(DateTime.t()) :: String.t()
-  def format_caldav_datetime(%DateTime{} = dt) do
-    utc_dt = DateTimeUtils.ensure_utc!(dt)
-
-    utc_dt
-    |> DateTime.to_iso8601(:basic)
-    |> String.replace(~r/[-:]/, "")
-    # Remove milliseconds
-    |> String.replace(~r/\.\d+/, "")
-    |> String.replace("+00:00", "Z")
-  end
-
-  @doc """
   Parses an iCal datetime string (various formats supported).
 
   Formats:
