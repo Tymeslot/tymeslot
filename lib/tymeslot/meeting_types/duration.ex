@@ -30,28 +30,32 @@ defmodule Tymeslot.MeetingTypes.Duration do
     Slugs.find_by_slug(user_id, slug)
   end
 
+  @typedoc "Why a duration selection is not yet good enough to advance on."
+  @type selection_error :: :duration_required | :duration_invalid
+
   @doc """
   Validates that a duration has been selected from available meeting types.
   Used in booking workflow validation.
+
+  Returns a reason atom rather than copy: this is a public, multi-locale
+  booking page, and rendering an atom to user-facing text is the web layer's
+  responsibility (the same split `Tymeslot.Bookings.Errors` states).
   """
   @spec validate_duration_selection(String.t() | nil, [Ecto.Schema.t()]) ::
-          :ok | {:error, String.t()}
-  def validate_duration_selection(nil, _available_types),
-    do: {:error, "Please select a meeting duration"}
+          :ok | {:error, selection_error()}
+  def validate_duration_selection(nil, _available_types), do: {:error, :duration_required}
 
-  def validate_duration_selection("", _available_types),
-    do: {:error, "Please select a meeting duration"}
+  def validate_duration_selection("", _available_types), do: {:error, :duration_required}
 
   def validate_duration_selection(duration, available_types) when is_list(available_types) do
     if duration_valid?(duration, available_types) do
       :ok
     else
-      {:error, "Invalid meeting duration selected"}
+      {:error, :duration_invalid}
     end
   end
 
-  def validate_duration_selection(_duration, _available_types),
-    do: {:error, "Please select a meeting duration"}
+  def validate_duration_selection(_duration, _available_types), do: {:error, :duration_required}
 
   @doc """
   Checks if a duration is valid against available meeting types.

@@ -11,22 +11,22 @@ defmodule Tymeslot.Availability.CalculateTest do
 
   describe "validate_time_selection/3" do
     test "returns error when date is nil" do
-      assert {:error, "Please select a date"} =
+      assert {:error, :date_required} =
                Calculate.validate_time_selection(nil, "10:00 AM", [])
     end
 
     test "returns error when date is empty string" do
-      assert {:error, "Please select a date"} =
+      assert {:error, :date_required} =
                Calculate.validate_time_selection("", "10:00 AM", [])
     end
 
     test "returns error when time is nil" do
-      assert {:error, "Please select a time"} =
+      assert {:error, :time_required} =
                Calculate.validate_time_selection("2025-06-15", nil, [])
     end
 
     test "returns error when time is empty string" do
-      assert {:error, "Please select a time"} =
+      assert {:error, :time_required} =
                Calculate.validate_time_selection("2025-06-15", "", [])
     end
 
@@ -43,7 +43,7 @@ defmodule Tymeslot.Availability.CalculateTest do
     end
 
     test "returns error with non-binary date" do
-      assert {:error, "Please select a date and time"} =
+      assert {:error, :selection_required} =
                Calculate.validate_time_selection(123, "10:00 AM", [])
     end
   end

@@ -301,16 +301,23 @@ defmodule Tymeslot.Availability.Calculate do
     end)
   end
 
+  @typedoc "Why a date/time selection is not yet good enough to advance on."
+  @type selection_error :: :date_required | :time_required | :selection_required
+
   @doc """
   Validates that both date and time have been selected for booking.
+
+  Returns a reason atom rather than copy: this is a public, multi-locale
+  booking page, and rendering an atom to user-facing text is the web layer's
+  responsibility (the same split `Tymeslot.Bookings.Errors` states).
   """
-  @spec validate_time_selection(term(), term(), term()) :: :ok | {:error, String.t()}
+  @spec validate_time_selection(term(), term(), term()) :: :ok | {:error, selection_error()}
   def validate_time_selection(date, time, _slots) do
     cond do
-      date in [nil, ""] -> {:error, "Please select a date"}
-      time in [nil, ""] -> {:error, "Please select a time"}
+      date in [nil, ""] -> {:error, :date_required}
+      time in [nil, ""] -> {:error, :time_required}
       is_binary(date) and is_binary(time) -> :ok
-      true -> {:error, "Please select a date and time"}
+      true -> {:error, :selection_required}
     end
   end
 

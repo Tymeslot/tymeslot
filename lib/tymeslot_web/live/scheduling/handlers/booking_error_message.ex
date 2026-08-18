@@ -74,6 +74,30 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     dgettext("booking", "This meeting could not be found. Please refresh and try again.")
   end
 
+  # Step-requirement refusals: the booker has not chosen enough yet to move on.
+  # `Availability.Calculate` and `MeetingTypes.Duration` used to return this
+  # copy themselves, in English, straight into a flash on a public multi-locale
+  # page.
+  def message(:duration_required) do
+    dgettext("booking", "Please select a meeting duration")
+  end
+
+  def message(:duration_invalid) do
+    dgettext("booking", "Invalid meeting duration selected")
+  end
+
+  def message(:date_required) do
+    dgettext("booking", "Please select a date")
+  end
+
+  def message(:time_required) do
+    dgettext("booking", "Please select a time")
+  end
+
+  def message(:selection_required) do
+    dgettext("booking", "Please select a date and time")
+  end
+
   # Intentional passthrough, not dead code: reschedule shares its domain
   # validation with cancel (`Policy.can_reschedule_meeting?/1`,
   # `Validation`), which still returns binaries directly — atomizing

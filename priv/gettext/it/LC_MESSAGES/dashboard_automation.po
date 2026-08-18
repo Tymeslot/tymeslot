@@ -570,3 +570,8 @@ msgstr[1] "Ultimi %{days} giorni"
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Cronologia delle consegne - %{name}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please slow down."
+msgstr "Troppe richieste. Rallenta."

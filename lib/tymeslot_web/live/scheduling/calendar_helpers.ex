@@ -52,14 +52,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
       else
         schedule = Schedules.resolve_for(meeting_type, organizer_profile)
-
-        config = %{
-          schedule_id: schedule && schedule.id,
-          max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-          min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-          buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-          owner_timezone: organizer_profile.timezone
-        }
+        config = availability_config(schedule, organizer_profile)
 
         Calculate.get_calendar_days(user_timezone, year, month, config, availability_map)
       end
@@ -115,11 +108,19 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       ) do
     if organizer_profile do
       today = user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
+      is_demo = Demo.demo_profile?(organizer_profile)
 
       # Resolved once rather than inside the loop: the fallback branch below runs
       # for all seven days and would otherwise repeat the same lookup each time.
       schedule = fallback_schedule(organizer_profile, availability_map, meeting_type)
       fallback_config = fallback_config(schedule, organizer_profile, week_start)
+
+      # Demo profiles answer the fallback question with the same demo
+      # generator the month grid uses, not Core's hard-coded business hours.
+      demo_days =
+        if is_demo,
+          do: demo_calendar_days(week_start, organizer_profile, availability_map, user_timezone),
+          else: %{}
 
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
@@ -132,6 +133,9 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
 
             is_map(availability_map) ->
               {Map.get(availability_map, date_string, false), false}
+
+            is_demo ->
+              {Map.get(demo_days, date_string, false), false}
 
             true ->
               {Calculate.day_bookable_by_business_hours?(date, user_timezone, fallback_config),
@@ -196,6 +200,19 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     end
   end
 
+  # A week can straddle a month boundary, so build the lookup from every
+  # month it touches rather than assuming `week_start`'s month covers it.
+  defp demo_calendar_days(week_start, organizer_profile, availability_map, user_timezone) do
+    0..6
+    |> Enum.map(&Date.add(week_start, &1))
+    |> Enum.map(&{&1.year, &1.month})
+    |> Enum.uniq()
+    |> Enum.flat_map(fn {year, month} ->
+      Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
+    end)
+    |> Map.new(&{&1.date, &1.available})
+  end
+
   # Only the fallback path needs a schedule; a supplied availability map already
   # answers the question, so resolving one there would be a pointless query.
   defp fallback_schedule(_organizer_profile, :loading, _meeting_type), do: nil
@@ -214,6 +231,27 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   # page: without it the seven per-day business-hours lookups each hit the
   # database.
   defp fallback_config(schedule, organizer_profile, week_start) do
+    config = availability_config(schedule, organizer_profile)
+
+    Calculate.prefetch_schedule_data(
+      config,
+      schedule && schedule.id,
+      Date.add(week_start, -1),
+      Date.add(week_start, 7)
+    )
+  end
+
+  # The month grid and the week strip fallback answer the same availability
+  # question, so both build their `availability_config` from this single
+  # place rather than carrying their own copy of the policy keys.
+  @spec availability_config(map() | nil, map()) :: %{
+          required(:schedule_id) => integer() | nil,
+          required(:max_advance_booking_days) => pos_integer(),
+          required(:min_advance_hours) => non_neg_integer(),
+          required(:buffer_minutes) => non_neg_integer(),
+          required(:owner_timezone) => String.t()
+        }
+  defp availability_config(schedule, organizer_profile) do
     %{
       schedule_id: schedule && schedule.id,
       max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
@@ -221,10 +259,5 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
       owner_timezone: organizer_profile.timezone
     }
-    |> Calculate.prefetch_schedule_data(
-      schedule && schedule.id,
-      Date.add(week_start, -1),
-      Date.add(week_start, 7)
-    )
   end
 end
