@@ -192,7 +192,13 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
         "meeting_id" => meeting.id
       })
 
-      # Note: We don't clear the mailbox explicitly - it's cleared between tests automatically
+      # The first run's emails land in this process, so they have to be taken
+      # out of the mailbox before the retry can be judged on its own. (They
+      # used to be invisible here: delivery ran inside the circuit breaker's
+      # process, so Swoosh's test adapter posted them there instead.)
+      assert_email_sent()
+      assert_email_sent()
+      refute_receive {:email, _further}, 0
 
       # Try to execute again (simulating a retry)
       perform_job(EmailWorker, %{

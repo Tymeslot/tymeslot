@@ -374,4 +374,63 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       assert %{status: :closed, failure_count: 0} = CircuitBreaker.status(breaker_name)
     end
   end
+
+  # The reason the breaker grants permission rather than executing the work:
+  # a breaker that runs the function inside its own GenServer caps concurrency
+  # on the dependency it protects at one caller.
+  describe "concurrency" do
+    test "callers run concurrently instead of queueing behind the breaker" do
+      name = start_breaker(config: %{failure_threshold: 10})
+      parent = self()
+      concurrency = 5
+
+      tasks =
+        for i <- 1..concurrency do
+          Task.async(fn ->
+            CircuitBreaker.call(name, fn ->
+              send(parent, {:inside, i, self()})
+
+              # Every caller holds here until all of them have arrived. Under a
+              # breaker that executed the work itself, the second caller would
+              # still be waiting in the mailbox and this would never resolve.
+              receive do
+                :release -> {:ok, i}
+              after
+                2_000 -> {:error, :never_released}
+              end
+            end)
+          end)
+        end
+
+      arrivals =
+        for _arrival <- 1..concurrency do
+          assert_receive {:inside, i, pid}, 1_000
+          {i, pid}
+        end
+
+      assert arrivals |> Enum.map(&elem(&1, 0)) |> Enum.sort() == Enum.to_list(1..concurrency)
+
+      Enum.each(arrivals, fn {_i, pid} -> send(pid, :release) end)
+
+      results = Task.await_many(tasks, 5_000)
+
+      assert Enum.sort(results) == Enum.map(1..concurrency, &{:ok, &1})
+    end
+
+    test "an open circuit still refuses without running the function" do
+      name = start_breaker(config: %{failure_threshold: 1, recovery_timeout: 60_000})
+      parent = self()
+
+      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      assert %{status: :open} = CircuitBreaker.status(name)
+
+      assert {:error, :circuit_open} =
+               CircuitBreaker.call(name, fn ->
+                 send(parent, :should_not_run)
+                 {:ok, :ran}
+               end)
+
+      refute_received :should_not_run
+    end
+  end
 end
