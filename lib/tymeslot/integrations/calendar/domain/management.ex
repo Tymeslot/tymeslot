@@ -261,30 +261,6 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     end
   end
 
-  @doc """
-  Fetches a calendar integration by ID, collapsing the
-  `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
-  after silently flagging the integration for reauthentication.
-
-  Use this in non-Oban callers that only care about the two-outcome
-  `{:ok, _} | {:error, :not_found}` shape.
-  """
-  @spec fetch_integration(integer()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
-  def fetch_integration(id) do
-    case CalendarIntegrationQueries.get(id) do
-      {:ok, integration} ->
-        {:ok, integration}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-
-      {:error, :requires_reencryption, stale} ->
-        flag_for_reauth(stale)
-        {:error, :not_found}
-    end
-  end
-
   # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific opts.
   defp flag_for_reauth(integration, opts \\ []) do
     ReauthHandling.flag(
