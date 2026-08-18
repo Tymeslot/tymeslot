@@ -103,6 +103,122 @@ defmodule Tymeslot.Precommit.RunnerTest do
     end
   end
 
+  describe "run/3 with the suite in the background" do
+    test "the suite runs while the later foreground steps do" do
+      test_pid = self()
+
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"test", ["test"], :test},
+        {"credo", ["credo"], :dev}
+      ]
+
+      # The suite blocks until the foreground releases it, so the run can only
+      # finish if the two were genuinely in flight at the same time. Verified by
+      # reverting the runner to the sequential path: this and the two cases
+      # below go red, here because a sequential run puts the suite through
+      # `cmd` instead, which this stub deliberately has no clause for.
+      capture_fun = fn ["test"], :test ->
+        send(test_pid, {:suite_started, self()})
+
+        receive do
+          :release -> {"suite output\n", 0}
+        end
+      end
+
+      cmd_fun = fn
+        ["compile"], :dev ->
+          0
+
+        ["credo"], :dev ->
+          assert_receive {:suite_started, suite}
+          send(suite, :release)
+          0
+      end
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false, cmd: cmd_fun, capture: capture_fun) == :ok
+        end)
+
+      assert output =~ "ok      test"
+      assert output =~ "ok      credo"
+      assert output =~ "suite output"
+    end
+
+    test "the summary keeps the declared order, not the order results arrived" do
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"test", ["test"], :test},
+        {"dialyzer", ["dialyzer.incremental"], :dev}
+      ]
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false,
+                   cmd: stub(%{["compile"] => 0, ["dialyzer.incremental"] => 0}),
+                   capture: fn ["test"], :test -> {"", 0} end
+                 ) == :ok
+        end)
+
+      summary = output |> String.split("Summary") |> List.last()
+
+      assert [_compile, "test", "dialyzer"] =
+               Enum.map(Regex.scan(~r/ok\s+(\S+)/, summary), &List.last/1)
+    end
+
+    test "a failing suite is reported and fails the run" do
+      steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
+
+      output =
+        capture_plain(fn ->
+          assert catch_exit(
+                   Runner.run(steps, false,
+                     cmd: stub(%{["compile"] => 0}),
+                     capture: fn ["test"], :test -> {"1 test, 1 failure\n", 2} end
+                   )
+                 ) == {:shutdown, 1}
+        end)
+
+      assert output =~ "failed  test (2)"
+      assert output =~ "1 test, 1 failure"
+    end
+
+    test "a broken build never starts the suite" do
+      steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
+
+      capture_fun = fn _args, _env ->
+        flunk("the suite ran against a build that does not compile")
+      end
+
+      output =
+        capture_plain(fn ->
+          assert catch_exit(
+                   Runner.run(steps, false, cmd: stub(%{["compile"] => 1}), capture: capture_fun)
+                 ) == {:shutdown, 1}
+        end)
+
+      assert output =~ "failed  compile (1)"
+      assert output =~ "skipped remaining steps: the build is broken"
+    end
+
+    test "--fail-fast runs everything in sequence" do
+      steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
+
+      capture_fun = fn _args, _env -> flunk("--fail-fast must not background a step") end
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, true,
+                   cmd: stub(%{["compile"] => 0, ["test"] => 0}),
+                   capture: capture_fun
+                 ) == :ok
+        end)
+
+      assert output =~ "ok      test"
+    end
+  end
+
   # The scheduler count is a measured speed setting (see `step_env/1` for the
   # numbers), and losing it is the kind of regression nothing else in a `mix
   # precommit` run would report: the gate would simply get slower, silently and
