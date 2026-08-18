@@ -23,6 +23,7 @@ defmodule Tymeslot.DataCase do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
@@ -101,6 +102,11 @@ defmodule Tymeslot.DataCase do
     # Host-keyed breakers are registered dynamically and are not covered by
     # the per-provider reset above
     CalendarCircuitBreaker.reset_all_hosts()
+
+    # Video provider breakers. These matter now that `ProviderAdapter` routes
+    # room create/update/delete through them: three induced provider failures
+    # in one test would otherwise open the breaker for every test after it.
+    Enum.each([:mirotalk, :google_meet, :teams, :zoom], &VideoCircuitBreaker.reset/1)
 
     # Reset other circuit breakers
     Enum.each([:email_service_breaker, :oauth_github_breaker, :oauth_google_breaker], fn name ->

@@ -125,6 +125,26 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
     Map.merge(@default_config, provider_specific)
   end
 
+  @doc """
+  Longest `recovery_timeout` configured across every video provider's
+  breaker, in seconds.
+
+  `Tymeslot.Workers.VideoRoom.ErrorPolicy` snoozes an Oban job past
+  `:circuit_open` rather than burning an attempt against a breaker known to
+  be open, but by the time the error reaches it the reason has been reduced
+  to a bare atom with no provider attached. Snoozing for the worst case
+  across all providers is always long enough to clear whichever breaker
+  actually tripped.
+  """
+  @spec max_recovery_seconds() :: pos_integer()
+  def max_recovery_seconds do
+    @video_providers
+    |> Enum.map(&get_config/1)
+    |> Enum.map(& &1.recovery_timeout)
+    |> Enum.max()
+    |> div(1_000)
+  end
+
   # Private functions
 
   defp breaker_name(provider) do

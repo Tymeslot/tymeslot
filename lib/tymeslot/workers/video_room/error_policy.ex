@@ -20,6 +20,8 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
+
   @typedoc "A normalised failure reason."
   @type reason :: atom() | String.t() | term()
 
@@ -33,6 +35,13 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
 
   # A provider outage is worth waiting out at a fixed, unhurried interval.
   @service_unavailable_snooze_seconds 120
+
+  # Extra seconds added on top of the breaker's recovery window when
+  # snoozing, picked at random per job — same jitter `EmailWorker` and
+  # `TransactionalEmailDelivery` add to their own `:circuit_open` snooze, so a
+  # queue full of jobs snoozed during the same outage doesn't all wake in the
+  # same second and stampede the breaker's half-open probe slots.
+  @circuit_open_jitter_seconds 30
 
   # Failures that will repeat identically on every attempt, and the reason
   # recorded against the discarded job.
@@ -94,6 +103,21 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
 
   def to_result(:service_unavailable, _attempt),
     do: {:snooze, @service_unavailable_snooze_seconds}
+
+  # The provider's circuit breaker is open, so every attempt made before it
+  # recovers fails instantly. Snoozing past the recovery window costs no
+  # attempt and waits the breaker out, rather than burning the job's limited
+  # retries on a call known to be refused.
+  def to_result(:circuit_open, _attempt) do
+    snooze_seconds =
+      VideoCircuitBreaker.max_recovery_seconds() + :rand.uniform(@circuit_open_jitter_seconds)
+
+    Logger.warning("Video circuit breaker open, snoozing past the recovery window",
+      snooze_seconds: snooze_seconds
+    )
+
+    {:snooze, snooze_seconds}
+  end
 
   def to_result(reason, _attempt) when is_atom(reason) do
     if terminal?(reason) do

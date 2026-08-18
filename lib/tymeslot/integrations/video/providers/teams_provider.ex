@@ -39,29 +39,94 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   def create_meeting_room(config) do
     Logger.info("Creating Microsoft Teams meeting room")
 
-    with {:ok, :valid} <- validate_teams_scope(config),
-         {:ok, token} <- get_access_token(config),
-         {:ok, meeting} <- create_scheduled_meeting(token, config) do
-      room_data = %RoomData{
-        room_id: meeting["id"],
-        meeting_url: meeting["joinUrl"],
-        provider_data: %{
-          join_web_url: meeting["joinWebUrl"],
-          video_teleconference_id: meeting["videoTeleconferenceId"],
-          passcode: meeting["passcode"],
-          toll_number: get_in(meeting, ["audioConferencing", "tollNumber"]),
-          conference_id: get_in(meeting, ["audioConferencing", "conferenceId"])
-        }
-      }
+    case precheck_create_meeting_room(config) do
+      {:ok, token} ->
+        finish_create_meeting_room(token, config)
 
-      Logger.info("Successfully created Teams meeting", room_id: room_data.room_id)
-      {:ok, room_data}
-    else
+      {:provider_error, reason} ->
+        log_create_meeting_room_error(reason)
+        {:error, reason}
+
       {:error, reason} = error ->
-        Logger.error("Failed to create Teams meeting", error: inspect(reason))
+        log_create_meeting_room_error(reason)
         error
     end
   end
+
+  @doc false
+  # Pre-flight phase for `ProviderAdapter`'s circuit-breaker split (see the
+  # comment on `ProviderAdapter.with_breaker/2`). Runs before the shared Teams
+  # breaker is ever asked for permission.
+  #
+  # Scope validation is pure, no network at all, so it can never represent
+  # Teams/Graph being down. Token acquisition *is* network I/O, but against
+  # Microsoft's OAuth host rather than Graph's meetings API, and its failures
+  # are classified before they reach the breaker: a rejected/expired grant is
+  # the tenant's problem (`{:error, _}`, bypasses the breaker entirely), while
+  # anything else — a timeout or 5xx from the OAuth host — comes back as
+  # `{:provider_error, _}` so the caller can still let the breaker witness it.
+  @spec precheck_create_meeting_room(map()) ::
+          {:ok, String.t()} | {:error, term()} | {:provider_error, term()}
+  def precheck_create_meeting_room(config) do
+    with {:ok, :valid} <- validate_teams_scope(config) do
+      classify_token_result(get_access_token(config))
+    end
+  end
+
+  @doc false
+  # The actual outbound Graph API call, meant to run behind the shared
+  # breaker. Takes the token `precheck_create_meeting_room/1` already
+  # resolved, so it never repeats the OAuth round-trip.
+  @spec finish_create_meeting_room(String.t(), map()) ::
+          {:ok, RoomData.t()} | {:error, term()}
+  def finish_create_meeting_room(token, config) do
+    case create_scheduled_meeting(token, config) do
+      {:ok, meeting} ->
+        room_data = %RoomData{
+          room_id: meeting["id"],
+          meeting_url: meeting["joinUrl"],
+          provider_data: %{
+            join_web_url: meeting["joinWebUrl"],
+            video_teleconference_id: meeting["videoTeleconferenceId"],
+            passcode: meeting["passcode"],
+            toll_number: get_in(meeting, ["audioConferencing", "tollNumber"]),
+            conference_id: get_in(meeting, ["audioConferencing", "conferenceId"])
+          }
+        }
+
+        Logger.info("Successfully created Teams meeting", room_id: room_data.room_id)
+        {:ok, room_data}
+
+      {:error, reason} = error ->
+        log_create_meeting_room_error(reason)
+        error
+    end
+  end
+
+  defp log_create_meeting_room_error(reason) do
+    Logger.error("Failed to create Teams meeting", error: inspect(reason))
+  end
+
+  # A rejected/expired grant (`invalid_grant`, `invalid_client`,
+  # `access_denied`) is the tenant's credential, not Graph's availability —
+  # matches the permanent-auth markers `HealthCheck.ResponseHandler` already
+  # uses for the same OAuth error shape (both Teams and Zoom refresh through
+  # the shared `ErrorParser.build_message/3`). Anything else (network error,
+  # an unrecognised HTTP status) is handed back for the breaker to witness.
+  @permanent_credential_error_markers ~w(invalid_grant invalid_client access_denied)
+
+  defp classify_token_result({:ok, _token} = ok), do: ok
+
+  defp classify_token_result({:error, reason} = error) do
+    if permanent_credential_error?(reason), do: error, else: {:provider_error, reason}
+  end
+
+  defp permanent_credential_error?(reason) when is_binary(reason) do
+    tokens = reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
+    Enum.any?(@permanent_credential_error_markers, &(&1 in tokens))
+  end
+
+  defp permanent_credential_error?(_reason), do: false
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do

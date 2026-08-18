@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
@@ -25,7 +26,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
       with {:ok, provider_module} <- ProviderRegistry.get_provider(provider_type),
            :ok <- provider_module.validate_config(config),
-           {:ok, room_data} <- provider_module.create_meeting_room(config) do
+           {:ok, room_data} <- create_room(provider_type, provider_module, config) do
         Logger.info("Successfully created meeting room",
           provider: provider_type,
           room_id: room_data.room_id || "unknown"
@@ -187,10 +188,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
           if callback_exported?(provider_module, :update_meeting_room, 2) do
-            # Optional callback resolved at runtime via the guard above; apply/3
-            # keeps the static type checker from flagging providers that omit it.
-            # credo:disable-for-next-line Credo.Check.Refactor.Apply
-            apply(provider_module, :update_meeting_room, [room_id, config])
+            with_breaker(provider_type, fn ->
+              # Optional callback resolved at runtime via the guard above; apply/3
+              # keeps the static type checker from flagging providers that omit it.
+              # credo:disable-for-next-line Credo.Check.Refactor.Apply
+              apply(provider_module, :update_meeting_room, [room_id, config])
+            end)
           else
             Logger.debug("Provider does not support update_meeting_room; treating as no-op",
               provider: provider_type
@@ -219,10 +222,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
           if callback_exported?(provider_module, :delete_meeting_room, 2) do
-            # Optional callback resolved at runtime via the guard above; apply/3
-            # keeps the static type checker from flagging providers that omit it.
-            # credo:disable-for-next-line Credo.Check.Refactor.Apply
-            apply(provider_module, :delete_meeting_room, [room_id, config])
+            with_breaker(provider_type, fn ->
+              # Optional callback resolved at runtime via the guard above; apply/3
+              # keeps the static type checker from flagging providers that omit it.
+              # credo:disable-for-next-line Credo.Check.Refactor.Apply
+              apply(provider_module, :delete_meeting_room, [room_id, config])
+            end)
           else
             Logger.debug("Provider does not support delete_meeting_room; treating as no-op",
               provider: provider_type
@@ -295,6 +300,71 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   # Private helper functions
+
+  # The three operations that reach a provider's API run through its circuit
+  # breaker, so a provider outage stops being hammered by every booking that
+  # wants a room. Registry lookup and config validation stay outside it: those
+  # fail for our own reasons and must not count against the provider.
+  #
+  # `test_connection/2` deliberately has no breaker. It is how an operator asks
+  # whether the provider is reachable, and refusing it while the circuit is open
+  # would withhold exactly the answer they asked for.
+  #
+  # Room creation additionally splits per-tenant work (credential/scope
+  # resolution) out of the breaker-guarded call itself — see `create_room/3`.
+  defp with_breaker(provider_type, fun) do
+    if ProviderConfig.circuit_breaker_enabled?(provider_type) do
+      VideoCircuitBreaker.call(provider_type, fun)
+    else
+      fun.()
+    end
+  end
+
+  # A provider's `create_meeting_room/1` callback typically bundles per-tenant
+  # credential/scope resolution with the actual outbound API call, so wrapping
+  # the whole thing in the breaker lets one tenant's bad credential (retried by
+  # Oban) open the shared, provider-wide breaker and stop room creation for
+  # every tenant.
+  #
+  # Providers may opt out of that by exposing two duck-typed functions instead
+  # of doing everything in `create_meeting_room/1`:
+  #
+  #   * `precheck_create_meeting_room/1` — runs entirely outside the breaker.
+  #     Returns `{:ok, token}` to proceed, `{:error, reason}` for a per-tenant
+  #     failure (bad scope, revoked grant) that must never count against the
+  #     breaker, or `{:provider_error, reason}` for a failure that looks like
+  #     the provider's own host (e.g. its OAuth endpoint) is having trouble —
+  #     handed to the breaker below so it still gets recorded.
+  #   * `finish_create_meeting_room/2` — the actual API call, given the
+  #     already-resolved token, run behind the breaker.
+  #
+  # Providers that don't implement both keep the old all-in-one behaviour
+  # unchanged.
+  defp create_room(provider_type, provider_module, config) do
+    if callback_exported?(provider_module, :precheck_create_meeting_room, 1) and
+         callback_exported?(provider_module, :finish_create_meeting_room, 2) do
+      create_room_with_precheck(provider_type, provider_module, config)
+    else
+      with_breaker(provider_type, fn -> provider_module.create_meeting_room(config) end)
+    end
+  end
+
+  defp create_room_with_precheck(provider_type, provider_module, config) do
+    case provider_module.precheck_create_meeting_room(config) do
+      {:ok, token} ->
+        with_breaker(provider_type, fn ->
+          provider_module.finish_create_meeting_room(token, config)
+        end)
+
+      {:provider_error, reason} ->
+        # Let the breaker witness the failure without repeating the network
+        # call that already happened during the precheck.
+        with_breaker(provider_type, fn -> {:error, reason} end)
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
 
   # function_exported?/3 returns false for modules that haven't been loaded
   # yet, which silently turns optional callbacks into no-ops in tests that

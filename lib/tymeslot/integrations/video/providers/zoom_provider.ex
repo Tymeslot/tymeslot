@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
@@ -42,9 +43,48 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def create_meeting_room(config) do
     Logger.info("Creating Zoom meeting room")
 
-    with {:ok, :valid} <- validate_zoom_scope(config, :write),
-         {:ok, token} <- get_access_token(config),
-         {:ok, {start_time, end_time}} <- Payload.get_meeting_times(config),
+    case precheck_create_meeting_room(config) do
+      {:ok, token} ->
+        finish_create_meeting_room(token, config)
+
+      {:provider_error, reason} ->
+        log_create_meeting_room_error(reason)
+        {:error, reason}
+
+      {:error, reason} = error ->
+        log_create_meeting_room_error(reason)
+        error
+    end
+  end
+
+  @doc false
+  # Pre-flight phase for `ProviderAdapter`'s circuit-breaker split (see the
+  # comment on `ProviderAdapter.with_breaker/2`). Runs before the shared Zoom
+  # breaker is ever asked for permission.
+  #
+  # Scope validation is pure, no network at all, so it can never represent
+  # Zoom being down. Token acquisition *is* network I/O, but against Zoom's
+  # OAuth host rather than its meetings API, and its failures are classified
+  # before they reach the breaker: a rejected/expired grant is the tenant's
+  # problem (`{:error, _}`, bypasses the breaker entirely), while anything
+  # else — a timeout or 5xx from the OAuth host — comes back as
+  # `{:provider_error, _}` so the caller can still let the breaker witness it.
+  @spec precheck_create_meeting_room(map()) ::
+          {:ok, String.t()} | {:error, term()} | {:provider_error, term()}
+  def precheck_create_meeting_room(config) do
+    with {:ok, :valid} <- validate_zoom_scope(config, :write) do
+      classify_token_result(get_access_token(config))
+    end
+  end
+
+  @doc false
+  # The actual outbound Zoom API call, meant to run behind the shared
+  # breaker. Takes the token `precheck_create_meeting_room/1` already
+  # resolved, so it never repeats the OAuth round-trip.
+  @spec finish_create_meeting_room(String.t(), map()) ::
+          {:ok, RoomData.t()} | {:error, term()}
+  def finish_create_meeting_room(token, config) do
+    with {:ok, {start_time, end_time}} <- Payload.get_meeting_times(config),
          {:ok, meeting} <- create_scheduled_meeting(token, start_time, end_time, config) do
       # Read the meeting back from Zoom to confirm it is retrievable before we
       # hand the join link to attendees. Exercises the meeting:read:meeting
@@ -66,10 +106,34 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       {:ok, room_data}
     else
       {:error, reason} = error ->
-        Logger.error("Failed to create Zoom meeting", error: inspect(reason))
+        log_create_meeting_room_error(reason)
         error
     end
   end
+
+  defp log_create_meeting_room_error(reason) do
+    Logger.error("Failed to create Zoom meeting", error: inspect(reason))
+  end
+
+  # A rejected/expired grant (`invalid_grant`, `invalid_client`,
+  # `access_denied`) is the tenant's credential, not Zoom's availability —
+  # matches the permanent-auth markers `HealthCheck.ResponseHandler` already
+  # uses for the same OAuth error shape. Anything else (network error, an
+  # unrecognised HTTP status) is handed back for the breaker to witness.
+  @permanent_credential_error_markers ~w(invalid_grant invalid_client access_denied)
+
+  defp classify_token_result({:ok, _token} = ok), do: ok
+
+  defp classify_token_result({:error, reason} = error) do
+    if permanent_credential_error?(reason), do: error, else: {:provider_error, reason}
+  end
+
+  defp permanent_credential_error?(reason) when is_binary(reason) do
+    tokens = reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
+    Enum.any?(@permanent_credential_error_markers, &(&1 in tokens))
+  end
+
+  defp permanent_credential_error?(_reason), do: false
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do
@@ -406,7 +470,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       {:ok, %Req.Response{status: 404, body: response_body}} ->
         Logger.warning("Zoom meeting no longer exists on reschedule",
           room_id: room_id,
-          body: inspect(response_body)
+          body: Redactor.redact_and_truncate(response_body)
         )
 
         {:error, :meeting_not_found}
