@@ -1,7 +1,13 @@
 defmodule Tymeslot.Bookings.Policy do
   @moduledoc """
   Business rules and policies for bookings.
-  Pure functions that define what is allowed.
+
+  Two kinds of function live here. The verdict predicates
+  (`can_cancel_meeting?/1`, `can_reschedule_meeting?/1`, …) are pure. The
+  attribute assembly (`build_meeting_attributes/1`, `scheduling_config/2`) is
+  not: it resolves the profile, the schedule, the video integration and the
+  meeting type, and so performs database reads. Callers that need purity should
+  reach for the predicates, not the assembler.
   """
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.BuildParams
@@ -14,7 +20,7 @@ defmodule Tymeslot.Bookings.Policy do
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.ReminderUtils
-  alias TymeslotWeb.Endpoint
+  alias Tymeslot.Utils.UrlBuilder
 
   require Logger
 
@@ -126,7 +132,9 @@ defmodule Tymeslot.Bookings.Policy do
 
   @doc """
   Builds meeting attributes from parameters and form data.
-  Pure transformation function.
+
+  Resolves the organiser's profile, schedule and integrations along the way, so
+  this reads from the database rather than being a pure transformation.
   """
   # Dialyzer can verify the typed `BuildParams.t()` input, but it cannot prove
   # the precise field types of the returned map: this is a pure data-shuffler
@@ -457,9 +465,7 @@ defmodule Tymeslot.Bookings.Policy do
   Gets the application base URL based on configuration.
   """
   @spec app_url() :: String.t()
-  def app_url do
-    Endpoint.url()
-  end
+  defdelegate app_url, to: UrlBuilder, as: :base_url
 
   @doc """
   Builds the public accept/decline RSVP URLs for a guest's token.
