@@ -148,6 +148,32 @@ defmodule Tymeslot.TestAffected.SelectionTest do
     end
   end
 
+  describe "tags_in_source/2" do
+    @domain MapSet.new([:auth, :payments])
+
+    test "reads the atom form" do
+      assert Selection.tags_in_source("@moduletag :auth\n", @domain) == MapSet.new([:auth])
+    end
+
+    test "reads the keyword form the Credo check also accepts" do
+      # `@moduletag backup_tests: true` is valid, so a domain tag written that
+      # way must not be missed: overlooking it would narrow a selection with no
+      # sign that anything was dropped.
+      assert Selection.tags_in_source("@moduletag payments: true\n", @domain) ==
+               MapSet.new([:payments])
+    end
+
+    test "keeps only domain tags, and is not fooled by a tag it does not know" do
+      source = "@moduletag :auth\n@moduletag :unit\n@moduletag :not_a_real_tag\n"
+
+      assert Selection.tags_in_source(source, @domain) == MapSet.new([:auth])
+    end
+
+    test "an untagged module yields nothing rather than erroring" do
+      assert Selection.tags_in_source("defmodule Foo do\nend\n", @domain) == MapSet.new()
+    end
+  end
+
   describe "mirror resolution" do
     test "prefers the mirror file, and falls back to the directory without one" do
       assert Selection.mirror_file("lib/tymeslot/auth/session.ex", index()) ==

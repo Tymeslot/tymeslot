@@ -56,6 +56,8 @@ defmodule Tymeslot.TestAffected.Selection do
 
   @source_extensions [".html.heex", ".heex", ".ex"]
 
+  @moduletag_re ~r/@moduletag\s+:?([a-z_0-9]+)/
+
   @ignored_prefixes ~w[assets/ priv/static/ priv/cert/ .github/ .gitea/ doc/ dev/]
   @ignored_extensions ~w[.md .txt .json .yml .yaml .css .js .png .svg .ico]
 
@@ -311,6 +313,25 @@ defmodule Tymeslot.TestAffected.Selection do
             reasons: Enum.reverse(plan.reasons)
         }
     end
+  end
+
+  @doc """
+  Reads the domain tags a test module declares, from its source.
+
+  Both forms the `CredoChecks.TestModuleTagRequired` check accepts are read:
+  `@moduletag :auth` and `@moduletag backup_tests: true`. Matching by string
+  against the taxonomy, rather than converting whatever is found into an atom,
+  means an unknown tag is simply not a domain tag: no atom is created from file
+  contents, and there is no failure to swallow. Tags outside the `domain`
+  category are dropped because nothing selects on them.
+  """
+  @spec tags_in_source(String.t(), MapSet.t(atom())) :: MapSet.t(atom())
+  def tags_in_source(source, domain_tags) do
+    found = MapSet.new(Regex.scan(@moduletag_re, source), fn [_line, tag] -> tag end)
+
+    domain_tags
+    |> Enum.filter(&MapSet.member?(found, Atom.to_string(&1)))
+    |> MapSet.new()
   end
 
   @doc "Formats a count as a percentage of the suite, for reporting."

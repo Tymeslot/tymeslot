@@ -100,20 +100,8 @@ defmodule Mix.Tasks.Test.Affected do
     }
   end
 
-  # Matches by string against the taxonomy rather than converting what it finds,
-  # so an unknown tag is simply not a domain tag: no atom is created from file
-  # contents, and there is no failure to swallow. Non-domain tags are dropped
-  # here because nothing downstream selects on them.
-  defp tags_in(file, domain_tags) do
-    found =
-      ~r/@moduletag\s+:([a-z_0-9]+)/
-      |> Regex.scan(File.read!(file))
-      |> MapSet.new(fn [_line, tag] -> tag end)
-
-    domain_tags
-    |> Enum.filter(&MapSet.member?(found, Atom.to_string(&1)))
-    |> MapSet.new()
-  end
+  defp tags_in(file, domain_tags),
+    do: Selection.tags_in_source(File.read!(file), domain_tags)
 
   # Core compiles the taxonomy into `:test`; the SaaS build does not, because a
   # path dependency is compiled without its owner's test paths. Load it from
