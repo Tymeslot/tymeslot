@@ -17,7 +17,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SecurityFields
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -41,6 +43,19 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <h1 class="poll-voting-title" data-testid="poll-title">{@poll.title}</h1>
         <p :if={@poll.description && @poll.description != ""} class="poll-voting-description">
           {@poll.description}
+        </p>
+        <%!-- Slot rows show a compact date with no zone on it, so the zone has
+              to be stated once here or every candidate time is unlabelled. It
+              reads as a property of the poll rather than a sentence about it,
+              so it is a badge; the full phrasing stays on the label, which
+              keeps the accessible reading intact. --%>
+        <p
+          class="poll-voting-timezone"
+          data-testid="poll-timezone"
+          aria-label={dgettext("booking", "Times shown in %{timezone}", timezone: tz(@poll))}
+        >
+          <.icon name="hero-globe-alt" class="poll-voting-timezone-icon" />
+          <span>{tz(@poll)}</span>
         </p>
       </div>
 
@@ -105,11 +120,26 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   """
   @spec identity_form(map()) :: Phoenix.LiveView.Rendered.t()
   def identity_form(assigns) do
+    # The token is verified with `maybe_verify_booking_token/2`, which pins the
+    # expected action to `booking_action/0`. Sending anything else here fails
+    # verification with `recaptcha_action_mismatch`, so the action must be read
+    # from the same place the verifier reads it.
+    assigns =
+      assign(
+        assigns,
+        :recaptcha_attrs,
+        SecurityFields.recaptcha_form_attrs(RecaptchaHelpers.booking_action(), "poll")
+      )
+
     ~H"""
+    <%!-- The id is load-bearing: phx-hook is ignored without one, and the
+          RecaptchaV3 hook is what fills the token field before submit. --%>
     <form
+      id="poll-register-form"
       phx-submit="register_participant"
       class="poll-identity-form"
       data-testid="poll-register-form"
+      {@recaptcha_attrs}
     >
       <%!-- Honeypot: hidden from real users, tempting to bots. A non-empty
             value is silently rejected by the register handler. --%>
@@ -124,6 +154,17 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           value=""
         />
       </div>
+
+      <%!-- The RecaptchaV3 hook finds this by id when the form posts flat
+            params rather than a nested param root. Rendered only when booking
+            reCAPTCHA is configured; the server verifies it either way. --%>
+      <input
+        :if={RecaptchaHelpers.booking_active?()}
+        type="hidden"
+        id="g-recaptcha-response"
+        name="g-recaptcha-response"
+        value=""
+      />
 
       <div class="poll-field">
         <label class="poll-field-label" for="poll-name">{dgettext("booking", "Your name")}</label>
@@ -154,6 +195,8 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       <button type="submit" class="poll-submit-button" data-testid="poll-register-submit">
         {dgettext("booking", "Continue to vote")}
       </button>
+
+      <SecurityFields.recaptcha_notice_block />
     </form>
     """
   end
@@ -251,14 +294,23 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
 
   defp slot_row(assigns) do
     ~H"""
-    <fieldset class="poll-slot-row" data-testid="poll-slot">
-      <legend class="poll-slot-time">{format_datetime(@slot.start_time, @tz)}</legend>
+    <%!-- A plain div, not a fieldset. A <legend> is taken out of the fieldset's
+          flow and painted over its top border, so keeping the time inside the
+          box meant forcing it onto a line of its own, which cost about a third
+          of each row's height. The vote controls already declare
+          role="radiogroup" labelled by the same time, so the fieldset was
+          contributing no grouping the assistive tree did not already have.
+          Time, tallies and controls now share one line and wrap only when the
+          card is too narrow to hold them. --%>
+    <div class="poll-slot-row" data-testid="poll-slot">
+      <span class="poll-slot-time">{format_slot_time(@slot.start_time, @tz)}</span>
 
       <div class="poll-slot-tallies">
         <span :for={response <- responses()} class={"poll-tally poll-tally--#{response}"}>
+          <%!-- Label first so the accessible reading is "Yes: 2", not "2 Yes". --%>
+          <span class="sr-only">{tally_label(response)}:</span>
           <.icon name={tally_icon(response)} class="poll-tally-icon" />
           <span class="poll-tally-count">{Map.get(@tally, response, 0)}</span>
-          <span class="sr-only">{tally_label(response)}</span>
         </span>
       </div>
 
@@ -268,7 +320,10 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         role="radiogroup"
         aria-label={format_datetime(@slot.start_time, @tz)}
       >
-        <label :for={response <- responses()} class={"poll-vote-option poll-vote-option--#{response}"}>
+        <label
+          :for={response <- responses()}
+          class={"poll-vote-option poll-vote-option--#{response}"}
+        >
           <input
             type="radio"
             name={"votes[#{@slot.id}]"}
@@ -279,7 +334,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           <span class="poll-vote-option-label">{tally_label(response)}</span>
         </label>
       </div>
-    </fieldset>
+    </div>
     """
   end
 
@@ -314,6 +369,14 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
 
   defp format_datetime(datetime, timezone) do
     LocalizationHelpers.format_meeting_datetime(datetime, timezone)
+  end
+
+  # Slot rows repeat the date on every line, so they drop the year and zone
+  # that `format_datetime/2` carries; `poll-voting-timezone` states the zone
+  # once for the whole list instead. The radiogroup label keeps the full form,
+  # since a screen reader reads one slot at a time with no such header nearby.
+  defp format_slot_time(datetime, timezone) do
+    LocalizationHelpers.format_meeting_datetime_compact(datetime, timezone)
   end
 
   # --- Response presentation ---

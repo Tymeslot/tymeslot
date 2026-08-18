@@ -2,16 +2,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   @moduledoc """
   LiveComponent for creating a poll.
 
-  Owns the interactive create form: the meeting details, the candidate-slot
-  builder (each row a `datetime-local` input in the host's timezone), and the
-  "suggest times" helper that reads the host's own availability for a date and
-  offers conflict-free times as clickable chips.
+  Owns the interactive create form: the meeting details and the candidate-slot
+  builder (each row a `datetime-local` input in the host's timezone).
 
   On submit it converts the local datetime values to UTC and calls
   `Tymeslot.Polls.create_poll/2`. Success flashes via the parent LiveView and
   asks the parent `PollsComponent` to refresh and close the form; failures map
-  to friendly inline errors. Availability lookups run in a bounded `Task` and
-  never block the form: on timeout or error the suggestions are simply hidden.
+  to friendly inline errors.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -23,10 +20,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.Polls.PollsComponent
-  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Shared.Flash
-
-  @suggest_timeout 6_000
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -39,10 +33,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        deadline: "",
        slots: [],
        slot_counter: 0,
-       errors: %{},
-       suggest_date: "",
-       suggestions: nil,
-       suggest_error: false
+       errors: %{}
      )}
   end
 
@@ -215,56 +206,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           </button>
         </div>
       </form>
-
-      <%!-- Availability-based suggestions live outside the main form so the
-           date picker never posts with the poll and never nests a form. --%>
-      <div class="border-t border-tymeslot-100 pt-5 space-y-3">
-        <p class="text-token-sm font-medium text-tymeslot-700">
-          {dgettext("dashboard_common", "Suggest times from your availability")}
-        </p>
-        <form
-          id={"poll-suggest-form-#{@id}"}
-          phx-submit="suggest_times"
-          phx-target={@myself}
-          class="flex items-end gap-2 flex-wrap"
-        >
-          <div class="flex-1 min-w-[12rem]">
-            <.input
-              type="date"
-              name="date"
-              value={@suggest_date}
-              aria-label={dgettext("dashboard_common", "Suggest times for date")}
-            />
-          </div>
-          <button type="submit" class="btn btn-secondary">
-            {dgettext("dashboard_common", "Suggest times")}
-          </button>
-        </form>
-
-        <p :if={@suggest_error} class="text-token-sm text-tymeslot-500">
-          {dgettext(
-            "dashboard_common",
-            "Couldn't load your availability. Add times manually instead."
-          )}
-        </p>
-
-        <div :if={@suggestions == []} class="text-token-sm text-tymeslot-500">
-          {dgettext("dashboard_common", "No free times on that date.")}
-        </div>
-
-        <div :if={is_list(@suggestions) and @suggestions != []} class="flex flex-wrap gap-2">
-          <button
-            :for={time <- @suggestions}
-            type="button"
-            phx-click="add_suggested_slot"
-            phx-value-time={time}
-            phx-target={@myself}
-            class="px-3 py-1.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-turquoise-700 text-token-sm font-medium hover:bg-turquoise-100 transition-colors"
-          >
-            {time}
-          </button>
-        </div>
-      </div>
     </div>
     """
   end
@@ -301,24 +242,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("suggest_times", %{"date" => date}, socket) when date != "" do
-    case fetch_suggestions(socket, date) do
-      {:ok, times} ->
-        {:noreply, assign(socket, suggestions: times, suggest_date: date, suggest_error: false)}
-
-      :error ->
-        {:noreply, assign(socket, suggestions: nil, suggest_date: date, suggest_error: true)}
-    end
-  end
-
-  def handle_event("suggest_times", _params, socket), do: {:noreply, socket}
-
-  @impl Phoenix.LiveComponent
-  def handle_event("add_suggested_slot", %{"time" => time}, socket) do
-    {:noreply, append_slot(socket, suggested_slot_value(socket.assigns.suggest_date, time))}
-  end
-
-  @impl Phoenix.LiveComponent
   def handle_event("create_poll", %{"poll" => params}, socket) do
     attrs = build_attrs(params, socket)
 
@@ -350,48 +273,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     end
   end
 
-  # Availability suggestions come back display-formatted ("9:00 AM"); a
-  # datetime-local value needs 24-hour "HH:MM", so parse and reformat.
-  defp suggested_slot_value(date, time) do
-    case DateTimeUtils.parse_time_string(time) do
-      {:ok, %Time{} = parsed} -> "#{date}T#{Calendar.strftime(parsed, "%H:%M")}"
-      _other -> "#{date}T#{time}"
-    end
-  end
-
   defp merge_slot_values(slots, values) do
     Enum.map(slots, fn %{key: key} = slot ->
       %{slot | value: Map.get(values, Integer.to_string(key), slot.value)}
     end)
-  end
-
-  # --- Availability suggestions ---
-
-  defp fetch_suggestions(socket, date) do
-    user = socket.assigns.current_user
-    profile = socket.assigns.profile
-    timezone = socket.assigns.timezone
-    duration = parse_duration(socket.assigns.duration)
-    context = %{organizer_profile: profile}
-
-    # Unlinked + supervised: a crash or timeout in the availability calc must
-    # never take down the LiveView. Fall back to manual entry instead.
-    task =
-      Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn ->
-        AvailabilityHelpers.get_available_slots(
-          date,
-          duration,
-          timezone,
-          user.id,
-          profile,
-          context
-        )
-      end)
-
-    case Task.yield(task, @suggest_timeout) || Task.shutdown(task) do
-      {:ok, {:ok, times}} when is_list(times) -> {:ok, times}
-      _other -> :error
-    end
   end
 
   # --- Attribute building ---

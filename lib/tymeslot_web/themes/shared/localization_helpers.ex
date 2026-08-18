@@ -97,6 +97,35 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @doc """
+  Formats a meeting start time for lists that repeat it on every row.
+
+  Same shift and fallback behaviour as `format_meeting_datetime/2`, but drops
+  the year and the timezone abbreviation and adds the weekday. In a poll every
+  candidate slot carries a date, so the year and zone are the same on every row
+  and only cost width, while the weekday is exactly what a voter is choosing
+  between. **The caller must state the timezone once for the list**, or the
+  times are unlabelled.
+  """
+  @spec format_meeting_datetime_compact(
+          DateTime.t() | NaiveDateTime.t() | nil,
+          String.t() | nil
+        ) :: String.t()
+  def format_meeting_datetime_compact(start_time, timezone) do
+    case to_attendee_datetime(start_time, timezone) do
+      {:ok, dt} ->
+        dgettext("booking", "%{weekday} %{day} %{month}, %{time}",
+          weekday: get_weekday_name(Date.day_of_week(DateTime.to_date(dt))),
+          day: dt.day,
+          month: get_month_name(dt.month),
+          time: format_time_by_locale(dt)
+        )
+
+      :error ->
+        ""
+    end
+  end
+
+  @doc """
   Shifts a meeting's stored UTC `start_time` into the zone it should be shown in.
 
   `start_time` is a `:utc_datetime`, so it must be shifted before formatting or

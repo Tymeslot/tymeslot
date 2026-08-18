@@ -23,10 +23,12 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [connected?: 1, push_patch: 2, put_flash: 3]
 
+  alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
 
   # Public write actions are rate-limited per client IP over a one-minute window,
@@ -70,13 +72,22 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       ) do
     if honeypot_tripped?(params) do
       # A bot filled the hidden field: fake success and register nothing, exactly
-      # as the booking form's honeypot does.
-      {:noreply,
-       put_flash(
-         socket,
-         :info,
-         dgettext("booking", "You're registered. Your responses are saved as you vote.")
-       )}
+      # as the booking form's honeypot does. Logged like the booking honeypot so
+      # the hit is visible, and still counted against the limiter below so a
+      # tripped bot cannot hammer the endpoint for free.
+      SecurityLogger.log_security_event("poll_register_honeypot_triggered", %{
+        ip_address: client_ip(socket),
+        poll_id: socket.assigns.poll.id
+      })
+
+      with_rate_limit(socket, "poll_register:", @register_limit, fn socket ->
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           dgettext("booking", "You're registered. Your responses are saved as you vote.")
+         )}
+      end)
     else
       register_participant(socket, params)
     end
@@ -92,23 +103,57 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   defp register_participant(socket, params) do
     with_rate_limit(socket, "poll_register:", @register_limit, fn socket ->
-      attrs = Map.take(params, ["name", "email", "timezone", "locale"])
-
-      case Voting.register_participant(socket.assigns.poll, attrs) do
-        {:ok, participant} ->
-          {:noreply,
-           socket
-           |> assign(participant: participant)
-           |> put_flash(
-             :info,
-             dgettext("booking", "You're registered. Your responses are saved as you vote.")
-           )
-           |> push_patch(to: put_participant_in_url(socket, participant))}
-
-        {:error, reason} ->
-          {:noreply, put_flash(socket, :error, register_error_message(reason))}
+      case verify_recaptcha(socket, params) do
+        :ok -> do_register(socket, params)
+        {:error, message} -> {:noreply, put_flash(socket, :error, message)}
       end
     end)
+  end
+
+  # Registration is unauthenticated and writes a row plus an addressable email,
+  # so it clears the same reCAPTCHA gate as a booking. A no-op when reCAPTCHA is
+  # not configured.
+  defp verify_recaptcha(socket, params) do
+    metadata = %{
+      ip: client_ip(socket),
+      user_agent: ClientIP.get_user_agent(socket)
+    }
+
+    token = Map.get(params, "g-recaptcha-response", "")
+
+    case RecaptchaHelpers.maybe_verify_booking_token(token, metadata) do
+      :ok -> :ok
+      {:error, reason} -> {:error, recaptcha_error_message(reason)}
+    end
+  end
+
+  defp recaptcha_error_message(:recaptcha_script_blocked) do
+    dgettext(
+      "booking",
+      "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
+    )
+  end
+
+  defp recaptcha_error_message(_reason),
+    do: dgettext("booking", "Security verification failed. Please try again.")
+
+  defp do_register(socket, params) do
+    attrs = Map.take(params, ["name", "email", "timezone", "locale"])
+
+    case Voting.register_participant(socket.assigns.poll, attrs) do
+      {:ok, participant} ->
+        {:noreply,
+         socket
+         |> assign(participant: participant)
+         |> put_flash(
+           :info,
+           dgettext("booking", "You're registered. Your responses are saved as you vote.")
+         )
+         |> push_patch(to: put_participant_in_url(socket, participant))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, register_error_message(reason))}
+    end
   end
 
   defp honeypot_tripped?(%{"website" => value}) when is_binary(value),

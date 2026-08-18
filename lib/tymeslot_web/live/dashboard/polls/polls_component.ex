@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   This module is the parent component for the Polls section: it owns the list of
   the host's polls, the show/hide state of the create form, and the selected
   poll's live results panel. It delegates rendering to `PollList` (the cards),
-  `PollForm` (the create flow), and `PollResults` (the results grid), reloads
+  `PollForm` (the create flow), and `PollResults` (the results panel), reloads
   the list when the form reports a new poll, and drives the confirm/cancel
   actions plus live vote updates for the selected poll.
 
@@ -20,12 +20,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.Changeset
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.SlotHealth
-  alias TymeslotWeb.Dashboard.Polls.{PollForm, PollList, PollResults}
+  alias TymeslotWeb.Dashboard.Polls.{CancelPollModal, PollForm, PollList, PollResults}
   alias TymeslotWeb.Live.Shared.Flash
 
   @task_supervisor Tymeslot.TaskSupervisor
@@ -71,6 +72,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
      |> assign_new(:slot_errors, fn -> %{} end)
      |> assign_new(:winning_slot_id, fn -> nil end)
      |> assign_new(:meeting_types, fn -> [] end)
+     |> assign_new(:show_cancel_modal, fn -> false end)
+     |> assign_new(:expanded_slots, fn -> MapSet.new() end)
+     |> assign_new(:editing_details?, fn -> false end)
+     |> assign_new(:detail_errors, fn -> %{} end)
      |> load_polls()}
   end
 
@@ -124,7 +129,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           slot_health_loading={@slot_health_loading}
           slot_errors={@slot_errors}
           winning_slot_id={@winning_slot_id}
+          expanded_slots={@expanded_slots}
+          editing_details?={@editing_details?}
+          detail_errors={@detail_errors}
+          profile={@profile}
+          integration_status={@integration_status}
           meetings_path={~p"/dashboard/meetings"}
+          myself={@myself}
+        />
+
+        <CancelPollModal.cancel_poll_modal
+          :if={@selected_poll}
+          open={@show_cancel_modal}
+          poll={@selected_poll}
+          participant_count={length(@selected_poll.participants)}
           myself={@myself}
         />
 
@@ -202,8 +220,73 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("edit_poll_details", _params, socket) do
+    {:noreply, assign(socket, editing_details?: true, detail_errors: %{})}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel_edit_poll_details", _params, socket) do
+    {:noreply, assign(socket, editing_details?: false, detail_errors: %{})}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("save_poll_details", %{"poll" => params}, socket) do
+    poll_id = socket.assigns.selected_poll_id
+    user_id = socket.assigns.current_user.id
+    attrs = Map.take(params, ["title", "description"])
+
+    case Polls.update_details(poll_id, user_id, attrs) do
+      {:ok, _poll} ->
+        Flash.info(dgettext("dashboard_common", "Poll updated"))
+
+        {:noreply,
+         socket
+         |> assign(editing_details?: false, detail_errors: %{})
+         |> reload_selected(refresh_health: false)
+         |> load_polls()}
+
+      {:error, :not_open} ->
+        {:noreply, socket |> assign(:editing_details?, false) |> poll_no_longer_open()}
+
+      {:error, %Changeset{} = changeset} ->
+        {:noreply, assign(socket, :detail_errors, changeset_errors(changeset))}
+
+      {:error, _reason} ->
+        Flash.error(dgettext("dashboard_common", "Couldn't save this poll. Please try again."))
+        {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_slot_voters", %{"slot" => slot_id}, socket) do
+    # Expansion is per slot and additive: a host comparing two close times wants
+    # both breakdowns open at once.
+    expanded = socket.assigns.expanded_slots
+
+    toggled =
+      if MapSet.member?(expanded, slot_id) do
+        MapSet.delete(expanded, slot_id)
+      else
+        MapSet.put(expanded, slot_id)
+      end
+
+    {:noreply, assign(socket, :expanded_slots, toggled)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("request_cancel_poll", _params, socket) do
+    {:noreply, assign(socket, :show_cancel_modal, true)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_cancel_poll_modal", _params, socket) do
+    {:noreply, assign(socket, :show_cancel_modal, false)}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("cancel_poll", _params, socket) do
     poll_id = socket.assigns.selected_poll_id
+    socket = assign(socket, :show_cancel_modal, false)
     user_id = socket.assigns.current_user.id
 
     case Polls.cancel_poll(poll_id, user_id) do
@@ -312,6 +395,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     end)
   end
 
+  defp changeset_errors(changeset) do
+    Changeset.traverse_errors(changeset, fn {message, opts} ->
+      Regex.replace(~r"%{(\w+)}", message, fn _whole, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), "") |> to_string()
+      end)
+    end)
+  end
+
   defp put_slot_error(socket, slot_id, message) do
     assign(socket, :slot_errors, Map.put(socket.assigns.slot_errors, slot_id, message))
   end
@@ -326,7 +417,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
       slot_health: %{},
       slot_health_loading: false,
       slot_errors: %{},
-      winning_slot_id: nil
+      winning_slot_id: nil,
+      show_cancel_modal: false,
+      expanded_slots: MapSet.new(),
+      editing_details?: false,
+      detail_errors: %{}
     )
   end
 

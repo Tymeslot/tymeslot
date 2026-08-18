@@ -31,6 +31,26 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
         assert html =~ "Roadmap sync"
         assert html =~ "poll-voting"
       end
+
+      test "states the poll's timezone once in the #{theme_name} theme", %{conn: conn} do
+        %{user: user, profile: profile} =
+          seed_booking_account(unquote(theme_id), "tz-host-#{unquote(theme_name)}", "Etc/UTC")
+
+        poll = insert(:poll, user: user, timezone: "Europe/Berlin")
+        insert(:poll_time_slot, poll: poll, start_time: ~U[2026-06-15 08:00:00Z])
+
+        {:ok, view, _html} = live(conn, poll_path(profile.username, poll.token))
+        html = render(view)
+
+        # Slot rows carry a compact date with no zone on it, so this line is
+        # the only thing telling a voter which clock the times are on.
+        assert html =~ "Times shown in Europe/Berlin"
+
+        # 08:00 UTC in June is 10:00 in Berlin (CEST). The row names the
+        # weekday and drops the year the long format would carry.
+        assert html =~ "Monday 15 June, 10:00"
+        refute html =~ "15 June 2026"
+      end
     end
   end
 

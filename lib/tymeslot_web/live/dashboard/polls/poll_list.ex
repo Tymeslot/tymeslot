@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   Presentation components for the dashboard poll list.
 
   Renders one card per poll (title, status badge, slot and participant counts,
-  a vote-progress summary, a gated copy-share-link control, and a view-results
+  a vote-progress summary, the shared copy-share-link control, and a view-results
   button) and the empty state shown when the host has no polls yet. All data is
   passed in; these are display-only function components with no internal state.
   """
@@ -11,9 +11,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls
-  alias Tymeslot.Scheduling.LinkAccessPolicy
-  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Dashboard.Polls.PollShareLink
 
   @doc """
   Renders the list of polls, or an empty state when there are none.
@@ -72,11 +71,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
       |> assign(:slot_count, length(assigns.poll.time_slots))
       |> assign(:participant_count, length(assigns.poll.participants))
       |> assign(:vote_count, total_votes(tallies))
-      |> assign(
-        :can_link?,
-        LinkAccessPolicy.can_link?(assigns.profile, assigns.integration_status)
-      )
-      |> assign(:share_url, share_url(assigns.profile, assigns.poll))
 
     ~H"""
     <div class={[
@@ -127,28 +121,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
-          <button
-            :if={@can_link?}
+          <PollShareLink.copy_link_button
             id={"poll-copy-#{@poll.id}"}
-            type="button"
-            phx-hook="CopyOnClick"
-            data-copy-text={@share_url}
-            data-copy-feedback={dgettext("dashboard_common", "Poll link copied to clipboard!")}
-            class="p-2 rounded-lg bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 transition-colors"
-            title={dgettext("dashboard_common", "Copy poll link to clipboard")}
-          >
-            <Icons.icon name="hero-clipboard" class="w-4 h-4" />
-          </button>
-          <button
-            :if={!@can_link?}
-            type="button"
-            aria-disabled="true"
-            aria-label={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
-            class="p-2 rounded-lg bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60"
-            title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
-          >
-            <Icons.icon name="hero-clipboard" class="w-4 h-4" />
-          </button>
+            poll={@poll}
+            profile={@profile}
+            integration_status={@integration_status}
+          />
 
           <button
             type="button"
@@ -193,11 +171,4 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
       acc + counts.yes + counts.if_need_be + counts.no
     end)
   end
-
-  defp share_url(%{username: username}, poll)
-       when is_binary(username) and username != "" do
-    UrlBuilder.build_url("/#{username}/poll/#{poll.token}")
-  end
-
-  defp share_url(_profile, _poll), do: nil
 end

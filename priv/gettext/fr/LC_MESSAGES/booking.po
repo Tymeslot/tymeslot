@@ -1220,11 +1220,13 @@ msgid "Payment not found."
 msgstr "Paiement introuvable."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification failed. Please try again."
 msgstr "La vérification de sécurité a échoué. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
 msgstr "La vérification de sécurité est actuellement indisponible. Cela peut être dû à la désactivation de JavaScript, à des extensions de confidentialité du navigateur (Privacy Badger, uBlock Origin, etc.) ou à des politiques de sécurité réseau. Veuillez ajuster vos paramètres ou contacter le support si le problème persiste."
@@ -1391,3 +1393,13 @@ msgid "The host is no longer accepting bookings for this period. Please pick a d
 msgstr ""
 "L’organisateur n’accepte plus de réservations pour cette période. Veuillez "
 "choisir un autre jour."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{weekday} %{day} %{month}, %{time}"
+msgstr "%{weekday} %{day} %{month}, %{time}"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Times shown in %{timezone}"
+msgstr "Horaires affichés en %{timezone}"

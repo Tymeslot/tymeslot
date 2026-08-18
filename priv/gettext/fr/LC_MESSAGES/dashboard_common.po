@@ -252,6 +252,7 @@ msgstr[0] "%{count} vote"
 msgstr[1] "%{count} votes"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Add any context for your guests"
 msgstr "Ajoutez du contexte pour vos invités"
@@ -272,10 +273,12 @@ msgid "Calendar conflict"
 msgstr "Conflit d'agenda"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annuler"
 
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel poll"
@@ -285,11 +288,6 @@ msgstr "Annuler le sondage"
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
 msgstr "Annulé"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
-#, elixir-autogen, elixir-format
-msgid "Candidate time"
-msgstr "Créneau proposé"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
@@ -321,7 +319,7 @@ msgstr "Confirmer ce créneau"
 msgid "Confirmed"
 msgstr "Confirmé"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_share_link.ex
 #, elixir-autogen, elixir-format
 msgid "Copy poll link to clipboard"
 msgstr "Copier le lien du sondage dans le presse-papiers"
@@ -336,11 +334,6 @@ msgstr "Impossible d'annuler ce sondage. Veuillez réessayer."
 msgid "Couldn't confirm this time. Please try again."
 msgstr "Impossible de confirmer ce créneau. Veuillez réessayer."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't load your availability. Add times manually instead."
-msgstr "Impossible de charger vos disponibilités. Ajoutez les créneaux manuellement."
-
 #: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
 #, elixir-autogen, elixir-format
 msgid "Create a poll to propose a few times and let your guests vote."
@@ -352,6 +345,7 @@ msgid "Create poll"
 msgstr "Créer le sondage"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Description (facultatif)"
@@ -404,11 +398,6 @@ msgstr "Sans réponse"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
-msgid "No free times on that date."
-msgstr "Aucun créneau libre à cette date."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
 msgid "No meeting type"
 msgstr "Aucun type de réunion"
 
@@ -437,7 +426,7 @@ msgstr "Sondage annulé"
 msgid "Poll created"
 msgstr "Sondage créé"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_list.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_share_link.ex
 #, elixir-autogen, elixir-format
 msgid "Poll link copied to clipboard!"
 msgstr "Lien du sondage copié dans le presse-papiers !"
@@ -452,21 +441,6 @@ msgstr "Sondages"
 #, elixir-autogen, elixir-format
 msgid "Remove time"
 msgstr "Supprimer le créneau"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Suggest times"
-msgstr "Proposer des créneaux"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Suggest times for date"
-msgstr "Proposer des créneaux pour cette date"
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#, elixir-autogen, elixir-format
-msgid "Suggest times from your availability"
-msgstr "Proposer des créneaux d'après vos disponibilités"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
@@ -514,6 +488,7 @@ msgid "Timezone"
 msgstr "Fuseau horaire"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Titre"
@@ -572,3 +547,72 @@ msgstr "Connectez un calendrier pour terminer la configuration"
 #, elixir-autogen, elixir-format
 msgid "Connect a video provider to finish setup"
 msgstr "Connectez un fournisseur de visioconférence pour terminer la configuration"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest has already voted. Their responses will be discarded."
+msgid_plural "%{count} guests have already voted. Their responses will be discarded."
+msgstr[0] "%{count} invité a déjà voté. Ses réponses seront supprimées."
+msgstr[1] "%{count} invités ont déjà voté. Leurs réponses seront supprimées."
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel this poll?"
+msgstr "Annuler ce sondage ?"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep poll"
+msgstr "Conserver le sondage"
+
+#: lib/tymeslot_web/live/dashboard/polls/cancel_poll_modal.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” will stop accepting responses and everyone holding the voting link will see it as cancelled. This cannot be undone."
+msgstr "« %{title} » n'acceptera plus de réponses et toutes les personnes disposant du lien de vote le verront comme annulé. Cette action est irréversible."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest has voted so far."
+msgid_plural "%{count} guests have voted so far."
+msgstr[0] "%{count} invité a voté pour l'instant."
+msgstr[1] "%{count} invités ont voté pour l'instant."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Most votes"
+msgstr "Le plus de votes"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "No responses yet."
+msgstr "Aucune réponse pour l'instant."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Who voted"
+msgstr "Qui a voté"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Hide who voted"
+msgstr "Masquer les votes"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save this poll. Please try again."
+msgstr "Impossible d'enregistrer ce sondage. Veuillez réessayer."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Edit title and description"
+msgstr "Modifier le titre et la description"
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "Poll updated"
+msgstr "Sondage mis à jour"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr "Enregistrer les modifications"

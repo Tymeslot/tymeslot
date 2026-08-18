@@ -57,6 +57,26 @@ defmodule Tymeslot.Polls do
   @spec list_polls(integer()) :: [PollSchema.t()]
   def list_polls(user_id), do: PollQueries.list_for_user(user_id)
 
+  @doc """
+  Updates an open poll's title and description, and notifies subscribers.
+
+  Only these two fields, and only while the poll is open. The candidate times,
+  duration, timezone, and deadline are the terms guests voted against, so they
+  are not editable; a confirmed poll has already minted a meeting that carries
+  its own title, and a cancelled one is history.
+
+  Subscribers are notified because the title and description are both on the
+  public voting page, so an open voting tab shows the correction immediately.
+  """
+  @spec update_details(Ecto.UUID.t(), integer(), map()) ::
+          {:ok, PollSchema.t()} | {:error, :not_found | :not_open | Ecto.Changeset.t()}
+  def update_details(id, user_id, attrs) do
+    with_poll(id, user_id, fn
+      %{status: :open} = poll -> do_update_details(poll, attrs)
+      _poll -> {:error, :not_open}
+    end)
+  end
+
   @doc "Cancels an open poll and notifies subscribers. Only open polls may be cancelled."
   @spec cancel_poll(Ecto.UUID.t(), integer()) ::
           {:ok, PollSchema.t()} | {:error, :not_found | :not_open | Ecto.Changeset.t()}
@@ -223,6 +243,17 @@ defmodule Tymeslot.Polls do
         :ok = PollScheduler.cancel_deadline_jobs(cancelled.id)
         broadcast_update(cancelled.id)
         {:ok, cancelled}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  defp do_update_details(poll, attrs) do
+    case PollQueries.update(PollSchema.details_changeset(poll, attrs)) do
+      {:ok, updated} ->
+        broadcast_update(updated.id)
+        {:ok, updated}
 
       {:error, changeset} ->
         {:error, changeset}
