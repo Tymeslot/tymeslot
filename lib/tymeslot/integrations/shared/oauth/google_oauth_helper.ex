@@ -238,23 +238,6 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
   def validate_state(_invalid), do: {:error, "Invalid state parameter"}
 
-  @doc """
-  Returns available scope definitions.
-  """
-  @spec available_scopes() :: map()
-  def available_scopes, do: @default_scopes
-
-  @doc """
-  Returns the scope string for a given scope atom.
-  """
-  @spec scope_string(atom()) :: String.t()
-  @spec scope_string(String.t()) :: String.t()
-  def scope_string(scope_atom) when is_atom(scope_atom) do
-    Map.get(@default_scopes, scope_atom, scope_atom)
-  end
-
-  def scope_string(scope_string) when is_binary(scope_string), do: scope_string
-
   # Private functions
 
   defp build_token_map(response) do
