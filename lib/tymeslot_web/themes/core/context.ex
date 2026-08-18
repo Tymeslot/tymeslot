@@ -123,22 +123,6 @@ defmodule TymeslotWeb.Themes.Core.Context do
   defp apply_layout(context, _params), do: context
 
   @doc """
-  Updates the context with new customizations.
-  """
-  @spec update_customizations(t(), map()) :: t()
-  def update_customizations(%__MODULE__{} = context, customizations) do
-    %{context | customizations: customizations}
-  end
-
-  @doc """
-  Checks if a theme capability is enabled.
-  """
-  @spec supports?(t(), atom()) :: boolean()
-  def supports?(%__MODULE__{capabilities: capabilities}, capability) do
-    Map.get(capabilities, capability, false)
-  end
-
-  @doc """
   Gets the CSS file path for the theme.
   """
   @spec css_file(t()) :: String.t() | nil
