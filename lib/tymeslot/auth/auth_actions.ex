@@ -109,16 +109,19 @@ defmodule Tymeslot.Auth.AuthActions do
   """
   @spec reset_password(String.t(), String.t(), String.t(), term()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
-  def reset_password(token, password, password_confirmation, _socket) do
+  def reset_password(token, password, password_confirmation, socket) do
     if Config.password_auth_enabled?() do
-      do_reset_password(token, password, password_confirmation)
+      do_reset_password(token, password, password_confirmation,
+        ip: ClientIP.get(socket),
+        user_agent: ClientIP.get_user_agent(socket)
+      )
     else
       {:error, password_auth_disabled_message()}
     end
   end
 
-  defp do_reset_password(token, password, password_confirmation) do
-    case PasswordReset.reset_password(token, password, password_confirmation) do
+  defp do_reset_password(token, password, password_confirmation, opts) do
+    case PasswordReset.reset_password(token, password, password_confirmation, opts) do
       {:ok, _user, _message} ->
         {:ok, :password_reset_success,
          dgettext(

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.AccountLive do
 
   alias Tymeslot.Locales
   alias TymeslotWeb.AccountLive.{Handlers, Helpers}
+  alias TymeslotWeb.Helpers.ClientIP
 
   import TymeslotWeb.AccountLive.Components
 
@@ -17,6 +18,10 @@ defmodule TymeslotWeb.AccountLive do
      socket
      |> assign(:page_title, dgettext("account", "Account Settings"))
      |> assign(:supported_locales, Locales.supported())
+     # Read once at mount and keep: the connect info is only reachable here, and
+     # the security audit entries these forms emit record where the change came
+     # from.
+     |> assign(:user_agent, ClientIP.get_user_agent_from_mount(socket))
      |> Helpers.init_form_state()}
   end
 
