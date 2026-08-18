@@ -6,8 +6,8 @@ defmodule Tymeslot.Bookings.Create do
 
   require Logger
 
-  alias Tymeslot.Availability.{Calculate, TimeSlots}
-  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -90,10 +90,11 @@ defmodule Tymeslot.Bookings.Create do
 
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          :ok <- validate_custom_field_answers(booking_data) do
-      booking_data = put_meeting_type_record(booking_data)
+      booking_data = booking_data |> put_meeting_type_record() |> put_scheduling_config()
+      config = scheduling_config(booking_data)
 
       # Try calendar pre-check for better UX
-      case fresh_calendar_check(booking_data) do
+      case fresh_calendar_check(booking_data, config) do
         :ok ->
           # Calendar shows available, proceed normally
           execute_internal(booking_data, form_data, opts)
@@ -187,7 +188,7 @@ defmodule Tymeslot.Bookings.Create do
       user_id ->
         # Meeting type active check
         with :ok <- validate_meeting_type_active(booking_data) do
-          config = Policy.scheduling_config(user_id, booking_data.meeting_type)
+          config = scheduling_config(booking_data)
 
           # Time window validation
           with :ok <-
@@ -226,18 +227,13 @@ defmodule Tymeslot.Bookings.Create do
   # than trusted from the submitted date and time. Conflicts are not this
   # check's business: `validate_calendar_availability/2` owns those.
   defp validate_slot_on_schedule(booking_data, config) do
-    if Calculate.offers_slot?(
-         booking_data.date,
-         booking_data.start_datetime,
-         booking_data.duration_minutes,
-         booking_data.user_timezone,
-         config.owner_timezone,
-         config
-       ) do
-      :ok
-    else
-      {:error, :slot_not_offered}
-    end
+    ScheduleCheck.validate_slot_on_schedule(
+      booking_data.date,
+      booking_data.start_datetime,
+      booking_data.duration_minutes,
+      booking_data.user_timezone,
+      config
+    )
   end
 
   # Fast pre-check with a friendly error before any side-effect setup. The
@@ -253,8 +249,8 @@ defmodule Tymeslot.Bookings.Create do
     )
   end
 
-  defp validate_calendar_availability(booking_data, _config) do
-    case fresh_calendar_check(booking_data) do
+  defp validate_calendar_availability(booking_data, config) do
+    case fresh_calendar_check(booking_data, config) do
       :ok ->
         {:ok, :validated}
 
@@ -292,7 +288,7 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp fresh_calendar_check(booking_data) do
+  defp fresh_calendar_check(booking_data, config) do
     %{start_datetime: start_datetime, end_datetime: end_datetime, date: date} = booking_data
 
     case Map.get(booking_data, :organizer_user_id) do
@@ -314,7 +310,7 @@ defmodule Tymeslot.Bookings.Create do
               start_datetime,
               end_datetime,
               events,
-              Policy.scheduling_config(organizer_user_id, Map.get(booking_data, :meeting_type))
+              config
             )
 
           {:ok, {:error, reason}} ->
@@ -379,6 +375,33 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp put_meeting_type_record(booking_data), do: Map.put(booking_data, :meeting_type, nil)
+
+  # The scheduling policy is derived from a profile lookup and a schedule
+  # lookup, and three separate checks need it: the booking window, the
+  # schedule's own slots, and the calendar conflict check. `execute_with_video_room/3`
+  # needs it ahead of `validate_booking/2` for its calendar pre-check, so it
+  # resolves eagerly here; `execute/3` has no such early need and instead lets
+  # `validate_booking/2` resolve it lazily via `scheduling_config/1`, once the
+  # meeting-type-active guard has passed, so an invalid meeting type never
+  # pays for a profile/schedule lookup it can't use.
+  defp put_scheduling_config(booking_data) do
+    Map.put_new_lazy(booking_data, :scheduling_config, fn ->
+      derive_scheduling_config(booking_data)
+    end)
+  end
+
+  defp scheduling_config(booking_data) do
+    Map.get_lazy(booking_data, :scheduling_config, fn ->
+      derive_scheduling_config(booking_data)
+    end)
+  end
+
+  defp derive_scheduling_config(booking_data) do
+    Policy.scheduling_config(
+      Map.get(booking_data, :organizer_user_id),
+      Map.get(booking_data, :meeting_type)
+    )
+  end
 
   defp paid_meeting_type?(%{meeting_type: %{payment_required: true}}), do: true
   defp paid_meeting_type?(_other), do: false

@@ -550,4 +550,69 @@ defmodule Tymeslot.Bookings.CreateTest do
       assert meeting.uid =~ @uuid_v4
     end
   end
+
+  # The scheduling policy costs a profile lookup and a schedule lookup, and the
+  # booking-window check, the schedule check and the conflict check all need it.
+  # Resolving it per consumer is what this pins against.
+  describe "execute/3 resolves the scheduling policy once" do
+    setup do
+      setup_booking_test()
+    end
+
+    test "the calendar conflict check adds no schedule lookup of its own", %{
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      set_calendar_empty()
+
+      # Hours far enough apart that the second booking cannot collide with the
+      # first, buffer included.
+      skipped =
+        schedule_queries_during(meeting_params, form_data, "09:00", skip_calendar_check: true)
+
+      checked =
+        schedule_queries_during(meeting_params, form_data, "17:00", skip_calendar_check: false)
+
+      assert skipped > 0, "expected the booking path to read the schedule at all"
+
+      assert checked == skipped,
+             "the conflict check re-derived the policy: #{checked} schedule reads with it, " <>
+               "#{skipped} without"
+    end
+
+    defp schedule_queries_during(meeting_params, form_data, time, opts) do
+      parent = self()
+      ref = make_ref()
+      handler_id = "booking-schedule-query-spy-#{inspect(ref)}"
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :repo, :query],
+        # The handler runs in the process that issued the query, so this is what
+        # keeps a concurrently running test's queries out.
+        fn _event, _measurements, %{source: source}, _config ->
+          if self() == parent, do: send(parent, {:query_source, ref, source})
+        end,
+        nil
+      )
+
+      params = Map.put(meeting_params, :time, time)
+
+      try do
+        assert {:ok, _meeting} = Create.execute(params, form_data, opts)
+      after
+        :telemetry.detach(handler_id)
+      end
+
+      ref |> drain_query_sources([]) |> Enum.count(&(&1 == "availability_schedules"))
+    end
+
+    defp drain_query_sources(ref, acc) do
+      receive do
+        {:query_source, ^ref, source} -> drain_query_sources(ref, [source | acc])
+      after
+        0 -> acc
+      end
+    end
+  end
 end
