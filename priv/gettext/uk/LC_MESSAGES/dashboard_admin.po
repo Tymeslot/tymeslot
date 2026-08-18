@@ -488,7 +488,7 @@ msgid "Accent colour used across transactional emails: buttons, links, the confi
 msgstr "Акцентний колір, який використовується в транзакційних листах: кнопки, посилання, банер підтвердження та тло позначок. Темніші та світліші відтінки цієї гами походять від нього. Бурштиновий і червоний не змінюються: вони позначають «потребує уваги» та «скасовано», і їх перефарбування зробило б скасування схожим на підтвердження. Залиште порожнім, щоб використати стандартний бірюзовий."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Could not remove the logo."
 msgstr "Не вдалося видалити логотип."
 
@@ -518,7 +518,7 @@ msgid "Email branding"
 msgstr "Брендування листів"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email logo"
 msgstr "Логотип листів"
 
@@ -603,6 +603,6 @@ msgid "White button text on this colour has a contrast of only %{ratio}:1. Butto
 msgstr "Білий текст кнопок на цьому кольорі має контраст лише %{ratio}:1. Кнопки може бути важко прочитати."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Це зображення завелике. Виберіть менше за %{limit}."

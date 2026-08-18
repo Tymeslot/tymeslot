@@ -488,7 +488,7 @@ msgid "Accent colour used across transactional emails: buttons, links, the confi
 msgstr "Accent colour used across transactional emails: buttons, links, the confirmation banner, and badge backgrounds. The darker and lighter shades of the family are derived from it. Amber and red are not affected - they signal \"needs attention\" and \"cancelled\", and recolouring them would make a cancellation read as a confirmation. Leave blank for the stock turquoise."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Could not remove the logo."
 msgstr "Could not remove the logo."
 
@@ -518,7 +518,7 @@ msgid "Email branding"
 msgstr "Email branding"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email logo"
 msgstr "Email logo"
 
@@ -603,6 +603,6 @@ msgid "White button text on this colour has a contrast of only %{ratio}:1. Butto
 msgstr "White button text on this colour has a contrast of only %{ratio}:1. Buttons may be hard to read."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "That image is too large. Pick one under %{limit}."

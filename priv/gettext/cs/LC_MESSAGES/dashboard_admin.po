@@ -488,7 +488,7 @@ msgid "Accent colour used across transactional emails: buttons, links, the confi
 msgstr "Akcentová barva používaná v transakčních e-mailech: tlačítka, odkazy, potvrzovací banner a pozadí odznaků. Tmavší a světlejší odstíny této rodiny se z ní odvozují. Jantarová a červená zůstávají beze změny, protože signalizují „vyžaduje pozornost“ a „zrušeno“; jejich přebarvení by způsobilo, že by zrušení působilo jako potvrzení. Ponechte prázdné pro výchozí tyrkysovou."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Could not remove the logo."
 msgstr "Logo se nepodařilo odebrat."
 
@@ -518,7 +518,7 @@ msgid "Email branding"
 msgstr "Branding e-mailů"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email logo"
 msgstr "Logo e-mailů"
 
@@ -603,6 +603,6 @@ msgid "White button text on this colour has a contrast of only %{ratio}:1. Butto
 msgstr "Bílý text tlačítek na této barvě má kontrast pouze %{ratio}:1. Tlačítka mohou být špatně čitelná."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Tento obrázek je příliš velký. Vyberte menší než %{limit}."

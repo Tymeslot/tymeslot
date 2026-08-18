@@ -488,7 +488,7 @@ msgid "Accent colour used across transactional emails: buttons, links, the confi
 msgstr "Akzentfarbe für alle Transaktions-E-Mails: Schaltflächen, Links, das Bestätigungsbanner und Badge-Hintergründe. Die dunkleren und helleren Abstufungen der Farbfamilie werden daraus abgeleitet. Bernstein und Rot bleiben unverändert, denn sie signalisieren „Handlungsbedarf“ und „abgesagt“; eine Umfärbung ließe eine Absage wie eine Bestätigung wirken. Leer lassen für das voreingestellte Türkis."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Could not remove the logo."
 msgstr "Das Logo konnte nicht entfernt werden."
 
@@ -518,7 +518,7 @@ msgid "Email branding"
 msgstr "E-Mail-Branding"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email logo"
 msgstr "E-Mail-Logo"
 
@@ -603,6 +603,6 @@ msgid "White button text on this colour has a contrast of only %{ratio}:1. Butto
 msgstr "Weißer Schaltflächentext auf dieser Farbe hat nur einen Kontrast von %{ratio}:1. Schaltflächen sind möglicherweise schwer lesbar."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Dieses Bild ist zu groß. Bitte wählen Sie eines unter %{limit}."
