@@ -3,6 +3,8 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
 
   @moduletag :recaptcha_signup_test
   @moduletag backup_tests: true
+  @moduletag :auth
+  @moduletag :security
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Infrastructure.Security.Recaptcha

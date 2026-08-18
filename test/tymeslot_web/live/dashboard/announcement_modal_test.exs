@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
   use TymeslotWeb.LiveCase, async: false
 
   @moduletag :live
+  @moduletag :notifications
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory

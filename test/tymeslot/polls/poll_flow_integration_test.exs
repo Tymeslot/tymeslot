@@ -13,6 +13,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   use TymeslotWeb.LiveCase, async: false
 
   @moduletag :integration
+  @moduletag :polls
 
   use Oban.Testing, repo: Tymeslot.Repo
 

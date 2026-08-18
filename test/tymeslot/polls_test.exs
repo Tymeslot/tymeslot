@@ -2,6 +2,7 @@ defmodule Tymeslot.PollsTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :unit
+  @moduletag :polls
 
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollSchema

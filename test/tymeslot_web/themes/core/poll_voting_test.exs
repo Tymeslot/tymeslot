@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :unit
+  @moduletag :polls
 
   alias Ecto.UUID
   alias Tymeslot.Polls

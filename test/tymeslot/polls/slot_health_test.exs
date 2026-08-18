@@ -2,6 +2,7 @@ defmodule Tymeslot.Polls.SlotHealthTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :unit
+  @moduletag :polls
 
   import Mox
   import Tymeslot.Factory

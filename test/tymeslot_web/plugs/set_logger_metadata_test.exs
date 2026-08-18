@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Plugs.SetLoggerMetadataTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :plugs
+  @moduletag :infrastructure
 
   alias Tymeslot.Factory
   alias TymeslotWeb.Plugs.SetLoggerMetadata

@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
   use ExUnit.Case, async: true
 
   @moduletag :hooks
+  @moduletag :infrastructure
 
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Infrastructure.CorrelationId

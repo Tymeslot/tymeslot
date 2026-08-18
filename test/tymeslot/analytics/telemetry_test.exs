@@ -5,6 +5,7 @@ defmodule Tymeslot.Analytics.TelemetryTest do
   import ExUnit.CaptureLog
 
   @moduletag :unit
+  @moduletag :analytics
 
   alias Tymeslot.Analytics.Telemetry
 

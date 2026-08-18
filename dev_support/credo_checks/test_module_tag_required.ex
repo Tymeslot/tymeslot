@@ -1,10 +1,15 @@
 defmodule CredoChecks.TestModuleTagRequired do
   @moduledoc """
-  Ensures every test module declares at least one `@moduletag` from the approved taxonomy.
+  Ensures every test module declares at least one `@moduletag` from the **domain**
+  category of the approved taxonomy.
 
-  Tags enable targeted test runs, CI filtering, and organised test reporting. A module
-  without a recognised tag cannot be filtered by domain or type, making it harder to
-  run scoped suites (e.g. `mix test --only auth`).
+  Targeted runs select on the domain category alone: `mix test --only payments` and
+  `mix test.affected` answer "which tests cover this feature?", and only a domain tag
+  answers that. The other categories are orthogonal to subject matter, since `:unit`,
+  `:live` and `:components` describe how a test is written or which layer it touches
+  and are spread across every feature. A module tagged only with those is unreachable
+  by any targeted run, so requiring a tag from the taxonomy at large is too weak: the
+  tag has to name the subject.
 
   The allowed tag list is maintained in `Tymeslot.Test.TagTaxonomy` (in `test/support/`) —
   that module is the single source of truth for the taxonomy. Edit it there to add or rename tags.
@@ -24,6 +29,14 @@ defmodule CredoChecks.TestModuleTagRequired do
         # ...
       end
 
+      # Bad — tagged, but only with a layer or test-type tag: nothing names the subject
+      defmodule MyApp.AuthTest do
+        use MyApp.DataCase, async: true
+        @moduletag :unit
+        @moduletag :live
+        # ...
+      end
+
       # Good — tagged with an approved domain tag
       defmodule MyApp.AuthTest do
         use MyApp.DataCase, async: true
@@ -31,9 +44,11 @@ defmodule CredoChecks.TestModuleTagRequired do
         # ...
       end
 
-      # Good — keyword-style tag (key must be in the taxonomy)
+      # Good — a domain tag plus any number of orthogonal ones
       defmodule MyApp.AuthTest do
         use MyApp.DataCase, async: true
+        @moduletag :auth
+        @moduletag :unit
         @moduletag backup_tests: true
         # ...
       end
@@ -44,14 +59,18 @@ defmodule CredoChecks.TestModuleTagRequired do
     category: :design,
     explanations: [
       check: """
-      Every test module must declare at least one @moduletag from the approved taxonomy.
+      Every test module must declare at least one @moduletag from the domain
+      category of the approved taxonomy.
 
-      Tags enable targeted test runs, CI filtering, and organised reporting.
+      Targeted runs (mix test --only <domain>, mix test.affected) select on the
+      domain category alone, so a module tagged only :unit or :live cannot be
+      reached by any of them.
       The taxonomy lives in Tymeslot.Test.TagTaxonomy (test/support/tag_taxonomy.ex).
       """,
       params: [
         allowed_tags:
-          "Override the allowed tag list. Defaults to Tymeslot.Test.TagTaxonomy.all()."
+          "Override the required tag list. Defaults to the domain category of " <>
+            "Tymeslot.Test.TagTaxonomy."
       ]
     ]
 
@@ -65,7 +84,7 @@ defmodule CredoChecks.TestModuleTagRequired do
   def run(%Credo.SourceFile{} = source_file, params) do
     if test_file?(source_file.filename) do
       issue_meta = IssueMeta.for(source_file, params)
-      allowed_tags = Keyword.get(params, :allowed_tags, TagTaxonomy.all())
+      allowed_tags = Keyword.get(params, :allowed_tags, domain_tags())
       Code.prewalk(source_file, &traverse(&1, &2, issue_meta, allowed_tags))
     else
       []
@@ -76,10 +95,25 @@ defmodule CredoChecks.TestModuleTagRequired do
   # Private helpers
   # ---------------------------------------------------------------------------
 
+  defp domain_tags, do: TagTaxonomy.by_category() |> Map.fetch!(:domain)
+
+  # Credo reports repo-relative filenames ("test/tymeslot/auth/auth_test.exs"),
+  # so an earlier `String.contains?(filename, "/test/")` guard here never
+  # matched and this check silently passed every file in both repositories.
+  # Match on the path segment instead, which holds for relative and absolute
+  # paths alike.
   defp test_file?(filename) do
+    segments = Path.split(filename)
+
     String.ends_with?(filename, "_test.exs") and
-      String.contains?(filename, "/test/") and
-      not String.contains?(filename, "/test/support/")
+      "test" in segments and
+      not support_file?(segments)
+  end
+
+  defp support_file?(segments) do
+    segments
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.any?(&(&1 == ["test", "support"]))
   end
 
   # Returns true only for modules whose last name segment ends with "Test",
@@ -157,20 +191,20 @@ defmodule CredoChecks.TestModuleTagRequired do
   defp build_issue(issue_meta, line_no, [], _allowed_tags) do
     format_issue(issue_meta,
       message:
-        "Test module is missing a @moduletag from the approved taxonomy. " <>
-          "See Tymeslot.Test.TagTaxonomy for the list of allowed tags.",
+        "Test module is missing a domain @moduletag. " <>
+          "See the domain category of Tymeslot.Test.TagTaxonomy.",
       line_no: line_no,
       trigger: "defmodule"
     )
   end
 
-  defp build_issue(issue_meta, line_no, tags, allowed_tags) do
-    invalid = tags -- allowed_tags
-
+  defp build_issue(issue_meta, line_no, tags, _allowed_tags) do
     format_issue(issue_meta,
       message:
-        "Test module uses unrecognised @moduletag(s): #{inspect(invalid)}. " <>
-          "Replace with an approved tag from Tymeslot.Test.TagTaxonomy.",
+        "Test module is tagged #{inspect(tags)}, none of which names a domain. " <>
+          "Add a tag from the domain category of Tymeslot.Test.TagTaxonomy: a " <>
+          "layer or test-type tag alone leaves the module unreachable by " <>
+          "`mix test --only <domain>` and `mix test.affected`.",
       line_no: line_no,
       trigger: "@moduletag"
     )

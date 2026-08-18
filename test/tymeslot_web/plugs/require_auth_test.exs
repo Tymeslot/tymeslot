@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Plugs.RequireAuthPlugTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :plugs
+  @moduletag :auth
 
   alias Phoenix.ConnTest
   alias Phoenix.Controller

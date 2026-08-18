@@ -2,6 +2,7 @@ defmodule TymeslotWeb.RootLayoutTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :ui
 
   describe "root layout <html lang>" do
     test "reflects the active locale for a German request", %{conn: conn} do

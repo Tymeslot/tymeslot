@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
   use TymeslotWeb.OAuthIntegrationCase, async: false
 
   @moduletag :oauth_integration
+  @moduletag :auth
+  @moduletag :integrations
 
   import Mox
   import Tymeslot.Factory

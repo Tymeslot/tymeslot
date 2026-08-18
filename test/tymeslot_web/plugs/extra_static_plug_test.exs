@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Plugs.ExtraStaticTest do
   use TymeslotWeb.ConnCase, async: false
 
   @moduletag :plugs
+  @moduletag :security
 
   import ExUnit.CaptureLog
   import Tymeslot.ConfigTestHelpers

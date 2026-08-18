@@ -5,6 +5,7 @@ defmodule TymeslotWeb.FreebusyControllerTest do
   use TymeslotWeb.ConnCase, async: false
 
   @moduletag :controllers
+  @moduletag :availability
 
   import Tymeslot.Factory
 

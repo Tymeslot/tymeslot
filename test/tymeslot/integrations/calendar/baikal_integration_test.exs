@@ -10,6 +10,8 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
   """
   use ExUnit.Case, async: false
   @moduletag :calendar_integration
+  @moduletag :calendar
+  @moduletag :integrations
 
   import Tymeslot.ConfigTestHelpers
 

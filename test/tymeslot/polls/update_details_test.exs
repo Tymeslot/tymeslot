@@ -12,6 +12,7 @@ defmodule Tymeslot.Polls.UpdateDetailsTest do
   alias Tymeslot.Repo
 
   @moduletag :integration
+  @moduletag :polls
 
   setup do
     user = insert(:user)

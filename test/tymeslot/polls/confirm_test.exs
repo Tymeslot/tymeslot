@@ -10,6 +10,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
   alias Tymeslot.Polls.Confirm
 
   @moduletag :integration
+  @moduletag :polls
 
   setup do
     user = insert(:user)

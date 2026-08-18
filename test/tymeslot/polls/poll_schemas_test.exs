@@ -2,6 +2,7 @@ defmodule Tymeslot.Polls.PollSchemasTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :unit
+  @moduletag :polls
 
   alias Ecto.UUID
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema, PollTimeSlotSchema, PollVoteSchema}

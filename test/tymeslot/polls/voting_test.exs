@@ -2,6 +2,7 @@ defmodule Tymeslot.Polls.VotingTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :unit
+  @moduletag :polls
 
   import Tymeslot.Factory
 
