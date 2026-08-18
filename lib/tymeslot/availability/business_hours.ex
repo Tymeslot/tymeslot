@@ -237,32 +237,6 @@ defmodule Tymeslot.Availability.BusinessHours do
     {@fallback_start_time, @fallback_end_time}
   end
 
-  @doc """
-  Determines if month navigation should be disabled.
-  """
-  @spec month_navigation_disabled?(
-          atom(),
-          integer(),
-          integer(),
-          String.t(),
-          Calculate.availability_config()
-        ) :: boolean()
-  def month_navigation_disabled?(type, year, month, timezone, config \\ %{}) do
-    current_date = timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
-
-    case type do
-      :prev ->
-        target_date = Date.new!(year, month, 1)
-        Date.compare(target_date, current_date) != :gt
-
-      :next ->
-        last_day = year |> Date.new!(month, 1) |> Date.end_of_month()
-        max_booking_date = Date.add(current_date, max_advance_booking_days)
-        Date.compare(last_day, max_booking_date) != :lt
-    end
-  end
-
   # Data lookup — uses preloaded collections when available, falls back to DB queries
 
   defp lookup_override(date, schedule_id, %{overrides: overrides}) when is_list(overrides) do

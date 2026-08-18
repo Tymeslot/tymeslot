@@ -293,17 +293,6 @@ defmodule Tymeslot.ThemeCustomizations do
     end
   end
 
-  # Backward-compatible wrapper (to be removed after callers migrate)
-  @spec apply_color_scheme_change(map(), String.t() | atom()) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
-  def apply_color_scheme_change(socket_assigns, scheme_id) do
-    profile_id = socket_assigns.profile.id
-    theme_id = socket_assigns.theme_id
-    current_customization = socket_assigns.customization
-
-    apply_color_scheme_change(profile_id, theme_id, current_customization, scheme_id)
-  end
-
   @doc """
   Switches the customisation to the "custom" colour scheme and persists the seed
   hex used to derive the palette.
@@ -358,17 +347,6 @@ defmodule Tymeslot.ThemeCustomizations do
 
       {:ok, saved}
     end
-  end
-
-  # Backward-compatible wrapper (to be removed after callers migrate)
-  @spec apply_background_change(map(), String.t(), String.t() | nil) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
-  def apply_background_change(socket_assigns, type, value) do
-    profile_id = socket_assigns.profile.id
-    theme_id = socket_assigns.theme_id
-    current_customization = socket_assigns.customization
-
-    apply_background_change(profile_id, theme_id, current_customization, type, value)
   end
 
   @doc """

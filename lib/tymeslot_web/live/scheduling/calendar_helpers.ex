@@ -11,7 +11,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   alias Phoenix.Component
   alias Tymeslot.Availability.{BusinessHours, Calculate, Schedules}
   alias Tymeslot.Demo
-  alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -153,40 +152,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   end
 
   @doc """
-  Handles previous month navigation.
-  """
-  @spec handle_prev_month(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def handle_prev_month(socket) do
-    current_month = socket.assigns.current_month
-    current_year = socket.assigns.current_year
-
-    {prev_year, prev_month} =
-      if current_month == 1, do: {current_year - 1, 12}, else: {current_year, current_month - 1}
-
-    socket
-    |> assign(:current_month, prev_month)
-    |> assign(:current_year, prev_year)
-    |> update_calendar_data()
-  end
-
-  @doc """
-  Handles next month navigation.
-  """
-  @spec handle_next_month(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def handle_next_month(socket) do
-    current_month = socket.assigns.current_month
-    current_year = socket.assigns.current_year
-
-    {next_year, next_month} =
-      if current_month == 12, do: {current_year + 1, 1}, else: {current_year, current_month + 1}
-
-    socket
-    |> assign(:current_month, next_month)
-    |> assign(:current_year, next_year)
-    |> update_calendar_data()
-  end
-
-  @doc """
   Handles week navigation (prev/next).
 
   Advances `current_week_start` by ±7 days. When the week crosses a month
@@ -213,27 +178,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     else
       assign(socket, :current_week_start, new_week_start)
     end
-  end
-
-  @doc """
-  Handles timezone change.
-  """
-  @spec handle_timezone_change(Phoenix.LiveView.Socket.t(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def handle_timezone_change(socket, timezone) do
-    socket
-    |> assign(:user_timezone, timezone)
-    |> update_calendar_data()
-  end
-
-  @doc """
-  Handles timezone search.
-  """
-  @spec handle_timezone_search(Phoenix.LiveView.Socket.t(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def handle_timezone_search(socket, search_term) do
-    filtered_timezones = Timezones.search(search_term)
-    assign(socket, :filtered_timezones, filtered_timezones)
   end
 
   @doc """
@@ -282,29 +226,5 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     is_within_limit = Date.diff(date, today) <= Schedules.policy(schedule, :advance_booking_days)
 
     is_weekday && is_future && is_within_limit
-  end
-
-  defp update_calendar_data(socket) do
-    %{
-      current_month: current_month,
-      current_year: current_year,
-      user_timezone: user_timezone,
-      organizer_profile: organizer_profile
-    } = socket.assigns
-
-    # Use availability map if present, otherwise nil (will use business hours only)
-    availability_map = Map.get(socket.assigns, :month_availability_map)
-
-    calendar_days =
-      get_calendar_days(
-        user_timezone,
-        current_year,
-        current_month,
-        organizer_profile,
-        availability_map,
-        Map.get(socket.assigns, :meeting_type)
-      )
-
-    assign(socket, :calendar_days, calendar_days)
   end
 end

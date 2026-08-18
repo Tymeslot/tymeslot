@@ -179,34 +179,6 @@ defmodule Tymeslot.Auth.AuthActions do
   # State Management
 
   @doc """
-  Updates socket with loading state.
-  """
-  @spec set_loading(Phoenix.LiveView.Socket.t(), boolean()) :: Phoenix.LiveView.Socket.t()
-  def set_loading(socket, loading) do
-    assign(socket, :loading, loading)
-  end
-
-  @doc """
-  Updates socket with error state.
-  """
-  @spec set_errors(Phoenix.LiveView.Socket.t(), %{atom() => String.t()}) ::
-          Phoenix.LiveView.Socket.t()
-  def set_errors(socket, errors) do
-    socket
-    |> assign(:errors, errors)
-    |> assign(:loading, false)
-  end
-
-  @doc """
-  Updates socket with form data.
-  """
-  @spec set_form_data(Phoenix.LiveView.Socket.t(), %{String.t() => term()}) ::
-          Phoenix.LiveView.Socket.t()
-  def set_form_data(socket, form_data) do
-    assign(socket, :form_data, form_data)
-  end
-
-  @doc """
   Transitions to a new authentication state.
   """
   @spec transition_state(term(), atom(), atom()) :: term()
