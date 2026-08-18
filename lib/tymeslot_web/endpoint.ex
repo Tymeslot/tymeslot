@@ -67,20 +67,6 @@ defmodule TymeslotWeb.Endpoint do
     plug Phoenix.Ecto.SQL.Sandbox
   end
 
-  # Tidewave's MCP plug, dev only, and deliberately gated on `code_reloading?`
-  # alone. A `Code.ensure_loaded?(Tidewave)` guard looks safer but silently
-  # drops the plug whenever this app is compiled as a path dependency of another
-  # project: Tidewave is an `only: :dev` dependency, and Mix does not put the
-  # parent's dev dependencies on the code path while this module compiles, so
-  # the check always fails there. For the same reason the compiler cannot
-  # resolve the reference in that build, hence `:no_warn_undefined`; the module
-  # is on the code path at runtime, which is what the plug call needs.
-  @compile {:no_warn_undefined, Tidewave}
-
-  if code_reloading? do
-    plug Tidewave
-  end
-
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest

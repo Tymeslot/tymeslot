@@ -73,8 +73,7 @@ defmodule Mix.Tasks.Dialyzer.Incremental do
   # dev dependencies on the code path while this compiles). The task is
   # dev-only in practice, so suppress the compile-time reference rather than
   # guarding on `Code.ensure_loaded?/1`, which would silently compile the task
-  # out of those builds. Same reasoning as the Tidewave plug in
-  # `TymeslotWeb.Endpoint`.
+  # out of those builds.
   @compile {:no_warn_undefined, [Dialyxir.Dialyzer, Dialyxir.Project]}
 
   # Mirrors the classic task's default warning set.
