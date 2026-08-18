@@ -15,6 +15,7 @@ defmodule Tymeslot.AppSettingsLockoutTest do
   import Tymeslot.AppSettingsEnvHelpers
 
   alias Tymeslot.AppSettings
+  alias Tymeslot.AppSettings.LockoutPolicy
 
   setup :restore_app_settings_env
 
@@ -183,10 +184,10 @@ defmodule Tymeslot.AppSettingsLockoutTest do
       on_exit(fn -> System.delete_env("GOOGLE_CLIENT_ID") end)
       on_exit(fn -> System.delete_env("GOOGLE_CLIENT_SECRET") end)
 
-      assert AppSettings.sso_credentials_present?(:google_auth_enabled)
+      assert LockoutPolicy.sso_credentials_present?(:google_auth_enabled)
 
       System.delete_env("GOOGLE_CLIENT_SECRET")
-      refute AppSettings.sso_credentials_present?(:google_auth_enabled)
+      refute LockoutPolicy.sso_credentials_present?(:google_auth_enabled)
     end
   end
 

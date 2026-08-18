@@ -229,8 +229,8 @@ defmodule Tymeslot.Auth.UserQueries do
   @doc """
   Returns `true` if at least one admin has a `password_hash` set — i.e. is
   capable of signing in via email + password. Used by the lockout-protection
-  check in `Tymeslot.AppSettings` to refuse disabling password authentication
-  while any admin still depends on it.
+  check in `Tymeslot.AppSettings.LockoutPolicy` to refuse disabling password
+  authentication while any admin still depends on it.
   """
   @spec any_admin_uses_password_auth?(module()) :: boolean()
   def any_admin_uses_password_auth?(repo \\ Repo) do

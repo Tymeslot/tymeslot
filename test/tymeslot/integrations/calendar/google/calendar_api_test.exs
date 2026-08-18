@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Security.Encryption
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -135,7 +136,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
         assert decoded_body["source"] == %{
                  "title" => "Tymeslot",
-                 "url" => TymeslotWeb.Endpoint.url()
+                 "url" => Endpoint.url()
                }
 
         assert decoded_body["extendedProperties"] == %{
@@ -329,7 +330,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
         assert decoded_body["source"] == %{
                  "title" => "Tymeslot",
-                 "url" => TymeslotWeb.Endpoint.url()
+                 "url" => Endpoint.url()
                }
 
         assert decoded_body["extendedProperties"] == %{
