@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
   import ExUnit.CaptureLog
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.Nextcloud.Provider
 
   setup do
@@ -134,8 +135,10 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       client = Provider.new(config)
 
-      # Calendar paths should be formatted for Nextcloud
-      assert client.calendar_paths == ["/calendars/testuser/personal/"]
+      # Relative to base_url, which ends in the DAV endpoint, rather than to the
+      # origin: a leading slash here would resolve against scheme://host alone
+      # and drop /remote.php/dav.
+      assert client.calendar_paths == ["calendars/testuser/personal/"]
     end
 
     test "defaults to personal calendar when no paths provided" do
@@ -147,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       client = Provider.new(config)
 
-      assert client.calendar_paths == ["/calendars/user/personal/"]
+      assert client.calendar_paths == ["calendars/user/personal/"]
     end
 
     test "extracts username from calendar URL when not provided" do
@@ -416,6 +419,59 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         result = Provider.delete_event(client, uid)
         assert match?({:error, _reason}, result)
       end)
+    end
+  end
+
+  # `new/1` decides the shape of every calendar path the CalDAV client then
+  # uses, and `UrlBuilder.build_calendar_url/2` resolves a leading slash
+  # against the origin alone but anything else against `base_url`. So the
+  # assertions below are on the URL a read or write actually requests: the
+  # intermediate path list is an implementation detail, and asserting on it
+  # would not show that a subdirectory install ends up off the DAV mount.
+  describe "new/1 calendar path resolution" do
+    defp event_url(base_url, calendar_paths) do
+      client =
+        Provider.new(%{
+          base_url: base_url,
+          username: "alice",
+          password: "pw",
+          calendar_paths: calendar_paths
+        })
+
+      [path] = client.calendar_paths
+      UrlBuilder.build_calendar_url(client.base_url, path)
+    end
+
+    test "resolves a discovered href on a root install" do
+      assert event_url("https://cloud.example.com", ["/remote.php/dav/calendars/alice/personal/"]) ==
+               "https://cloud.example.com/remote.php/dav/calendars/alice/personal/"
+    end
+
+    # Regression: a subdirectory install's href matched none of the leading
+    # paths this function used to test for, so it fell through to the
+    # bare-name branch and was concatenated whole into the middle of a new
+    # path — producing
+    # `/calendars/alice//nextcloud/remote.php/dav/calendars/alice/personal//`.
+    # Discovery listed the calendars, then every read and write went to a URL
+    # no Nextcloud instance serves, silently: busy times came back empty, so
+    # conflict checking stopped blocking anything.
+    test "resolves a discovered href on a subdirectory install" do
+      assert event_url("https://example.com/nextcloud", [
+               "/nextcloud/remote.php/dav/calendars/alice/personal/"
+             ]) == "https://example.com/nextcloud/remote.php/dav/calendars/alice/personal/"
+    end
+
+    # A bare name is what a user typing into the calendar-paths field supplies,
+    # and what the `["personal"]` default produces. Anchoring it at the root
+    # dropped `/remote.php/dav` on every install, not only subdirectory ones.
+    test "resolves a bare calendar name under the DAV endpoint on a root install" do
+      assert event_url("https://cloud.example.com", ["personal"]) ==
+               "https://cloud.example.com/remote.php/dav/calendars/alice/personal/"
+    end
+
+    test "resolves a bare calendar name under the DAV endpoint on a subdirectory install" do
+      assert event_url("https://example.com/nextcloud", ["personal"]) ==
+               "https://example.com/nextcloud/remote.php/dav/calendars/alice/personal/"
     end
   end
 end
