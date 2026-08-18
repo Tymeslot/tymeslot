@@ -173,25 +173,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Gets notification status for a meeting.
-  """
-  @spec get_notification_status(%{atom() => term()}) :: %{
-          required(:confirmation_sent) => boolean() | nil,
-          required(:reminder_scheduled) => boolean(),
-          required(:reminder_sent) => boolean() | nil,
-          required(:last_notification) => DateTime.t() | nil
-        }
-  def get_notification_status(meeting) do
-    %{
-      confirmation_sent: meeting.organizer_email_sent || meeting.attendee_email_sent,
-      # We don't track this in the schema
-      reminder_scheduled: false,
-      reminder_sent: meeting.reminder_email_sent,
-      last_notification: get_last_notification_time(meeting)
-    }
-  end
-
-  @doc """
   Schedules calendar invitation emails for a list of attendees.
 
   Enqueues one Oban job per attendee via EmailScheduler. Logs warnings for
@@ -356,12 +337,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
     end
 
     {:ok, :confirmation_updated}
-  end
-
-  defp get_last_notification_time(meeting) do
-    # Since we don't have timestamp fields for when emails were sent,
-    # we'll just use updated_at as the last notification time
-    meeting.updated_at
   end
 
   # Module getters for dependency injection in tests

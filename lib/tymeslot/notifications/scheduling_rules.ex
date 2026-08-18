@@ -43,51 +43,6 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   end
 
   @doc """
-  Returns the timing configuration for cancellation emails.
-  """
-  @spec cancellation_email_timing() :: email_timing()
-  def cancellation_email_timing do
-    %{
-      timing: :immediate,
-      priority: 1,
-      # No uniqueness window for cancellations
-      uniqueness_window: 0,
-      max_attempts: 3,
-      backoff_strategy: exponential_backoff()
-    }
-  end
-
-  @doc """
-  Returns the timing configuration for reschedule emails.
-  """
-  @spec reschedule_email_timing() :: email_timing()
-  def reschedule_email_timing do
-    %{
-      timing: :immediate,
-      priority: 1,
-      # 5 minutes
-      uniqueness_window: 5 * 60,
-      max_attempts: 5,
-      backoff_strategy: exponential_backoff()
-    }
-  end
-
-  @doc """
-  Returns the timing configuration for video room notification emails.
-  """
-  @spec video_room_email_timing() :: email_timing()
-  def video_room_email_timing do
-    %{
-      timing: :immediate,
-      priority: 1,
-      # 5 minutes
-      uniqueness_window: 5 * 60,
-      max_attempts: 3,
-      backoff_strategy: exponential_backoff()
-    }
-  end
-
-  @doc """
   Calculates the scheduled time for a reminder email.
   """
   @spec calculate_reminder_time(DateTime.t(), pos_integer(), String.t()) :: DateTime.t()
@@ -103,51 +58,6 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   def should_schedule_reminder?(meeting_start_time, value, unit) do
     reminder_time = calculate_reminder_time(meeting_start_time, value, unit)
     DateTime.compare(reminder_time, DateTime.utc_now()) == :gt
-  end
-
-  @doc """
-  Returns the retry policy for notifications.
-  """
-  @spec retry_policy() :: %{
-          optional(:initial_delay) => pos_integer(),
-          optional(:max_retries) => non_neg_integer(),
-          optional(:backoff_factor) => number(),
-          optional(:max_attempts) => non_neg_integer(),
-          optional(:backoff) => [pos_integer()],
-          optional(:rate_limit_snooze) => pos_integer()
-        }
-  def retry_policy do
-    %{
-      max_attempts: 5,
-      backoff: exponential_backoff(),
-      # 5 minutes
-      rate_limit_snooze: 300
-    }
-  end
-
-  @doc """
-  Returns priority levels for different notification types.
-  """
-  @spec priority_levels() :: %{
-          required(:confirmation) => non_neg_integer(),
-          required(:cancellation) => non_neg_integer(),
-          required(:reschedule) => non_neg_integer(),
-          required(:video_room) => non_neg_integer(),
-          required(:reminder) => non_neg_integer()
-        }
-  def priority_levels do
-    %{
-      # Highest priority
-      confirmation: 0,
-      # High priority
-      cancellation: 1,
-      # High priority
-      reschedule: 1,
-      # High priority
-      video_room: 1,
-      # Medium priority
-      reminder: 2
-    }
   end
 
   # Private functions

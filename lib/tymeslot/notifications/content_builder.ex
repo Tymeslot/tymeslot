@@ -185,35 +185,6 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   end
 
   @doc """
-  Builds email subject line for notification type.
-  """
-  @spec build_subject(atom(), %{atom() => term()}) :: String.t()
-  def build_subject(notification_type, meeting) do
-    case notification_type do
-      :confirmation ->
-        "Meeting Confirmed: #{meeting.title}"
-
-      :reminder ->
-        "Meeting Reminder: #{meeting.title} in 30 minutes"
-
-      :cancellation ->
-        "Meeting Cancelled: #{meeting.title}"
-
-      :reschedule ->
-        "Meeting Rescheduled: #{meeting.title}"
-
-      :video_room_created ->
-        "Video Room Ready: #{meeting.title}"
-
-      :video_room_failed ->
-        "Video Room Issue: #{meeting.title}"
-
-      _other ->
-        "Meeting Update: #{meeting.title}"
-    end
-  end
-
-  @doc """
   Validates that notification content is complete.
   """
   @spec validate_content(%{atom() => term()}) :: :ok | {:error, String.t()}

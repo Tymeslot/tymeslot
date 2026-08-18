@@ -190,26 +190,6 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
-  Handles meeting status change event.
-  """
-  @spec meeting_status_changed(term(), String.t(), String.t()) ::
-          {:ok, atom()} | {:ok, term()} | {:error, term()}
-  def meeting_status_changed(meeting, old_status, new_status) do
-    case {old_status, new_status} do
-      {_old, "cancelled"} ->
-        meeting_cancelled(meeting)
-
-      {_old, "completed"} ->
-        # No notifications needed for completed meetings
-        {:ok, :no_notifications}
-
-      _status_change ->
-        # Other status changes might need notifications in the future
-        {:ok, :no_notifications}
-    end
-  end
-
-  @doc """
   Determines if an event should trigger notifications.
   """
   @spec should_trigger_notifications?(atom(), term()) :: boolean()

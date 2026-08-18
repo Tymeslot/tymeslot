@@ -70,11 +70,10 @@ defmodule Tymeslot.Notifications.Recipients do
     end
   end
 
-  @doc """
-  Gets the notification context for a meeting.
-  """
-  @spec get_notification_context(term()) :: notification_context()
-  def get_notification_context(meeting) do
+  # Meeting-level context shared by both recipient variants of
+  # `build_recipient_context/2`, which is its only caller.
+  @spec notification_context(term()) :: notification_context()
+  defp notification_context(meeting) do
     %{
       meeting_id: meeting.id,
       meeting_uid: meeting.uid,
@@ -163,7 +162,7 @@ defmodule Tymeslot.Notifications.Recipients do
           required(:recipient_type) => atom()
         }
   def build_recipient_context(meeting, recipient_type) do
-    base_context = get_notification_context(meeting)
+    base_context = notification_context(meeting)
 
     case recipient_type do
       :organizer ->
