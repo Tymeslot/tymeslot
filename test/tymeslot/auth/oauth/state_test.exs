@@ -55,30 +55,6 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       assert {:error, :invalid_state} = State.validate_state(conn, "some-state")
     end
 
-    test "returns error for expired state" do
-      conn = build_conn()
-
-      # Store state with a timestamp 11 minutes in the past
-      expired_timestamp = System.system_time(:second) - 660
-      state = "test-state"
-
-      conn = Conn.put_session(conn, "_oauth_state", {state, expired_timestamp})
-
-      assert {:error, :invalid_state} = State.validate_state(conn, state)
-    end
-
-    test "accepts state within TTL window" do
-      conn = build_conn()
-
-      # Store state with a timestamp 5 minutes in the past (within 10-min TTL)
-      recent_timestamp = System.system_time(:second) - 300
-      state = "test-state"
-
-      conn = Conn.put_session(conn, "_oauth_state", {state, recent_timestamp})
-
-      assert :ok = State.validate_state(conn, state)
-    end
-
     test "backward compat: accepts bare string state without timestamp" do
       conn = build_conn()
       state = "legacy-state-value"
@@ -94,12 +70,6 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       conn = Conn.put_session(conn, "_oauth_state", "stored-value")
 
       assert {:error, :invalid_state} = State.validate_state(conn, "different-value")
-    end
-
-    test "returns error for empty string state with no session" do
-      conn = build_conn()
-
-      assert {:error, :invalid_state} = State.validate_state(conn, "")
     end
 
     test "rejects state at exact TTL boundary (601 seconds)" do

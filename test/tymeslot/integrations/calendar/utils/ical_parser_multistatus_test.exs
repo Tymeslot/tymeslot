@@ -43,18 +43,32 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserMultistatusTest do
       assert event.end_time == ~U[2030-01-15 11:00:00Z]
     end
 
-    test "handles XML entities in calendar data" do
+    test "unescapes XML entities inside the calendar data" do
       xml_body = """
       <?xml version="1.0"?>
       <multistatus xmlns="DAV:">
         <response>
-          <calendar-data>&lt;BEGIN:VCALENDAR&gt;</calendar-data>
+          <href>/calendars/user/calendar/event2.ics</href>
+          <propstat>
+            <prop>
+              <calendar-data>BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:entities@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Design &amp; Review &lt;draft&gt;
+      END:VEVENT
+      END:VCALENDAR</calendar-data>
+            </prop>
+          </propstat>
         </response>
       </multistatus>
       """
 
-      # Should unescape XML entities
-      assert {:ok, _events} = ICalParser.parse_multistatus(xml_body)
+      assert {:ok, [event]} = ICalParser.parse_multistatus(xml_body)
+      assert event.uid == "entities@example.com"
+      assert event.summary == "Design & Review <draft>"
     end
   end
 end

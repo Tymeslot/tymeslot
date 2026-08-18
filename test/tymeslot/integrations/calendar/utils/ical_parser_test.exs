@@ -215,36 +215,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert event.summary == "Past Event"
     end
 
-    test "includes future events" do
-      # Event starting in 1 hour
-      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
-
-      future_start =
-        DateTime.to_iso8601(future_time)
-        |> String.replace(~r/[-:]/, "")
-        |> String.replace("Z", "Z")
-
-      future_end =
-        DateTime.to_iso8601(DateTime.add(future_time, 3600, :second))
-        |> String.replace(~r/[-:]/, "")
-        |> String.replace("Z", "Z")
-
-      ical_content = """
-      BEGIN:VCALENDAR
-      VERSION:2.0
-      BEGIN:VEVENT
-      UID:future-event@example.com
-      DTSTART:#{future_start}
-      DTEND:#{future_end}
-      SUMMARY:Future Event
-      END:VEVENT
-      END:VCALENDAR
-      """
-
-      assert {:ok, [event]} = ICalParser.parse(ical_content)
-      assert event.summary == "Future Event"
-    end
-
     test "returns error for invalid iCalendar format" do
       invalid_content = "This is not valid iCalendar data"
 

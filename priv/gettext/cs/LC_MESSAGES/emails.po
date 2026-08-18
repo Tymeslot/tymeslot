@@ -1827,11 +1827,6 @@ msgstr "Jsme rádi, že jste tu. Ještě jeden krok a váš kalendář je přip
 msgid "Welcome to Tymeslot - please verify your email."
 msgstr "Vítejte ve službě Tymeslot – ověřte prosím svou e-mailovou adresu."
 
-#: lib/tymeslot/emails/shared/mjml_email.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} via Tymeslot"
-msgstr "%{name} prostřednictvím služby Tymeslot"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee paid: %{amount}"
@@ -1841,11 +1836,6 @@ msgstr "Platba účastníka: %{amount}"
 #, elixir-autogen, elixir-format
 msgid "Funds will arrive on your usual Stripe payout schedule."
 msgstr "Peníze dorazí podle vašeho obvyklého výplatního plánu Stripe."
-
-#: lib/tymeslot/emails/shared/layouts.ex
-#, elixir-autogen, elixir-format
-msgid "Important notification from Tymeslot"
-msgstr "Důležité upozornění ze služby Tymeslot"
 
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
@@ -2046,3 +2036,13 @@ msgstr "Účastník byl informován o novém termínu."
 #, elixir-autogen, elixir-format
 msgid "Your meeting has moved."
 msgstr "Vaše schůzka byla přesunuta."
+
+#: lib/tymeslot/emails/shared/mjml_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} via %{brand}"
+msgstr "%{name} prostřednictvím služby %{brand}"
+
+#: lib/tymeslot/emails/shared/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Important notification from %{brand}"
+msgstr "Důležité upozornění ze služby %{brand}"

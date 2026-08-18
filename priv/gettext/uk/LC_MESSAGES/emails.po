@@ -1827,11 +1827,6 @@ msgstr "Раді бачити вас тут. Ще один швидкий кро
 msgid "Welcome to Tymeslot - please verify your email."
 msgstr "Ласкаво просимо до Tymeslot - будь ласка, підтвердьте свою електронну пошту."
 
-#: lib/tymeslot/emails/shared/mjml_email.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} via Tymeslot"
-msgstr "%{name} через Tymeslot"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee paid: %{amount}"
@@ -1841,11 +1836,6 @@ msgstr "Учасник сплатив: %{amount}"
 #, elixir-autogen, elixir-format
 msgid "Funds will arrive on your usual Stripe payout schedule."
 msgstr "Кошти надійдуть за вашим звичайним графіком виплат Stripe."
-
-#: lib/tymeslot/emails/shared/layouts.ex
-#, elixir-autogen, elixir-format
-msgid "Important notification from Tymeslot"
-msgstr "Важливе сповіщення від Tymeslot"
 
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
@@ -2046,3 +2036,13 @@ msgstr "Учасника повідомлено про новий час."
 #, elixir-autogen, elixir-format
 msgid "Your meeting has moved."
 msgstr "Вашу зустріч перенесено."
+
+#: lib/tymeslot/emails/shared/mjml_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} via %{brand}"
+msgstr "%{name} через %{brand}"
+
+#: lib/tymeslot/emails/shared/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Important notification from %{brand}"
+msgstr "Важливе сповіщення від %{brand}"

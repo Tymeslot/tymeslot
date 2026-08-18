@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   setup :verify_on_exit!
@@ -56,6 +57,13 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
                perform_job(SyncGoogleCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
+
+      # persist_sync_state/2 swallows a failed update into :ok, so the return
+      # value alone says nothing about the token having been stored.
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+
+      assert reloaded.google_sync_token == "new-sync-token-abc"
+      assert reloaded.last_external_sync_at
     end
   end
 

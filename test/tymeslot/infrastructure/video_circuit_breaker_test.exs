@@ -196,14 +196,18 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       config = VideoCircuitBreaker.get_config(:teams)
 
       assert config.failure_threshold == 5
+      assert config.time_window == :timer.minutes(1)
       assert config.recovery_timeout == :timer.minutes(5)
+      assert config.half_open_requests == 2
     end
 
     test "returns configuration for mirotalk" do
       config = VideoCircuitBreaker.get_config(:mirotalk)
 
       assert config.failure_threshold == 3
+      assert config.time_window == :timer.minutes(1)
       assert config.recovery_timeout == :timer.minutes(2)
+      assert config.half_open_requests == 2
     end
 
     test "returns default config for unknown provider" do
@@ -221,16 +225,30 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
     test "supervisor and wrapper use same configuration" do
       # This test verifies that the supervisor gets config from the wrapper
       # by checking that get_config returns expected values
-      providers = [:mirotalk, :google_meet, :teams]
+      expected = %{
+        mirotalk: %{
+          failure_threshold: 3,
+          time_window: :timer.minutes(1),
+          recovery_timeout: :timer.minutes(2),
+          half_open_requests: 2
+        },
+        google_meet: %{
+          failure_threshold: 5,
+          time_window: :timer.minutes(1),
+          recovery_timeout: :timer.minutes(5),
+          half_open_requests: 2
+        },
+        teams: %{
+          failure_threshold: 5,
+          time_window: :timer.minutes(1),
+          recovery_timeout: :timer.minutes(5),
+          half_open_requests: 2
+        }
+      }
 
-      for provider <- providers do
-        config = VideoCircuitBreaker.get_config(provider)
-
-        # Verify all required config keys are present
-        assert is_integer(config.failure_threshold)
-        assert is_integer(config.time_window)
-        assert is_integer(config.recovery_timeout)
-        assert is_integer(config.half_open_requests)
+      for {provider, expected_config} <- expected do
+        assert VideoCircuitBreaker.get_config(provider) == expected_config,
+               "unexpected circuit breaker configuration for #{provider}"
       end
     end
   end

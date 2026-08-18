@@ -135,10 +135,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
 
       result = EventMapper.format_event_data(event_data)
 
+      # Event data carrying no timezone still gets one, defaulting to UTC.
+      assert result["start"]["timeZone"] == "UTC"
+
       # Outlook rejects dateTime with Z when timeZone is also present
-      if result["start"]["timeZone"] do
-        refute String.ends_with?(result["start"]["dateTime"], "Z")
-      end
+      refute String.ends_with?(result["start"]["dateTime"], "Z")
     end
   end
 

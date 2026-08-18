@@ -41,26 +41,14 @@ defmodule Tymeslot.MeetingPayments.ApplicationFeeTest do
       end
     end
 
-    test "integer ceiling diverges correctly from float at known boundary" do
-      # 10_001 * 1 = 10_001; 10_001 / 10_000 = 1.0001 → float ceil = 2 (would
-      # round to 2). Integer: (10_001 + 9_999) / 10_000 = 20_000 / 10_000 = 2.
-      # Both agree here; the point is the integer path is exact.
+    test "rounds up just past a whole cent and stays exact on one" do
+      # `calculate/2` is pure integer arithmetic — there is no float path to
+      # diverge from. These are the two boundaries either side of a whole cent.
       #
-      # The known problematic float case: price=4999, bp=1
-      # 4999 * 1 / 10_000 = 0.4999 — float may produce 0.4999000000000001 or
-      # similar; :math.ceil rounds up to 1.0, trunc = 1. Integer: (4999 + 9999)
-      # / 10_000 = 14998 / 10_000 = 1. Both give 1 — correct.
-      #
-      # A case where float ceiling historically diverged: price=10_000, bp=1
-      # 10_000 * 1 / 10_000 = 1.0 exactly in both; both return 1. Stable.
-      #
-      # Boundary where float rounds incorrectly in some IEEE-754 implementations:
-      # price=3, bp=3334 → 3 * 3334 = 10_002; 10_002/10_000 = 1.0002 → ceil = 2
-      # Integer: (10_002 + 9_999) / 10_000 = 20_001 / 10_000 = 2. Agree.
+      # Just over: 3 * 3334 = 10_002 → (10_002 + 9_999) div 10_000 = 2.
       assert ApplicationFee.calculate(3, 3334) == 2
 
-      # price=1, bp=10_000 → 1 * 10_000 / 10_000 = 1.0 → ceil = 1
-      # Integer: (10_000 + 9_999) / 10_000 = 19_999 / 10_000 = 1. Agree.
+      # Exactly on: 1 * 10_000 → (10_000 + 9_999) div 10_000 = 1, not 2.
       assert ApplicationFee.calculate(1, 10_000) == 1
     end
   end

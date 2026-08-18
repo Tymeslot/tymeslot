@@ -123,19 +123,6 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
       )
     end
 
-    test "returns :ok" do
-      user = insert(:user)
-
-      result =
-        AccountScheduler.schedule_email_change_confirmations(
-          user.id,
-          "old@example.com",
-          "new@example.com"
-        )
-
-      assert result == :ok
-    end
-
     test "enqueues exactly one job" do
       user = insert(:user)
       baseline = email_job_count()

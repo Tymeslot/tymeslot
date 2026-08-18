@@ -11,7 +11,6 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
-  alias Tymeslot.Integrations.Calendar.EventColour
 
   defp appearance(integration_id, calendar_id, colour) do
     %CalendarAppearanceSchema{
@@ -23,10 +22,13 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
   end
 
   describe "calendar_colour_classes/1" do
+    # The expected classes are spelled out rather than read back from
+    # `EventColour.tailwind_class/1`, which is the lookup the code under test
+    # performs and so can never disagree with it.
     test "resolves a chosen colour to its palette class" do
       classes = CalendarGrid.calendar_colour_classes([appearance(1, "cal-a", "banana")])
 
-      assert classes == %{{1, "cal-a"} => EventColour.tailwind_class("banana")}
+      assert classes == %{{1, "cal-a"} => "bg-calendar-banana"}
     end
 
     test "omits a calendar with no colour of its own, so the caller falls through" do
@@ -48,8 +50,8 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
           appearance(1, "cal-b", "grape")
         ])
 
-      assert classes[{1, "cal-a"}] == EventColour.tailwind_class("banana")
-      assert classes[{1, "cal-b"}] == EventColour.tailwind_class("grape")
+      assert classes[{1, "cal-a"}] == "bg-calendar-banana"
+      assert classes[{1, "cal-b"}] == "bg-calendar-grape"
     end
 
     test "keeps the same calendar id apart across two integrations" do
@@ -61,8 +63,8 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
           appearance(2, "primary", "sage")
         ])
 
-      assert classes[{1, "primary"}] == EventColour.tailwind_class("banana")
-      assert classes[{2, "primary"}] == EventColour.tailwind_class("sage")
+      assert classes[{1, "primary"}] == "bg-calendar-banana"
+      assert classes[{2, "primary"}] == "bg-calendar-sage"
     end
 
     test "is empty when the organiser has chosen nothing" do
@@ -74,13 +76,13 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
     test "still resolves for an integration with its own colour" do
       classes = CalendarGrid.integration_colour_classes([%{id: 1, colour: "tomato"}])
 
-      assert classes[1] == EventColour.tailwind_class("tomato")
+      assert classes[1] == "bg-calendar-tomato"
     end
 
     test "still rotates for an integration with no colour" do
       classes = CalendarGrid.integration_colour_classes([%{id: 1, colour: nil}])
 
-      assert classes[1] == EventColour.rotation_class(1)
+      assert classes[1] == "bg-calendar-1"
     end
   end
 end

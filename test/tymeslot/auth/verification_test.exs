@@ -63,7 +63,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert {:error, :invalid_token} = Verification.verify_user("nonexistent-token-value")
     end
 
-    test "already-verified user token is rejected (verification_token_used_at set)" do
+    test "verifying stamps the token as used and clears it, so reuse fails at lookup" do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
 
@@ -72,8 +72,12 @@ defmodule Tymeslot.Auth.VerificationTest do
       # First use succeeds
       {:ok, _verified_user} = Verification.verify_user(token)
 
-      # Second use fails — the token is cleared from the DB after first use,
-      # so the lookup returns :invalid_token (not :token_expired)
+      verified = Repo.reload!(user)
+      assert %DateTime{} = verified.verification_token_used_at
+      assert is_nil(verified.verification_token)
+
+      # The lookup requires a matching token *and* an unset used_at marker, so a
+      # replay is never classified as expired: it is simply an unknown token.
       assert {:error, :invalid_token} = Verification.verify_user(token)
     end
   end

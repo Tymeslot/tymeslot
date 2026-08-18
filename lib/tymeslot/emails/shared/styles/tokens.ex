@@ -13,6 +13,8 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   stylesheet — the single palette carries both light and inverted clients.
   """
 
+  alias Tymeslot.Emails.Shared.Styles.BrandPalette
+
   # ============================================================================
   # PALETTE — canvas, surfaces, ink, hairlines
   # ============================================================================
@@ -41,6 +43,8 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   #
   #   * Turquoise — the brand. Used for anything informational, welcome,
   #     reminder, invitation, trial, subscription, confirmation, or "all good".
+  #     The stock turquoise family lives in `BrandPalette`, alongside the
+  #     derivation it calibrates.
   #   * Amber    — the attention signal. Used when the reader needs to *act*
   #     but nothing is broken yet (payment reminders, integration health,
   #     security notifications, disputes filed, email change requests).
@@ -51,9 +55,17 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   # Every informational or neutral email uses the brand colour. Signal
   # colours only show up when they're genuinely signalling something.
 
-  @turquoise %{accent: "#14b8a6", deep: "#0d9488", ink: "#0f5954", tint: "#e1f7f3"}
+  # `deep` backs the stage band and the button surface for each family, so it
+  # carries text and has to clear 4.5:1 against it — the same floor
+  # `BrandPalette` clamps derived families to. Rose's `deep` was darkened from
+  # "#c44d3d" (4.41:1 against band text, a hair under) to reach it.
+  #
+  # Amber's `deep` is a known exception: it clears 4.5:1 for a button (dark ink
+  # reads at 5.8:1) but only reaches 2.99:1 against the near-white stage-band
+  # text. Fixing that means changing the alert band's colour, which is a design
+  # decision outside the email-branding change that surfaced it.
   @amber %{accent: "#f59e0b", deep: "#d97706", ink: "#78350f", tint: "#fef3c7"}
-  @rose %{accent: "#e26d5c", deep: "#c44d3d", ink: "#7a2b22", tint: "#fbeeeb"}
+  @rose %{accent: "#e26d5c", deep: "#bd493a", ink: "#7a2b22", tint: "#fbeeeb"}
 
   # ============================================================================
   # INTENTS — semantic categories describing the purpose of an email, each
@@ -63,24 +75,9 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   # no fallback, no inference, and no string vocabulary.
   # ============================================================================
 
-  @intent_families %{
-    confirmed: @turquoise,
-    alert: @amber,
-    cancelled: @rose
-  }
-
-  @intents Map.new(@intent_families, fn {intent, family} ->
-             {intent,
-              %{
-                accent: family.accent,
-                accent_deep: family.deep,
-                accent_ink: family.ink,
-                tint: family.tint,
-                band_color: family.deep,
-                band_text: "#f8f8f5"
-              }}
-           end)
-
+  # `:confirmed` is the only derivable family — a self-hosted instance can
+  # replace the turquoise with its own brand colour. The other two stay fixed
+  # because they carry meaning: see `BrandPalette` for why.
   @type intent :: :confirmed | :alert | :cancelled
 
   @type intent_tokens :: %{
@@ -173,9 +170,27 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   @doc """
   Full token map for an intent. Raises on unknown input — intents are
   declared by the caller, never inferred or guessed.
+
+  `:confirmed` resolves against the configured brand accent, so a self-hosted
+  instance that has set one gets its own colour everywhere the brand family
+  is used. An unset or unparseable accent falls back to the hand-tuned
+  turquoise, which is what ships by default.
   """
   @spec intent(intent()) :: intent_tokens()
-  def intent(intent) when is_map_key(@intents, intent), do: @intents[intent]
+  def intent(:confirmed), do: family_tokens(BrandPalette.family())
+  def intent(:alert), do: family_tokens(@amber)
+  def intent(:cancelled), do: family_tokens(@rose)
+
+  defp family_tokens(family) do
+    %{
+      accent: family.accent,
+      accent_deep: family.deep,
+      accent_ink: family.ink,
+      tint: family.tint,
+      band_color: family.deep,
+      band_text: BrandPalette.band_text()
+    }
+  end
 
   @doc "Shortcut for `intent(i).accent`."
   @spec intent_accent(intent()) :: String.t()

@@ -98,8 +98,8 @@ defmodule Tymeslot.LocalesTest do
       assert german.country_code == :deu
     end
 
-    test "supported_codes/0 is derived from supported/0" do
-      assert Locales.supported_codes() == Enum.map(Locales.supported(), & &1.code)
+    test "supported_codes/0 lists the configured codes, in configured order" do
+      assert Locales.supported_codes() == ["en", "de", "fr", "it", "uk", "cs"]
     end
   end
 

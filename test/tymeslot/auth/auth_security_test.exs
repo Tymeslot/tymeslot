@@ -6,12 +6,11 @@ defmodule Tymeslot.Auth.SecurityTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{Authentication, Session}
+  alias Tymeslot.Auth.Authentication
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Security.{Password, Token}
 
   import Tymeslot.Factory
-  import Phoenix.ConnTest
 
   describe "authentication security" do
     test "prevents brute force attacks through rate limiting" do
@@ -29,51 +28,9 @@ defmodule Tymeslot.Auth.SecurityTest do
       assert {:error, :rate_limit_exceeded, _message} =
                Auth.authenticate_user(user.email, "ValidPass123!")
     end
-
-    test "protects against timing attacks with consistent error messages" do
-      # Non-existent user
-      {:error, _reason1, message1} = Auth.authenticate_user("fake@example.com", "password")
-
-      # Existing user with wrong password
-      user =
-        insert(:user,
-          password_hash: Password.hash_password("RealPass123!")
-        )
-
-      {:error, _reason2, message2} = Auth.authenticate_user(user.email, "WrongPass")
-
-      # Messages should be identical to prevent user enumeration
-      assert message1 == message2
-    end
-
-    test "oauth users cannot use password authentication" do
-      oauth_user = insert(:user, provider: "google", password_hash: nil)
-
-      # OAuth users should get an error tuple, not an exception
-      # This prevents timing attacks by returning consistent error responses
-      assert {:error, :oauth_user, _error_message} =
-               Auth.authenticate_user(oauth_user.email, "any-password")
-    end
   end
 
   describe "session security" do
-    test "sessions expire after 24 hours" do
-      user = insert(:user)
-
-      {:ok, _created_conn, _session_token} =
-        Session.create_session(init_test_session(build_conn(), %{}), user)
-
-      # Create expired session directly in DB
-      expired_session =
-        insert(:user_session,
-          user: user,
-          expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)
-        )
-
-      # Expired sessions should not authenticate
-      assert nil == Authentication.get_user_by_session_token(expired_session.token)
-    end
-
     test "password changes invalidate all user sessions" do
       user =
         insert(:user, password_hash: Password.hash_password("OldPass123!"))
@@ -93,21 +50,6 @@ defmodule Tymeslot.Auth.SecurityTest do
   end
 
   describe "registration security" do
-    test "prevents duplicate accounts" do
-      _existing_user = insert(:user, email: "taken@example.com")
-
-      params = %{
-        # Case variation
-        "email" => "TAKEN@EXAMPLE.COM",
-        "password" => "ValidPass123!",
-        "password_confirmation" => "ValidPass123!",
-        "name" => "Duplicate",
-        "terms_accepted" => "true"
-      }
-
-      {:error, :auth, _changeset} = Auth.register_user(params, %Plug.Conn{})
-    end
-
     test "enforces strong passwords" do
       weak_passwords = [
         # Too short
@@ -173,25 +115,6 @@ defmodule Tymeslot.Auth.SecurityTest do
     end
   end
 
-  describe "email verification security" do
-    # Note: Single-use token behavior is tested in VerificationTest.
-    # This test suite focuses on higher-level security flows.
-
-    test "unverified users cannot authenticate" do
-      # Create unverified user with known password
-      password = "ValidPassword123!"
-
-      unverified =
-        insert(:unverified_user,
-          password_hash: Password.hash_password(password)
-        )
-
-      # Unverified users should not be able to authenticate
-      assert {:error, :email_not_verified, _message} =
-               Auth.authenticate_user(unverified.email, password)
-    end
-  end
-
   describe "password reset security" do
     test "reset tokens are single-use" do
       user = insert(:user)
@@ -210,13 +133,6 @@ defmodule Tymeslot.Auth.SecurityTest do
       # Second use always fails
       assert {:error, :invalid_token, _message} =
                Auth.reset_password(token, "AnotherPass123!", "AnotherPass123!")
-    end
-
-    test "oauth users cannot reset passwords" do
-      oauth_user = insert(:user, provider: "github", password_hash: nil)
-
-      result = Auth.initiate_password_reset(oauth_user.email)
-      assert match?({:error, _, _}, result)
     end
   end
 

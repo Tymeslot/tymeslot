@@ -61,7 +61,7 @@ defmodule Tymeslot.MeetingsContext.NotificationsTest do
   end
 
   describe "when sending reschedule request" do
-    test "reschedule request updates meeting status" do
+    test "reschedule request stamps reschedule_requested_at and leaves the status confirmed" do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user)
 

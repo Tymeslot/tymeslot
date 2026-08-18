@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   use TymeslotWeb.ConnCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integration
 
@@ -10,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Webhooks
+  alias Tymeslot.Workers.WebhookWorker
 
   setup %{conn: conn} do
     # Create a user and log them in
@@ -272,7 +274,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       meeting: meeting
     } do
       # Create a webhook
-      {:ok, _webhook} =
+      {:ok, webhook} =
         Webhooks.create_webhook(user.id, %{
           name: "Test Webhook",
           url: "https://example.com/webhook",
@@ -286,8 +288,12 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
         Tymeslot.Features.DefaultAccessChecker
       )
 
-      # Should trigger webhook
+      # `trigger_webhooks_for_event/3` returns a bare :ok whether it scheduled
+      # anything or bailed out on the access check, so the enqueued job is the
+      # only thing that tells the branches apart.
       assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+
+      assert_enqueued(worker: WebhookWorker, args: delivery_args(webhook, meeting))
     end
 
     test "blocks webhooks when feature_access_checker denies access", %{
@@ -311,6 +317,8 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # Should still return :ok but not trigger webhook
       assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+
+      assert all_enqueued(worker: WebhookWorker) == []
     end
 
     test "allows webhooks when feature_access_checker grants access", %{
@@ -318,7 +326,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       meeting: meeting
     } do
       # Create a webhook
-      {:ok, _webhook} =
+      {:ok, webhook} =
         Webhooks.create_webhook(user.id, %{
           name: "Test Webhook",
           url: "https://example.com/webhook",
@@ -334,6 +342,8 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # Should trigger webhook
       assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+
+      assert_enqueued(worker: WebhookWorker, args: delivery_args(webhook, meeting))
     end
 
     test "handles feature_access_checker errors gracefully", %{
@@ -357,7 +367,17 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # Should return :ok without raising
       assert :ok = Webhooks.trigger_webhooks_for_event(user.id, "meeting.created", meeting)
+
+      assert all_enqueued(worker: WebhookWorker) == []
     end
+  end
+
+  defp delivery_args(webhook, meeting) do
+    %{
+      "webhook_id" => webhook.id,
+      "event_type" => "meeting.created",
+      "meeting_id" => meeting.id
+    }
   end
 end
 

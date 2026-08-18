@@ -56,18 +56,19 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
 
       client = Provider.new(config)
 
-      # Should truncate or reject paths exceeding max byte length (255)
-      # Uses byte_size to account for multi-byte UTF-8 characters
-      if client.calendar_paths != [] do
-        assert Enum.all?(client.calendar_paths, fn path ->
-                 byte_size(path) <= 255
-               end)
-      end
+      # Sanitization truncates the name to 200 characters, so the path fits
+      # inside the 255-byte cap and survives. Assert the exact result: an empty
+      # list here would mean truncation stopped happening.
+      assert client.calendar_paths == ["/dav/user@example.com/#{String.duplicate("a", 200)}/"]
+      assert [path] = client.calendar_paths
+      assert byte_size(path) == 223
     end
 
-    test "handles calendar names with multi-byte UTF-8 characters and enforces byte limit" do
-      # Emoji are typically 4 bytes each in UTF-8
-      # 60 emoji = 240 bytes, plus path overhead could exceed 255 bytes
+    test "rejects a multi-byte calendar name whose path exceeds the byte limit" do
+      # 60 emoji is 60 characters, so the 200-character truncation in
+      # sanitize_calendar_name/1 does not shorten it, but it is 240 bytes and the
+      # resulting path is 263 bytes. The byte check rejects it outright rather
+      # than truncating, so the name is dropped and no path is produced.
       emoji_name = String.duplicate("📅", 60)
 
       config = %{
@@ -77,14 +78,11 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
         calendar_names: [emoji_name]
       }
 
+      assert byte_size("/dav/user@example.com/#{emoji_name}/") == 263
+
       client = Provider.new(config)
 
-      # Should enforce byte size limit, not character count
-      if client.calendar_paths != [] do
-        assert Enum.all?(client.calendar_paths, fn path ->
-                 byte_size(path) <= 255
-               end)
-      end
+      assert client.calendar_paths == []
     end
 
     test "handles empty calendar names" do
@@ -111,12 +109,13 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
 
       client = Provider.new(config)
 
-      # Critical: Pre-formatted paths must be sanitized to prevent path traversal
-      if client.calendar_paths != [] do
-        assert Enum.all?(client.calendar_paths, fn path ->
-                 not String.contains?(path, "..")
-               end)
-      end
+      # Critical: Pre-formatted paths must be sanitized to prevent path traversal.
+      # Assert the path count first: an empty list would otherwise skip the check.
+      assert length(client.calendar_paths) == 1
+
+      assert Enum.all?(client.calendar_paths, fn path ->
+               not String.contains?(path, "..")
+             end)
     end
 
     test "sanitizes pre-formatted paths with complex traversal patterns" do
@@ -245,12 +244,12 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
 
       client = Provider.new(config)
 
-      # Should truncate username to prevent DoS
-      if client.calendar_paths != [] do
-        assert Enum.all?(client.calendar_paths, fn path ->
-                 byte_size(path) <= 255
-               end)
-      end
+      # The username is truncated to 200 characters, keeping the path inside the
+      # 255-byte cap. Assert the exact path: an empty list would mean the
+      # truncation stopped happening and the whole path was rejected instead.
+      assert client.calendar_paths == ["/dav/#{String.duplicate("a", 200)}/Calendar/"]
+      assert [path] = client.calendar_paths
+      assert byte_size(path) == 215
     end
 
     test "sanitizes username with complex path traversal patterns" do

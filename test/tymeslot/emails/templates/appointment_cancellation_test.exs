@@ -74,7 +74,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details =
         build_appointment_details(%{
           meeting_type: "Product Demo",
-          location: "Office"
+          location: "Head Office"
         })
 
       email =
@@ -84,8 +84,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
           details
         )
 
-      # Should contain substantial information
-      assert String.length(email.html_body) > 500
+      assert email.html_body =~ "Product Demo"
+      assert email.html_body =~ "Head Office"
     end
 
     test "text body contains cancellation information" do
@@ -239,8 +239,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
           details
         )
 
-      # Should contain substantial information
-      assert String.length(email.html_body) > 500
+      assert email.html_body =~ "Consultation"
+      assert email.html_body =~ "Virtual"
     end
 
     test "text body contains cancellation information" do

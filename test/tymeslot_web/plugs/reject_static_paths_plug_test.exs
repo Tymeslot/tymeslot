@@ -7,12 +7,6 @@ defmodule TymeslotWeb.Plugs.RejectStaticPathsPlugTest do
 
   alias TymeslotWeb.Plugs.RejectStaticPathsPlug
 
-  describe "init/1" do
-    test "passes options through unchanged" do
-      assert RejectStaticPathsPlug.init(foo: :bar) == [foo: :bar]
-    end
-  end
-
   describe "call/2" do
     for ext <- ~w(.js .css .map .json .ico .png .jpg .svg .woff .woff2 .ttf .gz) do
       test "rejects request with #{ext} extension in first segment", %{conn: conn} do

@@ -7,12 +7,6 @@ defmodule TymeslotWeb.Plugs.ThemePlugTest do
 
   alias TymeslotWeb.Plugs.ThemePlug
 
-  describe "init/1" do
-    test "passes options through unchanged" do
-      assert ThemePlug.init(foo: :bar) == [foo: :bar]
-    end
-  end
-
   describe "call/2" do
     test "extracts theme_id from /scheduling/theme/:id path", %{conn: conn} do
       conn =

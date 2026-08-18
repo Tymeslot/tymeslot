@@ -1821,11 +1821,6 @@ msgstr "Nous sommes ravis de vous compter parmi nous. Une dernière étape rapid
 msgid "Welcome to Tymeslot - please verify your email."
 msgstr "Bienvenue sur Tymeslot - veuillez vérifier votre adresse e-mail."
 
-#: lib/tymeslot/emails/shared/mjml_email.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} via Tymeslot"
-msgstr "%{name} via Tymeslot"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee paid: %{amount}"
@@ -1835,11 +1830,6 @@ msgstr "Le participant a payé : %{amount}"
 #, elixir-autogen, elixir-format
 msgid "Funds will arrive on your usual Stripe payout schedule."
 msgstr "Les fonds vous seront versés selon votre calendrier de versement Stripe habituel."
-
-#: lib/tymeslot/emails/shared/layouts.ex
-#, elixir-autogen, elixir-format
-msgid "Important notification from Tymeslot"
-msgstr "Notification importante de Tymeslot"
 
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
@@ -2040,3 +2030,13 @@ msgstr "Le participant a été informé du nouvel horaire."
 #, elixir-autogen, elixir-format
 msgid "Your meeting has moved."
 msgstr "Votre rendez-vous a été déplacé."
+
+#: lib/tymeslot/emails/shared/mjml_email.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} via %{brand}"
+msgstr "%{name} via %{brand}"
+
+#: lib/tymeslot/emails/shared/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Important notification from %{brand}"
+msgstr "Notification importante de %{brand}"

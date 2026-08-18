@@ -19,7 +19,6 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
 
   @moduletag :auth
 
-  import ExUnit.CaptureLog
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
 
   alias Phoenix.Flash
@@ -28,6 +27,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Test.LogCapture
 
   @google_secret "test_google_state_secret_csrf"
   @outlook_secret "test_outlook_state_secret_csrf"
@@ -212,61 +212,65 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
     @secret_id_token "SECRET_ID_TOKEN_pqr5555_should_never_reach_logs"
 
     test "Google Calendar invalid-params log drops code, state, and id_token", %{conn: conn} do
-      log =
-        capture_log(fn ->
-          get(conn, ~p"/auth/google/calendar/callback", %{
-            "code" => @secret_code,
-            "id_token" => @secret_id_token,
-            "unknown_field" => "visible"
-          })
-        end)
+      LogCapture.attach()
 
-      refute log =~ @secret_code
-      refute log =~ @secret_id_token
-      assert log =~ "Invalid Google Calendar OAuth callback params"
+      get(conn, ~p"/auth/google/calendar/callback", %{
+        "code" => @secret_code,
+        "id_token" => @secret_id_token,
+        "unknown_field" => "visible"
+      })
+
+      dump =
+        LogCapture.dump(LogCapture.await_log("Invalid Google Calendar OAuth callback params"))
+
+      refute dump =~ @secret_code
+      refute dump =~ @secret_id_token
     end
 
     test "Outlook Calendar invalid-params log drops code, state, and id_token", %{conn: conn} do
-      log =
-        capture_log(fn ->
-          # Omit "state" so the params do not match the %{"code" => _, "state" => _}
-          # clause and instead fall through to the catch-all logging clause.
-          get(conn, ~p"/auth/outlook/calendar/callback", %{
-            "code" => @secret_code,
-            "id_token" => @secret_id_token
-          })
-        end)
+      LogCapture.attach()
 
-      assert log =~ "Invalid Outlook Calendar OAuth callback params"
-      refute log =~ @secret_code
-      refute log =~ @secret_id_token
+      # Omit "state" so the params do not match the %{"code" => _, "state" => _}
+      # clause and instead fall through to the catch-all logging clause.
+      get(conn, ~p"/auth/outlook/calendar/callback", %{
+        "code" => @secret_code,
+        "id_token" => @secret_id_token
+      })
+
+      dump =
+        LogCapture.dump(LogCapture.await_log("Invalid Outlook Calendar OAuth callback params"))
+
+      refute dump =~ @secret_code
+      refute dump =~ @secret_id_token
     end
 
     test "Google Meet invalid-params log drops code, state, and id_token", %{conn: conn} do
-      log =
-        capture_log(fn ->
-          get(conn, ~p"/auth/google/video/callback", %{
-            "code" => @secret_code,
-            "id_token" => @secret_id_token,
-            "unknown" => "visible"
-          })
-        end)
+      LogCapture.attach()
 
-      refute log =~ @secret_code
-      refute log =~ @secret_id_token
+      get(conn, ~p"/auth/google/video/callback", %{
+        "code" => @secret_code,
+        "id_token" => @secret_id_token,
+        "unknown" => "visible"
+      })
+
+      dump = LogCapture.dump(LogCapture.await_log("Invalid Google Meet OAuth callback params"))
+
+      refute dump =~ @secret_code
+      refute dump =~ @secret_id_token
     end
 
     test "Microsoft Teams invalid-params log drops code, state, and id_token", %{conn: conn} do
-      log =
-        capture_log(fn ->
-          get(conn, ~p"/auth/teams/video/callback", %{
-            "state" => @secret_state,
-            "id_token" => @secret_id_token
-          })
-        end)
+      LogCapture.attach()
 
-      refute log =~ @secret_state
-      refute log =~ @secret_id_token
+      get(conn, ~p"/auth/teams/video/callback", %{
+        "state" => @secret_state,
+        "id_token" => @secret_id_token
+      })
+
+      dump = LogCapture.dump(LogCapture.await_log("Invalid Teams OAuth callback params"))
+
+      refute dump =~ @secret_state
+      refute dump =~ @secret_id_token
     end
   end
 

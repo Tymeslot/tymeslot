@@ -1,11 +1,16 @@
 defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
   @moduledoc """
-  Regression: the `AddAttendeeNotificationTracking` migration's
-  `jsonb_build_object` backfill must survive NULL inputs across every
-  notifiable field. This test seeds rows with NULL-heavy data, runs the
-  backfill SQL (identical to the migration body), and asserts that the
-  resulting `last_notified_state` handles NULLs gracefully (as JSON `null`)
-  rather than raising or producing `{}`.
+  Regression: the backfill in `20260415154744_add_attendee_notification_tracking`
+  must survive NULL inputs across every notifiable field. This test seeds
+  NULL-heavy rows, runs the migration itself, and asserts that the resulting
+  `last_notified_state` handles NULLs gracefully (as JSON `null`) rather than
+  raising or producing `{}`.
+
+  The migration adds the tracking columns, so the round trip drops them and
+  adds them back — `up` then meets the rows exactly as it did on a real
+  database, and it backfills every row rather than one named id. The module is
+  loaded from `priv` and run through `Ecto.Migrator`; see
+  `Tymeslot.Test.MigrationRunner`.
 
   See docs/superpowers/specs/2026-04-15-centralise-attendee-notifications-design.md.
   """
@@ -17,35 +22,9 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
 
   alias Ecto.UUID
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MigrationRunner
 
-  @provider_calendar_events_backfill_sql """
-  UPDATE provider_calendar_events SET last_notified_state = jsonb_build_object(
-    'title',       COALESCE(to_jsonb(summary),     'null'::jsonb),
-    'starts_at',   COALESCE(to_jsonb(start_at),    'null'::jsonb),
-    'ends_at',     COALESCE(to_jsonb(end_at),      'null'::jsonb),
-    'location',    COALESCE(to_jsonb(location),    'null'::jsonb),
-    'description', COALESCE(to_jsonb(description), 'null'::jsonb),
-    'video_link',  'null'::jsonb,
-    'attendees',   COALESCE(to_jsonb(attendees),   '[]'::jsonb)
-  )
-  WHERE id = $1
-  """
-
-  @meetings_backfill_sql """
-  UPDATE meetings SET last_notified_state = jsonb_build_object(
-    'title',       COALESCE(to_jsonb(title), 'null'::jsonb),
-    'starts_at',   COALESCE(to_jsonb(start_time), 'null'::jsonb),
-    'ends_at',     COALESCE(to_jsonb(end_time), 'null'::jsonb),
-    'location',    COALESCE(to_jsonb(location), 'null'::jsonb),
-    'description', COALESCE(to_jsonb(description), 'null'::jsonb),
-    'video_link',  COALESCE(to_jsonb(attendee_video_url), 'null'::jsonb),
-    'attendees',   CASE
-                     WHEN attendee_email IS NULL THEN '[]'::jsonb
-                     ELSE jsonb_build_array(attendee_email)
-                   END
-  )
-  WHERE id = $1::uuid
-  """
+  @version 20_260_415_154_744
 
   describe "provider_calendar_events backfill" do
     test "populates last_notified_state from current columns when NULLs are present" do
@@ -54,12 +33,10 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
           summary: "Test Title",
           description: nil,
           location: nil,
-          attendees: [],
-          ical_sequence: 0,
-          last_notified_state: %{}
+          attendees: []
         )
 
-      Repo.query!(@provider_calendar_events_backfill_sql, [event.id])
+      MigrationRunner.rerun!(@version)
 
       state = reload_state("provider_calendar_events", event.id)
 
@@ -84,12 +61,10 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
           summary: "With Attendees",
           description: "hello",
           location: "Room 1",
-          attendees: attendees,
-          ical_sequence: 0,
-          last_notified_state: %{}
+          attendees: attendees
         )
 
-      Repo.query!(@provider_calendar_events_backfill_sql, [event.id])
+      MigrationRunner.rerun!(@version)
 
       state = reload_state("provider_calendar_events", event.id)
 
@@ -111,12 +86,10 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
           description: nil,
           location: nil,
           attendee_video_url: nil,
-          attendee_email: "attendee@example.com",
-          ical_sequence: 0,
-          last_notified_state: %{}
+          attendee_email: "attendee@example.com"
         )
 
-      Repo.query!(@meetings_backfill_sql, [UUID.dump!(meeting.id)])
+      MigrationRunner.rerun!(@version)
 
       state = reload_state("meetings", meeting.id)
 
@@ -137,12 +110,10 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
           description: "body",
           location: "HQ",
           attendee_video_url: "https://video.example.com/room",
-          attendee_email: "attendee@example.com",
-          ical_sequence: 0,
-          last_notified_state: %{}
+          attendee_email: "attendee@example.com"
         )
 
-      Repo.query!(@meetings_backfill_sql, [UUID.dump!(meeting.id)])
+      MigrationRunner.rerun!(@version)
 
       state = reload_state("meetings", meeting.id)
 

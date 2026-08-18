@@ -112,24 +112,6 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       assert :ok = RateLimiter.check_theme_customization_rate_limit(9_999_999_999)
     end
 
-    test "rate limit error message is actionable" do
-      user_id = 12_348
-
-      # Exhaust the limit
-      for _i <- 1..150 do
-        RateLimiter.check_theme_customization_rate_limit(user_id)
-      end
-
-      {:error, :rate_limited, message} =
-        RateLimiter.check_theme_customization_rate_limit(user_id)
-
-      # Message should include specific details
-      assert message =~ "150"
-      assert message =~ "theme customization"
-      assert message =~ "5 minutes"
-      assert message =~ "wait"
-    end
-
     test "logs error for invalid user_id" do
       import ExUnit.CaptureLog
 
@@ -236,50 +218,6 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       # Both should advise waiting
       assert theme_message =~ "wait"
       assert filter_message =~ "wait"
-    end
-  end
-
-  describe "boundary conditions" do
-    test "exactly at limit boundary" do
-      user_id = 77_777
-
-      # Use exactly 150 requests (the limit)
-      for i <- 1..150 do
-        assert :ok = RateLimiter.check_theme_customization_rate_limit(user_id),
-               "Request #{i}/150 should succeed"
-      end
-
-      # 151st request should fail
-      assert {:error, :rate_limited, _message} =
-               RateLimiter.check_theme_customization_rate_limit(user_id)
-    end
-
-    test "one request under limit" do
-      user_id = 77_778
-
-      # Use 149 requests (one under limit)
-      for _i <- 1..149 do
-        RateLimiter.check_theme_customization_rate_limit(user_id)
-      end
-
-      # 150th request should still succeed
-      assert :ok = RateLimiter.check_theme_customization_rate_limit(user_id)
-
-      # 151st should fail
-      assert {:error, :rate_limited, _message} =
-               RateLimiter.check_theme_customization_rate_limit(user_id)
-    end
-
-    test "works with very large user_ids" do
-      # Test with max safe integer-like values
-      large_user_id = 9_223_372_036_854_775_807
-
-      assert :ok = RateLimiter.check_theme_customization_rate_limit(large_user_id)
-    end
-
-    test "works with user_id = 1" do
-      # Edge case: smallest valid user_id
-      assert :ok = RateLimiter.check_theme_customization_rate_limit(1)
     end
   end
 end

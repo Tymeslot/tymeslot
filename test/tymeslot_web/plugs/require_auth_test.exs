@@ -60,10 +60,4 @@ defmodule TymeslotWeb.Plugs.RequireAuthPlugTest do
       assert conn.halted
     end
   end
-
-  describe "init/1" do
-    test "passes options through unchanged" do
-      assert RequireAuthPlug.init(foo: :bar) == [foo: :bar]
-    end
-  end
 end

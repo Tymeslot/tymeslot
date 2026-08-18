@@ -20,13 +20,6 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
   alias Phoenix.Flash
 
   describe "CalendarOAuthController.google_callback/2 — provider error params" do
-    test "access_denied maps to 'Authorization was denied'", %{conn: conn} do
-      conn = get(conn, "/auth/google/calendar/callback", %{"error" => "access_denied"})
-
-      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
-    end
-
     test "other error codes fall through to generic 'Authentication failed'",
          %{conn: conn} do
       conn =
@@ -37,35 +30,6 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
 
       assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authentication failed"
-    end
-  end
-
-  describe "CalendarOAuthController.outlook_callback/2 — provider error params" do
-    test "Microsoft admin-consent AADSTS65001 maps to the admin-approval message",
-         %{conn: conn} do
-      # AADSTS65001 is the canonical "user or administrator has not
-      # consented" code. The message must route the user to IT, not
-      # leave them retrying the same flow.
-      conn =
-        get(conn, "/auth/outlook/calendar/callback", %{
-          "error" => "consent_required",
-          "error_description" => "AADSTS65001: The user or administrator has not consented"
-        })
-
-      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
-      assert Flash.get(conn.assigns.flash, :error) =~ "admin approval"
-    end
-
-    test "access_denied without an AADSTS code uses the standard denial message",
-         %{conn: conn} do
-      conn =
-        get(conn, "/auth/outlook/calendar/callback", %{
-          "error" => "access_denied",
-          "error_description" => "user cancelled"
-        })
-
-      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
   end
 

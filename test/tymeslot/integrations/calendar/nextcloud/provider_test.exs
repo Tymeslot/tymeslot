@@ -106,8 +106,8 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       assert client.username == "testuser"
       assert client.password == "testpass"
-      # Nextcloud uses CalDAV under the hood, so provider may be :caldav
-      assert client.provider in [:nextcloud, :caldav]
+      # Nextcloud speaks CalDAV under the hood but keeps its own provider tag.
+      assert client.provider == :nextcloud
       assert client.verify_ssl == true
     end
 
@@ -198,8 +198,8 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 207, body: ""}}
       end)
 
-      assert {:ok, message} = Provider.perform_connection_test(integration)
-      assert String.contains?(message, "Nextcloud")
+      assert Provider.perform_connection_test(integration) ==
+               {:ok, "Nextcloud connection successful"}
     end
 
     test "translates 401 to a Nextcloud-flavoured authentication failure message" do
@@ -219,19 +219,21 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       assert message =~ "app password"
     end
 
-    test "is pure I/O — takes only the integration, no caller options" do
+    test "refuses a loopback base_url before any request is issued" do
+      # The connection test runs through the same guard as discovery below:
+      # `CalDAV.Discovery` validates the URL with `block_private_ips: true`
+      # unless `:allow_private_ips_for_calendar` is set. No stub is declared
+      # here, so any request that did go out would raise instead of reaching
+      # this assertion.
       integration = %{
-        base_url: "https://cloud.example.com",
+        base_url: "http://localhost:8080",
         username: "alice",
         password: "secret",
         calendar_paths: []
       }
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 207, body: ""}}
-      end)
-
-      assert {:ok, _message} = Provider.perform_connection_test(integration)
+      assert Provider.perform_connection_test(integration) ==
+               {:error, "Private or local network addresses are not allowed"}
     end
 
     test "returns Nextcloud-specific :not_found message when server returns 404" do
@@ -309,7 +311,11 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
           provider: :nextcloud
         }
 
-        assert {:error, _reason} = Provider.discover_calendars(client)
+        # Pinning the guard's own message is what makes this a test of the
+        # guard. A bare `{:error, _}` also holds with the guard removed —
+        # the request then fails against the stubbed transport instead.
+        assert Provider.discover_calendars(client) ==
+                 {:error, "Private or local network addresses are not allowed"}
       end
     end
   end
@@ -352,13 +358,19 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
     end
   end
 
+  # The three delegations below are asserted against a client with no calendar
+  # path configured. That is the one observable point in the chain that is
+  # reached before any request is built, so the message CaldavCommon returns
+  # there identifies which shared function the call landed in — without
+  # needing a server, and without the assertion quietly passing on any error
+  # at all.
   describe "create_event/2" do
-    test "delegates to CalDAV provider for event creation" do
+    test "delegates to CalDAV provider, which refuses without a target calendar" do
       client = %{
         base_url: "https://cloud.example.com/remote.php/dav",
         username: "user",
         password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
+        calendar_paths: [],
         provider: :nextcloud
       }
 
@@ -368,24 +380,20 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         end_time: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      capture_log(fn ->
-        result = Provider.create_event(client, event_data)
-        assert match?({:error, _reason}, result)
-      end)
+      assert Provider.create_event(client, event_data) ==
+               {:error, "No calendar configured for creating events"}
     end
   end
 
   describe "update_event/3" do
-    test "delegates to CalDAV provider for event update" do
+    test "delegates to CalDAV provider, which reports an unconfigured calendar as not found" do
       client = %{
         base_url: "https://cloud.example.com/remote.php/dav",
         username: "user",
         password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
+        calendar_paths: [],
         provider: :nextcloud
       }
-
-      uid = "nextcloud-event-123"
 
       event_data = %{
         summary: "Updated Event",
@@ -393,29 +401,22 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         end_time: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      capture_log(fn ->
-        result = Provider.update_event(client, uid, event_data)
-        assert match?({:error, _reason}, result)
-      end)
+      assert Provider.update_event(client, "nextcloud-event-123", event_data) ==
+               {:error, "Event not found"}
     end
   end
 
   describe "delete_event/2" do
-    test "delegates to CalDAV provider for event deletion" do
+    test "delegates to CalDAV provider, for which deleting from no calendar is a no-op" do
       client = %{
         base_url: "https://cloud.example.com/remote.php/dav",
         username: "user",
         password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
+        calendar_paths: [],
         provider: :nextcloud
       }
 
-      uid = "nextcloud-event-123"
-
-      capture_log(fn ->
-        result = Provider.delete_event(client, uid)
-        assert match?({:error, _reason}, result)
-      end)
+      assert Provider.delete_event(client, "nextcloud-event-123") == :ok
     end
   end
 end

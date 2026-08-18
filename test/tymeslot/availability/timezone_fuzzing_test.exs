@@ -15,6 +15,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Repo
   alias Tymeslot.Timezones
+  alias Tymeslot.Utils.DateTimeUtils
 
   setup do
     :ok = Sandbox.checkout(Repo)
@@ -174,25 +175,50 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     assert "12:30 AM" in normal_day_slots
   end
 
-  property "today's availability correctly respects min_advance_hours", %{schedule: schedule} do
+  property "month_availability respects min_advance_hours in any timezone", %{schedule: schedule} do
     check all(
             advance_hours <- integer(0..72),
-            user_tz <- member_of(@timezones)
+            user_tz <- member_of(@timezones),
+            max_runs: 30
           ) do
-      # ...
-      today = Date.utc_today()
+      today = user_tz |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
-      {:ok, _availability} =
-        Calculate.month_availability(
-          today.year,
-          today.month,
-          user_tz,
-          user_tz,
-          [],
-          %{min_advance_hours: advance_hours, schedule_id: schedule.id}
-        )
+      today_available? = day_available?(schedule, user_tz, advance_hours, today)
 
-      # ...
+      # The schedule closes at 17:00, so no slot on the current day is ever a
+      # full day out: a notice period of 24 hours or more must empty today.
+      if advance_hours >= 24 do
+        refute today_available?,
+               "#{user_tz}: today is bookable despite #{advance_hours}h minimum notice"
+      end
+
+      # Availability is anti-monotone in the notice period — a day it rules
+      # out cannot come back when the period grows.
+      if today_available? do
+        assert day_available?(schedule, user_tz, 0, today),
+               "#{user_tz}: today is bookable at #{advance_hours}h notice but not at 0h"
+      end
+
+      # The generated notice period tops out at 72 hours, so a day a week out
+      # stays bookable whichever value the run drew.
+      next_week = Date.add(today, 7)
+
+      assert day_available?(schedule, user_tz, advance_hours, next_week),
+             "#{user_tz}: #{next_week} is unbookable at #{advance_hours}h notice"
     end
+  end
+
+  defp day_available?(schedule, user_tz, advance_hours, date) do
+    {:ok, availability} =
+      Calculate.month_availability(
+        date.year,
+        date.month,
+        user_tz,
+        user_tz,
+        [],
+        %{min_advance_hours: advance_hours, schedule_id: schedule.id}
+      )
+
+    Map.fetch!(availability, Date.to_string(date))
   end
 end

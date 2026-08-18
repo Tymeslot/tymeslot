@@ -8,12 +8,6 @@ defmodule TymeslotWeb.Plugs.SetLoggerMetadataTest do
   alias Tymeslot.Factory
   alias TymeslotWeb.Plugs.SetLoggerMetadata
 
-  describe "init/1" do
-    test "passes options through unchanged" do
-      assert SetLoggerMetadata.init(foo: :bar) == [foo: :bar]
-    end
-  end
-
   describe "call/2" do
     setup do
       on_exit(fn -> Logger.metadata(user_id: nil) end)

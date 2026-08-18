@@ -162,31 +162,34 @@ defmodule TymeslotWeb.AuthLiveTest do
   describe "Page titles and meta descriptions" do
     setup :setup_password_reset_token
 
-    test "login page has a custom title and meta description", %{conn: conn} do
-      {:ok, view, html} = live(conn, ~p"/auth/login")
-      assert page_title(view) != "Schedule a Meeting · Tymeslot"
-      assert html =~ ~s(<meta name="description")
-    end
+    # Four routes, four LiveView states, four distinct titles and descriptions.
+    # The title and the description content are both pinned: a `<meta
+    # name="description">` tag on its own says nothing about what the page
+    # actually claims to be.
+    @indexable_auth_pages [
+      {"login", "/auth/login", "Log In · Tymeslot",
+       "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."},
+      {"signup", "/auth/signup", "Create an Account · Tymeslot",
+       "Create a Tymeslot account and start sharing your availability in minutes. No credit card required."},
+      {"reset password", "/auth/reset-password", "Reset Password · Tymeslot",
+       "Enter your email to receive a password reset link for your Tymeslot account."},
+      {"reset password form", :token, "Choose a New Password · Tymeslot",
+       "Choose a strong new password for your Tymeslot account."}
+    ]
 
-    test "signup page has a custom title and meta description", %{conn: conn} do
-      {:ok, view, html} = live(conn, ~p"/auth/signup")
-      assert page_title(view) != "Schedule a Meeting · Tymeslot"
-      assert html =~ ~s(<meta name="description")
-    end
+    for {name, path, title, description} <- @indexable_auth_pages do
+      test "#{name} page sets its own title and meta description", %{conn: conn, token: token} do
+        path =
+          case unquote(path) do
+            :token -> "/auth/reset-password/#{token}"
+            path -> path
+          end
 
-    test "reset password page has a custom title and meta description", %{conn: conn} do
-      {:ok, view, html} = live(conn, ~p"/auth/reset-password")
-      assert page_title(view) != "Schedule a Meeting · Tymeslot"
-      assert html =~ ~s(<meta name="description")
-    end
+        {:ok, view, html} = live(conn, path)
 
-    test "reset password form page has a custom title and meta description", %{
-      conn: conn,
-      token: token
-    } do
-      {:ok, view, html} = live(conn, ~p"/auth/reset-password/#{token}")
-      assert page_title(view) != "Schedule a Meeting · Tymeslot"
-      assert html =~ ~s(<meta name="description")
+        assert page_title(view) == unquote(title)
+        assert html =~ ~s(<meta name="description" content="#{unquote(description)}"/>)
+      end
     end
 
     test "oauth and transient pages do not set a custom title or meta description", %{conn: conn} do

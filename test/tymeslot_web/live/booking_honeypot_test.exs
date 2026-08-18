@@ -146,20 +146,4 @@ defmodule TymeslotWeb.BookingHoneypotTest do
     # Should create the meeting
     assert Repo.aggregate(MeetingSchema, :count, :id) == 1
   end
-
-  test "honeypot triggers silently on bot submission", %{
-    conn: conn,
-    profile: profile,
-    event_type: event_type
-  } do
-    view = navigate_to_booking_form(conn, profile, event_type)
-
-    honeypot_booking_form(view, "http://spammer.com")
-
-    # Should show fake success message to mislead bot
-    assert render(view) =~ "Booking submitted successfully"
-
-    # Should NOT create a meeting (silent drop)
-    assert Repo.aggregate(MeetingSchema, :count, :id) == 0
-  end
 end

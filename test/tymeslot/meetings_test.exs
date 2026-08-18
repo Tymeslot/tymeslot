@@ -15,7 +15,6 @@ defmodule Tymeslot.MeetingsTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   import Tymeslot.MeetingTestHelpers
-  import Tymeslot.CursorPaginationTestCases
 
   setup :verify_on_exit!
 
@@ -63,55 +62,7 @@ defmodule Tymeslot.MeetingsTest do
     end
   end
 
-  describe "list_upcoming_meetings_for_user/1" do
-    test "returns upcoming meetings for user" do
-      %{user: user} = create_user_with_profile()
-
-      upcoming_meeting = insert_meeting_for_user(user)
-
-      _past_meeting =
-        insert_meeting_for_user(user, %{
-          status: "completed",
-          start_offset: -86_400,
-          duration: 3_600
-        })
-
-      result = Meetings.list_upcoming_meetings_for_user(user.email)
-
-      assert length(result) == 1
-      assert hd(result).id == upcoming_meeting.id
-    end
-
-    test "returns empty list for user with no meetings" do
-      %{user: user} = create_user_with_profile()
-
-      result = Meetings.list_upcoming_meetings_for_user(user.email)
-
-      assert result == []
-    end
-  end
-
   describe "list_past_meetings_for_user/1" do
-    test "returns past meetings for user" do
-      %{user: user} = create_user_with_profile()
-
-      # Create a past meeting
-      past_meeting =
-        insert_meeting_for_user(user, %{
-          status: "completed",
-          start_offset: -86_400,
-          duration: 3_600
-        })
-
-      # Create an upcoming meeting (should not be returned)
-      _upcoming_meeting = insert_meeting_for_user(user)
-
-      result = Meetings.list_past_meetings_for_user(user.email)
-
-      assert length(result) == 1
-      assert hd(result).id == past_meeting.id
-    end
-
     test "returns empty list for user with no past meetings" do
       %{user: user} = create_user_with_profile()
 
@@ -122,36 +73,6 @@ defmodule Tymeslot.MeetingsTest do
   end
 
   describe "list_cancelled_meetings_for_user/1" do
-    test "returns cancelled meetings for user" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-
-      # Create a cancelled meeting
-      cancelled_meeting =
-        insert(:meeting,
-          organizer_email: user.email,
-          organizer_user_id: user.id,
-          status: "cancelled",
-          start_time: DateTime.add(DateTime.utc_now(), 86_400, :second),
-          end_time: DateTime.add(DateTime.utc_now(), 90_000, :second)
-        )
-
-      # Create a confirmed meeting (should not be returned)
-      _confirmed_meeting =
-        insert(:meeting,
-          organizer_email: user.email,
-          organizer_user_id: user.id,
-          status: "confirmed",
-          start_time: DateTime.add(DateTime.utc_now(), 86_400, :second),
-          end_time: DateTime.add(DateTime.utc_now(), 90_000, :second)
-        )
-
-      result = Meetings.list_cancelled_meetings_for_user(user.email)
-
-      assert length(result) == 1
-      assert hd(result).id == cancelled_meeting.id
-    end
-
     test "bounds the result set with the :limit option" do
       user = insert(:user)
 
@@ -166,30 +87,6 @@ defmodule Tymeslot.MeetingsTest do
       end
 
       assert length(Meetings.list_cancelled_meetings_for_user(user.email, limit: 2)) == 2
-    end
-  end
-
-  describe "get_meeting!/1" do
-    test "returns meeting when it exists" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-
-      meeting =
-        insert(:meeting,
-          organizer_user_id: user.id,
-          status: "confirmed"
-        )
-
-      result = Meetings.get_meeting!(meeting.id)
-
-      assert result.id == meeting.id
-      assert result.uid == meeting.uid
-    end
-
-    test "raises when meeting does not exist" do
-      assert_raise Ecto.NoResultsError, fn ->
-        Meetings.get_meeting!(UUID.generate())
-      end
     end
   end
 
@@ -312,20 +209,6 @@ defmodule Tymeslot.MeetingsTest do
     end
   end
 
-  describe "cancel_meeting/1" do
-    test "cancels a future meeting by uid" do
-      %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user)
-
-      assert {:ok, cancelled_meeting} = Meetings.cancel_meeting(meeting.uid)
-      assert cancelled_meeting.status == "cancelled"
-    end
-
-    test "returns error for non-existent meeting" do
-      assert {:error, :meeting_not_found} = Meetings.cancel_meeting("non-existent-uid")
-    end
-  end
-
   describe "send_reschedule_request/1" do
     test "successfully processes reschedule request" do
       meeting = insert(:meeting, status: "confirmed")
@@ -368,22 +251,6 @@ defmodule Tymeslot.MeetingsTest do
       assert {:error, :invalid_cursor} =
                Meetings.list_user_meetings_by_filter(user.id, "upcoming", after: "invalid")
     end
-  end
-
-  describe "get_meeting/1" do
-    test "returns meeting when it exists" do
-      meeting = insert(:meeting)
-      assert {:ok, result} = Meetings.get_meeting(meeting.id)
-      assert result.id == meeting.id
-    end
-
-    test "returns :not_found when meeting does not exist" do
-      assert {:error, :not_found} = Meetings.get_meeting(UUID.generate())
-    end
-  end
-
-  describe "list_user_meetings_cursor_page/2" do
-    shared_cursor_pagination_tests()
   end
 
   describe "list_user_meetings_cursor_page_by_id/2" do

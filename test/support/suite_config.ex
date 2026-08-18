@@ -15,7 +15,8 @@ defmodule Tymeslot.Test.SuiteConfig do
     oauth_integration: true,
     calendar_integration: true,
     e2e: true,
-    migrations: true
+    migrations: true,
+    proxy_integration: true
   ]
 
   @doc """

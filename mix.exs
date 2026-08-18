@@ -61,6 +61,7 @@ defmodule Tymeslot.MixProject do
   def cli do
     [
       preferred_envs: [
+        "test.e2e": :test,
         coveralls: :test,
         "coveralls.cobertura": :test,
         "coveralls.detail": :test,
@@ -193,6 +194,16 @@ defmodule Tymeslot.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      # Every `:e2e` test module lives in this repo, and `test_helper.exs` starts
+      # the endpoint and Wallaby only when E2E is set, so the tag is unrunnable
+      # without this alias. Needs a local Chrome and chromedriver, which is why
+      # it is not part of the default gate or of CI.
+      "test.e2e": [
+        &set_e2e_env/1,
+        "ecto.create --quiet",
+        "ecto.migrate --quiet",
+        "test --color --only e2e"
+      ],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": [
         "tailwind tymeslot",
@@ -215,4 +226,8 @@ defmodule Tymeslot.MixProject do
       ]
     ]
   end
+
+  # `test_helper.exs` reads this to decide whether to start the HTTP endpoint and
+  # Wallaby, which the browser needs to connect to.
+  defp set_e2e_env(_args), do: System.put_env("E2E", "true")
 end

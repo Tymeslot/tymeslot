@@ -531,6 +531,11 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
           }
 
           {:ok, room} = CustomProvider.create_meeting_room(config)
+
+          # Only the placeholder may be substituted; the rest of the template
+          # has to survive verbatim.
+          assert String.starts_with?(room.meeting_url, "https://jitsi.org/")
+
           List.last(String.split(room.meeting_url, "/"))
         end)
 
@@ -540,14 +545,27 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
       # Verify all hashes are lowercase hex
       assert Enum.all?(hashes, fn h -> String.match?(h, ~r/^[a-f0-9]{16}$/) end)
 
-      # Calculate collision rate in sample
+      # With 2^64 possible values a 1_000-sample run must collide zero times.
+      # Tolerating a rate instead would let a hash with far less entropy pass:
+      # truncating to 16 bits, for instance, collides on roughly 1% of a sample
+      # this size and would slip under a 1% threshold.
       unique_hashes = Enum.uniq(hashes)
-      collision_rate = (sample_size - length(unique_hashes)) / sample_size
 
-      # For 1000 samples with 2^64 possible values, collision probability is negligible
-      # We expect 0 collisions in this sample size
-      assert collision_rate < 0.01,
-             "Unexpected collision rate: #{collision_rate * 100}% in #{sample_size} samples"
+      assert length(unique_hashes) == sample_size,
+             "#{sample_size - length(unique_hashes)} collisions in #{sample_size} samples"
+
+      # A hash truncated from the wrong end, or one ignoring part of its input,
+      # still looks like hex — pin the value against the documented derivation.
+      [first_id | _rest] = meeting_ids
+
+      expected =
+        :sha256
+        |> :crypto.hash(first_id)
+        |> Base.encode16(case: :lower)
+        |> String.slice(0, 16)
+
+      assert List.first(hashes) == expected,
+             "room ids must be the first 16 hex characters of the meeting id's SHA-256"
     end
 
     test "verifies deterministic hashing (idempotency)" do

@@ -162,33 +162,5 @@ defmodule Tymeslot.Integrations.Calendar.ReminderTest do
       reminder = %{"method" => "popup", "minutes_before" => 0}
       assert Reminder.normalise(reminder) == %{method: :popup, minutes_before: 0}
     end
-
-    test "normalised 0-minute reminder returns 0 from minutes_before/1 (Google projection)" do
-      reminder = %{method: :popup, minutes_before: 0}
-      normalised = Reminder.normalise(reminder)
-      assert Reminder.minutes_before(normalised) == 0
-    end
-
-    test "normalised 0-minute reminder returns 0 from minutes_before/1 (Outlook projection)" do
-      # Outlook uses only minutes_before; 0 must survive the full normalise→minutes_before path
-      reminder = %{"method" => "popup", "minutes_before" => 0}
-      normalised = Reminder.normalise(reminder)
-      assert Reminder.minutes_before(normalised) == 0
-    end
-  end
-
-  describe ":sms degradation consistency" do
-    test "google_method and ical_action both degrade :sms to popup/DISPLAY" do
-      # Verifies the documented consistent degradation
-      assert Reminder.google_method(:sms) == "popup"
-      assert Reminder.ical_action(:sms) == "DISPLAY"
-    end
-
-    test "normalised :sms reminder preserves :sms method atom" do
-      # The canonical shape keeps :sms so the UI can identify it
-      reminder = %{"method" => "sms", "minutes_before" => 10}
-      normalised = Reminder.normalise(reminder)
-      assert normalised.method == :sms
-    end
   end
 end

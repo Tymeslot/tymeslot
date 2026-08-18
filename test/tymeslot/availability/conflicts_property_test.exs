@@ -227,10 +227,15 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
     end
   end
 
-  property "pre-filtering logic never misses a potentially relevant event" do
-    # This property test verifies that the +/- 2 day pre-filtering window
-    # safely captures all events that could possibly overlap with the
-    # target date window (+/- 1 day) across all possible timezone shifts.
+  property "the pre-filter never drops an event that still blocks the target day" do
+    # `date_has_slots_with_events?/6` narrows the event list to ±2 days around
+    # the target date before scanning slots. A long event that started days
+    # earlier still blocks the target day, so dropping it would report the day
+    # as bookable when it is fully taken.
+    #
+    # The pre-filter is exercised through the real call rather than restated
+    # here, and the answer is checked against `available_slots/6`, which scans
+    # the unnarrowed list: the two must agree.
 
     check all(
             timezone <-
@@ -245,50 +250,59 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
                 "Pacific/Niue"
               ]),
             target_days_ahead <- integer(5..60),
-            event_days_ahead <- integer(0..70),
-            event_hour <- integer(0..23),
-            event_min <- integer(0..59),
-            event_dur_min <- integer(1..1440)
+            start_days_before <- integer(0..2),
+            start_hour <- integer(0..23),
+            duration_hours <- integer(1..72)
           ) do
       target_date = Date.add(Date.utc_today(), target_days_ahead)
-      event_date = Date.add(Date.utc_today(), event_days_ahead)
+      event_date = Date.add(target_date, -start_days_before)
 
-      event_start = DateTime.new!(event_date, Time.new!(event_hour, event_min, 0), "Etc/UTC")
-      event_end = DateTime.add(event_start, event_dur_min, :minute)
+      event_start =
+        DateTimeUtils.create_datetime_safe(event_date, Time.new!(start_hour, 0, 0), timezone)
 
-      # This is the pre-converted map shape that Conflicts receives
-      event_in_user_tz = %{
-        start_time: DateTime.shift_zone!(event_start, timezone),
-        end_time: DateTime.shift_zone!(event_end, timezone)
-      }
+      event_end = DateTime.add(event_start, duration_hours, :hour)
 
-      start_date_limit = Date.add(target_date, -2)
-      end_date_limit = Date.add(target_date, 2)
+      event =
+        CalendarEvent.new!(%{
+          uid: "prefilter-#{System.unique_integer([:positive])}",
+          calendar_integration_id: 1,
+          provider: :google,
+          provider_event_id: "prefilter-#{System.unique_integer([:positive])}",
+          provider_calendar_id: "primary",
+          all_day: false,
+          start_at: event_start,
+          end_at: event_end,
+          synced_at: DateTime.utc_now()
+        })
 
-      event_start_date = DateTime.to_date(event_in_user_tz.start_time)
-      event_end_date = DateTime.to_date(event_in_user_tz.end_time)
+      config = %{buffer_minutes: 0, min_advance_hours: 0, duration_minutes: 30}
 
-      is_excluded =
-        Date.compare(event_end_date, start_date_limit) == :lt or
-          Date.compare(event_start_date, end_date_limit) == :gt
+      events_in_tz =
+        [event]
+        |> Enum.filter(&CalendarEvent.blocking?/1)
+        |> Events.convert_events_to_timezone(timezone, timezone)
 
-      if is_excluded do
-        # If the event was excluded, it MUST NOT overlap with ANY of the checked days
-        # [target_date - 1, target_date, target_date + 1] in any timezone.
-        window_start = DateTime.new!(Date.add(target_date, -1), ~T[00:00:00], timezone)
-        window_end = DateTime.new!(Date.add(target_date, 1), ~T[23:59:59], timezone)
+      # Default business hours are Mon–Fri, so only weekdays have slots at all.
+      if Date.day_of_week(target_date) in 1..5 do
+        has_slots_optimized =
+          Conflicts.date_has_slots_with_events?(
+            target_date,
+            timezone,
+            timezone,
+            events_in_tz,
+            DateTimeUtils.now_in_timezone(timezone),
+            config
+          )
 
-        overlaps =
-          not (DateTime.compare(event_in_user_tz.end_time, window_start) == :lt or
-                 DateTime.compare(event_in_user_tz.start_time, window_end) == :gt)
+        {:ok, slots} =
+          Calculate.available_slots(target_date, 30, timezone, timezone, [event], config)
 
-        assert not overlaps, """
-        Pre-filter excluded a relevant event!
-        Target Date: #{target_date}
+        assert has_slots_optimized == (slots != []), """
+        Pre-filter dropped a relevant event!
+        Target date: #{target_date}
         User TZ: #{timezone}
-        Event (user tz): #{inspect(event_in_user_tz)}
-        Filter limits: #{start_date_limit} to #{end_date_limit}
-        Overlap window: #{window_start} to #{window_end}
+        Event (user tz): #{inspect(events_in_tz)}
+        Optimised check: #{has_slots_optimized}, full check: #{slots != []}
         """
       end
     end

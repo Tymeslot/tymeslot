@@ -11,6 +11,14 @@ defmodule TymeslotWeb.Components.UITest do
   alias TymeslotWeb.Components.UI.Toggle
   alias TymeslotWeb.Components.UI.ToggleGroup
 
+  # The class attribute of the single element matching `selector`. Raises when
+  # the selector matches none, so a renamed element fails loudly rather than
+  # quietly asserting against an empty string.
+  defp class_of(doc, selector) do
+    [class] = Floki.attribute(doc, selector, "class")
+    class
+  end
+
   describe "CloseButton" do
     test "renders correctly with default attributes" do
       assigns = %{phx_click: "close"}
@@ -71,11 +79,26 @@ defmodule TymeslotWeb.Components.UITest do
       assert html =~ "cursor-not-allowed"
     end
 
-    test "renders with different sizes" do
-      for size <- [:small, :medium, :large] do
+    # {track dimensions, slider dimensions} per size. The id echoes the size
+    # name, so asserting on the id proves nothing about the size variant
+    # actually reaching the class list.
+    @switch_sizes %{
+      small: {"h-5 w-9", "h-4 w-4"},
+      medium: {"h-6 w-11", "h-5 w-5"},
+      large: {"h-7 w-12", "h-6 w-6"}
+    }
+
+    test "each size renders its own track and slider dimensions" do
+      for {size, {track, slider}} <- @switch_sizes do
         assigns = %{id: "switch-#{size}", checked: true, on_change: "toggle", size: size}
         html = render_component(&StatusSwitch.status_switch/1, assigns)
-        assert html =~ "switch-#{size}"
+
+        assert html =~ track
+        assert html =~ slider
+
+        for {_other_size, {other_track, _slider}} <- Map.delete(@switch_sizes, size) do
+          refute html =~ other_track
+        end
       end
     end
   end
@@ -100,14 +123,16 @@ defmodule TymeslotWeb.Components.UITest do
       assert html =~ "toggle-1-grid"
     end
 
-    test "highlights active option", %{options: options} do
+    test "highlights the active option and only that one", %{options: options} do
       assigns = %{id: "toggle-1", active_option: :grid, options: options, phx_click: "switch"}
       html = render_component(&Toggle.toggle/1, assigns)
+      doc = Floki.parse_fragment!(html)
 
-      # Grid view button should have active class
-      assert html =~ "toggle-1-grid"
-      # The active option gets "btn-primary" class
-      assert html =~ "btn-primary"
+      # "btn-primary is somewhere in the markup" is satisfied by highlighting
+      # the wrong button, so pin the highlight to the option it belongs to.
+      assert class_of(doc, "#toggle-1-grid") =~ "btn-primary"
+      refute class_of(doc, "#toggle-1-list") =~ "btn-primary"
+      assert class_of(doc, "#toggle-1-list") =~ "btn-ghost"
     end
 
     test "renders icons based on option", %{options: options} do
@@ -156,12 +181,16 @@ defmodule TymeslotWeb.Components.UITest do
       assert html =~ "Pending"
     end
 
-    test "highlights active option", %{options: options} do
+    test "highlights the active option and only that one", %{options: options} do
       assigns = %{id: "group-1", active_option: :pending, options: options, on_change: "filter"}
-      html = render_component(&ToggleGroup.toggle_group/1, assigns)
 
-      # Pending option should have active classes
-      assert html =~ "btn-primary"
+      html = render_component(&ToggleGroup.toggle_group/1, assigns)
+      doc = Floki.parse_fragment!(html)
+
+      # The buttons carry no id, so they are identified by the value they send.
+      assert class_of(doc, ~s(button[phx-value-option="pending"])) =~ "btn-primary"
+      refute class_of(doc, ~s(button[phx-value-option="all"])) =~ "btn-primary"
+      assert class_of(doc, ~s(button[phx-value-option="all"])) =~ "btn-ghost"
     end
   end
 

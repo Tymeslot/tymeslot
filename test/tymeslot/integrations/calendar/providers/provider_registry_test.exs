@@ -36,15 +36,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
       assert module == Tymeslot.Integrations.Calendar.Google.Provider
     end
 
-    test "returns provider module for outlook if available" do
-      case ProviderRegistry.get_provider(:outlook) do
-        {:ok, module} ->
-          assert module == Tymeslot.Integrations.Calendar.Outlook.Provider
-
-        {:error, _reason} ->
-          # Outlook provider may not be enabled
-          :ok
-      end
+    test "returns provider module for valid outlook provider" do
+      # :outlook is statically registered and get_provider/1 is toggle-agnostic,
+      # so this resolves regardless of the runtime enable flag.
+      assert ProviderRegistry.get_provider(:outlook) ==
+               {:ok, Tymeslot.Integrations.Calendar.Outlook.Provider}
     end
 
     test "returns provider module for valid nextcloud provider" do
@@ -233,10 +229,25 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
 
   describe "provider_count/0" do
     test "returns total number of registered providers" do
-      count = ProviderRegistry.provider_count()
+      # Nothing else in this file pins the registry's full contents — the
+      # list_providers/0 tests only assert membership — so a provider silently
+      # dropped from the registry would otherwise go unnoticed here.
+      assert Enum.sort(ProviderRegistry.list_providers()) == [
+               :apple,
+               :baikal,
+               :caldav,
+               :debug,
+               :demo,
+               :google,
+               :ics_url,
+               :mailbox_org,
+               :nextcloud,
+               :outlook,
+               :radicale,
+               :zimbra
+             ]
 
-      assert is_integer(count)
-      assert count >= 7
+      assert ProviderRegistry.provider_count() == 12
     end
   end
 
