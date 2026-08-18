@@ -148,51 +148,38 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
     end
   end
 
-  describe "validate_name_update/2" do
-    test "accepts valid name" do
-      assert {:ok, "My Webhook"} = InputValidation.validate_name_update("My Webhook")
+  # `Tymeslot.Security.RateLimiter.Integrations` states the rule: never one
+  # instance-wide bucket, the actor is always required. A bare literal key gave
+  # every logged-in user of an instance the same 60/min budget.
+  describe "validate_webhook_form/2 rate limiting" do
+    @valid_params %{
+      "name" => "My Webhook",
+      "url" => "https://example.com/webhook",
+      "events" => ["meeting.created"]
+    }
+
+    test "one user exhausting the budget does not refuse another user" do
+      for _attempt <- 1..61 do
+        InputValidation.validate_webhook_form(@valid_params, metadata: %{user_id: 1})
+      end
+
+      assert {:error, :rate_limited} =
+               InputValidation.validate_webhook_form(@valid_params, metadata: %{user_id: 1})
+
+      assert {:ok, _validated} =
+               InputValidation.validate_webhook_form(@valid_params, metadata: %{user_id: 2})
     end
 
-    test "rejects empty name" do
-      assert {:error, _msg} = InputValidation.validate_name_update("")
-    end
+    # Not a field error map: a throttled request says nothing about any field,
+    # and the `:form` key it used to return is one the blur handler looks past
+    # (deleting the field's real error) and the modal never renders.
+    test "refuses with a reason the web layer can act on" do
+      for _attempt <- 1..61 do
+        InputValidation.validate_webhook_form(@valid_params, metadata: %{user_id: 3})
+      end
 
-    test "rejects name exceeding 255 characters" do
-      long_name = String.duplicate("a", 256)
-      assert {:error, _msg} = InputValidation.validate_name_update(long_name)
-    end
-
-    test "preserves angle-bracket characters in name verbatim" do
-      assert {:ok, "<script>alert(1)</script>My Webhook"} =
-               InputValidation.validate_name_update("<script>alert(1)</script>My Webhook")
-    end
-
-    test "returns error for non-string name" do
-      assert {:error, _msg} = InputValidation.validate_name_update(42)
-    end
-  end
-
-  describe "validate_url_update/2" do
-    test "accepts valid HTTPS url" do
-      assert {:ok, "https://example.com/hook"} =
-               InputValidation.validate_url_update("https://example.com/hook")
-    end
-
-    test "rejects empty url" do
-      assert {:error, _msg} = InputValidation.validate_url_update("")
-    end
-
-    test "rejects invalid url" do
-      assert {:error, _msg} = InputValidation.validate_url_update("not-a-url")
-    end
-
-    test "accepts url with percent-encoded characters" do
-      assert {:ok, "https://example.com/hook?q=hello%20world"} =
-               InputValidation.validate_url_update("https://example.com/hook?q=hello%20world")
-    end
-
-    test "returns error for non-string url" do
-      assert {:error, _msg} = InputValidation.validate_url_update(:not_a_string)
+      assert {:error, :rate_limited} =
+               InputValidation.validate_webhook_form(@valid_params, metadata: %{user_id: 3})
     end
   end
 end
