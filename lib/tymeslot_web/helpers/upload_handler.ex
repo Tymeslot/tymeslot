@@ -56,15 +56,6 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   end
 
   @doc """
-  Pushes an event to clear file inputs in JavaScript after successful upload.
-  """
-  @spec push_upload_complete_event(Phoenix.LiveView.Socket.t(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def push_upload_complete_event(socket, event_name \\ "upload-complete") do
-    LiveView.push_event(socket, event_name, %{})
-  end
-
-  @doc """
   Sends update to a component with upload results.
   """
   @spec send_upload_result_to_component(module(), String.t(), atom(), list()) :: :ok
