@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   defp handle_successful_avatar_upload(updated_profile, socket) do
     send(self(), {:profile_updated, updated_profile})
     Flash.info(dgettext("dashboard_profile", "Avatar updated successfully"))
-    socket = push_event(socket, "avatar-upload-complete", %{})
+    socket = push_event(socket, "upload-complete", %{})
     assign(socket, profile: updated_profile)
   end
 
@@ -124,10 +124,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div id="avatar-upload-container" class="lg:col-span-1 space-y-8 text-center pt-4">
+    <div
+      id="avatar-upload-container"
+      class="lg:col-span-1 space-y-8 text-center pt-4"
+      phx-hook="AutoUpload"
+    >
       <.section_header level={3} title={dgettext("dashboard_profile", "Profile Picture")} />
 
-      <div class="relative inline-block mb-8" phx-hook="AutoUpload" id="avatar-upload-section">
+      <div class="relative inline-block mb-8" id="avatar-upload-section">
         <div class="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-tymeslot-100 border-4 border-white shadow-2xl relative z-10 mx-auto">
           <img
             src={Profiles.avatar_url(@profile, :thumb)}
@@ -145,7 +149,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
           phx-submit="upload_avatar"
           phx-change="validate_avatar"
           phx-target={@myself}
-          data-auto-upload="true"
           class="flex flex-col items-center gap-4"
         >
           <div class="w-full">
