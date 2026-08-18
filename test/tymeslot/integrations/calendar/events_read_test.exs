@@ -1,23 +1,10 @@
-defmodule Tymeslot.Integrations.Calendar.EventsReadTest.LogCapture do
-  @moduledoc false
-  # Minimal :logger handler that forwards each log event (with full
-  # metadata) to a test process. The test-env default formatter only prints
-  # a whitelisted subset of metadata keys, so this is what lets a test
-  # assert on metadata fields the formatter would otherwise hide.
-  @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
-  def log(event, %{config: %{pid: pid}}) do
-    send(pid, {:captured_log, event})
-    :ok
-  end
-end
-
 defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.EventsRead
-  alias Tymeslot.Integrations.Calendar.EventsReadTest.LogCapture
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
+  alias Tymeslot.Test.LogCapture
 
   @base_time ~U[2024-01-01 12:00:00Z]
 
@@ -325,9 +312,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
       start_dt = DateTime.add(@base_time, -3600, :second)
       end_dt = DateTime.add(@base_time, 3600, :second)
 
-      handler_id = :events_read_test_partial_success_handler
-      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-      on_exit(fn -> :logger.remove_handler(handler_id) end)
+      LogCapture.attach()
 
       assert {:error, %Outcome{}, "/cal/partial-success"} =
                EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
