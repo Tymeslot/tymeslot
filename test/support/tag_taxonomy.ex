@@ -116,7 +116,13 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :git_cliff,
       # Needs a real outbound HTTP proxy plus internet access — run with
       # HTTPS_PROXY=... mix test --only proxy_integration
-      :proxy_integration
+      :proxy_integration,
+      # Compares .pot catalogues against source by running gettext extraction in
+      # a subprocess, which force-recompiles the app it extracts from. That is
+      # ~100s, and was the largest single cost in the suite that owns these
+      # tests, so they are excluded by default and run on a schedule instead —
+      # run with mix test --only catalogue_freshness
+      :catalogue_freshness
     ]
   }
 

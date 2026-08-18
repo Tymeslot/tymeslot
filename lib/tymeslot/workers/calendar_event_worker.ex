@@ -29,8 +29,14 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   require Logger
 
   # Configuration
-  # 90 seconds for CalDAV operations (increased for background retries)
-  @calendar_timeout_ms 90_000
+  # 90 seconds for CalDAV operations (increased for background retries).
+  #
+  # Read at runtime rather than through `Application.compile_env/3`, which is
+  # this project's default: a compiled-in constant cannot be lowered by the test
+  # that exercises the timeout branch, so that test sat waiting out the full 90
+  # seconds and was half the Core suite's wall clock on its own. One
+  # `Application.get_env/3` per job is not a hot path.
+  @default_calendar_timeout_ms 90_000
 
   @doc """
   Performs the calendar event operation based on the action specified.
@@ -77,8 +83,14 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
+  defp calendar_timeout_ms do
+    Application.get_env(:tymeslot, :calendar_timeout_ms, @default_calendar_timeout_ms)
+  end
+
   defp handle_task_result(task, action, meeting_id, job) do
-    case Task.yield(task, @calendar_timeout_ms) || Task.shutdown(task) do
+    timeout_ms = calendar_timeout_ms()
+
+    case Task.yield(task, timeout_ms) || Task.shutdown(task) do
       {:ok, result} ->
         handle_result(result, job)
 
@@ -95,7 +107,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         Logger.error("Calendar operation timed out",
           action: action,
           meeting_id: meeting_id,
-          timeout_ms: @calendar_timeout_ms
+          timeout_ms: timeout_ms
         )
 
         # Snooze instead of error to give the server recovery time before

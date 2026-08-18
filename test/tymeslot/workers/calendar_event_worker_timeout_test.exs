@@ -15,11 +15,13 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
   setup :verify_on_exit!
 
   describe "perform/1 - timeout handling" do
-    @tag timeout: 150_000
     test "snoozes on timeout when CalDAV operation blocks" do
       # Exercises the Task.yield timeout path, which only fires when test_mode
-      # is false and the spawned task exceeds @calendar_timeout_ms (90s).
-      # Takes ~90 seconds to run because the timeout is a compiled constant.
+      # is false and the spawned task outlives the calendar timeout. That
+      # timeout is 90s in production and read from config, so this lowers it to
+      # 50ms rather than waiting out the real one; the branch under test is the
+      # same either way, and the wait was previously half of this suite's
+      # runtime on its own.
       meeting = insert(:meeting)
 
       Mox.stub(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
@@ -29,6 +31,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
 
       original_test_mode = Application.get_env(:tymeslot, :test_mode, false)
       Application.put_env(:tymeslot, :test_mode, false)
+      Application.put_env(:tymeslot, :calendar_timeout_ms, 50)
 
       try do
         assert {:snooze, 300} =
@@ -38,6 +41,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
                  })
       after
         Application.put_env(:tymeslot, :test_mode, original_test_mode)
+        Application.delete_env(:tymeslot, :calendar_timeout_ms)
       end
     end
   end
