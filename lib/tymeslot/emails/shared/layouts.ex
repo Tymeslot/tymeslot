@@ -15,6 +15,7 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   is no inference and no default — the template knows what it is.
   """
 
+  alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.{Frame, MjmlEmail, Sanitise, Stage, Styles, Urls}
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -44,7 +45,7 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   - `:eyebrow` — the short label shown above the stage title
 
   Optional opts:
-  - `:title` — the HTML `<title>` (default: `"Tymeslot"`)
+  - `:title` — the HTML `<title>` (default: the configured brand name)
   - `:preview` — the inbox preview text
   - `:stage_title` — headline in the stage band (default: the `:title`)
   - `:stage_subtitle` — optional supporting line
@@ -53,13 +54,13 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   def system_layout(content, opts) do
     intent = fetch_required!(opts, :intent)
     eyebrow = fetch_required!(opts, :eyebrow)
-    raw_title = Keyword.get(opts, :title, "Tymeslot")
+    raw_title = Keyword.get(opts, :title, Branding.brand_name())
     title = Sanitise.sanitize_for_email(raw_title)
 
     preview =
       opts
       |> Keyword.get_lazy(:preview, fn ->
-        dgettext("emails", "Important notification from Tymeslot")
+        dgettext("emails", "Important notification from %{brand}", brand: Branding.brand_name())
       end)
       |> Sanitise.sanitize_for_email()
 

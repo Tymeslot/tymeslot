@@ -481,3 +481,128 @@ msgstr "Вимагати проходження перевірки reCAPTCHA v3 
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr "Вимагати проходження перевірки reCAPTCHA v3 на загальнодоступній формі реєстрації. Потребує налаштування змінних середовища RECAPTCHA_SITE_KEY та RECAPTCHA_SECRET_KEY - якщо ключі відсутні, перемикач залишається активним, але перевірка непомітно пропускається."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Accent colour used across transactional emails: buttons, links, the confirmation banner, and badge backgrounds. The darker and lighter shades of the family are derived from it. Amber and red are not affected - they signal \"needs attention\" and \"cancelled\", and recolouring them would make a cancellation read as a confirmation. Leave blank for the stock turquoise."
+msgstr "Акцентний колір, який використовується в транзакційних листах: кнопки, посилання, банер підтвердження та тло позначок. Темніші та світліші відтінки цієї гами походять від нього. Бурштиновий і червоний не змінюються: вони позначають «потребує уваги» та «скасовано», і їх перефарбування зробило б скасування схожим на підтвердження. Залиште порожнім, щоб використати стандартний бірюзовий."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not remove the logo."
+msgstr "Не вдалося видалити логотип."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the logo."
+msgstr "Не вдалося зберегти логотип."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Current email logo"
+msgstr "Поточний логотип листів"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Email accent colour"
+msgstr "Акцентний колір листів"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Email brand name"
+msgstr "Назва бренду в листах"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Email branding"
+msgstr "Брендування листів"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Email logo"
+msgstr "Логотип листів"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Email logo removed."
+msgstr "Логотип листів видалено."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Email logo updated."
+msgstr "Логотип листів оновлено."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a hex colour such as #14b8a6."
+msgstr "Введіть шістнадцятковий колір, наприклад #14b8a6."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Logo shown at the top of every transactional email. Converted to a PNG in your browser before upload and attached inline, so it renders even in clients that block remote images. SVG, PNG, JPEG, and WebP sources are all accepted."
+msgstr "Логотип у верхній частині кожного транзакційного листа. Перед завантаженням він перетворюється на PNG у вашому браузері та вкладається безпосередньо в лист, тож відображається навіть у клієнтах, які блокують віддалені зображення. Приймаються файли SVG, PNG, JPEG і WebP."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
+msgstr "Назва, яка показується в рядку попереднього перегляду вхідних, в альтернативному тексті логотипа та в заголовку листа. Не змінює ім’я відправника, для цього слугує EMAIL_FROM_NAME. Залиште порожнім, щоб використати «Tymeslot»."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a colour"
+msgstr "Виберіть колір"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr "Видалити"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Replace"
+msgstr "Замінити"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That file is not a valid image and was not saved."
+msgstr "Цей файл не є дійсним зображенням і не був збережений."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That file type is not supported."
+msgstr "Цей тип файлу не підтримується."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That image could not be read. Try a PNG or JPEG."
+msgstr "Не вдалося прочитати зображення. Спробуйте PNG або JPEG."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That value is too long."
+msgstr "Це значення задовге."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "The logo could not be uploaded."
+msgstr "Не вдалося завантажити логотип."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Upload"
+msgstr "Завантажити"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Upload one logo at a time."
+msgstr "Завантажуйте по одному логотипу за раз."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "White button text on this colour has a contrast of only %{ratio}:1. Buttons may be hard to read."
+msgstr "Білий текст кнопок на цьому кольорі має контраст лише %{ratio}:1. Кнопки може бути важко прочитати."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That image is too large. Pick one under %{limit}."
+msgstr "Це зображення завелике. Виберіть менше за %{limit}."

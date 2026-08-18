@@ -7,6 +7,7 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
   from a title string or a fallback default.
   """
 
+  alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.{AvatarHelper, Layouts, MjmlEmail}
   alias Tymeslot.Emails.Shared.Styles.Tokens
 
@@ -57,7 +58,7 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
       name: appointment_details.organizer_name,
       email: appointment_details.organizer_email,
       avatar_url: AvatarHelper.generate_avatar_url(appointment_details),
-      title: appointment_details.organizer_title || "Tymeslot"
+      title: appointment_details.organizer_title || Branding.brand_name()
     }
 
     Enum.reduce(stage, base, fn {k, v}, acc -> Map.put(acc, k, v) end)

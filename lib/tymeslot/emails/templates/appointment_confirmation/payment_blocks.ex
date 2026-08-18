@@ -262,12 +262,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   defp receipt_button(%{receipt_url: receipt_url}) do
     button_label = dgettext("emails", "View receipt")
     safe_url = Sanitise.sanitize_for_email(receipt_url)
+    accent_deep = Styles.intent_accent_deep(:confirmed)
 
     """
     <mj-button
       href="#{safe_url}"
-      background-color="#{Styles.intent_accent_deep(:confirmed)}"
-      color="#ffffff"
+      background-color="#{accent_deep}"
+      color="#{Styles.button_text_color(accent_deep)}"
       border-radius="#{Styles.button_radius()}"
       font-weight="600"
       padding="14px 0 0 0"

@@ -481,3 +481,128 @@ msgstr "Einen bestandenen reCAPTCHA-v3-Score im öffentlichen Buchungsformular v
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr "Einen bestandenen reCAPTCHA-v3-Score im öffentlichen Registrierungsformular verlangen. Erfordert, dass RECAPTCHA_SITE_KEY und RECAPTCHA_SECRET_KEY in der Umgebung gesetzt sind - fehlen die Schlüssel, wird der Schalter beachtet, die Prüfung jedoch stillschweigend übersprungen."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Accent colour used across transactional emails: buttons, links, the confirmation banner, and badge backgrounds. The darker and lighter shades of the family are derived from it. Amber and red are not affected - they signal \"needs attention\" and \"cancelled\", and recolouring them would make a cancellation read as a confirmation. Leave blank for the stock turquoise."
+msgstr "Akzentfarbe für alle Transaktions-E-Mails: Schaltflächen, Links, das Bestätigungsbanner und Badge-Hintergründe. Die dunkleren und helleren Abstufungen der Farbfamilie werden daraus abgeleitet. Bernstein und Rot bleiben unverändert, denn sie signalisieren „Handlungsbedarf“ und „abgesagt“; eine Umfärbung ließe eine Absage wie eine Bestätigung wirken. Leer lassen für das voreingestellte Türkis."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not remove the logo."
+msgstr "Das Logo konnte nicht entfernt werden."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the logo."
+msgstr "Das Logo konnte nicht gespeichert werden."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Current email logo"
+msgstr "Aktuelles E-Mail-Logo"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Email accent colour"
+msgstr "E-Mail-Akzentfarbe"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Email brand name"
+msgstr "E-Mail-Markenname"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Email branding"
+msgstr "E-Mail-Branding"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Email logo"
+msgstr "E-Mail-Logo"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Email logo removed."
+msgstr "E-Mail-Logo entfernt."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Email logo updated."
+msgstr "E-Mail-Logo aktualisiert."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a hex colour such as #14b8a6."
+msgstr "Bitte geben Sie eine Hex-Farbe wie #14b8a6 ein."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Logo shown at the top of every transactional email. Converted to a PNG in your browser before upload and attached inline, so it renders even in clients that block remote images. SVG, PNG, JPEG, and WebP sources are all accepted."
+msgstr "Logo am Kopf jeder Transaktions-E-Mail. Es wird vor dem Hochladen im Browser in ein PNG umgewandelt und direkt in die Nachricht eingebettet, sodass es auch in Clients erscheint, die entfernte Bilder blockieren. SVG, PNG, JPEG und WebP werden als Quellformat akzeptiert."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Name shown in the inbox preview line, the logo's alt text, and the email title. Does not change the sender name - set EMAIL_FROM_NAME for that. Leave blank to use \"Tymeslot\"."
+msgstr "Name in der Vorschauzeile im Posteingang, im Alt-Text des Logos und im Titel der E-Mail. Ändert nicht den Absendernamen, dafür ist EMAIL_FROM_NAME zuständig. Leer lassen, um „Tymeslot“ zu verwenden."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a colour"
+msgstr "Farbe auswählen"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr "Entfernen"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Replace"
+msgstr "Ersetzen"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That file is not a valid image and was not saved."
+msgstr "Diese Datei ist kein gültiges Bild und wurde nicht gespeichert."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That file type is not supported."
+msgstr "Dieser Dateityp wird nicht unterstützt."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That image could not be read. Try a PNG or JPEG."
+msgstr "Dieses Bild konnte nicht gelesen werden. Versuchen Sie es mit einem PNG oder JPEG."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "That value is too long."
+msgstr "Dieser Wert ist zu lang."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "The logo could not be uploaded."
+msgstr "Das Logo konnte nicht hochgeladen werden."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "Upload"
+msgstr "Hochladen"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Upload one logo at a time."
+msgstr "Bitte laden Sie nur ein Logo auf einmal hoch."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex
+#, elixir-autogen, elixir-format
+msgid "White button text on this colour has a contrast of only %{ratio}:1. Buttons may be hard to read."
+msgstr "Weißer Schaltflächentext auf dieser Farbe hat nur einen Kontrast von %{ratio}:1. Schaltflächen sind möglicherweise schwer lesbar."
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That image is too large. Pick one under %{limit}."
+msgstr "Dieses Bild ist zu groß. Bitte wählen Sie eines unter %{limit}."

@@ -46,6 +46,13 @@ defmodule Tymeslot.AppSettings.Env do
   def default_for(:meeting_payments_enabled), do: false
   def default_for(:booking_analytics_enabled), do: false
 
+  # Email branding. A nil accent and logo mean "use what ships"; the brand
+  # name has a real default because it is substituted into user-facing copy
+  # and every caller would otherwise repeat the same fallback string.
+  def default_for(:email_brand_accent), do: nil
+  def default_for(:email_brand_name), do: "Tymeslot"
+  def default_for(:email_logo_path), do: nil
+
   @doc """
   Reads the effective config-layer value for `key`, handling both top-level
   and nested keys and falling back to the built-in default.

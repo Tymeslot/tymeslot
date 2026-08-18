@@ -3,7 +3,8 @@ defmodule Tymeslot.Emails.Shared.AvatarHelper do
   Helper functions for generating avatar URLs in email templates.
   """
 
-  alias Tymeslot.Emails.Shared.Sanitise
+  alias Tymeslot.Emails.Shared.{Sanitise, Styles}
+  alias Tymeslot.Emails.Shared.Styles.Tokens
 
   @doc """
   Generates an avatar URL for an organizer.
@@ -49,10 +50,12 @@ defmodule Tymeslot.Emails.Shared.AvatarHelper do
       |> String.upcase()
       |> Sanitise.sanitize_for_email()
 
+    accent_deep = Tokens.intent_accent_deep(:confirmed)
+
     svg = """
     <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="25" cy="25" r="25" fill="#14b8a6"/>
-      <text x="25" y="30" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="600" fill="white">#{initials}</text>
+      <circle cx="25" cy="25" r="25" fill="#{accent_deep}"/>
+      <text x="25" y="30" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="600" fill="#{Styles.button_text_color(accent_deep)}">#{initials}</text>
     </svg>
     """
 
