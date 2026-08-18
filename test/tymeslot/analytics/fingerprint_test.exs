@@ -2,6 +2,7 @@ defmodule Tymeslot.Analytics.FingerprintTest do
   use ExUnit.Case, async: true
 
   @moduletag :unit
+  @moduletag :analytics
 
   alias Tymeslot.Analytics.Fingerprint
 

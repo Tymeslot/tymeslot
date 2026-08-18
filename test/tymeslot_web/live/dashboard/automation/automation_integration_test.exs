@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integration
+  @moduletag :automation
 
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers

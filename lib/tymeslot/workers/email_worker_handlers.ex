@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.PollEmails
 
   # Static dispatch table — keeps `execute_email_action/2` simple and lets
   # adding a new email type be a one-line change. Each entry maps the
@@ -25,6 +26,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
     "send_seat_reminder" => {GroupMeetingEmails, :handle_seat_reminder_emails},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
+    "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders},
+    "send_poll_host_nudge" => {PollEmails, :handle_host_nudge},
     "send_email_change_confirmations" => {AuthEmails, :handle_email_change_confirmations},
     "send_email_verification" => {AuthEmails, :handle_email_verification},
     "send_password_reset" => {AuthEmails, :handle_password_reset},

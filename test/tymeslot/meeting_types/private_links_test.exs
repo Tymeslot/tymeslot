@@ -181,6 +181,13 @@ defmodule Tymeslot.MeetingTypes.PrivateLinksTest do
       refute cs.valid?
     end
 
+    test "rejects the reserved 'poll' slug that would shadow the voting page" do
+      type = insert(:meeting_type)
+      cs = MeetingTypeSchema.slug_changeset(type, %{slug: "poll"})
+      refute cs.valid?
+      assert "is reserved" in errors_on(cs).slug
+    end
+
     test "accepts lowercase alphanumerics and hyphens" do
       type = insert(:meeting_type)
       cs = MeetingTypeSchema.slug_changeset(type, %{slug: "vip-2026"})

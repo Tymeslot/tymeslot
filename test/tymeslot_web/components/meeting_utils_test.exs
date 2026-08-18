@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Components.MeetingUtilsTest do
   use ExUnit.Case, async: true
 
   @moduletag :components
+  @moduletag :meetings
 
   alias TymeslotWeb.Components.MeetingUtils
 

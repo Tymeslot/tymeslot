@@ -15,6 +15,7 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   @moduletag :proxy_integration
   @moduletag :integration
   @moduletag timeout: 30_000
+  @moduletag :infrastructure
 
   setup_all do
     original_proxy = Application.get_env(:tymeslot, :http_proxy)

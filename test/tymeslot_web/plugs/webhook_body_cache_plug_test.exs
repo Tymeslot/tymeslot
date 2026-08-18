@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
   use ExUnit.Case, async: false
 
   @moduletag :plugs
+  @moduletag :webhooks
 
   alias Plug.Test, as: PlugTest
   alias TymeslotWeb.Plugs.WebhookBodyCachePlug

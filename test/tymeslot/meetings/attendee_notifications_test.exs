@@ -3,6 +3,8 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integration
+  @moduletag :meetings
+  @moduletag :notifications
 
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary

@@ -151,4 +151,49 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtilsTest do
       end
     end
   end
+
+  # `normalize_url(url, provider: :nextcloud)` is what turns whatever a user
+  # pastes into the connect form into the base the CalDAV client queries, so a
+  # wrong result here is invisible: discovery still returns a well-formed 2xx,
+  # just for a resource that holds no calendars.
+  #
+  # Subdirectory installs were broken in both directions before this block
+  # existed. A browser-pasted app route was reduced to `scheme://host`, silently
+  # dropping the subdirectory; and a bare subdirectory host was left untouched,
+  # so the DAV endpoint was never appended at all.
+  describe "normalize_url/2 with provider: :nextcloud" do
+    test "appends the DAV endpoint to a bare host" do
+      assert PathUtils.normalize_url("https://cloud.example.com", provider: :nextcloud) ==
+               "https://cloud.example.com/remote.php/dav/"
+    end
+
+    test "appends the DAV endpoint to a subdirectory install" do
+      assert PathUtils.normalize_url("https://example.com/nextcloud", provider: :nextcloud) ==
+               "https://example.com/nextcloud/remote.php/dav/"
+    end
+
+    test "keeps the subdirectory when stripping a browser-pasted app route" do
+      assert PathUtils.normalize_url("https://example.com/nextcloud/apps/calendar",
+               provider: :nextcloud
+             ) == "https://example.com/nextcloud/remote.php/dav/"
+    end
+
+    test "keeps the subdirectory when stripping an index.php front-controller URL" do
+      assert PathUtils.normalize_url("https://example.com/nextcloud/index.php/apps/calendar",
+               provider: :nextcloud
+             ) == "https://example.com/nextcloud/remote.php/dav/"
+    end
+
+    test "leaves a URL that already points inside the DAV endpoint untouched" do
+      assert PathUtils.normalize_url(
+               "https://example.com/nextcloud/remote.php/dav/calendars/alice/personal",
+               provider: :nextcloud
+             ) == "https://example.com/nextcloud/remote.php/dav/calendars/alice/personal/"
+    end
+
+    test "preserves a non-standard port" do
+      assert PathUtils.normalize_url("https://cloud.example.com:8443", provider: :nextcloud) ==
+               "https://cloud.example.com:8443/remote.php/dav/"
+    end
+  end
 end

@@ -84,6 +84,60 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
       assert {:ok, calendars} = Discovery.discover_calendars_for_integration(integration)
       assert Enum.map(calendars, & &1.name) == ["Personal"]
     end
+
+    test "discovers for nextcloud provider even when base_url omits /remote.php/dav" do
+      # Regression: `Nextcloud.Provider.perform_connection_test/1` normalises
+      # `integration.base_url` through `PathUtils.normalize_url/2` before
+      # probing (see its moduledoc), but
+      # `Nextcloud.Provider.discover_calendars_for_integration/1` passed
+      # `integration.base_url` straight through unnormalised. A base_url
+      # persisted without `/remote.php/dav` (the format
+      # `Creation.prepare_attrs` actually stores) made "Test connection"
+      # succeed while the calendar picker silently found nothing, because the
+      # guessed discovery path became `<base_url>/calendars/<user>/` instead
+      # of the CalDAV-mounted `/remote.php/dav/calendars/<user>/`.
+      #
+      # The probed URL is asserted down to the calendar home rather than to
+      # `/remote.php/dav/`: the service root the discovery fix exists to avoid
+      # ends in exactly that prefix, so the looser assertion passed either way
+      # and this case could not tell the bug from the fix.
+      integration =
+        insert(:calendar_integration,
+          provider: "nextcloud",
+          base_url: "https://cloud.example.com",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("app-password")
+        )
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, url, _body, _headers, _opts ->
+        assert url =~ "/remote.php/dav/calendars/alice/", "probed wrong URL: #{url}"
+
+        {:ok,
+         %Req.Response{
+           status: 207,
+           body: """
+           <d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+             <d:response>
+               <d:href>/remote.php/dav/calendars/alice/personal/</d:href>
+               <d:propstat>
+                 <d:prop>
+                   <d:displayname>Personal</d:displayname>
+                   <d:resourcetype>
+                     <d:collection/>
+                     <cal:calendar/>
+                   </d:resourcetype>
+                 </d:prop>
+                 <d:status>HTTP/1.1 200 OK</d:status>
+               </d:propstat>
+             </d:response>
+           </d:multistatus>
+           """
+         }}
+      end)
+
+      assert {:ok, calendars} = Discovery.discover_calendars_for_integration(integration)
+      assert Enum.map(calendars, & &1.name) == ["Personal"]
+    end
   end
 
   describe "discover_calendars_for_credentials/5" do

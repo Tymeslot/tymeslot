@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModalTe
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :calendar
 
   import Phoenix.LiveViewTest
 

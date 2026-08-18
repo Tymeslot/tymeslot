@@ -44,13 +44,17 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
       {token, _value} = Token.generate_password_reset_token()
       {:ok, _stored} = UserTokenQueries.set_reset_token(user, token)
 
+      token_hash = Token.hash_token(token)
+
       queries =
         capture_repo_queries(fn ->
           assert {:ok, _found} = UserTokenQueries.get_user_by_reset_token_for_update(token)
         end)
 
       lookup =
-        Enum.find(queries, &(&1 =~ "reset_token_hash" and &1 =~ ~r/^SELECT/i))
+        Enum.find_value(queries, fn {query, params} ->
+          if token_hash in params, do: query
+        end)
 
       assert lookup, "expected a token lookup query, got: #{inspect(queries)}"
 
@@ -62,6 +66,14 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
   # The lock is only observable in the SQL the repo actually issues, so the
   # query is captured from Ecto's telemetry rather than rebuilt in the test —
   # a rebuilt query proves nothing about the one production runs.
+  #
+  # Ecto's telemetry is global and carries no originating pid, so this window
+  # also catches every query issued by whatever else is running concurrently.
+  # The params come back with the query for that reason: the caller identifies
+  # its own statement by the token hash it bound, which nothing else in the VM
+  # holds. Matching on the SQL text instead is not enough — a plain
+  # `Repo.get(UserSchema, id)` from another async test selects the
+  # `reset_token_hash` column too, and was picked up as the lookup.
   defp capture_repo_queries(fun) do
     ref = make_ref()
     handler_id = {__MODULE__, ref}
@@ -91,8 +103,11 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
         ) :: :ok
   def handle_repo_query(_event, _measurements, metadata, %{pid: pid, ref: ref}) do
     case metadata do
-      %{query: query} when is_binary(query) -> send(pid, {ref, query})
-      _no_sql -> :ok
+      %{query: query, params: params} when is_binary(query) ->
+        send(pid, {ref, {query, params}})
+
+      _no_sql ->
+        :ok
     end
 
     :ok
@@ -100,7 +115,7 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
 
   defp drain(ref, acc) do
     receive do
-      {^ref, query} -> drain(ref, [query | acc])
+      {^ref, captured} -> drain(ref, [captured | acc])
     after
       0 -> Enum.reverse(acc)
     end

@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Plugs.FetchCurrentUserTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :plugs
+  @moduletag :auth
 
   alias Phoenix.ConnTest
   alias Plug.Conn

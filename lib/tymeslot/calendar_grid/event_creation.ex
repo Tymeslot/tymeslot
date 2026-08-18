@@ -8,7 +8,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     * build iCal event data from the dashboard create form,
     * plan and attach video-conference data (inline Google Meet or a
       separately-provisioned room),
-    * call the calendar provider via `EventOperations`,
+    * call the calendar provider via `Calendar.Events`,
     * fire attendee notifications, and
     * look up integration metadata for the cache row.
 
@@ -25,8 +25,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
-  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video.EventDetails
@@ -89,7 +89,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan)
 
     result =
-      calendar_operations_module().create_event(
+      CalendarEvents.create_event(
         event_data,
         {creating.integration_id, user_id}
       )
@@ -258,10 +258,6 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        video_room_id: video_room_id,
        description: notify_event.description
      }}
-  end
-
-  defp calendar_operations_module do
-    Application.get_env(:tymeslot, :event_create_operations_module, EventOperations)
   end
 
   defp provision_video_room(integration_id, user_id, event_details)

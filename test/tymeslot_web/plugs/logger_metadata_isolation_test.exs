@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
   use ExUnit.Case, async: false
 
   @moduletag :plugs
+  @moduletag :infrastructure
 
   alias Phoenix.LiveView.Socket
   alias Plug.Conn

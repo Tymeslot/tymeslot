@@ -1,0 +1,272 @@
+/* Polls — public voting page (Rhythm video-background card).
+   Every rule is scoped to html.rhythm-theme so poll styling stays inside the
+   theme. Colours come from the theme's own --theme-* tokens and spacing/radii
+   from the shared --space-* / --radius-* / --border-width-* tokens (see
+   booking-form.css); structure from the shared PollVotingComponents classes. */
+
+html.rhythm-theme .poll-voting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-lg);
+  color: var(--theme-text);
+}
+
+html.rhythm-theme .poll-voting-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  text-align: center;
+}
+
+html.rhythm-theme .poll-voting-title {
+  font-size: var(--theme-font-size-2xl);
+  font-weight: 700;
+  line-height: var(--theme-line-height-snug);
+  color: var(--theme-text);
+}
+
+html.rhythm-theme .poll-voting-description {
+  font-size: var(--theme-font-size-base);
+  color: var(--theme-text-secondary);
+}
+
+html.rhythm-theme .poll-voting-timezone {
+  /* A badge, not a line of prose: it labels every time below it rather than
+     saying something in its own right. `align-self: center` keeps it centred
+     inside the header's flex column without stretching the pill full width. */
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.15);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.rhythm-theme .poll-voting-timezone-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+html.rhythm-theme .poll-voting-greeting {
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-primary);
+}
+
+html.rhythm-theme .poll-voting-notice {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+  text-align: center;
+}
+
+/* Deadline banner */
+html.rhythm-theme .poll-deadline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.08);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.15);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.rhythm-theme .poll-deadline-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-warning);
+}
+
+/* Registration form */
+html.rhythm-theme .poll-identity-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+html.rhythm-theme .poll-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+html.rhythm-theme .poll-field-label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+html.rhythm-theme .poll-field-input {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--input-border-radius);
+  background: rgba(255, 255, 255, 0.1);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.2);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-base);
+}
+
+html.rhythm-theme .poll-field-input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25);
+}
+
+html.rhythm-theme .poll-submit-button {
+  align-self: stretch;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--button-radius);
+  background: var(--theme-primary);
+  color: #fff;
+  font-size: var(--theme-font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+html.rhythm-theme .poll-submit-button:hover {
+  background: var(--theme-primary-hover);
+}
+
+/* Slot grid */
+html.rhythm-theme .poll-slot-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+html.rhythm-theme .poll-slot-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+html.rhythm-theme .poll-slot-row {
+  /* Time, tallies and controls on one line. They wrap onto their own lines
+     only when the card is too narrow to hold them, which is what keeps a
+     forty-slot poll from running to several screens. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.rhythm-theme .poll-slot-time {
+  /* Sized to its own content, never grown: with flex-grow the time swallows
+     the row and pushes the tallies onto a second line. It may still shrink, so
+     a long localised date wraps inside the row rather than forcing the
+     controls out of it. */
+  flex: 0 1 auto;
+  min-width: 0;
+  /* One step down from base so the date and its tallies fit on a single line
+     at the card's default width. A longer locale still wraps, which the row's
+     flex-wrap handles; this only decides where the common case lands. */
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+html.rhythm-theme .poll-slot-tallies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+html.rhythm-theme .poll-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.rhythm-theme .poll-tally-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+html.rhythm-theme .poll-tally--yes .poll-tally-icon {
+  color: var(--theme-accent);
+}
+
+html.rhythm-theme .poll-tally--if_need_be .poll-tally-icon {
+  color: var(--theme-warning);
+}
+
+html.rhythm-theme .poll-tally--no .poll-tally-icon {
+  color: var(--theme-danger);
+}
+
+/* Vote controls (three-state) */
+html.rhythm-theme .poll-vote-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+html.rhythm-theme .poll-vote-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.22);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+
+html.rhythm-theme .poll-vote-option:has(input:checked) {
+  border-color: var(--theme-primary);
+  background: rgba(6, 182, 212, 0.22);
+  font-weight: 600;
+}
+
+html.rhythm-theme .poll-vote-option--yes:has(input:checked) {
+  border-color: var(--theme-accent);
+}
+
+html.rhythm-theme .poll-vote-option--no:has(input:checked) {
+  border-color: var(--theme-danger);
+}
+
+/* Closed states */
+html.rhythm-theme .poll-closed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+  padding: var(--space-md) 0;
+}
+
+html.rhythm-theme .poll-closed-icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+html.rhythm-theme .poll-closed-icon--success {
+  color: var(--theme-accent);
+}
+
+html.rhythm-theme .poll-closed-icon--danger {
+  color: var(--theme-danger);
+}
+
+html.rhythm-theme .poll-closed-message {
+  font-size: var(--theme-font-size-md);
+  color: var(--theme-text);
+}

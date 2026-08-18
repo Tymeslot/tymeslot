@@ -301,25 +301,33 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     PathUtils.normalize_url(url, provider: :nextcloud, ensure_trailing_slash: false)
   end
 
+  # `UrlBuilder.build_calendar_url/2` resolves a leading slash as
+  # server-root-relative, against the origin alone, and anything else against
+  # `base_url`, which by this point ends in the instance's DAV endpoint. Both
+  # shapes reach here, so which one is produced decides where every read and
+  # write actually lands.
+  #
+  # Discovery stores the server's own hrefs, and those already carry whatever
+  # prefix the instance is served from: `/remote.php/dav/calendars/{user}/{cal}/`
+  # at the domain root, `/nextcloud/remote.php/dav/...` on a subdirectory
+  # install. Testing them against a fixed list of leading paths recognised only
+  # the domain-root spellings, so a subdirectory href fell through to the
+  # bare-name branch and was concatenated whole into the middle of a new path.
+  # Every root-relative path now passes through untouched: the server has
+  # already said where the collection lives, and nothing here can improve on it.
+  #
+  # A bare calendar name is the only shape left to build, and it is relative to
+  # the DAV endpoint rather than to the origin, so it is deliberately returned
+  # without a leading slash. Anchoring it at the root dropped `/remote.php/dav`
+  # on every install, subdirectory or not.
   defp build_nextcloud_calendar_paths(config) do
     username = config[:username]
     # calendar_paths might come from the database integration
     calendar_paths = config[:calendar_paths] || ["personal"]
 
-    Enum.map(calendar_paths, fn calendar_name ->
-      cond do
-        # Already a full server-root-relative DAV path stored by discovery.
-        String.starts_with?(calendar_name, "/remote.php/dav/") ->
-          calendar_name
-
-        # Already an absolute calendar path relative to /remote.php/dav
-        String.starts_with?(calendar_name, "/calendars/") ->
-          calendar_name
-
-        # Bare calendar name — build the standard per-user path
-        true ->
-          "/calendars/#{username}/#{calendar_name}/"
-      end
+    Enum.map(calendar_paths, fn
+      "/" <> _rest = discovered_path -> discovered_path
+      calendar_name -> "calendars/#{username}/#{calendar_name}/"
     end)
   end
 end

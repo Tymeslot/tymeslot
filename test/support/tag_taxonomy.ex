@@ -15,6 +15,16 @@ defmodule Tymeslot.Test.TagTaxonomy do
   | Test type / layer | What kind of tests these are (unit, integration, schema, etc.) |
   | Special / env     | Tags used for selective exclusion or CI environment control    |
 
+  ## Every Test Module Needs a Domain Tag
+
+  `CredoChecks.TestModuleTagRequired` requires at least one tag from the
+  **domain** category, not merely one from the taxonomy. The other categories
+  are orthogonal to subject matter: `:unit`, `:live` and `:components` say how a
+  test is written or which layer it exercises, and they are spread across every
+  feature, so they cannot answer "which tests cover payments?". Targeted runs
+  (`mix test --only payments`, `mix test.affected`) select on the domain
+  category alone, so a module with no domain tag is unreachable by any of them.
+
   ## Adding a New Tag
 
   1. Append the atom to the relevant section in `@taxonomy` below.
@@ -37,11 +47,15 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :availability,
       :bookings,
       :calendar,
+      :dashboard,
       :database,
       :demo,
+      :docs,
       :emails,
+      :i18n,
       :infrastructure,
       :integrations,
+      :legal,
       :mailer,
       :marketing,
       :meetings,
@@ -49,17 +63,24 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :notifications,
       :onboarding,
       :payments,
+      :polls,
       :profiles,
       :scheduling,
       :security,
       :themes,
+      :ui,
       :utils,
       :video,
       :workers,
       :seo,
       :slack,
       :telegram,
-      :custom_fields
+      :custom_fields,
+      :webhooks,
+      # The project's own tooling: mix tasks, the precommit runner, the custom
+      # Credo checks. A domain rather than a test type, because it names what
+      # the tests are about, not how they are written.
+      :dev_support
     ],
     web_layer: [
       :components,
@@ -73,8 +94,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :integration,
       :schema,
       :queries,
-      :migrations,
-      :dev_support
+      :migrations
     ],
     special: [
       # Excluded by default in ExUnit.configure — keep in sync with test_helper.exs
@@ -96,7 +116,13 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :git_cliff,
       # Needs a real outbound HTTP proxy plus internet access — run with
       # HTTPS_PROXY=... mix test --only proxy_integration
-      :proxy_integration
+      :proxy_integration,
+      # Compares .pot catalogues against source by running gettext extraction in
+      # a subprocess, which force-recompiles the app it extracts from. That is
+      # ~100s, and was the largest single cost in the suite that owns these
+      # tests, so they are excluded by default and run on a schedule instead —
+      # run with mix test --only catalogue_freshness
+      :catalogue_freshness
     ]
   }
 

@@ -2,6 +2,7 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
   use TymeslotWeb.BrowserCase, async: false
 
   @moduletag :e2e
+  @moduletag :auth
 
   # Override the default stub to capture the reset URL before the Oban job
   # delivers it. The plaintext token is only available at generation time —

@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
   use ExUnit.Case, async: true
 
   @moduletag :unit
+  @moduletag :dashboard
 
   alias Tymeslot.Agenda.Day
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent

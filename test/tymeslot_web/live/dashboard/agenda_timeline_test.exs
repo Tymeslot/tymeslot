@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.AgendaTimelineTest do
   use ExUnit.Case, async: true
 
   @moduletag :unit
+  @moduletag :dashboard
 
   alias Tymeslot.Agenda.Entry
   alias TymeslotWeb.Dashboard.AgendaTimeline

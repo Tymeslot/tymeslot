@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :calendar
 
   import Phoenix.LiveViewTest
 

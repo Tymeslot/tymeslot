@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.TabNavTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :integrations
 
   import Phoenix.LiveViewTest
 

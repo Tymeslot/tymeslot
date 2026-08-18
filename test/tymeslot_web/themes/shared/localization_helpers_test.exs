@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   @moduledoc """
   Covers `format_meeting_datetime/2`, which renders a meeting's start time on
-  the payment return pages in the attendee's own timezone rather than raw UTC.
+  the payment return pages in the attendee's own timezone rather than raw UTC,
+  and its compact sibling used by lists that repeat the date on every row.
   """
 
   use ExUnit.Case, async: true
@@ -63,6 +64,71 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
 
     test "returns an empty string for an unusable value" do
       assert LocalizationHelpers.format_meeting_datetime(nil, "America/New_York") == ""
+    end
+  end
+
+  describe "format_meeting_datetime_compact/2" do
+    test "shifts into the attendee's timezone and names the weekday" do
+      # 14:00 UTC in June is 10:00 in New York (EDT, UTC-4); 2026-06-15 is a Monday.
+      result =
+        LocalizationHelpers.format_meeting_datetime_compact(
+          ~U[2026-06-15 14:00:00Z],
+          "America/New_York"
+        )
+
+      assert result == "Monday 15 June, 10:00 AM"
+    end
+
+    test "drops the year and the timezone the long form carries" do
+      long =
+        LocalizationHelpers.format_meeting_datetime(
+          ~U[2026-06-15 14:00:00Z],
+          "America/New_York"
+        )
+
+      compact =
+        LocalizationHelpers.format_meeting_datetime_compact(
+          ~U[2026-06-15 14:00:00Z],
+          "America/New_York"
+        )
+
+      # The caller states the zone once for the whole list, so carrying it per
+      # row is exactly the width this format exists to save.
+      assert long =~ "2026"
+      assert long =~ "EDT"
+      refute compact =~ "2026"
+      refute compact =~ "EDT"
+    end
+
+    test "accepts a naive datetime as UTC and shifts it" do
+      assert LocalizationHelpers.format_meeting_datetime_compact(
+               ~N[2026-06-15 14:00:00],
+               "America/New_York"
+             ) == "Monday 15 June, 10:00 AM"
+    end
+
+    test "falls back to UTC when the timezone is missing or unknown" do
+      # 14:00 UTC stays 14:00, rendered on the English 12-hour clock.
+      assert LocalizationHelpers.format_meeting_datetime_compact(~U[2026-06-15 14:00:00Z], nil) ==
+               "Monday 15 June, 02:00 PM"
+
+      assert LocalizationHelpers.format_meeting_datetime_compact(
+               ~U[2026-06-15 14:00:00Z],
+               "Not/AZone"
+             ) == "Monday 15 June, 02:00 PM"
+    end
+
+    test "follows the visitor's locale for weekday, month and clock" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+
+      assert LocalizationHelpers.format_meeting_datetime_compact(
+               ~U[2026-06-15 14:00:00Z],
+               "America/New_York"
+             ) == "Montag, 15. Juni, 10:00"
+    end
+
+    test "returns an empty string for an unusable value" do
+      assert LocalizationHelpers.format_meeting_datetime_compact(nil, "America/New_York") == ""
     end
   end
 

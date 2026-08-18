@@ -494,6 +494,7 @@ msgid "Need to reschedule? Check your confirmation email."
 msgstr "Devi riprogrammare? Controlla l'email di conferma."
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "No"
 msgstr "No"
@@ -819,6 +820,7 @@ msgid "Wednesday"
 msgstr "Mercoledì"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr "Sì"
@@ -1218,11 +1220,13 @@ msgid "Payment not found."
 msgstr "Pagamento non trovato."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification failed. Please try again."
 msgstr "Verifica di sicurezza non riuscita. Riprova."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
 msgstr "La verifica di sicurezza non è al momento disponibile. La causa potrebbe essere JavaScript disattivato, estensioni per la privacy del browser (Privacy Badger, uBlock Origin, ecc.) o criteri di sicurezza della rete. Modifica le impostazioni o contatta l'assistenza se il problema persiste."
@@ -1273,59 +1277,115 @@ msgstr "Fissa una riunione"
 msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
 msgstr "Questa pagina di prenotazione richiede JavaScript per prenotare le riunioni. Attivalo per continuare."
 
-#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} seat left"
-msgid_plural "%{count} seats left"
-msgstr[0] "%{count} posto libero"
-msgstr[1] "%{count} posti liberi"
+msgid "Continue to vote"
+msgstr "Continua a votare"
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel your spot?"
-msgstr "Annullare il tuo posto?"
+msgid "If need be"
+msgstr "Se necessario"
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
-msgid "Confirm to give up your spot in this meeting with %{name}."
-msgstr "Conferma per rinunciare al tuo posto in questo incontro con %{name}."
+msgid "One of the selected times is no longer available. Please refresh and try again."
+msgstr "Uno degli orari selezionati non è più disponibile. Aggiorna la pagina e riprova."
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
-msgid "The link may have expired or already been used. Please contact the meeting host."
-msgstr "Il link di invito potrebbe essere scaduto o già stato utilizzato. Contatta l'organizzatore."
+msgid "One of your responses wasn't recognised. Please refresh and try again."
+msgstr "Una delle tue risposte non è stata riconosciuta. Aggiorna la pagina e riprova."
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
-msgid "The meeting is too close to its start time. Please contact the host directly."
-msgstr "L'incontro è troppo vicino all'orario di inizio. Contatta direttamente l'organizzatore."
+msgid "Please check your name and email, then try again."
+msgstr "Controlla il tuo nome e la tua email, poi riprova."
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
-msgid "This spot can no longer be cancelled online"
-msgstr "Questo posto non può più essere annullato online"
+msgid "Please register before voting."
+msgstr "Registrati prima di votare."
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/core/mount_helpers.ex
 #, elixir-autogen, elixir-format
-msgid "We've let %{name} know. A confirmation email is on its way."
-msgstr "Abbiamo avvisato %{name}. Un'email di conferma è in arrivo."
+msgid "Poll not found"
+msgstr "Sondaggio non trovato"
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "Yes, cancel my spot"
-msgstr "Sì, annulla il mio posto"
+msgid "Save my responses"
+msgstr "Salva le mie risposte"
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "You can add up to %{count} guest."
-msgid_plural "You can add up to %{count} guests."
-msgstr[0] "Puoi aggiungere fino a %{count} ospite."
-msgstr[1] "Puoi aggiungere fino a %{count} ospiti."
+msgid "Scheduled for %{time}"
+msgstr "Programmato per %{time}"
 
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "Your spot has been cancelled"
-msgstr "Il tuo posto è stato annullato"
+msgid "This poll has been cancelled and is no longer accepting responses."
+msgstr "Questo sondaggio è stato annullato e non accetta più risposte."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll has been scheduled."
+msgstr "Questo sondaggio è stato programmato."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "This poll has reached its participant limit."
+msgstr "Questo sondaggio ha raggiunto il limite di partecipanti."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please wait a moment and try again."
+msgstr "Troppi tentativi. Attendi un momento e riprova."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Voting as %{name}"
+msgstr "Voti come %{name}"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closes %{deadline}"
+msgstr "Le votazioni si chiudono %{deadline}"
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed for this poll."
+msgstr "Le votazioni per questo sondaggio sono chiuse."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Here are the final responses."
+msgstr "Le votazioni sono chiuse. Ecco le risposte finali."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't find your registration. Please register again."
+msgstr "Non abbiamo trovato la tua registrazione. Registrati di nuovo."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "You're registered. Your responses are saved as you vote."
+msgstr "Sei registrato. Le tue risposte vengono salvate mentre voti."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your email"
+msgstr "La tua email"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your name"
+msgstr "Il tuo nome"
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses have been saved."
+msgstr "Le tue risposte sono state salvate."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
@@ -1333,6 +1393,23 @@ msgid "The host is no longer accepting bookings for this period. Please pick a d
 msgstr ""
 "L'organizzatore non accetta più prenotazioni per questo periodo. Scegli un "
 "altro giorno."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{weekday} %{day} %{month}, %{time}"
+msgstr "%{weekday} %{day} %{month}, %{time}"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Times shown in %{timezone}"
+msgstr "Orari mostrati in %{timezone}"
+
+#: lib/tymeslot_web/themes/shared/components/seat_badge.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} seat left"
+msgid_plural "%{count} seats left"
+msgstr[0] "%{count} posto libero"
+msgstr[1] "%{count} posti liberi"
 
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
@@ -1343,6 +1420,16 @@ msgstr "Prenota un altro orario"
 #, elixir-autogen, elixir-format
 msgid "Cancel your spot"
 msgstr "Annulla il tuo posto"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel your spot?"
+msgstr "Annullare il tuo posto?"
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm to give up your spot in this meeting with %{name}."
+msgstr "Conferma per rinunciare al tuo posto in questo incontro con %{name}."
 
 #: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
@@ -1364,6 +1451,16 @@ msgstr "Posto annullato"
 msgid "Spot cannot be cancelled"
 msgstr "Questo posto non può essere annullato"
 
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "The link may have expired or already been used. Please contact the meeting host."
+msgstr "Il link di invito potrebbe essere scaduto o già stato utilizzato. Contatta l'organizzatore."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is too close to its start time. Please contact the host directly."
+msgstr "L'incontro è troppo vicino all'orario di inizio. Contatta direttamente l'organizzatore."
+
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This booking has already been cancelled or moved."
@@ -1374,12 +1471,39 @@ msgstr "Questa prenotazione è già stata annullata o spostata."
 msgid "This is a group booking, so each participant moves their own spot from their confirmation email."
 msgstr "Questa è una prenotazione di gruppo: ogni partecipante sposta il proprio posto dalla propria e-mail di conferma."
 
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be cancelled online"
+msgstr "Questo posto non può più essere annullato online"
+
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
 msgid "This time only has room for %{count} of your guests, so the rest were removed."
 msgstr "Questo orario ha posto solo per %{count} dei tuoi ospiti, gli altri sono stati rimossi."
 
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "We've let %{name} know. A confirmation email is on its way."
+msgstr "Abbiamo avvisato %{name}. Un'email di conferma è in arrivo."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, cancel my spot"
+msgstr "Sì, annulla il mio posto"
+
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a spot at this time. Check your email for your booking confirmation."
 msgstr "Hai già un posto a quest'ora. Controlla la tua e-mail per la conferma della prenotazione."
+
+#: lib/tymeslot_web/themes/shared/guest_booking.ex
+#, elixir-autogen, elixir-format
+msgid "You can add up to %{count} guest."
+msgid_plural "You can add up to %{count} guests."
+msgstr[0] "Puoi aggiungere fino a %{count} ospite."
+msgstr[1] "Puoi aggiungere fino a %{count} ospiti."
+
+#: lib/tymeslot_web/controllers/seat_html.ex
+#, elixir-autogen, elixir-format
+msgid "Your spot has been cancelled"
+msgstr "Il tuo posto è stato annullato"

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.E2E.SignupTest do
   alias Tymeslot.Repo
 
   @moduletag :e2e
+  @moduletag :auth
 
   feature "user can sign up, verify email, and reach dashboard", %{session: session} do
     email = "e2e-signup-#{System.unique_integer([:positive])}@example.com"

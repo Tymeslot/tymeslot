@@ -16,11 +16,19 @@ defmodule Tymeslot.Test.SuiteConfig do
     calendar_integration: true,
     e2e: true,
     migrations: true,
-    proxy_integration: true
+    proxy_integration: true,
+    catalogue_freshness: true
   ]
 
   @doc """
   Default `:exclude` tags every suite skips unless explicitly included.
+
+  `:catalogue_freshness` differs from its neighbours: it needs no external
+  service, only a great deal of time. Those tests run gettext extraction in a
+  subprocess to compare .pot catalogues against source, which force-recompiles
+  the app being extracted from, and at ~100s they were the single largest cost
+  in the suite that owns them. Excluding them keeps the guarantee on a schedule
+  rather than on every local run.
 
   `:git_cliff` is excluded only where the binary is missing, so the changelog
   config tests run by default for anyone able to cut a release (and in the

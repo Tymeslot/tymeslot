@@ -2,6 +2,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventTest do
   use ExUnit.Case, async: true
 
   @moduletag :unit
+  @moduletag :calendar
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
 

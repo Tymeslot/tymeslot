@@ -2,6 +2,7 @@ defmodule Tymeslot.Webhooks.DispatcherTest do
   use Tymeslot.DataCase, async: false
 
   @moduletag :integration
+  @moduletag :webhooks
 
   use Oban.Testing, repo: Tymeslot.Repo
 

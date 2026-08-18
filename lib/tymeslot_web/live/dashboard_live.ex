@@ -40,6 +40,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.MeetingFormMessages
   alias TymeslotWeb.Dashboard.OnboardingChecklist
   alias TymeslotWeb.Dashboard.PaymentsHandlers
+  alias TymeslotWeb.Dashboard.PollEventHandlers
   alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
   alias TymeslotWeb.Dashboard.TourEventHandlers
@@ -395,6 +396,14 @@ defmodule TymeslotWeb.DashboardLive do
 
     {:noreply, socket}
   end
+
+  # Poll-specific handle_info clauses — delegated to PollEventHandlers.
+
+  def handle_info({:poll_updated, poll_id}, socket),
+    do: PollEventHandlers.handle_poll_updated(poll_id, socket)
+
+  def handle_info({:poll_slot_health, poll_id, health}, socket),
+    do: PollEventHandlers.handle_poll_slot_health(poll_id, health, socket)
 
   # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
 

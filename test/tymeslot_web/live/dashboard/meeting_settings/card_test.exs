@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :meeting_types
 
   import Phoenix.LiveViewTest
 

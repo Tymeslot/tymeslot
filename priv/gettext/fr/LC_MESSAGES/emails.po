@@ -905,6 +905,7 @@ msgid "Ready to join when it's time?"
 msgstr "Prêt(e) à rejoindre le moment venu ?"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder"
 msgstr "Rappel"
@@ -1854,6 +1855,111 @@ msgstr "Vous avez reçu %{amount}"
 #, elixir-autogen, elixir-format
 msgid "You received: %{amount} (less Stripe processing fees)"
 msgstr "Vous avez reçu : %{amount} (déduction faite des frais de traitement Stripe)"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding."
+msgstr "%{host} vous a invité à aider à choisir un horaire pour %{title}. Votre vote est toujours attendu."
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} is waiting for your vote on %{title}."
+msgstr "%{host} attend votre vote pour %{title}."
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "All votes in"
+msgstr "Tous les votes sont là"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Cast Your Vote"
+msgstr "Votez maintenant"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Cast your vote:"
+msgstr "Votez :"
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Every participant has cast their vote on %{title}. Review the results and confirm the time that works best."
+msgstr "Tous les participants ont voté pour %{title}. Consultez les résultats et confirmez le créneau qui convient le mieux."
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone has voted on \"%{title}\", pick a time"
+msgstr "Tout le monde a voté pour « %{title} », choisissez un horaire"
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone has voted on %{title}"
+msgstr "Tout le monde a voté pour %{title}"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Help %{host} lock in a time for %{title}."
+msgstr "Aidez %{host} à fixer un horaire pour %{title}."
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a Time"
+msgstr "Choisir un horaire"
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a final time so everyone can put it in the diary."
+msgstr "Choisissez l'horaire définitif pour que chacun puisse le noter."
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a time:"
+msgstr "Choisir un horaire :"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: vote on \"%{title}\""
+msgstr "Rappel : votez pour « %{title} »"
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "The deadline for %{title} has passed. Review the results and confirm the time that works best."
+msgstr "La date limite pour %{title} est passée. Consultez les résultats et confirmez le créneau qui convient le mieux."
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Vote on %{title}"
+msgstr "Voter pour %{title}"
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closed"
+msgstr "Vote clos"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closes"
+msgstr "Fin du vote"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closes:"
+msgstr "Fin du vote :"
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed on \"%{title}\", pick a time"
+msgstr "Le vote pour « %{title} » est clos, choisissez un horaire"
+
+#: lib/tymeslot/emails/templates/poll_host_nudge.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed on %{title}"
+msgstr "Le vote pour %{title} est clos"
+
+#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Your vote is needed"
+msgstr "Votre vote est attendu"
 
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format

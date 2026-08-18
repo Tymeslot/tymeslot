@@ -2,6 +2,7 @@ defmodule TymeslotWeb.E2E.LoginTest do
   use TymeslotWeb.BrowserCase, async: false
 
   @moduletag :e2e
+  @moduletag :auth
 
   feature "user can log in with valid credentials", %{session: session} do
     user = create_onboarded_user()

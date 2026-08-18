@@ -29,6 +29,23 @@ defmodule Mix.Tasks.Precommit do
   to load this task at all, so it aborts first and prints the error on its own.
   Same information, one step earlier.
 
+  ## Why dialyzer runs incrementally
+
+  The step runs `dialyzer.incremental`, not `dialyzer`. A classic PLT is
+  re-verified wholesale whenever dialyxir's `mix.lock`-and-applications hash
+  moves, and re-analysed wholesale on every run regardless; an incremental PLT
+  tracks per-module hashes and re-analyses only what changed. Measured here,
+  with nothing changed since the previous run: 78.7s against 4.5s in Core, and
+  451.8s against 12.0s in the repo that consumes Core as a path dependency,
+  where every Core commit invalidates the classic PLT.
+
+  The two modes were adopted on identical output: the same warnings, the same
+  skips, the same exit status, verified both on a clean tree and against a
+  deliberately broken `@spec`. `mix dialyzer` is unchanged and remains the
+  cross-check to run when a warning here looks wrong. `--list-unused-filters`
+  is passed explicitly because the incremental task takes it as an argument
+  rather than reading `:list_unused_filters` from the `dialyzer:` config.
+
   ## Why each step is a separate process
 
   Mix resolves `MIX_ENV` once, from the invoked task. The suite has to run in
@@ -54,7 +71,7 @@ defmodule Mix.Tasks.Precommit do
     {"workflows", ~w[actionlint], :dev},
     {"xref", ~w[xref graph --label compile-connected --fail-above 25], :dev},
     {"test", ~w[test], :test},
-    {"dialyzer", ~w[dialyzer], :dev}
+    {"dialyzer", ~w[dialyzer.incremental --list-unused-filters], :dev}
   ]
 
   @impl Mix.Task

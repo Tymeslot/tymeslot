@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <meta name="csp-nonce" content={assigns[:csp_nonce]} />
+    <%!-- Every surface rendered through this layout is private (auth, dashboard,
+    onboarding, admin), so none of it belongs in a search index. Stated here
+    rather than in robots.txt because disallowing a path only stops the crawl:
+    a page linked from elsewhere still gets indexed, snippet-less, and the
+    crawler never reads the directive that would have kept it out. --%>
+    <meta name="robots" content="noindex" />
     <link rel="canonical" href={TymeslotWeb.Layouts.current_url(assigns)} />
     <%= if assigns[:meta_description] do %>
       <meta name="description" content={@meta_description} />

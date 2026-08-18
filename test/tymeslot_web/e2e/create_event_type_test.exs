@@ -2,6 +2,7 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
   use TymeslotWeb.BrowserCase, async: false
 
   @moduletag :e2e
+  @moduletag :meeting_types
 
   feature "user can create a meeting type from the dashboard", %{session: session} do
     {session, _user} = log_in_via_browser(session)

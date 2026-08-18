@@ -4,6 +4,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
   alias Tymeslot.Auth.Verification
 
   @moduletag :e2e
+  @moduletag :onboarding
 
   feature "new user completes onboarding wizard", %{session: session} do
     # Create a verified user who hasn't completed onboarding

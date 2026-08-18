@@ -2,6 +2,7 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
   use ExUnit.Case, async: true
 
   @moduletag :unit
+  @moduletag :notifications
 
   alias Tymeslot.Announcements.Catalog
 

@@ -3,6 +3,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integration
+  @moduletag :meetings
+  @moduletag :notifications
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema

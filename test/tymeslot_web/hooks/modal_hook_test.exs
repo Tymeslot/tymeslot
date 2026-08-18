@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Hooks.ModalHookTest do
   use ExUnit.Case, async: true
   @moduletag :hooks
+  @moduletag :ui
 
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Hooks.ModalHook

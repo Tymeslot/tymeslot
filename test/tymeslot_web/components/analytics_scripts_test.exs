@@ -7,6 +7,7 @@ defmodule TymeslotWeb.AnalyticsScriptsTest do
   alias TymeslotWeb.Layouts
 
   @moduletag :components
+  @moduletag :analytics
 
   setup do
     original = Application.get_env(:tymeslot, :analytics_providers)

@@ -44,7 +44,7 @@ defmodule TymeslotWeb.BrowserCase do
     # to the browser session. A double checkout would split the sandbox: factory
     # data would land in one connection while Phoenix.Ecto.SQL.Sandbox routes the
     # server to a different one, making inserted rows invisible to browser requests.
-    DataCase.reset_stateful_components()
+    DataCase.reset_stateful_components(tags)
 
     # Force-disable legal agreements for Core E2E tests. A downstream overlay
     # can set enforce_legal_agreements: true, which overrides Core's test.exs

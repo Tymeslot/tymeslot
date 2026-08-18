@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Components.CoreComponentsFormsTest do
   use ExUnit.Case, async: true
 
   @moduletag :components
+  @moduletag :ui
 
   alias Gettext.Plural
   alias TymeslotWeb.Components.CoreComponents.Forms

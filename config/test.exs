@@ -211,6 +211,13 @@ config :tymeslot, Tymeslot.Integrations.HealthCheck,
   yield_timeout: 100,
   stream_timeout: 200
 
+# Payment retries sleep between attempts, and the suite was sleeping the
+# production 1s base delay: ten tests across RetryHelperTest and StripeTest
+# waiting out real backoff for about 18 seconds of every run. Only the delay is
+# shortened; max_attempts and backoff_multiplier keep their production values,
+# so the attempt-count and backoff-shape assertions still test what they say.
+config :tymeslot, :payment_retry, base_delay_ms: 1
+
 # Wallaby E2E browser test configuration
 # otp_app + ecto_repos let Wallaby.Feature auto-checkout the sandbox and pass
 # the token in request headers so Phoenix.Ecto.SQL.Sandbox can allow the browser

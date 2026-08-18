@@ -313,33 +313,23 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
 
   # Private helper functions
 
+  # Nextcloud: append the DAV endpoint to the instance root, unless the URL
+  # already points inside it.
+  #
+  # `normalize_base_url/1` is the one place that resolves that root correctly:
+  # it strips the browser paths users paste (`/index.php…`, `/apps…`,
+  # `/remote.php/webdav…`) while preserving a subdirectory install such as
+  # `https://example.com/nextcloud`. Deriving the root any other way is what
+  # broke subpath installs. Reducing to `scheme://host` discarded the
+  # subdirectory, sending discovery to `https://example.com/remote.php/dav`;
+  # and leaving a non-empty path alone meant the endpoint was never appended at
+  # all, sending it to `https://example.com/nextcloud/calendars/{user}/`. Both
+  # produce a well-formed URL that no Nextcloud instance serves calendars from.
   defp maybe_add_provider_path(url, :nextcloud) do
-    # Nextcloud: Add /remote.php/dav if not present
-    cond do
-      # URL already contains the DAV endpoint - keep as is
-      String.contains?(url, "/remote.php/dav") ->
-        url
-
-      # URL contains index.php or apps - it's likely a direct Nextcloud URL, extract base
-      String.contains?(url, "/index.php") or String.contains?(url, "/apps/") ->
-        # Extract base URL up to the Nextcloud root
-        base = extract_base_url(url)
-        base <> "/remote.php/dav"
-
-      # Clean base URL - add the DAV endpoint
-      true ->
-        uri = URI.parse(url)
-        base = extract_base_url(url)
-
-        # Preserve any existing path but add Nextcloud DAV endpoint
-        existing_path = uri.path || ""
-
-        if existing_path == "/" or existing_path == "" do
-          base <> "/remote.php/dav"
-        else
-          # Keep original URL if it has a specific path
-          url
-        end
+    if String.contains?(url, "/remote.php/dav") do
+      url
+    else
+      normalize_base_url(url) <> "/remote.php/dav"
     end
   end
 

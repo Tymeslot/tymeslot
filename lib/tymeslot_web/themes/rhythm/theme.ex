@@ -111,4 +111,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
       _other -> raise "Unsupported meeting action: #{action}"
     end
   end
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  defdelegate render_poll_action(assigns), to: TymeslotWeb.Themes.Rhythm.Poll.Voting, as: :render
 end
