@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
   @moduledoc """
-  Calendar event query operations (list, range, month queries).
+  Calendar event query operations (list and range queries).
 
   Responsibilities:
   - List events across all calendars
   - Range queries with request coalescing
-  - Month queries with async fetching
   - Event filtering and deduplication
   """
 
@@ -59,21 +58,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
   end
 
   @doc """
-  Gets events for a month for display purposes.
-  Uses request coalescing to prevent duplicate API calls.
-  """
-  @spec get_events_for_month(user_id(), integer(), integer(), String.t()) ::
-          {:ok, list(map())} | {:error, term()}
-  def get_events_for_month(user_id, year, month, timezone) do
-    Metrics.time_operation(:get_events_for_month, %{year: year, month: month}, fn ->
-      Logger.info("Getting events for month", year: year, month: month, timezone: timezone)
-
-      {start_dt, end_dt} = month_utc_boundaries(year, month, timezone)
-      get_events_for_range_fresh(user_id, start_dt, end_dt)
-    end)
-  end
-
-  @doc """
   Gets fresh events for a date range.
   Uses request coalescing to prevent duplicate API calls when multiple
   requests for the same date range occur simultaneously.
@@ -90,22 +74,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
     RequestCoalescer.coalesce(user_id, start_date, end_date, fn ->
       fetch_events_from_providers(user_id, start_date, end_date)
     end)
-  end
-
-  @doc false
-  @spec month_utc_boundaries(integer(), 1..12, String.t()) :: {DateTime.t(), DateTime.t()}
-  def month_utc_boundaries(year, month, timezone) do
-    start_date = Date.new!(year, month, 1)
-    end_date = Date.end_of_month(start_date)
-
-    # Convert month boundaries in user's timezone to UTC so we don't miss events
-    # near day boundaries (e.g. UTC+12 starts 12h before UTC midnight)
-    start_dt =
-      DateTime.shift_zone!(DateTime.new!(start_date, ~T[00:00:00], timezone), "Etc/UTC")
-
-    end_dt = DateTime.shift_zone!(DateTime.new!(end_date, ~T[23:59:59], timezone), "Etc/UTC")
-
-    {start_dt, end_dt}
   end
 
   # --- Private Implementation ---

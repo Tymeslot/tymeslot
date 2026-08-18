@@ -23,11 +23,6 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   end
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
-  def get_events_for_month(user_id, year, month, timezone) do
-    EventQueries.get_events_for_month(user_id, year, month, timezone)
-  end
-
-  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_event(uid, user_id \\ nil) do
     EventOperations.get_event(uid, user_id)
   end

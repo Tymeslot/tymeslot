@@ -104,24 +104,6 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   end
 
   @doc """
-  Get events for a month with user context (preferred variant).
-  """
-  @spec get_events_for_month(user_id(), pos_integer(), pos_integer(), String.t()) ::
-          {:ok, list()} | {:error, term()}
-  def get_events_for_month(user_id, year, month, timezone)
-      when is_integer(user_id) and is_integer(year) and is_integer(month) and is_binary(timezone) do
-    behaviour_module().get_events_for_month(user_id, year, month, timezone)
-  end
-
-  @doc """
-  Backward-compatible variant without explicit user context.
-  """
-  @spec get_events_for_month(pos_integer(), pos_integer(), String.t()) ::
-          {:ok, list()} | {:error, term()}
-  def get_events_for_month(_year, _month, _timezone),
-    do: {:error, :user_id_required}
-
-  @doc """
   Get fresh events for range with user context (preferred variant).
   """
   @spec get_events_for_range_fresh(user_id(), Date.t(), Date.t()) ::
