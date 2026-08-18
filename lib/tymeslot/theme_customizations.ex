@@ -30,10 +30,6 @@ defmodule Tymeslot.ThemeCustomizations do
   @type customization_input :: ThemeCustomizationSchema.t() | map() | nil
   @type upload_attrs :: %{path: String.t(), filename: String.t()}
   @type persistence_result :: {:ok, ThemeCustomizationSchema.t()} | {:error, Changeset.t()}
-  @type cleanup_entry :: %{
-          optional(:background_image_path) => String.t() | nil,
-          optional(:background_video_path) => String.t() | nil
-        }
 
   @doc """
   Gets a theme customization by profile ID and theme ID.
@@ -425,12 +421,6 @@ defmodule Tymeslot.ThemeCustomizations do
   def store_background_video(profile_id, theme_id, %{path: temp_path, filename: filename}) do
     Storage.store_background_video(profile_id, theme_id, %{path: temp_path, filename: filename})
   end
-
-  @doc """
-  Legacy cleanup function - now delegates to unified system.
-  """
-  @spec cleanup_old_backgrounds(cleanup_entry() | ThemeCustomizationSchema.t()) :: :ok
-  defdelegate cleanup_old_backgrounds(customization), to: FileLifecycle
 
   # Private functions
 

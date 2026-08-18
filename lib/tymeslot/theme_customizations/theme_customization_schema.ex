@@ -71,18 +71,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   end
 
   @doc """
-  Returns all valid color schemes.
-  """
-  @spec valid_color_schemes() :: [String.t()]
-  def valid_color_schemes, do: @valid_color_schemes
-
-  @doc """
-  Returns all valid background types.
-  """
-  @spec valid_background_types() :: [String.t()]
-  def valid_background_types, do: @valid_background_types
-
-  @doc """
   Color scheme definitions with their CSS variables.
   """
   @spec color_scheme_definitions() :: map()
