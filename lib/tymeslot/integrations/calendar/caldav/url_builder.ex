@@ -10,7 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
   Builds the initial discovery URL for a CalDAV client.
 
   If `base_url` already looks like a full CalDAV principal URL (path depth ≥ 2),
-  it is used as-is. Otherwise a provider-specific path is appended.
+  it is used as-is. A CalDAV *service root* is excluded from that test, however
+  deep it sits: it addresses the DAV mount rather than a calendar collection, so
+  the provider-specific path is still appended to it.
   """
   @spec build_discovery_url(map()) :: String.t()
   def build_discovery_url(client) do
@@ -100,11 +102,35 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
   # (e.g., /dav/user@example.com or /remote.php/dav/calendars/user).
   defp full_caldav_url?(base_url) do
     case URI.parse(base_url).path do
-      nil -> false
-      "/" -> false
-      path -> length(String.split(path, "/", trim: true)) >= 2
+      nil ->
+        false
+
+      "/" ->
+        false
+
+      path ->
+        segments = String.split(path, "/", trim: true)
+        length(segments) >= 2 and not caldav_service_root?(segments)
     end
   end
+
+  # `Shared.PathUtils.normalize_url/2` turns a bare Nextcloud host into
+  # `.../remote.php/dav` before this module ever sees it (see
+  # `Nextcloud.Provider.new/1`). That path has depth 2, so it used to satisfy
+  # `full_caldav_url?/1` and get treated as an already-specific calendar
+  # collection — skipping the `/calendars/{username}/` this module would
+  # otherwise append. The resulting request queried the CalDAV *service
+  # root*, whose PROPFIND response lists top-level collections
+  # (files/, addressbooks/, calendars/, ...) that never carry a
+  # `<cal:calendar/>` resourcetype, so discovery silently returned zero
+  # calendars for every Nextcloud account — no error, no log, just an empty
+  # list indistinguishable from "this user really has no calendars".
+  #
+  # Matched as a suffix, not an exact path: Nextcloud is frequently installed in
+  # a subdirectory, where the same normalisation yields `/nextcloud/remote.php/dav`.
+  # An exact two-segment match would leave those installations on the original
+  # broken path.
+  defp caldav_service_root?(segments), do: Enum.take(segments, -2) == ["remote.php", "dav"]
 
   # Only include port when it differs from the scheme default.
   # URI.parse/1 always fills in the default port (443 for https, 80 for http),
