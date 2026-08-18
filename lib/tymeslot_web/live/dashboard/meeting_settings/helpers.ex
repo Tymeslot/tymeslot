@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
 
   alias Phoenix.Component
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Utils.FormHelpers
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
@@ -26,31 +25,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
     |> Component.assign(:saving, false)
     |> Component.assign(:selected_icon, "none")
     |> Component.assign(:form_data, %{})
-  end
-
-  @doc """
-  Handles profile update operations with consistent error handling.
-  """
-  @spec handle_profile_update(
-          Phoenix.LiveView.Socket.t(),
-          (Ecto.Schema.t() -> {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}),
-          (Ecto.Schema.t() -> String.t())
-        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_profile_update(socket, update_fn, success_message_fn) do
-    case update_fn.(socket.assigns.profile) do
-      {:ok, updated_profile} ->
-        Flash.info(success_message_fn.(updated_profile))
-        send(self(), {:profile_updated, updated_profile})
-
-        # Update the component's own assigns with the new profile data
-        socket = Component.assign(socket, :profile, updated_profile)
-        {:noreply, socket}
-
-      {:error, changeset} ->
-        error_message = ChangesetUtils.get_first_error(changeset)
-        Flash.error(error_message)
-        {:noreply, socket}
-    end
   end
 
   @doc """
