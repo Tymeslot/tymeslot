@@ -126,7 +126,10 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
          |> where([w], w.id == ^id)
          |> select([w], w)
          |> Repo.update_all(
-           set: [last_status: "failed: #{reason}"],
+           set: [
+             last_status: "failed: #{reason}",
+             last_triggered_at: DateTime.utc_now(:second)
+           ],
            inc: [failure_count: 1]
          ) do
       {0, []} ->
