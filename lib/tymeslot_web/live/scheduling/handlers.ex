@@ -22,7 +22,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers do
   **Functions:**
   - `fetch_available_slots/4` - Fetch available time slots for a given date
   - `maybe_reload_slots/1` - Conditionally reload slots if date is selected
-  - `handle_calendar_error/2` - Process calendar errors gracefully
   - `load_slots/2` - Load slots for a specific date
 
   ### FormValidationHandlerComponent
@@ -31,7 +30,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers do
   **Functions:**
   - `validate_form/2` - Validate booking form data
   - `sanitize_params/2` - Sanitize form parameters
-  - `assign_form_errors/2` - Assign validation errors to socket
   - `mark_field_touched/2` - Mark a field as touched for validation
   - `validate_field/3` - Validate a specific field
 
@@ -208,7 +206,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers do
         functions: [
           :fetch_available_slots,
           :maybe_reload_slots,
-          :handle_calendar_error,
           :load_slots
         ]
       },
@@ -219,7 +216,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers do
         functions: [
           :validate_form,
           :sanitize_params,
-          :assign_form_errors,
           :mark_field_touched,
           :validate_field
         ]

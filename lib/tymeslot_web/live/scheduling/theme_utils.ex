@@ -15,30 +15,6 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
-  Assigns theme-related data to the socket dynamically based on the theme_id.
-
-  This replaces hardcoded theme assignments and allows themes to work
-  correctly with debug routes and theme switching.
-
-  ## Examples
-
-      # In a theme LiveView:
-      socket = assign_theme(socket)
-
-      # In debug context:
-      socket = assign(socket, :theme_id, "2")
-      socket = assign_theme(socket)
-  """
-  @spec assign_theme(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def assign_theme(socket) do
-    theme_id = socket.assigns[:theme_id] || Registry.default_theme_id()
-
-    socket
-    |> assign(:scheduling_theme_id, theme_id)
-    |> assign(:scheduling_theme_css, ThemeInfo.get_css_file(theme_id))
-  end
-
-  @doc """
   Assigns theme-related data including preview mode detection.
 
   A page is a preview when the URL carries either `?theme=` (a theme-switch

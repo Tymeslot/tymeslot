@@ -152,40 +152,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   end
 
   @doc """
-  Handles previous month navigation.
-  """
-  @spec handle_prev_month(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def handle_prev_month(socket) do
-    current_month = socket.assigns.current_month
-    current_year = socket.assigns.current_year
-
-    {prev_year, prev_month} =
-      if current_month == 1, do: {current_year - 1, 12}, else: {current_year, current_month - 1}
-
-    socket
-    |> assign(:current_month, prev_month)
-    |> assign(:current_year, prev_year)
-    |> update_calendar_data()
-  end
-
-  @doc """
-  Handles next month navigation.
-  """
-  @spec handle_next_month(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def handle_next_month(socket) do
-    current_month = socket.assigns.current_month
-    current_year = socket.assigns.current_year
-
-    {next_year, next_month} =
-      if current_month == 12, do: {current_year + 1, 1}, else: {current_year, current_month + 1}
-
-    socket
-    |> assign(:current_month, next_month)
-    |> assign(:current_year, next_year)
-    |> update_calendar_data()
-  end
-
-  @doc """
   Handles week navigation (prev/next).
 
   Advances `current_week_start` by ±7 days. When the week crosses a month
