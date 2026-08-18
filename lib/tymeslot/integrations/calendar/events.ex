@@ -8,7 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
 
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
@@ -42,8 +42,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @spec list_events(user_id() | nil) :: {:ok, list()} | {:error, term()}
   def list_events(user_id \\ nil) do
     case user_id do
-      id when is_integer(id) and id > 0 -> EventQueries.list_events(id)
-      nil -> EventQueries.list_events(nil)
+      id when is_integer(id) and id > 0 -> EventFetcher.list_events(id)
+      nil -> EventFetcher.list_events(nil)
       _other -> {:error, :invalid_user_id}
     end
   end

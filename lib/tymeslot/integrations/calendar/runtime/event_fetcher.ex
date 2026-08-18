@@ -1,12 +1,18 @@
-defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
+defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
   @moduledoc """
-  Calendar event query operations (list, range, month queries).
+  Reads a user's events from their connected calendar providers.
 
   Responsibilities:
   - List events across all calendars
-  - Range queries with request coalescing
-  - Month queries with async fetching
+  - Range fetches with request coalescing
+  - Month fetches with async fetching
   - Event filtering and deduplication
+
+  Named a fetcher rather than a queries module because it performs no data
+  access of its own: this is provider HTTP fan-out, metrics, and the
+  fail-closed availability gate, on the live booking path. The `*_queries.ex`
+  suffix would have exempted the whole file from `CredoChecks.RepoCallBoundary`
+  for an exemption it never needed.
   """
 
   require Logger

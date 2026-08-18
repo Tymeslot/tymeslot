@@ -8,23 +8,23 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   All actual logic lives in focused modules:
   - ClientManager - Client creation and booking resolution
   - EventOperations - Event CRUD operations
-  - EventQueries - Event query operations
+  - EventFetcher - Provider event fetches
   """
 
   @behaviour Tymeslot.Integrations.Calendar.CalendarBehaviour
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
+  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Runtime.EventOperations
-  alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_events_for_range_fresh(user_id, start_date, end_date) do
-    EventQueries.get_events_for_range_fresh(user_id, start_date, end_date)
+    EventFetcher.get_events_for_range_fresh(user_id, start_date, end_date)
   end
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_events_for_month(user_id, year, month, timezone) do
-    EventQueries.get_events_for_month(user_id, year, month, timezone)
+    EventFetcher.get_events_for_month(user_id, year, month, timezone)
   end
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
