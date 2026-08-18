@@ -110,6 +110,46 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       assert updated.attendee_email_sent == true
     end
 
+    # The mail breaker stays open for five minutes; `EmailWorker`'s backoff
+    # spends all five attempts inside the first fifteen seconds of that window.
+    # Flattening `:circuit_open` into "Failed to send all emails" therefore
+    # dropped booking confirmations outright for the length of any mail outage,
+    # so the reason has to survive as far as the worker.
+    test "surfaces an open circuit breaker instead of flattening it into a message" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:error, :circuit_open}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:error, :circuit_open}
+      end)
+
+      assert {:error, :circuit_open} =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "surfaces a permanently rejected recipient instead of retrying it" do
+      meeting = insert(:meeting)
+      rejection = {:recipient_rejected, {422, %{"ErrorCode" => 406}}}
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:error, rejection}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:error, rejection}
+      end)
+
+      assert {:error, ^rejection} =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+    end
+
     test "handles partial failure" do
       meeting = insert(:meeting)
 

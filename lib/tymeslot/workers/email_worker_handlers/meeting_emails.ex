@@ -125,7 +125,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           {:discard,
            "Partial cancellation email failure: one email succeeded, retry would duplicate"}
         else
-          {:error, "Failed to send cancellation emails"}
+          reason =
+            worker_actionable_reason([organizer_result, attendee_result]) ||
+              "Failed to send cancellation emails"
+
+          {:error, reason}
         end
     end
   end
@@ -327,10 +331,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp check_email_errors(organizer_result, attendee_result) do
+    results = [organizer_result, attendee_result]
+
     cond do
       match?({:error, :rate_limited}, organizer_result) or
           match?({:error, :rate_limited}, attendee_result) ->
         {:error, :rate_limited}
+
+      reason = worker_actionable_reason(results) ->
+        {:error, reason}
 
       match?({:error, :invalid_email}, organizer_result) or
           match?({:error, :invalid_email}, attendee_result) ->
@@ -345,6 +354,24 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             nil
         end
     end
+  end
+
+  # The two failures `EmailWorker` must act on differently from an ordinary
+  # retry, preserved rather than flattened into a message — the same contract
+  # `DeliveryOutcome.from_error/2` gives every other handler.
+  #
+  # `:circuit_open` is the one that mattered here: the mail breaker stays open
+  # for five minutes, and this worker's backoff spends all five attempts inside
+  # the first fifteen seconds of that window, so flattening it dropped booking
+  # confirmations, reminders and cancellations outright for the duration of any
+  # mail outage. The worker snoozes past the window instead, at no cost in
+  # attempts.
+  defp worker_actionable_reason(results) do
+    Enum.find_value(results, fn
+      {:error, :circuit_open} -> :circuit_open
+      {:error, {:recipient_rejected, _reason} = rejection} -> rejection
+      _other -> nil
+    end)
   end
 
   defp update_email_sent_flags(
