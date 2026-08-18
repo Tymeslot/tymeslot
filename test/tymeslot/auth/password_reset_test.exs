@@ -213,6 +213,31 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       rate_limited = Enum.filter(results, &match?({:error, :rate_limited, _msg}, &1))
       assert length(rate_limited) >= 15
     end
+
+    test "records a rate-limit audit entry naming the account and origin" do
+      insert(:user, email: "ratelimit-audit@example.com")
+
+      for _i <- 1..5 do
+        PasswordReset.initiate_reset("ratelimit-audit@example.com", ip: "192.168.1.101")
+      end
+
+      # AccountLogging emits at :warning, which config/test.exs already pins the
+      # primary level to, so the level does not need lowering here.
+      LogCapture.with_capture(fn ->
+        assert {:error, :rate_limited, _message} =
+                 PasswordReset.initiate_reset("ratelimit-audit@example.com", ip: "192.168.1.101")
+      end)
+
+      assert_receive {:captured_log,
+                      %{
+                        level: :warning,
+                        meta: %{event: "password_reset_rate_limit_exceeded"} = meta
+                      }}
+
+      assert meta.operation == "password_reset"
+      assert meta.identifier == "ratelimit-audit@example.com"
+      assert meta.ip_address == "192.168.1.101"
+    end
   end
 
   describe "token tamper + replay resistance" do

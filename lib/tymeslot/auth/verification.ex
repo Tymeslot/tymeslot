@@ -89,15 +89,7 @@ defmodule Tymeslot.Auth.Verification do
   @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec verify_user_email(socket_or_conn(), term(), map()) :: verification_result()
   def verify_user_email(socket_or_conn, user, _profile_params) do
-    ip_address = extract_ip_address(socket_or_conn)
-
-    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
-      :ok ->
-        do_verify_user_email(socket_or_conn, user)
-
-      {:error, :rate_limited, message} ->
-        {:error, :rate_limited, message}
-    end
+    send_within_rate_limit(socket_or_conn, user)
   end
 
   @doc """
@@ -114,15 +106,7 @@ defmodule Tymeslot.Auth.Verification do
   @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec resend_verification_email(socket_or_conn(), term()) :: verification_result()
   def resend_verification_email(socket_or_conn, user) do
-    ip_address = extract_ip_address(socket_or_conn)
-
-    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
-      :ok ->
-        do_verify_user_email(socket_or_conn, user)
-
-      {:error, :rate_limited, message} ->
-        {:error, :rate_limited, message}
-    end
+    send_within_rate_limit(socket_or_conn, user)
   end
 
   @doc """
@@ -147,6 +131,24 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   # Private functions
+
+  # The initial send and the resend are the same operation as far as the limiter
+  # is concerned: they share a bucket, a rejection message, and an audit entry.
+  defp send_within_rate_limit(socket_or_conn, user) do
+    ip_address = extract_ip_address(socket_or_conn)
+
+    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
+      :ok ->
+        do_verify_user_email(socket_or_conn, user)
+
+      {:error, :rate_limited, message} ->
+        AccountLogging.log_rate_limit_exceeded("email_verification", user.id, %{
+          ip_address: ip_address
+        })
+
+        {:error, :rate_limited, message}
+    end
+  end
 
   @spec fetch_user_by_token(String.t()) :: {:ok, term()} | {:error, :invalid_token}
   defp fetch_user_by_token(token) do

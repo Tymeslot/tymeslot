@@ -98,7 +98,15 @@ defmodule Tymeslot.Auth.Registration do
       :ok
     else
       ip = ClientIP.get(socket_or_conn)
-      RateLimiter.check_signup_rate_limit(email, ip)
+
+      case RateLimiter.check_signup_rate_limit(email, ip) do
+        :ok ->
+          :ok
+
+        {:error, :rate_limited, message} ->
+          AccountLogging.log_rate_limit_exceeded("signup", email, %{ip_address: ip})
+          {:error, :rate_limited, message}
+      end
     end
   end
 

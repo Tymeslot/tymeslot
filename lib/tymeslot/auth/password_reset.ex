@@ -41,10 +41,21 @@ defmodule Tymeslot.Auth.PasswordReset do
     ip = extract_ip_from_opts(opts)
 
     with {:ok, validated_email} <- validate_email_format(email),
-         :ok <- RateLimiter.check_password_reset_rate_limit(validated_email, ip) do
+         :ok <- check_reset_rate_limit(validated_email, ip) do
       process_password_reset_secure(validated_email, user_queries)
     else
       {:error, reason, message} -> {:error, reason, message}
+    end
+  end
+
+  defp check_reset_rate_limit(email, ip) do
+    case RateLimiter.check_password_reset_rate_limit(email, ip) do
+      :ok ->
+        :ok
+
+      {:error, :rate_limited, message} ->
+        AccountLogging.log_rate_limit_exceeded("password_reset", email, %{ip_address: ip})
+        {:error, :rate_limited, message}
     end
   end
 
