@@ -351,14 +351,7 @@ config :tymeslot, :tz_watch_enabled, false
 config :tymeslot, :auth, success_redirect_path: "/dashboard"
 
 # Input validation configuration
-config :tymeslot, :field_validation,
-  email_max_length: 254,
-  name_min_length: 2,
-  name_max_length: 100,
-  universal_max_length: 10_000,
-  password_min_length: 8,
-  password_max_length: 80,
-  full_name_max_length: 100
+config :tymeslot, :field_validation, universal_max_length: 10_000
 
 # Social Authentication Configuration moved to runtime.exs (needs runtime env vars)
 
