@@ -15,8 +15,8 @@ defmodule Tymeslot.Emails.Shared.Styles.BrandPalette do
   ## Derivation
 
   The transforms are calibrated against the hand-tuned turquoise family, so
-  seeding with the stock accent reproduces something very close to the
-  original values and the stock look is unchanged:
+  seeding with the stock accent reproduces it closely enough that the
+  difference does not survive an inbox:
 
     * `accent` — the seed, verbatim, never adjusted. This is the admin's
       brand colour as configured; it is preserved as-is because it is the
@@ -37,9 +37,12 @@ defmodule Tymeslot.Emails.Shared.Styles.BrandPalette do
   carries an 11px eyebrow and a 15px subtitle (see
   `Tymeslot.Emails.Shared.Stage`), neither of which meets the large-text
   carve-out, so `deep` is held to 4.5:1 — the same normal-text threshold as
-  `ink` on `tint`. The stock turquoise family already clears both, so the
-  clamp is inert for the default and only engages for seeds that would
-  otherwise produce unreadable emails, such as a pale yellow.
+  `ink` on `tint`. The stock family is stored already clearing both and
+  `family/0` hands it back verbatim, so an instance that configures no accent
+  never reaches the clamp at all. Seeding explicitly with the stock accent
+  does engage it: the untouched transform lands `deep` at 3.6:1, and the
+  clamp walks it down to 5.1:1. A seed that would otherwise produce
+  unreadable emails, such as a pale yellow, is walked down much further.
 
   The seed itself is deliberately exempt. A light brand colour will give a
   low-contrast button, and the admin UI surfaces that ratio as a warning

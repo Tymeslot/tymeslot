@@ -58,7 +58,7 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   # `deep` backs the stage band and the button surface for each family, so it
   # carries text and has to clear 4.5:1 against it — the same floor
   # `BrandPalette` clamps derived families to. Rose's `deep` was darkened from
-  # "#c44d3d" (4.48:1, a hair under) to reach it.
+  # "#c44d3d" (4.41:1 against band text, a hair under) to reach it.
   #
   # Amber's `deep` is a known exception: it clears 4.5:1 for a button (dark ink
   # reads at 5.8:1) but only reaches 2.99:1 against the near-white stage-band

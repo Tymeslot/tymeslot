@@ -56,7 +56,10 @@ defmodule Tymeslot.Emails.Branding do
   # `deep` clears the same 4.5:1 floor against band text that
   # `BrandPalette.@band_min_contrast` clamps *derived* families to, so a
   # self-hosted instance's custom brand band is never held to a stricter bar
-  # than Tymeslot's own default one.
+  # than Tymeslot's own default one. Reaching it moved `deep` from the
+  # "#0d9488" that shipped before (3.52:1 against band text, and only ever
+  # used for the band) to "#0d786c" at 5.03:1, so the default stage band and
+  # button both render a shade deeper than they did.
   @stock_family %{accent: "#14b8a6", deep: "#0d786c", ink: "#0f5954", tint: "#e1f7f3"}
 
   @doc """
