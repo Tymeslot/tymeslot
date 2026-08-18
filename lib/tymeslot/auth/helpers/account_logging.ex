@@ -186,32 +186,6 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   end
 
   @doc """
-  Logs session creation events.
-
-  ## Parameters
-  - `user`: The user struct/map
-  - `session_info`: Session information (optional)
-  - `context`: Additional context map (optional)
-
-  ## Examples
-      log_session_created(%{id: 123, email: "user@example.com"})
-  """
-  @spec log_session_created(user_entity(), logging_context(), logging_context()) :: :ok
-  def log_session_created(user, session_info \\ %{}, context \\ %{}) do
-    Logger.info(
-      "Session created successfully",
-      build_metadata(
-        [
-          {:user_id, user.id},
-          {:email, user.email},
-          {:event, "session_created"}
-        ],
-        Map.merge(session_info, context)
-      )
-    )
-  end
-
-  @doc """
   Logs password reset events.
 
   ## Parameters
