@@ -99,6 +99,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:attendee_locale) => String.t(),
           required(:status) => String.t(),
           required(:reminders) => [reminder()],
+          required(:show_as_free) => boolean(),
+          required(:attachments_snapshot) => [map()],
           required(:view_url) => String.t(),
           required(:reschedule_url) => String.t(),
           required(:cancel_url) => String.t(),
@@ -128,14 +130,6 @@ defmodule Tymeslot.Bookings.Policy do
   Builds meeting attributes from parameters and form data.
   Pure transformation function.
   """
-  # Dialyzer can verify the typed `BuildParams.t()` input, but it cannot prove
-  # the precise field types of the returned map: this is a pure data-shuffler
-  # whose values flow straight from struct/schema fields and the attendee's
-  # form data (`form_data["name"]` etc. are inherently `term()`), so the success
-  # typing widens every output field to `any()`. The `meeting_attributes` spec
-  # is retained as the authoritative documentation of the result shape; the
-  # contract check is disabled rather than gutting that type to `term()`.
-  @dialyzer {:no_contracts, build_meeting_attributes: 1}
   @spec build_meeting_attributes(BuildParams.t()) :: meeting_attributes()
   def build_meeting_attributes(%BuildParams{} = params) do
     meeting_uid = params.meeting_uid

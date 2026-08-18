@@ -10,8 +10,10 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
   `:reauth_required` signal the orchestration returns (rather than flashing)
   when an integration's credentials need re-encrypting.
 
-  The full provider-call path is stubbed: we fake `EventOperations.create_event`
-  via `Tymeslot.CalendarMock` and the MiroTalk provider via `HTTPClientMock`.
+  The full provider-call path is stubbed: the suite-wide `:calendar_module` seam
+  points `Calendar.Events` at `Tymeslot.CalendarMock`, and the MiroTalk provider
+  at `HTTPClientMock`. The one end-to-end case that must reach the real Google
+  client points the same seam back at `Calendar.Operations` for its own setup.
   """
 
   use Tymeslot.DataCase, async: false
@@ -92,34 +94,23 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         end_at: end_at
       }
 
-      original = Application.get_env(:tymeslot, :event_create_operations_module)
-      Application.put_env(:tymeslot, :event_create_operations_module, Tymeslot.CalendarMock)
+      assert {:ok, result} = EventCreation.run_create_event(payload)
 
-      try do
-        assert {:ok, result} = EventCreation.run_create_event(payload)
+      assert result.meeting_url == meet_url
+      # The room id is parsed out of the Meet URL by GoogleMeetProvider.extract_room_id
+      assert result.video_room_id == "inline-abc-def"
+      # The email/notification description carries the Meet URL — even though
+      # the calendar event itself relies on conferenceData.
+      assert result.description =~ meet_url
 
-        assert result.meeting_url == meet_url
-        # The room id is parsed out of the Meet URL by GoogleMeetProvider.extract_room_id
-        assert result.video_room_id == "inline-abc-def"
-        # The email/notification description carries the Meet URL — even though
-        # the calendar event itself relies on conferenceData.
-        assert result.description =~ meet_url
-
-        assert_enqueued(
-          worker: EmailWorker,
-          args: %{
-            "action" => "send_calendar_invitation",
-            "attendee_email" => "alice@example.com",
-            "event_uid" => "uid-inline-123"
-          }
-        )
-      after
-        if original do
-          Application.put_env(:tymeslot, :event_create_operations_module, original)
-        else
-          Application.delete_env(:tymeslot, :event_create_operations_module)
-        end
-      end
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "alice@example.com",
+          "event_uid" => "uid-inline-123"
+        }
+      )
     end
   end
 
@@ -167,24 +158,13 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         end_at: end_at
       }
 
-      original = Application.get_env(:tymeslot, :event_create_operations_module)
-      Application.put_env(:tymeslot, :event_create_operations_module, Tymeslot.CalendarMock)
+      assert {:ok, result} = EventCreation.run_create_event(payload)
 
-      try do
-        assert {:ok, result} = EventCreation.run_create_event(payload)
+      # The event is saved but meeting_url is nil
+      assert is_nil(result.meeting_url)
 
-        # The event is saved but meeting_url is nil
-        assert is_nil(result.meeting_url)
-
-        # A warning is signalled so handle_create_result can flash it
-        assert result.warning =~ "Meet link"
-      after
-        if original do
-          Application.put_env(:tymeslot, :event_create_operations_module, original)
-        else
-          Application.delete_env(:tymeslot, :event_create_operations_module)
-        end
-      end
+      # A warning is signalled so handle_create_result can flash it
+      assert result.warning =~ "Meet link"
     end
   end
 
@@ -233,37 +213,20 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
       # Route the provider call through the Mox-backed mock so
       # we don't need a real CalDAV server for the test.
-      original =
-        Application.get_env(:tymeslot, :event_create_operations_module)
+      assert {:ok, result} = EventCreation.run_create_event(payload)
 
-      Application.put_env(
-        :tymeslot,
-        :event_create_operations_module,
-        Tymeslot.CalendarMock
+      assert result.meeting_url == "https://video.example.com/join/room-123"
+      assert result.video_room_id == "room-123"
+      assert result.description =~ "https://video.example.com/join/room-123"
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "alice@example.com",
+          "event_uid" => "new-uid-123"
+        }
       )
-
-      try do
-        assert {:ok, result} = EventCreation.run_create_event(payload)
-
-        assert result.meeting_url == "https://video.example.com/join/room-123"
-        assert result.video_room_id == "room-123"
-        assert result.description =~ "https://video.example.com/join/room-123"
-
-        assert_enqueued(
-          worker: EmailWorker,
-          args: %{
-            "action" => "send_calendar_invitation",
-            "attendee_email" => "alice@example.com",
-            "event_uid" => "new-uid-123"
-          }
-        )
-      after
-        if original do
-          Application.put_env(:tymeslot, :event_create_operations_module, original)
-        else
-          Application.delete_env(:tymeslot, :event_create_operations_module)
-        end
-      end
     end
   end
 
@@ -300,29 +263,18 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         end_at: ~U[2026-04-08 09:30:00Z]
       }
 
-      original = Application.get_env(:tymeslot, :event_create_operations_module)
-      Application.put_env(:tymeslot, :event_create_operations_module, Tymeslot.CalendarMock)
+      assert {:ok, result} = EventCreation.run_create_event(payload)
 
-      try do
-        assert {:ok, result} = EventCreation.run_create_event(payload)
+      assert result.reauth_required == true
+      assert result.provider == nil
+      assert result.default_booking_calendar_id == nil
 
-        assert result.reauth_required == true
-        assert result.provider == nil
-        assert result.default_booking_calendar_id == nil
+      # The real DB side effect still happens: the integration is flagged.
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth == true
 
-        # The real DB side effect still happens: the integration is flagged.
-        reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
-        assert reloaded.needs_reauth == true
-
-        # The signal is data, not a flash sent back to the caller process.
-        refute_received {:flash, _}
-      after
-        if original do
-          Application.put_env(:tymeslot, :event_create_operations_module, original)
-        else
-          Application.delete_env(:tymeslot, :event_create_operations_module)
-        end
-      end
+      # The signal is data, not a flash sent back to the caller process.
+      refute_received {:flash, _}
     end
 
     test "returns reauth_required: false on the happy path" do
@@ -346,19 +298,8 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         end_at: ~U[2026-04-08 11:30:00Z]
       }
 
-      original = Application.get_env(:tymeslot, :event_create_operations_module)
-      Application.put_env(:tymeslot, :event_create_operations_module, Tymeslot.CalendarMock)
-
-      try do
-        assert {:ok, result} = EventCreation.run_create_event(payload)
-        assert result.reauth_required == false
-      after
-        if original do
-          Application.put_env(:tymeslot, :event_create_operations_module, original)
-        else
-          Application.delete_env(:tymeslot, :event_create_operations_module)
-        end
-      end
+      assert {:ok, result} = EventCreation.run_create_event(payload)
+      assert result.reauth_required == false
     end
   end
 
@@ -387,31 +328,21 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         video_integration_id: nil
       }
 
-      original = Application.get_env(:tymeslot, :event_create_operations_module)
-      Application.put_env(:tymeslot, :event_create_operations_module, Tymeslot.CalendarMock)
+      assert {:ok, result} = EventCreation.run_create_ad_hoc_meeting(params)
 
-      try do
-        assert {:ok, result} = EventCreation.run_create_ad_hoc_meeting(params)
+      assert %MeetingSchema{title: "Ad-hoc Chat", attendee_email: "alice@example.com"} =
+               Repo.get!(MeetingSchema, result.meeting_id)
 
-        assert %MeetingSchema{title: "Ad-hoc Chat", attendee_email: "alice@example.com"} =
-                 Repo.get!(MeetingSchema, result.meeting_id)
-
-        assert result.start_at == start_at
-        assert result.end_at == end_at
-      after
-        if original do
-          Application.put_env(:tymeslot, :event_create_operations_module, original)
-        else
-          Application.delete_env(:tymeslot, :event_create_operations_module)
-        end
-      end
+      assert result.start_at == start_at
+      assert result.end_at == end_at
     end
   end
 
   describe "run_create_event/1 — inline Meet end-to-end" do
     setup do
-      # This is the only test that drives the *real* calendar client path
-      # (the others stub `EventOperations` via `Tymeslot.CalendarMock`).
+      # This is the only test that drives the *real* calendar client path, so
+      # it points the `:calendar_module` seam back at the runtime module the
+      # rest of the suite mocks.
       # `ClientManager.booking_client/1` gates on
       # `function_exported?(Google.Provider, :build_booking_client_config, 1)`,
       # and `function_exported?/3` reports `false` for a module the VM has not
@@ -419,6 +350,23 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       # not run first, yielding a spurious `{:error, :no_calendar_client}`.
       # Force the provider module to load so the gate reflects reality.
       Code.ensure_loaded!(Tymeslot.Integrations.Calendar.Google.Provider)
+
+      previous_calendar = Application.get_env(:tymeslot, :calendar_module)
+
+      Application.put_env(
+        :tymeslot,
+        :calendar_module,
+        Tymeslot.Integrations.Calendar.Operations
+      )
+
+      on_exit(fn ->
+        if previous_calendar do
+          Application.put_env(:tymeslot, :calendar_module, previous_calendar)
+        else
+          Application.delete_env(:tymeslot, :calendar_module)
+        end
+      end)
+
       previous = Application.get_env(:tymeslot, :google_calendar_api_module)
 
       Application.put_env(
