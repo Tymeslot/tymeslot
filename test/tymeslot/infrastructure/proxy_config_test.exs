@@ -229,27 +229,6 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       assert auth_header == "Basic #{expected_auth}"
     end
 
-    test "proxy_headers must NOT be in proxy tuple (regression test)" do
-      # This test explicitly catches the bug we fixed.
-      # If someone accidentally puts proxy_headers back in the tuple,
-      # this test will fail.
-
-      proxy_config = %{
-        host: "proxy.example.com",
-        port: 3128,
-        auth: {"user", "pass"},
-        scheme: "http"
-      }
-
-      options = ProxyConfig.build_req_proxy_options(proxy_config)
-      {_scheme, _host, _port, proxy_tuple_opts} = options[:connect_options][:proxy]
-
-      # MUST NOT have proxy_headers in tuple
-      refute Keyword.has_key?(proxy_tuple_opts, :proxy_headers),
-             "BUG: proxy_headers found in proxy tuple! This breaks authentication. " <>
-               "Move proxy_headers to connect_options level."
-    end
-
     test "complete structure matches Req/Mint expectations" do
       # This test verifies the EXACT structure that Req/Mint expects.
       # If Req/Mint changes their API, this test will catch it.

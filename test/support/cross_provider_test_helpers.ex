@@ -25,34 +25,56 @@ defmodule Tymeslot.CrossProviderTestHelpers do
   end
 
   @doc """
-  Tests that all providers return display_name.
+  Tests that every provider returns the display name the caller expects.
+
+  `expected_names` maps a provider type to the exact label the UI renders for
+  it. Pinning the label is the point: a non-empty string tells you nothing,
+  while a swapped or lower-cased name is exactly the regression this catches.
   """
-  @spec assert_providers_return_display_name(module(), list(atom())) :: :ok
-  def assert_providers_return_display_name(registry_module, provider_list) do
-    Enum.each(provider_list, fn provider_type ->
+  @spec assert_providers_return_display_name(module(), %{atom() => String.t()}) :: :ok
+  def assert_providers_return_display_name(registry_module, expected_names)
+      when is_map(expected_names) do
+    Enum.each(expected_names, fn {provider_type, expected_name} ->
       {:ok, provider_module} = registry_module.get_provider(provider_type)
 
-      # Should be able to call display_name
-      display_name = provider_module.display_name()
-      assert is_binary(display_name)
-      assert String.length(display_name) > 0
+      assert provider_module.display_name() == expected_name
     end)
 
     :ok
   end
 
+  # Every declared field type the form renderer knows how to handle.
+  @known_field_types [:string, :integer, :boolean, :list, :map]
+
   @doc """
-  Tests that all providers return config_schema.
+  Tests that every provider's config schema declares each field the way the
+  setup form needs it: a `:type` the renderer understands and an explicit
+  `:required` flag, with at least one field actually required.
+
+  A schema that merely is a non-empty map satisfies nothing — a field missing
+  `:required` renders as optional and silently lets an incomplete config
+  through.
   """
   @spec assert_providers_return_config_schema(module(), list(atom())) :: :ok
   def assert_providers_return_config_schema(registry_module, provider_list) do
     Enum.each(provider_list, fn provider_type ->
       {:ok, provider_module} = registry_module.get_provider(provider_type)
 
-      # Should be able to call config_schema
       schema = provider_module.config_schema()
-      assert is_map(schema)
-      assert map_size(schema) > 0
+      assert is_map(schema) and map_size(schema) > 0
+
+      Enum.each(schema, fn {field, definition} ->
+        context = "#{inspect(provider_type)}.#{field}"
+
+        assert definition[:type] in @known_field_types,
+               "#{context} declares an unknown field type: #{inspect(definition[:type])}"
+
+        assert is_boolean(definition[:required]),
+               "#{context} must declare :required explicitly"
+      end)
+
+      assert Enum.any?(schema, fn {_field, definition} -> definition[:required] end),
+             "#{inspect(provider_type)} declares no required config field"
     end)
 
     :ok

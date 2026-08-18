@@ -115,8 +115,11 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
       profile =
         insert(:profile, user: user, username: "testuser", booking_theme: "999")
 
-      # Should not crash
-      assert {:ok, _view, _html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
+
+      # An unknown theme id falls back to Quill's stylesheet.
+      assert html =~ "scheduling-theme-quill.css"
+      refute html =~ "scheduling-theme-rhythm.css"
     end
 
     test "shows readiness error when no calendar integration is connected", %{conn: conn} do

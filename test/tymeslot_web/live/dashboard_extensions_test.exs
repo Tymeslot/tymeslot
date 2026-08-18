@@ -8,6 +8,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.DashboardCache
+  alias TymeslotWeb.Components.CoreComponents.Heroicons
 
   setup_all do
     case Process.whereis(DashboardCache) do
@@ -215,11 +216,16 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
 
     test "renders icon component for extension", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
-      # The icon should be rendered - we can't check the exact SVG path
-      # but we can verify the extension nav item exists
-      assert html =~ "Icon Test"
+      # An unknown icon name degrades to an empty <span>, so assert the nav item
+      # carries the resolved heroicon markup itself.
+      icon = view |> element(~s(a[href="/dashboard/icon-test"] svg)) |> render()
+
+      {:ok, heroicon} = Heroicons.fetch("hero-puzzle-piece")
+      [_full, path_data] = Regex.run(~r/ d="([^"]+)"/, heroicon.body)
+
+      assert icon =~ path_data
     end
   end
 
@@ -323,10 +329,15 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
 
     test "sidebar mobile menu includes extensions", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/overview")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
 
-      # The extension should be in the sidebar (which is used for both mobile and desktop)
-      assert html =~ "Integrated Feature"
+      # One sidebar serves both mobile and desktop, so the extension must be a
+      # nav link inside the drawer — the label appearing anywhere is not enough.
+      assert has_element?(
+               view,
+               ~s(aside#dashboard-sidebar a[href="/dashboard/integrated"]),
+               "Integrated Feature"
+             )
     end
 
     test "extensions appear in Account section of sidebar", %{conn: conn} do

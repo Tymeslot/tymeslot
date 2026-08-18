@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
   import Mox
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
+  alias Tymeslot.Test.LogCapture
 
   setup :verify_on_exit!
 
@@ -140,7 +141,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
     end
 
     test "redacts and truncates error bodies in logs" do
-      import ExUnit.CaptureLog
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
@@ -152,10 +152,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
          }}
       end)
 
-      log = capture_log(fn -> MiroTalkProvider.perform_connection_test(config) end)
+      LogCapture.attach()
 
-      assert log =~ "MiroTalk server error"
-      refute log =~ "ya29.secret"
+      MiroTalkProvider.perform_connection_test(config)
+
+      # The body goes to metadata, which the console formatter drops, so this
+      # must be asserted against the captured record rather than `capture_log`.
+      refute LogCapture.dump(LogCapture.await_log("MiroTalk server error")) =~ "ya29.secret"
     end
   end
 

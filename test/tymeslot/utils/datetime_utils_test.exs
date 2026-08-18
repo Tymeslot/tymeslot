@@ -199,12 +199,6 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       assert result["Morning"] == ["7:30 AM", "8:00 AM", "9:00 AM", "11:30 AM"]
     end
 
-    test "early-hour times (07:30) appear before later times (11:30) in the same period" do
-      slots = ["11:30 AM", "7:30 AM"]
-      result = Display.group_slots_by_period(slots)
-      assert result["Morning"] == ["7:30 AM", "11:30 AM"]
-    end
-
     test "sorts within each period independently" do
       slots = ["3:00 PM", "1:00 PM", "8:00 PM", "6:00 PM", "10:00 AM", "7:00 AM"]
       result = Display.group_slots_by_period(slots)

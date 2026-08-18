@@ -110,13 +110,4 @@ defmodule Tymeslot.Payments.MetadataSanitizerTest do
       refute MetadataSanitizer.system_reserved?("custom_field_1")
     end
   end
-
-  describe "allowed_keys/0" do
-    test "returns list of allowed user keys" do
-      keys = MetadataSanitizer.allowed_keys()
-      assert "billing_interval" in keys
-      assert "referral_code" in keys
-      assert "utm_source" in keys
-    end
-  end
 end

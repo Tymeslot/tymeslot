@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Common.ErrorHandler
+  alias Tymeslot.Test.LogCapture
 
   describe "normalize_error/1" do
     test "normalizes 3-tuple errors" do
@@ -55,20 +56,19 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
     end
 
     test "suppresses logging for specified errors" do
-      log =
-        capture_log(fn ->
-          assert {:error, :ignored} =
-                   ErrorHandler.handle_with_logging(fn -> {:error, :ignored} end,
-                     suppress_errors: [:ignored]
-                   )
-        end)
+      LogCapture.attach()
 
-      # The suppressed error must not be logged. Assert on its specific
-      # footprint rather than log == "", which is brittle: capture_log in an
-      # async test also captures log output emitted by other concurrently
-      # running test modules.
-      refute log =~ "ignored"
-      refute log =~ "Integration error"
+      assert {:error, :ignored} =
+               ErrorHandler.handle_with_logging(fn -> {:error, :ignored} end,
+                 suppress_errors: [:ignored]
+               )
+
+      # A suppressed error must produce no log line at all, which `capture_log`
+      # cannot express: it captures every process's output, so `log == ""` would
+      # trip over concurrently running modules, and matching a substring instead
+      # ("ignored") is loose enough to do the same in reverse. Narrowing to the
+      # events this process emitted makes the absence assertion exact.
+      assert [] == logs_emitted_here()
     end
 
     test "handles exceptions" do
@@ -194,5 +194,15 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
         assert translated.message =~ "Insufficient permissions"
       end)
     end
+  end
+
+  # Every log event the code under test emitted, rendered so a failure names the
+  # offending line. A :logger handler is global, so events are narrowed to those
+  # logged by this process; the handler callback runs in the logging process, so
+  # anything logged synchronously has already arrived.
+  defp logs_emitted_here do
+    LogCapture.drain()
+    |> Enum.filter(&(&1.meta.pid == self()))
+    |> Enum.map(&LogCapture.dump/1)
   end
 end

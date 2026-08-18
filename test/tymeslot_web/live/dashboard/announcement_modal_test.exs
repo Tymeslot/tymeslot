@@ -207,19 +207,24 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
       user = pre_existing_user()
       conn = log_in(conn, user)
 
-      {:ok, view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-      # Back button is disabled at index 0 — assert the attribute is present.
-      assert html =~ ~s(disabled)
+      # The button's own class carries `disabled:opacity-40`, so match the
+      # attribute on the button itself rather than the substring anywhere.
+      assert has_element?(view, ~s|button[phx-click="back"][disabled]|)
 
-      # Advance then retreat — covers the code path that clamps to 0.
+      # On item 2 it is enabled again.
       view |> element(~s|button[phx-click="next"]|) |> render_click()
+      refute has_element?(view, ~s|button[phx-click="back"][disabled]|)
+
+      # Retreating clamps back to 0, where it is disabled once more.
       view |> element(~s|button[phx-click="back"]|) |> render_click()
 
       rendered = render(view)
 
       assert rendered =~ "Alpha"
       assert rendered =~ "1 / 2"
+      assert has_element?(view, ~s|button[phx-click="back"][disabled]|)
       assert Process.alive?(view.pid)
     end
   end

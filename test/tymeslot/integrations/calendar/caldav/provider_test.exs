@@ -196,24 +196,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
   end
 
   describe "list_events/3" do
-    test "delegates to CaldavCommon with time range" do
+    test "delegates a valid time range to CaldavCommon" do
+      # Nothing is sent: `CaldavCommon.get_events/3` refuses a client with no
+      # configured calendar path before any request is built. That refusal is
+      # the proof the range was accepted and the call reached the shared
+      # module, rather than short-circuiting on :missing_time_range here.
       client = %{
-        base_url: "http://localhost:1",
+        base_url: "https://caldav.example.com",
         username: "user",
         password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
+        calendar_paths: [],
         provider: :caldav
       }
 
       start_time = DateTime.utc_now()
       end_time = DateTime.add(start_time, 3600, :second)
 
-      capture_log(fn ->
-        # Port 1 is closed, so the delegated request fails immediately rather
-        # than being rejected up front for a missing time range.
-        assert {:error, _reason} =
-                 Provider.list_events(client, start_time: start_time, end_time: end_time)
-      end)
+      assert Provider.list_events(client, start_time: start_time, end_time: end_time) ==
+               {:error, "No calendars configured"}
     end
 
     test "returns error when time range is missing" do
@@ -230,12 +230,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
   end
 
   describe "create_event/2" do
-    test "accepts event data for creation" do
+    test "delegates to CaldavCommon, which refuses without a target calendar" do
+      # The message is CaldavCommon's own and is returned before any request
+      # is built, so it pins the delegation without needing a live server.
       client = %{
-        base_url: "http://localhost:1",
+        base_url: "https://caldav.example.com",
         username: "user",
         password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
+        calendar_paths: [],
         provider: :caldav
       }
 
@@ -245,24 +247,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
         end_time: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      capture_log(fn ->
-        result = Provider.create_event(client, event_data)
-        assert match?({:error, _}, result)
-      end)
+      assert Provider.create_event(client, event_data) ==
+               {:error, "No calendar configured for creating events"}
     end
   end
 
   describe "update_event/3" do
-    test "accepts uid and event data for update" do
+    test "delegates to CaldavCommon, which reports an unconfigured calendar as not found" do
       client = %{
-        base_url: "http://localhost:1",
+        base_url: "https://caldav.example.com",
         username: "user",
         password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
+        calendar_paths: [],
         provider: :caldav
       }
-
-      uid = "test-event-123"
 
       event_data = %{
         summary: "Updated Meeting",
@@ -270,34 +268,35 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
         end_time: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      capture_log(fn ->
-        result = Provider.update_event(client, uid, event_data)
-        assert match?({:error, _}, result)
-      end)
+      assert Provider.update_event(client, "test-event-123", event_data) ==
+               {:error, "Event not found"}
     end
   end
 
   describe "delete_event/2" do
-    test "accepts uid for deletion" do
+    test "delegates to CaldavCommon, for which deleting from no calendar is a no-op" do
+      # Deletion is idempotent by design: with nothing configured there is
+      # nothing to remove, so CaldavCommon reports success rather than an
+      # error. Asserting `:ok` pins that contract; the previous
+      # `{:error, _}` assertion described the opposite behaviour.
       client = %{
-        base_url: "http://localhost:1",
+        base_url: "https://caldav.example.com",
         username: "user",
         password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
+        calendar_paths: [],
         provider: :caldav
       }
 
-      uid = "test-event-123"
-
-      capture_log(fn ->
-        result = Provider.delete_event(client, uid)
-        assert match?({:error, _}, result)
-      end)
+      assert Provider.delete_event(client, "test-event-123") == :ok
     end
   end
 
   describe "test_connection/1" do
-    test "returns error for invalid credentials" do
+    test "refuses a loopback base_url before any request is issued" do
+      # `CalDAV.Discovery` validates the URL with `block_private_ips: true`
+      # unless `:allow_private_ips_for_calendar` is set, so the probe never
+      # reaches a socket. Pinning the guard's own message is what proves the
+      # guard fired, rather than the connection merely having failed.
       integration = %{
         base_url: "http://localhost:1",
         username: "invalid",
@@ -305,24 +304,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
         calendar_paths: []
       }
 
-      capture_log(fn ->
-        result = Provider.perform_connection_test(integration)
-        assert {:error, _message} = result
-      end)
+      assert Provider.perform_connection_test(integration) ==
+               {:error, "Private or local network addresses are not allowed"}
     end
 
     test "is pure I/O — takes only the integration, no caller options" do
       integration = %{
-        base_url: "http://localhost:1",
+        base_url: "https://caldav.example.com",
         username: "user",
         password: "pass",
         calendar_paths: []
       }
 
-      capture_log(fn ->
-        result = Provider.perform_connection_test(integration)
-        assert {:error, _message} = result
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: ""}}
       end)
+
+      assert Provider.perform_connection_test(integration) ==
+               {:ok, "CalDAV connection successful"}
     end
   end
 

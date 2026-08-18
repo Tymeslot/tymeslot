@@ -9,8 +9,7 @@ defmodule TymeslotWeb.AnalyticsTest do
   use ExUnit.Case, async: false
   @moduletag :infrastructure
 
-  import ExUnit.CaptureLog
-
+  alias Tymeslot.Test.LogCapture
   alias TymeslotWeb.Analytics
 
   # A bare socket is enough: push_event/3 only writes to socket.private.live_temp.
@@ -37,14 +36,13 @@ defmodule TymeslotWeb.AnalyticsTest do
     test "does not leak the offending prop VALUE when it raises" do
       # The validator interpolates inspect(value) for a non-categorical value.
       # Even so, the raise path must not log the value anywhere.
-      log =
-        capture_log(fn ->
-          assert_raise ArgumentError, fn ->
-            Analytics.push(socket(), "onboarding_step_completed", %{step: %{secret: "leak-123"}})
-          end
-        end)
+      LogCapture.attach()
 
-      refute log =~ "leak-123"
+      assert_raise ArgumentError, fn ->
+        Analytics.push(socket(), "onboarding_step_completed", %{step: %{secret: "leak-123"}})
+      end
+
+      refute Enum.map_join(LogCapture.drain(), " ", &LogCapture.dump/1) =~ "leak-123"
     end
 
     test "emits and pushes the event for a valid payload" do
@@ -69,16 +67,18 @@ defmodule TymeslotWeb.AnalyticsTest do
     end
 
     test "logs the dropped event but never the prop VALUE" do
-      log =
-        capture_log(fn ->
-          Analytics.push(socket(), "onboarding_step_completed", %{user_id: "secret-value-123"})
-        end)
+      LogCapture.attach()
 
-      assert log =~ "analytics event dropped"
-      # The offending key names go to keyword metadata (rendered by logger_json
-      # in prod); the security guarantee under test is that the prop VALUE is
-      # never written to the log.
-      refute log =~ "secret-value-123"
+      Analytics.push(socket(), "onboarding_step_completed", %{user_id: "secret-value-123"})
+
+      # The offending key names go to keyword metadata; the security guarantee
+      # under test is that the prop VALUE is never written to the log. Asserted
+      # against the whole record because the console formatter drops metadata,
+      # which would make a `capture_log` refutation vacuous.
+      event = LogCapture.await_log("analytics event dropped")
+
+      assert LogCapture.user_metadata(event)[:keys] == [:user_id]
+      refute LogCapture.dump(event) =~ "secret-value-123"
     end
 
     test "still pushes a valid event" do

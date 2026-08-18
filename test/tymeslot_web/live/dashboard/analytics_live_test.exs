@@ -54,15 +54,19 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       assert html =~ "twitter"
     end
 
-    test "switching to the 7-day range re-renders the dashboard", %{conn: conn, user: user} do
+    test "switching to the 7-day range makes it the active range", %{conn: conn, user: user} do
       seed_visit(user, "linkedin", "hash-a")
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
 
-      html = view |> element("button[phx-value-range=\"7d\"]") |> render_click()
+      # 30 days is the default range.
+      assert has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed]))
+      refute has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed]))
 
-      assert html =~ "Analytics"
-      assert html =~ "linkedin"
+      view |> element(~s(button[phx-value-range="7d"])) |> render_click()
+
+      assert has_element?(view, ~s(button[phx-value-range="7d"][aria-pressed]))
+      refute has_element?(view, ~s(button[phx-value-range="30d"][aria-pressed]))
     end
 
     test "renders the device breakdown with per-device labels", %{conn: conn, user: user} do

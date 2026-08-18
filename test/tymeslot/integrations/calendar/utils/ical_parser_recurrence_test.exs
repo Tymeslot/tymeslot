@@ -205,9 +205,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserRecurrenceTest do
       END:VCALENDAR
       """
 
-      # Parser should handle TZID parameter
-      result = ICalParser.parse(ical_content)
-      assert match?({:ok, _}, result)
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      # New York is UTC-5 in January, so 10:00–11:00 local = 15:00–16:00 UTC
+      assert event.start_time == ~U[2030-01-15 15:00:00Z]
+      assert event.end_time == ~U[2030-01-15 16:00:00Z]
     end
   end
 end

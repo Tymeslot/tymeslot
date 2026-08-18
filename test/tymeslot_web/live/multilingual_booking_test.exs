@@ -179,8 +179,16 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
       html =
         view |> element("button[phx-click='toggle_language_dropdown']") |> render_click()
 
-      # Current language should have active class
-      assert html =~ "active"
+      # Exactly the current locale's option carries the `active` marker. A bare
+      # `html =~ "active"` matches any number of unrelated attributes and class
+      # names on the page, so it could never fail.
+      active_locales =
+        html
+        |> Floki.parse_document!()
+        |> Floki.find("button[phx-click='change_locale'].active")
+        |> Floki.attribute("phx-value-locale")
+
+      assert active_locales == ["de"]
     end
   end
 

@@ -12,6 +12,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     test "returns list of all registered video providers" do
       assert Enum.sort(ProviderRegistry.list_providers()) ==
                [:custom, :google_meet, :mirotalk, :teams, :zoom]
+
+      assert ProviderRegistry.provider_count() == 5
     end
   end
 
@@ -26,15 +28,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       assert module == Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
     end
 
-    test "returns provider module for teams if available" do
-      case ProviderRegistry.get_provider(:teams) do
-        {:ok, module} ->
-          assert module == Tymeslot.Integrations.Video.Providers.TeamsProvider
-
-        {:error, _reason} ->
-          # Teams provider may not be available
-          :ok
-      end
+    test "returns provider module for valid teams provider" do
+      assert ProviderRegistry.get_provider(:teams) ==
+               {:ok, Tymeslot.Integrations.Video.Providers.TeamsProvider}
     end
 
     test "returns ZoomProvider for :zoom" do
@@ -195,15 +191,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "provider_count/0" do
-    test "returns total number of registered video providers" do
-      count = ProviderRegistry.provider_count()
-
-      assert is_integer(count)
-      assert count >= 3
-    end
-  end
-
   describe "providers_with_capability/1" do
     test "filters providers by specific capability" do
       # MiroTalk, Google Meet, Teams and Zoom declare screen_sharing; only the
@@ -218,15 +205,18 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
   end
 
   describe "recommend_provider/1" do
-    test "returns a recommended provider based on requirements" do
+    test "ignores the requirements it is given and returns the default" do
+      # Requirement-aware selection is not implemented: the argument is
+      # discarded. Pinning the answer keeps this honest — a membership check
+      # would pass just as happily once the behaviour does change, hiding the
+      # moment this test needs revisiting.
       requirements = %{
         participant_count: 10,
         recording_required: false
       }
 
-      provider = ProviderRegistry.recommend_provider(requirements)
-
-      assert provider in [:mirotalk, :google_meet, :teams, :custom]
+      assert ProviderRegistry.recommend_provider(requirements) == :mirotalk
+      assert ProviderRegistry.recommend_provider(%{participant_count: 500}) == :mirotalk
     end
 
     test "returns default provider when no requirements specified" do

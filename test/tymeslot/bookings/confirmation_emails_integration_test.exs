@@ -141,25 +141,6 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       # This integration test verifies the complete booking → job → database update flow
     end
 
-    test "handles partial email failure gracefully", %{
-      meeting_params: meeting_params,
-      form_data: form_data
-    } do
-      # Create the booking
-      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-
-      # Simulate a scenario where one email fails
-      # (This would be caught by the worker, which we test separately)
-      # Here we just verify the job is enqueued correctly
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "action" => "send_confirmation_emails",
-          "meeting_id" => meeting.id
-        }
-      )
-    end
-
     test "job completes successfully for different meeting types", %{
       user: user,
       form_data: form_data

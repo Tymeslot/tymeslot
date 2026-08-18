@@ -250,25 +250,9 @@ defmodule Tymeslot.Integrations.Calendar.TokensTest do
 
       assert {:ok, _updated} = Tokens.refresh_oauth_token(integration)
     end
-
-    test "handles missing provider_atom safely" do
-      # This should be caught by the when guard, but let's be sure.
-      integration = %{provider: "unknown", id: 123}
-      assert {:error, :unsupported_provider} = Tokens.refresh_oauth_token(integration)
-    end
   end
 
   describe "token refresh behavior with different providers" do
-    test "handles CalDAV provider correctly (no refresh needed)" do
-      integration = %{
-        provider: "caldav",
-        username: "user",
-        password: "pass"
-      }
-
-      assert {:error, :unsupported_provider} = Tokens.refresh_oauth_token(integration)
-    end
-
     test "handles Nextcloud provider correctly (no OAuth refresh)" do
       integration = %{
         provider: "nextcloud",

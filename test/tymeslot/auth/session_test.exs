@@ -6,6 +6,7 @@ defmodule Tymeslot.Auth.SessionTest do
   alias Phoenix.Socket.Broadcast
   alias Tymeslot.Auth.Session
   alias Tymeslot.Auth.UserSessionQueries
+  alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
   alias TymeslotWeb.Endpoint
@@ -18,6 +19,17 @@ defmodule Tymeslot.Auth.SessionTest do
   # token here and hash it to reconstruct the same topic.
   defp live_socket_topic(token),
     do: "users_sessions:#{Base.url_encode64(Token.hash_token(token))}"
+
+  # Makes a session look as though it had been created `hours` ago, by rewinding
+  # the expiry that `create_session/2` stamped on it. Deliberately relative: the
+  # test asserts how long a session lasts without restating the lifetime.
+  defp age_session(token, hours) do
+    session = Repo.get_by!(UserSessionSchema, token_hash: Token.hash_token(token))
+
+    session
+    |> change(expires_at: DateTime.add(session.expires_at, -hours, :hour))
+    |> Repo.update!()
+  end
 
   describe "create_session/2" do
     test "stores session token in conn session" do
@@ -35,12 +47,20 @@ defmodule Tymeslot.Auth.SessionTest do
       assert UserSessionQueries.get_user_by_session_token(token)
     end
 
-    test "session has 24-hour expiration" do
+    test "a session still resolves after 23 hours but no longer after 25" do
       user = insert(:user)
-      {:ok, _conn, token} = Session.create_session(init_test_session(build_conn(), %{}), user)
 
-      # Token should work now
-      assert %{id: _id} = UserSessionQueries.get_user_by_session_token(token)
+      {:ok, _conn, recent_token} =
+        Session.create_session(init_test_session(build_conn(), %{}), user)
+
+      {:ok, _conn, stale_token} =
+        Session.create_session(init_test_session(build_conn(), %{}), user)
+
+      age_session(recent_token, 23)
+      age_session(stale_token, 25)
+
+      assert %{id: _id} = UserSessionQueries.get_user_by_session_token(recent_token)
+      assert nil == UserSessionQueries.get_user_by_session_token(stale_token)
     end
 
     test "records the login as the user's last activity" do

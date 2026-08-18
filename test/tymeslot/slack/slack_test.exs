@@ -286,13 +286,7 @@ defmodule Tymeslot.SlackTest do
   # and the worker test (Task 2.5) — keeping the context test focused on inputs
   # the context owns directly.
 
-  describe "available_events/0 and slack_enabled?/0" do
-    test "available_events/0 lists three meeting events" do
-      events = Slack.available_events()
-      assert length(events) == 3
-      assert Enum.all?(events, &Map.has_key?(&1, :value))
-    end
-
+  describe "slack_enabled?/0 and oauth_mode_available?/0" do
     test "slack_enabled?/0 reflects config" do
       setup_config(:tymeslot, slack_notifications_allowed: true)
       assert Slack.slack_enabled?()

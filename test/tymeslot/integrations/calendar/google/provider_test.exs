@@ -410,12 +410,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
     end
   end
 
-  describe "get_calendar_api_module/0" do
-    test "returns the configured Google CalendarAPI mock" do
-      assert Provider.get_calendar_api_module() == GoogleCalendarAPIMock
-    end
-  end
-
   describe "CRUD operations delegation" do
     test "call_create_event uses primary calendar and mocks API call" do
       user = insert(:user)

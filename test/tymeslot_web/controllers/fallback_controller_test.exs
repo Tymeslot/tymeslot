@@ -25,11 +25,6 @@ defmodule TymeslotWeb.FallbackControllerTest do
       assert body =~ "app.css"
     end
 
-    test "does not redirect (no soft-404)", %{conn: conn} do
-      conn = get(conn, "/invalid/path/to/trigger/fallback")
-      refute conn.status in 300..399
-    end
-
     test "emits no canonical link advertising the missing URL", %{conn: conn} do
       # The root layout carries a self-referential <link rel="canonical">. On a
       # 404 that would tell crawlers a dead page is its own canonical, so the

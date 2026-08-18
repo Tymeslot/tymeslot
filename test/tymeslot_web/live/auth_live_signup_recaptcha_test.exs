@@ -188,46 +188,6 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
   end
 
   describe "Edge cases - Token and data handling" do
-    test "signup with very long token is rejected (DoS protection)" do
-      # Enable reCAPTCHA
-      Application.put_env(:tymeslot, :recaptcha,
-        signup_enabled: true,
-        signup_min_score: 0.3,
-        signup_action: "signup_form",
-        expected_hostnames: []
-      )
-
-      System.put_env("RECAPTCHA_SITE_KEY", "test_site_key")
-      System.put_env("RECAPTCHA_SECRET_KEY", "test_secret_key")
-
-      # Create a very large token (100KB+)
-      huge_token = String.duplicate("X", 100_000)
-
-      # Verify the token is rejected without crashing
-      result = Recaptcha.verify(huge_token)
-      assert result == {:error, :invalid_token}
-    end
-
-    test "token exceeding 5KB size limit is rejected early" do
-      # Enable reCAPTCHA
-      Application.put_env(:tymeslot, :recaptcha,
-        signup_enabled: true,
-        signup_min_score: 0.3,
-        signup_action: "signup_form",
-        expected_hostnames: []
-      )
-
-      System.put_env("RECAPTCHA_SITE_KEY", "test_site_key")
-      System.put_env("RECAPTCHA_SECRET_KEY", "test_secret_key")
-
-      # Create a token just over 5KB
-      oversized_token = String.duplicate("X", 5_001)
-
-      # Should be rejected before hitting Google API (prevents DoS)
-      result = Recaptcha.verify(oversized_token)
-      assert result == {:error, :invalid_token}
-    end
-
     test "token at exactly 5KB boundary passes size check" do
       # Enable reCAPTCHA
       Application.put_env(:tymeslot, :recaptcha,

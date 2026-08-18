@@ -25,10 +25,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponentTes
 
   test "sanitize_params/2 sanitizes data" do
     socket = %Socket{assigns: %{__changed__: %{}}}
-    params = %{"name" => "  John Doe  "}
+    # Every field in the booking spec has to be present and valid: on a
+    # validation error `sanitize_params/2` falls back to the raw input, so
+    # omitting the required email would leave the sanitiser untested.
+    params = %{"name" => "  John Doe  ", "email" => "  john@example.com  "}
 
     {:ok, updated} = FormValidationHandlerComponent.sanitize_params(socket, params)
-    assert updated.assigns.form.params["name"] == "  John Doe  "
+    assert updated.assigns.form.params["name"] == "John Doe"
+    assert updated.assigns.form.params["email"] == "john@example.com"
   end
 
   test "validate_field/3 validates fields" do

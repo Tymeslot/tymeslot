@@ -6,6 +6,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpersTest do
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
+  # The extremes of the timezone map: UTC+14 and UTC-12 are 26 hours apart, so
+  # their local dates always differ, whatever moment the suite runs at. Each
+  # zone's "today" is therefore a date the other zone must never highlight, and
+  # the pair pins timezone awareness without depending on the time of day.
+  @ahead_tz "Pacific/Kiritimati"
+  @behind_tz "Etc/GMT+12"
+
   # ── day_header_class/2 ────────────────────────────────────────────────
 
   describe "day_header_class/2 — timezone-aware today highlighting" do
@@ -29,52 +36,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpersTest do
       assert PreferenceHelpers.day_header_class(today_utc) =~ "turquoise"
     end
 
-    test "UTC+14 (Pacific/Kiritimati) boundary: local today differs from UTC today" do
-      # Pacific/Kiritimati is UTC+14. At 23:30 UTC, Kiritimati local time is
-      # 13:30 the next calendar day. We freeze a UTC moment that sits early
-      # enough in the UTC day that the Kiritimati date is already one day ahead.
-      #
-      # We cannot easily mock DateTime.utc_now/0 without a mock library, so we
-      # instead verify the function's logic directly: given a Date that is the
-      # localised today for Kiritimati (which may differ from Date.utc_today/0),
-      # it must be highlighted.
-      kiritimati_tz = "Pacific/Kiritimati"
+    test "UTC+14 (Pacific/Kiritimati) today is highlighted there and not in UTC-12" do
+      now = DateTime.utc_now()
+      ahead_today = local_today(now, @ahead_tz)
 
-      # Compute the local date independently, mirroring the function's logic.
-      local_today =
-        DateTime.utc_now()
-        |> DateTime.shift_zone!(kiritimati_tz)
-        |> DateTime.to_date()
+      # Precondition: the two zones are never on the same calendar date, so the
+      # date below is genuinely "not today" for the far-behind zone.
+      assert Date.compare(ahead_today, local_today(now, @behind_tz)) != :eq
 
-      # The function must highlight that date.
-      assert PreferenceHelpers.day_header_class(local_today, kiritimati_tz) =~ "turquoise"
-
-      # And it must NOT highlight the raw UTC date when it differs.
-      utc_today = Date.utc_today()
-
-      if Date.compare(local_today, utc_today) != :eq do
-        # The two dates differ: ensure only the local date is highlighted.
-        refute PreferenceHelpers.day_header_class(utc_today, kiritimati_tz) =~ "turquoise"
-      end
+      assert PreferenceHelpers.day_header_class(ahead_today, @ahead_tz) =~ "turquoise"
+      refute PreferenceHelpers.day_header_class(ahead_today, @behind_tz) =~ "turquoise"
     end
 
-    test "UTC-12 (Etc/GMT+12) boundary: local today may lag UTC today" do
-      # UTC-12 is the furthest-behind timezone. At 00:30 UTC, it is still
-      # the previous calendar day in UTC-12.
-      tz = "Etc/GMT+12"
+    test "UTC-12 (Etc/GMT+12) today is highlighted there and not in UTC+14" do
+      now = DateTime.utc_now()
+      behind_today = local_today(now, @behind_tz)
 
-      local_today =
-        DateTime.utc_now()
-        |> DateTime.shift_zone!(tz)
-        |> DateTime.to_date()
+      assert Date.compare(behind_today, local_today(now, @ahead_tz)) != :eq
 
-      assert PreferenceHelpers.day_header_class(local_today, tz) =~ "turquoise"
-
-      utc_today = Date.utc_today()
-
-      if Date.compare(local_today, utc_today) != :eq do
-        refute PreferenceHelpers.day_header_class(utc_today, tz) =~ "turquoise"
-      end
+      assert PreferenceHelpers.day_header_class(behind_today, @behind_tz) =~ "turquoise"
+      refute PreferenceHelpers.day_header_class(behind_today, @ahead_tz) =~ "turquoise"
     end
   end
 
@@ -152,5 +133,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpersTest do
       label = PreferenceHelpers.period_label(assigns)
       assert label =~ "2026"
     end
+  end
+
+  defp local_today(now, timezone) do
+    now
+    |> DateTime.shift_zone!(timezone)
+    |> DateTime.to_date()
   end
 end

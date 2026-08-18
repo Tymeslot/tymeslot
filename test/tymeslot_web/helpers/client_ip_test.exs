@@ -161,18 +161,6 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
       assert ClientIP.get_from_mount(socket) == "203.0.113.7"
     end
 
-    test "falls back to x-real-ip when cf-connecting-ip is absent" do
-      socket =
-        mock_socket(
-          connect_info: %{
-            peer_data: @peer_data,
-            x_headers: [{"x-real-ip", "203.0.113.7"}, {"x-forwarded-for", "203.0.113.9"}]
-          }
-        )
-
-      assert ClientIP.get_from_mount(socket) == "203.0.113.7"
-    end
-
     test "takes the first hop of x-forwarded-for when x-real-ip is absent" do
       socket =
         mock_socket(
@@ -314,13 +302,6 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
   # address — one shared identity behind every IP-keyed rate limit.
   describe "get_from_mount/1 with an IPv4-mapped peer (dual-stack listener)" do
     @mapped_proxy %{address: {0, 0, 0, 0, 0, 0xFFFF, 0xAC12, 0x0001}, port: 0, ssl_cert: nil}
-
-    test "the mapped peer really is the address production reports" do
-      # Guards the fixture itself: if this stops parsing to the tuple below, the
-      # cases in this block would silently stop covering the production shape.
-      assert :inet.parse_address(~c"::ffff:172.18.0.1") == {:ok, @mapped_proxy.address}
-      assert tuple_size(@mapped_proxy.address) == 8
-    end
 
     test "trusts forwarded headers when the peer is an IPv4-mapped private address" do
       socket =

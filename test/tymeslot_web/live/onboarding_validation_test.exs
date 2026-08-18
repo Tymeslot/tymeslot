@@ -17,6 +17,8 @@ defmodule TymeslotWeb.OnboardingValidationTest do
   import Tymeslot.AuthTestHelpers
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias Tymeslot.Profiles
+
   setup :verify_on_exit!
 
   setup tags do
@@ -64,7 +66,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
     end
 
     test "valid name is accepted", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
+      {:ok, view, _html, user} = setup_onboarding(conn)
 
       view
       |> element("button[phx-click='next_step']")
@@ -79,6 +81,13 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       # Should proceed to connect_calendar
       assert has_element?(view, ".onboarding-provider-cards")
+
+      # Advancing alone is what the empty-name and spaces-only tests already
+      # assert — the point here is that the name was persisted.
+      {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
+
+      assert profile.full_name == "Valid Name"
+      assert profile.username == "validuser123"
     end
   end
 

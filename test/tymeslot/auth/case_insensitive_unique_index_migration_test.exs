@@ -1,16 +1,18 @@
 defmodule Tymeslot.Auth.CaseInsensitiveUniqueIndexMigrationTest do
   @moduledoc """
-  Regression for `AddCaseInsensitiveUniqueIndexesForEmailAndUsername`'s
-  collision-refusal path: `ensure_no_case_collisions/2` must detect
-  pre-existing case-variant duplicates and raise a guided message rather
-  than let the functional index creation fail with an opaque unique
-  violation. This test seeds case-variant duplicates directly (bypassing the
-  changeset normalisation that downcases email/username on the happy path)
-  and exercises the exact detection query/raise from the migration.
+  Regression for `20260702200554_add_case_insensitive_unique_indexes_for_email_and_username`
+  and its collision-refusal path: the migration must detect pre-existing
+  case-variant duplicates and raise a guided message rather than let the
+  functional index creation fail with an opaque unique violation.
 
-  Tests run non-async because they temporarily drop the live
-  case-insensitive unique indexes to simulate the pre-migration schema
-  state where case-variant duplicates could exist.
+  Every test rolls the migration back first, which restores the
+  case-sensitive indexes the migration replaced. That is what makes seeding
+  case-variant duplicates possible, and it means `up` runs against the schema
+  it met on a real database. The migration module is loaded from `priv` and
+  run through `Ecto.Migrator`; see `Tymeslot.Test.MigrationRunner`.
+
+  Runs non-async because it rewrites live indexes for the duration of the
+  test.
   """
 
   use Tymeslot.DataCase, async: false
@@ -19,86 +21,72 @@ defmodule Tymeslot.Auth.CaseInsensitiveUniqueIndexMigrationTest do
   @moduletag :migrations
 
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MigrationRunner
+
+  @version 20_260_702_200_554
+
+  setup do
+    # Back to the pre-migration schema: plain, case-sensitive unique indexes,
+    # under which case-variant duplicates are legal.
+    MigrationRunner.down!(@version)
+
+    :ok
+  end
 
   describe "users.email collision refusal" do
-    setup do
-      Repo.query!("DROP INDEX IF EXISTS users_email_index")
-      :ok
-    end
-
     test "raises the guided message when case-variant emails collide" do
       insert(:user, email: "Foo@example.com")
       insert(:user, email: "foo@example.com")
 
       assert_raise RuntimeError, ~r/Cannot add a case-insensitive unique index/, fn ->
-        ensure_no_case_collisions("users", "email")
+        MigrationRunner.up!(@version)
       end
     end
 
-    test "allows the index to be created once the collision is resolved" do
+    test "creates the case-insensitive index when there is no collision" do
       insert(:user, email: "unique-user@example.com")
 
-      ensure_no_case_collisions("users", "email")
+      MigrationRunner.up!(@version)
 
-      assert {:ok, _result} =
-               Repo.query("CREATE UNIQUE INDEX users_email_index ON users (lower(email))")
+      assert index_definition("users_email_index") =~ "lower((email)::text)"
     end
   end
 
   describe "profiles.username collision refusal" do
-    setup do
-      Repo.query!("DROP INDEX IF EXISTS profiles_username_index")
-      :ok
-    end
-
     test "raises the guided message when case-variant usernames collide" do
       insert(:profile, username: "FooUser")
       insert(:profile, username: "foouser")
 
       assert_raise RuntimeError, ~r/Cannot add a case-insensitive unique index/, fn ->
-        ensure_no_case_collisions("profiles", "username")
+        MigrationRunner.up!(@version)
       end
     end
 
-    test "allows the index to be created once the collision is resolved" do
+    test "creates the case-insensitive index when there is no collision" do
       insert(:profile, username: "unique-username")
 
-      ensure_no_case_collisions("profiles", "username")
+      MigrationRunner.up!(@version)
 
-      assert {:ok, _result} =
-               Repo.query(
-                 "CREATE UNIQUE INDEX profiles_username_index ON profiles (lower(username))"
-               )
+      assert index_definition("profiles_username_index") =~ "lower((username)::text)"
     end
   end
 
-  # Mirrors the migration's private `ensure_no_case_collisions/2` exactly —
-  # same detection query and same guided raise message — so the assertions
-  # above verify the actual behaviour the migration relies on.
-  defp ensure_no_case_collisions(table, column) do
-    %{rows: rows} =
-      Repo.query!("""
-      SELECT lower(#{column}) AS key, count(*) AS n
-      FROM #{table}
-      WHERE #{column} IS NOT NULL
-      GROUP BY lower(#{column})
-      HAVING count(*) > 1
-      """)
+  describe "the installed indexes" do
+    test "reject case-variant duplicates once the migration has run" do
+      insert(:user, email: "casefold@example.com")
 
-    case rows do
-      [] ->
-        :ok
+      MigrationRunner.up!(@version)
 
-      collisions ->
-        details = Enum.map_join(collisions, ", ", fn [key, n] -> "#{key} (#{n})" end)
-
-        raise """
-        Cannot add a case-insensitive unique index on #{table}.#{column}: \
-        existing rows collide when lowercased — #{details}. \
-        Merge or remove the duplicate rows, then re-run the migration. \
-        (These cannot be resolved automatically because the migration cannot \
-        decide which row to keep.)
-        """
+      assert_raise Ecto.ConstraintError, ~r/users_email_index/, fn ->
+        insert(:user, email: "CaseFold@example.com")
+      end
     end
+  end
+
+  defp index_definition(name) do
+    %{rows: [[definition]]} =
+      Repo.query!("SELECT indexdef FROM pg_indexes WHERE indexname = $1", [name])
+
+    definition
   end
 end

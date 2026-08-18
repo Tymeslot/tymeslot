@@ -3,6 +3,7 @@ defmodule Tymeslot.Emails.Shared.Urls do
   App URL and calendar-link building helpers for Tymeslot emails.
   """
 
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Endpoint
 
   @doc """
@@ -14,12 +15,15 @@ defmodule Tymeslot.Emails.Shared.Urls do
   end
 
   @doc """
-  Builds a full URL for a given path.
+  Builds a full URL for a given path, adding the leading slash when the caller
+  omitted it.
+
+  Delegates to `Tymeslot.Utils.UrlBuilder.build_url/1` so email links and the
+  rest of the application cannot drift apart on how a path is joined to the
+  base URL.
   """
   @spec build_url(String.t()) :: String.t()
-  def build_url(path) do
-    "#{get_app_url()}#{path}"
-  end
+  defdelegate build_url(path), to: UrlBuilder
 
   @doc """
   Generates calendar links for various providers.

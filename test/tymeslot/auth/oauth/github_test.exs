@@ -41,8 +41,10 @@ defmodule Tymeslot.Auth.OAuth.GitHubTest do
     assert url =~ "scope=user%3Aemail"
   end
 
-  test "get_callback_url/0 returns GitHub callback path" do
-    expect(HelperMock, :get_callback_url, fn :github -> "/auth/github/callback" end)
+  test "get_callback_url/0 asks the helper for the :github provider" do
+    # The stub derives its answer from the provider it is handed, so the
+    # assertion below fails if this module ever asks for a different provider.
+    expect(HelperMock, :get_callback_url, fn provider -> "/auth/#{provider}/callback" end)
 
     assert GitHub.get_callback_url() == "/auth/github/callback"
   end

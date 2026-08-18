@@ -203,6 +203,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
   describe "format_month_name/2" do
     test "formats valid month numbers" do
       assert LocaleFormat.format_month_name(1, "en") == "January"
+      assert LocaleFormat.format_month_name(3, "en") == "March"
+      assert LocaleFormat.format_month_name(10, "en") == "October"
       assert LocaleFormat.format_month_name(12, "en") == "December"
       assert LocaleFormat.format_month_name(3, "de") == "März"
     end
@@ -282,25 +284,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
   end
 
   describe "DST transition handling" do
-    test "formats date during spring DST transition (clock forward)" do
-      # In most timezones, DST transitions happen in March/April
-      # Date formatting should not be affected by DST transitions
-      date_before = ~D[2026-03-28]
-      date_after = ~D[2026-03-29]
-
-      assert LocaleFormat.format_date(date_before, "en") == "March 28, 2026"
-      assert LocaleFormat.format_date(date_after, "en") == "March 29, 2026"
-    end
-
-    test "formats date during fall DST transition (clock backward)" do
-      # In most timezones, DST transitions happen in October/November
-      date_before = ~D[2026-10-24]
-      date_after = ~D[2026-10-25]
-
-      assert LocaleFormat.format_date(date_before, "en") == "October 24, 2026"
-      assert LocaleFormat.format_date(date_after, "en") == "October 25, 2026"
-    end
-
     test "formats time during DST transition - Time type is DST-agnostic" do
       # Time (without timezone) should always format consistently
       time = ~T[02:30:00]
@@ -308,58 +291,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_time(time, "en") == "02:30 AM"
       assert LocaleFormat.format_time(time, "de") == "02:30"
       assert LocaleFormat.format_time(time, "uk") == "02:30"
-    end
-
-    test "handles DateTime during spring DST transition" do
-      # Create DateTimes around DST transition in US Eastern time
-      # Note: This uses UTC, actual DST handling is done by Tzdata in other parts of the app
-      {:ok, dt_before} = DateTime.new(~D[2026-03-08], ~T[06:59:00], "Etc/UTC")
-      {:ok, dt_after} = DateTime.new(~D[2026-03-08], ~T[07:01:00], "Etc/UTC")
-
-      # Extract date and time components for formatting
-      date_before = DateTime.to_date(dt_before)
-      time_before = DateTime.to_time(dt_before)
-      date_after = DateTime.to_date(dt_after)
-      time_after = DateTime.to_time(dt_after)
-
-      # The transition does not shift the rendered wall-clock components
-      assert LocaleFormat.format_date(date_before, "en") == "March 08, 2026"
-      assert LocaleFormat.format_time(time_before, "en") == "06:59 AM"
-      assert LocaleFormat.format_date(date_after, "en") == "March 08, 2026"
-      assert LocaleFormat.format_time(time_after, "en") == "07:01 AM"
-    end
-
-    test "handles DateTime during fall DST transition" do
-      {:ok, dt_before} = DateTime.new(~D[2026-11-01], ~T[05:59:00], "Etc/UTC")
-      {:ok, dt_after} = DateTime.new(~D[2026-11-01], ~T[06:01:00], "Etc/UTC")
-
-      date_before = DateTime.to_date(dt_before)
-      time_before = DateTime.to_time(dt_before)
-      date_after = DateTime.to_date(dt_after)
-      time_after = DateTime.to_time(dt_after)
-
-      assert LocaleFormat.format_date(date_before, "en") == "November 01, 2026"
-      assert LocaleFormat.format_time(time_before, "en") == "05:59 AM"
-      assert LocaleFormat.format_date(date_after, "en") == "November 01, 2026"
-      assert LocaleFormat.format_time(time_after, "en") == "06:01 AM"
-    end
-
-    test "month names remain consistent across DST transitions" do
-      # Month names should not be affected by DST
-      march = LocaleFormat.format_month_name(3, "en")
-      october = LocaleFormat.format_month_name(10, "en")
-
-      assert march == "March"
-      assert october == "October"
-    end
-
-    test "weekday names remain consistent across DST transitions" do
-      # Weekday names should not be affected by DST
-      monday = LocaleFormat.format_weekday_name(1, "en", :full)
-      sunday = LocaleFormat.format_weekday_name(7, "en", :full)
-
-      assert monday == "Monday"
-      assert sunday == "Sunday"
     end
   end
 

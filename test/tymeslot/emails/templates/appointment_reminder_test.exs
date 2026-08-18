@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.AppointmentReminder
   import Tymeslot.EmailTestHelpers
 
@@ -69,8 +70,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
-      # Should contain substantial meeting information
-      assert String.length(email.html_body) > 1000
+      assert email.html_body =~ "Strategy Session"
+      assert email.html_body =~ "Conference Room B"
     end
 
     test "HTML body includes action links" do
@@ -184,8 +185,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
-      # Should contain substantial meeting information
-      assert String.length(email.html_body) > 1000
+      assert email.html_body =~ "Technical Review"
+      assert email.html_body =~ "Video Conference"
     end
 
     test "HTML body includes action links" do
@@ -238,15 +239,31 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
     end
 
     test "includes timezone-aware time display" do
+      # start_time is 14:00 UTC; the attendee sits in America/Los_Angeles
+      # (UTC-8 in January), so their local start is 06:00 — represented here
+      # by a distinct DateTime so the two are told apart in the output.
+      utc_start = ~U[2026-01-15 14:00:00Z]
+      attendee_local_start = %{utc_start | hour: 6}
+
       details =
         build_appointment_details(%{
+          start_time: utc_start,
+          start_time_attendee_tz: attendee_local_start,
           attendee_timezone: "America/Los_Angeles"
         })
 
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
-      # Should include substantial content with time information
-      assert String.length(email.html_body) > 1000
+      formatted_attendee = Formatting.format_time(attendee_local_start, "en")
+      formatted_utc = Formatting.format_time(utc_start, "en")
+
+      assert email.html_body =~ formatted_attendee,
+             "Expected attendee-local time #{formatted_attendee} in HTML body"
+
+      refute email.html_body =~ formatted_utc,
+             "Expected raw UTC time #{formatted_utc} to be absent from HTML body"
+
+      assert email.html_body =~ "America/Los_Angeles"
     end
   end
 

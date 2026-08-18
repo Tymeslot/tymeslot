@@ -1,12 +1,14 @@
 defmodule Tymeslot.Meetings.RescheduleRequestedAtBackfillTest do
   @moduledoc """
-  Verifies the up/down backfill SQL from
-  `20260716094322_add_reschedule_requested_at_to_meetings`: `up` splits the
-  legacy `status = "reschedule_requested"` overload into the
-  `reschedule_requested_at` column without touching other statuses, and
-  `down` only resurrects the still-active (non-terminal) rows it created —
-  it must never clobber a cancelled or completed meeting that happens to
-  carry a stale `reschedule_requested_at`.
+  Drives `20260716094322_add_reschedule_requested_at_to_meetings` itself: `up`
+  splits the legacy `status = "reschedule_requested"` overload into the
+  `reschedule_requested_at` column without touching other statuses, and `down`
+  only resurrects the still-active (non-terminal) rows it created — it must
+  never clobber a cancelled or completed meeting that happens to carry a stale
+  `reschedule_requested_at`.
+
+  The migration module is loaded from `priv` and run through
+  `Ecto.Migrator`; see `Tymeslot.Test.MigrationRunner`.
   """
 
   use Tymeslot.DataCase, async: false
@@ -15,21 +17,13 @@ defmodule Tymeslot.Meetings.RescheduleRequestedAtBackfillTest do
   @moduletag :migrations
   @moduletag :meetings
 
+  import Ecto.Query
+
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Test.MigrationRunner
 
-  @up_sql """
-  UPDATE meetings
-  SET reschedule_requested_at = updated_at,
-      status = 'confirmed'
-  WHERE status = 'reschedule_requested'
-  """
-
-  @down_sql """
-  UPDATE meetings
-  SET status = 'reschedule_requested'
-  WHERE reschedule_requested_at IS NOT NULL
-    AND status IN ('confirmed', 'pending', 'awaiting_payment')
-  """
+  @version 20_260_716_094_322
 
   describe "up" do
     test "converts reschedule_requested rows and leaves other statuses untouched" do
@@ -37,7 +31,10 @@ defmodule Tymeslot.Meetings.RescheduleRequestedAtBackfillTest do
       pending = insert(:meeting, status: "pending")
       confirmed = insert(:meeting, status: "confirmed")
 
-      Repo.query!(@up_sql)
+      # None of these rows carries a `reschedule_requested_at`, so the `down`
+      # half of the round trip is a no-op on them and `up` meets the schema as
+      # it stood before the migration.
+      MigrationRunner.rerun!(@version)
 
       reloaded_requested = Repo.reload!(requested)
       assert reloaded_requested.status == "confirmed"
@@ -68,13 +65,19 @@ defmodule Tymeslot.Meetings.RescheduleRequestedAtBackfillTest do
       cancelled = insert(:meeting, status: "cancelled", reschedule_requested_at: now)
       completed = insert(:meeting, status: "completed", reschedule_requested_at: now)
 
-      Repo.query!(@down_sql)
+      MigrationRunner.down!(@version)
 
-      assert Repo.reload!(confirmed).status == "reschedule_requested"
-      assert Repo.reload!(pending).status == "reschedule_requested"
-      assert Repo.reload!(awaiting_payment).status == "reschedule_requested"
-      assert Repo.reload!(cancelled).status == "cancelled"
-      assert Repo.reload!(completed).status == "completed"
+      assert status(confirmed) == "reschedule_requested"
+      assert status(pending) == "reschedule_requested"
+      assert status(awaiting_payment) == "reschedule_requested"
+      assert status(cancelled) == "cancelled"
+      assert status(completed) == "completed"
     end
+  end
+
+  # `down` drops `reschedule_requested_at`, so a full-row reload would ask for
+  # a column that no longer exists.
+  defp status(meeting) do
+    Repo.one!(from(m in MeetingSchema, where: m.id == ^meeting.id, select: m.status))
   end
 end

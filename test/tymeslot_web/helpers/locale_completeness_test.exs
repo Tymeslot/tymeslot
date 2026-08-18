@@ -128,15 +128,21 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
         assert File.exists?(po_path),
                "Missing emails Gettext PO file for #{unquote(locale)} at #{po_path}"
 
-        # The "emails" domain must resolve through the backend for this locale,
-        # otherwise every email silently renders in the source language.
+        # An uncompiled "emails" domain does not raise — Gettext falls back to
+        # the msgid, so every email silently renders in English. Comparing
+        # against the msgid is what detects that; comparing against "" cannot,
+        # because the fallback is never empty.
         translated =
           Gettext.with_locale(TymeslotWeb.Gettext, unquote(locale), fn ->
             Gettext.dgettext(TymeslotWeb.Gettext, "emails", "Video call")
           end)
 
-        assert translated != "",
-               "emails domain resolved to an empty string for #{unquote(locale)}"
+        if unquote(locale) == "en" do
+          assert translated == "Video call"
+        else
+          refute translated == "Video call",
+                 "emails domain fell back to the English msgid for #{unquote(locale)}"
+        end
       end
     end
   end

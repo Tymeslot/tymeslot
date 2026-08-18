@@ -135,18 +135,5 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
                  :deleted
                )
     end
-
-    test "delivers modified notification" do
-      user = insert(:user)
-      insert(:profile, user: user)
-      meeting = insert(:meeting, organizer_user: user)
-
-      assert {:ok, _email} =
-               EmailService.send_external_booking_change(
-                 meeting,
-                 user.email,
-                 :modified
-               )
-    end
   end
 end

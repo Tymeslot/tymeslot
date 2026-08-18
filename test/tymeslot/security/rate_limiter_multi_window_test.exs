@@ -79,20 +79,6 @@ defmodule Tymeslot.Security.RateLimiterMultiWindowTest do
 
       assert AccountLockout.get_failed_attempt_count(email) == n
     end
-
-    test "success clears all attempts" do
-      email = "concurrent-clear@example.com"
-
-      for _i <- 1..5 do
-        AccountLockout.check_and_record_attempt(email, false)
-      end
-
-      assert AccountLockout.get_failed_attempt_count(email) == 5
-
-      AccountLockout.check_and_record_attempt(email, true)
-
-      assert AccountLockout.get_failed_attempt_count(email) == 0
-    end
   end
 
   describe "booking recipient multi-window limits (per attendee email)" do

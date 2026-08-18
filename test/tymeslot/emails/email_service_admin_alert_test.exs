@@ -13,14 +13,19 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
     end
   end
 
-  # Note: Swoosh.TestAssertions.assert_email_sent/1 is not used here because
   # EmailService.deliver/1 runs inside CircuitBreaker.call/2, which executes the
-  # delivery function inside a GenServer. Swoosh's test adapter sends the
-  # {:email, email} message to whichever process calls Mailer.deliver/1 — in
-  # this case the circuit breaker GenServer, not the test process. Content
-  # assertions are covered by Tymeslot.Emails.Templates.AdminAlertTest instead.
+  # delivery function inside a GenServer. Swoosh's test adapter delivers to
+  # whichever process calls Mailer.deliver/1 — the circuit breaker, not this
+  # test — so `:shared_test_process` is what makes the message observable here.
+  # It is global state, hence `async: false` for the whole module.
+  setup do
+    Application.put_env(:swoosh, :shared_test_process, self())
+    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+    :ok
+  end
+
   describe "send_admin_alert/5" do
-    test "happy path: returns {:ok, _} for a :warning alert with metadata" do
+    test "addresses the operator and reports category, message and metadata" do
       assert {:ok, _response} =
                EmailService.send_admin_alert(
                  "ops@example.com",
@@ -29,31 +34,33 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
                  "Unhandled webhook event received",
                  %{"event_id" => "evt_001", "event_type" => "charge.failed"}
                )
+
+      assert_received {:email, email}
+      assert email.to == [{"Tymeslot Operator", "ops@example.com"}]
+      assert email.subject == "⚠️ Tymeslot Admin Alert: Webhook"
+      assert email.text_body =~ "Category: Webhook"
+      assert email.text_body =~ "Unhandled webhook event received"
+      assert email.text_body =~ "event_id: evt_001"
+      assert email.text_body =~ "event_type: charge.failed"
     end
 
-    test "returns {:ok, _} for an :error severity alert" do
-      assert {:ok, _response} =
-               EmailService.send_admin_alert(
-                 "ops@example.com",
-                 "Security",
-                 :error,
-                 "Suspicious login attempt detected",
-                 %{"user_id" => "42", "ip" => "1.2.3.4"}
-               )
+    test "carries each severity through to the body" do
+      for severity <- [:info, :warning, :error] do
+        assert {:ok, _response} =
+                 EmailService.send_admin_alert(
+                   "ops@example.com",
+                   "Security",
+                   severity,
+                   "Suspicious login attempt detected",
+                   %{"user_id" => "42"}
+                 )
+
+        assert_received {:email, email}
+        assert email.text_body =~ "Severity: #{severity}"
+      end
     end
 
-    test "returns {:ok, _} for an :info severity alert" do
-      assert {:ok, _response} =
-               EmailService.send_admin_alert(
-                 "ops@example.com",
-                 "Payments",
-                 :info,
-                 "Refund processed successfully",
-                 %{"refund_id" => "re_001"}
-               )
-    end
-
-    test "returns {:ok, _} with empty metadata" do
+    test "marks the context section as empty when there is no metadata" do
       assert {:ok, _response} =
                EmailService.send_admin_alert(
                  "ops@example.com",
@@ -62,17 +69,11 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
                  "Alert with no metadata",
                  %{}
                )
-    end
 
-    test "returns {:ok, _} for a :warning alert with rich metadata" do
-      assert {:ok, _response} =
-               EmailService.send_admin_alert(
-                 "ops@example.com",
-                 "General",
-                 :warning,
-                 "Test alert with metadata",
-                 %{"order_id" => "ord_999", "amount" => "100"}
-               )
+      assert_received {:email, email}
+      assert email.subject == "⚠️ Tymeslot Admin Alert: General"
+      assert email.text_body =~ "Alert with no metadata"
+      assert email.text_body =~ "(none)"
     end
   end
 
@@ -90,8 +91,11 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
 
     meeting = build(:meeting)
 
-    result = EmailService.send_calendar_sync_error(meeting, :test_error)
+    assert {:ok, _response} = EmailService.send_calendar_sync_error(meeting, :test_error)
 
-    assert {:ok, _response} = result
+    assert_received {:email, email}
+    assert [{_name, address}] = email.to
+    assert address == meeting.organizer_email
+    assert email.subject =~ "Calendar Sync Error"
   end
 end

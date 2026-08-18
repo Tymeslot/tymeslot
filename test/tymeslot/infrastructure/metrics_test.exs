@@ -1,21 +1,10 @@
-defmodule Tymeslot.Infrastructure.MetricsTest.LogCapture do
-  @moduledoc false
-  # Minimal :logger handler that forwards each log event (with full metadata)
-  # to a test process, so assertions can inspect metadata the formatter omits.
-  @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
-  def log(event, %{config: %{pid: pid}}) do
-    send(pid, {:captured_log, event})
-    :ok
-  end
-end
-
 defmodule Tymeslot.Infrastructure.MetricsTest do
   use ExUnit.Case, async: false
 
   @moduletag :infrastructure
 
   alias Tymeslot.Infrastructure.Metrics
-  alias Tymeslot.Infrastructure.MetricsTest.LogCapture
+  alias Tymeslot.Test.LogCapture
 
   setup do
     # Detach any handlers from previous test runs to avoid :already_exists errors
@@ -246,9 +235,11 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
       assert :ok = Metrics.setup_handlers()
 
-      # Verify handlers exist by checking that events can be executed without error
+      # :telemetry.execute/3 succeeds even with zero handlers attached, so the
+      # only meaningful assertion is that each event genuinely carries one.
       Enum.each(expected_events, fn event ->
-        :telemetry.execute(event, %{duration: 0}, %{status_code: 200})
+        assert [%{id: handler_id}] = :telemetry.list_handlers(event)
+        assert handler_id == "#{inspect(event)}-handler"
       end)
 
       # Clean up
@@ -264,10 +255,7 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
   describe "handle_http_event/4" do
     test "does not log for successful fast requests" do
-      handler_id = :metrics_http_no_log
-
-      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-      on_exit(fn -> :logger.remove_handler(handler_id) end)
+      LogCapture.attach()
 
       Metrics.handle_http_event(
         [:tymeslot, :http, :request],
@@ -280,10 +268,7 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
     end
 
     test "logs host and redacted path but drops the URL query string on errors" do
-      handler_id = :metrics_http_capture
-
-      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-      on_exit(fn -> :logger.remove_handler(handler_id) end)
+      LogCapture.attach()
 
       Metrics.handle_http_event(
         [:tymeslot, :http, :request],
@@ -306,10 +291,7 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
     end
 
     test "redacts a Google ical feed secret on a 401 response" do
-      handler_id = :metrics_http_ics_secret
-
-      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-      on_exit(fn -> :logger.remove_handler(handler_id) end)
+      LogCapture.attach()
 
       Metrics.handle_http_event(
         [:tymeslot, :http, :request],
@@ -330,10 +312,7 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
     end
 
     test "leaves an ordinary API path unredacted on a slow response" do
-      handler_id = :metrics_http_slow_ordinary
-
-      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-      on_exit(fn -> :logger.remove_handler(handler_id) end)
+      LogCapture.attach()
 
       Metrics.handle_http_event(
         [:tymeslot, :http, :request],
@@ -349,10 +328,7 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
   describe "handle_pool_event/4" do
     test "does not log when pool is not under stress" do
-      handler_id = :metrics_pool_no_log
-
-      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-      on_exit(fn -> :logger.remove_handler(handler_id) end)
+      LogCapture.attach()
 
       Metrics.handle_pool_event(
         [:tymeslot, :connection_pool, :usage],
@@ -367,10 +343,7 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
   describe "handle_parser_event/4" do
     test "does not log for fast operations" do
-      handler_id = :metrics_parser_no_log
-
-      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
-      on_exit(fn -> :logger.remove_handler(handler_id) end)
+      LogCapture.attach()
 
       Metrics.handle_parser_event(
         [:tymeslot, :parser, :performance],

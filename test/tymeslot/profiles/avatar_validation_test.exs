@@ -16,10 +16,10 @@ defmodule Tymeslot.Profiles.AvatarValidationTest do
       profile = insert(:profile)
       result = Profiles.consume_avatar_upload(profile, upload_stub(), entry("photo.jpg"), %{})
 
-      # Returns {:ok, {:error, _}} only on validation failure; any other result means validation passed
-      assert result !=
-               {:ok,
-                {:error, "Invalid file type. Only JPG, PNG, GIF, and WebP files are allowed"}}
+      # Validation passes, so the call runs on to the file copy, which fails
+      # with :enoent because the stub path names no real file. A rejected
+      # extension would surface the validation message string instead.
+      assert result == {:ok, {:error, :enoent}}
     end
 
     test "rejects .exe extension" do
@@ -67,7 +67,7 @@ defmodule Tymeslot.Profiles.AvatarValidationTest do
 
     test "accepts files at exactly 10MB" do
       profile = insert(:profile)
-      # At exactly 10MB validation passes; any downstream error is unrelated to size
+
       result =
         Profiles.consume_avatar_upload(
           profile,
@@ -76,7 +76,10 @@ defmodule Tymeslot.Profiles.AvatarValidationTest do
           %{}
         )
 
-      assert result != {:ok, {:error, "File too large. Maximum size is 10MB"}}
+      # Exactly at the limit validation passes, so the call runs on to the file
+      # copy and fails with :enoent on the stub path. An off-by-one in the size
+      # check would surface the "File too large" message instead.
+      assert result == {:ok, {:error, :enoent}}
     end
   end
 

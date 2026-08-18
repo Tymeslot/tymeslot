@@ -390,21 +390,36 @@ defmodule TymeslotWeb.AccountLiveTest do
   end
 
   describe "Miscellaneous Events" do
-    test "ignores validation events", %{conn: conn} do
+    test "validation events are no-ops that leave an open form open", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
-      assert render_click(view, "validate_email_field", %{}) =~ "Account Security"
-      assert render_click(view, "validate_password_field", %{}) =~ "Account Security"
+
+      # The validate hooks exist so early keystrokes do not trigger validation.
+      # Opening a form and typing into it must therefore change nothing at all:
+      # the form stays open and no error appears.
+      assert render_click(view, "toggle_email_form") =~ "Cancel"
+      assert render_click(view, "toggle_password_form") =~ "Cancel"
+      opened = render(view)
+
+      render_click(view, "validate_email_field", %{
+        "email_form" => %{"email" => "not-an-email"}
+      })
+
+      render_click(view, "validate_password_field", %{
+        "password_form" => %{"password" => "x"}
+      })
+
+      assert render(view) == opened
     end
 
-    test "handles unknown messages and events gracefully", %{conn: conn} do
+    test "unknown events and messages change nothing and keep the view alive", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+      baseline = render(view)
 
-      # send unknown event
-      assert render_click(view, "unknown_event", %{}) =~ "Account Security"
-
-      # send unknown info message
+      render_click(view, "unknown_event", %{})
       send(view.pid, :unknown_message)
-      assert render(view) =~ "Account Security"
+
+      assert render(view) == baseline
+      assert Process.alive?(view.pid)
     end
   end
 

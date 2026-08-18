@@ -2,10 +2,15 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
+  import ExUnit.CaptureLog
+  import Mox
   import Tymeslot.Factory
   alias Tymeslot.Integrations.Calendar.Creation
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
+
+  setup :verify_on_exit!
 
   describe "prepare_attrs/2 — nextcloud" do
     test "returns atom-keyed attrs that satisfy the maybe_discover_calendars/1 guard" do
@@ -159,7 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
   end
 
   describe "prevalidate_config/1" do
-    test "validates CalDAV config before creation" do
+    test "probes a CalDAV config and passes the attrs through when it answers" do
       attrs = %{
         provider: "caldav",
         user_id: 1,
@@ -169,9 +174,16 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
         calendar_paths: []
       }
 
-      # Will fail validation due to network error
-      result = Creation.prevalidate_config(attrs)
-      assert match?({:error, _reason}, result)
+      # `expect/4` is the assertion that matters here: unlike the OAuth and
+      # unknown-provider cases below, a CalDAV config must actually be probed,
+      # so exactly one PROPFIND has to be issued. A regression that skipped the
+      # probe would still return {:ok, attrs} and leave this expectation
+      # unfulfilled, which `verify_on_exit!` reports.
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: ""}}
+      end)
+
+      assert Creation.prevalidate_config(attrs) == {:ok, attrs}
     end
 
     test "skips validation for OAuth providers" do
@@ -272,6 +284,14 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
     end
 
     test "creates integration and sets as primary if first", %{user: user} do
+      # The primary calendar is recorded on the profile; without one the
+      # promotion below is a silent no-op.
+      insert(:profile, user: user)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: ""}}
+      end)
+
       params = %{
         "name" => "Test Calendar",
         "provider" => "caldav",
@@ -281,23 +301,33 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
         "calendar_paths" => ""
       }
 
-      # Will fail due to network validation — no live CalDAV server in tests.
-      assert match?({:error, _reason}, Creation.create_with_validation(user.id, params))
+      assert {:ok, integration} = Creation.create_with_validation(user.id, params)
+      assert integration.name == "Test Calendar"
+      assert integration.base_url == "https://caldav.example.com"
+
+      assert [%{id: id}] = CalendarManagement.list_calendar_integrations(user.id)
+      assert id == integration.id
+
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == integration.id
     end
 
-    test "returns changeset errors for invalid params", %{user: user} do
+    test "reports a missing name against the name field", %{user: user} do
       params = %{
         "name" => "",
         "provider" => "invalid"
       }
 
-      result = Creation.create_with_validation(user.id, params)
+      # The field the error is keyed under is the whole point: the form renders
+      # it next to the offending input, so a bare {:error, _} would not notice
+      # the message drifting onto a different field.
+      assert Creation.create_with_validation(user.id, params) ==
+               {:error, {:form_errors, %{name: "Integration name is required"}}}
 
-      # Should return error due to missing required fields
-      assert {:error, _reason} = result
+      assert CalendarManagement.list_calendar_integrations(user.id) == []
     end
 
-    test "returns form errors for security validation failures", %{user: user} do
+    test "reports a malicious URL against the url field", %{user: user} do
       params = %{
         "name" => "Test",
         "provider" => "caldav",
@@ -307,10 +337,12 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
         "calendar_paths" => ""
       }
 
-      result = Creation.create_with_validation(user.id, params)
+      assert Creation.create_with_validation(user.id, params) ==
+               {:error,
+                {:form_errors,
+                 %{url: "Please enter a valid server URL (e.g., https://cloud.example.com)"}}}
 
-      # Security validation should catch malicious URL
-      assert {:error, _reason} = result
+      assert CalendarManagement.list_calendar_integrations(user.id) == []
     end
 
     test "surfaces a failed connection probe as a form-level error", %{user: user} do
@@ -332,21 +364,31 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert byte_size(message) > 0
     end
 
-    test "accepts metadata option for rate limiting", %{user: user} do
+    test "threads caller metadata through to the security log", %{user: user} do
+      # `:metadata` is request provenance for the security log, not a
+      # rate-limiting key — the only place it shows up is the entry
+      # `SecurityLogger.log_blocked_input/3` writes when a field is sanitised.
+      # The username below trips the SQL-injection check, which is what makes
+      # that entry appear and the IP observable.
       params = %{
         "name" => "Test",
         "provider" => "caldav",
         "url" => "https://example.com",
-        "username" => "user",
+        "username" => "admin' OR 1=1 --",
         "password" => "pass",
         "calendar_paths" => ""
       }
 
-      metadata = %{ip: "192.168.1.1"}
-      result = Creation.create_with_validation(user.id, params, metadata: metadata)
+      log =
+        capture_log([format: "$metadata$message\n", metadata: :all], fn ->
+          assert {:error, _reason} =
+                   Creation.create_with_validation(user.id, params,
+                     metadata: %{ip: "203.0.113.7"}
+                   )
+        end)
 
-      # Should still fail validation but metadata is accepted
-      assert match?({:error, _reason}, result)
+      assert log =~ "Suspicious input sanitised"
+      assert log =~ "ip_address=203.0.113.7"
     end
   end
 end
