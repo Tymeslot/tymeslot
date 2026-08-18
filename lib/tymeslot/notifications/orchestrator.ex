@@ -7,7 +7,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
 
@@ -336,24 +335,12 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   defp update_confirmation_notifications(meeting, _content) do
-    # Update already-scheduled reminder emails with video room information
-    Logger.info("Updating scheduled notifications with video room info",
+    # Already-scheduled reminder emails re-fetch the meeting from the database
+    # at send time, so they pick up the new video_room_id/meeting_url on their
+    # own; there is no job to update here.
+    Logger.info("Video room added; pending reminder jobs will pick it up automatically",
       meeting_id: meeting.id
     )
-
-    # Acknowledge pending reminder jobs (emails re-fetch meeting data at send time)
-    {:ok, count} = ObanJobQueries.update_pending_reminder_jobs(meeting)
-
-    if count > 0 do
-      Logger.info("Pending reminder jobs acknowledged",
-        meeting_id: meeting.id,
-        updated_count: count
-      )
-    else
-      Logger.info("No pending reminder jobs required updates",
-        meeting_id: meeting.id
-      )
-    end
 
     {:ok, :confirmation_updated}
   end

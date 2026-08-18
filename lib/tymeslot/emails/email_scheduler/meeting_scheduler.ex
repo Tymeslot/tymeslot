@@ -3,7 +3,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
 
   alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.Helpers
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorker
@@ -169,7 +169,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @spec cancel_reminder_emails(term()) :: :ok
   def cancel_reminder_emails(meeting_id) do
     {deleted, _result} =
-      ObanJobQueries.delete_reminder_jobs_for_meeting(meeting_id, EmailWorker, %{})
+      Jobs.delete_reminder_jobs_for_meeting(meeting_id, EmailWorker, %{})
 
     Logger.info("Cancelled pending reminder email jobs",
       meeting_id: meeting_id,
@@ -219,7 +219,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   defp delete_existing_reminder_jobs(meeting_id, reminder_value, reminder_unit) do
-    ObanJobQueries.delete_reminder_jobs_for_meeting(
+    Jobs.delete_reminder_jobs_for_meeting(
       meeting_id,
       EmailWorker,
       %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit}
