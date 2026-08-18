@@ -6,7 +6,7 @@ defmodule Tymeslot.Bookings.Create do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Availability.{Calculate, TimeSlots}
   alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
@@ -196,6 +196,7 @@ defmodule Tymeslot.Bookings.Create do
                    booking_data.user_timezone,
                    config
                  ),
+               :ok <- validate_slot_on_schedule(booking_data, config),
                :ok <- validate_booking_limits(booking_data, user_id) do
             # Optional fresh calendar validation
             if Keyword.get(opts, :skip_calendar_check, false) do
@@ -218,6 +219,26 @@ defmodule Tymeslot.Bookings.Create do
     do: {:error, :meeting_type_inactive}
 
   defp validate_meeting_type_active(%{meeting_type: nil}), do: {:error, :meeting_type_not_found}
+
+  # A direct load of `/:username/:slug/book` performs no step transition, so
+  # none of the booking page's own guards on the offered slots ever run for
+  # it. The schedule's windows and breaks are therefore re-derived here rather
+  # than trusted from the submitted date and time. Conflicts are not this
+  # check's business: `validate_calendar_availability/2` owns those.
+  defp validate_slot_on_schedule(booking_data, config) do
+    if Calculate.offers_slot?(
+         booking_data.date,
+         booking_data.start_datetime,
+         booking_data.duration_minutes,
+         booking_data.user_timezone,
+         config.owner_timezone,
+         config
+       ) do
+      :ok
+    else
+      {:error, :slot_not_offered}
+    end
+  end
 
   # Fast pre-check with a friendly error before any side-effect setup. The
   # race-safe check runs again inside the booking transaction
@@ -441,6 +462,7 @@ defmodule Tymeslot.Bookings.Create do
     meeting_type_missing: :meeting_type_not_found,
     time_conflict: :slot_taken,
     slot_unavailable: :slot_taken,
+    slot_not_offered: :slot_taken,
     availability_unverifiable: :slot_taken,
     booking_limit_reached: :booking_limit_reached,
     organizer_required: :organizer_required,

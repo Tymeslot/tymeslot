@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
 
   import Mox
   import Swoosh.TestAssertions
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
   alias Ecto.UUID
@@ -59,6 +60,9 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
     # Create test user with profile
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
     profile = insert(:profile, user: user, timezone: "America/New_York")
+    # Emails are the subject here, so the host offers every hour of every day
+    # and the schedule never refuses the bookings these tests make.
+    _schedule = open_schedule_for(profile)
 
     # Create an active meeting type
     meeting_type =
@@ -376,7 +380,8 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
           name: malicious_name
         )
 
-      _profile = insert(:profile, user: user, timezone: "America/New_York")
+      profile = insert(:profile, user: user, timezone: "America/New_York")
+      _schedule = open_schedule_for(profile)
 
       meeting_type =
         insert(:meeting_type,

@@ -27,6 +27,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
   @moduletag :bookings
   @moduletag :integration
 
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
@@ -134,13 +135,16 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     } do
       original = insert_future_meeting(user, meeting_type)
 
-      new_slot = future_datetime(5, :day)
+      # This profile has no explicit schedule, so `Bookings.ScheduleCheck` falls
+      # back to the hard-coded business hours (11:00-19:30, Mon-Fri); the target
+      # must be a weekday and land inside that window.
+      target_date = next_bookable_weekday(5)
 
       params = %{
         form_data: %{},
         meeting_params: %{
-          date: Date.to_iso8601(DateTime.to_date(shift_to_berlin(new_slot))),
-          time: time_string(shift_to_berlin(new_slot)),
+          date: Date.to_iso8601(target_date),
+          time: "14:00",
           duration: "30min",
           user_timezone: "Europe/Berlin"
         }
@@ -248,16 +252,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     DateTime.utc_now() |> DateTime.add(amount, unit) |> DateTime.truncate(:second)
   end
 
-  defp shift_to_berlin(%DateTime{} = dt), do: DateTime.shift_zone!(dt, "Europe/Berlin")
-
   defp tomorrow_in_berlin(time) do
     {Date.to_iso8601(Date.add(Date.utc_today(), 1)), time}
   end
-
-  defp time_string(%DateTime{hour: h, minute: m}) do
-    "#{pad(h)}:#{pad(m)}"
-  end
-
-  defp pad(n) when n < 10, do: "0#{n}"
-  defp pad(n), do: Integer.to_string(n)
 end

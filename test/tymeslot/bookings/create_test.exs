@@ -10,13 +10,16 @@ defmodule Tymeslot.Bookings.CreateTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
 
+  import Tymeslot.AvailabilityTestHelpers
+
   # Create assigns the meeting's public identifier with UUID.uuid4/0.
   @uuid_v4 ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
   # Shared test setup helper
   defp setup_booking_test do
-    user = insert(:user)
-    _profile = insert(:profile)
+    # An always-open host: these tests are about the calendar conflict check,
+    # so the schedule must never be the reason a booking is refused.
+    %{user: user} = create_always_bookable_profile(timezone: "America/New_York")
 
     meeting_params = %{
       date: Date.add(Date.utc_today(), 1),

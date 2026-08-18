@@ -124,6 +124,41 @@ defmodule Tymeslot.Availability.Calculate do
   end
 
   @doc """
+  Returns whether the schedule described by `config` offers a slot starting at
+  `start_datetime` on `date`.
+
+  The answer comes from `available_slots/6` with an empty event list, so a
+  booking cannot drift from the list the booking page rendered: calendar
+  conflicts stay the caller's business, the schedule's own windows and breaks
+  are this function's. Anything that leaves the slot list unobtainable answers
+  `true`, so an unrelated failure can never refuse an otherwise valid booking.
+  """
+  @spec offers_slot?(
+          Date.t(),
+          DateTime.t(),
+          pos_integer(),
+          String.t(),
+          String.t(),
+          availability_config()
+        ) :: boolean()
+  def offers_slot?(date, start_datetime, duration_minutes, user_timezone, owner_timezone, config) do
+    with {:ok, slots} <-
+           available_slots(date, duration_minutes, user_timezone, owner_timezone, [], config),
+         {:ok, local_start} <- DateTime.shift_zone(start_datetime, user_timezone) do
+      Enum.any?(slots, &starts_at?(&1, local_start))
+    else
+      _unobtainable -> true
+    end
+  end
+
+  defp starts_at?(slot, %DateTime{hour: hour, minute: minute}) do
+    case TimeSlots.parse_time_slot(slot) do
+      %Time{hour: ^hour, minute: ^minute} -> true
+      _other -> false
+    end
+  end
+
+  @doc """
   Gets availability status for an arbitrary date range.
   Optimized for calendar display where visible dates may span multiple months.
 
@@ -272,13 +307,22 @@ defmodule Tymeslot.Availability.Calculate do
     # non-past day in the grid — up to 42 of each, from inside the template
     # render of a public page. Padded by a day at each end for the adjacent-day
     # lookups `check_today_fallback_availability/3` performs.
+    #
+    # Only the business-hours fallback (`availability_map` neither a map nor
+    # `:loading`) ever reads `weekly_schedule`/`overrides` back out of
+    # `config`, so skip the prefetch otherwise — this LiveComponent re-renders
+    # on every date and time click.
     config =
-      prefetch_schedule_data(
-        config,
-        Map.get(config, :schedule_id),
-        Date.add(first_display_date, -1),
-        Date.add(end_date, 1)
-      )
+      if is_map(availability_map) or availability_map == :loading do
+        config
+      else
+        prefetch_schedule_data(
+          config,
+          Map.get(config, :schedule_id),
+          Date.add(first_display_date, -1),
+          Date.add(end_date, 1)
+        )
+      end
 
     Enum.map(0..41, fn offset ->
       date = Date.add(first_display_date, offset)
@@ -445,7 +489,8 @@ defmodule Tymeslot.Availability.Calculate do
     case result do
       {:ok, %{end_datetime: %DateTime{} = end_dt}} ->
         min_advance_hours = config_policy(config).min_advance_hours
-        latest_start = DateTime.add(end_dt, -min_advance_hours * 60, :minute)
+        duration_minutes = Map.get(config, :duration_minutes, 30)
+        latest_start = DateTime.add(end_dt, -(min_advance_hours * 60 + duration_minutes), :minute)
         DateTime.compare(now, latest_start) != :gt
 
       _other ->

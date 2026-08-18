@@ -15,11 +15,17 @@ defmodule Tymeslot.Bookings.RescheduleLimitsTest do
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.TestMocks
 
-  import Tymeslot.MeetingTestHelpers
+  import Tymeslot.AvailabilityTestHelpers
 
   setup do
     TestMocks.setup_all_mocks()
-    %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_day: 1})
+
+    %{user: user} =
+      create_always_bookable_profile(
+        timezone: "Etc/UTC",
+        profile: %{max_bookings_per_day: 1}
+      )
+
     %{user: user}
   end
 

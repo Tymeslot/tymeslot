@@ -2,12 +2,14 @@ defmodule Tymeslot.Bookings.Policy do
   @moduledoc """
   Business rules and policies for bookings.
 
-  Two kinds of function live here. The verdict predicates
-  (`can_cancel_meeting?/1`, `can_reschedule_meeting?/1`, …) are pure. The
-  attribute assembly (`build_meeting_attributes/1`, `scheduling_config/2`) is
-  not: it resolves the profile, the schedule, the video integration and the
-  meeting type, and so performs database reads. Callers that need purity should
-  reach for the predicates, not the assembler.
+  None of the functions here are pure. The attribute assembly performs
+  database reads: `scheduling_config/2` resolves the organiser's profile and
+  schedule; `build_meeting_attributes/1` additionally resolves the video
+  integration and meeting type. The verdict predicates `can_cancel_meeting?/1`
+  and `can_reschedule_meeting?/1` read the system clock (`Tymeslot.Clock`) and
+  emit `Logger.info` on their blocked branches. `meeting_is_current?/1` and
+  `meeting_is_past?/1` also read the clock but do no database access and no
+  logging.
   """
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.BuildParams
@@ -33,6 +35,7 @@ defmodule Tymeslot.Bookings.Policy do
   computed from. A nil meeting type resolves the organiser's default schedule.
   """
   @spec scheduling_config(integer() | nil, map() | nil) :: %{
+          required(:schedule_id) => integer() | nil,
           required(:buffer_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
@@ -55,8 +58,11 @@ defmodule Tymeslot.Bookings.Policy do
 
   # `max_advance_booking_days` is this map's name for the schedule's
   # `advance_booking_days`; every other key is carried through unrenamed.
+  # `schedule_id` is carried so callers can recompute the schedule's own
+  # windows from this config alone, as the availability display path does.
   defp policy_values(schedule) do
     %{
+      schedule_id: schedule && schedule.id,
       buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
       min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
       max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days)

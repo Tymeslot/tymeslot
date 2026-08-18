@@ -27,6 +27,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   import Tymeslot.Factory
 
   alias Ecto.UUID
+  alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.TelegramWorker
@@ -74,8 +75,22 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     profile = insert(:profile, user: user, timezone: "Europe/Berlin")
 
     # The booking policy lives on the schedule now, not the profile; these tests
-    # only need one to exist so the reschedule resolves a policy at all.
-    insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+    # only need one to exist so the reschedule resolves a policy at all. It
+    # must offer every hour of every day: reschedule now refuses a time the
+    # organiser's schedule doesn't offer, and these tests pick
+    # `future_datetime/2`, an arbitrary time of day.
+    schedule =
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+
+    for day_of_week <- 1..7 do
+      {:ok, _day} =
+        WeeklySchedule.create_day_availability(schedule.id, day_of_week, %{
+          is_available: true,
+          start_time: ~T[00:00:00],
+          end_time: ~T[23:59:00]
+        })
+    end
+
     insert(:webhook, user: user, events: ["meeting.rescheduled"])
     insert(:telegram_integration, user: user, events: ["meeting.rescheduled"])
 
@@ -196,8 +211,19 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     )
   end
 
+  # Floored to the half hour: the open schedule's slots are generated in
+  # 30-minute steps from local midnight, so an unaligned current-time
+  # minute/second would land between slots and the reschedule's own
+  # schedule check (`Bookings.ScheduleCheck`) would refuse it.
   defp future_datetime(amount, unit) do
-    DateTime.utc_now() |> DateTime.add(amount, unit) |> DateTime.truncate(:second)
+    DateTime.utc_now()
+    |> DateTime.add(amount, unit)
+    |> DateTime.truncate(:second)
+    |> floor_to_half_hour()
+  end
+
+  defp floor_to_half_hour(%DateTime{minute: minute} = dt) do
+    %{dt | minute: minute - rem(minute, 30), second: 0, microsecond: {0, 0}}
   end
 
   defp reschedule_params_for(%DateTime{} = target_utc) do
