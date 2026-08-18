@@ -17,9 +17,6 @@ defmodule Tymeslot.Bookings.Validation do
           required(:end_time) => DateTime.t() | Date.t() | nil
         }
 
-  @typedoc "String-keyed form submission params (e.g. from a booking form)."
-  @type form_params :: %{String.t() => term()}
-
   @typedoc "Optional scheduling configuration for booking time validation."
   @type scheduling_config :: %{
           optional(:min_advance_hours) => non_neg_integer(),
@@ -117,25 +114,6 @@ defmodule Tymeslot.Bookings.Validation do
       {:error, :slot_unavailable}
     else
       :ok
-    end
-  end
-
-  @doc """
-  Validates booking form data structure.
-
-  Pure validation of required fields and formats.
-  """
-  @spec validate_booking_form_structure(form_params()) ::
-          {:ok, form_params()} | {:error, String.t()}
-  def validate_booking_form_structure(params) do
-    required_fields = ["name", "email", "date", "time"]
-
-    missing_fields = required_fields -- Map.keys(params)
-
-    if Enum.empty?(missing_fields) do
-      {:ok, params}
-    else
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
     end
   end
 

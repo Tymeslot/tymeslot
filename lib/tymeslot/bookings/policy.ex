@@ -268,21 +268,6 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   @doc """
-  Determines if a calendar check failure should block booking.
-
-  Some calendar failures are recoverable (network issues),
-  while others should block the booking attempt.
-  """
-  @spec should_block_on_calendar_failure?(term()) :: boolean()
-  def should_block_on_calendar_failure?(reason) do
-    case reason do
-      :slot_unavailable -> true
-      :calendar_fetch_failed -> false
-      _other -> false
-    end
-  end
-
-  @doc """
   Gets the organizer name from configuration.
   """
   @spec organizer_name() :: String.t()
