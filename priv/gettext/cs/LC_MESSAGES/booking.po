@@ -494,6 +494,7 @@ msgid "Need to reschedule? Check your confirmation email."
 msgstr "Potřebujete schůzku přesunout? Podívejte se do potvrzovacího e-mailu."
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "No"
 msgstr "Ne"
@@ -819,6 +820,7 @@ msgid "Wednesday"
 msgstr "Středa"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr "Ano"
@@ -1218,11 +1220,13 @@ msgid "Payment not found."
 msgstr "Platba nebyla nalezena."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification failed. Please try again."
 msgstr "Bezpečnostní ověření se nezdařilo. Zkuste to prosím znovu."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
+#: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
 msgstr "Bezpečnostní ověření je momentálně nedostupné. Příčinou může být vypnutý JavaScript, rozšíření prohlížeče na ochranu soukromí (Privacy Badger, uBlock Origin apod.) nebo zásady zabezpečení sítě. Upravte prosím své nastavení, a pokud potíže přetrvávají, obraťte se na podporu."
@@ -1273,10 +1277,130 @@ msgstr "Naplánovat schůzku"
 msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
 msgstr "Tato rezervační stránka potřebuje k rezervaci schůzek JavaScript. Povolte ho prosím a pokračujte."
 
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Continue to vote"
+msgstr "Pokračovat k hlasování"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "If need be"
+msgstr "V nouzi"
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "One of the selected times is no longer available. Please refresh and try again."
+msgstr "Jeden z vybraných termínů už není dostupný. Obnovte prosím stránku a zkuste to znovu."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "One of your responses wasn't recognised. Please refresh and try again."
+msgstr "Jednu z vašich odpovědí se nepodařilo rozpoznat. Obnovte prosím stránku a zkuste to znovu."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please check your name and email, then try again."
+msgstr "Zkontrolujte prosím své jméno a e-mail a zkuste to znovu."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Please register before voting."
+msgstr "Před hlasováním se prosím zaregistrujte."
+
+#: lib/tymeslot_web/themes/core/mount_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Poll not found"
+msgstr "Anketa nebyla nalezena"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Save my responses"
+msgstr "Uložit mé odpovědi"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled for %{time}"
+msgstr "Naplánováno na %{time}"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll has been cancelled and is no longer accepting responses."
+msgstr "Tato anketa byla zrušena a už nepřijímá odpovědi."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "This poll has been scheduled."
+msgstr "Tato anketa už má naplánovaný termín."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "This poll has reached its participant limit."
+msgstr "Tato anketa dosáhla limitu účastníků."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please wait a moment and try again."
+msgstr "Příliš mnoho pokusů. Chvíli prosím počkejte a zkuste to znovu."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Voting as %{name}"
+msgstr "Hlasujete jako %{name}"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Voting closes %{deadline}"
+msgstr "Hlasování končí %{deadline}"
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed for this poll."
+msgstr "Hlasování v této anketě bylo ukončeno."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Here are the final responses."
+msgstr "Hlasování bylo ukončeno. Zde jsou konečné odpovědi."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't find your registration. Please register again."
+msgstr "Vaši registraci se nepodařilo najít. Zaregistrujte se prosím znovu."
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "You're registered. Your responses are saved as you vote."
+msgstr "Registrace proběhla. Odpovědi se ukládají průběžně při hlasování."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your email"
+msgstr "Váš e-mail"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your name"
+msgstr "Vaše jméno"
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex
+#, elixir-autogen, elixir-format
+msgid "Your responses have been saved."
+msgstr "Vaše odpovědi byly uloženy."
+
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "The host is no longer accepting bookings for this period. Please pick a different day."
 msgstr "Hostitel už na toto období rezervace nepřijímá. Vyberte prosím jiný den."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{weekday} %{day} %{month}, %{time}"
+msgstr "%{weekday} %{day}. %{month}, %{time}"
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#, elixir-autogen, elixir-format
+msgid "Times shown in %{timezone}"
+msgstr "Časy jsou uvedeny v časovém pásmu %{timezone}"
 
 #: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format

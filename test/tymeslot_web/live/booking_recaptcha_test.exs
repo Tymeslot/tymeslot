@@ -7,6 +7,8 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
   import Tymeslot.TestHelpers.Eventually
 
   @moduletag backup_tests: true
+  @moduletag :bookings
+  @moduletag :security
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Meetings.MeetingSchema

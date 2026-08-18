@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurityTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :plugs
+  @moduletag :security
 
   alias TymeslotWeb.Plugs.UploadStaticSecurity
 

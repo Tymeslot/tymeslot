@@ -1,8 +1,9 @@
 defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPICircuitBreakerTest do
-  # async: false is required: `DataCase.reset_stateful_components/0` runs in
-  # every test's setup and resets all calendar circuit breakers. Under
-  # async: true, a sibling test's setup can fire between the breaker-tripping
-  # failures below and the status assertion, wiping the state we just built up.
+  # async: false is required: the calendar circuit breakers are global, and
+  # nothing scopes one to a test. `DataCase.reset_stateful_components/1` clears
+  # them in every sync test's setup, which is safe only because sync modules run
+  # alone; under async: true a sibling module's tests would still be running
+  # against the breaker this one trips.
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 

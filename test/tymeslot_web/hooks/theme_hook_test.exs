@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :hooks
+  @moduletag :themes
 
   import Tymeslot.Factory
 

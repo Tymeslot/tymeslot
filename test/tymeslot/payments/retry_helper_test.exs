@@ -195,7 +195,8 @@ defmodule Tymeslot.Payments.RetryHelperTest do
 
   describe "configuration" do
     test "uses default config when not specified" do
-      # Default: max_attempts: 3, base_delay_ms: 1000
+      # Asserts the configured max_attempts (3), not the delay: config/test.exs
+      # shortens base_delay_ms so the suite does not sleep out real backoff.
       {:ok, agent_pid} = start_counter_agent()
 
       operation = fn ->

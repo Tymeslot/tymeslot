@@ -4,6 +4,7 @@ defmodule TymeslotWeb.E2E.MeetingCancellationTest do
   alias Tymeslot.Profiles
 
   @moduletag :e2e
+  @moduletag :meetings
 
   feature "guest cancels a meeting via the cancellation link", %{session: session} do
     user = create_onboarded_user()

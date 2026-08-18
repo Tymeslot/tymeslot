@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Plugs.ThemePlugTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :plugs
+  @moduletag :themes
 
   alias TymeslotWeb.Plugs.ThemePlug
 

@@ -114,6 +114,30 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Deletes pending poll email jobs (deadline reminders and host nudges) for a poll.
+
+  Used when a poll is confirmed or cancelled, so no reminder or nudge fires for a
+  poll that is no longer collecting votes. Matches on the `poll_id` embedded in
+  the job args regardless of action or variant.
+  """
+  @spec delete_poll_jobs(term(), module()) :: {non_neg_integer(), nil}
+  def delete_poll_jobs(poll_id, worker_module) do
+    # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
+    # normalises the module into that form so the match can't silently miss.
+    worker_name = Worker.to_string(worker_module)
+    args_match = %{"poll_id" => poll_id}
+
+    Repo.delete_all(
+      from(j in Job,
+        where: j.queue == "emails",
+        where: j.worker == ^worker_name,
+        where: j.state in ["available", "scheduled", "retryable"],
+        where: fragment("? @> ?::jsonb", j.args, type(^args_match, :map))
+      )
+    )
+  end
+
+  @doc """
   Lists queues with accumulated available jobs exceeding the threshold.
   Returns a list of `{queue_name, count}` tuples.
   """

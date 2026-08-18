@@ -6,6 +6,7 @@ defmodule Tymeslot.ChangesetValidators.EmailTest do
   alias Tymeslot.ChangesetValidators.Email
 
   @moduletag :unit
+  @moduletag :utils
 
   defmodule EmailHolder do
     use Ecto.Schema

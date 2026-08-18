@@ -2,6 +2,7 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
   use TymeslotWeb.BrowserCase, async: false
 
   @moduletag :e2e
+  @moduletag :profiles
 
   feature "user changes password from account settings", %{session: session} do
     {session, user} = log_in_via_browser(session)

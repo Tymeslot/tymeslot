@@ -16,6 +16,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
   use TymeslotWeb.ConnCase, async: false
 
   @moduletag :controllers
+  @moduletag :auth
 
   alias Phoenix.Flash
 

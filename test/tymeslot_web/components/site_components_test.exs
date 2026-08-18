@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :ui
 
   import Phoenix.Component, only: [sigil_H: 2]
   import Phoenix.LiveViewTest

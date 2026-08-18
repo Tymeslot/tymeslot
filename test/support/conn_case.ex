@@ -38,7 +38,7 @@ defmodule TymeslotWeb.ConnCase do
 
   setup tags do
     DataCase.setup_sandbox(tags)
-    DataCase.reset_stateful_components()
+    DataCase.reset_stateful_components(tags)
     DataCase.stub_verification_default()
     Mox.set_mox_from_context(tags)
     TestMocks.setup_subscription_mocks()

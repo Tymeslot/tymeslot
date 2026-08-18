@@ -1,6 +1,8 @@
 defmodule Tymeslot.Meetings.AttendeeNotifications.LastNotifiedStateTest do
   use ExUnit.Case, async: true
   @moduletag :unit
+  @moduletag :meetings
+  @moduletag :notifications
 
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
 

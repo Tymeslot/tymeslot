@@ -14,6 +14,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Profiles.ProfileQueries
@@ -31,11 +32,12 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:attendee_timezone) => String.t(),
           optional(:calendar_integration_id) => pos_integer() | nil,
           optional(:calendar_path) => String.t() | nil,
-          optional(:video_integration_id) => pos_integer() | nil
+          optional(:video_integration_id) => pos_integer() | nil,
+          optional(:guest_emails) => [String.t()]
         }
 
   @spec execute(params()) ::
-          {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, String.t()}
+          {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, String.t() | :time_conflict}
   def execute(params) do
     # The organiser's details are resolved once and threaded through: validation
     # needs the organiser email to reject self-booking, and the meeting attrs
@@ -44,9 +46,11 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     organizer = get_organizer_details(params.organizer_user_id)
 
     with :ok <- validate(params, organizer) do
+      guest_emails = params[:guest_emails] || []
+
       params
       |> build_meeting_attrs(organizer)
-      |> run_transaction()
+      |> run_transaction(guest_emails)
     end
   end
 
@@ -124,10 +128,14 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     }
   end
 
-  defp run_transaction(meeting_attrs) do
+  defp run_transaction(meeting_attrs, guest_emails) do
     result =
       Repo.transaction(fn ->
+        # Guests are inserted after the meeting exists and before notifications
+        # fire, so a guest changeset failure rolls the whole booking back. The
+        # caller pre-validates the list, so emails are passed through as-is.
         with {:ok, meeting} <- create_meeting(meeting_attrs),
+             {:ok, _guests} <- Guests.create_for_meeting(meeting.id, guest_emails),
              {:ok, _job} <- schedule_calendar_job(meeting) do
           handle_side_effects(meeting, meeting_attrs[:video_integration_id])
           meeting
@@ -202,6 +210,9 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     {:ok, meeting}
   end
 
+  # Preserve the time-conflict reason distinctly so callers can tell an occupied
+  # slot apart from a generic booking failure.
+  defp map_result({:error, :time_conflict}), do: {:error, :time_conflict}
   defp map_result({:error, reason}) when is_binary(reason), do: {:error, reason}
   defp map_result({:error, _reason}), do: {:error, "Failed to create meeting"}
 

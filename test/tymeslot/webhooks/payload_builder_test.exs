@@ -2,6 +2,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :unit
+  @moduletag :webhooks
 
   import Tymeslot.Factory
 

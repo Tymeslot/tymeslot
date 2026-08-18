@@ -84,7 +84,8 @@ defmodule TymeslotWeb.Themes.Core.Loader do
       {:theme_config, 0},
       {:validate_theme, 0},
       {:initial_state_for_action, 1},
-      {:supports_feature?, 1}
+      {:supports_feature?, 1},
+      {:render_poll_action, 1}
     ]
 
     missing_functions =

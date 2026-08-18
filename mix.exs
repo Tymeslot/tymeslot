@@ -62,6 +62,7 @@ defmodule Tymeslot.MixProject do
     [
       preferred_envs: [
         "test.e2e": :test,
+        "test.affected": :test,
         coveralls: :test,
         "coveralls.cobertura": :test,
         "coveralls.detail": :test,
@@ -98,7 +99,6 @@ defmodule Tymeslot.MixProject do
       {:phoenix, "~> 1.8"},
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
-      {:tidewave, "~> 0.8", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
       {:floki, ">= 0.30.0", only: :test},
       {:lazy_html, "~> 0.1.8", only: :test},

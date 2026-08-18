@@ -11,6 +11,7 @@ defmodule Tymeslot.Repo.Migrations.AvailabilitySchedulesBackfillTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :migrations
+  @moduletag :availability
 
   import Tymeslot.Factory
 

@@ -64,8 +64,7 @@ defmodule Tymeslot.DataCase do
 
     stub_verification_default()
 
-    # Reset stateful components to ensure test isolation
-    reset_stateful_components()
+    reset_stateful_components(tags)
 
     :ok
   end
@@ -87,11 +86,32 @@ defmodule Tymeslot.DataCase do
   end
 
   @doc """
-  Resets stateful components like circuit breakers between tests.
-  This ensures test isolation and prevents state pollution.
+  Resets the stateful components shared by the whole VM: the circuit breakers,
+  the rate-limiter ETS table, and the availability cache.
+
+  **Sync modules only, which is why this takes the test tags and does nothing
+  for an async one.** None of that state is scoped to the test process, so a
+  reset issued from an async test's setup wipes state that other async tests
+  are part-way through relying on. A test that primes a rate-limit bucket loses
+  it the moment any concurrent setup fires, and a per-test-unique bucket key is
+  no defence against a table-wide delete. That is the mechanism behind a class
+  of seed-dependent failures this suite used to carry; `--seed 636119` was one
+  reproduction.
+
+  Sync modules are safe: `ExUnit.Runner` takes them only once every async
+  module has finished, and runs them one at a time, so nothing is concurrently
+  depending on what they clear.
+
+  An async test therefore has to scope its own reset: derive a bucket key
+  unique to the test and clear just that one with
+  `Tymeslot.Security.RateLimiter.clear_bucket/1`. A test that genuinely needs
+  global state reset (a circuit breaker, usually) belongs in a sync module
+  instead; `calendar_api_circuit_breaker_test.exs` is the precedent.
   """
-  @spec reset_stateful_components() :: :ok
-  def reset_stateful_components do
+  @spec reset_stateful_components(map()) :: :ok
+  def reset_stateful_components(%{async: true}), do: :ok
+
+  def reset_stateful_components(_tags) do
     # Reset calendar circuit breakers
     providers = [:caldav, :radicale, :nextcloud, :google, :outlook]
 

@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     EventBus,
     MeetingManagement,
     MountHelpers,
+    PollVoting,
     Registry,
     ThemeInfo
   }
@@ -64,8 +65,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # Check if this is a meeting management action
     action = socket.assigns[:live_action]
 
-    if action in [:reschedule, :cancel, :cancel_confirmed] do
-      # For meeting management, we don't need handle_params
+    if action in [:reschedule, :cancel, :cancel_confirmed, :poll_voting] do
+      # Meeting management and poll voting have no scheduling params to delegate.
       {:noreply, socket}
     else
       delegate_handle_params(params, url, socket)
@@ -91,6 +92,12 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   def handle_event("keep_meeting" = event, params, socket),
     do: MeetingManagement.handle_meeting_event(event, params, socket)
 
+  def handle_event("register_participant" = event, params, socket),
+    do: PollVoting.handle_poll_event(event, params, socket)
+
+  def handle_event("cast_votes" = event, params, socket),
+    do: PollVoting.handle_poll_event(event, params, socket)
+
   def handle_event(event, params, socket) do
     # For scheduling actions, delegate to the theme
     theme_id = socket.assigns[:theme_id] || Registry.default_theme_id()
@@ -103,6 +110,9 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     socket = EventBus.handle_event(elem(msg, 1), socket)
     {:noreply, socket}
   end
+
+  def handle_info({:poll_updated, _poll_id} = msg, socket),
+    do: PollVoting.handle_poll_info(msg, socket)
 
   def handle_info(msg, socket) do
     theme_id = socket.assigns[:theme_id] || Registry.default_theme_id()
@@ -131,15 +141,46 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
       true ->
         action = assigns[:live_action]
 
-        if action in [:reschedule, :cancel, :cancel_confirmed] do
-          render_meeting_management_component(assigns, action)
-        else
-          render_scheduling_component(assigns)
+        cond do
+          action in [:reschedule, :cancel, :cancel_confirmed] ->
+            render_meeting_management_component(assigns, action)
+
+          action == :poll_voting ->
+            render_poll_voting_component(assigns)
+
+          true ->
+            render_scheduling_component(assigns)
         end
     end
   end
 
   # Private functions
+
+  defp render_poll_voting_component(assigns) do
+    theme_id = assigns[:theme_id] || Registry.default_theme_id()
+
+    case ThemeInfo.get_theme_module(theme_id) do
+      nil ->
+        render_error(assigns, "Theme not found for poll voting")
+
+      module ->
+        try do
+          module.render_poll_action(assigns)
+        rescue
+          e in UndefinedFunctionError ->
+            Logger.error("render_poll_action not implemented in theme module",
+              module: inspect(module),
+              error: inspect(e)
+            )
+
+            render_error(assigns, "Poll voting rendering not implemented for this theme")
+
+          e ->
+            Logger.error("Error rendering poll voting", theme_id: theme_id, error: inspect(e))
+            render_error(assigns, "Poll voting rendering failed")
+        end
+    end
+  end
 
   defp render_meeting_management_component(assigns, action) do
     theme_id = assigns[:theme_id] || Registry.default_theme_id()

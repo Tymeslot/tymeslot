@@ -82,7 +82,8 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {"/dashboard/integrations", "Integrations"},
       {"/dashboard/theme", "Choose Your Style"},
       {"/dashboard/meetings", "Meetings"},
-      {"/dashboard/automation", "Automation"}
+      {"/dashboard/automation", "Automation"},
+      {"/dashboard/polls", "Polls"}
     ]
 
     for {path, expected_text} <- @routes do
@@ -90,6 +91,12 @@ defmodule TymeslotWeb.DashboardRoutesTest do
         {:ok, _view, html} = live(conn, unquote(path))
         assert html =~ unquote(expected_text)
       end
+    end
+
+    test "renders the polls section body", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/dashboard/polls")
+
+      assert html =~ "Find a time that works for everyone"
     end
 
     # The standalone calendar/video/payments pages are now tabs in the unified

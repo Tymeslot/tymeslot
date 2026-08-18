@@ -7,6 +7,7 @@ defmodule Tymeslot.ChangesetValidators.TimeOrderTest do
   alias Tymeslot.ChangesetValidators.TimeOrder
 
   @moduletag :unit
+  @moduletag :utils
 
   defmodule TimeSlot do
     use Ecto.Schema

@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
   alias Tymeslot.Security.Encryption
 
   @moduletag :calendar_integration
+  @moduletag :calendar
+  @moduletag :integrations
 
   @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
