@@ -97,11 +97,16 @@ ehthumbs.db
 *.backup
 *.old
 
-# Local scripts and debug files
-debug_*.exs
-test_*.exs
-check_*.exs
-fetch_*.exs
+# Local scripts and debug files. Anchored to the repository root: unanchored,
+# these swallow legitimate files anywhere in the tree, and `test/` is full of
+# names that match (test_helper.exs, fetch_current_user_test.exs,
+# debug_schedule_test.exs). Tracked files were unaffected, since .gitignore
+# only governs untracked ones, but a *new* test file whose name started with
+# test_ was invisible to git with no sign anything had been dropped.
+/debug_*.exs
+/test_*.exs
+/check_*.exs
+/fetch_*.exs
 
 # Node/npm/yarn
 node_modules/

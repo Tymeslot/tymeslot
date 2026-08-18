@@ -83,6 +83,12 @@
 @source inline("bg-calendar-{1,2,3,4,5,6,7,8} bg-calendar-fallback");
 @source inline("bg-calendar-{tomato,tangerine,banana,sage,peacock,blueberry,grape,graphite}");
 @source inline("w-6 h-6 w-8 h-8 w-10 h-10 h-16 h-20 box-border");
+/* Poll response-bar segments. These are returned as bare strings from
+   `PollResults.bar_segment_class/1` rather than written into a template, and the
+   scanner does not extract class names from Elixir string literals — three of
+   the four only resolved because unrelated templates happened to use the same
+   shades. Listed here so the bar owns its own colours. */
+@source inline("bg-green-500 bg-amber-400 bg-red-400 bg-tymeslot-200");
 
 @theme {
   /* --- Brand + extended palette (formerly theme.extend.colors) --- */

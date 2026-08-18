@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :hooks
+  @moduletag :auth
 
   import Tymeslot.Factory
 

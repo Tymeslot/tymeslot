@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :ui
 
   import Phoenix.LiveViewTest
 

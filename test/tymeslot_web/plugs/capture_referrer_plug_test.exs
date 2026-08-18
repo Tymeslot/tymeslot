@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Plugs.CaptureReferrerPlugTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :plugs
+  @moduletag :analytics
 
   alias Plug.Test, as: PlugTest
   alias TymeslotWeb.Plugs.CaptureReferrerPlug

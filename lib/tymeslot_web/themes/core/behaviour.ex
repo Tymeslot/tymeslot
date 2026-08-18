@@ -56,4 +56,9 @@ defmodule TymeslotWeb.Themes.Core.Behaviour do
   """
   @callback render_meeting_action(assigns :: map(), action :: atom()) ::
               Phoenix.LiveView.Rendered.t()
+
+  @doc """
+  Renders the public poll voting page for this theme.
+  """
+  @callback render_poll_action(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
 end

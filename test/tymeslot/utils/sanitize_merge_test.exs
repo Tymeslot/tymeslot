@@ -2,6 +2,7 @@ defmodule Tymeslot.Utils.SanitizeMergeTest do
   use ExUnit.Case, async: true
 
   @moduletag :unit
+  @moduletag :utils
 
   alias Tymeslot.Utils.SanitizeMerge
 

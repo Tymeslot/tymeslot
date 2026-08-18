@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.ColourSwatchesTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :components
+  @moduletag :ui
 
   import Phoenix.LiveViewTest
 

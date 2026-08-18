@@ -27,6 +27,8 @@ defmodule Tymeslot.Integrations.Calendar.NextcloudIntegrationTest do
   """
   use ExUnit.Case, async: false
   @moduletag :calendar_integration
+  @moduletag :calendar
+  @moduletag :integrations
 
   import Tymeslot.ConfigTestHelpers
 

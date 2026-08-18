@@ -98,6 +98,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   # Reserved because the URL layer rewrites "<n>min" into "<n>-minutes" for
   # legacy duration links, which would break round-tripping of such a slug.
   @reserved_slug_format ~r/^\d+min$/
+  # Reserved because `/:username/poll/:token` (the public poll voting page) would
+  # otherwise shadow `/:username/poll/book` for a meeting type slugged "poll".
+  @reserved_slugs ~w(poll)
   @slug_max_length 80
 
   @doc """
@@ -233,7 +236,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           String.length(slug) > @slug_max_length ->
             add_error(changeset, :slug, "is too long")
 
-          Regex.match?(@reserved_slug_format, slug) ->
+          Regex.match?(@reserved_slug_format, slug) or slug in @reserved_slugs ->
             add_error(changeset, :slug, "is reserved")
 
           not Regex.match?(@slug_format, slug) ->

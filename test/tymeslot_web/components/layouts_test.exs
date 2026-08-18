@@ -2,6 +2,7 @@ defmodule TymeslotWeb.LayoutsTest do
   use ExUnit.Case, async: true
 
   @moduletag :components
+  @moduletag :ui
 
   alias TymeslotWeb.Layouts
 

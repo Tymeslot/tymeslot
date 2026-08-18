@@ -6,6 +6,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
   alias Wallaby.Element
 
   @moduletag :e2e
+  @moduletag :bookings
 
   feature "visitor books a meeting through the public page", %{session: session} do
     user = create_onboarded_user()

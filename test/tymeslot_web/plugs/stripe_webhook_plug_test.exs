@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
   use TymeslotWeb.ConnCase, async: false
 
   @moduletag :plugs
+  @moduletag :payments
 
   import Tymeslot.ConfigTestHelpers
 
