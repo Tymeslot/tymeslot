@@ -71,35 +71,4 @@ defmodule TymeslotWeb.Shared.Auth.ButtonComponents do
     </a>
     """
   end
-
-  @spec simple_link_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def simple_link_button(assigns) do
-    assigns = assign_new(assigns, :class, fn -> "" end)
-
-    # Extract only valid HTML attributes
-    rest_assigns =
-      assigns
-      |> Map.drop([:href, :class, :inner_block])
-      |> Map.take([
-        :id,
-        :target,
-        :rel,
-        :"phx-click",
-        :"data-confirm",
-        :"aria-label",
-        :"aria-describedby"
-      ])
-
-    assigns = assign(assigns, :rest_assigns, rest_assigns)
-
-    ~H"""
-    <a
-      href={@href}
-      class={["btn-primary w-full py-3.5 text-sm", @class]}
-      {@rest_assigns}
-    >
-      {render_slot(@inner_block)}
-    </a>
-    """
-  end
 end

@@ -66,26 +66,6 @@ defmodule TymeslotWeb.Components.Auth.AuthVideoConfig do
   end
 
   @doc """
-  Get fallback gradient for authentication flows.
-  """
-  @spec auth_fallback_gradient() :: String.t()
-  def auth_fallback_gradient do
-    Map.get(
-      get_auth_video_config(),
-      :fallback_gradient,
-      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-    )
-  end
-
-  @doc """
-  Check if authentication flows support crossfading videos.
-  """
-  @spec auth_crossfade_enabled?() :: boolean()
-  def auth_crossfade_enabled? do
-    Map.get(get_auth_video_config(), :crossfade_enabled, false)
-  end
-
-  @doc """
   Get video element IDs for authentication flows.
   """
   @spec auth_video_ids() :: [String.t()]
