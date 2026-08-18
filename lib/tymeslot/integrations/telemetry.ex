@@ -108,18 +108,6 @@ defmodule Tymeslot.Integrations.Telemetry do
   end
 
   @doc """
-  Records an API call with detailed metrics.
-  """
-  @spec record_api_call(atom(), atom(), map()) :: term()
-  def record_api_call(provider, operation, metadata \\ %{}) do
-    span(
-      [:tymeslot, :integration, :api_call],
-      Map.merge(metadata, %{provider: provider, operation: operation}),
-      fn -> yield() end
-    )
-  end
-
-  @doc """
   Public handler for telemetry events.
   Used by the telemetry system via module-qualified function reference.
   """
@@ -287,12 +275,6 @@ defmodule Tymeslot.Integrations.Telemetry do
 
   defp generate_correlation_id do
     Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
-  end
-
-  defp yield do
-    receive do
-      {:continue, result} -> result
-    end
   end
 end
 
