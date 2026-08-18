@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.VisibilityTest do
   """
 
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :live
@@ -19,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.VisibilityTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility
 
   defp build_socket(user) do
@@ -82,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.VisibilityTest do
   end
 
   describe "handle_refresh/2 — success path" do
-    test "loads events and returns an updated socket when within rate limit" do
+    test "enqueues a sync worker and puts the socket into the syncing state" do
       user = insert(:user)
       socket = build_socket(user)
 
@@ -90,10 +92,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.VisibilityTest do
 
       {:noreply, returned_socket} = Visibility.handle_refresh(%{}, socket)
 
-      # The socket should be alive — we don't assert a specific flash message
-      # because the outcome depends on what workers were enqueued, but the
-      # handler must not crash and must return a valid socket.
-      assert %Phoenix.LiveView.Socket{} = returned_socket
+      # The socket's single integration is a CalDAV one, so exactly one sync
+      # job is enqueued and the grid switches to its in-progress state.
+      assert_enqueued(worker: SyncCalDavCalendarWorker)
+      assert returned_socket.assigns.syncing == true
+      assert returned_socket.assigns.sync_total == 1
+      assert returned_socket.assigns.sync_completed == 0
+
+      # Nothing went wrong, so no flash is raised at all.
+      refute_receive {:flash, _outcome}
     end
   end
 end

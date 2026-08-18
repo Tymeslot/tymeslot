@@ -135,7 +135,7 @@ defmodule Tymeslot.Security.UrlValidationTest do
                )
     end
 
-    test "blocks uppercase IPv6 addresses (SSRF protection - case sensitivity)" do
+    test "classifies uppercase IPv6 addresses as local, waiving the HTTPS requirement" do
       # Uppercase localhost
       assert :ok =
                UrlValidation.validate_http_url("http://[::1]",
@@ -170,8 +170,11 @@ defmodule Tymeslot.Security.UrlValidationTest do
                )
     end
 
-    test "blocks IPv4-mapped IPv6 addresses (SSRF protection - AWS metadata)" do
-      # AWS metadata endpoint via IPv6-mapped (critical SSRF vector)
+    test "classifies IPv4-mapped IPv6 addresses as local, waiving the HTTPS requirement" do
+      # These hosts are recognised through the IPv4-mapped form, so the public-HTTPS
+      # rule does not apply. Blocking them outright is asserted separately by the
+      # block_private_ips tests below.
+      # AWS metadata endpoint via IPv6-mapped
       assert :ok =
                UrlValidation.validate_http_url("http://[::ffff:169.254.169.254]",
                  enforce_https_for_public: true,

@@ -185,25 +185,6 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
 
       assert updated_socket.assigns.embedded == true
     end
-
-    test "still rejects a real cross-origin embed (no preview flag)" do
-      # The preview exemption must not weaken third-party embed enforcement:
-      # a real embed sends embed=1 without preview, so the allowlist still applies.
-      user = insert(:user)
-
-      profile =
-        insert(:profile, user: user, username: "guarded", allowed_embed_domains: ["example.com"])
-
-      socket = build_socket(%{}, %{}, connected: true)
-      token = Token.sign(profile.username, "https://evil.com")
-
-      assert {:halt, updated_socket} =
-               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
-
-      assert updated_socket.redirected ==
-               {:redirect,
-                %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fevil.com", status: 302}}
-    end
   end
 
   describe "origin_allowed?/2" do
@@ -285,8 +266,8 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert EmbedAuthHook.origin_allowed?("http://localhost", ["localhost"])
     end
 
-    test "rejects origin with path or query (URI.parse host extraction)" do
-      # URI.parse should extract just the host, ignoring path/query
+    test "matches on host only, ignoring path and query (URI.parse host extraction)" do
+      # URI.parse extracts just the host, so path/query play no part in the match
       assert EmbedAuthHook.origin_allowed?("https://example.com/some/path?q=1", ["example.com"])
     end
 

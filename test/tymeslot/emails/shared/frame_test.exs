@@ -14,12 +14,27 @@ defmodule Tymeslot.Emails.Shared.FrameTest do
   }
 
   describe "wrap/1" do
-    test "returns non-empty MJML with all required keys" do
+    test "renders every required section, in stage → header → body → footer order" do
       mjml = Frame.wrap(@base_sections)
 
-      assert String.length(mjml) > 100
       assert mjml =~ "<mjml>"
       assert mjml =~ "</mjml>"
+      assert mjml =~ "<mj-title>#{@base_sections.title}</mj-title>"
+      assert mjml =~ "<mj-preview>#{@base_sections.preview}</mj-preview>"
+
+      positions =
+        Enum.map([:stage, :header, :body, :footer], fn key ->
+          case :binary.match(mjml, @base_sections[key]) do
+            {position, _length} ->
+              position
+
+            :nomatch ->
+              flunk("expected the #{key} section to be rendered into the frame")
+          end
+        end)
+
+      assert positions == Enum.sort(positions),
+             "expected the sections in stage → header → body → footer order"
     end
 
     test "includes title and preview in the head" do

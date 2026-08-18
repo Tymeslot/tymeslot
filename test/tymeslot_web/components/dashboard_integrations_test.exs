@@ -122,7 +122,11 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     html = render_component(&UIComponents.form_submit_button/1, assigns)
     doc = Floki.parse_document!(html)
     assert html =~ "Save Me"
-    refute html =~ "Saving..."
+    # The saving branch renders the spinner plus either `saving_text` or the
+    # "Adding..." default — never the string "Saving...", so refuting that could
+    # never fire. Refute what the branch actually emits.
+    refute html =~ "Adding..."
+    refute html =~ "spinner"
     assert Floki.find(doc, "button[type='submit'][disabled]") == []
 
     # Saving state

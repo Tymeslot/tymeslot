@@ -1,17 +1,25 @@
 defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :emails
   @moduletag :payments
+
+  import Swoosh.TestAssertions
 
   alias Ecto.UUID
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   # Swoosh's test adapter posts {:email, ...} to whichever process calls
   # Mailer.deliver/1, which is the CircuitBreaker GenServer — not the test
-  # process. Worker tests therefore rely on the worker's return value;
-  # rendering correctness is tested directly in the template test suite.
+  # process. Pointing the adapter at this test collects the delivered emails
+  # here instead, so the delivery branches can be told apart from the no-op
+  # one. Safe because the module is `async: false`.
+  setup do
+    Application.put_env(:swoosh, :shared_test_process, self())
+    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+    :ok
+  end
 
   defp insert_payment(attrs \\ %{}) do
     defaults = %{
@@ -38,6 +46,12 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
                perform_job(SendBookingPaymentRefunded, %{
                  "booking_payment_id" => payment.id
                })
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"Alice", "alice@example.com"}]
+        assert email.subject == "Refund Issued - €50.00"
+        assert email.text_body =~ "€50.00"
+      end)
     end
 
     test "delivers a partial refund email when amounts differ" do
@@ -47,6 +61,14 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
                perform_job(SendBookingPaymentRefunded, %{
                  "booking_payment_id" => payment.id
                })
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"Alice", "alice@example.com"}]
+        assert email.subject == "Partial Refund Issued - €20.00"
+        # The partial branch names the refunded amount against the original.
+        assert email.text_body =~ "€20.00"
+        assert email.text_body =~ "€50.00"
+      end)
     end
 
     test "discards when booking_payment is missing" do
@@ -63,6 +85,8 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
                perform_job(SendBookingPaymentRefunded, %{
                  "booking_payment_id" => payment.id
                })
+
+      refute_email_sent()
     end
 
     test "discards when booking_payment_id is missing from args" do

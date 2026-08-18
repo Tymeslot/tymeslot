@@ -24,14 +24,22 @@ defmodule Tymeslot.CustomFields.SnapshotInsulationTest do
           ]
         })
 
+      # The meeting must point at the very type the tests edit — an unlinked
+      # meeting would survive any edit trivially and prove nothing about
+      # insulation.
       meeting =
         insert(:meeting,
+          organizer_user: user,
+          meeting_type_ref: meeting_type,
+          meeting_type: meeting_type.name,
           attendee_email: "jane@example.com",
           custom_fields_snapshot: [
             %{"id" => field_id, "type" => "short_text", "label" => "Company"}
           ],
           custom_field_answers: %{field_id => "Acme"}
         )
+
+      assert meeting.meeting_type_id == meeting_type.id
 
       %{user: user, meeting_type: meeting_type, meeting: meeting, field_id: field_id}
     end

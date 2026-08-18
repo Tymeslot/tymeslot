@@ -109,7 +109,16 @@ defmodule Tymeslot.Availability.CalculateTest do
     test "handles UTC timezone" do
       days = Calculate.get_calendar_days("Etc/UTC", 2025, 6, %{})
 
-      assert length(days) == 42
+      # 1 June 2025 is a Sunday, so the six-week grid needs no leading padding
+      # and runs 1 June – 12 July.
+      assert List.first(days).date == "2025-06-01"
+      assert List.last(days).date == "2025-07-12"
+
+      assert Enum.map(days, & &1.date) ==
+               Enum.map(0..41, &Date.to_string(Date.add(~D[2025-06-01], &1)))
+
+      # Exactly the 30 days of June belong to the requested month.
+      assert days |> Enum.filter(& &1.current_month) |> Enum.map(& &1.day) == Enum.to_list(1..30)
     end
 
     test "handles different timezones" do
@@ -117,10 +126,22 @@ defmodule Tymeslot.Availability.CalculateTest do
       days_london = Calculate.get_calendar_days("Europe/London", 2025, 6, %{})
       days_tokyo = Calculate.get_calendar_days("Asia/Tokyo", 2025, 6, %{})
 
-      # All should return 42 days
-      assert length(days_ny) == 42
-      assert length(days_london) == 42
-      assert length(days_tokyo) == 42
+      # The displayed window is derived from the requested year/month alone, so
+      # every timezone must render the same dates in the same order.
+      dates = Enum.map(days_ny, & &1.date)
+
+      assert dates == Enum.map(days_london, & &1.date)
+      assert dates == Enum.map(days_tokyo, & &1.date)
+      assert List.first(dates) == "2025-06-01"
+      assert List.last(dates) == "2025-07-12"
+
+      # June 2025 is behind every one of these timezones, so no cell may be
+      # offered as bookable in any of them.
+      for days <- [days_ny, days_london, days_tokyo], day <- days do
+        assert day.past, "#{day.date} must be marked past"
+        refute day.available, "#{day.date} must not be bookable"
+        refute day.today, "#{day.date} must not be marked today"
+      end
     end
 
     test "marks today correctly" do
@@ -132,11 +153,11 @@ defmodule Tymeslot.Availability.CalculateTest do
           day.date == Date.to_string(today)
         end)
 
-      # There should be a today entry unless we're at a month boundary
-      if today_entry do
-        assert today_entry.today == true
-        assert today_entry.past == false
-      end
+      # The 42-cell grid always spans the whole requested month, so the grid for
+      # today's month always contains today.
+      assert today_entry, "expected today's month grid to contain today"
+      assert today_entry.today == true
+      assert today_entry.past == false
     end
 
     test "handles loading state in availability_map" do
@@ -291,6 +312,12 @@ defmodule Tymeslot.Availability.CalculateTest do
     end
 
     test "handles events parameter" do
+      timezone = "America/New_York"
+
+      # A month wholly in the past is unavailable whatever the events say, so
+      # the blocked day has to sit inside the booking window to prove anything.
+      blocked = next_weekday(Date.add(Date.utc_today(), 10))
+
       events = [
         CalendarEvent.new!(%{
           uid: "calc-test-event",
@@ -299,24 +326,42 @@ defmodule Tymeslot.Availability.CalculateTest do
           provider_event_id: "calc-test-event",
           provider_calendar_id: "primary",
           all_day: false,
-          start_at: DateTime.new!(~D[2025-06-15], ~T[10:00:00], "America/New_York"),
-          end_at: DateTime.new!(~D[2025-06-15], ~T[11:00:00], "America/New_York"),
+          start_at: DateTime.new!(blocked, ~T[00:00:00], timezone),
+          end_at: DateTime.new!(Date.add(blocked, 1), ~T[00:00:00], timezone),
           synced_at: DateTime.utc_now()
         })
       ]
 
-      assert {:ok, availability_map} =
+      assert {:ok, without_events} =
                Calculate.month_availability(
-                 2025,
-                 6,
-                 "America/New_York",
-                 "America/New_York",
+                 blocked.year,
+                 blocked.month,
+                 timezone,
+                 timezone,
+                 [],
+                 %{}
+               )
+
+      assert {:ok, with_events} =
+               Calculate.month_availability(
+                 blocked.year,
+                 blocked.month,
+                 timezone,
+                 timezone,
                  events,
                  %{}
                )
 
-      # Every day of June is still accounted for once events are supplied.
-      assert map_size(availability_map) == 30
+      key = Date.to_string(blocked)
+
+      assert without_events[key] == true,
+             "expected #{key} to be bookable before the event is supplied"
+
+      assert with_events[key] == false,
+             "a day-long blocking event must remove #{key} from availability"
+
+      # Nothing but the covered day may change.
+      assert Map.delete(with_events, key) == Map.delete(without_events, key)
     end
 
     test "respects max_advance_booking_days in config" do
@@ -405,6 +450,16 @@ defmodule Tymeslot.Availability.CalculateTest do
 
       assert "9:00 AM" in slots
       assert "9:30 AM" in slots
+    end
+  end
+
+  # The fallback business hours cover Monday–Friday only, so a date used to
+  # prove availability has to land on a weekday.
+  defp next_weekday(date) do
+    case Date.day_of_week(date) do
+      6 -> Date.add(date, 2)
+      7 -> Date.add(date, 1)
+      _weekday -> date
     end
   end
 end

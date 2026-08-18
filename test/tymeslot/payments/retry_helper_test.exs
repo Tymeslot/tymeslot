@@ -149,13 +149,14 @@ defmodule Tymeslot.Payments.RetryHelperTest do
       # contention or GC pauses. The upper bound only needs to sit well
       # below the default `base_delay_ms` (1000ms) to prove the option
       # was honoured — we're not trying to pin the exact latency.
-      if length(timestamps) >= 2 do
-        delay1 =
-          Enum.at(timestamps, 1) -
-            Enum.at(timestamps, 0)
+      # The operation always fails with a retryable error, so all three attempts
+      # must run; asserting that first stops a regression to a single attempt
+      # from silently skipping the delay assertion.
+      assert length(timestamps) == 3
 
-        assert delay1 >= 45 and delay1 < 500
-      end
+      delay1 = Enum.at(timestamps, 1) - Enum.at(timestamps, 0)
+
+      assert delay1 >= 45 and delay1 < 500
 
       Agent.stop(agent_pid)
     end

@@ -12,7 +12,9 @@ defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
       html = IntegrationPaused.render(user, integration, :calendar, 14)
 
       assert html =~ "<!doctype html>"
-      assert String.length(html) > 500
+      assert html =~ "Integration paused"
+      assert html =~ "Google calendar calendar integration has been paused"
+      assert html =~ "Open Integration Settings"
     end
 
     test "generates valid HTML output for video type" do
@@ -22,7 +24,9 @@ defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
       html = IntegrationPaused.render(user, integration, :video, 14)
 
       assert html =~ "<!doctype html>"
-      assert String.length(html) > 500
+      assert html =~ "Integration paused"
+      assert html =~ "Zoom video integration has been paused"
+      assert html =~ "Open Integration Settings"
     end
 
     test "includes humanized provider label" do
@@ -68,7 +72,10 @@ defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
       html = IntegrationPaused.render(user, integration, :other, 14)
 
       assert html =~ "<!doctype html>"
-      assert String.length(html) > 500
+      # An unrecognised type falls back to its own string form rather than
+      # dropping the provider/type wording altogether.
+      assert html =~ "Custom service other integration has been paused"
+      assert html =~ "Open Integration Settings"
     end
   end
 

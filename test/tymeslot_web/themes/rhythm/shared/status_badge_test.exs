@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.StatusBadgeTest do
 
       assert Floki.find(doc, ".success-badge-inner--success") != []
       assert html =~ "M5 13l4 4L19 7"
+      # The check icon is the only icon drawn at stroke-width 3; the rest use 2.
+      assert html =~ "stroke-width=\"3\""
     end
 
     test "applies transparent styling when transparent is true" do
@@ -63,28 +65,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.StatusBadgeTest do
   end
 
   describe "status_badge/1 with different icons" do
-    test "renders check icon" do
-      assigns = %{variant: "success", icon: "check", transparent: false}
-      html = render_component(&StatusBadge.status_badge/1, assigns)
-
-      assert html =~ "M5 13l4 4L19 7"
-      assert html =~ "stroke-width=\"3\""
-    end
-
-    test "renders x icon" do
-      assigns = %{variant: "danger", icon: "x", transparent: false}
-      html = render_component(&StatusBadge.status_badge/1, assigns)
-
-      assert html =~ "M6 18L18 6M6 6l12 12"
-    end
-
-    test "renders info icon" do
-      assigns = %{variant: "info", icon: "info", transparent: false}
-      html = render_component(&StatusBadge.status_badge/1, assigns)
-
-      assert html =~ "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-    end
-
     test "renders refresh icon" do
       assigns = %{variant: "info", icon: "refresh", transparent: false}
       html = render_component(&StatusBadge.status_badge/1, assigns)
@@ -147,36 +127,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.StatusBadgeTest do
   end
 
   describe "status_badge/1 variant and icon combinations" do
-    test "success with check icon displays correctly" do
-      assigns = %{variant: "success", icon: "check", transparent: false}
-      html = render_component(&StatusBadge.status_badge/1, assigns)
-
-      assert html =~ "success-badge-inner--success"
-      assert html =~ "M5 13l4 4L19 7"
-    end
-
-    test "danger with x icon displays correctly" do
-      assigns = %{variant: "danger", icon: "x", transparent: false}
-      html = render_component(&StatusBadge.status_badge/1, assigns)
-
-      assert html =~ "success-badge-inner--danger"
-      assert html =~ "M6 18L18 6M6 6l12 12"
-    end
-
     test "warning with refresh icon displays correctly" do
       assigns = %{variant: "warning", icon: "refresh", transparent: false}
       html = render_component(&StatusBadge.status_badge/1, assigns)
 
       assert html =~ "success-badge-inner--warning"
       assert html =~ "M4 4v5h.582m15.356 2A8.001"
-    end
-
-    test "info with info icon displays correctly" do
-      assigns = %{variant: "info", icon: "info", transparent: false}
-      html = render_component(&StatusBadge.status_badge/1, assigns)
-
-      assert html =~ "success-badge-inner--info"
-      assert html =~ "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
     end
   end
 end

@@ -164,19 +164,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       tomorrow_iso = Date.to_iso8601(Date.add(Date.utc_today(), 1))
 
       # Route the hook event to the component via the CalendarDrag hook element
-      html =
-        lv
-        |> element("#calendar-drag-zone")
-        |> render_hook("event_dropped", %{
-          "event-id" => to_string(event.id),
-          "new-date" => tomorrow_iso,
-          "new-hour" => "10",
-          "new-minute" => "0",
-          "new-end-hour" => "11",
-          "new-end-minute" => "0"
-        })
+      lv
+      |> element("#calendar-drag-zone")
+      |> render_hook("event_dropped", %{
+        "event-id" => to_string(event.id),
+        "new-date" => tomorrow_iso,
+        "new-hour" => "10",
+        "new-minute" => "0",
+        "new-end-hour" => "11",
+        "new-end-minute" => "0"
+      })
 
-      refute html =~ "You don't have permission to modify this event"
+      # The authorization flash travels through `send(self(), {:flash, ...})` to
+      # the parent LiveView, so it only reaches the DOM on a later render — and
+      # it arrives HTML-escaped. Both facts have to be honoured or this refute
+      # can never fire.
+      refute render(lv) =~ "You don&#39;t have permission to modify this event"
     end
   end
 
@@ -206,15 +209,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       |> element("#calendar-grid")
       |> render_hook("show_event", %{"event-id" => to_string(event.id)})
 
-      html =
-        lv
-        |> element("#calendar-grid")
-        |> render_hook("update_event_calendar", %{
-          "integration-id" => to_string(other_integration.id)
-        })
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_event_calendar", %{
+        "integration-id" => to_string(other_integration.id)
+      })
 
-      # The optimistic UI update must not raise; no permission error expected
-      refute html =~ "You don't have permission"
+      # The optimistic UI update must not raise; no permission error expected.
+      # The flash reaches the DOM only on a later render, and renders escaped —
+      # see the matching assertion in "rejects a move to an integration owned by
+      # another user" below.
+      refute render(lv) =~ "You don&#39;t have permission"
     end
 
     test "rejects a move to an integration owned by another user", %{conn: conn, user: user} do
@@ -284,7 +289,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         })
 
       # The optimistic update must apply without an authorization error or crash.
-      refute html =~ "You don't have permission to modify this event"
+      # The flash arrives via `send(self(), {:flash, ...})` and renders escaped,
+      # so the refute has to run against a later render of the escaped string.
+      refute render(lv) =~ "You don&#39;t have permission to modify this event"
       assert html =~ "Resizable Event"
       # The new 12:00 PM end edge must appear in the rendered time label —
       # this catches a regression where the resize is authorised but the

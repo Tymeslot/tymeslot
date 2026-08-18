@@ -38,7 +38,8 @@ defmodule TymeslotWeb.EndpointTest do
       assert id =~ ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
     end
 
-    test "incoming x-correlation-id header is used for tracing", %{conn: conn} do
+    test "an incoming x-correlation-id becomes the log and process correlation id",
+         %{conn: conn} do
       existing_id = CorrelationId.generate()
 
       conn =
@@ -46,10 +47,13 @@ defmodule TymeslotWeb.EndpointTest do
         |> put_req_header("x-correlation-id", existing_id)
         |> get(~p"/auth/login")
 
-      # The CorrelationId plug reads the incoming header for logging/tracing
-      # but does not echo it back in the response (ensure/1 only sets resp header
-      # for newly generated IDs). Verify the request completed successfully.
-      assert conn.status in [200, 302]
+      # `ensure/1` adopts the caller's id rather than minting a fresh one, and
+      # never echoes an adopted id back — the response header is deliberately
+      # absent here. The observable that matters is what downstream logging and
+      # non-plug code see, both of which the plug writes in this process.
+      assert Logger.metadata()[:correlation_id] == existing_id
+      assert CorrelationId.get_from_process() == existing_id
+      assert get_resp_header(conn, "x-correlation-id") == []
     end
   end
 
