@@ -85,18 +85,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Lists all active user IDs in the system.
-  More efficient than loading full user records when only IDs are needed.
-  Returns a list of user IDs.
-  """
-  @spec list_all_user_ids() :: [integer()]
-  def list_all_user_ids do
-    UserSchema
-    |> select([u], u.id)
-    |> Repo.all()
-  end
-
-  @doc """
   Gets a user by provider and provider uid.
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
 
@@ -362,17 +350,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Updates a user's email.
-  """
-  @spec update_user_email(UserSchema.t(), String.t()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_user_email(%UserSchema{} = user, new_email) do
-    user
-    |> UserSchema.changeset(%{email: new_email})
-    |> Repo.update()
-  end
-
-  @doc """
   Updates a user's password with confirmation.
   """
   @spec update_user_password(UserSchema.t(), String.t(), String.t()) ::
@@ -451,24 +428,6 @@ defmodule Tymeslot.Auth.UserQueries do
     query = from(u in UserSchema, where: u.id == ^user_id)
     Repo.update_all(query, set: [last_active_at: DateTime.utc_now(:second)])
     :ok
-  end
-
-  @doc """
-  Gets a user by ID with profile preloaded.
-  """
-  @spec get_user_with_profile!(integer()) :: UserSchema.t()
-  def get_user_with_profile!(id) do
-    UserSchema
-    |> Repo.get!(id)
-    |> Repo.preload(:profile)
-  end
-
-  @doc """
-  Preloads profile for a user.
-  """
-  @spec preload_profile(UserSchema.t()) :: UserSchema.t()
-  def preload_profile(%UserSchema{} = user) do
-    Repo.preload(user, :profile)
   end
 
   @doc """

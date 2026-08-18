@@ -206,15 +206,6 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Resends verification email to a user.
-  """
-  @spec resend_verification_email(Plug.Conn.t() | Phoenix.LiveView.Socket.t(), Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom(), String.t()}
-  def resend_verification_email(socket_or_conn, user) do
-    Verification.resend_verification_email(socket_or_conn, user)
-  end
-
-  @doc """
   Generates a fresh verification token for a user and persists it without sending an email.
 
   Intended for background workers that need to produce a valid verification URL before
