@@ -99,6 +99,31 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
     # expands a series it is handed, so one placeholder carries the whole
     # thing, while a target that cannot would receive a single block at
     # whichever occurrence the cache happened to keep.
+    # The shape a Google recurring source actually has. `singleEvents=true`
+    # returns expanded instances, and an instance carries no `recurrence` array
+    # — only the master does — so `recurrence_rule` is always nil and
+    # `recurring_event_id` is the only mark of a series. Every test below that
+    # marks recurrence with a rule describes a row no Google sync can produce,
+    # which is how a rule-based guard passed them all while never firing on a
+    # real event.
+    test "a Google instance is recognised as recurring by its master id" do
+      instance = event(recurrence_rule: nil, recurring_event_id: "master_abc123")
+
+      assert Eligibility.mirror_source?(instance, MapSet.new(), "google")
+
+      refute Eligibility.mirror_source?(instance, MapSet.new(), "outlook"),
+             "a series must not be handed to a target that cannot expand one"
+    end
+
+    test "a one-off carrying neither mark is eligible for any target" do
+      one_off = event(recurrence_rule: nil, recurring_event_id: nil)
+
+      for provider <- ~w(google outlook caldav) do
+        assert Eligibility.mirror_source?(one_off, MapSet.new(), provider),
+               "#{provider} should take an ordinary event"
+      end
+    end
+
     test "a recurring source is eligible for a target that expands a series" do
       assert Eligibility.mirror_source?(
                event(recurrence_rule: "FREQ=WEEKLY;COUNT=10"),

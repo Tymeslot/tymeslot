@@ -50,9 +50,16 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
   end
 
   # A weekly series as the cache actually holds it: one row, carrying the LAST
-  # occurrence's times (`upsert_batch/1` keeps the last of the expanded
-  # instances) and that instance's own rule. Both are the values a naive
-  # implementation would mirror, and both are wrong for the series.
+  # occurrence's times, because `upsert_batch/1` keeps the last of the expanded
+  # instances. Those times are the values a naive implementation would mirror,
+  # and they are wrong for the series.
+  #
+  # `recurrence_rule` is `nil`, which is the row's real shape: only the master
+  # carries a `recurrence` array, so no Google row in the cache has a rule and
+  # `recurring_event_id` is the only mark of a series. An earlier fixture set
+  # both, a combination no Google row can have, and that is what let a version
+  # gating recurrence on the rule pass every test here while mirroring every
+  # series wrongly in production.
   defp weekly_instance(source, attrs \\ %{}) do
     Map.merge(
       %ProviderCalendarEventSchema{
@@ -68,7 +75,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
         # December: the final occurrence, months after the series began.
         start_at: ~U[2026-12-15 09:00:00Z],
         end_at: ~U[2026-12-15 09:30:00Z],
-        recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+        recurrence_rule: nil,
         recurring_event_id: "master_abc123"
       },
       attrs
@@ -315,10 +322,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
       link: link
     } do
       # No `expect` for `get_event` — a call would fail the Mox verification.
+      #
+      # A genuine one-off: no master id, which is what distinguishes it from a
+      # series row. Both Google shapes have a `nil` rule, so the rule is not what
+      # tells them apart and clearing it alone would not have made this ordinary.
       ordinary =
         weekly_instance(source, %{
           uid: "one-off@google.com",
-          recurrence_rule: nil,
           recurring_event_id: nil
         })
 
@@ -337,23 +347,37 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineRecurrenceTest do
   end
 
   describe "a series the master cannot describe is skipped, never guessed" do
-    test "a source with no recurring_event_id writes nothing", %{
+    test "a cached rule with no master id never reaches the payload", %{
       user: user,
       source: source,
       link: link
     } do
-      # No provider expectation of any kind: neither a master fetch (there is no
-      # id to fetch with) nor a create. The cached rule is right there and must
-      # not be used — it is the last occurrence's.
-      instance = weekly_instance(source, %{recurring_event_id: nil})
+      # No `get_event` expectation: there is no id to fetch a master with, so no
+      # request may be made.
+      #
+      # The row carries a rule anyway — the shape a non-Google ingest leaves, or
+      # a Google row from before `singleEvents=true`. That rule is the one thing
+      # that must not travel: it describes the last occurrence, and a placeholder
+      # built from it blocks a single wrong date forever while looking correct.
+      # So the event is mirrored as what it can be shown to be, a one-off at its
+      # own time, and the payload carries no rule at all.
+      instance =
+        weekly_instance(source, %{
+          recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+          recurring_event_id: nil
+        })
 
-      assert {:discard, :series_master_unavailable} == Engine.mirror(link, instance, user.id)
+      test_pid = self()
 
-      assert {:error, :not_found} ==
-               CalendarSyncMirrorQueries.get_by_link_and_source_uid(
-                 link.id,
-                 "weekly-series@google.com"
-               )
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        send(test_pid, {:payload, event_data})
+        {:ok, %{provider_event_id: "target-pid-1"}}
+      end)
+
+      assert :ok == Engine.mirror(link, instance, user.id)
+
+      assert_received {:payload, payload}
+      refute Map.has_key?(payload, :recurrence_rule)
     end
 
     test "a failed master fetch writes nothing and leaves the retry to the sweep", %{

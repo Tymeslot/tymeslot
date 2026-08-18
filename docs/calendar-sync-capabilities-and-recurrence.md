@@ -156,8 +156,19 @@ diverge from the rule, the mirror is written from the series rule alone and a
 exists for exactly this. The organiser sees "this series has exceptions the
 placeholder does not reflect" instead of a quietly wrong busy block.
 
-Lifting this later means either patching the mirror's EXDATE set (cheap, covers
-cancellations) or writing per-instance overrides (expensive, covers moves).
+**This was lifted.** A moved occurrence now moves the block with it: the slot it
+left is freed and the slot it went to is blocked, both carried on the same
+repeating placeholder rather than a second event, through an `EXDATE`/`RDATE`
+pair on the placeholder the engine already rewrites. It is still recorded in the
+conflict log, which is what an organiser reads when a calendar looked wrong and
+they want to know why.
+
+The limit that remains is detection, not correction: it reads a marker only
+Google supplies, so a move on a CalDAV source is neither corrected nor reported.
+
+The original reasoning, kept because it explains what was weighed: lifting this
+means either patching the mirror's EXDATE set (cheap, covers cancellations) or
+writing per-instance overrides (expensive, covers moves).
 Cancellations are the common case and the cheaper half.
 
 ### What must not change

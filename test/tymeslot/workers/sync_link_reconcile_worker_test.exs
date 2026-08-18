@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorkerTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.SyncLink.Engine
+  alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
   alias Tymeslot.Workers.SyncLinkReconcileWorker
   alias Tymeslot.Workers.SyncLinkWriteBackWorker
 
@@ -196,6 +197,64 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorkerTest do
 
       assert {:ok, reloaded} = CalendarSyncLinkQueries.get(link.id)
       assert %DateTime{} = reloaded.last_reconciled_at
+    end
+  end
+
+  # The sweep is a repair pass: it re-enqueues writes the push path missed. A
+  # correction already pending is exactly such a write, and `WriteBack`'s
+  # `replace` swaps a pending job's args wholesale — so a plain re-enqueue here
+  # drops the moved occurrences it was carrying, and the placeholder is rewritten
+  # at the time the occurrence left. The repair would destroy what it exists to
+  # protect.
+  describe "perform/1 — a pending correction" do
+    test "survives the sweep re-enqueueing the same series", %{
+      source: source,
+      link: link
+    } do
+      moves = [
+        %{"original_start" => "2026-08-14T14:00:00Z", "new_start" => "2026-08-14T22:00:00Z"}
+      ]
+
+      cached_event(source,
+        uid: "series-uid",
+        provider_updated_at: ~U[2026-07-02 09:00:00.000000Z]
+      )
+
+      mirror_for_link(link,
+        source_uid: "series-uid",
+        source_updated_at: ~U[2026-07-01 09:00:00.000000Z]
+      )
+
+      # What `MovedOccurrence.report/2` leaves behind.
+      assert :ok == WriteBack.enqueue(link.id, "series-uid", :upsert, moved: moves)
+
+      assert :ok = perform_job(SyncLinkReconcileWorker, %{"sync_link_id" => link.id})
+
+      [job] = all_enqueued(worker: SyncLinkWriteBackWorker)
+
+      assert job.args["moved"] == moves,
+             "the sweep must not strip a correction it is re-enqueueing"
+    end
+
+    test "a series with no pending correction is unaffected", %{
+      source: source,
+      link: link
+    } do
+      cached_event(source,
+        uid: "ordinary-uid",
+        provider_updated_at: ~U[2026-07-02 09:00:00.000000Z]
+      )
+
+      mirror_for_link(link,
+        source_uid: "ordinary-uid",
+        source_updated_at: ~U[2026-07-01 09:00:00.000000Z]
+      )
+
+      assert :ok = perform_job(SyncLinkReconcileWorker, %{"sync_link_id" => link.id})
+
+      [job] = all_enqueued(worker: SyncLinkWriteBackWorker)
+
+      refute Map.has_key?(job.args, "moved")
     end
   end
 

@@ -97,7 +97,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.WriteBack do
   # per event per link on every sync, and a lookup there would be a query per
   # synced event on every calendar — the cost the sync path avoids by fetching
   # the mirror set once for the whole batch. Only a caller re-enqueueing a
-  # series it already knows about pays it, by passing `moved: :preserve`.
+  # series it already knows about pays it, by passing `moved: :preserve`:
+  # `SyncLinkReconcileWorker`, whose whole job is to repair writes the push path
+  # missed, and `Remirror`, which rewrites every placeholder a link holds after
+  # a presentation change. Both would otherwise destroy a correction while
+  # repairing the thing it was correcting.
   #
   # Fresh moves always win over preserved ones: a newer detection is the current
   # truth, and merging the two sets would keep correcting a move the organiser

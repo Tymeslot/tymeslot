@@ -19,6 +19,23 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
   that recurs every Tuesday until December shows up once, in December, and the
   organiser's Tuesdays are all bookable.
 
+  ## Why the cached rule is not even the question
+
+  What an expanded instance carries is *no rule at all*. Google puts the
+  `recurrence` array on the master alone, so an instance has no such key, and
+  `EventNormaliser.map_recurrence_rule/1` maps `nil` onto every Google row in
+  the cache. A `recurrence_rule` on a Google row is not the wrong description of
+  a series; it is a value that does not occur.
+
+  That is why `recurring?/1` reads `recurring_event_id` instead. It is the only
+  field an instance carries that names the series it belongs to, it is present
+  on every occurrence of every series, and it is the handle the master fetch
+  needs regardless — so the question and the answer are the same value rather
+  than two that live data never presents together. Asking the rule instead
+  answered "not recurring" for every row that has ever existed, which meant the
+  entire master fetch below was unreachable and every series was mirrored as the
+  one-off block the section above describes.
+
   ## Why a skip is the only alternative to the master
 
   Both failures here answer `:skip`, and neither falls back to the cached rule.
@@ -31,10 +48,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
 
   The skips are:
 
-  - **No `recurring_event_id`.** Nothing to fetch the master with. Google
-    populates `recurringEventId` on every expanded instance, so its absence
-    means either the source is not really an instance or the row predates the
-    column being read — in both cases the series cannot be described.
   - **The master fetch failed.** A rate limit, an expired token, a master
     deleted between the sync and the mirror. Retrying belongs to the sweep,
     which already exists for exactly the mirrors that are missing.
@@ -49,6 +62,12 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
     than a runtime condition — and it is answered rather than raised because
     a `FunctionClauseError` inside a sync job is a worse report of that bug
     than a skip and a log line.
+  - **No `recurring_event_id`.** Kept as a clause but not reachable through
+    `resolve/2`, which now refuses such a source as `:not_recurring` before the
+    fetch is attempted — the id is what recurrence is read from, so a source
+    without one never gets this far. It stands for a caller that reaches
+    `fetch_series/2` some other way, and for the same reason as the clause
+    above: a skip reports that better than a raise.
 
   ## The request cost
 
@@ -164,12 +183,28 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
     end
   end
 
-  defp recurring?(%{recurrence_rule: rule}) when is_binary(rule) and rule != "", do: true
+  # Recurrence is read from the master handle, not from the cached rule, and the
+  # difference is the whole module. Under `singleEvents=true` the row is an
+  # expanded instance, an instance carries no `recurrence` array — only the
+  # master does — and `EventNormaliser.map_recurrence_rule/1` therefore maps
+  # `nil` onto every Google row there is. Gating on the rule asked a question
+  # whose answer was always "no", so no series ever reached the master fetch and
+  # every one was mirrored as a plain one-off block at the last occurrence's
+  # date: exactly the failure the moduledoc above describes, reached by never
+  # running the code that prevents it.
+  #
+  # `recurringEventId` is what an instance does carry, on every occurrence of
+  # every series, and it is the same field `fetch_series/2` needs anyway. Asking
+  # for it here means the question and the handle are one value rather than two
+  # that live data never presents together.
+  defp recurring?(%{recurring_event_id: id}) when is_binary(id) and id != "", do: true
   defp recurring?(_source), do: false
 
-  # The master handle. Its absence is the skip that matters most: the cached
-  # rule sits right there on the row and looks like a usable answer, and using
-  # it is the failure this whole module exists to prevent.
+  # The same handle, re-matched. A source that reaches here has one by the guard
+  # above, so the fallback below is the answer to a caller that has bypassed
+  # `resolve/2` rather than to a live row — kept because the two clauses are
+  # separately reachable and a `FunctionClauseError` inside a sync job is a worse
+  # report of that than a skip.
   defp fetch_series(%{recurring_event_id: master_id} = source, integration)
        when is_binary(master_id) and master_id != "" do
     case api_module(integration) do

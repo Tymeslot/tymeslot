@@ -630,16 +630,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
     |> then(&Enum.into(target_calendar_opts(link), &1))
   end
 
-  # `create_event/2` promises `{:ok, map()}`, but not one shape of map: the
-  # CalDAV family answers with the payload it PUT (carrying the UID the caller
-  # supplied), while Google and Outlook echo the provider's own response, whose
-  # id is server-assigned and lives under `"id"`. `nil` is an acceptable answer
-  # — the mapping is still written, keyed on the deterministic `target_uid`,
-  # which is what every subsequent update and delete addresses. The provider id
-  # is recorded for diagnosis and for the reconcile sweep, not for addressing.
-  # The id the provider filed the placeholder under, which is the only handle
-  # teardown has for withdrawing it later. Four shapes because the write path
-  # crosses three layers that each describe an event differently.
-  #
+  # The id the provider filed the placeholder under. Which key carries it
+  # differs per provider family and per layer, and a `nil` answer is the defect
+  # that left 420 mapping rows addressing nothing — `ProviderEventId` holds both
+  # facts and the reasoning behind them. Delegated rather than restated so the
+  # two cannot drift.
   defp provider_event_id(shape), do: ProviderEventId.extract(shape)
 end

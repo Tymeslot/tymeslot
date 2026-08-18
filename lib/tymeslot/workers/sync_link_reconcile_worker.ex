@@ -213,7 +213,7 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
 
     Enum.each(sources, fn {uid, event} ->
       case Map.get(by_uid, uid) do
-        nil -> WriteBack.enqueue(link.id, uid, :upsert)
+        nil -> WriteBack.enqueue(link.id, uid, :upsert, moved: :preserve)
         mapping -> reconcile_mapped(link, mapping, event)
       end
     end)
@@ -227,7 +227,7 @@ defmodule Tymeslot.Workers.SyncLinkReconcileWorker do
 
   defp reconcile_mapped(link, mapping, event) do
     if stale?(mapping, event) do
-      WriteBack.enqueue(link.id, mapping.source_uid, :upsert)
+      WriteBack.enqueue(link.id, mapping.source_uid, :upsert, moved: :preserve)
     else
       :ok
     end

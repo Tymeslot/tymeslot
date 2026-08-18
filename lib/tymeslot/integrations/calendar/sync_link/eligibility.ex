@@ -192,6 +192,18 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
     not recurring?(event) or Capability.supports?(target_provider, :recurrence)
   end
 
+  # The master's id, not the row's rule, for the reason `SyncLink.RecurringSeries`
+  # gives at length: `singleEvents=true` returns expanded instances, an instance
+  # carries no `recurrence` array at all, and so a Google row's `recurrence_rule`
+  # is always nil. A rule-based question therefore answers "not recurring" for
+  # every series Google sends, and this refusal — the one that keeps a series
+  # away from a target that cannot expand one — never fired.
+  #
+  # Either mark is enough. A row carrying a rule but no master id is a
+  # non-Google ingest, or a Google row from before the expansion was turned on;
+  # it is still a series, and still not something a target without `:recurrence`
+  # can hold.
+  defp recurring?(%{recurring_event_id: id}) when is_binary(id) and id != "", do: true
   defp recurring?(%{recurrence_rule: rule}) when is_binary(rule) and rule != "", do: true
   defp recurring?(_event), do: false
 

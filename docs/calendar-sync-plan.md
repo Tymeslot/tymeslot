@@ -224,29 +224,43 @@ indexes created inside the same migration. That is the case the existing
 and `column_reference_added`. `mix excellent_migrations.check_safety` is part of
 the gate list run at the end of every stage.
 
-## Tagging scheme
+## Recognising a mirror
 
-Every mirror carries two properties beyond the existing `createdBy` marker: the
-sync link id that produced it, and the source event UID it mirrors. The engine
-reads these to decide eligibility and to recover a mapping when the local row is
-missing.
+A placeholder that is not recognised as a leaf comes back on the target's next
+inbound sync as an ordinary event and is mirrored again, and a pair of linked
+calendars then generate events at each other until a quota stops them. So
+something has to answer, for any cached event, whether Tymeslot wrote it.
 
-| Provider | Mechanism | Properties |
-| -------- | --------- | ---------- |
-| Google | `extendedProperties.private` | `tymeslotSyncLinkId`, `tymeslotSourceUid` alongside the existing `createdBy` |
-| Outlook | `singleValueExtendedProperties` | ids `String {00020329-0000-0000-C000-000000000046} Name tymeslotSyncLinkId` and `… Name tymeslotSourceUid` |
-| CalDAV family | iCalendar custom properties on the VEVENT | `X-TYMESLOT-SYNC-LINK-ID`, `X-TYMESLOT-SOURCE-UID` |
+**The mirrors table is the authority.** A cached event's `{integration_id,
+uid}` present in the mirror set means it *is* a mirror, and a mirror is always a
+leaf. This is Tymeslot's own bookkeeping rather than a projection of provider
+state, so no inbound sync overwrites it — unlike `provider_metadata`, which is
+in `replace_fields/0` and is wiped wholesale on every sync — and
+`calendar_sync_mirrors_target_uid_index` on `[target_integration_id,
+target_uid]` exists for exactly this backward lookup.
 
-ICS needs no scheme: `ics/provider.ex:183` returns `{:error, :read_only}` for
-`create_event`, so an ICS subscription can be a sync *source* but never a
-target.
+**The rule lives in one module.** `Calendar.SyncLink.Eligibility` answers
+`mirror_source?/3` for a cached event, and the sync-path enqueue, the worker and
+the reconcile sweep all go through it. Duplicating it per provider is how one
+copy drifts, and this is the rule whose failure mode is unbounded.
 
-**The eligibility rule lives in one module.** `Calendar.SyncLink.Eligibility`
-answers `mirror_source?/1` for a cached event, and every caller goes through it.
-An event is eligible as a source only when it carries no
-`tymeslotSyncLinkId`. A tagged event is always a leaf: the engine updates and
-deletes it, but it never spawns a further mirror. Enforcing this in one place is
-what prevents a mirror loop, so it is not duplicated per provider.
+**Provider-side tagging is deferred, not abandoned.** A tag written into the
+event itself — a `tymeslotSyncLinkId` in Google's `extendedProperties.private`,
+Outlook's single-value extended property, an `X-` property in an iCalendar body
+— would travel with the placeholder and survive the local database being lost.
+Carrying one means changing the mapper, the normaliser and the `CalendarEvent`
+struct for three provider families before a single mirror can be written, and
+the tag that already exists, `created_by_tymeslot`, cannot serve: it means
+"Tymeslot wrote this" and is equally true of every booking event, so keying loop
+prevention on it would stop Tymeslot's own bookings being mirrored. The tag
+remains worth adding as a recovery mechanism for the case this design does not
+cover — the local mirror row lost while the placeholder survives on the provider
+— and so external tools can recognise a Tymeslot busy block. When it arrives it
+will corroborate loop prevention, not carry it.
+
+ICS needs no scheme either way: `ics/provider.ex:183` returns
+`{:error, :read_only}` for `create_event`, so an ICS subscription can be a sync
+*source* but never a target.
 
 ## Module layout
 

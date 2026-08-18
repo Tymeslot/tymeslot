@@ -105,6 +105,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Remirror do
   def enqueue_remirror(%CalendarSyncLinkSchema{} = link) do
     link.id
     |> CalendarSyncMirrorQueries.list_for_link()
-    |> Enum.each(&WriteBack.enqueue(link.id, &1.source_uid, :upsert))
+    |> Enum.each(&WriteBack.enqueue(link.id, &1.source_uid, :upsert, moved: :preserve))
   end
 end

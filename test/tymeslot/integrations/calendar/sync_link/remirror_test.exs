@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RemirrorTest do
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkQueries
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Remirror
+  alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
   alias Tymeslot.Workers.SyncLinkWriteBackWorker
 
   defp enqueued_pairs do
@@ -111,6 +112,24 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RemirrorTest do
                  {link.id, "src-1", "upsert"},
                  {link.id, "src-2", "upsert"}
                ])
+    end
+
+    test "a pending correction survives a presentation change", %{link: link} do
+      # Same hazard as the reconcile sweep: this re-enqueues a series it already
+      # knows about, and `replace` would swap away the moves a pending job
+      # carries. A tier change must not silently undo a correction.
+      mirror_for_link(link, source_uid: "series-uid")
+
+      moves = [
+        %{"original_start" => "2026-08-14T14:00:00Z", "new_start" => "2026-08-14T22:00:00Z"}
+      ]
+
+      assert :ok == WriteBack.enqueue(link.id, "series-uid", :upsert, moved: moves)
+      assert :ok == Remirror.enqueue_remirror(link)
+
+      [job] = all_enqueued(worker: SyncLinkWriteBackWorker)
+
+      assert job.args["moved"] == moves
     end
 
     test "a link holding no mappings enqueues nothing", %{link: link} do

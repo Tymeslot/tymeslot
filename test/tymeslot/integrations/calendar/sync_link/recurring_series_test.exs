@@ -1,14 +1,21 @@
 defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeriesTest do
   @moduledoc """
-  The series master lookup, and the two ways it is allowed to fail.
+  The series master lookup: what marks a source as recurring, and the ways the
+  lookup is allowed to fail.
 
-  Both failures answer `:skip`, and that is the whole point of this module.
   Under `singleEvents=true` the cached row for a recurring source is an
-  *expanded instance* whose `recurrence_rule` describes whatever the last
-  occurrence carried — so the tempting fallback, "use the rule we already have",
-  places a single busy block at the final occurrence's date. Skipping leaves the
-  organiser with no placeholder, which the reconcile sweep retries; guessing
-  leaves them with a wrong one, which nothing ever corrects.
+  *expanded instance*, and an instance carries no `recurrence` array — Google
+  puts that on the master alone. So a Google row's `recurrence_rule` is not a
+  description of the last occurrence; it is `nil`, always, and the field that
+  marks the row as part of a series is `recurring_event_id`. Reading recurrence
+  from the rule asked a question live data never answers "yes" to, so the master
+  fetch below was never reached and every series mirrored as one busy block at
+  the final occurrence's date.
+
+  Every failure past that gate answers `:skip`, and that is the rest of the
+  design. Skipping leaves the organiser with no placeholder, which the reconcile
+  sweep retries; guessing leaves them with a wrong one, which nothing ever
+  corrects.
   """
   use Tymeslot.DataCase, async: false
 
@@ -18,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeriesTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries
 
@@ -30,12 +38,21 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeriesTest do
     %{user: user, source: source}
   end
 
+  # A cached row as Google actually produces one. `recurrence_rule` is `nil`,
+  # and that is not an omission: `singleEvents=true` means Google expands the
+  # series and returns instances, an instance carries no `recurrence` array —
+  # only the master does — and `EventNormaliser.map_recurrence_rule/1` therefore
+  # maps `nil` onto every Google row. `recurring_event_id` is the only handle an
+  # instance carries back to its series, which is why it is what recurrence is
+  # read from. The `resolve/2 — a Google row as the normaliser builds it`
+  # describe block below builds this same shape through the real normaliser
+  # rather than by hand.
   defp instance(attrs \\ %{}) do
     Map.merge(
       %ProviderCalendarEventSchema{
         uid: "series-uid@google.com",
         provider: "google",
-        recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+        recurrence_rule: nil,
         recurring_event_id: "master_abc123",
         start_at: ~U[2026-09-29 09:00:00Z],
         end_at: ~U[2026-09-29 10:00:00Z]
@@ -44,11 +61,112 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeriesTest do
     )
   end
 
+  # The seam the bug lived in. `EventNormaliser` is what builds every Google
+  # cache row and `RecurringSeries.resolve/2` is what reads one, but no test ever
+  # drove the first into the second: the normaliser tests asserted on the struct
+  # it returns and the sync-link tests invented their own, and the invented one
+  # carried a `recurrence_rule` no expanded instance can have. Both suites passed
+  # while every production series mirrored as a one-off block at the last
+  # occurrence's date.
+  #
+  # The bodies here are the shapes captured off the live API, keys and all.
+  describe "resolve/2 — a Google row as the normaliser builds it" do
+    @normaliser_context %{
+      calendar_integration_id: 42,
+      provider_calendar_id: "primary",
+      synced_at: ~U[2026-08-16 12:00:00Z]
+    }
+
+    # An expanded instance: `recurringEventId` present, no `recurrence` key at
+    # all. This is what `singleEvents=true` returns for every occurrence of every
+    # series, and it is the only shape the cache ever holds for one.
+    defp normalised_instance(overrides \\ %{}) do
+      raw =
+        Map.merge(
+          %{
+            "id" => "1e683tgmubkufoa8nht2v586b5_20260703T134500Z",
+            "iCalUID" => "1e683tgmubkufoa8nht2v586b5@google.com",
+            "summary" => "Weekly standup",
+            "status" => "confirmed",
+            "transparency" => "opaque",
+            "recurringEventId" => "1e683tgmubkufoa8nht2v586b5",
+            "start" => %{
+              "dateTime" => "2026-07-03T10:45:00-03:00",
+              "timeZone" => "America/Sao_Paulo"
+            },
+            "end" => %{
+              "dateTime" => "2026-07-03T11:30:00-03:00",
+              "timeZone" => "America/Sao_Paulo"
+            }
+          },
+          overrides
+        )
+
+      {:ok, [event]} = EventNormaliser.normalise_events([raw], @normaliser_context)
+      event
+    end
+
+    test "an expanded instance carries no rule but does carry its master's id" do
+      event = normalised_instance()
+
+      # The premise the rest of this block rests on, asserted rather than
+      # assumed: if Google ever started sending `recurrence` on instances, or the
+      # ingest paths dropped `singleEvents=true`, this is what would say so.
+      assert event.recurrence_rule == nil
+      assert event.recurring_event_id == "1e683tgmubkufoa8nht2v586b5"
+    end
+
+    test "is recognised as recurring and fetches its master", %{source: source} do
+      expect(GoogleCalendarAPIMock, :get_event, fn _integration, _calendar_id, event_id ->
+        # The id the instance pointed at, which is the only handle it has.
+        assert event_id == "1e683tgmubkufoa8nht2v586b5"
+
+        {:ok,
+         %{
+           "id" => "1e683tgmubkufoa8nht2v586b5",
+           "recurrence" => [
+             "EXDATE;TZID=America/Sao_Paulo:20260629T104500",
+             "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"
+           ]
+         }}
+      end)
+
+      assert {:ok, series} = RecurringSeries.resolve(normalised_instance(), source)
+      assert series.recurrence_rule == "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"
+      assert series.exceptions == ["EXDATE;TZID=America/Sao_Paulo:20260629T104500"]
+    end
+
+    test "a genuinely one-off event is not recurring and costs no request", %{source: source} do
+      # No `expect`: a provider call here would fail `verify_on_exit!`. A real
+      # one-off carries neither key — no `recurrence`, because it is not a
+      # series, and no `recurringEventId`, because it belongs to none.
+      event =
+        normalised_instance(%{
+          "id" => "plain0ne0ffevent",
+          "iCalUID" => "plain0ne0ffevent@google.com",
+          "recurringEventId" => nil
+        })
+
+      assert event.recurrence_rule == nil
+      assert event.recurring_event_id == nil
+
+      assert :not_recurring == RecurringSeries.resolve(event, source)
+    end
+  end
+
   describe "resolve/2 — a non-recurring source" do
     test "is not a series and costs no request", %{source: source} do
       # No `expect` at all: a provider call here would fail `verify_on_exit!`.
+      #
+      # Both keys are absent, which is what makes this a one-off. The earlier
+      # version of this test cleared only `recurrence_rule` and left the master
+      # id in place, and so asserted that the shape of *every production row* was
+      # not recurring — pinning the bug as the specification.
       assert :not_recurring ==
-               RecurringSeries.resolve(instance(%{recurrence_rule: nil}), source)
+               RecurringSeries.resolve(
+                 instance(%{recurrence_rule: nil, recurring_event_id: nil}),
+                 source
+               )
     end
   end
 
@@ -64,9 +182,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeriesTest do
          }}
       end)
 
-      # The cached instance claims a bare weekly rule; the master carries the
-      # COUNT. Asserting on the difference is what proves the master was read
-      # rather than the row that was already in hand.
+      # The cached instance has no rule of its own to fall back to — it is an
+      # expanded occurrence — so the whole rule can only have come from the
+      # master that was fetched.
       assert {:ok, series} = RecurringSeries.resolve(instance(), source)
       assert series.recurrence_rule == "RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=12"
     end
@@ -131,16 +249,35 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeriesTest do
     end
   end
 
-  describe "resolve/2 — the two mandatory skips" do
-    test "a recurring instance with no recurring_event_id skips rather than guessing", %{
-      source: source
-    } do
+  describe "resolve/2 — the mandatory skips" do
+    test "a row with a rule but no master id is not mirrored from that rule", %{source: source} do
       # No expectation: nothing to fetch the master with, so no request may be
-      # made. The cached rule is right there and must not be used — it is the
-      # last occurrence's, and mirroring it is the bug this stage exists to
-      # prevent.
-      assert {:skip, :no_series_master} ==
-               RecurringSeries.resolve(instance(%{recurring_event_id: nil}), source)
+      # made. The cached rule is right there and must not be used.
+      #
+      # This is the shape a *non-Google* ingest leaves behind — Outlook and the
+      # CalDAV family cache a real series rule — and the shape a Google row would
+      # have had before `singleEvents=true`. It reaches `:not_recurring` rather
+      # than `{:skip, :no_series_master}` because recurrence is read from the
+      # master id, and the outcome is the same either way: no placeholder built
+      # from the row's own rule. Which of the two it is matters to the caller
+      # only in that a skip is logged and a not-recurring is not, and a source
+      # that cannot name a master is not a series this module can describe.
+      assert :not_recurring ==
+               RecurringSeries.resolve(
+                 instance(%{
+                   recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=TU",
+                   recurring_event_id: nil
+                 }),
+                 source
+               )
+    end
+
+    test "an empty master id is no handle at all, and skips", %{source: source} do
+      # No expectation, for the same reason. `""` is a value the column permits
+      # and no provider means, so it is refused at both gates: it is not a series
+      # to resolve, and it is not an id to fetch with.
+      assert :not_recurring ==
+               RecurringSeries.resolve(instance(%{recurring_event_id: ""}), source)
     end
 
     test "a failed master fetch skips and leaves the retry to the sweep", %{source: source} do
