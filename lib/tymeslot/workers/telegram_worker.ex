@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Meetings
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
@@ -161,8 +162,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         :ok
 
       {:ok, 401, _body} ->
-        auto_disable(integration, "Unauthorized (invalid bot token)")
-        {:discard, "Unauthorized"}
+        handle_unauthorized(integration, attempt)
 
       # Telegram answers both "bot was blocked by the user" and "bot was kicked"
       # with 403, deriving the body's `Forbidden:` prefix from that same code.
@@ -182,6 +182,34 @@ defmodule Tymeslot.Workers.TelegramWorker do
         if attempt == 1, do: Telegram.record_failure(integration, to_string(reason))
         {:error, reason}
     end
+  end
+
+  # A 401 means the bot token itself was rejected. In "own" mode that token
+  # belongs to this integration alone, so it is safe to treat as a permanent,
+  # per-integration failure. In "shared" mode the same token is used by every
+  # user on the deployment, so a 401 is the operator's shared credential
+  # having been rotated or revoked, not a fault of this integration: disabling
+  # it would silently disable Telegram for the whole deployment, one
+  # integration at a time, requiring a manual per-user re-enable. Surface it
+  # to the operator instead and leave the integration active.
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "own"} = integration, _attempt) do
+    auto_disable(integration, "Unauthorized (invalid bot token)")
+    {:discard, "Unauthorized"}
+  end
+
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "shared"} = integration, attempt) do
+    if attempt == 1 do
+      Logger.warning("Shared Telegram bot token rejected (401 Unauthorized)",
+        integration_id: integration.id
+      )
+
+      AdminAlerts.report(:integration_health_failure,
+        summary: "Shared Telegram bot token rejected (401 Unauthorized)",
+        context: %{integration_id: integration.id, bot_mode: "shared"}
+      )
+    end
+
+    {:discard, "Unauthorized"}
   end
 
   defp auto_disable(integration, reason) do

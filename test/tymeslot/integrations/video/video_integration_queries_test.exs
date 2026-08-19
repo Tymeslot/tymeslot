@@ -223,6 +223,37 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
 
       assert {:error, :not_found} = VideoIntegrationQueries.toggle_active(soft)
     end
+
+    test "a reconnect via update_credentials clears deleted_at instead of resurrecting the row" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: "acct-1",
+          is_active: true
+        )
+
+      assert {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      # An OAuth reconnect reaches its row by id (`reauthorize_existing/3` in
+      # `Tymeslot.Integrations.Video`), which does not exclude soft-deleted rows.
+      assert {:ok, fetched} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+
+      assert {:ok, reconnected} =
+               VideoIntegrationQueries.update_credentials(fetched, %{is_active: true})
+
+      assert reconnected.is_active
+      refute reconnected.deleted_at
+
+      # A previously blocked connect attempt for the same account must now find
+      # the reconnected row rather than colliding with a deleted-but-active one.
+      assert {:ok, found} =
+               VideoIntegrationQueries.get_by_account_for_user(user.id, "zoom", "acct-1")
+
+      assert found.id == integration.id
+    end
   end
 
   # Every uniqueness index is predicated on `is_active = true`, so reactivating

@@ -182,12 +182,16 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   the badge can't lie about an integration the user has just turned back on.
   """
   @spec toggle_calendar_integration(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | :duplicate_account}
   def toggle_calendar_integration(integration) do
     case CalendarIntegrationQueries.toggle_active(integration) do
       {:ok, %{is_active: true} = updated} = ok ->
         HealthCheck.mark_user_recovered(:calendar, updated.id)
         ok
+
+      :duplicate_account ->
+        {:error, :duplicate_account}
 
       result ->
         result

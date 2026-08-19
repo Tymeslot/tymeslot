@@ -110,8 +110,33 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
       ProviderConfig.provider_constraint_list_all()
     )
     |> validate_provider_specific_fields()
+    |> clear_deleted_at_on_reactivation()
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
+    |> apply_active_uniqueness_constraints()
+  end
+
+  # `get_for_user/2` and `get/1` deliberately fetch soft-deleted rows (a
+  # reconnect reaches its row by id), so a reconnect that sets `is_active: true`
+  # via this changeset must also clear `deleted_at`. Otherwise the row lands in
+  # an impossible state: active yet marked deleted, which still sits inside the
+  # partial unique indexes below (they are not conditioned on `deleted_at`) and
+  # remains eligible for the disconnect worker's hard-delete sweep despite being
+  # back in use.
+  defp clear_deleted_at_on_reactivation(changeset) do
+    if get_change(changeset, :is_active) == true do
+      put_change(changeset, :deleted_at, nil)
+    else
+      changeset
+    end
+  end
+
+  # Shared by `changeset/2` and `activation_changeset/2`: both partial indexes
+  # are predicated on `is_active = true`, so any write that can set it true has
+  # to declare them or a genuine violation raises `Ecto.ConstraintError`
+  # instead of returning an invalid changeset the caller can render.
+  defp apply_active_uniqueness_constraints(changeset) do
+    changeset
     |> unique_constraint([:user_id, :provider, :provider_account_id],
       name: :unique_active_video_account_per_user,
       # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
@@ -139,14 +164,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   def activation_changeset(%__MODULE__{} = integration, is_active) do
     integration
     |> change(%{is_active: is_active})
-    |> unique_constraint([:user_id, :provider, :provider_account_id],
-      name: :unique_active_video_account_per_user,
-      message: dgettext_noop("errors", "an integration for this account already exists")
-    )
-    |> unique_constraint([:user_id, :provider],
-      name: :unique_active_video_null_account_per_user,
-      message: dgettext_noop("errors", "an integration for this provider already exists")
-    )
+    |> apply_active_uniqueness_constraints()
   end
 
   @doc """

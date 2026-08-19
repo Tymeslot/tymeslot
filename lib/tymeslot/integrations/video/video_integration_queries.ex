@@ -218,7 +218,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   defp null_account_result(nil), do: {:error, :not_found}
-  defp null_account_result(integration), do: {:ok, integration}
+
+  defp null_account_result(integration),
+    do: {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
 
   @doc """
   Finds any video integration (active or inactive) by provider and account ID for a user.
