@@ -117,6 +117,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:attendee_timezone) => String.t(),
           required(:attendee_locale) => String.t(),
           required(:status) => String.t(),
+          required(:approval_requested_at) => DateTime.t() | nil,
+          required(:approval_deadline_at) => DateTime.t() | nil,
           required(:reminders) => [reminder()],
           required(:show_as_free) => boolean(),
           required(:attachments_snapshot) => [map()],

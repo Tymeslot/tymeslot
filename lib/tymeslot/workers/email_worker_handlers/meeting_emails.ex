@@ -155,7 +155,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   defp host_locale(meeting) do
     case Auth.get_user(meeting.organizer_user_id) do
-      %{locale: locale} when is_binary(locale) -> locale
+      {:ok, %{locale: locale}} when is_binary(locale) -> locale
       _no_explicit_choice -> Locales.default_locale()
     end
   end

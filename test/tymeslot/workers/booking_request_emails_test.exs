@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
   @moduletag :emails
   @moduletag :bookings
 
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.EmailWorker
 
@@ -138,6 +139,56 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
         MeetingQueries.transition_from_awaiting_approval(meeting.id, status: "cancelled")
 
       assert {:discard, _reason} = nudge_job(Repo.reload!(meeting))
+    end
+  end
+
+  describe "which language the host is written to in" do
+    test "their own, not the invitee's" do
+      # The one meeting email addressed to the account owner. Reading the
+      # host's locale through `Auth.get_user/1` is easy to get subtly wrong,
+      # and getting it wrong fails silently: every host quietly receives the
+      # default language and nothing errors.
+      host = insert(:user, locale: "de")
+
+      meeting =
+        held_meeting(%{
+          organizer_user: host,
+          organizer_user_id: host.id,
+          attendee_locale: "fr"
+        })
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _meeting ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn _variant,
+                                                                           _meeting,
+                                                                           _urls,
+                                                                           locale ->
+        assert locale == "de"
+        {:ok, :sent}
+      end)
+
+      assert :ok = request_job(meeting)
+    end
+
+    test "the default when they have chosen none" do
+      host = insert(:user, locale: nil)
+      meeting = held_meeting(%{organizer_user: host, organizer_user_id: host.id})
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _meeting ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn _variant,
+                                                                           _meeting,
+                                                                           _urls,
+                                                                           locale ->
+        assert locale == Locales.default_locale()
+        {:ok, :sent}
+      end)
+
+      assert :ok = request_job(meeting)
     end
   end
 
