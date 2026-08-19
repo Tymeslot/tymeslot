@@ -61,9 +61,17 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
 
       config = %{custom_meeting_url: "https://meet.example.com/room"}
 
-      # The URL is well-formed, so it gets as far as the reachability probe,
-      # which always fails: example.com has no `meet` host.
-      assert {:error, _reason} = custom.perform_connection_test(config)
+      # The URL is well-formed, so it gets as far as the reachability probe.
+      # HEAD failing falls back to GET, and a transport error on both is what
+      # an unreachable host looks like.
+      unreachable = %Req.TransportError{reason: :nxdomain}
+
+      expect(Tymeslot.HTTPClientMock, :head, fn _url, _headers, _opts -> {:error, unreachable} end)
+
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts -> {:error, unreachable} end)
+
+      assert {:error, reason} = custom.perform_connection_test(config)
+      assert reason =~ "Failed to reach URL"
     end
 
     test "mirotalk perform_connection_test requires HTTP mock" do

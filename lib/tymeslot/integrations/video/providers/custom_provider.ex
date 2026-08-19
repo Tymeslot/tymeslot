@@ -39,8 +39,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   All URLs (static and template) must:
   - Use HTTP or HTTPS scheme
   - Have a valid, resolvable host
-  - Not point to private or loopback addresses (in perform_connection_test only)
   - Be reachable (in perform_connection_test only)
+
+  The reachability probe is the only outbound request this provider ever makes:
+  a booking hands the URL to the browser rather than fetching it. That probe
+  goes through `Tymeslot.Security.SsrfGuard`, so in `:prod` a host resolving to
+  a private, loopback, or link-local address is refused unless the operator has
+  set `ALLOW_PRIVATE_IPS_FOR_VIDEO` (see `SsrfGuard.allow_private_for_video?/0`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -50,8 +55,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.TemplateConfig
-  alias Tymeslot.Security.PrivateIPv4
   alias Tymeslot.Security.SsrfBlockedError
+  alias Tymeslot.Security.SsrfGuard
 
   require Logger
 
@@ -229,7 +234,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
             String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
           with :ok <- assert_http_or_https(test_url),
-               :ok <- assert_public_host(test_url),
                {:ok, status} <- check_reachable(test_url) do
             # Shares the msgid the non-2xx branches use: the caller wraps a
             # success in "✓ Custom provider configured - …", so the status
@@ -355,42 +359,30 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     end
   end
 
-  defp assert_public_host(url) do
-    uri = URI.parse(url)
-    host = uri.host
-
-    with true <- is_binary(host) and host != "",
-         {:ok, ips} <- :inet.getaddrs(String.to_charlist(host), :inet),
-         false <- Enum.any?(ips, &PrivateIPv4.private?/1) do
-      :ok
-    else
-      false ->
-        {:error, dgettext("dashboard_integrations", "Invalid hostname in URL")}
-
-      {:error, _reason} ->
-        {:error,
-         dgettext("dashboard_integrations", "Could not resolve host: %{host}", host: host)}
-
-      true ->
-        {:error,
-         dgettext("dashboard_integrations", "URL resolves to a private or loopback address")}
-    end
-  end
-
   # The host is user-supplied, so every hop is classified in its own right.
-  # `ssrf_protect: true` forcibly sets `redirect: false` and validates only the
-  # URL it is handed, so letting the client follow redirects itself would leave
-  # every hop after the first unchecked: a host that resolves publicly can 302
-  # straight to 127.0.0.1 or the cloud metadata endpoint, and this probe
-  # reports status, timeout and connection-refused apart. Same shape as the ICS
-  # feed fetcher, which has the identical problem.
+  # `ssrf_protect: true` hands the private-address decision to `SsrfGuard`,
+  # which resolves every A and AAAA record, is gated to `:prod` so a local video
+  # container stays reachable in development, and honours the operator's
+  # ALLOW_PRIVATE_IPS_FOR_VIDEO opt-out. It also forcibly sets `redirect: false`
+  # and validates only the URL it is handed, so letting the client follow
+  # redirects itself would leave every hop after the first unchecked: a host
+  # that resolves publicly can 302 straight to 127.0.0.1 or the cloud metadata
+  # endpoint. Following them here reports status, timeout and
+  # connection-refused apart. Same shape as the ICS feed fetcher, which has the
+  # identical problem.
   @max_redirects 3
 
-  @probe_opts [
-    receive_timeout: 3_000,
-    connect_options: [timeout: 3_000],
-    ssrf_protect: true
-  ]
+  # Built per call rather than as a module attribute: the opt-out is read from
+  # application config at runtime, and an attribute would freeze it at compile
+  # time.
+  defp probe_opts do
+    [
+      receive_timeout: 3_000,
+      connect_options: [timeout: 3_000],
+      ssrf_protect: true,
+      ssrf_allow_private: SsrfGuard.allow_private_for_video?()
+    ]
+  end
 
   defp check_reachable(url), do: check_reachable(url, @max_redirects)
 
@@ -399,7 +391,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   end
 
   defp check_reachable(url, hops_left) do
-    case Config.http_client_module().head(url, [], @probe_opts) do
+    case Config.http_client_module().head(url, [], probe_opts()) do
       {:ok, %{status: 405}} ->
         do_get(url, hops_left)
 
@@ -415,7 +407,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   end
 
   defp do_get(url, hops_left) do
-    case Config.http_client_module().get(url, [], @probe_opts) do
+    case Config.http_client_module().get(url, [], probe_opts()) do
       {:ok, response} ->
         classify_probe(response, url, hops_left)
 

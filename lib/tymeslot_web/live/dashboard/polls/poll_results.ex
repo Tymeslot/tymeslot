@@ -343,6 +343,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           phx-click="confirm_slot"
           phx-value-slot={@slot.id}
           phx-target={@myself}
+          phx-disable-with={dgettext("common", "Processing...")}
           class="btn btn-secondary btn-sm inline-flex items-center gap-1 shrink-0"
         >
           <Icons.icon name="hero-check" class="w-4 h-4" />

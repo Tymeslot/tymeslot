@@ -187,7 +187,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     |> validate_inclusion(:colour, EventColour.keys(),
       message: dgettext_noop("errors", "is not a valid colour")
     )
-    |> URLValidator.validate_url(:base_url, block_private_ips: not SsrfGuard.allow_private?())
+    |> URLValidator.validate_url(:base_url,
+      block_private_ips: not SsrfGuard.allow_private_for_calendar?()
+    )
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)

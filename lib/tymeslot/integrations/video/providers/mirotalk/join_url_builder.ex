@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
     handle_join_api_response(
       HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
-        Config.http_client_module().post(url, body, headers, ssrf_protect: true)
+        Config.http_client_module().post(url, body, headers, HttpHelpers.ssrf_options())
       end),
       :with_validation
     )
@@ -86,7 +86,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
     handle_join_api_response(
       HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
-        Config.http_client_module().post(url, body, headers, ssrf_protect: true)
+        Config.http_client_module().post(url, body, headers, HttpHelpers.ssrf_options())
       end),
       :legacy
     )
