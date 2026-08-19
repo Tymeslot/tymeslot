@@ -5,6 +5,16 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
   Events are keyed by (calendar_integration_id, uid) and reflect the state of
   the external calendar at the time of the last sync.
 
+  That key carries an assumption worth stating, because nothing enforces it:
+  each read path an integration performs must produce uids in its own
+  namespace. Exchange is where it bites — one meeting is cached twice, once
+  from the busy-time read under a synthesised uid and once from the item read
+  under the real one, the two rows distinguished by the `role` column added in
+  migration 20260819170109. A path that ever produced the same uid from both
+  reads would collapse them into whichever role was written first, silently and
+  unrecoverably, since `role` is held out of the upsert's replace list. Keep the
+  namespaces disjoint by construction rather than by luck.
+
   Use `to_calendar_event/1` to convert a loaded record into the canonical
   `CalendarEvent` struct, and `from_calendar_event/1` to prepare a struct
   for database upsert.

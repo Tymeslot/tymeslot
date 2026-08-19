@@ -561,6 +561,19 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # (:sync_state, :sync_attempts, :sync_last_attempt_at, :sync_last_error) which
   # must survive a server-sourced upsert so OfflineQueue can still replay the
   # local change after the cache row has been refreshed.
+  #
+  # :role is excluded for the same reason as :provider — it is insert-time
+  # identity. A row does not change from a busy interval into a calendar item,
+  # and a partial cache update that omits it must not silently re-file the row
+  # as the default. Its absence here is a decision, not an oversight.
+  #
+  # Grepping for :role in this module finds nothing else, and that is expected:
+  # the column exists in the database (migration 20260819170109) but has no
+  # schema field yet. The field lands with the Exchange provider, the first
+  # writer that needs a value other than the default. Adding it to this list
+  # before then would not merely be premature — it would raise when the query is
+  # built, because Ecto validates `{:replace, fields}` against the schema's own
+  # fields. So this note is forward-looking rather than stale.
   defp replace_fields do
     [
       :provider_event_id,
