@@ -158,3 +158,31 @@
     max-height: 120px;
   }
 }
+
+/* ===== Two-Tier Hour Picker ===== */
+/* Only reached when the meeting type offers starts on a grid finer than its
+   own duration. The minute grid deliberately has no max-height: the schedule
+   step is a viewport-locked app shell with exactly one internal scroll region
+   (see base.css), and a second scrollable box nested inside it breaks that
+   contract at short heights. */
+
+html.quill-theme .time-slot-button--hour {
+  gap: var(--space-2xs);
+}
+
+html.quill-theme .slot-hour-count {
+  font-size: var(--theme-font-size-xs);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+html.quill-theme .time-slot-button--expanded {
+  background: var(--surface-medium-light);
+  border-color: var(--border-strong);
+}
+
+html.quill-theme .time-slots-grid--minutes {
+  margin-top: var(--space-xs);
+  padding-left: var(--space-xs);
+  border-left: var(--border-width-thin) solid var(--border-light);
+}

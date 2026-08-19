@@ -181,15 +181,24 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
   end
 
   # Read the offered slots off the page rather than from the grouping code, so
-  # the expected hour is derived independently of the code under test.
+  # the expected hour is derived independently of the code under test. A theme
+  # rendering the two-tier picker shows only the open hour's minutes, so the
+  # hour buttons are as much a source of offered hours as the minutes are.
   defp slot_hours(view) do
-    hours =
-      view
-      |> render()
-      |> Floki.parse_document!()
+    document = view |> render() |> Floki.parse_document!()
+
+    from_minutes =
+      document
       |> Floki.attribute("button.time-slot-button", "phx-value-time")
-      |> Enum.map(&TimeSlots.parse_time_slot/1)
-      |> Enum.map(& &1.hour)
+      |> Enum.map(&TimeSlots.parse_time_slot(&1).hour)
+
+    from_hours =
+      document
+      |> Floki.attribute("[data-testid='slot-hour']", "phx-value-hour")
+      |> Enum.map(&String.to_integer/1)
+
+    hours =
+      (from_minutes ++ from_hours)
       |> Enum.uniq()
       |> Enum.sort()
 

@@ -386,6 +386,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       calendar_error={@calendar_error}
                       available_slots={@available_slots}
                       selected_time={@selected_time}
+                      slot_interval_minutes={@slot_interval_minutes}
+                      duration_minutes={@duration_minutes}
+                      expanded_hour={@expanded_hour}
                       target={@myself}
                     />
                   </div>
