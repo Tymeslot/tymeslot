@@ -44,7 +44,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConstraintAgreementTest do
         match?({:ok, _result}, set_provider(integration.id, provider))
       end)
 
-    assert refused == []
+    assert refused == [],
+           "the CHECK constraint refuses #{inspect(refused)}, which " <>
+             "ProviderConfig.provider_constraint_list/0 names as valid"
   end
 
   test "Postgres refuses a provider the constraint list does not name" do
@@ -55,7 +57,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConstraintAgreementTest do
   end
 
   # `pg_get_constraintdef/1` renders the `IN (...)` list as an `ANY (ARRAY[...])`
-  # of `character varying` literals; only the provider names are quoted.
+  # of `character varying` literals; only the provider names are quoted. The
+  # character class admits digits so a provider such as `office365` is read
+  # rather than silently dropped from the comparison.
   defp constraint_providers do
     %{rows: rows} =
       Repo.query!(
@@ -65,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConstraintAgreementTest do
 
     case rows do
       [[definition]] ->
-        ~r/'([a-z_]+)'/
+        ~r/'([a-z0-9_]+)'/
         |> Regex.scan(definition)
         |> Enum.map(fn [_match, provider] -> provider end)
 
@@ -74,6 +78,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConstraintAgreementTest do
     end
   end
 
+  # Each probe stands alone despite the shared sandbox transaction: Ecto's SQL
+  # sandbox rolls a failed statement back to its own savepoint, so a provider
+  # the constraint refuses does not leave the transaction aborted and the
+  # probes after it still run. That is what lets the assertion above name the
+  # providers actually at fault rather than everything following the first —
+  # verified by putting a refused provider at the head of the list. No
+  # savepoint dance of this test's own is needed.
   defp set_provider(id, provider) do
     Repo.query("UPDATE calendar_integrations SET provider = $1 WHERE id = $2", [provider, id])
   end

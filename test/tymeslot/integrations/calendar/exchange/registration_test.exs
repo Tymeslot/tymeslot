@@ -32,16 +32,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RegistrationTest do
     end
 
     test "builds a client without validating, the way sync does" do
+      # Deliberately missing the password. Sync builds a client from a row
+      # that is already persisted and must not re-validate it, so the
+      # incomplete config still yields a client; the same config through the
+      # validating path is refused. The pair is what makes the skip
+      # observable — a client built from a complete config proves nothing,
+      # because it would build either way.
       config = %{
         base_url: "https://mail.example.com/EWS/Exchange.asmx",
-        username: "user@example.com",
-        password: "secret"
+        username: "user@example.com"
       }
 
-      assert {:ok, client} =
+      assert {:ok, _client} =
                ProviderRegistry.create_client(:exchange, config, skip_validation: true)
 
-      assert client.base_url == "https://mail.example.com/EWS/Exchange.asmx"
+      assert {:error, _reason} = ProviderRegistry.create_client(:exchange, config)
     end
   end
 

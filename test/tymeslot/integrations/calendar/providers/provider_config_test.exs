@@ -235,8 +235,15 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
   describe "ews?/1" do
     test "answers for the string form the database stores" do
       assert ProviderConfig.ews?("exchange")
-      assert ProviderConfig.ews_providers() == [:exchange]
-      assert ProviderConfig.ews_provider_strings() == ["exchange"]
+
+      # `integration.provider` is a string column, so every EWS provider has
+      # to be recognised from its stored name and not only from the atom.
+      # Asserting over the list rather than the literal keeps this true of a
+      # second EWS provider instead of failing on its arrival.
+      providers = ProviderConfig.ews_providers()
+
+      assert :exchange in providers
+      assert Enum.reject(providers, &ProviderConfig.ews?(Atom.to_string(&1))) == []
     end
 
     test "answers false for every other provider" do
