@@ -41,23 +41,21 @@ defmodule Tymeslot.ExchangeFixtures do
   end
 
   @doc """
-  A `FindItem` response message that failed, carrying `code`.
+  A response to `operation` whose single response message failed with `code`.
 
   Built by hand rather than through `response_envelope/2`, which always
-  states `NoError`. A failed message carries no `m:RootFolder` at all, which
-  is exactly the shape that reads as an empty calendar to anything not
-  checking the response code.
+  states `NoError`. A failed message carries no payload at all — no
+  `m:RootFolder`, no `m:Items` — which is exactly the shape that reads as an
+  empty calendar to anything not checking the response code.
   """
-  @spec failed_find_item_response(String.t()) :: String.t()
-  def failed_find_item_response(code) do
+  @spec failed_response(String.t(), String.t()) :: String.t()
+  def failed_response(operation, code) do
     soap_envelope("""
-    <m:FindItemResponse>
+    <m:#{operation}Response>
         <m:ResponseMessages>
-          <m:FindItemResponseMessage ResponseClass="Error">
-            <m:ResponseCode>#{code}</m:ResponseCode>
-          </m:FindItemResponseMessage>
+          #{failed_message(operation, code)}
         </m:ResponseMessages>
-      </m:FindItemResponse>
+      </m:#{operation}Response>
     """)
   end
 
@@ -70,31 +68,25 @@ defmodule Tymeslot.ExchangeFixtures do
   """
   @spec get_item_response(keyword()) :: String.t()
   def get_item_response(overrides \\ []) do
-    fields =
-      Keyword.merge(
-        [
-          id: @item_id,
-          change_key: @change_key,
-          subject: "Standup",
-          uid: "uid-1",
-          start: "2026-09-01T10:00:00Z",
-          end: "2026-09-01T11:00:00Z",
-          calendar_item_type: nil
-        ],
-        overrides
-      )
+    response_envelope("GetItem", "<m:Items>#{calendar_item(overrides)}</m:Items>")
+  end
 
-    response_envelope("GetItem", """
-    <m:Items><t:CalendarItem>
-                  <t:ItemId Id="#{fields[:id]}" ChangeKey="#{fields[:change_key]}"/>
-                  <t:Subject>#{fields[:subject]}</t:Subject>
-                  <t:UID>#{fields[:uid]}</t:UID>
-                  <t:Start>#{fields[:start]}</t:Start>
-                  <t:End>#{fields[:end]}</t:End>
-                  <t:IsAllDayEvent>false</t:IsAllDayEvent>
-                  <t:LegacyFreeBusyStatus>Busy</t:LegacyFreeBusyStatus>
-                  #{item_type_element(fields[:calendar_item_type])}
-                </t:CalendarItem></m:Items>
+  @doc """
+  A `GetItem` response answering one response message per entry.
+
+  `GetItem` states an outcome per requested id, so a real batch can be partly
+  successful. An entry is `{:ok, overrides}` for a message carrying one
+  calendar item (`overrides` as `get_item_response/1` takes them), or
+  `{:error, code}` for one that failed and therefore carries no `m:Items`.
+  """
+  @spec get_item_batch_response([{:ok, keyword()} | {:error, String.t()}]) :: String.t()
+  def get_item_batch_response(entries) do
+    soap_envelope("""
+    <m:GetItemResponse>
+        <m:ResponseMessages>
+          #{Enum.map_join(entries, "\n", &get_item_message/1)}
+        </m:ResponseMessages>
+      </m:GetItemResponse>
     """)
   end
 
@@ -157,6 +149,54 @@ defmodule Tymeslot.ExchangeFixtures do
 
   defp availability_envelope(body) do
     soap_envelope("<m:GetUserAvailabilityResponse>#{body}</m:GetUserAvailabilityResponse>")
+  end
+
+  defp get_item_message({:ok, overrides}) do
+    """
+    <m:GetItemResponseMessage ResponseClass="Success">
+      <m:ResponseCode>NoError</m:ResponseCode>
+      <m:Items>#{calendar_item(overrides)}</m:Items>
+    </m:GetItemResponseMessage>
+    """
+  end
+
+  defp get_item_message({:error, code}), do: failed_message("GetItem", code)
+
+  defp failed_message(operation, code) do
+    """
+    <m:#{operation}ResponseMessage ResponseClass="Error">
+      <m:ResponseCode>#{code}</m:ResponseCode>
+    </m:#{operation}ResponseMessage>
+    """
+  end
+
+  defp calendar_item(overrides) do
+    fields =
+      Keyword.merge(
+        [
+          id: @item_id,
+          change_key: @change_key,
+          subject: "Standup",
+          uid: "uid-1",
+          start: "2026-09-01T10:00:00Z",
+          end: "2026-09-01T11:00:00Z",
+          calendar_item_type: nil
+        ],
+        overrides
+      )
+
+    """
+    <t:CalendarItem>
+      <t:ItemId Id="#{fields[:id]}" ChangeKey="#{fields[:change_key]}"/>
+      <t:Subject>#{fields[:subject]}</t:Subject>
+      <t:UID>#{fields[:uid]}</t:UID>
+      <t:Start>#{fields[:start]}</t:Start>
+      <t:End>#{fields[:end]}</t:End>
+      <t:IsAllDayEvent>false</t:IsAllDayEvent>
+      <t:LegacyFreeBusyStatus>Busy</t:LegacyFreeBusyStatus>
+      #{item_type_element(fields[:calendar_item_type])}
+    </t:CalendarItem>
+    """
   end
 
   defp item_type_element(nil), do: ""

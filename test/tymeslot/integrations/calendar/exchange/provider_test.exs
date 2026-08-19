@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
 
   describe "provider identity" do
     test "declares its type, name and rate-limit bucket" do
@@ -146,10 +147,43 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       # A failed response message carries no items, so anything not reading the
       # response code answers `{:ok, []}` — which the sync layer persists as a
       # calendar with nothing in it.
-      respond_with(200, ExchangeFixtures.failed_find_item_response("ErrorAccessDenied"))
+      respond_with(200, ExchangeFixtures.failed_response("FindItem", "ErrorAccessDenied"))
 
       assert {:error, {:response_code, "ErrorAccessDenied"}} =
                Provider.list_events(config(), range())
+    end
+
+    test "fails the read when every GetItem message states a failure" do
+      # The guard `FindItem` carries has to survive one step further: a batch
+      # denied in full carries no `m:Items` either, so walking straight to the
+      # calendar items answers `{:ok, []}` for a folder that was read and
+      # refused.
+      stub_find_item_then_get_item(
+        ExchangeFixtures.get_item_batch_response([{:error, "ErrorAccessDenied"}])
+      )
+
+      assert {:error, {:response_code, "ErrorAccessDenied"}} =
+               Provider.list_events(config(), range())
+    end
+
+    test "returns the readable items when only part of the GetItem batch failed" do
+      LogCapture.attach()
+
+      stub_find_item_then_get_item(
+        ExchangeFixtures.get_item_batch_response([
+          {:ok, [id: "item-1"]},
+          {:error, "ErrorItemNotFound"}
+        ])
+      )
+
+      assert {:ok, [item]} = Provider.list_events(config(), range())
+      assert item_id(item) == "item-1"
+
+      # An item deleted between the enumeration and the fetch is the ordinary
+      # cause, so it must not fail the window — but it is still an event
+      # missing from the grid, and the log line is the only record of it.
+      assert_receive {:captured_log, %{level: :warning, meta: %{failed_item_count: 1} = meta}}
+      assert meta.response_codes == "ErrorItemNotFound"
     end
 
     test "surfaces a transport failure rather than an empty calendar" do
@@ -427,6 +461,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       [start_time: ~U[2026-09-01 00:00:00Z], end_time: ~U[2026-10-01 00:00:00Z]],
       overrides
     )
+  end
+
+  # `list_events/2` costs two round trips, and the second is the one under
+  # test: the first answers a single id so that a batch is sent at all.
+  defp stub_find_item_then_get_item(get_item_body) do
+    counter = :counters.new(1, [])
+
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      :counters.add(counter, 1, 1)
+
+      case :counters.get(counter, 1) do
+        1 -> respond(conn, ExchangeFixtures.find_item_response())
+        2 -> respond(conn, get_item_body)
+      end
+    end)
   end
 
   defp respond(conn, body) do

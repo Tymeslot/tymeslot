@@ -61,8 +61,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   Returns the `CalendarItem` elements of a parsed `GetItem` response.
 
   A response message that did not succeed carries no `m:Items`, so it drops
-  out of this walk structurally and no per-message response-code check is
-  needed.
+  out of this walk structurally, and what comes back is exactly the readable
+  items. Whether a batch that lost messages this way should be answered at all
+  is the caller's decision, not this walk's: `Exchange.Provider` refuses one in
+  which every message failed, because that is indistinguishable from an empty
+  window, and logs the rest.
   """
   @spec parse_items(Soap.document()) :: [Soap.document()]
   def parse_items(doc) do

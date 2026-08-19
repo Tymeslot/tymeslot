@@ -75,6 +75,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
 
+  require Logger
+
   # EWS is credentialed HTTP against a user-nominated host, which is exactly
   # what the CalDAV connection-test bucket meters. A bucket of its own would
   # split one user's budget across two pools without protecting anything more.
@@ -273,11 +275,57 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   defp fetch_items(_config, []), do: {:ok, []}
 
   defp fetch_items(config, ids) do
-    case Client.call(config, Requests.get_item(ids)) do
-      {:ok, doc} -> {:ok, EventNormaliser.parse_items(doc)}
-      {:error, _reason} = error -> error
+    with {:ok, doc} <- Client.call(config, Requests.get_item(ids)),
+         :ok <- require_readable_batch(doc) do
+      {:ok, EventNormaliser.parse_items(doc)}
     end
   end
+
+  # `GetItem` answers one response message per requested id, so the guard
+  # `item_ids/1` applies to `FindItem` — fail on the first stated failure — is
+  # the wrong shape here, and a partly successful batch is not an anomaly. The
+  # ids come from a *separate* round trip, so an item the organiser deleted
+  # between the two calls is answered with its own `ErrorItemNotFound`;
+  # failing the window over that would break the grid for the calendar every
+  # time someone deletes a meeting mid-sync, and permanently for a single item
+  # nobody can read.
+  #
+  # So the readable items are returned and the failed messages are logged
+  # under the server's own codes, with one exception: a batch in which *every*
+  # message failed is refused, because that is the emptied-calendar case the
+  # guard exists for and it is indistinguishable from an empty window
+  # otherwise. What this trades away is the partial case — an event denied on
+  # its own message disappears from the grid with only a log line to say so.
+  # Availability is unaffected either way: it comes from
+  # `GetUserAvailability` over the whole mailbox, never from these items.
+  defp require_readable_batch(doc) do
+    case Soap.response_messages(doc, "GetItemResponseMessage") do
+      [] -> {:error, :no_response_messages}
+      messages -> classify_batch(messages, Enum.reject(messages, &succeeded?/1))
+    end
+  end
+
+  defp classify_batch(_messages, []), do: :ok
+
+  defp classify_batch(messages, failed) when length(failed) == length(messages),
+    do: {:error, {:response_code, Soap.response_code(hd(failed))}}
+
+  # Only counts and the server's own codes travel: a failed message names no
+  # item, and nothing else in the response is safe to log — a subject or a
+  # location is mailbox content.
+  defp classify_batch(_messages, failed) do
+    Logger.warning("Exchange GetItem batch was partly unreadable",
+      provider: :exchange,
+      failed_item_count: length(failed),
+      response_codes: failed |> Soap.response_codes() |> Enum.uniq() |> Enum.join(", ")
+    )
+
+    :ok
+  end
+
+  # A message stating no code at all reads back as `""`, which is not
+  # `"NoError"` and so counts as failed, matching `Soap.require_success/2`.
+  defp succeeded?(message), do: Soap.response_code(message) == "NoError"
 
   # The response code is read before the items are. A `FindItem` message that
   # failed carries no `m:RootFolder`, so walking straight to the ids answers
