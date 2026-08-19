@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   """
   import Ecto.Query, warn: false
   alias Tymeslot.Availability.{AvailabilityBreakSchema, WeeklyAvailabilitySchema}
+  alias Tymeslot.Clock
   alias Tymeslot.Repo
 
   @default_start_time ~T[11:00:00]
@@ -134,7 +135,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   @spec create_default_weekly_days(integer(), Ecto.Repo.t()) ::
           {:ok, non_neg_integer()} | {:error, :failed_to_create_schedule}
   def create_default_weekly_days(schedule_id, repo \\ Repo) do
-    now = DateTime.utc_now(:second)
+    now = DateTime.truncate(Clock.utc_now(), :second)
 
     # Build all entries at once
     # Monday to Friday (1-5)
@@ -197,7 +198,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
 
     # Bulk insert new breaks
     unless Enum.empty?(breaks) do
-      now = DateTime.utc_now(:second)
+      now = DateTime.truncate(Clock.utc_now(), :second)
 
       entries =
         Enum.map(breaks, fn break ->
