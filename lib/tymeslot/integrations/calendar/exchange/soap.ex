@@ -152,6 +152,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   The spec is read as a string whatever cast modifier it carries, so
   `~x"./t:UID/text()"` and `~x"./t:UID/text()"s` behave alike. SweetXml's `so`
   modifier is not a substitute: it answers `""` for a missing element too.
+
+  A spec that can match more than one node needs care: casting a nodeset to a
+  string concatenates every match, so a document-wide
+  `//m:ResponseCode/text()` over two response messages answers
+  `"NoErrorErrorAccessDenied"` rather than either code. The relative reads on
+  this path descend from a single element and cannot match twice; a
+  document-wide one is the caller's to bound.
   """
   @spec text(document(), xpath_spec()) :: String.t() | nil
   def text(node, %SweetXpath{} = spec) do

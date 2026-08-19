@@ -118,6 +118,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusyTest do
     end
 
     test "shifts a boundary carrying an offset onto UTC" do
+      # This is what stands between the reader and an offset silently thrown
+      # away: `NaiveDateTime.from_iso8601/1` accepts the value below and
+      # answers its wall time, so trying it before `DateTime.from_iso8601/1`
+      # would anchor this interval an hour late.
       doc =
         response(view(event("2026-11-02T10:00:00+01:00", "2026-11-02T11:30:00+01:00", "Busy")))
 
@@ -178,6 +182,37 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusyTest do
 
       assert FreeBusy.parse_intervals(doc) ==
                {:error, {:response_code, "ErrorProxyRequestNotAllowed"}}
+    end
+
+    test "rejects a document answering for more than one mailbox" do
+      # The reads here are document-wide, and casting a nodeset to a string
+      # concatenates it, so a second mailbox leaves no readable response code.
+      # That is the direction to fail in: the alternative pairs one mailbox's
+      # response code with everybody's events.
+      doc =
+        response("""
+        <m:FreeBusyResponseArray>
+          <m:FreeBusyResponse>
+            <m:ResponseMessage ResponseClass="Success">
+              <m:ResponseCode>NoError</m:ResponseCode>
+            </m:ResponseMessage>
+            <m:FreeBusyView>
+              <t:FreeBusyViewType>FreeBusy</t:FreeBusyViewType>
+              <t:CalendarEventArray>
+                #{event("2026-11-02T09:00:00Z", "2026-11-02T09:15:00Z", "Busy")}
+              </t:CalendarEventArray>
+            </m:FreeBusyView>
+          </m:FreeBusyResponse>
+          <m:FreeBusyResponse>
+            <m:ResponseMessage ResponseClass="Error">
+              <m:ResponseCode>ErrorAccessDenied</m:ResponseCode>
+            </m:ResponseMessage>
+          </m:FreeBusyResponse>
+        </m:FreeBusyResponseArray>
+        """)
+
+      assert FreeBusy.parse_intervals(doc) ==
+               {:error, {:response_code, "NoErrorErrorAccessDenied"}}
     end
 
     test "a granted view of `None` is an error, never an empty calendar" do

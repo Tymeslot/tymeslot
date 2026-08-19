@@ -24,7 +24,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
   right, and so is a response code that is not `NoError`.
 
   `Requests.get_user_availability/3` asks for one mailbox, so one
-  `m:FreeBusyResponse` comes back and its response code decides the call.
+  `m:FreeBusyResponse` comes back and its response code decides the call. A
+  document carrying more than one is rejected rather than read: the reads
+  below are document-wide, and `Soap.text/2` casts a nodeset to a string by
+  concatenating it, so two mailboxes yield a response code of, say,
+  `"NoErrorErrorAccessDenied"`, which is not `NoError`. That is the direction
+  to fail in, since the alternative pairs one mailbox's response code with
+  everybody's events, and it is stated here because nothing in the code says
+  it.
 
   The same reasoning covers the view the server granted: `MergedOnly` and
   `None` are answered with a success code and no `t:CalendarEventArray`, so
@@ -50,11 +57,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
   @type error_reason ::
           :no_response_code | {:response_code, String.t()} | {:free_busy_view_type, String.t()}
 
-  # `Free` and `NoData` are the only values that leave the organiser bookable,
-  # matching how `Exchange.EventNormaliser` reads `LegacyFreeBusyStatus`.
+  # `Free` and `NoData` are the only values that leave the organiser bookable.
   # Anything else consumes time, and an unrecognised value is deliberately
   # read as busy rather than dropped: over-blocking costs a bookable slot,
   # under-blocking causes a double booking.
+  #
+  # `NoData` parts company with `Exchange.EventNormaliser`, which blocks on it
+  # when reading an item's `LegacyFreeBusyStatus`. The divergence is meant:
+  # there the value is a status the organiser put on a meeting that exists,
+  # while in a free/busy expansion it means the server knows nothing about
+  # that stretch of the window, which is not a booking.
   @free_types ["Free", "NoData"]
   @busy_types %{"Busy" => :busy, "Tentative" => :tentative, "OOF" => :out_of_office}
 
@@ -102,15 +114,19 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
     end
   end
 
+  # Three outcomes rather than the two `Exchange.FolderDiscovery` splits on: an
+  # interval to keep, a free one that is a correct drop, and an unreadable one
+  # that is an anomaly. Only the last is counted out of the dropped half.
   defp intervals(doc) do
-    read =
+    {read, dropped} =
       doc
       |> Soap.xpath(~x"//m:FreeBusyView/t:CalendarEventArray/t:CalendarEvent"l)
       |> Enum.map(&interval/1)
+      |> Enum.split_with(&match?({:ok, _interval}, &1))
 
-    log_unreadable(Enum.count(read, &(&1 == :unreadable)))
+    log_unreadable(Enum.count(dropped, &(&1 == :unreadable)))
 
-    for {:ok, parsed} <- read, do: parsed
+    Enum.map(read, fn {:ok, interval} -> interval end)
   end
 
   # Without an `else`, the `with` hands back whichever clause did not match, so
@@ -131,6 +147,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
 
   defp to_datetime(nil), do: :unreadable
 
+  # The order is load-bearing, and so is naming `:missing_offset` rather than
+  # widening the clause to every error. `NaiveDateTime.from_iso8601/1` accepts
+  # an offset-bearing value and silently discards the offset, reading
+  # `2026-11-02T09:00:00-05:00` as `~N[2026-11-02 09:00:00]`, which would
+  # anchor busy time five hours wrong. Trying `DateTime` first is what keeps
+  # the fallback to genuinely unqualified values, and naming the one error it
+  # answers for them says that the fallback is for that case alone.
   defp to_datetime(value) do
     case DateTime.from_iso8601(value) do
       {:ok, datetime, _offset} -> {:ok, DateTime.truncate(datetime, :second)}
@@ -145,6 +168,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
   # `Requests.get_user_availability/3` sends a bias of zero, so an unqualified
   # boundary is a UTC one. Rejecting it instead would drop every interval a
   # real Exchange server sends and report a booked mailbox as free.
+  #
+  # That reads the request only. It also bets that the server honours the EWS
+  # contract, under which the request's `t:TimeZone` governs the times in the
+  # answer as well; one that ignored it would mis-anchor every interval by its
+  # own offset. The bet is not new, since the `Z` path above trusts the
+  # server's zone claim exactly as far.
   defp from_unqualified(value) do
     case NaiveDateTime.from_iso8601(value) do
       {:ok, naive} ->

@@ -132,6 +132,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   differs only in asking a permissioned server for the meeting subjects,
   locations and item ids that `Exchange.FreeBusy` discards, so it costs
   mailbox content for nothing.
+
+  `t:MergedFreeBusyIntervalInMinutes` is inert for that view: it sizes the
+  merged bitmask only a `MergedOnly` view returns. It stays because the
+  request verified against a live server carried it, and a schema deviation
+  here is answered with an empty body and no fault, which is indistinguishable
+  from a free calendar; trading a verified request for an unverified one to
+  save a line is a bad bet.
   """
   @spec get_user_availability(String.t(), DateTime.t(), DateTime.t()) :: String.t()
   def get_user_availability(email, %DateTime{} = from, %DateTime{} = to)
