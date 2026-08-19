@@ -16,6 +16,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
 
   alias Ecto.UUID
   alias Tymeslot.Emails.Templates.BookingApprovalRequest
+  alias Tymeslot.Emails.Templates.BookingRequestOutcome
   alias Tymeslot.Emails.Templates.BookingRequestReceived
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
@@ -149,6 +150,61 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
         BookingApprovalRequest.render(:request, meeting(%{attendee_message: nil}), @urls, "en")
 
       assert email.html_body =~ @urls.approve_url
+    end
+  end
+
+  describe "BookingRequestOutcome" do
+    test "a decline quotes the host's reason back" do
+      email =
+        BookingRequestOutcome.render(:declined, meeting(%{decline_reason: "Away that week"}))
+
+      assert email.to == [{"Alex Guest", "alex@example.com"}]
+      assert email.subject =~ "Request declined"
+      assert email.html_body =~ "Away that week"
+      assert email.text_body =~ "Away that week"
+    end
+
+    test "a decline with no reason invents none" do
+      email = BookingRequestOutcome.render(:declined, meeting(%{decline_reason: nil}))
+
+      assert email.html_body =~ "wasn't able to take this booking"
+      refute email.html_body =~ "They added:"
+      refute email.text_body =~ "They added:"
+    end
+
+    test "an expiry does not tell the invitee the host refused" do
+      email = BookingRequestOutcome.render(:expired, meeting())
+
+      assert email.subject =~ "Request expired"
+      assert email.html_body =~ "didn't get to your request in time"
+      refute email.html_body =~ "wasn't able to take this booking"
+    end
+
+    test "the two variants do not share a subject line" do
+      declined = BookingRequestOutcome.render(:declined, meeting()).subject
+      expired = BookingRequestOutcome.render(:expired, meeting()).subject
+
+      assert declined != expired
+    end
+
+    test "an expired request never quotes a stale decline reason" do
+      # `decline_reason` is only ever written by a decline, but a meeting
+      # reaching expiry after an earlier gate cycle could still carry one, and
+      # attributing it to a host who simply did not answer would be a lie.
+      email =
+        BookingRequestOutcome.render(:expired, meeting(%{decline_reason: "Away that week"}))
+
+      refute email.html_body =~ "Away that week"
+    end
+
+    test "carries no calendar attachment either" do
+      calendar_parts =
+        :declined
+        |> BookingRequestOutcome.render(meeting())
+        |> Map.fetch!(:attachments)
+        |> Enum.filter(&calendar_attachment?/1)
+
+      assert calendar_parts == []
     end
   end
 end

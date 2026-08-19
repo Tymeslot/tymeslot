@@ -10,6 +10,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Meetings.ApprovalJobs
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
 
@@ -52,7 +53,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
     Logger.info("Scheduling booking request notifications", meeting_id: meeting.id)
 
     with :ok <- MeetingScheduler.schedule_request_emails(meeting.id),
-         :ok <- schedule_approval_nudge(meeting) do
+         :ok <- schedule_approval_nudge(meeting),
+         :ok <- ApprovalJobs.schedule_expiry(meeting) do
       {:ok, :notifications_scheduled}
     end
   end
@@ -75,11 +77,27 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Cancels any pending nudge for a booking request that has been answered.
+  Sends the invitee the email closing out a request that will not happen.
+  """
+  @spec send_request_outcome_notifications(%{atom() => term()}, :declined | :expired) ::
+          {:ok, :notifications_scheduled} | {:error, term()}
+  def send_request_outcome_notifications(meeting, variant) do
+    case MeetingScheduler.schedule_request_outcome(meeting.id, variant) do
+      :ok -> {:ok, :notifications_scheduled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Cancels every pending job for a booking request that has been answered.
+
+  Both the nudge and the expiry, together: see `Tymeslot.Meetings.ApprovalJobs`
+  for why they are cancelled as one action rather than two.
   """
   @spec cancel_request_notifications(%{atom() => term()}) :: :ok
   def cancel_request_notifications(meeting) do
-    MeetingScheduler.cancel_approval_emails(meeting.id)
+    :ok = MeetingScheduler.cancel_approval_emails(meeting.id)
+    ApprovalJobs.cancel(meeting)
   end
 
   @doc """

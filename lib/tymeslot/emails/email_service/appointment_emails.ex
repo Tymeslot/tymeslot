@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     AppointmentReminder,
     AppointmentRescheduled,
     BookingApprovalRequest,
+    BookingRequestOutcome,
     BookingRequestReceived
   }
 
@@ -53,6 +54,19 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_booking_request_received(Meeting.t()) :: {:ok, any()} | {:error, any()}
   def send_booking_request_received(%Meeting{} = meeting) do
     Delivery.deliver(BookingRequestReceived.render(meeting))
+  end
+
+  @doc """
+  Tells the invitee a booking request will not happen, and why.
+
+  Closes the loop the acknowledgement opened. `variant` is `:declined` when
+  the host refused and `:expired` when nobody answered; the two are not
+  interchangeable, because only one of them is a decision a person made.
+  """
+  @spec send_booking_request_outcome(BookingRequestOutcome.variant(), Meeting.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_booking_request_outcome(variant, %Meeting{} = meeting) do
+    Delivery.deliver(BookingRequestOutcome.render(variant, meeting))
   end
 
   @doc """

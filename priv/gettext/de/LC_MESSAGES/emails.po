@@ -81,6 +81,7 @@ msgstr "DETAILS:"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
@@ -95,6 +96,7 @@ msgid "Duration"
 msgstr "Dauer"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
@@ -113,6 +115,7 @@ msgstr "E-Mail:"
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -181,6 +184,7 @@ msgstr "Ort"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
@@ -211,6 +215,7 @@ msgid "MESSAGE FROM ATTENDEE:"
 msgstr "NACHRICHT DES TEILNEHMERS:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
@@ -365,6 +370,7 @@ msgid "Time:"
 msgstr "Uhrzeit:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -372,6 +378,7 @@ msgid "Timezone:"
 msgstr "Zeitzone:"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
@@ -2169,6 +2176,7 @@ msgid "New booking request"
 msgstr "Neue Buchungsanfrage"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "REQUESTED TIME:"
@@ -2190,6 +2198,7 @@ msgid "Request received: %{title} - %{date}"
 msgstr "Anfrage eingegangen: %{title} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "Requested Time"
@@ -2224,3 +2233,73 @@ msgstr "Anfrage zurückziehen:"
 #, elixir-autogen, elixir-format
 msgid "a meeting"
 msgstr "einen Termin"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} wasn't able to take this booking, so the time is no longer held for you."
+msgstr "%{organizer} konnte diese Buchung nicht annehmen, daher ist die Zeit nicht mehr für Sie reserviert."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Request Declined"
+msgstr "Buchungsanfrage abgelehnt"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Request Expired"
+msgstr "Buchungsanfrage abgelaufen"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{organizer} can't make this time."
+msgstr "Hallo %{name}, %{organizer} kann diesen Termin nicht wahrnehmen."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, this request wasn't answered in time."
+msgstr "Hallo %{name}, diese Anfrage wurde nicht rechtzeitig beantwortet."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "No longer held"
+msgstr "Nicht mehr reserviert"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Not confirmed"
+msgstr "Nicht bestätigt"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Pick another time"
+msgstr "Andere Zeit wählen"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Pick another time:"
+msgstr "Andere Zeit wählen:"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Request declined: %{title} - %{date}"
+msgstr "Anfrage abgelehnt: %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Request expired: %{title} - %{date}"
+msgstr "Anfrage abgelaufen: %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "They added:"
+msgstr "Anmerkung:"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "This time slot is available for booking again."
+msgstr "Dieses Zeitfenster ist wieder buchbar."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot."
+msgstr "%{organizer} hat Ihre Anfrage nicht rechtzeitig bearbeitet, daher wurde die Zeit wieder freigegeben. Sie können gerne einen anderen Termin wählen."

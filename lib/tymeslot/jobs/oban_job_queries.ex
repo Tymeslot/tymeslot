@@ -138,6 +138,29 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Deletes every pending job a worker holds for one meeting, on any queue.
+
+  `delete_jobs_by_action/3` above is scoped to the `emails` queue, which is
+  correct for the email jobs it was written for but silently matches nothing
+  for a worker that runs anywhere else. The approval expiry job is one of
+  those, and a missed deletion there is not cosmetic: it fires after the host
+  has already answered and tries to expire a request that is no longer open.
+  """
+  @spec delete_meeting_jobs(module(), term()) :: {non_neg_integer(), nil}
+  def delete_meeting_jobs(worker_module, meeting_id) do
+    worker_name = Worker.to_string(worker_module)
+    args_match = %{"meeting_id" => meeting_id}
+
+    Repo.delete_all(
+      from(j in Job,
+        where: j.worker == ^worker_name,
+        where: j.state in ["available", "scheduled", "retryable"],
+        where: fragment("? @> ?::jsonb", j.args, type(^args_match, :map))
+      )
+    )
+  end
+
+  @doc """
   Deletes existing reminder email jobs for a meeting to avoid duplicates
   when rescheduling.
   """

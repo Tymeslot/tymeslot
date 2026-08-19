@@ -94,6 +94,28 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the invitee's email for a request that will not happen.
+
+  Sent immediately, not scheduled: an invitee whose time was held is owed the
+  news the moment it stops being held. Uniqueness is keyed on the action and
+  the meeting, so the expiry job and the sweep both firing produces one email.
+  """
+  @spec schedule_request_outcome(term(), :declined | :expired) :: :ok | {:error, String.t()}
+  def schedule_request_outcome(meeting_id, variant) when variant in [:declined, :expired] do
+    %{
+      "action" => "send_booking_request_outcome",
+      "meeting_id" => meeting_id,
+      "variant" => Atom.to_string(variant)
+    }
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 0,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> insert_job("Booking request outcome", meeting_id)
+  end
+
+  @doc """
   Deletes any pending nudge for a meeting.
 
   Called on every exit from the approval gate. A nudge that fires after the

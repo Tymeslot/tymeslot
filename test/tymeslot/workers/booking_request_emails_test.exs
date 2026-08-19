@@ -42,6 +42,14 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
         "meeting_id" => meeting.id
       })
 
+  defp outcome_job(meeting, variant),
+    do:
+      perform_job(EmailWorker, %{
+        "action" => "send_booking_request_outcome",
+        "meeting_id" => meeting.id,
+        "variant" => variant
+      })
+
   defp nudge_job(meeting),
     do:
       perform_job(EmailWorker, %{
@@ -130,6 +138,44 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
         MeetingQueries.transition_from_awaiting_approval(meeting.id, status: "cancelled")
 
       assert {:discard, _reason} = nudge_job(Repo.reload!(meeting))
+    end
+  end
+
+  describe "the outcome email" do
+    test "sends the declined variant for a request the host refused" do
+      meeting = held_meeting(%{status: "cancelled", decline_reason: "Away that week"})
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_outcome, fn :declined, sent ->
+        assert sent.id == meeting.id
+        {:ok, :sent}
+      end)
+
+      assert :ok = outcome_job(meeting, "declined")
+    end
+
+    test "sends the expired variant for a request nobody answered" do
+      meeting = held_meeting(%{status: "expired"})
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_outcome, fn :expired, _sent ->
+        {:ok, :sent}
+      end)
+
+      assert :ok = outcome_job(meeting, "expired")
+    end
+
+    test "refuses to tell an invitee a confirmed booking was declined" do
+      # The status is the authority, not the job's args. A request returned to
+      # the gate and then approved between enqueue and execution must not
+      # produce a decline email for a meeting that is going ahead.
+      meeting = held_meeting(%{status: "confirmed"})
+
+      assert {:discard, _reason} = outcome_job(meeting, "declined")
+    end
+
+    test "refuses to call an expiry a decline" do
+      meeting = held_meeting(%{status: "expired"})
+
+      assert {:discard, _reason} = outcome_job(meeting, "declined")
     end
   end
 end

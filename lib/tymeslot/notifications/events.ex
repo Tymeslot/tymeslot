@@ -59,6 +59,37 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
+  Handles a booking request the host refused.
+
+  Distinct from `meeting_cancelled/1` even though the stored status is the
+  same. A cancellation tells the invitee a confirmed meeting is off; a decline
+  tells them a request was never accepted, and sending the cancellation email
+  here would refer to a booking they were explicitly told was not one.
+  """
+  @spec meeting_declined(term()) :: {:ok, term()} | {:error, term()}
+  def meeting_declined(meeting), do: request_ended(meeting, :meeting_declined, :declined)
+
+  @doc """
+  Handles a booking request nobody answered before its deadline.
+  """
+  @spec meeting_request_expired(term()) :: {:ok, term()} | {:error, term()}
+  def meeting_request_expired(meeting),
+    do: request_ended(meeting, :meeting_request_expired, :expired)
+
+  defp request_ended(meeting, event, variant) do
+    result =
+      send_notifications(event, meeting, fn ->
+        Orchestrator.send_request_outcome_notifications(meeting, variant)
+      end)
+
+    Dispatcher.dispatch(event, meeting)
+    TelegramDispatcher.dispatch(event, meeting)
+    SlackDispatcher.dispatch(event, meeting)
+
+    result
+  end
+
+  @doc """
   Handles meeting cancellation event.
   """
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}

@@ -95,6 +95,49 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end)
   end
 
+  @doc """
+  Tells the invitee a request was declined or expired.
+
+  Unlike the other approval emails this one is *not* guarded on the request
+  still being held: by the time it runs the request has been answered, which
+  is precisely why it is being sent. It is guarded on the status matching the
+  variant instead, so a decline email cannot be delivered for a request that
+  a later reschedule returned to the gate.
+  """
+  @spec handle_booking_request_outcome(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_booking_request_outcome(%{"meeting_id" => meeting_id, "variant" => variant})
+      when variant in ["declined", "expired"] do
+    with_meeting(meeting_id, "booking request outcome", fn meeting ->
+      send_outcome(meeting, String.to_existing_atom(variant))
+    end)
+  end
+
+  defp send_outcome(meeting, variant) do
+    if outcome_still_true?(meeting, variant) do
+      deliver_outcome(meeting, variant)
+    else
+      Logger.info("Skipping booking request outcome - status no longer matches",
+        meeting_id: meeting.id,
+        email_action: variant,
+        status: meeting.status
+      )
+
+      {:discard, "Meeting #{meeting.status}"}
+    end
+  end
+
+  defp outcome_still_true?(%{status: "cancelled"}, :declined), do: true
+  defp outcome_still_true?(%{status: "expired"}, :expired), do: true
+  defp outcome_still_true?(_meeting, _variant), do: false
+
+  defp deliver_outcome(meeting, variant) do
+    case Config.email_service_module().send_booking_request_outcome(variant, meeting) do
+      {:ok, _sent} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp send_nudge(meeting) do
     with {:ok, _sent} <- send_approval_request(:nudge, meeting, Config.email_service_module()),
          {:ok, _meeting} <- MeetingQueries.mark_approval_nudge_sent(meeting) do

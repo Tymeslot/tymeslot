@@ -70,6 +70,10 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_approval_request(variant, meeting, urls, locale), to: AppointmentEmails
 
+  @doc "Tells an invitee a booking request was declined or expired."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_booking_request_outcome(variant, meeting), to: AppointmentEmails
+
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_guest_confirmation(guest_email, appointment_details), to: AppointmentEmails
 

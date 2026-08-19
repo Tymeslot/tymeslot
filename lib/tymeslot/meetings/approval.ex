@@ -56,9 +56,12 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
+  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Validation.Constraints
 
   @typedoc "Why a transition out of the approval gate did not happen."
@@ -131,6 +134,7 @@ defmodule Tymeslot.Meetings.Approval do
       {:ok, confirmed} ->
         Logger.info("Booking request approved", meeting_id: confirmed.id, uid: confirmed.uid)
         AvailabilityCache.invalidate_for_user(confirmed.organizer_user_id)
+        Orchestrator.cancel_request_notifications(confirmed)
         Activation.activate(confirmed, with_video_room: true)
         {:ok, confirmed}
 
@@ -182,6 +186,7 @@ defmodule Tymeslot.Meetings.Approval do
         )
 
         AvailabilityCache.invalidate_for_user(released.organizer_user_id)
+        after_release(released)
         {:ok, released}
 
       {:error, :not_awaiting_approval} = error ->
@@ -193,6 +198,21 @@ defmodule Tymeslot.Meetings.Approval do
         error
     end
   end
+
+  # Everything that must happen once the slot is genuinely free again, in the
+  # order that matters: stop the jobs that would contradict the outcome, take
+  # the hold off the host's calendar, then tell the invitee. Each step is
+  # best-effort and logged by its own module; none of them may fail the
+  # transition, which has already been committed and cannot be undone.
+  defp after_release(%Meeting{status: status} = meeting) do
+    Orchestrator.cancel_request_notifications(meeting)
+    Meetings.cancel_calendar_event(meeting)
+    announce_release(meeting, status)
+    :ok
+  end
+
+  defp announce_release(meeting, "expired"), do: Events.meeting_request_expired(meeting)
+  defp announce_release(meeting, _declined), do: Events.meeting_declined(meeting)
 
   defp started?(%Meeting{start_time: nil}, _now), do: false
 
