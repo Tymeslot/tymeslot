@@ -221,12 +221,15 @@ defmodule Tymeslot.Meetings.Approval do
 
   defp earliest(a, b), do: if(DateTime.compare(a, b) == :lt, do: a, else: b)
 
+  # Capped here rather than only in the form, because the reason is quoted
+  # verbatim into an email to a third party and the two places a host can type
+  # one are both client-side limits a request can simply not honour.
   defp normalise_reason(nil), do: nil
 
   defp normalise_reason(reason) when is_binary(reason) do
     case String.trim(reason) do
       "" -> nil
-      trimmed -> trimmed
+      trimmed -> String.slice(trimmed, 0, Constraints.decline_reason_max_length())
     end
   end
 end

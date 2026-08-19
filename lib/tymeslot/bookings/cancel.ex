@@ -14,6 +14,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Workers.VideoSyncWorker
 
   @doc """
@@ -152,6 +153,7 @@ defmodule Tymeslot.Bookings.Cancel do
         )
 
         AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
+        stop_approval_clock(meeting)
         {:ok, updated_meeting}
 
       {:error, changeset} ->
@@ -162,6 +164,21 @@ defmodule Tymeslot.Bookings.Cancel do
 
         {:error, "Failed to update meeting status"}
     end
+  end
+
+  # An invitee who withdraws a request they are still waiting on leaves two
+  # jobs behind: a nudge asking the host to answer, and an expiry to release a
+  # slot already released. Neither is harmless — the nudge asks a real person
+  # to decide something that no longer exists.
+  #
+  # Keyed on the status the meeting had *before* cancelling, because after it
+  # the meeting no longer looks like a held request.
+  defp stop_approval_clock(meeting) do
+    if MeetingState.awaiting_approval?(meeting) do
+      Orchestrator.cancel_request_notifications(meeting)
+    end
+
+    :ok
   end
 
   defp update_meeting_status_external(meeting) do

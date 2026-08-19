@@ -779,3 +779,33 @@ msgstr "Pianificazione aggiornata e salvata"
 #, elixir-autogen, elixir-format
 msgid "Selected schedule is not one of yours"
 msgstr "La pianificazione selezionata non è tua"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Answer within"
+msgstr "Rispondi entro"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Approval"
+msgstr "Approvazione"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm each booking myself"
+msgstr "Confermare personalmente ogni prenotazione"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer in time the request lapses, the slot is released, and the invitee is told. Silence never confirms a booking. Leave blank to use %{default} hours."
+msgstr "Se non rispondi in tempo la richiesta decade, l'orario viene liberato e l'invitato viene avvisato. Il silenzio non conferma mai una prenotazione. Lascia vuoto per %{default} ore."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Invitees get a \"request received\" email instead of a confirmation, and the slot is held so nobody else can take it. They get the confirmation and the calendar invite once you accept."
+msgstr "Gli invitati ricevono un'email di « richiesta ricevuta » invece di una conferma, e l'orario viene riservato così nessun altro può prenderlo. Ricevono la conferma e l'invito al calendario appena accetti."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "hours"
+msgstr "ore"

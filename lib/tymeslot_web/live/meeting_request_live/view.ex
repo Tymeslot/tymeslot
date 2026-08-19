@@ -12,6 +12,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Validation.Constraints
 
   # The host is answering about the invitee's time, so both timestamps render
   # in the invitee's zone rather than silently in UTC.
@@ -108,7 +109,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
             value={@decline_reason}
             label={dgettext("booking", "Reason (optional)")}
             placeholder={dgettext("booking", "Shared with %{name}.", name: @meeting.attendee_name)}
-            maxlength="500"
+            maxlength={Constraints.decline_reason_max_length()}
           />
 
           <div class="mt-4 flex flex-wrap gap-3">

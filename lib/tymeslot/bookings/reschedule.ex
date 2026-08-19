@@ -2,12 +2,26 @@ defmodule Tymeslot.Bookings.Reschedule do
   @moduledoc """
   Orchestrates the booking rescheduling process.
   Handles meeting time updates, calendar event migration, and notifications.
+
+  ## Rescheduling does not bypass the approval gate
+
+  On a meeting type requiring the host's approval, moving a booking to a new
+  time returns it to the gate rather than carrying the old answer across. The
+  host agreed to a specific time, not to the invitee's standing right to pick
+  another one, and a confirmed booking that can be silently moved anywhere is
+  the gate with an obvious hole in it.
+
+  So a reschedule on such a meeting type re-enters `"awaiting_approval"` with
+  a fresh window, the provider event goes back to tentative, and the invitee
+  is told a request was made rather than that their meeting has moved.
   """
 
   require Logger
 
   alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
@@ -55,14 +69,23 @@ defmodule Tymeslot.Bookings.Reschedule do
           {:ok, Ecto.Schema.t()} | {:error, Errors.classified_error() | String.t()}
   def execute(meeting_uid, new_params, _form_data, organizer_user_id)
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
+    meeting_type = fn meeting ->
+      fetch_meeting_type(meeting.meeting_type_id, organizer_user_id)
+    end
+
     with {:ok, original_meeting} <-
            MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
          :ok <- validate_can_reschedule(original_meeting),
          {:ok, new_times} <- prepare_new_times(new_params, original_meeting),
-         {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do
+         {:ok, updated_meeting} <-
+           apply_time_update_and_schedule_job(
+             original_meeting,
+             new_times,
+             meeting_type.(original_meeting)
+           ) do
       AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
       sync_provider_video_room(updated_meeting)
-      send_reschedule_notifications(updated_meeting, original_meeting)
+      announce(updated_meeting, original_meeting)
       {:ok, updated_meeting}
     else
       {:error, :not_found} -> {:error, :meeting_not_found}
@@ -72,26 +95,28 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   # Private functions
 
-  defp apply_time_update_and_schedule_job(meeting, %{
-         start_time: start_dt,
-         end_time: end_dt,
-         duration_minutes: _dur
-       }) do
+  defp apply_time_update_and_schedule_job(
+         meeting,
+         %{start_time: start_dt, end_time: end_dt, duration_minutes: _dur},
+         meeting_type
+       ) do
     # Booking a new time settles any pending organizer reschedule request, so
-    # the slot becomes live again — clear the timestamp. `status` is left
-    # untouched: it tracks the booking lifecycle (pending, awaiting_payment,
-    # confirmed, ...), which a reschedule never changes.
+    # the slot becomes live again — clear the timestamp.
     #
     # Reminder sent-tracking is reset too: the reminder(s) already sent were
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
-    attrs = %{
-      start_time: start_dt,
-      end_time: end_dt,
-      reschedule_requested_at: nil,
-      reminders_sent: [],
-      reminder_email_sent: false
-    }
+    attrs =
+      Map.merge(
+        %{
+          start_time: start_dt,
+          end_time: end_dt,
+          reschedule_requested_at: nil,
+          reminders_sent: [],
+          reminder_email_sent: false
+        },
+        gate_attributes(meeting_type, start_dt)
+      )
 
     case Repo.transaction(fn ->
            with {:ok, updated} <- update_meeting(meeting, attrs),
@@ -109,6 +134,58 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
   end
+
+  # On an ungated meeting type `status` is left untouched: it tracks the booking
+  # lifecycle (pending, awaiting_payment, confirmed, ...), which a reschedule
+  # never changes there.
+  #
+  # On a gated one the reschedule *is* a new request, so the whole approval
+  # record is reset rather than partially updated: a stale `approval_resolved_at`
+  # would make the new request look answered, and a stale
+  # `approval_nudge_sent_at` would suppress the nudge for a window that has not
+  # been nudged. The deadline is computed from now and capped at the new start
+  # time, exactly as an original booking's is.
+  defp gate_attributes(meeting_type, start_time) do
+    if Approval.required?(meeting_type) do
+      requested_at = DateTime.truncate(Clock.utc_now(), :second)
+
+      %{
+        status: "awaiting_approval",
+        approval_requested_at: requested_at,
+        approval_deadline_at: Approval.deadline_for(meeting_type, requested_at, start_time),
+        approval_resolved_at: nil,
+        approval_nudge_sent_at: nil,
+        decline_reason: nil
+      }
+    else
+      %{}
+    end
+  end
+
+  # A booking back in the gate has not been rescheduled from the invitee's
+  # point of view — it has been re-requested. Sending the reschedule email
+  # would tell them their meeting has moved to a time nobody has agreed to,
+  # which is the confusion the whole feature exists to remove.
+  defp announce(%{status: "awaiting_approval"} = updated, _original) do
+    case Events.meeting_requested(updated) do
+      {:ok, _result} ->
+        Logger.info("Reschedule returned the booking to the approval gate",
+          meeting_id: updated.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to send booking request notifications on reschedule",
+          meeting_id: updated.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  defp announce(updated, original), do: send_reschedule_notifications(updated, original)
 
   defp validate_can_reschedule(meeting) do
     Policy.can_reschedule_meeting?(meeting)

@@ -49,6 +49,17 @@ defmodule Tymeslot.Validation.Constraints do
   def approval_window_hours_range, do: 1..336
 
   @doc """
+  How much a host may write when declining a booking request.
+
+  The note is quoted verbatim into the invitee's email, so the cap is a
+  boundary on what reaches a third party, not a storage limit: it is enforced
+  where the reason is written, and mirrored as a `maxlength` on both places a
+  host can type one.
+  """
+  @spec decline_reason_max_length() :: pos_integer()
+  def decline_reason_max_length, do: 500
+
+  @doc """
   The approval window applied when a meeting type stores none.
 
   A day is long enough to cover an overnight or a weekend gap on either side of

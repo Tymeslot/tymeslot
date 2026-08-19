@@ -32,6 +32,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> Component.assign(:allow_guests, get_allow_guests(type))
+    |> Component.assign(:requires_approval, get_requires_approval(type))
+    |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))
     |> Component.assign(:booking_limits, get_booking_limits(type))
     |> Component.assign(
@@ -174,6 +176,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       "icon" => type.icon || "none"
     }
   end
+
+  @doc "Whether this meeting type holds its bookings for the host to answer."
+  @spec get_requires_approval(Ecto.Schema.t() | nil) :: boolean()
+  def get_requires_approval(%{requires_approval: true}), do: true
+  def get_requires_approval(_type), do: false
+
+  @doc """
+  The saved approval window, or nil.
+
+  Nil is meaningful and is not replaced with the default here: the form shows
+  the default as a placeholder so a host can see what blank means without the
+  value being written into their meeting type.
+  """
+  @spec get_approval_window_hours(Ecto.Schema.t() | nil) :: pos_integer() | nil
+  def get_approval_window_hours(%{approval_window_hours: hours}) when is_integer(hours), do: hours
+  def get_approval_window_hours(_type), do: nil
 
   @doc "Returns whether guests are allowed for an existing meeting type."
   @spec get_allow_guests(Ecto.Schema.t() | nil) :: boolean()

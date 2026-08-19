@@ -86,7 +86,7 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
-  @doc """
+  @doc \"""
   Deletes any pending job for one meeting and one action.
 
   Generalises the reminder deletion below for the approval jobs, which key on

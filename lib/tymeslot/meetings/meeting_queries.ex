@@ -446,6 +446,24 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  How many booking requests this host has not yet answered.
+
+  Drives the dashboard's count badge, and is backed by the partial index
+  `meetings_pending_approval_by_organizer` so it stays a cheap query on a
+  dashboard that renders it on every load.
+  """
+  @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
+  def count_awaiting_approval_for_organizer(organizer_user_id) do
+    Repo.aggregate(
+      from(m in Meeting,
+        where: m.organizer_user_id == ^organizer_user_id and m.status == "awaiting_approval"
+      ),
+      :count,
+      :id
+    )
+  end
+
+  @doc """
   Returns the count of meetings with status `awaiting_payment` for a given organizer.
 
   Used by `Tymeslot.MeetingPayments` to guard currency changes: if the host has any

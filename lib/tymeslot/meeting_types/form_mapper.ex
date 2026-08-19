@@ -45,6 +45,8 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         is_active: params["is_active"] == "true",
         allow_video: ui_state.meeting_mode == "video",
         allow_guests: params["allow_guests"] == "true",
+        requires_approval: params["requires_approval"] == "true",
+        approval_window_hours: parse_approval_window(params["approval_window_hours"]),
         video_integration_id: video_integration_id(ui_state),
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
@@ -99,6 +101,21 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   end
 
   defp parse_duration(_value), do: {:error, :invalid_duration}
+
+  # Blank means "use the application default", which the domain resolves at
+  # read time rather than freezing today's value into every row. An
+  # unparseable value becomes nil for the same reason: the changeset owns the
+  # range, and a half-typed number should not save as a different window.
+  defp parse_approval_window(value) when is_integer(value), do: value
+
+  defp parse_approval_window(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {hours, ""} -> hours
+      _other -> nil
+    end
+  end
+
+  defp parse_approval_window(_value), do: nil
 
   defp booking_limits(params) do
     Map.new(Constraints.booking_limit_fields(), fn field ->

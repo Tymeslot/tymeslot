@@ -76,9 +76,14 @@ defmodule Tymeslot.Meetings.Listing do
 
     query_opts =
       case filter do
-        "upcoming" -> [time_filter: :upcoming, exclude_status: "cancelled"]
+        # Held requests are deliberately kept out of "upcoming": they are not
+        # upcoming meetings, they are decisions the host still owes somebody,
+        # and listing them beside confirmed bookings is what made an
+        # unanswered request look agreed to.
+        "upcoming" -> [time_filter: :upcoming, exclude_status: ["cancelled", "awaiting_approval"]]
         "past" -> [time_filter: :past, exclude_status: "cancelled"]
         "cancelled" -> [status: "cancelled"]
+        "awaiting_approval" -> [status: "awaiting_approval"]
         _other -> []
       end
 

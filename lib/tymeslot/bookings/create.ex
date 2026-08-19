@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Create do
   require Logger
 
   alias Tymeslot.Availability.TimeSlots
+
   alias Tymeslot.Bookings.{
     Activation,
     BuildParams,
@@ -16,6 +17,7 @@ defmodule Tymeslot.Bookings.Create do
     ScheduleCheck,
     Validation
   }
+
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache

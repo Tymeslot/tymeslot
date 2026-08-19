@@ -9,17 +9,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.RateLimiter
 
   alias Phoenix.LiveView
 
-  alias TymeslotWeb.Components.Dashboard.Meetings.{
-    CancelMeetingModal,
-    Helpers,
-    MeetingListComponents,
-    RescheduleRequestModal
-  }
+  alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
+  alias TymeslotWeb.Dashboard.BookingsManagement.Modals
 
+  alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
   alias TymeslotWeb.Live.Shared.Flash
 
   require Logger
@@ -35,6 +34,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:cancelling_meeting, nil)
      |> assign(:cancel_booking_payment, nil)
      |> assign(:sending_reschedule, nil)
+     |> assign(:answering_request, nil)
+     |> assign(:awaiting_approval_count, 0)
      |> assign(:per_page, 20)
      |> assign(:next_cursor, nil)
      |> assign(:has_more, false)
@@ -44,7 +45,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:_last_filter, nil)
      |> assign(:_last_user_id, nil)
      |> assign(:_last_per_page, nil)
-     |> ModalHook.mount_modal(cancel_meeting: false, reschedule_request: false)}
+     |> ModalHook.mount_modal(
+       cancel_meeting: false,
+       reschedule_request: false,
+       decline_request: false
+     )}
   end
 
   @impl Phoenix.LiveComponent
@@ -268,6 +273,44 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
+  # Approving from the dashboard and approving from the emailed link are the
+  # same transition through `Meetings.Approval`, which resolves the race
+  # between them in the database. The only thing this layer adds is the
+  # ownership check: the lookup is scoped to the signed-in host, so an id
+  # belonging to somebody else is not found rather than answered.
+  def handle_event("approve_request", %{"id" => _id} = params, socket) do
+    RequestActions.answer(socket, params, &Approval.approve/1,
+      success: dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
+      failure: dgettext("dashboard_bookings", "That request could not be approved."),
+      reload: &load_meetings/1
+    )
+  end
+
+  def handle_event("show_decline_modal", %{"id" => _id} = params, socket) do
+    case RequestActions.fetch_held_request(socket, params) do
+      {:ok, meeting} -> {:noreply, ModalHook.show_modal(socket, :decline_request, meeting)}
+      {:error, message} -> {:noreply, RequestActions.flash_and_stay(socket, message)}
+    end
+  end
+
+  def handle_event("hide_decline_modal", _params, socket) do
+    {:noreply, ModalHook.hide_modal(socket, :decline_request)}
+  end
+
+  def handle_event("confirm_decline_request", params, socket) do
+    reason = Map.get(params, "reason")
+
+    ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
+      socket
+      |> ModalHook.hide_modal(:decline_request)
+      |> RequestActions.answer(%{"id" => meeting.id}, &Approval.decline(&1, reason),
+        success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
+        failure: dgettext("dashboard_bookings", "That request could not be declined."),
+        reload: &load_meetings/1
+      )
+    end)
+  end
+
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
@@ -279,7 +322,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         />
 
         <div class="mb-10">
-          <MeetingListComponents.filter_tabs active={@filter} target={@myself} />
+          <MeetingListComponents.filter_tabs
+            active={@filter}
+            awaiting_approval_count={@awaiting_approval_count}
+            target={@myself}
+          />
         </div>
 
         <MeetingListComponents.meetings_list
@@ -291,6 +338,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           time_format={@time_format}
           cancelling_meeting={@cancelling_meeting}
           sending_reschedule={@sending_reschedule}
+          answering_request={@answering_request}
           target={@myself}
         />
 
@@ -316,39 +364,20 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         </div>
       </div>
 
-      <CancelMeetingModal.cancel_meeting_modal
-        id="cancel-meeting-modal"
-        show={@show_cancel_meeting_modal || false}
-        meeting={@cancel_meeting_modal_data}
-        booking_payment={@cancel_booking_payment}
-        timezone={
-          if @cancel_meeting_modal_data,
-            do: Helpers.get_meeting_timezone(@cancel_meeting_modal_data, @profile),
-            else: "UTC"
-        }
-        time_format={@time_format}
+      <Modals.booking_modals
+        cancel_meeting={@cancel_meeting_modal_data}
+        show_cancel={@show_cancel_meeting_modal || false}
+        cancel_booking_payment={@cancel_booking_payment}
         cancelling={@cancelling_meeting != nil}
-        on_cancel={JS.push("hide_cancel_modal", target: @myself)}
-        confirm_event="confirm_cancel_meeting"
-        target={@myself}
-      />
-
-      <RescheduleRequestModal.reschedule_request_modal
-        id="reschedule-request-modal"
-        show={@show_reschedule_request_modal || false}
-        meeting={@reschedule_request_modal_data}
-        timezone={
-          if @reschedule_request_modal_data,
-            do: Helpers.get_meeting_timezone(@reschedule_request_modal_data, @profile),
-            else: "UTC"
-        }
+        decline_request={@decline_request_modal_data}
+        show_decline={@show_decline_request_modal || false}
+        declining={@answering_request != nil}
+        reschedule_request={@reschedule_request_modal_data}
+        show_reschedule={@show_reschedule_request_modal || false}
+        sending_reschedule={@sending_reschedule}
+        profile={@profile}
         time_format={@time_format}
-        sending={
-          !!(@reschedule_request_modal_data && @sending_reschedule &&
-               @sending_reschedule == @reschedule_request_modal_data.id)
-        }
-        on_cancel={JS.push("hide_reschedule_modal", target: @myself)}
-        on_confirm={JS.push("confirm_reschedule_request", target: @myself)}
+        target={@myself}
       />
     </div>
     """
@@ -490,6 +519,14 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
+  defp assign_awaiting_approval_count(socket) do
+    assign(
+      socket,
+      :awaiting_approval_count,
+      MeetingQueries.count_awaiting_approval_for_organizer(socket.assigns.current_user.id)
+    )
+  end
+
   defp emit_cancel_open_telemetry(user_id, meeting_id) do
     :telemetry.execute(
       [:tymeslot, :dashboard, :meetings, :cancel, :open],
@@ -533,6 +570,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         |> assign(:has_more, page.has_more)
         |> assign(:loading, false)
         |> assign(:is_empty, page.items == [])
+        |> assign_awaiting_approval_count()
 
       {:error, _error} ->
         :telemetry.execute(
@@ -571,7 +609,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     Meetings.get_meeting_for_user(id, user_email)
   end
 
-  @valid_filters ["upcoming", "past", "cancelled"]
+  @valid_filters ["upcoming", "past", "cancelled", "awaiting_approval"]
 
   defp validate_filter(filter) when filter in @valid_filters, do: {:ok, filter}
   defp validate_filter(_filter), do: {:error, "Invalid filter option"}
