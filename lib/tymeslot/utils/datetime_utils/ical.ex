@@ -4,22 +4,6 @@ defmodule Tymeslot.Utils.DateTimeUtils.ICal do
   alias Tymeslot.Utils.DateTimeUtils
 
   @doc """
-  Formats a DateTime to iCal format (YYYYMMDDTHHMMSSZ).
-  Ensures the datetime is in UTC before formatting.
-  """
-  @spec format_ical_datetime(DateTime.t()) :: String.t()
-  def format_ical_datetime(%DateTime{} = dt) do
-    utc_dt = DateTimeUtils.ensure_utc!(dt)
-
-    # Format without microseconds for iCalendar compatibility
-    utc_dt
-    |> DateTime.truncate(:second)
-    |> DateTime.to_iso8601(:basic)
-    |> String.replace(~r/[-:]/, "")
-    |> String.replace("+00:00", "Z")
-  end
-
-  @doc """
   Parses an iCal datetime string (various formats supported).
 
   Formats:

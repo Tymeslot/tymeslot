@@ -36,14 +36,6 @@ defmodule Tymeslot.Infrastructure.Config do
   end
 
   @doc """
-  Gets the OAuth helper module configured for the application.
-  """
-  @spec oauth_helper_module() :: module()
-  def oauth_helper_module do
-    get_module(:oauth_helper_module, Tymeslot.Auth.OAuth.Helper)
-  end
-
-  @doc """
   Gets the HTTP client module configured for the application.
 
   Read at runtime so tests can inject a mock via `with_config/3` or
@@ -113,14 +105,6 @@ defmodule Tymeslot.Infrastructure.Config do
   @spec video_provider_settings() :: map()
   def video_provider_settings do
     Application.get_env(:tymeslot, :video_providers, %{})
-  end
-
-  @doc """
-  Returns the configured environment tag (e.g., :dev, :test, :prod).
-  """
-  @spec environment() :: atom() | nil
-  def environment do
-    Application.get_env(:tymeslot, :environment)
   end
 
   @doc """

@@ -204,14 +204,6 @@ defmodule Tymeslot.Availability.BusinessHours do
     end
   end
 
-  @doc """
-  Returns the fallback business hours used when no schedule is resolvable.
-  """
-  @spec fallback_business_hours_range() :: {Time.t(), Time.t()}
-  def fallback_business_hours_range do
-    {@fallback_start_time, @fallback_end_time}
-  end
-
   # Data lookup — uses preloaded collections when available, falls back to DB queries
 
   defp lookup_override(date, schedule_id, %{overrides: overrides}) when is_list(overrides) do

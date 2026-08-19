@@ -345,22 +345,5 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   @spec valid_statuses() :: [String.t()]
   def valid_statuses, do: @valid_statuses
 
-  @doc """
-  Checks if a meeting is in the future
-  """
-  @spec future?(t()) :: boolean
-  def future?(%__MODULE__{start_time: start_time}) do
-    DateTime.compare(start_time, DateTime.utc_now()) == :gt
-  end
-
-  @doc """
-  Checks if a meeting is currently happening
-  """
-  @spec current?(t()) :: boolean
-  def current?(%__MODULE__{start_time: start_time, end_time: end_time}) do
-    now = DateTime.utc_now()
-    DateTime.compare(start_time, now) != :gt && DateTime.compare(end_time, now) == :gt
-  end
-
   defp supported_locale_codes, do: Locales.supported_codes()
 end

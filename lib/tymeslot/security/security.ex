@@ -6,61 +6,12 @@ defmodule Tymeslot.Security.Security do
 
   require Logger
 
-  alias Tymeslot.Profiles
   alias Tymeslot.Security.FieldValidators.TLDList
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Timezones
 
   # Longest IANA id is well under 40 chars; this is an injection guard, not a
   # format check, so it stays generous.
   @max_timezone_length 100
-
-  @doc """
-  Validates URL parameters to prevent injection attacks.
-  """
-  @spec validate_url_params(%{String.t() => String.t() | nil}) :: boolean()
-  def validate_url_params(params) do
-    dangerous_patterns = [
-      ~r/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi,
-      ~r/javascript:/i,
-      ~r/data:text\/html/i,
-      ~r/vbscript:/i,
-      ~r/on\w+\s*=/i,
-      # Path traversal
-      ~r/\.\.\//,
-      # Null bytes
-      ~r/\0/,
-      # CRLF injection
-      ~r/\r|\n/
-    ]
-
-    result =
-      Enum.all?(params, fn
-        {_key, nil} ->
-          true
-
-        {key, val} when is_binary(val) ->
-          if Enum.any?(dangerous_patterns, &Regex.match?(&1, val)) do
-            Logger.warning("Dangerous pattern detected in URL parameter",
-              key: key,
-              pattern_detected: true
-            )
-
-            false
-          else
-            true
-          end
-
-        {_key, _non_string_val} ->
-          true
-      end)
-
-    unless result do
-      Logger.error("URL parameter validation failed", params_count: map_size(params))
-    end
-
-    result
-  end
 
   @doc """
   Sanitizes timezone input to prevent injection.
@@ -97,116 +48,6 @@ defmodule Tymeslot.Security.Security do
   def validate_timezone(timezone) do
     Logger.warning("Timezone validation failed: not a string", value_type: inspect(timezone))
     {:error, "Invalid timezone"}
-  end
-
-  @doc """
-  Validates business hours to prevent scheduling outside allowed times.
-  """
-  @spec validate_business_hours(Time.t(), String.t()) ::
-          {:ok, DateTime.t()} | {:error, String.t()}
-  def validate_business_hours(time, timezone) do
-    # Convert to the business timezone (adjust as needed)
-    business_timezone = Profiles.get_default_timezone()
-
-    try do
-      case DateTime.new(Date.utc_today(), time, timezone) do
-        {:ok, user_datetime} ->
-          case DateTime.shift_zone(user_datetime, business_timezone) do
-            {:ok, business_datetime} ->
-              business_time = DateTime.to_time(business_datetime)
-
-              # Check if within business hours (9 AM - 5 PM)
-              if Time.compare(business_time, ~T[09:00:00]) != :lt and
-                   Time.compare(business_time, ~T[17:00:00]) == :lt do
-                {:ok, business_datetime}
-              else
-                {:error, "Time outside business hours"}
-              end
-
-            _error ->
-              {:error, "Invalid timezone conversion"}
-          end
-
-        _error ->
-          {:error, "Invalid time"}
-      end
-    rescue
-      exception ->
-        # Log the exception so timezone-fuzzing enumeration is visible —
-        # the caller still gets a generic error message.
-        Logger.warning("validate_business_hours raised",
-          error: inspect(exception),
-          kind: exception.__struct__
-        )
-
-        {:error, "Time validation failed"}
-    end
-  end
-
-  @doc """
-  Prevents calendar enumeration attacks by limiting queries.
-  """
-  @spec validate_calendar_access(Date.t(), String.t()) :: {:ok, Date.t()} | {:error, String.t()}
-  def validate_calendar_access(date, user_identifier) do
-    # Rate limit calendar queries per user
-    bucket_key = "calendar_query:#{user_identifier}"
-
-    case RateLimiter.check_rate(bucket_key, 60_000, 10) do
-      {:allow, _count} ->
-        # Additional date validation
-        today = Date.utc_today()
-        max_future_date = Date.add(today, 365)
-
-        cond do
-          Date.compare(date, today) == :lt ->
-            Logger.warning("Calendar access denied: past date",
-              date: date,
-              user_identifier: user_identifier
-            )
-
-            {:error, "Cannot query past dates"}
-
-          Date.compare(date, max_future_date) == :gt ->
-            Logger.warning("Calendar access denied: date too far in future",
-              date: date,
-              max_allowed: max_future_date,
-              user_identifier: user_identifier
-            )
-
-            {:error, "Cannot query dates more than a year in advance"}
-
-          true ->
-            Logger.debug("Calendar access allowed", date: date)
-            {:ok, date}
-        end
-
-      {:deny, _limit_count} ->
-        Logger.error("Calendar access rate limit exceeded",
-          user_identifier: user_identifier,
-          bucket_key: bucket_key
-        )
-
-        {:error, "Too many calendar queries"}
-    end
-  end
-
-  @doc """
-  Prevents email enumeration by consistent response times.
-  """
-  @spec consistent_response_delay() :: :ok
-  def consistent_response_delay do
-    # Add small random delay to prevent timing attacks
-    delay = :rand.uniform(100) + 50
-    Logger.debug("Adding security delay", delay_ms: delay)
-    Process.sleep(delay)
-  end
-
-  @doc """
-  Logs security events for monitoring.
-  """
-  @spec log_security_event(String.t(), %{optional(atom()) => term()}, term()) :: :ok
-  def log_security_event(event_type, details, _unused_socket_or_conn) do
-    Logger.warning("Security event", event: event_type, details: details)
   end
 
   @doc """
