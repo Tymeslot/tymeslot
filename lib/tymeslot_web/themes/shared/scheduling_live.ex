@@ -491,7 +491,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # Override with multi-clause defp to handle custom schedule events.
       defp handle_theme_schedule_event(socket, _event, _data), do: {:noreply, socket}
 
-      defoverridable handle_theme_event: 3, handle_theme_schedule_event: 3
+      defoverridable handle_theme_event: 3, handle_theme_schedule_event: 3, handle_info: 2
     end
   end
 end

@@ -192,8 +192,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   @spec handle_unexpected(Phoenix.LiveView.Socket.t(), term()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_unexpected(socket, message) do
-    Logger.debug("Scheduling LiveView ignoring unexpected message",
-      message: inspect(message, limit: 50, printable_limit: 200)
+    Logger.warning("Scheduling LiveView ignoring unexpected message",
+      message: inspect(message, limit: 50, printable_limit: 200),
+      current_state: socket.assigns[:current_state],
+      organizer_user_id: socket.assigns[:organizer_user_id]
     )
 
     {:noreply, socket}
