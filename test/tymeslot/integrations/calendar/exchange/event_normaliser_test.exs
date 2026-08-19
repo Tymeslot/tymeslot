@@ -11,10 +11,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
 
   setup :capture_admin_alerts
 
+  alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Test.LogCapture
 
   @context %{
     calendar_integration_id: 7,
@@ -385,6 +387,60 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       # "(event_id: )" and name nothing at all.
       assert AlertTypes.format_message(:invalid_calendar_event, payload) =~
                "(event_id: unknown)"
+    end
+  end
+
+  describe "require_readable_batch/1" do
+    test "reads a batch whose messages all succeeded" do
+      {:ok, doc} = Soap.parse(ExchangeFixtures.get_item_batch_response([{:ok, []}, {:ok, []}]))
+
+      assert EventNormaliser.require_readable_batch(doc) == :ok
+    end
+
+    test "refuses a batch every message of which failed" do
+      # A denied batch carries no `m:Items` at all, so reading past it answers
+      # the empty list, which the sync layer cannot tell from an emptied
+      # calendar and persists as one.
+      {:ok, doc} =
+        Soap.parse(
+          ExchangeFixtures.get_item_batch_response([
+            {:error, "ErrorAccessDenied"},
+            {:error, "ErrorAccessDenied"}
+          ])
+        )
+
+      assert EventNormaliser.require_readable_batch(doc) ==
+               {:error, {:response_code, "ErrorAccessDenied"}}
+    end
+
+    test "reads a batch that lost only some of its messages, logging what it lost" do
+      # An item the organiser deleted between the enumeration and the fetch is
+      # answered with its own failure, and failing the window over that would
+      # empty the grid every time someone deletes a meeting mid-sync.
+      LogCapture.attach()
+
+      {:ok, doc} =
+        Soap.parse(
+          ExchangeFixtures.get_item_batch_response([
+            {:ok, []},
+            {:error, "ErrorItemNotFound"},
+            {:error, "ErrorItemNotFound"}
+          ])
+        )
+
+      assert EventNormaliser.require_readable_batch(doc) == :ok
+
+      assert_receive {:captured_log, %{level: :warning, meta: %{failed_item_count: 2} = meta}}
+      assert meta.response_codes == "ErrorItemNotFound"
+    end
+
+    test "refuses a response stating no GetItem message at all" do
+      # A well-formed 200 whose envelope carries an empty or foreign
+      # `m:ResponseMessages` — what a reverse proxy in front of EWS can answer
+      # — states no outcome for any requested id, so it is not an empty window.
+      {:ok, doc} = Soap.parse(ExchangeFixtures.get_item_batch_response([]))
+
+      assert EventNormaliser.require_readable_batch(doc) == {:error, :no_response_messages}
     end
   end
 

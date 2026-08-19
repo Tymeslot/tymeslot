@@ -61,21 +61,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  # Only the sigil: every xpath goes through `Soap.xpath/2,3`, which binds the
-  # EWS namespace prefixes onto the spec and onto every subspec.
-  import SweetXml, only: [sigil_x: 2]
-
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Exchange.Client
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
+  alias Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery
   alias Tymeslot.Integrations.Calendar.Exchange.Requests
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
-
-  require Logger
 
   # EWS is credentialed HTTP against a user-nominated host, which is exactly
   # what the CalDAV connection-test bucket meters. A bucket of its own would
@@ -214,7 +209,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     to = Keyword.fetch!(opts, :end_time)
 
     with {:ok, doc} <- Client.call(config, Requests.find_item(folder, from, to)),
-         {:ok, ids} <- item_ids(doc) do
+         {:ok, ids} <- ItemDiscovery.item_ids(doc) do
       fetch_items(config, ids)
     end
   end
@@ -292,78 +287,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   defp fetch_items(config, ids) do
     with {:ok, doc} <- Client.call(config, Requests.get_item(ids)),
-         :ok <- require_readable_batch(doc) do
+         :ok <- EventNormaliser.require_readable_batch(doc) do
       {:ok, EventNormaliser.parse_items(doc)}
-    end
-  end
-
-  # `GetItem` answers one response message per requested id, so the guard
-  # `item_ids/1` applies to `FindItem` — fail on the first stated failure — is
-  # the wrong shape here, and a partly successful batch is not an anomaly. The
-  # ids come from a *separate* round trip, so an item the organiser deleted
-  # between the two calls is answered with its own `ErrorItemNotFound`;
-  # failing the window over that would break the grid for the calendar every
-  # time someone deletes a meeting mid-sync, and permanently for a single item
-  # nobody can read.
-  #
-  # So the readable items are returned and the failed messages are logged
-  # under the server's own codes, with one exception: a batch in which *every*
-  # message failed is refused, because that is the emptied-calendar case the
-  # guard exists for and it is indistinguishable from an empty window
-  # otherwise. What this trades away is the partial case — an event denied on
-  # its own message disappears from the grid with only a log line to say so.
-  # Availability is unaffected either way: it comes from
-  # `GetUserAvailability` over the whole mailbox, never from these items.
-  defp require_readable_batch(doc) do
-    case Soap.response_messages(doc, "GetItemResponseMessage") do
-      [] -> {:error, :no_response_messages}
-      messages -> classify_batch(messages, Enum.reject(messages, &Soap.succeeded?/1))
-    end
-  end
-
-  defp classify_batch(_messages, []), do: :ok
-
-  defp classify_batch(messages, failed) when length(failed) == length(messages),
-    do: {:error, {:response_code, Soap.response_code(hd(failed))}}
-
-  # Only counts and the server's own codes travel: a failed message names no
-  # item, and nothing else in the response is safe to log — a subject or a
-  # location is mailbox content.
-  defp classify_batch(_messages, failed) do
-    Logger.warning("Exchange GetItem batch was partly unreadable",
-      provider: :exchange,
-      failed_item_count: length(failed),
-      response_codes: failed |> Soap.response_codes() |> Enum.uniq() |> Enum.join(", ")
-    )
-
-    :ok
-  end
-
-  # The response code is read before the items are. A `FindItem` message that
-  # failed carries no `m:RootFolder`, so walking straight to the ids answers
-  # `[]` for a folder that could not be read at all — which the sync layer
-  # cannot tell from a genuinely empty window and persists as an emptied
-  # calendar.
-  defp item_ids(doc) do
-    with {:ok, messages} <- Soap.require_success(doc, "FindItemResponseMessage") do
-      {:ok, messages |> Enum.flat_map(&ids_in/1) |> Enum.reject(&is_nil/1)}
-    end
-  end
-
-  defp ids_in(message) do
-    message
-    |> Soap.xpath(~x"./m:RootFolder/t:Items/t:CalendarItem/t:ItemId"l)
-    |> Enum.map(&to_id_pair/1)
-  end
-
-  # An id is what makes an item fetchable, so one without it is dropped rather
-  # than sent. The change key is not: EWS treats it as optional, and a
-  # `GetItem` naming an id alone is a valid request for the current version of
-  # that item, which is what a sync wants anyway.
-  defp to_id_pair(item_id) do
-    case Soap.text(item_id, ~x"./@Id") do
-      nil -> nil
-      id -> {id, Soap.text(item_id, ~x"./@ChangeKey") || ""}
     end
   end
 

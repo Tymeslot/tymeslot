@@ -63,13 +63,58 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   A response message that did not succeed carries no `m:Items`, so it drops
   out of this walk structurally, and what comes back is exactly the readable
   items. Whether a batch that lost messages this way should be answered at all
-  is the caller's decision, not this walk's: `Exchange.Provider` refuses one in
-  which every message failed, because that is indistinguishable from an empty
-  window, and logs the rest.
+  is `require_readable_batch/1`'s decision, not this walk's.
   """
   @spec parse_items(Soap.document()) :: [Soap.document()]
   def parse_items(doc) do
     Soap.xpath(doc, ~x"//m:GetItemResponseMessage/m:Items/t:CalendarItem"l)
+  end
+
+  @doc """
+  States whether a `GetItem` batch may be read as an answer at all.
+
+  `GetItem` answers one response message per requested id, so the guard
+  `Exchange.ItemDiscovery` applies to `FindItem` — fail on the first stated
+  failure — is the wrong shape here, and a partly successful batch is not an
+  anomaly. The ids come from a *separate* round trip, so an item the organiser
+  deleted between the two calls is answered with its own `ErrorItemNotFound`;
+  failing the window over that would break the grid for the calendar every time
+  someone deletes a meeting mid-sync, and permanently for a single item nobody
+  can read.
+
+  So a batch that lost only some of its messages is `:ok`, and the failed ones
+  are logged under the server's own codes, with one exception: a batch in which
+  *every* message failed is refused, because that is the emptied-calendar case
+  the guard exists for and it is indistinguishable from an empty window
+  otherwise. What this trades away is the partial case — an event denied on its
+  own message disappears from the grid with only a log line to say so.
+  Availability is unaffected either way: it comes from `GetUserAvailability`
+  over the whole mailbox, never from these items.
+  """
+  @spec require_readable_batch(Soap.document()) :: :ok | {:error, Soap.failure()}
+  def require_readable_batch(doc) do
+    case Soap.response_messages(doc, "GetItemResponseMessage") do
+      [] -> {:error, :no_response_messages}
+      messages -> classify_batch(messages, Enum.reject(messages, &Soap.succeeded?/1))
+    end
+  end
+
+  defp classify_batch(_messages, []), do: :ok
+
+  defp classify_batch(messages, failed) when length(failed) == length(messages),
+    do: {:error, {:response_code, Soap.response_code(hd(failed))}}
+
+  # Only counts and the server's own codes travel: a failed message names no
+  # item, and nothing else in the response is safe to log — a subject or a
+  # location is mailbox content.
+  defp classify_batch(_messages, failed) do
+    Logger.warning("Exchange GetItem batch was partly unreadable",
+      provider: :exchange,
+      failed_item_count: length(failed),
+      response_codes: failed |> Soap.response_codes() |> Enum.uniq() |> Enum.join(", ")
+    )
+
+    :ok
   end
 
   @doc """
