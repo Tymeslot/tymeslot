@@ -1127,3 +1127,13 @@ msgstr "Renommer"
 #, elixir-autogen, elixir-format
 msgid "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
 msgstr "Le calendrier de réservation n’existe plus sur Outlook. Veuillez reconnecter l’intégration et choisir un autre calendrier."
+
+#: lib/tymeslot/integrations/calendar/exchange/provider.ex
+#, elixir-autogen, elixir-format
+msgid "EWS endpoint not found. It usually ends in /EWS/Exchange.asmx."
+msgstr "Point de terminaison EWS introuvable. Il se termine généralement par /EWS/Exchange.asmx."
+
+#: lib/tymeslot/integrations/calendar/exchange/provider.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange connection successful"
+msgstr "Connexion à Exchange réussie"
