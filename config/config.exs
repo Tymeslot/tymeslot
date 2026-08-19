@@ -350,7 +350,11 @@ config :tymeslot, :tz_watch_enabled, false
 # Authentication configuration
 config :tymeslot, :auth, success_redirect_path: "/dashboard"
 
-# Input validation configuration
+# Input validation configuration. Core has no reader of its own; the key is
+# consumed by projects depending on this one as a path dependency, to cap
+# free-text form input. Those readers carry their own compile-time default
+# matching this value, so the cap holds even without this key — but keep it
+# here, or a "no reader in Core" sweep will delete a value something reads.
 config :tymeslot, :field_validation, universal_max_length: 10_000
 
 # Social Authentication Configuration moved to runtime.exs (needs runtime env vars)

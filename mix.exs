@@ -137,6 +137,12 @@ defmodule Tymeslot.MixProject do
       # The same override must be repeated in any project that depends on
       # this one as a path dependency, because overrides declared by a
       # dependency do not apply to the parent project's resolution.
+      # Verified via `mix deps.tree`/mix.lock: no current dependency
+      # requires hackney below 4.0 (stripity_stripe's own requirement is
+      # already the non-optional `~> 4.0` that would be picked without this
+      # override), so nothing is being resolved here today. Retained
+      # deliberately as a guard against a future dependency reintroducing a
+      # lower requirement and silently downgrading hackney underneath it.
       {:hackney, "~> 4.0", override: true},
       {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},
