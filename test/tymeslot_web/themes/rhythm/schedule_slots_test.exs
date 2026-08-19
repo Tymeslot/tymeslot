@@ -1,18 +1,22 @@
-defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
+defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
   @moduledoc """
-  Covers how Quill presents a day's slots.
+  Covers how Rhythm presents a day's slots.
 
   A meeting type offering starts on a grid finer than its own duration turns a
-  working day into a hundred-odd buttons, so Quill nests them one level deeper:
-  the booker sees an hour per button and opens one hour at a time. Every other
-  meeting type keeps the flat grid it has always had, which is the case the
-  last test pins.
+  working day into a hundred-odd buttons, so Rhythm nests them one level
+  deeper: the booker sees an hour per button and opens one hour at a time.
+  Every other meeting type keeps the flat grid it has always had, which is the
+  case the last test pins.
+
+  The assertions are written against Rhythm's own markup rather than shared
+  with Quill's equivalent test: each theme's markup is the subject here, and a
+  shared helper would hide which theme broke.
 
   Expected times are read off the rendered attributes rather than written into
   the test, so an assertion cannot quietly stop matching what is offered.
   """
 
-  # The overlap with Rhythm's equivalent test is deliberate: each theme's own
+  # The overlap with Quill's equivalent test is deliberate: each theme's own
   # markup is the subject, and folding the two into shared assertions would
   # hide which theme broke.
   # credo:disable-for-this-file Credo.Check.Design.DuplicatedCode
@@ -44,8 +48,8 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
     profile =
       insert(:profile,
         user: user,
-        username: "quillslots",
-        booking_theme: "1",
+        username: "rhythmslots",
+        booking_theme: "2",
         timezone: "America/New_York"
       )
 
@@ -158,8 +162,7 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
       # minutes really are nested under their hour.
       assert has_element?(
                view,
-               "#slot-hour-panel-#{open} " <>
-                 "button.time-slot-button--selected[phx-value-time='#{chosen}']"
+               "#slot-hour-panel-#{open} button.time-slot.selected[data-time='#{chosen}']"
              )
     end
   end
@@ -191,6 +194,9 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
     end
   end
 
+  # Rhythm's calendar is a week strip rather than Quill's month grid, so
+  # reaching tomorrow steps a week rather than a month when it falls past the
+  # currently rendered week.
   defp reach_loaded_slots(conn, profile) do
     timezone = profile.timezone
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{timezone}")
@@ -200,19 +206,18 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
 
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target = Date.add(today, 1)
-
-    if target.month != today.month do
-      view |> element("button[phx-click='next_month']") |> render_click()
-    end
-
     date = Date.to_string(target)
+
+    unless has_element?(view, "button.calendar-day[phx-value-date='#{date}']") do
+      view |> element("button[phx-click='next_week']") |> render_click()
+    end
 
     wait_until(fn ->
       has_element?(view, "button.calendar-day[phx-value-date='#{date}']:not([disabled])")
     end)
 
     view |> element("button.calendar-day[phx-value-date='#{date}']") |> render_click()
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+    wait_until(fn -> has_element?(view, "button.time-slot") end)
 
     view
   end
@@ -227,9 +232,9 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
     |> Enum.sort()
   end
 
-  # Hour buttons carry no `phx-value-time`, so this is exactly the minute slots.
+  # Hour buttons carry no `data-time`, so this is exactly the minute slots.
   defp rendered_times(view) do
-    view |> document() |> Floki.attribute("button.time-slot-button", "phx-value-time")
+    view |> document() |> Floki.attribute("button.time-slot", "data-time")
   end
 
   # The same minute as a slot already on the page, moved into `hour`.
@@ -241,5 +246,5 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
     |> Display.format_time_for_display()
   end
 
-  defp slot_selector(time), do: "button.time-slot-button[phx-value-time='#{time}']"
+  defp slot_selector(time), do: "button.time-slot[data-time='#{time}']"
 end
