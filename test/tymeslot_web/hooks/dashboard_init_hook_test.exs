@@ -11,7 +11,8 @@ defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
   defp build_socket(assigns \\ %{}) do
     %Socket{
       assigns: Map.merge(%{__changed__: %{}}, assigns),
-      endpoint: TymeslotWeb.Endpoint
+      endpoint: TymeslotWeb.Endpoint,
+      transport_pid: self()
     }
   end
 

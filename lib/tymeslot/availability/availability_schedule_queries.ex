@@ -15,7 +15,9 @@ defmodule Tymeslot.Availability.AvailabilityScheduleQueries do
   @doc """
   Lists a profile's schedules, default first, then alphabetically.
   """
-  @spec list_by_profile(integer()) :: [AvailabilityScheduleSchema.t()]
+  @spec list_by_profile(integer() | nil) :: [AvailabilityScheduleSchema.t()]
+  def list_by_profile(nil), do: []
+
   def list_by_profile(profile_id) do
     AvailabilityScheduleSchema
     |> where([s], s.profile_id == ^profile_id)

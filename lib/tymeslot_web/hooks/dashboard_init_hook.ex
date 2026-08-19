@@ -37,35 +37,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   end
 
   defp mount_dashboard_data(user, socket) do
-    # Load profile and integration status concurrently — they are independent
-    profile_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
-      end)
-
-    integration_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        DashboardContext.get_integration_status(user.id)
-      end)
-
-    results = Task.yield_many([profile_task, integration_task], :timer.seconds(5))
-
-    Enum.each(results, fn
-      {task, nil} -> Task.shutdown(task, :brutal_kill)
-      _result -> :ok
-    end)
-
-    profile =
-      case Enum.at(results, 0) do
-        {_task, {:ok, value}} -> value
-        _timeout_or_error -> %ProfileSchema{user_id: user.id}
-      end
-
-    integration_status =
-      case Enum.at(results, 1) do
-        {_task, {:ok, value}} -> value
-        _timeout_or_error -> DashboardContext.default_integration_status()
-      end
+    {profile, integration_status} = load_profile_and_integration_status(user, socket)
 
     # Read extension/feature config once at mount so components receive stable assigns
     # rather than calling Application.get_env on every render.
@@ -104,6 +76,56 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       )
 
     {:cont, socket}
+  end
+
+  # The static render is thrown away the moment the socket connects, so the
+  # integration-status fetch below only runs once connected — its badges are
+  # cosmetic and the disconnected render already uses the same defaults when
+  # the connected fetch times out. The profile itself cannot be deferred the
+  # same way: every dashboard sub-component (schedule settings, theme
+  # customisation, ...) keys its own queries off `profile.id`, so the static
+  # render needs the real row, not the zero-id placeholder, to avoid crashing.
+  defp load_profile_and_integration_status(user, socket) do
+    if connected?(socket) do
+      fetch_profile_and_integration_status(user)
+    else
+      profile = Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
+      {profile, DashboardContext.default_integration_status()}
+    end
+  end
+
+  defp fetch_profile_and_integration_status(user) do
+    # Load profile and integration status concurrently — they are independent
+    profile_task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
+      end)
+
+    integration_task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        DashboardContext.get_integration_status(user.id)
+      end)
+
+    results = Task.yield_many([profile_task, integration_task], :timer.seconds(5))
+
+    Enum.each(results, fn
+      {task, nil} -> Task.shutdown(task, :brutal_kill)
+      _result -> :ok
+    end)
+
+    profile =
+      case Enum.at(results, 0) do
+        {_task, {:ok, value}} -> value
+        _timeout_or_error -> %ProfileSchema{user_id: user.id}
+      end
+
+    integration_status =
+      case Enum.at(results, 1) do
+        {_task, {:ok, value}} -> value
+        _timeout_or_error -> DashboardContext.default_integration_status()
+      end
+
+    {profile, integration_status}
   end
 
   defp payments_allowed?(user_id), do: Features.meeting_payments_allowed?(user_id)

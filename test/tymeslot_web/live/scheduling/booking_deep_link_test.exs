@@ -106,4 +106,18 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
 
     assert to == "/#{profile.username}"
   end
+
+  @tag :capture_log
+  test "a reschedule link whose uid no longer resolves still resolves the meeting type from the slug",
+       %{conn: conn, profile: profile, meeting_type: meeting_type} do
+    {:ok, view, _html} =
+      live(
+        conn,
+        "/#{profile.username}/deep-dive/book?reschedule_meeting_uid=does-not-exist"
+      )
+
+    assigns = :sys.get_state(view.pid).socket.assigns
+
+    assert assigns.meeting_type.id == meeting_type.id
+  end
 end

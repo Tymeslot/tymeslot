@@ -74,8 +74,16 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
 
-    # Finally setup initial state
-    socket = setup_initial_state_fun.(socket, initial_state, params)
+    # Finally setup initial state. Only on the connected mount — handle_params
+    # (which always runs immediately after mount, on both the static and
+    # connected passes) calls the same entry handler, so doing it here too on
+    # the static pass would throw the result away and query twice for nothing.
+    socket =
+      if connected?(socket) do
+        setup_initial_state_fun.(socket, initial_state, params)
+      else
+        socket
+      end
 
     # Pre-fetch month availability so it's ready for the schedule step. Only on
     # the connected mount — the static render would throw the result away, and
@@ -398,8 +406,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   # assume an earlier step already resolved the type.
   #
   # A reschedule is committed to the original meeting's type (see
-  # `ThemeFlow.resolve_meeting_type_for_reschedule/2`) and must never be bounced
-  # on a slug that no longer names a live type, so it never redirects.
+  # `ThemeFlow.resolve_meeting_type_for_reschedule/2`), which is preferred over
+  # the slug even when the slug still names a live type, because two types can
+  # share a duration. Only when that resolution itself comes back nil — not a
+  # reschedule, meeting not the organiser's, or it predates meeting types —
+  # does it fall back to the same slug match a fresh booking would use, so the
+  # flow never lands on `meeting_type_id: nil`.
   defp resolve_booking_meeting_type(socket, params, false = _is_reschedule) do
     resolve_slug_meeting_type(socket, normalize_duration_param(params))
   end
@@ -411,7 +423,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
            reschedule_uid,
            socket.assigns[:organizer_user_id]
          ) do
-      nil -> {:ok, socket}
+      nil -> resolve_slug_meeting_type(socket, normalize_duration_param(params))
       meeting_type -> {:ok, assign_meeting_type(socket, meeting_type)}
     end
   end
