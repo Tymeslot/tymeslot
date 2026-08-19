@@ -16,9 +16,11 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
   the test, so an assertion cannot quietly stop matching what is offered.
   """
 
-  # The overlap with Quill's equivalent test is deliberate: each theme's own
-  # markup is the subject, and folding the two into shared assertions would
-  # hide which theme broke.
+  # Each theme's assertions are repeated rather than shared. The fixture and the
+  # generic page reads live in Tymeslot.SlotPickerTestHelpers, but the assertions
+  # stay inline: they are the subject of these tests, and folding them into a
+  # helper taking per-theme selectors would trade the thing worth reading for
+  # indirection. Credo counts the two copies as duplication; that is the trade.
   # credo:disable-for-this-file Credo.Check.Design.DuplicatedCode
 
   use TymeslotWeb.LiveCase, async: false
@@ -28,6 +30,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.SlotPickerTestHelpers
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -43,38 +46,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
     AvailabilityCache.clear_all()
     TestMocks.setup_all_mocks()
 
-    user = insert(:user)
-
-    profile =
-      insert(:profile,
-        user: user,
-        username: "rhythmslots",
-        booking_theme: "2",
-        timezone: "America/New_York"
-      )
-
-    schedule =
-      insert(:availability_schedule,
-        profile: profile,
-        is_default: true,
-        advance_booking_days: 30,
-        min_advance_hours: 0,
-        buffer_minutes: 0
-      )
-
-    Enum.each(1..7, fn day_of_week ->
-      insert(:weekly_availability,
-        schedule: schedule,
-        day_of_week: day_of_week,
-        is_available: true,
-        start_time: ~T[09:00:00],
-        end_time: ~T[17:00:00]
-      )
-    end)
-
-    insert(:calendar_integration, user: user, is_active: true)
-
-    %{user: user, profile: profile}
+    booking_page("rhythmslots", "2")
   end
 
   describe "a grid finer than the meeting" do
@@ -222,28 +194,9 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
     view
   end
 
-  defp document(view), do: view |> render() |> Floki.parse_document!()
-
-  defp rendered_hours(view) do
-    view
-    |> document()
-    |> Floki.attribute("[data-testid='slot-hour']", "phx-value-hour")
-    |> Enum.map(&String.to_integer/1)
-    |> Enum.sort()
-  end
-
   # Hour buttons carry no `data-time`, so this is exactly the minute slots.
   defp rendered_times(view) do
     view |> document() |> Floki.attribute("button.time-slot", "data-time")
-  end
-
-  # The same minute as a slot already on the page, moved into `hour`.
-  defp minute_of(times, hour) do
-    times
-    |> List.first()
-    |> TimeSlots.parse_time_slot()
-    |> Map.put(:hour, hour)
-    |> Display.format_time_for_display()
   end
 
   defp slot_selector(time), do: "button.time-slot[data-time='#{time}']"
