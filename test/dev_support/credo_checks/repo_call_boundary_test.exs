@@ -33,6 +33,8 @@ defmodule CredoChecks.RepoCallBoundaryTest do
     test "no issues for *_schema.ex files" do
       """
       defmodule Tymeslot.Users.UserSchema do
+        use Ecto.Schema
+
         alias Tymeslot.Repo
 
         def changeset_and_insert(attrs) do
@@ -43,6 +45,45 @@ defmodule CredoChecks.RepoCallBoundaryTest do
       |> to_source_file("lib/tymeslot/users/user_schema.ex")
       |> run_check(RepoCallBoundary)
       |> refute_issues()
+    end
+
+    # The suffix used to be the whole test, so any module named `*_schema.ex`
+    # opted out of the boundary by filename with nothing to warn a reader.
+    test "a *_schema.ex file that is not an Ecto schema is still checked" do
+      """
+      defmodule Tymeslot.Dashboard.ExtensionSchema do
+        alias Tymeslot.Repo
+
+        def list, do: Repo.all(Extension)
+      end
+      """
+      |> to_source_file("lib/tymeslot/dashboard/extension_schema.ex")
+      |> run_check(RepoCallBoundary)
+      |> assert_issue()
+    end
+
+    # `use Ecto.Schema` mentioned inside a moduledoc heredoc must not grant the
+    # exemption to a module that never actually uses it.
+    test "a *_schema.ex file mentioning \"use Ecto.Schema\" only in its moduledoc is still checked" do
+      source =
+        "defmodule Tymeslot.Dashboard.ExtensionSchema do\n" <>
+          "  @moduledoc \"\"\"\n" <>
+          "  Not an Ecto schema. Historically this module looked like:\n" <>
+          "\n" <>
+          "      use Ecto.Schema\n" <>
+          "\n" <>
+          "  before the fields moved elsewhere.\n" <>
+          "  \"\"\"\n" <>
+          "\n" <>
+          "  alias Tymeslot.Repo\n" <>
+          "\n" <>
+          "  def list, do: Repo.all(Extension)\n" <>
+          "end\n"
+
+      source
+      |> to_source_file("lib/tymeslot/dashboard/extension_schema.ex")
+      |> run_check(RepoCallBoundary)
+      |> assert_issue()
     end
 
     test "no issues for test files" do

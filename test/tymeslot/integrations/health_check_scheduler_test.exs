@@ -26,7 +26,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
 
       # Trip the circuit breaker by causing failures
       for _i <- 1..5 do
-        CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
+        CalendarCircuitBreaker.call(:google, fn -> {:provider_error, :api_failure} end)
       end
 
       # Verify circuit is open
@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
     test "circuit breaker returns error when open" do
       # Trip the circuit
       for _i <- 1..5 do
-        CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
+        CalendarCircuitBreaker.call(:google, fn -> {:provider_error, :api_failure} end)
       end
 
       # Next call should return circuit_open
@@ -104,7 +104,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
 
       # Trip the circuit breaker
       for _i <- 1..5 do
-        CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
+        CalendarCircuitBreaker.call(:google, fn -> {:provider_error, :api_failure} end)
       end
 
       # Verify circuit is open

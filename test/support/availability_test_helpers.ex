@@ -26,6 +26,15 @@ defmodule Tymeslot.AvailabilityTestHelpers do
     end_time: ~T[17:00:00]
   }
 
+  # Every day, around the clock. `Bookings.Create` refuses a time the host's
+  # schedule does not offer, so a test whose subject is something other than
+  # availability needs a host who offers everything.
+  @open_day_attrs %{
+    is_available: true,
+    start_time: ~T[00:00:00],
+    end_time: ~T[23:59:00]
+  }
+
   @doc """
   Creates a profile plus a day availability record with defaults unless overridden.
   """
@@ -62,6 +71,7 @@ defmodule Tymeslot.AvailabilityTestHelpers do
     * `:days`     - ISO weekdays made available (default `1..5`)
     * `:hours`    - `%{is_available:, start_time:, end_time:}` per day
       (default 11:00–17:00)
+    * `:profile`  - further profile attrs (booking limits, etc.)
   """
   @spec create_bookable_profile(keyword()) :: %{
           user: UserSchema.t(),
@@ -75,8 +85,12 @@ defmodule Tymeslot.AvailabilityTestHelpers do
     days = Keyword.get(opts, :days, Enum.to_list(1..5))
     hours = Keyword.get(opts, :hours, @bookable_day_attrs)
 
-    %{user: user, profile: profile} =
-      MeetingTestHelpers.create_user_with_profile(%{timezone: timezone})
+    profile_attrs =
+      opts
+      |> Keyword.get(:profile, %{})
+      |> Map.put(:timezone, timezone)
+
+    %{user: user, profile: profile} = MeetingTestHelpers.create_user_with_profile(profile_attrs)
 
     schedule = insert_default_schedule(profile)
 
@@ -97,6 +111,45 @@ defmodule Tymeslot.AvailabilityTestHelpers do
   # one the booking page falls back to.
   defp insert_default_schedule(profile) do
     insert(:availability_schedule, profile: profile, is_default: true)
+  end
+
+  @doc """
+  Gives an existing profile a default schedule open every day, around the clock.
+
+  For tests that build their own user and profile but still need the booking
+  path to accept whatever time they pick.
+  """
+  @spec open_schedule_for(ProfileSchema.t()) :: AvailabilityScheduleSchema.t()
+  def open_schedule_for(profile) do
+    schedule = insert_default_schedule(profile)
+
+    for day_of_week <- 1..7 do
+      {:ok, _day} =
+        WeeklySchedule.create_day_availability(schedule.id, day_of_week, @open_day_attrs)
+    end
+
+    schedule
+  end
+
+  @doc """
+  `create_bookable_profile/1` with the schedule open every day, around the clock.
+
+  For booking tests whose subject is limits, guests or tracking rather than
+  availability: the host offers whatever time the test picks, so the schedule
+  never becomes the reason a booking is refused.
+  """
+  @spec create_always_bookable_profile(keyword()) :: %{
+          user: UserSchema.t(),
+          profile: ProfileSchema.t(),
+          profile_id: integer(),
+          schedule: AvailabilityScheduleSchema.t(),
+          schedule_id: integer()
+        }
+  def create_always_bookable_profile(opts \\ []) do
+    opts
+    |> Keyword.put_new(:days, Enum.to_list(1..7))
+    |> Keyword.put_new(:hours, @open_day_attrs)
+    |> create_bookable_profile()
   end
 
   @doc """

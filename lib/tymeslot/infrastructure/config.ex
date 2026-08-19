@@ -23,22 +23,6 @@ defmodule Tymeslot.Infrastructure.Config do
     get_module(:user_token_queries_module, Tymeslot.Auth.UserTokenQueries)
   end
 
-  @doc """
-  Gets the user schema module configured for the application.
-  """
-  @spec user_schema_module() :: module()
-  def user_schema_module do
-    get_module(:user_schema_module, Tymeslot.Auth.UserSchema)
-  end
-
-  @doc """
-  Gets the user session queries module configured for the application.
-  """
-  @spec user_session_queries_module() :: module()
-  def user_session_queries_module do
-    get_module(:user_session_queries_module, Tymeslot.Auth.UserSessionQueries)
-  end
-
   # Authentication Modules
 
   # Service Modules
@@ -49,14 +33,6 @@ defmodule Tymeslot.Infrastructure.Config do
   @spec email_service_module() :: module()
   def email_service_module do
     get_module(:email_service_module, Tymeslot.Emails.EmailService)
-  end
-
-  @doc """
-  Gets the OAuth helper module configured for the application.
-  """
-  @spec oauth_helper_module() :: module()
-  def oauth_helper_module do
-    get_module(:oauth_helper_module, Tymeslot.Auth.OAuth.Helper)
   end
 
   @doc """
@@ -112,14 +88,6 @@ defmodule Tymeslot.Infrastructure.Config do
     get_auth_config(:success_redirect_path, "/dashboard")
   end
 
-  @doc """
-  Gets the login path.
-  """
-  @spec login_path() :: String.t()
-  def login_path do
-    get_auth_config(:login_path, "/auth/login")
-  end
-
   # Provider settings (single source of truth)
   @doc """
   Returns the calendar providers configuration map.
@@ -137,14 +105,6 @@ defmodule Tymeslot.Infrastructure.Config do
   @spec video_provider_settings() :: map()
   def video_provider_settings do
     Application.get_env(:tymeslot, :video_providers, %{})
-  end
-
-  @doc """
-  Returns the configured environment tag (e.g., :dev, :test, :prod).
-  """
-  @spec environment() :: atom() | nil
-  def environment do
-    Application.get_env(:tymeslot, :environment)
   end
 
   @doc """

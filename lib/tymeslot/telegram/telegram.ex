@@ -290,6 +290,16 @@ defmodule Tymeslot.Telegram do
     end
   end
 
+  @spec auto_disable(TelegramIntegrationSchema.t(), String.t()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def auto_disable(%TelegramIntegrationSchema{} = integration, reason) do
+    TelegramQueries.update_integration(integration, %{
+      is_active: false,
+      disabled_at: DateTime.utc_now(),
+      disabled_reason: reason
+    })
+  end
+
   # ============================================================================
   # Delivery Logs
   # ============================================================================

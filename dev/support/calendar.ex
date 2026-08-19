@@ -84,15 +84,6 @@ defmodule Tymeslot.Dev.Calendar do
   end
 
   @impl true
-  def get_events_for_month(user_id, year, month, timezone) do
-    start_date = Date.new!(year, month, 1)
-    end_date = Date.end_of_month(start_date)
-    range_start = day_start(start_date, timezone)
-    range_end = day_start(Date.add(end_date, 1), timezone)
-    {:ok, generate(user_id, range_start, range_end, timezone)}
-  end
-
-  @impl true
   def get_event(uid, _user_id) do
     case DebugStore.fetch_event(uid) do
       {:ok, event} -> {:ok, event}

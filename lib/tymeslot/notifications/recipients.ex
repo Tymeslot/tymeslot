@@ -60,12 +60,6 @@ defmodule Tymeslot.Notifications.Recipients do
       :reschedule ->
         recipients_for(meeting, base_recipients)
 
-      :video_room_created ->
-        {:both, base_recipients}
-
-      :video_room_failed ->
-        {:organizer_only, base_recipients}
-
       _unknown_type ->
         {:both, base_recipients}
     end
@@ -85,11 +79,10 @@ defmodule Tymeslot.Notifications.Recipients do
     end
   end
 
-  @doc """
-  Gets the notification context for a meeting.
-  """
-  @spec get_notification_context(term()) :: notification_context()
-  def get_notification_context(meeting) do
+  # Meeting-level context shared by both recipient variants of
+  # `build_recipient_context/2`, which is its only caller.
+  @spec notification_context(term()) :: notification_context()
+  defp notification_context(meeting) do
     %{
       meeting_id: meeting.id,
       meeting_uid: meeting.uid,
@@ -108,9 +101,7 @@ defmodule Tymeslot.Notifications.Recipients do
   @spec should_receive_notification?(atom(), atom(), term()) :: boolean()
   def should_receive_notification?(recipient_type, notification_type, _unused_meeting) do
     case {recipient_type, notification_type} do
-      {:organizer, :video_room_failed} -> true
       {:organizer, _any_type} -> true
-      {:attendee, :video_room_failed} -> false
       {:attendee, _any_type} -> true
       _invalid_combination -> false
     end
@@ -178,7 +169,7 @@ defmodule Tymeslot.Notifications.Recipients do
           required(:recipient_type) => atom()
         }
   def build_recipient_context(meeting, recipient_type) do
-    base_context = get_notification_context(meeting)
+    base_context = notification_context(meeting)
 
     case recipient_type do
       :organizer ->

@@ -135,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
       Application.put_env(:tymeslot, :webhook_base_url, "https://hooks.example.com")
 
       Enum.each(1..5, fn _i ->
-        CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
+        CalendarCircuitBreaker.call(:google, fn -> {:provider_error, :api_failure} end)
       end)
 
       assert %{status: :open} = CalendarCircuitBreaker.status(:google)

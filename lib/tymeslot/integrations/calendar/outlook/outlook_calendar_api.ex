@@ -295,10 +295,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     GraphSubscription.bootstrap_sync(integration)
   end
 
-  @doc false
-  @spec tymeslot_property_id() :: String.t()
-  def tymeslot_property_id, do: @outlook_tymeslot_property_id
-
   @doc """
   Fetches a single raw Graph event by its provider event ID.
 

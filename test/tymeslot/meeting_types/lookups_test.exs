@@ -138,30 +138,24 @@ defmodule Tymeslot.MeetingTypes.LookupsTest do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user)
 
-      result = MeetingTypes.validate_duration_selection(nil, [meeting_type])
-
-      assert {:error, message} = result
-      assert message =~ "select"
+      assert {:error, :duration_required} =
+               MeetingTypes.validate_duration_selection(nil, [meeting_type])
     end
 
     test "rejects empty duration" do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user)
 
-      result = MeetingTypes.validate_duration_selection("", [meeting_type])
-
-      assert {:error, message} = result
-      assert message =~ "select"
+      assert {:error, :duration_required} =
+               MeetingTypes.validate_duration_selection("", [meeting_type])
     end
 
     test "rejects duration not in available types" do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user, name: "Intro", duration_minutes: 30)
 
-      result = MeetingTypes.validate_duration_selection("other", [meeting_type])
-
-      assert {:error, message} = result
-      assert message =~ "Invalid"
+      assert {:error, :duration_invalid} =
+               MeetingTypes.validate_duration_selection("other", [meeting_type])
     end
   end
 

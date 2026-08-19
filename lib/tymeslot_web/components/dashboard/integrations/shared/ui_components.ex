@@ -95,62 +95,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   end
 
   @doc """
-  Renders a small amber warning badge indicating connection issues for an integration.
-
-  ## Examples
-
-      <.health_warning_badge />
-      <.health_warning_badge class="absolute top-2 right-2 z-10 ..." />
-  """
-  attr :class, :string,
-    default:
-      "flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
-
-  @spec health_warning_badge(map()) :: Phoenix.LiveView.Rendered.t()
-  def health_warning_badge(assigns) do
-    ~H"""
-    <span class={@class}>
-      <.icon name="hero-exclamation-triangle" class="w-3 h-3 shrink-0" />
-      {dgettext("dashboard_integrations", "Connection issues")}
-    </span>
-    """
-  end
-
-  @doc """
-  Renders a small amber warning badge indicating a calendar integration has no
-  calendars selected, so no events will be synced.
-
-  ## Examples
-
-      <.no_calendars_badge />
-  """
-  attr :class, :string,
-    default:
-      "flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
-
-  @spec no_calendars_badge(map()) :: Phoenix.LiveView.Rendered.t()
-  def no_calendars_badge(assigns) do
-    ~H"""
-    <span
-      class={@class}
-      title={
-        dgettext(
-          "dashboard_integrations",
-          "No calendars selected - nothing will sync until you pick at least one."
-        )
-      }
-    >
-      <.icon name="hero-calendar-mini" class="w-3 h-3 shrink-0" />
-      {dgettext("dashboard_integrations", "No calendars selected")}
-    </span>
-    """
-  end
-
-  @doc """
   Renders a small status pill with a coloured dot and label, driven by a
-  `:variant`. Colours mirror the shared `info_box` variant map and the amber
-  `health_warning_badge` so status indicators stay visually consistent across
-  the integrations UI.
+  `:variant`. Colours mirror the shared `info_box` variant map so status
+  indicators stay visually consistent across the integrations UI.
 
   ## Examples
 

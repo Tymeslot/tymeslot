@@ -26,7 +26,7 @@ defmodule Tymeslot.Profiles.ProfileQueriesTest do
     test "prevents duplicate profiles per user" do
       existing_profile = insert(:profile)
       # Reload to get the user_id that was auto-created
-      existing_profile = ProfileQueries.get_profile!(existing_profile.id)
+      existing_profile = ProfileQueries.get_with_user!(existing_profile.id)
 
       assert {:ok, profile} = ProfileQueries.get_or_create_by_user_id(existing_profile.user_id)
       assert profile.id == existing_profile.id

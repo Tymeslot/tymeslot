@@ -198,40 +198,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
   end
 
   @doc """
-  Builds a full CalDAV URL from base URL and calendar path.
-
-  ## Parameters
-  - `base_url` - The base URL
-  - `calendar_path` - The calendar path
-
-  ## Returns
-  - Full CalDAV URL
-  """
-  @spec build_full_url(String.t(), String.t()) :: String.t()
-  def build_full_url(base_url, calendar_path) do
-    base = String.trim_trailing(base_url, "/")
-
-    path =
-      if String.starts_with?(calendar_path, "/"), do: calendar_path, else: "/" <> calendar_path
-
-    base <> path
-  end
-
-  @doc """
-  Checks if a path is a simple calendar name or a full path.
-
-  ## Parameters
-  - `path` - The path to check
-
-  ## Returns
-  - `:simple` if it's just a calendar name, `:full` if it's a full path
-  """
-  @spec path_type(String.t()) :: :simple | :full
-  def path_type(path) do
-    if String.contains?(path, "/"), do: :full, else: :simple
-  end
-
-  @doc """
   Converts a simple calendar name to a full CalDAV path.
 
   ## Parameters

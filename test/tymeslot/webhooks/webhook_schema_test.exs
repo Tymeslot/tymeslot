@@ -3,6 +3,7 @@ defmodule Tymeslot.Webhooks.WebhookSchemaTest do
   @moduletag :utils
 
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Validation.Constraints
   alias Tymeslot.Webhooks.WebhookSchema
 
   describe "generate_token/1" do
@@ -52,6 +53,33 @@ defmodule Tymeslot.Webhooks.WebhookSchemaTest do
 
       refute get_change(changeset, :webhook_token)
       assert get_field(changeset, :webhook_token_encrypted) == encrypted
+    end
+  end
+
+  describe "changeset/2 - url column width" do
+    test "a URL between 256 and the 2048 changeset limit passes validation and inserts" do
+      # The changeset allows URLs up to Constraints.url_max_length/0 (2048),
+      # so the database column must accept the same length or a URL between
+      # 256 and 2048 characters passes the changeset here and then raises a
+      # Postgrex error on insert.
+      long_path = String.duplicate("a", 500)
+      url = "https://example.com/" <> long_path
+      assert String.length(url) > 255
+      assert String.length(url) <= Constraints.url_max_length()
+
+      user = insert(:user)
+
+      changeset =
+        WebhookSchema.changeset(%WebhookSchema{}, %{
+          name: "Long URL Webhook",
+          url: url,
+          user_id: user.id,
+          events: ["meeting.created"]
+        })
+
+      assert changeset.valid?
+      assert {:ok, webhook} = Repo.insert(changeset)
+      assert webhook.url == url
     end
   end
 end

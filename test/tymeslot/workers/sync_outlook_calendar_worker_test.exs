@@ -69,9 +69,11 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       integration = outlook_integration()
 
       # Trip the circuit breaker by making enough failing calls through it.
-      # The outlook breaker has failure_threshold: 5.
+      # The outlook breaker has failure_threshold: 5. A raised exception is
+      # never classified as a provider failure (it says nothing about the
+      # provider's health), so a real provider-error shape is needed here.
       for _n <- 1..6 do
-        CalendarCircuitBreaker.call(:outlook, fn -> raise "simulated failure" end)
+        CalendarCircuitBreaker.call(:outlook, fn -> {:provider_error, :simulated_failure} end)
       end
 
       # The HTTP call now happens before the circuit breaker check (for 404/401 extraction),

@@ -224,11 +224,13 @@ msgid "This page doesn't exist"
 msgstr "Cette page n’existe pas"
 
 #: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "an integration for this account already exists"
 msgstr "une intégration pour ce compte existe déjà"
 
 #: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "an integration for this provider already exists"
 msgstr "une intégration pour ce fournisseur existe déjà"

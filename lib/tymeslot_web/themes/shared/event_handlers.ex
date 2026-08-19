@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Themes.Shared.LiveHelpers
   import Phoenix.Component, only: [assign: 3]
 
@@ -140,8 +141,10 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
         socket = callbacks.transition_to.(socket, next_state, %{})
         {:noreply, socket}
 
+      # `reason` is a semantic atom from the step validators; rendering it to
+      # copy is this layer's job, and the booking page is multi-locale.
       {:error, reason} ->
-        {:noreply, LiveView.put_flash(socket, :error, reason)}
+        {:noreply, LiveView.put_flash(socket, :error, BookingErrorMessage.message(reason))}
     end
   end
 end

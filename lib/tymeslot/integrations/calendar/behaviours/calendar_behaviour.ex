@@ -8,8 +8,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
 
   @callback get_events_for_range_fresh(pos_integer(), Date.t(), Date.t()) ::
               {:ok, list()} | {:error, any()}
-  @callback get_events_for_month(pos_integer(), pos_integer(), pos_integer(), String.t()) ::
-              {:ok, list()} | {:error, any()}
   @callback get_event(binary(), pos_integer() | nil) :: {:ok, any()} | {:error, any()}
   @callback create_event(
               map(),

@@ -11,7 +11,6 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Helpers.ClientIP
 
   # ========== USER HELPERS ==========
 
@@ -64,17 +63,6 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
       {:error, _reason} ->
         socket
     end
-  end
-
-  # ========== CONNECTION HELPERS ==========
-
-  @doc """
-  Gets the client IP address from the socket connection.
-  Delegates to the unified ClientIP module.
-  """
-  @spec get_client_ip(Phoenix.LiveView.Socket.t()) :: String.t()
-  def get_client_ip(socket) do
-    ClientIP.get(socket)
   end
 
   # ========== FORM HELPERS ==========
@@ -145,34 +133,6 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   # ========== NAVIGATION HELPERS ==========
 
   @doc """
-  Redirects to thank you page with meeting details.
-  """
-  @spec redirect_to_thank_you(Phoenix.LiveView.Socket.t(), Ecto.Schema.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def redirect_to_thank_you(socket, meeting) do
-    params = %{
-      name: meeting.attendee_name,
-      date: Date.to_iso8601(DateTime.to_date(meeting.start_time)),
-      time: format_time_for_display(meeting.start_time, socket.assigns.user_timezone),
-      duration: to_string(meeting.duration),
-      timezone: socket.assigns.user_timezone,
-      email: meeting.attendee_email,
-      meeting_uid: meeting.uid
-    }
-
-    query_string = URI.encode_query(params)
-
-    path =
-      if socket.assigns[:username_context] do
-        "/#{socket.assigns.username_context}/thank-you"
-      else
-        "/"
-      end
-
-    push_navigate(socket, to: "#{path}?#{query_string}")
-  end
-
-  @doc """
   Common helper to handle form submission state.
   """
   @spec with_submission_state(Phoenix.LiveView.Socket.t(), function()) ::
@@ -202,11 +162,4 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   """
   @spec noreply(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def noreply(socket), do: {:noreply, socket}
-
-  defp format_time_for_display(datetime, timezone) do
-    case DateTime.shift_zone(datetime, timezone) do
-      {:ok, shifted} -> Calendar.strftime(shifted, "%-I:%M %p")
-      _other -> Calendar.strftime(datetime, "%-I:%M %p")
-    end
-  end
 end

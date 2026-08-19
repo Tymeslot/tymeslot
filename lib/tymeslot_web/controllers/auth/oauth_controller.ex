@@ -9,7 +9,7 @@ defmodule TymeslotWeb.OAuthController do
   require Logger
 
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
-  alias Tymeslot.Auth.OAuth.{GenericOAuth, GitHub, Google}
+  alias Tymeslot.Auth.OAuth.{FlowHandler, GenericOAuth, GitHub, Google}
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.OAuth.{URLs, UserRegistration}
   alias Tymeslot.Infrastructure.Config
@@ -294,7 +294,12 @@ defmodule TymeslotWeb.OAuthController do
     if Map.get(user, :needs_email_verification, false) do
       handle_email_verification_flow(conn, user, oauth_data)
     else
-      create_session_and_redirect(conn, user, get_welcome_message(oauth_data.provider))
+      create_session_and_redirect(
+        conn,
+        user,
+        oauth_data.provider,
+        get_welcome_message(oauth_data.provider)
+      )
     end
   end
 
@@ -309,7 +314,7 @@ defmodule TymeslotWeb.OAuthController do
             provider: String.capitalize(oauth_data.provider)
           )
 
-        create_session_and_redirect(conn, user, message)
+        create_session_and_redirect(conn, user, oauth_data.provider, message)
 
       {:error, :rate_limited, _rate_limit_message} ->
         handle_rate_limited_error(conn)
@@ -322,19 +327,35 @@ defmodule TymeslotWeb.OAuthController do
             provider: String.capitalize(oauth_data.provider)
           )
 
-        create_session_and_redirect(conn, user, message)
+        create_session_and_redirect(conn, user, oauth_data.provider, message)
     end
   end
 
-  @spec create_session_and_redirect(Plug.Conn.t(), map(), String.t()) :: Plug.Conn.t()
-  defp create_session_and_redirect(conn, user, success_message) do
+  @spec create_session_and_redirect(Plug.Conn.t(), map(), String.t(), String.t()) ::
+          Plug.Conn.t()
+  defp create_session_and_redirect(conn, user, provider, success_message) do
     case Session.create_session(conn, user) do
       {:ok, updated_conn, _session_token} ->
+        # Account creation itself is audited by the caller; this closes the
+        # loop with the social-auth success entry FlowHandler.create_user_session/3
+        # already emits for returning-user OAuth logins.
+        FlowHandler.log_social_auth(provider, true, updated_conn, %{
+          email: Map.get(user, :email),
+          oauth_state_valid: true
+        })
+
         updated_conn
         |> put_flash(:info, success_message)
         |> redirect(to: ~p"/dashboard")
 
       {:error, _error_reason, _error_details} ->
+        # Mirrors the failure entry FlowHandler.create_user_session/3 emits
+        # for the returning-user login path.
+        FlowHandler.log_social_auth(provider, false, conn, %{
+          email: Map.get(user, :email),
+          error_reason: "session_failed"
+        })
+
         conn
         |> put_flash(:error, dgettext("auth", "Failed to create session. Please try again."))
         |> redirect(to: ~p"/auth/login")

@@ -15,6 +15,7 @@ defmodule Tymeslot.Bookings.RescheduleGroupMeetingTest do
   @moduletag :bookings
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
   import Tymeslot.MeetingTestHelpers
 
@@ -50,7 +51,8 @@ defmodule Tymeslot.Bookings.RescheduleGroupMeetingTest do
   end
 
   test "a solo meeting is unaffected by the guard" do
-    %{user: user} = create_user_with_profile()
+    %{user: user, profile: profile} = create_user_with_profile()
+    open_schedule_for(profile)
     meeting = insert_meeting_for_user(user)
 
     new_params = %{

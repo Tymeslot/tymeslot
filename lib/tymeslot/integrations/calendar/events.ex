@@ -8,7 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
 
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
@@ -42,8 +42,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @spec list_events(user_id() | nil) :: {:ok, list()} | {:error, term()}
   def list_events(user_id \\ nil) do
     case user_id do
-      id when is_integer(id) and id > 0 -> EventQueries.list_events(id)
-      nil -> EventQueries.list_events(nil)
+      id when is_integer(id) and id > 0 -> EventFetcher.list_events(id)
+      nil -> EventFetcher.list_events(nil)
       _other -> {:error, :invalid_user_id}
     end
   end
@@ -102,24 +102,6 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
     get_calendar_events(date, organizer_user_id, opts)
   end
-
-  @doc """
-  Get events for a month with user context (preferred variant).
-  """
-  @spec get_events_for_month(user_id(), pos_integer(), pos_integer(), String.t()) ::
-          {:ok, list()} | {:error, term()}
-  def get_events_for_month(user_id, year, month, timezone)
-      when is_integer(user_id) and is_integer(year) and is_integer(month) and is_binary(timezone) do
-    behaviour_module().get_events_for_month(user_id, year, month, timezone)
-  end
-
-  @doc """
-  Backward-compatible variant without explicit user context.
-  """
-  @spec get_events_for_month(pos_integer(), pos_integer(), String.t()) ::
-          {:ok, list()} | {:error, term()}
-  def get_events_for_month(_year, _month, _timezone),
-    do: {:error, :user_id_required}
 
   @doc """
   Get fresh events for range with user context (preferred variant).

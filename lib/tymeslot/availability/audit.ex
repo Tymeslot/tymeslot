@@ -24,6 +24,7 @@ defmodule Tymeslot.Availability.Audit do
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Profiles.ProfileQueries
@@ -84,7 +85,7 @@ defmodule Tymeslot.Availability.Audit do
   def audit(profile, opts \\ []) do
     duration_minutes = Keyword.get(opts, :duration_minutes, @default_duration_minutes)
     horizon_days = Keyword.get(opts, :horizon_days, @default_horizon_days)
-    start_date = Keyword.get(opts, :start_date, Date.utc_today())
+    start_date = Keyword.get(opts, :start_date, Clock.utc_today())
     end_date = Date.add(start_date, horizon_days)
     timezone = profile.timezone
 

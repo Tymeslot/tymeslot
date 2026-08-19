@@ -15,6 +15,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
   alias TymeslotWeb.AccountLive.ErrorFormatter
 
   setup %{conn: conn} do
@@ -149,6 +150,36 @@ defmodule TymeslotWeb.AccountLiveTest do
 
       assert flash["info"] =~
                "Your password has been changed. Please sign in again with your new password."
+    end
+
+    test "audits the change with the request context the LiveView already builds",
+         %{conn: conn, user: user} do
+      # SecurityLogger emits at :info; config/test.exs pins the primary level to
+      # :warning, so it has to come down for the duration. Safe: async: false.
+      conn = put_req_header(conn, "user-agent", "TymeslotTestAgent/1.0")
+
+      LogCapture.with_capture([logger_level: :info], fn ->
+        {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+        view |> element("button", "Change Password") |> render_click()
+
+        view
+        |> form("form[phx-submit='update_password']", %{
+          "password_form" => %{
+            "current_password" => "Password123!",
+            "new_password" => "NewPassword123!",
+            "new_password_confirmation" => "NewPassword123!"
+          }
+        })
+        |> render_submit()
+
+        assert_redirect(view, ~p"/auth/login")
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "password_change"} = meta}}
+      assert meta.user_id == user.id
+      assert meta.ip_address == "127.0.0.1"
+      assert meta.user_agent == "TymeslotTestAgent/1.0"
     end
 
     test "shows error for password mismatch", %{conn: conn} do

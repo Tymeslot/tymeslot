@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.CalendarUpNextStrip do
       <%!-- Key the id on the start time too: `phx-update="ignore"` hands the
             element to the JS hook, so a same-id reschedule would otherwise
             count toward the old time. A changed start → new id → remount. --%>
+      <% templates = Formatters.countdown_templates() %>
       <time
         id={"calendar-up-next-countdown-#{@entry.id}-#{DateTime.to_unix(@entry.start_at)}"}
         phx-hook="AgendaCountdown"
@@ -47,6 +48,10 @@ defmodule TymeslotWeb.Dashboard.CalendarUpNextStrip do
         data-start={DateTime.to_iso8601(@entry.start_at)}
         data-end={DateTime.to_iso8601(@entry.end_at)}
         data-join={@entry.join_url && "calendar-up-next-join-#{@entry.id}"}
+        data-tpl-now={templates.now}
+        data-tpl-minutes={templates.minutes}
+        data-tpl-hours={templates.hours}
+        data-tpl-days={templates.days}
         class="text-token-lg font-black tabular-nums leading-none shrink-0"
       >{Formatters.relative_hint(@entry)}</time>
       <a

@@ -13,15 +13,11 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   alias Tymeslot.Bookings.RescheduleRequest
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.HTTPClientMock
-  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.EmailWorkerHandlers
-  alias Tymeslot.Workers.VideoSyncWorker
-  alias Tymeslot.ZoomOAuthHelperMock
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.MeetingTestHelpers
 
   setup :verify_on_exit!
@@ -33,7 +29,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   end
 
   defp setup_reschedule_test do
-    %{user: user, profile: profile} = create_user_with_profile()
+    %{user: user, profile: profile} = create_always_bookable_profile()
     meeting = insert_meeting_for_user(user)
 
     # Create new params for rescheduling (2 days from now instead of 1)
@@ -85,7 +81,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     end
 
     test "clears reschedule_requested_at without altering status when settling a request" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
       meeting = insert_meeting_for_user(user, %{status: "confirmed"})
 
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
@@ -113,7 +109,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     end
 
     test "pending meeting: reschedule request then rebook does not silently confirm it" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
       meeting = insert_meeting_for_user(user, %{status: "pending"})
 
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
@@ -133,7 +129,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     end
 
     test "awaiting_payment meeting: reschedule request then rebook does not silently confirm an unpaid meeting" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
       meeting = insert_meeting_for_user(user, %{status: "awaiting_payment"})
 
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
@@ -202,14 +198,26 @@ defmodule Tymeslot.Bookings.RescheduleTest do
                  args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
                )
 
-      expect(Tymeslot.EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
-        {{:ok, "sent"}, {:ok, "sent"}}
+      expect(Tymeslot.EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email,
+                                                                                    _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email,
+                                                                                   _details ->
+        {:ok, "sent"}
       end)
 
       assert :ok = EmailWorkerHandlers.execute_email_action(job.args["action"], job.args)
 
       {:ok, after_send} = MeetingQueries.get_meeting(meeting.id)
-      assert %{"value" => 30, "unit" => "minutes"} in after_send.reminders_sent
+
+      assert %{
+               "value" => 30,
+               "unit" => "minutes",
+               "organizer_sent" => true,
+               "attendee_sent" => true
+             } in after_send.reminders_sent
     end
   end
 
@@ -231,7 +239,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
   describe "execute/4 - concurrent slot conflict" do
     test "returns {:error, :slot_taken} when a concurrent booking claims the new time first" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
       meeting = insert_meeting_for_user(user)
 
       new_params = %{
@@ -273,7 +281,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
   describe "execute/4 - organizer scoping (IDOR prevention)" do
     test "rejects rescheduling when organizer_user_id belongs to a different user" do
-      %{user: victim_user} = create_user_with_profile()
+      %{user: victim_user} = create_always_bookable_profile()
       victim_meeting = insert_meeting_for_user(victim_user)
 
       attacker_user = insert(:user)
@@ -293,7 +301,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     end
 
     test "allows rescheduling when organizer_user_id matches meeting owner" do
-      %{user: owner_user} = create_user_with_profile()
+      %{user: owner_user} = create_always_bookable_profile()
       owner_meeting = insert_meeting_for_user(owner_user)
 
       new_params = %{
@@ -322,7 +330,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     end
 
     test "returns error when meeting is completed" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -343,7 +351,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     end
 
     test "returns error when meeting has already started" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -363,7 +371,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     end
 
     test "returns error when meeting has already occurred" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -430,7 +438,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
   describe "execute/3 - edge cases" do
     test "allows rescheduling meeting that starts soon" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -482,168 +490,5 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
       assert updated_meeting.id == meeting.id
     end
-  end
-
-  describe "Zoom video room sync" do
-    test "still enqueues the update job after the integration was disconnected" do
-      %{user: user, profile: _profile} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
-
-      meeting =
-        insert_meeting_for_user(user, %{
-          video_integration_id: integration.id,
-          video_provider: "zoom",
-          video_room_id: "123456789",
-          title: "Customer call"
-        })
-
-      assert {:ok, :deleted} = Video.delete_integration(user.id, integration.id)
-
-      new_params = %{
-        date: Date.to_string(Date.add(Date.utc_today(), 2)),
-        time: "2:00 PM",
-        duration: "60min",
-        user_timezone: "America/New_York"
-      }
-
-      assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
-
-      assert updated.video_integration_id == nil
-
-      # Otherwise the Zoom meeting keeps advertising the old time on a join URL
-      # the attendee still holds.
-      assert_enqueued(
-        worker: VideoSyncWorker,
-        args: %{"meeting_id" => updated.id, "action" => "update"}
-      )
-    end
-
-    test "enqueues a video-sync update job that PATCHes the Zoom meeting with new times" do
-      %{user: user, profile: _profile} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
-
-      meeting =
-        insert_meeting_for_user(user, %{
-          video_integration_id: integration.id,
-          video_room_id: "123456789",
-          title: "Customer call"
-        })
-
-      new_params = %{
-        date: Date.to_string(Date.add(Date.utc_today(), 2)),
-        time: "2:00 PM",
-        duration: "60min",
-        user_timezone: "America/New_York"
-      }
-
-      assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
-
-      # The provider PATCH is deferred to a supervised, retrying Oban job — not
-      # made inline — so a transient Zoom failure no longer permanently
-      # desyncs the meeting's scheduled time.
-      assert_enqueued(
-        worker: VideoSyncWorker,
-        args: %{"meeting_id" => updated.id, "action" => "update"}
-      )
-
-      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
-
-      expect(HTTPClientMock, :request, fn :patch, url, body, headers, _opts ->
-        assert url == "https://api.zoom.us/v2/meetings/123456789"
-        assert {"Authorization", "Bearer access-token"} in headers
-
-        decoded = Jason.decode!(body)
-        assert decoded["topic"] == "Customer call"
-        # The job re-reads the meeting, so the PATCH carries the *new* duration.
-        assert decoded["duration"] == 60
-        assert decoded["start_time"] == DateTime.to_iso8601(updated.start_time)
-
-        {:ok, %Req.Response{status: 204, body: ""}}
-      end)
-
-      assert :ok =
-               perform_job(VideoSyncWorker, %{"meeting_id" => updated.id, "action" => "update"})
-    end
-
-    test "still reschedules successfully and the job retries when Zoom update fails" do
-      %{user: user, profile: _profile} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
-
-      meeting =
-        insert_meeting_for_user(user, %{
-          video_integration_id: integration.id,
-          video_room_id: "777"
-        })
-
-      new_params = %{
-        date: Date.to_string(Date.add(Date.utc_today(), 2)),
-        time: "2:00 PM",
-        duration: "60min",
-        user_timezone: "America/New_York"
-      }
-
-      assert {:ok, updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
-
-      assert_enqueued(
-        worker: VideoSyncWorker,
-        args: %{"meeting_id" => updated.id, "action" => "update"}
-      )
-
-      # A transient Zoom failure surfaces as {:error, _} from the job so Oban
-      # retries it.
-      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
-
-      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
-        {:error, :timeout}
-      end)
-
-      assert {:error, _reason} =
-               perform_job(VideoSyncWorker, %{"meeting_id" => updated.id, "action" => "update"})
-    end
-
-    test "does not enqueue a video-sync job when meeting has no video_room_id" do
-      %{user: user, profile: _profile} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
-
-      meeting =
-        insert_meeting_for_user(user, %{
-          video_integration_id: integration.id,
-          video_room_id: nil
-        })
-
-      new_params = %{
-        date: Date.to_string(Date.add(Date.utc_today(), 2)),
-        time: "2:00 PM",
-        duration: "60min",
-        user_timezone: "America/New_York"
-      }
-
-      assert {:ok, _updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
-
-      refute_enqueued(worker: VideoSyncWorker)
-    end
-  end
-
-  defp insert_zoom_integration(user) do
-    insert(:video_integration,
-      user: user,
-      name: "Zoom",
-      provider: "zoom",
-      base_url: nil,
-      api_key_encrypted: nil,
-      tenant_id_encrypted: nil,
-      client_id_encrypted: nil,
-      client_secret_encrypted: nil,
-      teams_user_id_encrypted: nil,
-      access_token_encrypted: Encryption.encrypt("access-token"),
-      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
-      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting",
-      provider_account_id: nil
-    )
   end
 end

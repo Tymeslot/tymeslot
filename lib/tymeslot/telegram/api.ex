@@ -20,8 +20,10 @@ defmodule Tymeslot.Telegram.API do
     })
   end
 
+  # The body is `Req.Response.body`, which Req has already decoded: a JSON
+  # response arrives as a map, not a string. Callers must handle both.
   @spec set_webhook(String.t(), String.t(), String.t()) ::
-          {:ok, non_neg_integer(), String.t()} | {:error, String.t()}
+          {:ok, non_neg_integer(), term()} | {:error, String.t()}
   def set_webhook(bot_token, webhook_url, secret_token) do
     post("#{bot_token}/setWebhook", %{
       url: webhook_url,

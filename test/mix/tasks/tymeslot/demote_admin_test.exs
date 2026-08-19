@@ -32,9 +32,32 @@ defmodule Mix.Tasks.Tymeslot.DemoteAdminTest do
 
     test "demotes the admin user" do
       admin = insert(:user, is_admin: true)
+      insert(:user, is_admin: true)
 
       capture_io(fn ->
         DemoteAdmin.run([admin.email])
+      end)
+
+      refute Repo.reload!(admin).is_admin
+    end
+
+    test "refuses to demote the only remaining admin without --force" do
+      admin = insert(:user, is_admin: true)
+
+      assert_raise Mix.Error, ~r/only remaining admin/, fn ->
+        capture_io(fn ->
+          DemoteAdmin.run([admin.email])
+        end)
+      end
+
+      assert Repo.reload!(admin).is_admin
+    end
+
+    test "demotes the only remaining admin when --force is passed" do
+      admin = insert(:user, is_admin: true)
+
+      capture_io(fn ->
+        DemoteAdmin.run(["--force", admin.email])
       end)
 
       refute Repo.reload!(admin).is_admin

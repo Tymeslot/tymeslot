@@ -32,7 +32,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpersTest do
       )
 
       # Open the circuit
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
       assert {:error, :circuit_open} =
                CircuitBreakerHelpers.call_with_breaker(name, :test, "Test", fn ->

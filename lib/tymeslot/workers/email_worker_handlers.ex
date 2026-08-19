@@ -16,12 +16,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   @action_handlers %{
     "send_admin_alert" => {AdminEmails, :handle_admin_alert},
     "send_confirmation_emails" => {MeetingEmails, :handle_confirmation_emails},
-    "send_seat_confirmation_emails" => {MeetingEmails, :handle_seat_confirmation_emails},
+    "send_seat_confirmation_emails" => {GroupMeetingEmails, :handle_seat_confirmation_emails},
     "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails},
-    "send_seat_cancellation_emails" => {MeetingEmails, :handle_seat_cancellation_emails},
+    "send_seat_cancellation_emails" => {GroupMeetingEmails, :handle_seat_cancellation_emails},
     "send_seat_meeting_cancellation" =>
       {GroupMeetingEmails, :handle_seat_meeting_cancellation_emails},
-    "send_seat_reschedule_emails" => {MeetingEmails, :handle_seat_reschedule_emails},
+    "send_seat_reschedule_emails" => {GroupMeetingEmails, :handle_seat_reschedule_emails},
     "send_seat_reschedule_request" => {GroupMeetingEmails, :handle_seat_reschedule_request},
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
     "send_seat_reminder" => {GroupMeetingEmails, :handle_seat_reminder_emails},

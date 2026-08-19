@@ -11,14 +11,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   # Data loading
 
   defdelegate load_integrations(socket), to: DataLoading
-  defdelegate check_staleness(socket), to: DataLoading
   defdelegate load_events(socket), to: DataLoading
   defdelegate precompute_derived(socket), to: DataLoading
-  defdelegate range_for_view(assigns), to: DataLoading
 
   # Event positioning
 
-  defdelegate top_rem(dt), to: EventPositioning
   defdelegate top_rem(dt, tz), to: EventPositioning
   defdelegate height_rem(start_dt, end_dt), to: EventPositioning
   defdelegate left_pct(col_idx, total_cols), to: EventPositioning
@@ -35,36 +32,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   # Time formatting
 
-  defdelegate format_time_range(event), to: TimeFormatting
-  defdelegate format_time_range(event, fmt), to: TimeFormatting
-  defdelegate format_display_time_range(event), to: TimeFormatting
-  defdelegate format_display_time_range(event, fmt), to: TimeFormatting
   defdelegate format_display_time_range(event, fmt, timezone), to: TimeFormatting
-  defdelegate format_time_range_in_tz(event, timezone), to: TimeFormatting
   defdelegate format_time_range_in_tz(event, timezone, fmt), to: TimeFormatting
   defdelegate tz_abbr(timezone), to: TimeFormatting
   defdelegate datetime_to_local_parts(dt, timezone), to: TimeFormatting
   defdelegate format_hour(hour, assigns), to: TimeFormatting
-  defdelegate user_timezone(assigns), to: TimeFormatting
   defdelegate user_tz_abbr(assigns), to: TimeFormatting
   defdelegate url?(str), to: TimeFormatting
   defdelegate linkify_text(text), to: TimeFormatting
 
   # Preference helpers
 
-  defdelegate week_start(date, assigns), to: PreferenceHelpers
   defdelegate col_count(assigns), to: PreferenceHelpers
-  defdelegate day_header_class(day), to: PreferenceHelpers
   defdelegate day_header_class(day, timezone), to: PreferenceHelpers
   defdelegate period_label(assigns), to: PreferenceHelpers
   defdelegate view_label(view), to: PreferenceHelpers
   defdelegate navigate_month(date, delta), to: PreferenceHelpers
   defdelegate month_cell_class(day, assigns), to: PreferenceHelpers
   defdelegate week_start_atom(assigns), to: PreferenceHelpers
-  defdelegate show_weekends?(assigns), to: PreferenceHelpers
   defdelegate show_week_numbers?(assigns), to: PreferenceHelpers
   defdelegate time_format(assigns), to: PreferenceHelpers
-  defdelegate safe_view_atom(view), to: PreferenceHelpers
   defdelegate assign_view_from_preferences(socket), to: PreferenceHelpers
   defdelegate week_number(date), to: PreferenceHelpers
   defdelegate day_name_headers(assigns), to: PreferenceHelpers
@@ -72,10 +59,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   # Overlap layout
 
-  defdelegate positioned_events_for_day(assigns, date), to: OverlapLayout
-  defdelegate overflow_events_for_day(assigns, date), to: OverlapLayout
   defdelegate layout_for_day(assigns, date), to: OverlapLayout
-  defdelegate overlap_layout(events), to: OverlapLayout
 
   # Month-grid multi-day / all-day bar layout
 
@@ -86,9 +70,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   @spec visible_events(map()) :: list()
   def visible_events(assigns), do: assigns.visible_events
-
-  @spec visible_days(map()) :: [Date.t()]
-  def visible_days(assigns), do: assigns.visible_days
 
   @spec day_events(map(), Date.t()) :: list()
   def day_events(assigns, date) do

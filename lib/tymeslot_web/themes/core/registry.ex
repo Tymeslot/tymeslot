@@ -70,16 +70,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   def all_themes, do: @themes
 
   @doc """
-  Returns all active themes (excludes deprecated themes).
-  """
-  @spec active_themes() :: %{theme_key() => theme_definition()}
-  def active_themes do
-    @themes
-    |> Enum.filter(fn {_key, theme} -> theme.status == :active end)
-    |> Map.new()
-  end
-
-  @doc """
   Gets a theme by its ID.
 
   ## Examples
@@ -95,44 +85,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
     case Map.get(@id_to_theme_map, id) do
       nil -> {:error, :theme_not_found}
       theme -> {:ok, theme}
-    end
-  end
-
-  @doc """
-  Gets a theme by its ID, raises if not found.
-  """
-  @spec get_theme_by_id!(theme_id()) :: theme_definition()
-  def get_theme_by_id!(id) when is_binary(id) do
-    case get_theme_by_id(id) do
-      {:ok, theme} -> theme
-      {:error, :theme_not_found} -> raise "Theme with ID #{id} not found"
-    end
-  end
-
-  @doc """
-  Gets a theme by its key.
-
-  ## Examples
-
-      iex> Registry.get_theme_by_key(:quill)
-      {:ok, %{id: "1", key: :quill, name: "Quill", ...}}
-  """
-  @spec get_theme_by_key(theme_key()) :: {:ok, theme_definition()} | {:error, :theme_not_found}
-  def get_theme_by_key(key) when is_atom(key) do
-    case Map.get(@themes, key) do
-      nil -> {:error, :theme_not_found}
-      theme -> {:ok, theme}
-    end
-  end
-
-  @doc """
-  Gets a theme by its key, raises if not found.
-  """
-  @spec get_theme_by_key!(theme_key()) :: theme_definition()
-  def get_theme_by_key!(key) when is_atom(key) do
-    case get_theme_by_key(key) do
-      {:ok, theme} -> theme
-      {:error, :theme_not_found} -> raise "Theme with key #{key} not found"
     end
   end
 
@@ -156,53 +108,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   end
 
   @doc """
-  Converts a theme key to its ID.
-
-  ## Examples
-
-      iex> Registry.key_to_id(:quill)
-      {:ok, "1"}
-  """
-  @spec key_to_id(theme_key()) :: {:ok, theme_id()} | {:error, :invalid_theme_key}
-  def key_to_id(key) when is_atom(key) do
-    case Map.get(@themes, key) do
-      nil -> {:error, :invalid_theme_key}
-      %{id: id} -> {:ok, id}
-    end
-  end
-
-  @doc """
-  Returns a list of valid theme IDs.
-
-  ## Examples
-
-      iex> Registry.valid_theme_ids()
-      ["1", "2"]
-  """
-  @spec valid_theme_ids() :: [theme_id()]
-  def valid_theme_ids do
-    @themes
-    |> Map.values()
-    |> Enum.map(& &1.id)
-    |> Enum.sort()
-  end
-
-  @doc """
-  Returns a list of valid theme keys.
-
-  ## Examples
-
-      iex> Registry.valid_theme_keys()
-      [:quill, :rhythm]
-  """
-  @spec valid_theme_keys() :: [theme_key()]
-  def valid_theme_keys do
-    @themes
-    |> Map.keys()
-    |> Enum.sort()
-  end
-
-  @doc """
   Checks if a theme ID is valid.
 
   ## Examples
@@ -216,14 +121,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   @spec valid_theme_id?(theme_id()) :: boolean()
   def valid_theme_id?(id) when is_binary(id) do
     Map.has_key?(@id_to_theme_map, id)
-  end
-
-  @doc """
-  Checks if a theme key is valid.
-  """
-  @spec valid_theme_key?(theme_key()) :: boolean()
-  def valid_theme_key?(key) when is_atom(key) do
-    Map.has_key?(@themes, key)
   end
 
   @doc """
@@ -250,39 +147,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   @spec default_theme_key() :: theme_key()
   def default_theme_key do
     default_theme().key
-  end
-
-  @doc """
-  Returns themes that support a specific feature.
-
-  ## Examples
-
-      iex> Registry.themes_with_feature(:supports_video_background)
-      [%{key: :quill, ...}, %{key: :rhythm, ...}]
-  """
-  @spec themes_with_feature(atom()) :: [theme_definition()]
-  def themes_with_feature(feature) when is_atom(feature) do
-    @themes
-    |> Map.values()
-    |> Enum.filter(fn theme ->
-      Map.get(theme.features, feature, false) == true
-    end)
-  end
-
-  @doc """
-  Gets theme module by ID.
-
-  ## Examples
-
-      iex> Registry.get_module_by_id("1")
-      {:ok, TymeslotWeb.Themes.Quill.Theme}
-  """
-  @spec get_module_by_id(theme_id()) :: {:ok, module()} | {:error, :theme_not_found}
-  def get_module_by_id(id) when is_binary(id) do
-    case get_theme_by_id(id) do
-      {:ok, theme} -> {:ok, theme.module}
-      error -> error
-    end
   end
 
   @doc """

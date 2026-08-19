@@ -10,7 +10,7 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
 
   alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.Helpers
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Workers.EmailWorker
 
   require Logger
@@ -53,7 +53,7 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   @doc "Deletes any pending deadline reminder / host nudge jobs for a poll."
   @spec cancel_deadline_jobs(Ecto.UUID.t()) :: :ok
   def cancel_deadline_jobs(poll_id) do
-    {deleted, _result} = ObanJobQueries.delete_poll_jobs(poll_id, EmailWorker)
+    {deleted, _result} = Jobs.delete_poll_jobs(poll_id, EmailWorker)
 
     Logger.info("Cancelled pending poll email jobs",
       poll_id: poll_id,

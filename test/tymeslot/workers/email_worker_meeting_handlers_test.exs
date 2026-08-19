@@ -38,8 +38,12 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
     test "handles send_reminder_emails" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_reminders, fn _meeting, _user ->
-        {{:ok, "sent"}, {:ok, "sent"}}
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
       end)
 
       assert :ok =
@@ -108,6 +112,46 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       assert updated.organizer_email_sent == true
       assert updated.attendee_email_sent == true
+    end
+
+    # The mail breaker stays open for five minutes; `EmailWorker`'s backoff
+    # spends all five attempts inside the first fifteen seconds of that window.
+    # Flattening `:circuit_open` into "Failed to send all emails" therefore
+    # dropped booking confirmations outright for the length of any mail outage,
+    # so the reason has to survive as far as the worker.
+    test "surfaces an open circuit breaker instead of flattening it into a message" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:error, :circuit_open}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:error, :circuit_open}
+      end)
+
+      assert {:error, :circuit_open} =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "surfaces a permanently rejected recipient instead of retrying it" do
+      meeting = insert(:meeting)
+      rejection = {:recipient_rejected, {422, %{"ErrorCode" => 406}}}
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:error, rejection}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:error, rejection}
+      end)
+
+      assert {:error, ^rejection} =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
     end
 
     test "handles partial failure" do
@@ -212,8 +256,12 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
     test "tracks reminder as sent after delivery" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_reminders, fn _meeting, _user ->
-        {{:ok, "sent"}, {:ok, "sent"}}
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
       end)
 
       assert :ok =
@@ -224,15 +272,26 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
                })
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert %{"value" => 1, "unit" => "hours"} in updated.reminders_sent
+
+      assert %{
+               "value" => 1,
+               "unit" => "hours",
+               "organizer_sent" => true,
+               "attendee_sent" => true
+             } in updated.reminders_sent
+
       assert updated.reminder_email_sent == true
     end
 
     test "marks reminder sent and succeeds when organizer sent but attendee fails" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
-        {{:ok, "sent"}, {:error, "inactive recipient"}}
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:error, "inactive recipient"}
       end)
 
       assert :ok =
@@ -243,15 +302,26 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
                })
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert %{"value" => 30, "unit" => "minutes"} in updated.reminders_sent
+
+      assert %{
+               "value" => 30,
+               "unit" => "minutes",
+               "organizer_sent" => true,
+               "attendee_sent" => false
+             } in updated.reminders_sent
+
       assert updated.reminder_email_sent == true
     end
 
     test "marks reminder sent and succeeds when attendee sent but organizer fails" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
-        {{:error, "delivery failed"}, {:ok, "sent"}}
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+        {:error, "delivery failed"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
       end)
 
       assert :ok =
@@ -262,15 +332,26 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
                })
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert %{"value" => 30, "unit" => "minutes"} in updated.reminders_sent
+
+      assert %{
+               "value" => 30,
+               "unit" => "minutes",
+               "organizer_sent" => false,
+               "attendee_sent" => true
+             } in updated.reminders_sent
+
       assert updated.reminder_email_sent == true
     end
 
     test "returns error when both organizer and attendee emails fail" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
-        {{:error, "delivery failed"}, {:error, "delivery failed"}}
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+        {:error, "delivery failed"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:error, "delivery failed"}
       end)
 
       assert {:error, _reason} =
@@ -281,7 +362,62 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
                })
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      refute %{"value" => 30, "unit" => "minutes"} in List.wrap(updated.reminders_sent)
+      refute Enum.any?(List.wrap(updated.reminders_sent), &(&1["value"] == 30))
+    end
+
+    # The bug this guards against: `:circuit_open` on one recipient used to
+    # short-circuit before the successful recipient's send was ever recorded,
+    # so every retry re-emailed the recipient who had already received it —
+    # for as long as the mail breaker stayed open.
+    test "does not re-email the organizer on retry after the attendee send hit an open circuit" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:error, :circuit_open}
+      end)
+
+      assert {:error, :circuit_open} =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      {:ok, after_first} = MeetingQueries.get_meeting(meeting.id)
+
+      assert %{
+               "value" => 30,
+               "unit" => "minutes",
+               "organizer_sent" => true,
+               "attendee_sent" => false
+             } in after_first.reminders_sent
+
+      # Retry: only the attendee callback is expected. `verify_on_exit!`
+      # enforces that :send_appointment_reminder_to_organizer is NOT called a
+      # second time — that is the retry-safety invariant this test guards.
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      {:ok, after_retry} = MeetingQueries.get_meeting(meeting.id)
+
+      assert %{
+               "value" => 30,
+               "unit" => "minutes",
+               "organizer_sent" => true,
+               "attendee_sent" => true
+             } in after_retry.reminders_sent
     end
   end
 end

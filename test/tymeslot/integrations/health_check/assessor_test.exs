@@ -218,19 +218,25 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
     test "passes custom_meeting_url to test_connection" do
       user = insert(:user)
 
-      # A loopback URL resolves without DNS and deterministically fails the public-host
-      # check — proving the URL was forwarded (the bug returned "No custom meeting URL
+      # The URL the reachability probe is pointed at is the proof that the
+      # configured value was forwarded (the bug returned "No custom meeting URL
       # provided" when the config was built as an empty map instead).
       integration =
         insert(:video_integration,
           user: user,
           provider: "custom",
-          custom_meeting_url: "http://127.0.0.1/meeting"
+          custom_meeting_url: "https://meet.example.com/meeting"
         )
+
+      expect(Tymeslot.HTTPClientMock, :head, fn url, _headers, _opts ->
+        send(self(), {:probed, url})
+        {:ok, %Req.Response{status: 200}}
+      end)
 
       {result, _duration} = Assessor.assess(:video, integration)
 
-      assert {:error, "URL resolves to a private or loopback address"} = result
+      assert_received {:probed, "https://meet.example.com/meeting"}
+      assert {:ok, _status} = result
     end
 
     test "returns success for valid google_meet integration" do

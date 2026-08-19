@@ -379,11 +379,16 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     # Get proxy config for this URL (considers NO_PROXY and URL scheme)
     proxy_config = ProxyConfig.get_proxy_for_url(url)
 
-    # Log proxy usage for debugging
+    # Log proxy usage for debugging. Scheme and host only, never the path or
+    # query: some destinations (the Telegram Bot API) carry their credential
+    # in the URL path, and this debug log is not the place to re-derive which
+    # paths are safe to print.
     if proxy_config do
+      %URI{scheme: scheme, host: host} = URI.parse(url)
+
       Logger.debug("Using proxy for request",
         proxy: "#{proxy_config.host}:#{proxy_config.port}",
-        url: url
+        url: "#{scheme}://#{host}"
       )
     end
 

@@ -27,12 +27,12 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   require Logger
 
-  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded.RefundContext
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.TransactionalEmailDelivery
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id}}) do
@@ -79,18 +79,11 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   end
 
   defp deliver(context, payment) do
-    case context |> BookingPaymentRefunded.render() |> Delivery.deliver() do
-      {:ok, _result} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Refund email delivery failed",
-          booking_payment_id: payment.id,
-          reason: inspect(reason)
-        )
-
-        {:error, reason}
-    end
+    context
+    |> BookingPaymentRefunded.render()
+    |> TransactionalEmailDelivery.deliver("Refund email delivery failed",
+      booking_payment_id: payment.id
+    )
   end
 
   defp build_context(%BookingPaymentSchema{attendee_email: email}) when email in [nil, ""],

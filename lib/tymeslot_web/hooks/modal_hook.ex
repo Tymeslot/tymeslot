@@ -64,15 +64,6 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     end
   end
 
-  @spec reset_modal_state(Phoenix.LiveView.Socket.t(), atom() | String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def reset_modal_state(socket, modal_name) do
-    socket
-    |> hide_modal(modal_name)
-    |> Component.assign(:form_errors, %{})
-    |> Component.assign(:saving, false)
-  end
-
   @modal_registry %{
     delete_break: {:show_delete_break_modal, :delete_break_modal_data},
     clear_day: {:show_clear_day_modal, :clear_day_modal_data},

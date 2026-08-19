@@ -105,6 +105,12 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   If `details[:email]` is present it is masked before logging so no raw
   email (PII) reaches Logger sinks or the monitoring webhook.
+
+  Only the keys listed in the `Logger.info` call below reach Logger; anything
+  else an event builder assembles is carried to the monitoring webhook via
+  `:additional_data` but not to the log line. Raw identifiers are deliberately
+  not among them — an event that needs to name an account puts it under
+  `:email` so it is masked first.
   """
   @spec log_security_event(String.t(), event_metadata()) :: :ok
   def log_security_event(event_type, details \\ %{}) do
@@ -116,7 +122,10 @@ defmodule Tymeslot.Security.SecurityLogger do
       email_masked: masked_email,
       ip_address: details[:ip_address],
       user_agent: details[:user_agent],
-      session_id: details[:session_id]
+      session_id: details[:session_id],
+      provider: sanitize_provider(details[:provider]),
+      lockout_type: details[:lockout_type],
+      limit_type: details[:limit_type]
     )
 
     # Also send to external monitoring if configured
@@ -152,6 +161,22 @@ defmodule Tymeslot.Security.SecurityLogger do
   end
 
   defp mask_email(_other), do: nil
+
+  # `details[:provider]` sometimes carries raw, unvalidated user input (e.g.
+  # a form's `params["provider"]`), not just the fixed OAuth provider atoms
+  # this module's own callers use. Restrict it to a short identifier-shaped
+  # value so an arbitrary attacker-controlled string can't ride into the log
+  # line under this key; anything else is dropped rather than emitted.
+  @spec sanitize_provider(term()) :: String.t() | nil
+  defp sanitize_provider(nil), do: nil
+
+  defp sanitize_provider(provider) when is_atom(provider), do: to_string(provider)
+
+  defp sanitize_provider(provider) when is_binary(provider) do
+    if Regex.match?(~r/^[a-zA-Z0-9_-]{1,32}$/, provider), do: provider, else: nil
+  end
+
+  defp sanitize_provider(_other), do: nil
 
   @doc """
   Logs authentication attempts with success/failure details.
@@ -206,11 +231,14 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   @doc """
   Logs rate limiting violations.
+
+  The identifier names the rejected attempt: an email address is carried
+  under `:email` and masked before it reaches Logger, a user id under
+  `:user_id` as-is.
   """
-  @spec log_rate_limit_violation(String.t(), String.t(), event_metadata()) :: :ok
+  @spec log_rate_limit_violation(String.t() | integer(), String.t(), event_metadata()) :: :ok
   def log_rate_limit_violation(identifier, limit_type, metadata \\ %{}) do
-    event_details = %{
-      identifier: identifier,
+    base_details = %{
       limit_type: limit_type,
       ip_address: metadata[:ip_address],
       user_agent: metadata[:user_agent],
@@ -221,17 +249,35 @@ defmodule Tymeslot.Security.SecurityLogger do
       }
     }
 
+    event_details = Map.merge(base_details, rate_limit_identifier_details(identifier))
+
     log_security_event("rate_limit_violation", event_details)
   end
 
+  # An email identifies the rejected attempt by account; a user id (e.g. the
+  # email-verification path, which already has the user loaded) is not PII
+  # and needs no masking.
+  defp rate_limit_identifier_details(identifier) when is_integer(identifier),
+    do: %{user_id: identifier}
+
+  defp rate_limit_identifier_details(identifier) when is_binary(identifier),
+    do: %{email: identifier}
+
+  defp rate_limit_identifier_details(_identifier), do: %{}
+
   @doc """
   Logs account lockout events.
+
+  The identifier is an email address, so it is carried under `:email` and
+  masked before it reaches Logger.
   """
   @spec log_account_lockout(String.t(), String.t(), event_metadata()) :: :ok
   def log_account_lockout(identifier, lockout_type, metadata \\ %{}) do
     event_details = %{
       identifier: identifier,
+      email: identifier,
       lockout_type: lockout_type,
+      user_id: metadata[:user_id],
       ip_address: metadata[:ip_address],
       user_agent: metadata[:user_agent],
       additional_data: %{

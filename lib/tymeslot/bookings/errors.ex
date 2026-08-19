@@ -47,6 +47,8 @@ defmodule Tymeslot.Bookings.Errors do
     meeting_type_missing: :meeting_type_not_found,
     time_conflict: :slot_taken,
     slot_unavailable: :slot_taken,
+    slot_not_offered: :slot_taken,
+    slot_availability_unverifiable: :slot_taken,
     availability_unverifiable: :slot_taken,
     booking_limit_reached: :booking_limit_reached,
     organizer_required: :organizer_required,

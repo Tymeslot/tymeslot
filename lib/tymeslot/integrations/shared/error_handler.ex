@@ -187,22 +187,6 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
   end
 
   @doc """
-  Validates that an error response contains expected fields.
-
-  Useful for ensuring error responses from external APIs contain the information
-  we need for proper error handling.
-  """
-  @spec validate_error_response(map(), list(atom() | String.t())) :: :ok | {:error, String.t()}
-  def validate_error_response(error_data, required_fields) when is_map(error_data) do
-    missing_fields = Enum.reject(required_fields, &Map.has_key?(error_data, &1))
-
-    case missing_fields do
-      [] -> :ok
-      fields -> {:error, "Error response missing fields: #{Enum.join(fields, ", ")}"}
-    end
-  end
-
-  @doc """
   Wraps HTTP client errors with consistent formatting.
 
   Handles common HTTP client error patterns and converts them to standardized formats.

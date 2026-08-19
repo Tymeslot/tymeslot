@@ -289,14 +289,6 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
     end
   end
 
-  @doc """
-  Generates a hidden input field for the reCAPTCHA token.
-  """
-  @spec recaptcha_hidden_input() :: String.t()
-  def recaptcha_hidden_input do
-    ~s(<input type="hidden" name="contact[g-recaptcha-response]" id="g-recaptcha-response" value="" />)
-  end
-
   defp key_present?(value) when is_binary(value), do: String.trim(value) != ""
   defp key_present?(_value), do: false
 

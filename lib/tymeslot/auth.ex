@@ -78,14 +78,21 @@ defmodule Tymeslot.Auth do
   Updates a user's password after verifying their current password.
   Pure domain logic without HTTP concerns.
   """
-  @spec update_user_password(term(), String.t(), String.t(), String.t()) ::
+  @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, String.t()}
-  def update_user_password(user, current_password, new_password, new_password_confirmation) do
+  def update_user_password(
+        user,
+        current_password,
+        new_password,
+        new_password_confirmation,
+        opts \\ []
+      ) do
     PasswordUpdate.update_user_password(
       user,
       current_password,
       new_password,
-      new_password_confirmation
+      new_password_confirmation,
+      opts
     )
   end
 
@@ -203,15 +210,6 @@ defmodule Tymeslot.Auth do
 
       {:ok, user}
     end
-  end
-
-  @doc """
-  Resends verification email to a user.
-  """
-  @spec resend_verification_email(Plug.Conn.t() | Phoenix.LiveView.Socket.t(), Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom(), String.t()}
-  def resend_verification_email(socket_or_conn, user) do
-    Verification.resend_verification_email(socket_or_conn, user)
   end
 
   @doc """

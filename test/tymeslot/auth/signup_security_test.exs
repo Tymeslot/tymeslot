@@ -73,6 +73,27 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       assert message == "Too many signup attempts. Please try again later."
     end
 
+    test "records a signup rate-limit audit entry naming the account and origin" do
+      email = "rate-audit@example.com"
+      params = %{"email" => email}
+
+      for _i <- 1..5, do: SignupSecurity.gate(params, @meta)
+
+      # SecurityLogger emits at :info; config/test.exs pins the primary level
+      # to :warning, so lower it for the duration of the call.
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:error, :rate_limited, _message} = SignupSecurity.gate(params, @meta)
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+
+      assert meta.limit_type == "signup"
+      assert meta.email_masked == "r***@example.com"
+      assert meta.ip_address == "203.0.113.5"
+      assert meta.user_agent == "tymeslot-test/1.0"
+      refute inspect(meta) =~ email
+    end
+
     test "rate limit error message is a non-empty string" do
       email = "rate-msg@example.com"
       params = %{"email" => email}

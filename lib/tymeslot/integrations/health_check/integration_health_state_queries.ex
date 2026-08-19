@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   import Ecto.Query
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
@@ -48,7 +49,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       integration_type: type_str,
       integration_id: integration_id,
       user_id: user_id,
-      status: "healthy",
+      status: HealthStatus.to_db_value(:healthy),
       failures: 0,
       consecutive_hard_failures: 0,
       successes: 0,
@@ -112,6 +113,39 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   end
 
   @doc """
+  Updates an existing health state record through the schema's validated
+  changeset, so a status value outside `HealthStatus.values/0` is rejected
+  rather than silently written. Used by `Monitor.put_state/3`, the sole
+  path that writes a runtime-derived status; other field updates that never
+  touch `status` keep using the plain `update_fields/3`.
+
+  Unlike `update_fields/3`, this is a read-then-write, not a single atomic
+  statement: it fetches the row first. Raises on an invalid changeset,
+  since the caller's status values are closed by construction and a
+  rejection here means that invariant broke. Safe to call when no row
+  exists (no-op).
+  """
+  @spec update_validated(String.t() | atom(), integer(), map()) :: {non_neg_integer(), nil}
+  def update_validated(type, integration_id, field_updates) do
+    type_str = to_string(type)
+
+    case Repo.get_by(IntegrationHealthStateSchema,
+           integration_type: type_str,
+           integration_id: integration_id
+         ) do
+      nil ->
+        {0, nil}
+
+      record ->
+        record
+        |> IntegrationHealthStateSchema.changeset(field_updates)
+        |> Repo.update!()
+
+        {1, nil}
+    end
+  end
+
+  @doc """
   Resets the health state row to a known-healthy baseline.
 
   Used when the user has produced an unambiguous success signal — a successful
@@ -132,7 +166,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @spec reset(String.t() | atom(), integer()) :: {non_neg_integer(), nil}
   def reset(type, integration_id) do
     update_fields(type, integration_id,
-      status: "healthy",
+      status: HealthStatus.to_db_value(:healthy),
       failures: 0,
       consecutive_hard_failures: 0,
       successes: 0,
@@ -182,7 +216,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
     Repo.all(
       from(s in IntegrationHealthStateSchema,
-        where: s.user_id == ^user_id and s.status == "unhealthy",
+        where: s.user_id == ^user_id and s.status == ^HealthStatus.to_db_value(:unhealthy),
         where:
           (s.integration_type == "calendar" and s.integration_id in subquery(calendar_ids)) or
             (s.integration_type == "video" and s.integration_id in subquery(video_ids))
@@ -217,7 +251,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
     |> where(
       [s],
       s.integration_type == ^type_str and
-        s.status == "unhealthy" and
+        s.status == ^HealthStatus.to_db_value(:unhealthy) and
         s.integration_id in subquery(active_ids) and
         ((not is_nil(s.became_unhealthy_at) and s.became_unhealthy_at < ^calendar_cutoff) or
            s.consecutive_hard_failures >= ^hard_failure_count)

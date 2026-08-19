@@ -276,15 +276,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def show_back_button?(:ready), do: false
   def show_back_button?(_step), do: true
 
-  @doc """
-  Returns whether a step is a scheduling preference step.
-  """
-  @spec scheduling_step?(step()) :: boolean()
-  def scheduling_step?(:buffer_time), do: true
-  def scheduling_step?(:booking_window), do: true
-  def scheduling_step?(:minimum_notice), do: true
-  def scheduling_step?(_step), do: false
-
   # -------------------------------------------------------------------
   # Scheduling preset accessors
   # -------------------------------------------------------------------

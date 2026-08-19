@@ -33,7 +33,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
 
   # Default alert thresholds (can be overridden via application config)
   @default_thresholds %{
@@ -84,7 +84,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
 
     unhealthy_queues =
       recent_cutoff
-      |> ObanJobQueries.list_accumulated_jobs()
+      |> Jobs.list_accumulated_jobs()
       |> Enum.filter(fn {_queue, count} -> count > threshold end)
 
     if unhealthy_queues != [] do
@@ -117,7 +117,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
 
     unhealthy_queues =
       cutoff_time
-      |> ObanJobQueries.list_stuck_available_jobs(recent_cutoff)
+      |> Jobs.list_stuck_available_jobs(recent_cutoff)
       |> Enum.filter(fn {_queue, count} -> count > threshold end)
 
     if unhealthy_queues != [] do
@@ -153,7 +153,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
 
     unhealthy_queues =
       now
-      |> ObanJobQueries.list_stuck_retryable_jobs(cutoff_time, recent_cutoff)
+      |> Jobs.list_stuck_retryable_jobs(cutoff_time, recent_cutoff)
       |> Enum.filter(fn {_queue, count} -> count > threshold end)
 
     if unhealthy_queues != [] do

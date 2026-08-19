@@ -197,6 +197,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
   end
 
   defp status_color("success"), do: "text-green-600 font-bold"
-  defp status_color("failed"), do: "text-red-600 font-bold"
+  # The failure writer stores "failed: <reason>", never a bare "failed", so a
+  # whole-string match on "failed" rendered every failed delivery neutral.
+  defp status_color("failed" <> _reason), do: "text-red-600 font-bold"
   defp status_color(_status), do: "text-tymeslot-600 font-medium"
 end

@@ -205,13 +205,6 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns), do: Forms.password_requirements(assigns)
 
-  @doc """
-  Renders a field error message.
-  """
-  attr :errors, :list, default: []
-  @spec field_error(map()) :: Phoenix.LiveView.Rendered.t()
-  def field_error(assigns), do: Forms.field_error(assigns)
-
   # ========== FEEDBACK ==========
 
   @doc """

@@ -17,8 +17,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # `payments_allowed` is computed once at mount by `DashboardInitHook`
-    # (mirroring the `PaymentsHandlers` gate: `:ok`/`:stripe_required` allow),
-    # so the hub reuses it rather than re-checking the feature here.
+    # through `Features.meeting_payments_allowed?/1`, so the hub reuses it
+    # rather than re-checking the feature here.
     payments_allowed? = Map.get(assigns, :payments_allowed, false)
     socket = assign(socket, assigns)
     user_id = socket.assigns.current_user.id

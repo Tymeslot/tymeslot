@@ -250,42 +250,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
       {:error, "Failed to parse calendar-home-set response"}
   end
 
-  @doc """
-  Parses server capabilities from a OPTIONS or PROPFIND response.
-  """
-  @spec parse_server_capabilities(String.t()) ::
-          {:ok,
-           %{
-             required(:calendar_access) => boolean(),
-             required(:calendar_schedule) => boolean(),
-             required(:calendar_auto_schedule) => boolean(),
-             required(:supported_reports) => list(atom())
-           }}
-          | {:error, String.t()}
-  def parse_server_capabilities(xml_body) do
-    doc = parse_with_security(xml_body)
-
-    capabilities = %{
-      calendar_access: xpath(doc, ~x"//*[local-name()='calendar-access']") != nil,
-      calendar_schedule: xpath(doc, ~x"//*[local-name()='calendar-schedule']") != nil,
-      calendar_auto_schedule: xpath(doc, ~x"//*[local-name()='calendar-auto-schedule']") != nil,
-      supported_reports:
-        Enum.map(
-          xpath(
-            doc,
-            ~x"//*[local-name()='supported-report-set']/*[local-name()='supported-report']/*[local-name()='report']/*"l
-          ),
-          &elem(&1, 1)
-        )
-    }
-
-    {:ok, capabilities}
-  rescue
-    e ->
-      Logger.error("XML parsing error", error: inspect(e))
-      {:error, "Failed to parse server capabilities"}
-  end
-
   # Private helper functions
 
   defp parse_with_security(xml_string) do

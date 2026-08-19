@@ -5,9 +5,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
   import Mox
 
   alias Phoenix.Flash
-  alias Tymeslot.Auth.OAuth.HelperMock
+  alias Plug.Test
+  alias Tymeslot.Auth.OAuth.{HelperMock, UserRegistration}
+  alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
 
   setup :verify_on_exit!
 
@@ -416,6 +419,65 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       assert redirected_to(conn) == "/?auth=login"
       assert Flash.get(conn.assigns.flash, :error) =~ "SSO authentication failed"
+    end
+  end
+
+  describe "POST /auth/complete social auth auditing" do
+    setup do
+      try do
+        :meck.unload(UserRegistration)
+      rescue
+        _other -> :ok
+      end
+
+      :meck.new(UserRegistration, [:passthrough])
+
+      on_exit(fn ->
+        try do
+          :meck.unload(UserRegistration)
+        rescue
+          _other -> :ok
+        end
+      end)
+
+      :ok
+    end
+
+    defp social_auth_events do
+      LogCapture.drain()
+      |> Enum.map(&LogCapture.user_metadata/1)
+      |> Enum.filter(&(&1[:event_type] in ["social_auth_success", "social_auth_failure"]))
+    end
+
+    test "first-time signup logs a social_auth_success entry", %{conn: conn} do
+      session_data = %{
+        provider: "github",
+        email: "new@example.com",
+        name: "New User",
+        is_verified: true,
+        email_from_provider: true,
+        provider_uid: "",
+        github_user_id: 12_345,
+        google_user_id: nil
+      }
+
+      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
+        user = Factory.insert(:user, email: "new@example.com", provider: "github")
+        {:ok, user}
+      end)
+
+      conn = Test.init_test_session(conn, %{pending_oauth_registration: session_data})
+
+      LogCapture.with_capture([logger_level: :info], fn ->
+        conn = post(conn, ~p"/auth/complete", %{"terms_accepted" => "on"})
+
+        assert redirected_to(conn) == "/dashboard"
+      end)
+
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_success"
+      assert event.provider == "github"
+      assert event.email_masked == "n***@example.com"
     end
   end
 end

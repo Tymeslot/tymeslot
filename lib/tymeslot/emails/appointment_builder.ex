@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
 
   require Logger
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
@@ -330,5 +331,22 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       end
 
     "#{value} #{unit_word}"
+  end
+
+  @doc """
+  Decorates an appointment-details map with one guest's name and RSVP URLs.
+
+  Guest confirmations reuse the booker's details for everything but the
+  addressee, so the two email handlers that send them (the solo path and the
+  per-seat group path) build the same map the same way.
+  """
+  @spec put_guest(map(), term()) :: map()
+  def put_guest(appointment_details, guest) do
+    urls = Policy.guest_rsvp_urls(guest.rsvp_token)
+
+    appointment_details
+    |> Map.put(:guest_name, guest.name || guest.email)
+    |> Map.put(:guest_accept_url, urls.accept_url)
+    |> Map.put(:guest_decline_url, urls.decline_url)
   end
 end

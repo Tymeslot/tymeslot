@@ -11,7 +11,6 @@ defmodule TymeslotWeb.AuthControllerHelpers do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Plug.Conn
   import Phoenix.Controller
 
   alias Tymeslot.Auth.AuthActions
@@ -33,55 +32,6 @@ defmodule TymeslotWeb.AuthControllerHelpers do
     conn
     |> put_flash(:error, message)
     |> redirect(to: redirect_path)
-  end
-
-  @doc """
-  Handles validation errors with consistent response pattern.
-
-  ## Parameters
-  - `conn`: The Plug connection
-  - `errors`: Map of validation errors
-  - `message`: Flash message to display
-  - `render_function`: Function to render the form with errors
-  """
-  @spec handle_validation_error(Plug.Conn.t(), map(), String.t(), function()) :: Plug.Conn.t()
-  def handle_validation_error(
-        conn,
-        errors,
-        message \\ dgettext("auth", "Please correct the errors in the form."),
-        render_function
-      ) do
-    conn
-    |> put_status(200)
-    |> put_flash(:error, message)
-    |> render_function.(%{errors: errors})
-  end
-
-  @doc """
-  Creates a form error response with render function.
-
-  ## Parameters
-  - `conn`: The Plug connection
-  - `errors`: Map of validation errors
-  - `message`: Flash message to display
-  - `render_fn`: Anonymous function that takes conn and assigns and renders form
-
-  ## Returns
-  - Updated connection with error response
-  """
-  @spec form_error_with_render(
-          Plug.Conn.t(),
-          map(),
-          String.t(),
-          (Plug.Conn.t(), map() -> Plug.Conn.t())
-        ) :: Plug.Conn.t()
-  def form_error_with_render(conn, errors, message, render_fn) do
-    updated_conn =
-      conn
-      |> put_status(200)
-      |> put_flash(:error, message)
-
-    render_fn.(updated_conn, %{errors: errors})
   end
 
   @doc """

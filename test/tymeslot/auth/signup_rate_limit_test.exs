@@ -18,6 +18,7 @@ defmodule Tymeslot.Auth.SignupRateLimitTest do
 
   alias Tymeslot.Auth.{Registration, SignupSecurity}
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
 
   @meta %{ip: "203.0.113.9", user_agent: "signup-rate-limit-test/1.0"}
 
@@ -55,5 +56,27 @@ defmodule Tymeslot.Auth.SignupRateLimitTest do
     # prior attempts, this bucket would already have tripped after the
     # 3rd.
     assert {:error, :rate_limited, _message} = SignupSecurity.gate(signup_params(6), @meta)
+  end
+
+  test "register_user/3 records an audit entry when it rejects on its own rate limit" do
+    conn = %Plug.Conn{remote_ip: {203, 0, 113, 9}}
+
+    for i <- 11..15 do
+      assert {:ok, _user, _message} = Registration.register_user(signup_params(i), conn)
+    end
+
+    # SecurityLogger emits at :info; config/test.exs pins the primary level to
+    # :warning, so lower it for the duration of the call.
+    LogCapture.with_capture([logger_level: :info], fn ->
+      assert {:error, :rate_limited, _message} =
+               Registration.register_user(signup_params(16), conn)
+    end)
+
+    assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+
+    assert meta.limit_type == "signup"
+    assert meta.email_masked == "g***@example.com"
+    assert meta.ip_address == "203.0.113.9"
+    refute inspect(meta) =~ "gate-plus-register-16@example.com"
   end
 end

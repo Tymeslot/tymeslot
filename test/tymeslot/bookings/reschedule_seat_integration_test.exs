@@ -22,6 +22,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.{Create, RescheduleSeat}
@@ -45,7 +46,11 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     end)
 
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
-    _profile = insert(:profile, user: user, timezone: "America/New_York")
+    profile = insert(:profile, user: user, timezone: "America/New_York")
+
+    # The seat move is this test's subject, not availability: the host offers
+    # every hour of every day so the schedule is never why a booking is refused.
+    open_schedule_for(profile)
 
     meeting_type =
       insert(:meeting_type,

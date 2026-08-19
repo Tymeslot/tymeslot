@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   end
 
   @spec validate_state_transition(Phoenix.LiveView.Socket.t(), atom(), atom()) ::
-          :ok | {:error, String.t()}
+          :ok | {:error, MeetingTypes.Duration.selection_error() | Calculate.selection_error()}
   def validate_state_transition(socket, current_state, next_state) do
     case {current_state, next_state} do
       {:overview, :schedule} ->
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   end
 
   @spec validate_step_requirements(Phoenix.LiveView.Socket.t(), atom()) ::
-          :ok | {:error, String.t()}
+          :ok | {:error, MeetingTypes.Duration.selection_error() | Calculate.selection_error()}
   def validate_step_requirements(socket, :schedule) do
     MeetingTypes.validate_duration_selection(
       socket.assigns[:selected_duration],

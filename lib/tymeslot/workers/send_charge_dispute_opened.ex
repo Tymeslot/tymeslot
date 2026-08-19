@@ -20,12 +20,12 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
 
   require Logger
 
-  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.ChargeDisputeOpened
   alias Tymeslot.Emails.Templates.ChargeDisputeOpened.DisputeContext
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.TransactionalEmailDelivery
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id} = args}) do
@@ -61,18 +61,11 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   defp send_email(payment, args) do
     context = build_context(payment, args)
 
-    case context |> ChargeDisputeOpened.render() |> Delivery.deliver() do
-      {:ok, _result} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Dispute email delivery failed",
-          booking_payment_id: payment.id,
-          reason: inspect(reason)
-        )
-
-        {:error, reason}
-    end
+    context
+    |> ChargeDisputeOpened.render()
+    |> TransactionalEmailDelivery.deliver("Dispute email delivery failed",
+      booking_payment_id: payment.id
+    )
   end
 
   defp build_context(%BookingPaymentSchema{} = payment, args) do

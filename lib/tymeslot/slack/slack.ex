@@ -422,9 +422,6 @@ defmodule Tymeslot.Slack do
       not is_nil(Application.get_env(:tymeslot, :slack_client_id))
   end
 
-  @spec webhook_url_mode_available?() :: boolean()
-  def webhook_url_mode_available?, do: slack_enabled?()
-
   @spec max_failure_count() :: integer()
   def max_failure_count, do: 10
 

@@ -86,8 +86,16 @@ defmodule Tymeslot.Auth.SignupSecurity do
 
     if is_binary(email) and email != "" do
       case RateLimiter.check_signup_rate_limit(email, metadata[:ip]) do
-        :ok -> :ok
-        {:error, :rate_limited, reason} -> {:error, :rate_limited, reason}
+        :ok ->
+          :ok
+
+        {:error, :rate_limited, reason} ->
+          SecurityLogger.log_rate_limit_violation(email, "signup", %{
+            ip_address: metadata[:ip],
+            user_agent: metadata[:user_agent]
+          })
+
+          {:error, :rate_limited, reason}
       end
     else
       {:error, :rate_limited,

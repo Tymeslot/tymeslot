@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.MeetingTestHelpers
 
   setup :verify_on_exit!
@@ -27,8 +28,9 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
   describe "when a user books an appointment" do
     setup do
-      user = insert(:user)
-      profile = insert(:profile, user: user)
+      # `build_meeting_params/1` books mid-afternoon, so the host must offer
+      # that hour: booking creation refuses a time the schedule never offers.
+      %{user: user, profile: profile} = create_always_bookable_profile()
       meeting_type = insert(:meeting_type, user: user)
 
       %{user: user, profile: profile, meeting_type: meeting_type}
@@ -107,8 +109,9 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
   describe "when creating appointment with calendar validation" do
     setup do
-      user = insert(:user)
-      profile = insert(:profile, user: user)
+      # `build_meeting_params/1` books mid-afternoon, so the host must offer
+      # that hour: booking creation refuses a time the schedule never offers.
+      %{user: user, profile: profile} = create_always_bookable_profile()
 
       %{user: user, profile: profile}
     end
@@ -184,7 +187,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
   describe "when rescheduling a meeting" do
     test "future meeting can be rescheduled to new time" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
       meeting = insert_meeting_for_user(user)
 
       new_date = Date.add(Date.utc_today(), 5)

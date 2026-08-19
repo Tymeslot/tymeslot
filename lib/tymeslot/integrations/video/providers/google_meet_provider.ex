@@ -23,12 +23,14 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
+  alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
   alias Tymeslot.Integrations.Video.RoomData
 
   @capabilities Capabilities.new!(
@@ -79,16 +81,73 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def create_meeting_room(config) do
     Logger.info("Creating Google Meet space")
 
-    with {:ok, valid_token} <- ensure_valid_token(config),
-         {:ok, space} <- create_meet_space(valid_token),
+    case precheck_create_meeting_room(config) do
+      {:ok, valid_token} ->
+        finish_create_meeting_room(valid_token, config)
+
+      {:provider_error, reason} ->
+        log_create_meeting_room_error(reason)
+        {:error, reason}
+
+      {:error, reason} = error ->
+        log_create_meeting_room_error(reason)
+        error
+    end
+  end
+
+  @doc false
+  # Pre-flight phase for `ProviderAdapter`'s circuit-breaker split (see the
+  # comment on `ProviderAdapter.with_breaker/2`). Runs before the shared
+  # Google Meet breaker is ever asked for permission.
+  #
+  # `ensure_valid_token/1` is network I/O, but against Google's OAuth host
+  # rather than the Meet API, and its failures are classified before they
+  # reach the breaker: a rejected/expired grant is the tenant's problem
+  # (`{:error, _}`, bypasses the breaker entirely), while anything else — a
+  # timeout or 5xx from the OAuth host — comes back as `{:provider_error, _}`
+  # so the caller can still let the breaker witness it.
+  @spec precheck_create_meeting_room(map()) ::
+          {:ok, map()} | {:error, term()} | {:provider_error, term()}
+  def precheck_create_meeting_room(config) do
+    classify_token_result(ensure_valid_token(config))
+  end
+
+  @doc false
+  # The actual outbound Meet API call, meant to run behind the shared
+  # breaker. Takes the refreshed config `precheck_create_meeting_room/1`
+  # already resolved, so it never repeats the OAuth round-trip. The original
+  # `config` argument is unused: Meet space creation needs no tenant data
+  # beyond the access token already embedded in `valid_token`.
+  @spec finish_create_meeting_room(map(), map()) :: {:ok, RoomData.t()} | {:error, term()}
+  def finish_create_meeting_room(valid_token, _config) do
+    with {:ok, space} <- create_meet_space(valid_token),
          {:ok, room_data} <- extract_space_data(space) do
       Logger.info("Successfully created Google Meet space", room_id: room_data.room_id)
       {:ok, room_data}
     else
       {:error, reason} = error ->
-        Logger.error("Failed to create Google Meet space", reason: Redactor.redact(reason))
+        log_create_meeting_room_error(reason)
         error
     end
+  end
+
+  defp log_create_meeting_room_error(reason) do
+    Logger.error("Failed to create Google Meet space", reason: Redactor.redact(reason))
+  end
+
+  # A rejected/expired grant (`invalid_grant`, `invalid_client`,
+  # `access_denied`) is the tenant's credential, not Meet's availability —
+  # `BreakerOutcome.permanent_credential_error?/1` shares this rule with
+  # `HealthCheck.ResponseHandler`'s reauth fast-path (Google refreshes
+  # through the shared `ErrorParser.build_message/3`, same as Zoom and
+  # Teams). Anything else (network error, an unrecognised HTTP status) is
+  # handed back for the breaker to witness.
+  defp classify_token_result({:ok, _config} = ok), do: ok
+
+  defp classify_token_result({:error, reason} = error) do
+    if BreakerOutcome.permanent_credential_error?(reason),
+      do: error,
+      else: {:provider_error, reason}
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -241,28 +300,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def build_config(integration, decrypted, _opts) do
-    %{
-      access_token: decrypted.access_token,
-      refresh_token: decrypted.refresh_token,
-      token_expires_at: integration.token_expires_at,
-      oauth_scope: integration.oauth_scope,
-      integration_id: integration.id,
-      user_id: integration.user_id
-    }
-  end
+  defdelegate build_config(integration, decrypted, opts), to: OAuthCredentials
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def credential_spec do
-    %{
-      required: [],
-      credential_pairs: [
-        {:access_token, :access_token_encrypted},
-        {:refresh_token, :refresh_token_encrypted}
-      ],
-      url_fields: []
-    }
-  end
+  defdelegate credential_spec, to: OAuthCredentials
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def url_patterns, do: ["meet.google.com"]

@@ -11,22 +11,22 @@ defmodule Tymeslot.Availability.CalculateTest do
 
   describe "validate_time_selection/3" do
     test "returns error when date is nil" do
-      assert {:error, "Please select a date"} =
+      assert {:error, :date_required} =
                Calculate.validate_time_selection(nil, "10:00 AM", [])
     end
 
     test "returns error when date is empty string" do
-      assert {:error, "Please select a date"} =
+      assert {:error, :date_required} =
                Calculate.validate_time_selection("", "10:00 AM", [])
     end
 
     test "returns error when time is nil" do
-      assert {:error, "Please select a time"} =
+      assert {:error, :time_required} =
                Calculate.validate_time_selection("2025-06-15", nil, [])
     end
 
     test "returns error when time is empty string" do
-      assert {:error, "Please select a time"} =
+      assert {:error, :time_required} =
                Calculate.validate_time_selection("2025-06-15", "", [])
     end
 
@@ -43,7 +43,7 @@ defmodule Tymeslot.Availability.CalculateTest do
     end
 
     test "returns error with non-binary date" do
-      assert {:error, "Please select a date and time"} =
+      assert {:error, :selection_required} =
                Calculate.validate_time_selection(123, "10:00 AM", [])
     end
   end
@@ -450,6 +450,73 @@ defmodule Tymeslot.Availability.CalculateTest do
 
       assert "9:00 AM" in slots
       assert "9:30 AM" in slots
+    end
+  end
+
+  describe "get_calendar_days/5 query cost" do
+    # This runs inside the template render of the public booking page, so the
+    # per-day business-hours fallback must not be a query per day.
+    test "reads the weekly schedule and overrides once for the whole grid" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
+      for day_of_week <- 1..5 do
+        insert(:weekly_availability,
+          schedule: schedule,
+          day_of_week: day_of_week,
+          start_time: ~T[09:00:00],
+          end_time: ~T[17:00:00],
+          is_available: true
+        )
+      end
+
+      next_month = Date.add(Date.utc_today(), 31)
+
+      sources =
+        capture_query_sources(fn ->
+          Calculate.get_calendar_days(
+            "Etc/UTC",
+            next_month.year,
+            next_month.month,
+            %{schedule_id: schedule.id, owner_timezone: "Etc/UTC"}
+          )
+        end)
+
+      # The grid holds 42 days, all but a handful of them future, so an
+      # unprefetched run issues dozens of each.
+      assert Enum.count(sources, &(&1 == "weekly_availability")) <= 1
+      assert Enum.count(sources, &(&1 == "availability_overrides")) <= 1
+    end
+  end
+
+  defp capture_query_sources(fun) do
+    parent = self()
+    ref = make_ref()
+    handler_id = "calculate-query-spy-#{inspect(ref)}"
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      # The handler runs in the process that issued the query, so this is what
+      # keeps a concurrently running async test's queries out of the count.
+      fn _event, _measurements, %{source: source}, _config ->
+        if self() == parent, do: send(parent, {:query_source, ref, source})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    fun.()
+
+    drain_query_sources(ref, [])
+  end
+
+  defp drain_query_sources(ref, acc) do
+    receive do
+      {:query_source, ^ref, source} -> drain_query_sources(ref, [source | acc])
+    after
+      0 -> acc
     end
   end
 

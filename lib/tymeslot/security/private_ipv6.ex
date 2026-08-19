@@ -7,15 +7,22 @@ defmodule Tymeslot.Security.PrivateIPv6 do
   both layers agree on what counts as a private, loopback, link-local, or
   unspecified IPv6 address.
 
-  IPv4-mapped addresses (`::ffff:x.x.x.x`) are decoded and delegated to
-  `PrivateIPv4.private?/1` so the two modules stay in sync.
+  IPv4-mapped (`::ffff:x.x.x.x`), IPv4-compatible (`::x.x.x.x`), and NAT64
+  (`64:ff9b::/96`) addresses embed an IPv4 address; all three are decoded and
+  delegated to `PrivateIPv4.private?/1` so the two modules stay in sync.
 
   Ranges covered:
   - `::` — unspecified address (RFC 4291)
   - `::1` — loopback (RFC 4291)
   - `::ffff:0:0/96` — IPv4-mapped (RFC 4291), classified via `PrivateIPv4`
+  - `::0.0.0.0/96` — IPv4-compatible, deprecated (RFC 4291), classified via
+    `PrivateIPv4`
+  - `64:ff9b::/96` — NAT64 well-known prefix (RFC 6052), classified via
+    `PrivateIPv4`
   - `fe80::/10` — link-local unicast (RFC 4291)
+  - `fec0::/10` — site-local unicast, deprecated (RFC 4291, RFC 3879)
   - `fc00::/7` — unique local unicast (RFC 4193)
+  - `ff00::/8` — multicast (RFC 4291)
   """
 
   import Bitwise, only: [band: 2, bsr: 2]
@@ -24,7 +31,7 @@ defmodule Tymeslot.Security.PrivateIPv6 do
 
   @doc """
   Returns true when the 8-element IPv6 tuple falls in a private, loopback,
-  link-local, unspecified, or IPv4-mapped-private range.
+  link-local, multicast, unspecified, or IPv4-embedded-private range.
   """
   @spec private?(:inet.ip6_address()) :: boolean()
 
@@ -39,14 +46,34 @@ defmodule Tymeslot.Security.PrivateIPv6 do
     address |> unmap() |> PrivateIPv4.private?()
   end
 
+  # 64:ff9b::x.x.x.x — NAT64 well-known prefix; classify the embedded IPv4 address
+  def private?({0x0064, 0xFF9B, 0, 0, 0, 0, hi, lo}) do
+    PrivateIPv4.private?(decode_ipv4(hi, lo))
+  end
+
+  # ::x.x.x.x — IPv4-compatible, deprecated; classify the embedded IPv4 address
+  def private?({0, 0, 0, 0, 0, 0, hi, lo}) do
+    PrivateIPv4.private?(decode_ipv4(hi, lo))
+  end
+
   # fe80::/10 — link-local (first hextet 0xFE80..0xFEBF)
   def private?({s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8})
       when band(s1, 0xFFC0) == 0xFE80,
       do: true
 
+  # fec0::/10 — site-local, deprecated (first hextet 0xFEC0..0xFEFF)
+  def private?({s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8})
+      when band(s1, 0xFFC0) == 0xFEC0,
+      do: true
+
   # fc00::/7 — unique local (first hextet 0xFC00..0xFDFF)
   def private?({s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8})
       when band(s1, 0xFE00) == 0xFC00,
+      do: true
+
+  # ff00::/8 — multicast (first hextet 0xFF00..0xFFFF)
+  def private?({s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8})
+      when band(s1, 0xFF00) == 0xFF00,
       do: true
 
   def private?(_other), do: false
@@ -60,9 +87,13 @@ defmodule Tymeslot.Security.PrivateIPv6 do
   their 4-element clauses silently never match.
   """
   @spec unmap(:inet.ip_address()) :: :inet.ip_address()
-  def unmap({0, 0, 0, 0, 0, 0xFFFF, hi, lo}) do
+  def unmap({0, 0, 0, 0, 0, 0xFFFF, hi, lo}), do: decode_ipv4(hi, lo)
+  def unmap(address), do: address
+
+  # Splits the two trailing 16-bit hextets of an IPv4-embedded IPv6 address
+  # (mapped, compatible, or NAT64) into the equivalent 4-element IPv4 tuple.
+  @spec decode_ipv4(0..0xFFFF, 0..0xFFFF) :: :inet.ip4_address()
+  defp decode_ipv4(hi, lo) do
     {bsr(hi, 8), band(hi, 0xFF), bsr(lo, 8), band(lo, 0xFF)}
   end
-
-  def unmap(address), do: address
 end

@@ -13,6 +13,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
   alias Ecto.UUID
   alias Tymeslot.Meetings
   alias Tymeslot.TestMocks
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.MeetingTestHelpers
 
   setup :verify_on_exit!
@@ -28,7 +29,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
 
   describe "when creating appointment with video room" do
     test "meeting is created even when video integration is configured" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
 
       vi =
         insert(:video_integration,
@@ -59,7 +60,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
     end
 
     test "meeting without video integration still creates successfully" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_always_bookable_profile()
 
       meeting_params = build_meeting_params(user, %{date: Date.add(Date.utc_today(), 7)})
       form_data = build_form_data()

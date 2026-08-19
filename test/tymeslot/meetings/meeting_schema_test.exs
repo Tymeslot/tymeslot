@@ -104,21 +104,6 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
       changeset = Meeting.changeset(%Meeting{}, attrs)
       assert changeset.changes.duration == 90
     end
-
-    test "determines if meeting is currently happening" do
-      now = DateTime.utc_now()
-      start_time = DateTime.add(now, -30, :minute)
-      end_time = DateTime.add(now, 30, :minute)
-
-      meeting = %Meeting{start_time: start_time, end_time: end_time}
-      assert Meeting.current?(meeting)
-    end
-
-    test "determines if meeting is in the future" do
-      future_time = DateTime.add(DateTime.utc_now(), 1, :hour)
-      meeting = %Meeting{start_time: future_time}
-      assert Meeting.future?(meeting)
-    end
   end
 
   describe "status enum" do

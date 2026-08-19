@@ -81,12 +81,12 @@ defmodule Tymeslot.Auth.Authentication do
     cond do
       user.provider not in [nil, "email"] ->
         log_auth_attempt(user, :oauth_user, opts)
-        RateLimiter.record_auth_attempt(user.email, false)
+        record_auth_attempt(user, false, opts)
         {:error, :oauth_user, ErrorFormatter.format_auth_error(:oauth_user)}
 
       user.verified_at == nil ->
         log_auth_attempt(user, :email_not_verified, opts)
-        RateLimiter.record_auth_attempt(user.email, false)
+        record_auth_attempt(user, false, opts)
         {:error, :email_not_verified, ErrorFormatter.format_auth_error(:email_not_verified)}
 
       verify_password(user, password) ->
@@ -96,13 +96,42 @@ defmodule Tymeslot.Auth.Authentication do
           method: "password"
         })
 
-        RateLimiter.record_auth_attempt(user.email, true)
+        record_auth_attempt(user, true, opts)
         {:ok, user, dgettext("auth", "Login successful.")}
 
       true ->
         log_auth_attempt(user, :invalid_password, opts)
-        RateLimiter.record_auth_attempt(user.email, false)
+        record_auth_attempt(user, false, opts)
         {:error, :invalid_password, ErrorFormatter.format_auth_error(:invalid_password)}
+    end
+  end
+
+  # Records the attempt against the account lockout tracker and audits the
+  # moment the account crosses a lockout threshold.
+  #
+  # `check_auth_rate_limit/2` runs *before* this, as a read-only pre-check
+  # (`AccountLockout.check_lockout_status/1`) that returns an error without
+  # recording anything once the failure count reaches the throttle threshold
+  # (10 in the last hour). Because that pre-check short-circuits
+  # `authenticate_with_password/3` before this function can record another
+  # failure, the count freezes at the throttle threshold under sequential
+  # brute force: the lock threshold (20) is never reached via this path, so
+  # only `:account_throttled` fires here in practice. The 1-hour sliding
+  # window in `AccountLockout.check_lockout_status/1` also means the audit
+  # entry recurs roughly hourly as old attempts age out and throttling
+  # re-triggers, rather than firing once.
+  defp record_auth_attempt(user, success, opts) do
+    case RateLimiter.record_auth_attempt(user.email, success) do
+      {:error, lockout_type, _message}
+      when lockout_type in [:account_locked, :account_throttled] ->
+        SecurityLogger.log_account_lockout(user.email, to_string(lockout_type), %{
+          user_id: user.id,
+          ip_address: opts[:ip_address],
+          user_agent: opts[:user_agent]
+        })
+
+      _other ->
+        :ok
     end
   end
 

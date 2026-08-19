@@ -22,13 +22,13 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Profiles
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
@@ -50,8 +50,10 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
     end)
 
     user = insert(:user, email: "host@example.com", name: "Host")
-    {:ok, profile} = Profiles.get_or_create_profile(user.id)
-    {:ok, _profile} = Profiles.update_profile(profile, %{timezone: "Europe/Berlin"})
+    profile = insert(:profile, user: user, timezone: "Europe/Berlin")
+    # Paid-booking flow is the subject here, so the host offers every hour of
+    # every day and the schedule never refuses the bookings these tests make.
+    _schedule = open_schedule_for(profile)
 
     insert(:connect_account,
       user: user,

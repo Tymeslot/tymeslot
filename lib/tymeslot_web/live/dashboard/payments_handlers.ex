@@ -6,8 +6,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsHandlers do
   Stripe Express onboarding flow (`?return=1`/`?refresh=1`, carried across from
   the legacy `/dashboard/payments` route), this enqueues a one-shot Stripe
   resync so capability flags refresh without waiting on the next
-  `account.updated` webhook. Access to the payments tab itself is gated by the
-  hub (`payments_allowed`), so no feature check is needed here.
+  `account.updated` webhook. It runs on every `:integrations` render,
+  regardless of `Tymeslot.Features.meeting_payments_allowed?/1` (the hub's own
+  mount-time gate, read as `payments_allowed`): no feature check is needed
+  here because the lookup is scoped to the caller's own account and only acts
+  when a genuine return marker is present, so a host without payments access
+  simply has no connect account to find.
   """
 
   import Phoenix.LiveView, only: [connected?: 1]

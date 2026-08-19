@@ -126,7 +126,10 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
          |> where([w], w.id == ^id)
          |> select([w], w)
          |> Repo.update_all(
-           set: [last_status: "failed: #{reason}"],
+           set: [
+             last_status: "failed: #{reason}",
+             last_triggered_at: DateTime.utc_now(:second)
+           ],
            inc: [failure_count: 1]
          ) do
       {0, []} ->
@@ -205,17 +208,6 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
     %WebhookDeliverySchema{}
     |> WebhookDeliverySchema.changeset(attrs)
     |> Repo.insert()
-  end
-
-  @doc """
-  Updates a webhook delivery log entry.
-  """
-  @spec update_delivery(WebhookDeliverySchema.t(), map()) ::
-          {:ok, WebhookDeliverySchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_delivery(%WebhookDeliverySchema{} = delivery, attrs) do
-    delivery
-    |> WebhookDeliverySchema.changeset(attrs)
-    |> Repo.update()
   end
 
   @doc """

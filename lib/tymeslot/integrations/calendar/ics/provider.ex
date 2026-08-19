@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   one place this provider deliberately departs from every other one, and it is
   worth being explicit about why.
 
-  The availability path (`Runtime.EventQueries.fetch_events_from_providers/3`)
+  The availability path (`Runtime.EventFetcher.fetch_events_from_providers/3`)
   fans out over every client a user has and fails closed if any of them fails:
   one unreadable calendar means no slots are offered at all. A published feed
   has no date-range parameter, so serving that path from the network would

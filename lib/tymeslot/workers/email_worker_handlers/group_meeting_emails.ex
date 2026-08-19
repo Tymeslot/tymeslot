@@ -18,9 +18,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   free; a failed organiser send retries the whole dispatch, which is safe
   because re-enqueuing an already-unique per-seat job is a no-op.
 
+  It also owns the seat lifecycle itself — the confirmation, cancellation and
+  reschedule emails for one booker's own seat, as opposed to that booker's
+  copy of a whole-meeting event.
+
   Split out of `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, which
   still owns the solo-meeting paths and the meeting-level bookkeeping
-  (`process_email_results/4`) shared by both.
+  (`process_email_results/4`).
   """
 
   require Logger
@@ -29,11 +33,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.Recipient
+  alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @doc """
   One live participant's copy of a whole-meeting cancellation. Dispatched by
@@ -299,12 +305,21 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   # reminder email"). Mirrors `MeetingEmails.with_meeting/3`, scoped to the
   # per-seat jobs dispatched from this module.
   defp with_meeting_and_participant(meeting_id, participant_id, action, fun) do
+    with_meeting(meeting_id, action, fn meeting ->
+      case ParticipantQueries.get(participant_id) do
+        {:ok, participant} -> fun.(meeting, participant)
+        {:error, :not_found} -> {:discard, "Participant not found"}
+      end
+    end)
+  end
+
+  # The meeting-only half of the same contract, for the seat handlers that
+  # resolve their participant themselves (through `Meetings.recipients/1`, or
+  # by id because the seat is already cancelled).
+  defp with_meeting(meeting_id, action, fun) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        case ParticipantQueries.get(participant_id) do
-          {:ok, participant} -> fun.(meeting, participant)
-          {:error, :not_found} -> {:discard, "Participant not found"}
-        end
+        fun.(meeting)
 
       {:error, :not_found} ->
         Logger.warning("Attempted to send email for non-existent meeting",
@@ -314,5 +329,170 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
 
         {:discard, "Meeting not found"}
     end
+  end
+
+  @spec handle_seat_confirmation_emails(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_confirmation_emails(%{
+        "meeting_id" => meeting_id,
+        "participant_id" => participant_id
+      }) do
+    with_meeting(meeting_id, "seat confirmation emails", fn meeting ->
+      case find_live_recipient(meeting, participant_id) do
+        nil -> {:discard, "Participant not found or cancelled"}
+        recipient -> send_seat_confirmation_emails(meeting, recipient)
+      end
+    end)
+  end
+
+  @spec handle_seat_cancellation_emails(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_cancellation_emails(
+        %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
+      ) do
+    with_meeting(meeting_id, "seat cancellation emails", fn meeting ->
+      case ParticipantQueries.get(participant_id) do
+        {:ok, participant} ->
+          notify_organizer? = Map.get(args, "notify_organizer", true)
+          send_seat_cancellation_emails(meeting, participant, notify_organizer?)
+
+        {:error, :not_found} ->
+          {:discard, "Participant not found"}
+      end
+    end)
+  end
+
+  @spec handle_seat_reschedule_emails(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_reschedule_emails(
+        %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
+      ) do
+    with_meeting(meeting_id, "seat reschedule emails", fn meeting ->
+      with {:ok, participant} <- ParticipantQueries.get(participant_id),
+           {:ok, old_event} <- parse_old_event(args) do
+        send_seat_reschedule_emails(meeting, participant, old_event)
+      else
+        {:error, :not_found} -> {:discard, "Participant not found"}
+        {:error, :invalid_snapshot} -> {:discard, "Invalid old-event snapshot"}
+      end
+    end)
+  end
+
+  defp find_live_recipient(meeting, participant_id) do
+    meeting
+    |> Meetings.recipients()
+    |> Enum.find(&(&1.participant_id == participant_id))
+  end
+
+  # One participant's confirmation plus the organiser's per-seat notification.
+  # Idempotency is job-level (no sent flags on participants): a full failure
+  # retries, a partial failure discards so the retry cannot duplicate the
+  # email that already went out — mirroring the cancellation-email semantics.
+  defp send_seat_confirmation_emails(meeting, recipient) do
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
+    email_service = Config.email_service_module()
+
+    organizer_result =
+      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
+
+    attendee_result =
+      email_service.send_appointment_confirmation_to_attendee(recipient.email, details)
+
+    send_participant_guest_confirmations(meeting, recipient, details, email_service)
+
+    DeliveryOutcome.from_dual_send(
+      "seat confirmation",
+      [meeting_id: meeting.id, participant_id: recipient.participant_id],
+      organizer_result,
+      attendee_result
+    )
+  end
+
+  # The cancelled participant is looked up by id, not through `recipients/1`,
+  # precisely because they are no longer live. The attendee email is the
+  # existing `AppointmentCancellation` template, whose cancel ICS already
+  # bumps `ical_sequence + 1` on the meeting UID, removing the event from
+  # that participant's calendar copy only.
+  defp send_seat_cancellation_emails(meeting, participant, notify_organizer?) do
+    recipient = Recipient.from_participant(participant)
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
+    email_service = Config.email_service_module()
+
+    attendee_result =
+      email_service.send_cancellation_email_to_attendee(recipient.email, details)
+
+    organizer_result =
+      if notify_organizer? do
+        email_service.send_cancellation_email_to_organizer(details.organizer_email, details)
+      else
+        {:ok, :skipped}
+      end
+
+    DeliveryOutcome.from_dual_send(
+      "seat cancellation",
+      [meeting_id: meeting.id, participant_id: participant.id],
+      organizer_result,
+      attendee_result
+    )
+  end
+
+  defp parse_old_event(%{
+         "old_uid" => uid,
+         "old_ical_sequence" => sequence,
+         "old_start_time" => start_iso,
+         "old_end_time" => end_iso
+       })
+       when is_binary(uid) and is_integer(sequence) do
+    with {:ok, start_time, _offset} <- DateTime.from_iso8601(start_iso),
+         {:ok, end_time, _offset} <- DateTime.from_iso8601(end_iso) do
+      {:ok, %{uid: uid, ical_sequence: sequence, start_time: start_time, end_time: end_time}}
+    else
+      _invalid -> {:error, :invalid_snapshot}
+    end
+  end
+
+  defp parse_old_event(_args), do: {:error, :invalid_snapshot}
+
+  defp send_seat_reschedule_emails(meeting, participant, old_event) do
+    recipient = Recipient.from_participant(participant)
+    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
+    email_service = Config.email_service_module()
+
+    attendee_result =
+      email_service.send_seat_reschedule_to_participant(recipient.email, details, old_event)
+
+    organizer_result =
+      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
+
+    DeliveryOutcome.from_dual_send(
+      "seat reschedule",
+      [meeting_id: meeting.id, participant_id: participant.id],
+      organizer_result,
+      attendee_result
+    )
+  end
+
+  # Same mechanics as `MeetingEmails` uses for a solo booking, scoped to one
+  # participant's
+  # guests. Guests are stamped after a successful send so Oban retries only
+  # re-attempt unsent guests.
+  defp send_participant_guest_confirmations(meeting, recipient, details, email_service) do
+    recipient.participant_id
+    |> GuestQueries.list_unsent_for_participant()
+    |> Enum.each(fn guest ->
+      guest_details = AppointmentBuilder.put_guest(details, guest)
+
+      case email_service.send_guest_confirmation(guest.email, guest_details) do
+        {:ok, _result} ->
+          GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+
+        other ->
+          Logger.error("Guest confirmation email failed",
+            meeting_id: meeting.id,
+            guest_email: guest.email,
+            result: inspect(other)
+          )
+      end
+    end)
   end
 end

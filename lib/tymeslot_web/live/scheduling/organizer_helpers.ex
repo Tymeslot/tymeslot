@@ -125,42 +125,11 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   end
 
   @doc """
-  Returns a CSS class if the field has errors.
-  """
-  @spec field_error_class(Phoenix.HTML.Form.t(), atom()) :: String.t()
-  def field_error_class(form, field) do
-    if Enum.any?(get_field_errors(form, field)), do: "error", else: ""
-  end
-
-  @doc """
-  Gets error messages for a specific field from the form.
-  """
-  @spec get_field_errors(Phoenix.HTML.Form.t(), atom()) :: [String.t()]
-  def get_field_errors(form, field) do
-    case form[field] do
-      %{errors: errors} when is_list(errors) ->
-        Enum.map(errors, fn {msg, _opts} -> msg end)
-
-      _other ->
-        []
-    end
-  end
-
-  @doc """
   Marks a form field as touched.
   """
   @spec mark_field_touched(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
   def mark_field_touched(socket, field_name) do
     assign(socket, :touched_fields, MapSet.put(socket.assigns.touched_fields, field_name))
-  end
-
-  @doc """
-  Gets client IP address for rate limiting.
-  Delegates to the unified ClientIP module.
-  """
-  @spec get_client_ip(Phoenix.LiveView.Socket.t()) :: String.t()
-  def get_client_ip(socket) do
-    ClientIP.get(socket)
   end
 
   @doc """

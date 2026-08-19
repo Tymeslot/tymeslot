@@ -32,7 +32,7 @@ defmodule Tymeslot.Webhooks.InputValidation do
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
   @spec validate_webhook_form(map(), keyword()) ::
-          {:ok, map()} | {:error, map()}
+          {:ok, map()} | {:error, map() | :rate_limited}
   def validate_webhook_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
@@ -44,52 +44,12 @@ defmodule Tymeslot.Webhooks.InputValidation do
           |> handle_webhook_validation_result()
         end
 
-      {:error, :rate_limited} ->
-        {:error, %{form: "Too many requests. Please slow down."}}
-    end
-  end
-
-  @doc """
-  Validates a webhook name update.
-  """
-  @spec validate_name_update(String.t(), keyword()) ::
-          {:ok, String.t()} | {:error, String.t()}
-  def validate_name_update(name, opts \\ []) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case check_rate_limit("webhook_name", metadata) do
-      :ok ->
-        case sanitize_text_value(name, metadata) do
-          {:ok, sanitized_name} ->
-            %{"name" => sanitized_name}
-            |> perform_name_update_validation()
-            |> handle_name_update_result()
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-
-      {:error, :rate_limited} ->
-        {:error, "Too many requests. Please slow down."}
-    end
-  end
-
-  @doc """
-  Validates a webhook URL update.
-  """
-  @spec validate_url_update(String.t(), keyword()) ::
-          {:ok, String.t()} | {:error, String.t()}
-  def validate_url_update(url, opts \\ []) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case check_rate_limit("webhook_url", metadata) do
-      :ok ->
-        %{"url" => url}
-        |> perform_url_update_validation()
-        |> handle_url_update_result()
-
-      {:error, :rate_limited} ->
-        {:error, "Too many requests. Please slow down."}
+      {:error, :rate_limited} = refusal ->
+        # Deliberately not a field error map: a throttled request is not a
+        # problem with any field, and the caller keyed it `:form`, which the
+        # blur handler looks past (deleting the field's real error) and the
+        # modal never renders. The web layer owns the copy.
+        refusal
     end
   end
 
@@ -115,33 +75,6 @@ defmodule Tymeslot.Webhooks.InputValidation do
     |> apply_action(:validate)
   end
 
-  defp handle_name_update_result({:ok, validated}), do: {:ok, validated.name}
-
-  defp handle_name_update_result({:error, changeset}),
-    do: {:error, get_first_error(changeset, :name)}
-
-  defp perform_name_update_validation(params) do
-    %__MODULE__{}
-    |> cast(params, [:name])
-    |> validate_required([:name])
-    |> validate_length(:name, Constraints.webhook_name_length_opts())
-    |> apply_action(:validate)
-  end
-
-  defp handle_url_update_result({:ok, validated}), do: {:ok, validated.url}
-
-  defp handle_url_update_result({:error, changeset}),
-    do: {:error, get_first_error(changeset, :url)}
-
-  defp perform_url_update_validation(params) do
-    %__MODULE__{}
-    |> cast(params, [:url])
-    |> validate_required([:url])
-    |> validate_length(:url, min: 1, max: Constraints.url_max_length())
-    |> validate_url_format()
-    |> apply_action(:validate)
-  end
-
   defp validate_url_format(changeset) do
     URLValidator.validate_url(changeset, :url,
       block_private_ips: not SsrfValidator.allow_private?(),
@@ -158,12 +91,28 @@ defmodule Tymeslot.Webhooks.InputValidation do
     end)
   end
 
-  defp check_rate_limit(bucket_key, _metadata) do
-    case RateLimiter.check_rate_limit(bucket_key, 60, 60_000) do
+  # `Tymeslot.Security.RateLimiter.Integrations` states the rule this used to
+  # break: never one instance-wide bucket, the actor is always required.
+  # A bare literal key gave every logged-in user of an instance the same 60/min
+  # budget, so one of them could refuse webhook edits for all the others.
+  defp check_rate_limit(bucket_key, metadata) do
+    case RateLimiter.check_rate_limit(actor_bucket(bucket_key, metadata), 60, 60_000) do
       :ok -> :ok
       {:error, _reason} -> {:error, :rate_limited}
     end
   end
+
+  defp actor_bucket(bucket_key, %{user_id: nil} = metadata),
+    do: actor_bucket(bucket_key, Map.delete(metadata, :user_id))
+
+  defp actor_bucket(bucket_key, %{user_id: user_id}), do: "#{bucket_key}:user:#{user_id}"
+
+  defp actor_bucket(bucket_key, %{ip: ip}) when is_binary(ip), do: "#{bucket_key}:ip:#{ip}"
+
+  # Still reachable: validate_webhook_form/2's `metadata` opt defaults to
+  # %{}, so a caller that omits it (every current one supplies it) falls
+  # through to a bare, instance-wide bucket rather than crashing.
+  defp actor_bucket(bucket_key, _metadata), do: bucket_key
 
   defp translate_errors(changeset) do
     Changeset.traverse_errors(changeset, fn {msg, opts} ->
@@ -175,21 +124,10 @@ defmodule Tymeslot.Webhooks.InputValidation do
     |> Map.new()
   end
 
-  defp get_first_error(changeset, field) do
-    case changeset.errors[field] do
-      {msg, opts} ->
-        Regex.replace(~r/%{(\w+)}/, msg, fn _arg1, key ->
-          opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-        end)
-
-      _other ->
-        "Invalid input"
-    end
-  end
-
   defp sanitize_text_fields(params, metadata) do
-    with {:ok, sanitized_name} <- sanitize_field_for_form(params["name"], :name, metadata) do
-      {:ok, Map.put(params, "name", sanitized_name)}
+    with {:ok, sanitized_name} <- sanitize_field_for_form(params["name"], :name, metadata),
+         {:ok, sanitized_url} <- sanitize_field_for_form(params["url"], :url, metadata) do
+      {:ok, params |> Map.put("name", sanitized_name) |> Map.put("url", sanitized_url)}
     end
   end
 
@@ -204,12 +142,4 @@ defmodule Tymeslot.Webhooks.InputValidation do
 
   defp sanitize_field_for_form(_value, field, _metadata),
     do: {:error, %{field => "must be a string"}}
-
-  defp sanitize_text_value(value, _metadata) when value in [nil, ""], do: {:ok, value}
-
-  defp sanitize_text_value(value, metadata) when is_binary(value) do
-    UniversalSanitizer.sanitize_and_validate(value, mode: :plain_text, metadata: metadata)
-  end
-
-  defp sanitize_text_value(_value, _metadata), do: {:error, "must be a string"}
 end

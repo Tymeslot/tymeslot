@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
 
   import Mox
   import Swoosh.TestAssertions
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
   alias Ecto.UUID
@@ -59,6 +60,9 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
     # Create test user with profile
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
     profile = insert(:profile, user: user, timezone: "America/New_York")
+    # Emails are the subject here, so the host offers every hour of every day
+    # and the schedule never refuses the bookings these tests make.
+    _schedule = open_schedule_for(profile)
 
     # Create an active meeting type
     meeting_type =
@@ -188,7 +192,13 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
         "meeting_id" => meeting.id
       })
 
-      # Note: We don't clear the mailbox explicitly - it's cleared between tests automatically
+      # The first run's emails land in this process, so they have to be taken
+      # out of the mailbox before the retry can be judged on its own. (They
+      # used to be invisible here: delivery ran inside the circuit breaker's
+      # process, so Swoosh's test adapter posted them there instead.)
+      assert_email_sent()
+      assert_email_sent()
+      refute_receive {:email, _further}, 0
 
       # Try to execute again (simulating a retry)
       perform_job(EmailWorker, %{
@@ -376,7 +386,8 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
           name: malicious_name
         )
 
-      _profile = insert(:profile, user: user, timezone: "America/New_York")
+      profile = insert(:profile, user: user, timezone: "America/New_York")
+      _schedule = open_schedule_for(profile)
 
       meeting_type =
         insert(:meeting_type,

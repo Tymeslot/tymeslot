@@ -311,6 +311,45 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
       refute meta.path =~ "user@gmail.com"
     end
 
+    test "redacts a Telegram bot token carried in the request path" do
+      LogCapture.attach()
+
+      Metrics.handle_http_event(
+        [:tymeslot, :http, :request],
+        %{duration: 100},
+        %{
+          method: "POST",
+          url:
+            "https://api.telegram.org/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage",
+          status_code: 403
+        },
+        nil
+      )
+
+      assert_receive {:captured_log, %{meta: %{status_code: 403} = meta}}
+      assert meta.path == "/:id/sendMessage"
+      refute meta.path =~ "AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"
+    end
+
+    test "redacts a Telegram bot token on a request slow enough to log" do
+      LogCapture.attach()
+
+      Metrics.handle_http_event(
+        [:tymeslot, :http, :request],
+        %{duration: 10_001},
+        %{
+          method: "POST",
+          url:
+            "https://api.telegram.org/bot987654321:BBGxrUdwDI2wHXKygTfpgTBt1L6QBMEtbx/setWebhook",
+          status_code: 0
+        },
+        nil
+      )
+
+      assert_receive {:captured_log, %{meta: meta}}
+      refute meta.path =~ "BBGxrUdwDI2wHXKygTfpgTBt1L6QBMEtbx"
+    end
+
     test "leaves an ordinary API path unredacted on a slow response" do
       LogCapture.attach()
 

@@ -212,19 +212,16 @@ msgstr ""
 msgid "Your day"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "in %{days}d"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "in %{hours}h"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "in %{minutes}m"

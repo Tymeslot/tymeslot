@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
 
   - `validate_form/2` - Validate booking form data
   - `sanitize_params/2` - Sanitize form parameters
-  - `assign_form_errors/2` - Assign validation errors to socket
   - `mark_field_touched/2` - Mark a field as touched for validation
   """
 
@@ -95,26 +94,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
 
     form = Component.to_form(sanitized_params)
     socket = assign(socket, :form, form)
-    {:ok, socket}
-  end
-
-  @doc """
-  Assigns validation errors to the socket.
-
-  This function takes a list of validation errors and assigns them to the socket
-  for display in the UI.
-
-  ## Examples
-
-      socket = FormValidationHandlerComponent.assign_form_errors(socket, [
-        {:name, "Name is required"},
-        {:email, "Invalid email format"}
-      ])
-  """
-  @spec assign_form_errors(Phoenix.LiveView.Socket.t(), map()) ::
-          {:ok, Phoenix.LiveView.Socket.t()}
-  def assign_form_errors(socket, errors) do
-    socket = OrganizerHelpers.assign_form_errors(socket, errors)
     {:ok, socket}
   end
 

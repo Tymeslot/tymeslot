@@ -33,6 +33,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerCompositionTest do
   alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
+  alias Tymeslot.Test.LogCapture
 
   setup do
     :meck.new(Client, [:passthrough])
@@ -202,6 +203,46 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerCompositionTest do
 
       # And no user was created as a side-effect.
       assert Repo.aggregate(Tymeslot.Auth.UserSchema, :count, :id) == 0
+    end
+
+    test "audits a social_auth_failure with error_reason \"registration_disabled\"" do
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+
+      on_exit(fn ->
+        if is_nil(original),
+          do: Application.delete_env(:tymeslot, :registration_enabled),
+          else: Application.put_env(:tymeslot, :registration_enabled, original)
+      end)
+
+      new_email = "unseen-#{System.unique_integer([:positive])}@example.com"
+
+      stub_client_success(:github, %{
+        "id" => "unseen-#{System.unique_integer([:positive])}",
+        "email" => new_email,
+        "name" => "Should Be Rejected"
+      })
+
+      {conn, state} = conn_with_fresh_state()
+
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:error, :registration_disabled, :github, _conn} =
+                 FlowHandler.handle_oauth_callback(conn, %{
+                   code: "valid-code",
+                   state: state,
+                   provider: :github
+                 })
+      end)
+
+      assert [event] =
+               LogCapture.drain()
+               |> Enum.map(&LogCapture.user_metadata/1)
+               |> Enum.filter(
+                 &(&1[:event_type] in ["social_auth_success", "social_auth_failure"])
+               )
+
+      assert event.event_type == "social_auth_failure"
+      assert event.provider == "github"
     end
   end
 

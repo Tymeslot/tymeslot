@@ -27,8 +27,12 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   import Tymeslot.Factory
 
   alias Ecto.UUID
+  alias Oban.Job
+  alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.TelegramWorker
   alias Tymeslot.Workers.WebhookWorker
 
@@ -74,8 +78,22 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     profile = insert(:profile, user: user, timezone: "Europe/Berlin")
 
     # The booking policy lives on the schedule now, not the profile; these tests
-    # only need one to exist so the reschedule resolves a policy at all.
-    insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+    # only need one to exist so the reschedule resolves a policy at all. It
+    # must offer every hour of every day: reschedule now refuses a time the
+    # organiser's schedule doesn't offer, and these tests pick
+    # `future_datetime/2`, an arbitrary time of day.
+    schedule =
+      insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
+
+    for day_of_week <- 1..7 do
+      {:ok, _day} =
+        WeeklySchedule.create_day_availability(schedule.id, day_of_week, %{
+          is_available: true,
+          start_time: ~T[00:00:00],
+          end_time: ~T[23:59:00]
+        })
+    end
+
     insert(:webhook, user: user, events: ["meeting.rescheduled"])
     insert(:telegram_integration, user: user, events: ["meeting.rescheduled"])
 
@@ -139,6 +157,32 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     end
   end
 
+  describe "execute/4 re-arms a reminder that already fired" do
+    test "schedules a fresh reminder for the new time, even though the previous reminder already completed",
+         %{user: user, meeting: meeting} do
+      assert :ok = Orchestrator.schedule_reminder_notifications(meeting)
+
+      assert [%{id: reminder_job_id}] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_reminder_emails"})
+
+      # Simulate the reminder having already fired, as it will have for any
+      # reschedule that happens after the original reminder's send time.
+      {1, nil} =
+        Repo.update_all(from(j in Job, where: j.id == ^reminder_job_id),
+          set: [state: "completed", completed_at: DateTime.utc_now()]
+        )
+
+      new_params = reschedule_params_for(future_datetime(11, :day))
+      assert {:ok, updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+
+      assert [%{scheduled_at: new_scheduled_at, state: "scheduled"} = new_job] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_reminder_emails"})
+
+      refute new_job.id == reminder_job_id
+      assert DateTime.compare(new_scheduled_at, updated.start_time) == :lt
+    end
+  end
+
   describe "execute/4 when the email send fails" do
     setup do
       Application.put_env(:tymeslot, :email_service_module, RaisingEmailService)
@@ -196,8 +240,19 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     )
   end
 
+  # Floored to the half hour: the open schedule's slots are generated in
+  # 30-minute steps from local midnight, so an unaligned current-time
+  # minute/second would land between slots and the reschedule's own
+  # schedule check (`Bookings.ScheduleCheck`) would refuse it.
   defp future_datetime(amount, unit) do
-    DateTime.utc_now() |> DateTime.add(amount, unit) |> DateTime.truncate(:second)
+    DateTime.utc_now()
+    |> DateTime.add(amount, unit)
+    |> DateTime.truncate(:second)
+    |> floor_to_half_hour()
+  end
+
+  defp floor_to_half_hour(%DateTime{minute: minute} = dt) do
+    %{dt | minute: minute - rem(minute, 30), second: 0, microsecond: {0, 0}}
   end
 
   defp reschedule_params_for(%DateTime{} = target_utc) do

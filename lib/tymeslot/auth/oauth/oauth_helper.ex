@@ -63,10 +63,6 @@ defmodule Tymeslot.Auth.OAuth.Helper do
   @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def get_callback_url(provider), do: URLs.callback_path(provider)
 
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def get_full_callback_url_from_conn(conn, relative_path),
-    do: URLs.callback_url(conn, relative_path)
-
   # --- Flow Handling ---
 
   @impl Tymeslot.Auth.OAuth.HelperBehaviour

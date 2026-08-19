@@ -45,6 +45,28 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
         args: %{"type" => "calendar", "integration_id" => integration.id}
       )
     end
+
+    test "returns {:error, :duplicate_account} when reactivating would collide with an active integration" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        provider_account_id: "acct-1",
+        is_active: true
+      )
+
+      dormant =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          provider_account_id: "acct-1",
+          is_active: false
+        )
+
+      assert {:error, :duplicate_account} =
+               CalendarManagement.toggle_calendar_integration(dormant)
+    end
   end
 
   # ---------------------------------------------------------------------------

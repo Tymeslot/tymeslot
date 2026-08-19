@@ -88,16 +88,4 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
     </div>
     """
   end
-
-  @spec form_label(map()) :: Phoenix.LiveView.Rendered.t()
-  def form_label(assigns) do
-    ~H"""
-    <label
-      for={@for}
-      class="label"
-    >
-      {@text}
-    </label>
-    """
-  end
 end

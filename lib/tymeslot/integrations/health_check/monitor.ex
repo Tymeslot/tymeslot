@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
+  alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
 
   @failure_threshold 3
@@ -82,12 +83,14 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   @doc """
   Persists the health state for an integration to the database.
-  Updates the existing record (created by get_state/get_or_init).
+  Updates the existing record (created by get_state/get_or_init) through a
+  validated changeset, so a status outside `HealthStatus.values/0` is
+  rejected rather than silently written.
   """
   @spec put_state(integration_type(), integer(), health_state()) :: {non_neg_integer(), nil}
   def put_state(type, integration_id, health_state) do
     attrs = to_db_attrs(health_state)
-    IntegrationHealthStateQueries.update_fields(type, integration_id, Map.to_list(attrs))
+    IntegrationHealthStateQueries.update_validated(type, integration_id, attrs)
   end
 
   @doc """
@@ -308,7 +311,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   defp to_db_attrs(health_state) do
     base = %{
-      status: Atom.to_string(health_state.status),
+      status: HealthStatus.to_db_value(health_state.status),
       failures: health_state.failures,
       consecutive_hard_failures: health_state.consecutive_hard_failures,
       successes: health_state.successes,
@@ -326,11 +329,20 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     end
   end
 
-  @valid_statuses ~w(healthy degraded unhealthy)a
-  @statuses_by_name Map.new(@valid_statuses, &{Atom.to_string(&1), &1})
+  # The canonical status set lives in `HealthCheck.HealthStatus`. Every write
+  # now goes through a validated changeset (`IntegrationHealthStateQueries.
+  # update_validated/3`), so a row with a status outside that set means the
+  # invariant broke upstream; raise rather than quietly degrading it.
+  defp safe_to_status(str) when is_binary(str) do
+    case HealthStatus.parse(str) do
+      {:ok, status} ->
+        status
 
-  defp safe_to_status(str) when is_binary(str),
-    do: Map.get(@statuses_by_name, str, :degraded)
+      :error ->
+        raise ArgumentError,
+              "unrecognised integration health status in database: #{inspect(str)}"
+    end
+  end
 
   @valid_error_classes ~w(transient hard)a
   @error_classes_by_name Map.new(@valid_error_classes, &{Atom.to_string(&1), &1})

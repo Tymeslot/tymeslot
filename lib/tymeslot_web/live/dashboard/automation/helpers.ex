@@ -53,6 +53,12 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
           field_atom = String.to_existing_atom(field)
           Map.delete(current_errors, field_atom)
 
+        # A throttled blur says nothing about the field, so leave whatever the
+        # last real validation concluded standing. Clearing it here rendered a
+        # genuinely invalid field clean.
+        {:error, :rate_limited} ->
+          current_errors
+
         {:error, errors} ->
           field_atom = String.to_existing_atom(field)
           field_error = Map.get(errors, field_atom)

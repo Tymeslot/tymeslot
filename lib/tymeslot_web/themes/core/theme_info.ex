@@ -121,17 +121,6 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
   end
 
   @doc """
-  Gets the state machine definition for a theme.
-  """
-  @spec get_states(term()) :: map()
-  def get_states(id) do
-    case get_theme_module(id) do
-      nil -> %{}
-      module -> module.states()
-    end
-  end
-
-  @doc """
   Gets the components map for a theme.
   """
   @spec get_components(term()) :: map()
@@ -149,17 +138,6 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
   @spec get_live_view_module(term()) :: module() | nil
   def get_live_view_module(id) do
     Loader.get_live_view_module(to_string(id))
-  end
-
-  @doc """
-  Gets the initial state for a live_action in a specific theme.
-  """
-  @spec get_initial_state(term(), atom()) :: term()
-  def get_initial_state(id, live_action) do
-    case get_theme_module(id) do
-      nil -> nil
-      module -> module.initial_state_for_action(live_action)
-    end
   end
 
   @doc """

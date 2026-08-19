@@ -238,22 +238,6 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
-  Handles video room creation success event.
-  """
-  @spec video_room_created(term()) :: {:ok, term()} | {:error, term()}
-  def video_room_created(meeting) do
-    Orchestrator.handle_video_room_notifications(meeting, :created)
-  end
-
-  @doc """
-  Handles video room creation failure event.
-  """
-  @spec video_room_failed(term()) :: {:ok, term()} | {:error, term()}
-  def video_room_failed(meeting) do
-    Orchestrator.handle_video_room_notifications(meeting, :failed)
-  end
-
-  @doc """
   Handles meeting reminder trigger event.
   """
   @spec reminder_triggered(term()) :: {:ok, atom()}
@@ -261,26 +245,6 @@ defmodule Tymeslot.Notifications.Events do
     # This would be called by the reminder job
     # The actual email sending is handled by the EmailWorker
     {:ok, :reminder_processed}
-  end
-
-  @doc """
-  Handles meeting status change event.
-  """
-  @spec meeting_status_changed(term(), String.t(), String.t()) ::
-          {:ok, atom()} | {:ok, term()} | {:error, term()}
-  def meeting_status_changed(meeting, old_status, new_status) do
-    case {old_status, new_status} do
-      {_old, "cancelled"} ->
-        meeting_cancelled(meeting)
-
-      {_old, "completed"} ->
-        # No notifications needed for completed meetings
-        {:ok, :no_notifications}
-
-      _status_change ->
-        # Other status changes might need notifications in the future
-        {:ok, :no_notifications}
-    end
   end
 
   @doc """
@@ -297,12 +261,6 @@ defmodule Tymeslot.Notifications.Events do
 
       :meeting_rescheduled ->
         meeting.status == "confirmed"
-
-      :video_room_created ->
-        meeting.video_room_enabled == true
-
-      :video_room_failed ->
-        meeting.video_room_enabled == false
 
       :reminder_triggered ->
         meeting.status == "confirmed" and

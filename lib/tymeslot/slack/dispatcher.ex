@@ -10,6 +10,7 @@ defmodule Tymeslot.Slack.Dispatcher do
   require Logger
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Slack
 
   @spec dispatch(atom() | String.t(), MeetingSchema.t()) :: :ok | {:error, term()}
@@ -39,8 +40,5 @@ defmodule Tymeslot.Slack.Dispatcher do
   end
 
   @spec atom_to_event_type(atom()) :: String.t()
-  def atom_to_event_type(:meeting_created), do: "meeting.created"
-  def atom_to_event_type(:meeting_cancelled), do: "meeting.cancelled"
-  def atom_to_event_type(:meeting_rescheduled), do: "meeting.rescheduled"
-  def atom_to_event_type(atom), do: to_string(atom)
+  defdelegate atom_to_event_type(event_atom), to: EventTypes, as: :to_event_type
 end

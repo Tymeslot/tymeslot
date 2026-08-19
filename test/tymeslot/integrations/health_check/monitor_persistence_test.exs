@@ -97,20 +97,23 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
   end
 
   describe "from_db_record/1" do
-    test "handles unexpected status string without crashing" do
+    test "raises on an unrecognised status instead of silently degrading it" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
       {:ok, _record} =
         IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
 
+      # `update_fields/3` bypasses the schema's validated changeset, so it is
+      # the only way left to get an invalid status into the row for this test.
       {1, _nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
           status: "some_future_status"
         )
 
-      health = Monitor.get_state(:calendar, integration.id, user.id)
-      assert health.status == :degraded
+      assert_raise ArgumentError, ~r/unrecognised integration health status/, fn ->
+        Monitor.get_state(:calendar, integration.id, user.id)
+      end
     end
 
     test "handles unexpected last_error_class string without crashing" do

@@ -237,12 +237,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @spec caldav_based_providers() :: list(atom())
   def caldav_based_providers, do: @caldav_based_providers
 
-  @doc """
-  Returns feed-subscription providers.
-  """
-  @spec subscription_providers() :: list(atom())
-  def subscription_providers, do: @subscription_providers
-
   @subscription_provider_strings Enum.map(@subscription_providers, &Atom.to_string/1)
 
   @doc """

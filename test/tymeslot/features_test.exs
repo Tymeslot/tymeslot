@@ -53,6 +53,33 @@ defmodule Tymeslot.FeaturesTest do
     def check_access(_user_id, _feature), do: {:error, :db_timeout}
   end
 
+  defmodule StripeRequiredChecker do
+    @moduledoc false
+    @behaviour Tymeslot.Features.CheckerBehaviour
+
+    @impl Tymeslot.Features.CheckerBehaviour
+    @spec check_access(integer(), atom()) :: {:error, :stripe_required}
+    def check_access(_user_id, _feature), do: {:error, :stripe_required}
+  end
+
+  defmodule FeatureDisabledChecker do
+    @moduledoc false
+    @behaviour Tymeslot.Features.CheckerBehaviour
+
+    @impl Tymeslot.Features.CheckerBehaviour
+    @spec check_access(integer(), atom()) :: {:error, :feature_disabled}
+    def check_access(_user_id, _feature), do: {:error, :feature_disabled}
+  end
+
+  defmodule ProRequiredChecker do
+    @moduledoc false
+    @behaviour Tymeslot.Features.CheckerBehaviour
+
+    @impl Tymeslot.Features.CheckerBehaviour
+    @spec check_access(integer(), atom()) :: {:error, :pro_required}
+    def check_access(_user_id, _feature), do: {:error, :pro_required}
+  end
+
   defmodule BogusReturnChecker do
     @moduledoc false
     # Intentionally does not implement CheckerBehaviour — returns an
@@ -144,6 +171,59 @@ defmodule Tymeslot.FeaturesTest do
 
     test "returns the safe error for non-atom feature" do
       assert {:error, :feature_access_checker_failed} = Features.check_access(1, "any")
+    end
+  end
+
+  describe "meeting_payments_allowed?/1" do
+    # This is the single authority the dashboard init hook, the
+    # integrations hub, the payments controller and the meeting-type
+    # form all route through, so exercising every branch here covers
+    # all four call sites' behaviour through the gate.
+
+    test "allows when the checker returns :ok" do
+      with_config(:tymeslot, :feature_access_checker, OkChecker)
+
+      assert Features.meeting_payments_allowed?(42)
+    end
+
+    test "allows when the checker returns {:error, :stripe_required}" do
+      # The plan includes the feature; the host just hasn't connected a
+      # charges-enabled Stripe account yet. Settings must stay reachable
+      # so they can connect one — this is the deny-to-allow flip that
+      # makes this gate different from a plain :ok check.
+      with_config(:tymeslot, :feature_access_checker, StripeRequiredChecker)
+
+      assert Features.meeting_payments_allowed?(42)
+    end
+
+    test "denies when the checker returns {:error, :insufficient_plan}" do
+      with_config(:tymeslot, :feature_access_checker, InsufficientPlanChecker)
+
+      refute Features.meeting_payments_allowed?(42)
+    end
+
+    test "denies when the checker returns {:error, :feature_disabled}" do
+      with_config(:tymeslot, :feature_access_checker, FeatureDisabledChecker)
+
+      refute Features.meeting_payments_allowed?(42)
+    end
+
+    test "denies when the checker returns {:error, :pro_required}" do
+      with_config(:tymeslot, :feature_access_checker, ProRequiredChecker)
+
+      refute Features.meeting_payments_allowed?(42)
+    end
+
+    test "denies when the checker fails (generic error collapsed to :feature_access_checker_failed)" do
+      with_config(:tymeslot, :feature_access_checker, GenericErrorChecker)
+
+      refute Features.meeting_payments_allowed?(42)
+    end
+
+    test "denies when the checker raises" do
+      with_config(:tymeslot, :feature_access_checker, RaisingChecker)
+
+      refute Features.meeting_payments_allowed?(42)
     end
   end
 end

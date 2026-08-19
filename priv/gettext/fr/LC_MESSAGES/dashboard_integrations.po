@@ -193,7 +193,6 @@ msgstr "Connectez-en un pour que les réunions en ligne reçoivent automatiqueme
 msgid "Connected"
 msgstr "Connecté"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -486,11 +485,6 @@ msgstr "Tiret bas manquant : {{meeting_id}} et non {{meetingid}}"
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
 msgstr "Aucune URL configurée"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
-msgstr "Aucun calendrier sélectionné"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -869,11 +863,6 @@ msgstr "%{status} - nécessite votre attention"
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Réactivation impossible - une autre intégration active utilise déjà ce compte"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
-msgstr "Aucun calendrier sélectionné - rien ne sera synchronisé tant que vous n’en aurez pas choisi au moins un."
-
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} day"
@@ -993,11 +982,6 @@ msgstr "Échec de la validation de la connexion"
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Impossible d’identifier votre compte. Veuillez réessayer. Si le problème persiste, supprimez puis rajoutez l’intégration."
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
-#, elixir-autogen, elixir-format
-msgid "Could not resolve host: %{host}"
-msgstr "Impossible de résoudre l’hôte : %{host}"
-
 #: lib/tymeslot/integrations/shared/oauth/account_match.ex
 #, elixir-autogen, elixir-format
 msgid "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."
@@ -1059,7 +1043,6 @@ msgid "Invalid URL scheme. Only http and https are supported"
 msgstr "Schéma d’URL invalide. Seuls http et https sont pris en charge"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid hostname in URL"
 msgstr "Nom d’hôte invalide dans l’URL"
@@ -1264,3 +1247,8 @@ msgstr[1] "%{count} réservations à venir utilisent encore cette intégration. 
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr "Supprimer également leurs salles de réunion. Les participants qui possèdent déjà le lien de connexion ne pourront plus s’en servir."
+
+#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#, elixir-autogen, elixir-format
+msgid "URL redirects too many times"
+msgstr "L’URL effectue trop de redirections"

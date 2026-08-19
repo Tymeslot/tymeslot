@@ -298,18 +298,6 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def display_name(provider), do: Map.get(@display_names, provider, "Unknown Provider")
 
   @doc """
-  Returns the provider modules list (enabled only).
-
-  Used to compute the providers map for registries.
-  """
-  @spec provider_modules() :: [module()]
-  def provider_modules do
-    all_providers_with_dev()
-    |> Enum.map(&get_provider_module/1)
-    |> Enum.reject(&is_nil/1)
-  end
-
-  @doc """
   Gets the provider module for a given provider type.
   """
   @spec get_provider_module(atom()) :: module() | nil
@@ -335,19 +323,11 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   end
 
   @doc """
-  Returns provider strings for database constraint validation (enabled providers only).
-  """
-  @spec provider_constraint_list() :: list(String.t())
-  def provider_constraint_list do
-    Enum.map(all_providers_with_dev(), &Atom.to_string/1)
-  end
-
-  @doc """
   Returns provider strings for changeset inclusion validation on persisted rows.
 
-  Unlike `provider_constraint_list/0` this is toggle-agnostic: it always
-  returns all providers in `@providers`, ensuring that existing DB rows for
-  a now-disabled provider still pass changeset validation.
+  This is toggle-agnostic: it always returns all providers in `@providers`,
+  ensuring that existing DB rows for a now-disabled provider still pass
+  changeset validation.
   """
   @spec provider_constraint_list_all() :: list(String.t())
   def provider_constraint_list_all do

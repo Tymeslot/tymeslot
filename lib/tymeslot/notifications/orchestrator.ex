@@ -7,7 +7,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Meetings
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
@@ -44,11 +43,10 @@ defmodule Tymeslot.Notifications.Orchestrator do
   def schedule_confirmation_notifications(meeting) do
     recipients = Recipients.determine_recipients(meeting, :confirmation)
     content = ContentBuilder.build_appointment_details(meeting)
-    timing = SchedulingRules.confirmation_email_timing()
 
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content),
-         result <- schedule_email_job(:confirmation, meeting.id, content, timing) do
+         result <- schedule_email_job(:confirmation, meeting.id) do
       case result do
         :ok -> :ok
         {:ok, _result} -> :ok
@@ -80,11 +78,10 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
     recipients = Recipients.determine_recipients(meeting, :reminder)
     content = ContentBuilder.build_reminder_details(meeting)
-    timing = SchedulingRules.reminder_email_timing()
 
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content, Meetings.group?(meeting)) do
-      {result, scheduled_any?} = schedule_reminders(meeting, reminders, timing)
+      {result, scheduled_any?} = schedule_reminders(meeting, reminders)
 
       case {result, scheduled_any?} do
         {:ok, true} -> :ok
@@ -191,54 +188,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Handles video room notifications.
-  """
-  @spec handle_video_room_notifications(%{atom() => term()}, :created | :failed) ::
-          {:ok, atom()} | :ok | {:error, term()}
-  def handle_video_room_notifications(meeting, video_room_status) do
-    notification_type =
-      case video_room_status do
-        :created -> :video_room_created
-        :failed -> :video_room_failed
-      end
-
-    recipients = Recipients.determine_recipients(meeting, notification_type)
-    content = ContentBuilder.build_video_room_details(meeting, video_room_status)
-
-    with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content) do
-      case video_room_status do
-        :created ->
-          # Update existing confirmation emails with video room info
-          update_confirmation_notifications(meeting, content)
-
-        :failed ->
-          # Send fallback notification to organizer
-          send_immediate_notifications(:video_room_failed, content)
-      end
-    end
-  end
-
-  @doc """
-  Gets notification status for a meeting.
-  """
-  @spec get_notification_status(%{atom() => term()}) :: %{
-          required(:confirmation_sent) => boolean() | nil,
-          required(:reminder_scheduled) => boolean(),
-          required(:reminder_sent) => boolean() | nil,
-          required(:last_notification) => DateTime.t() | nil
-        }
-  def get_notification_status(meeting) do
-    %{
-      confirmation_sent: meeting.organizer_email_sent || meeting.attendee_email_sent,
-      # We don't track this in the schema
-      reminder_scheduled: false,
-      reminder_sent: meeting.reminder_email_sent,
-      last_notification: get_last_notification_time(meeting)
-    }
-  end
-
-  @doc """
   Schedules calendar invitation emails for a list of attendees.
 
   Enqueues one Oban job per attendee via EmailScheduler. Logs warnings for
@@ -335,8 +284,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   defp schedule_email_job(
          notification_type,
          meeting_id,
-         _content,
-         _timing,
          schedule_at \\ nil,
          reminder_value \\ nil,
          reminder_unit \\ nil
@@ -374,41 +321,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
             {:ok, :reschedules_partially_sent}
         end
-
-      :video_room_failed ->
-        # For now, just log this as we don't have this specific method yet
-        Logger.info("Video room failed notification", content: content)
-        {:ok, :video_room_notification_logged}
     end
-  end
-
-  defp update_confirmation_notifications(meeting, _content) do
-    # Update already-scheduled reminder emails with video room information
-    Logger.info("Updating scheduled notifications with video room info",
-      meeting_id: meeting.id
-    )
-
-    # Acknowledge pending reminder jobs (emails re-fetch meeting data at send time)
-    {:ok, count} = ObanJobQueries.update_pending_reminder_jobs(meeting)
-
-    if count > 0 do
-      Logger.info("Pending reminder jobs acknowledged",
-        meeting_id: meeting.id,
-        updated_count: count
-      )
-    else
-      Logger.info("No pending reminder jobs required updates",
-        meeting_id: meeting.id
-      )
-    end
-
-    {:ok, :confirmation_updated}
-  end
-
-  defp get_last_notification_time(meeting) do
-    # Since we don't have timestamp fields for when emails were sent,
-    # we'll just use updated_at as the last notification time
-    meeting.updated_at
   end
 
   # Module getters for dependency injection in tests
@@ -420,13 +333,13 @@ defmodule Tymeslot.Notifications.Orchestrator do
     ReminderUtils.normalize_reminders(reminders)
   end
 
-  defp schedule_reminders(meeting, reminders, timing) do
+  defp schedule_reminders(meeting, reminders) do
     results =
       Enum.map(reminders, fn %{value: value, unit: unit} ->
         if SchedulingRules.should_schedule_reminder?(meeting.start_time, value, unit) do
           schedule_at = SchedulingRules.calculate_reminder_time(meeting.start_time, value, unit)
 
-          case schedule_email_job(:reminder, meeting.id, %{}, timing, schedule_at, value, unit) do
+          case schedule_email_job(:reminder, meeting.id, schedule_at, value, unit) do
             :ok -> {:ok, true}
             {:ok, _result} -> {:ok, true}
             error -> {error, false}

@@ -55,7 +55,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       # The google_meet config has failure_threshold: 5
       for _i <- 1..5 do
         VideoCircuitBreaker.call(:google_meet, fn ->
-          {:error, :simulated_failure}
+          {:provider_error, :simulated_failure}
         end)
       end
 
@@ -141,7 +141,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       # Cause failures to open circuit (teams has threshold of 5)
       for _i <- 1..5 do
         VideoCircuitBreaker.call(:teams, fn ->
-          {:error, :simulated_failure}
+          {:provider_error, :simulated_failure}
         end)
       end
 
@@ -159,7 +159,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       # Open the circuit first
       for _i <- 1..5 do
         VideoCircuitBreaker.call(:mirotalk, fn ->
-          {:error, :failure}
+          {:provider_error, :failure}
         end)
       end
 
@@ -250,6 +250,18 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
         assert VideoCircuitBreaker.get_config(provider) == expected_config,
                "unexpected circuit breaker configuration for #{provider}"
       end
+    end
+  end
+
+  describe "max_recovery_seconds/0" do
+    test "returns the longest recovery_timeout across every provider, in seconds" do
+      longest_ms =
+        [:google_meet, :teams, :mirotalk, :zoom]
+        |> Enum.map(&VideoCircuitBreaker.get_config/1)
+        |> Enum.map(& &1.recovery_timeout)
+        |> Enum.max()
+
+      assert VideoCircuitBreaker.max_recovery_seconds() == div(longest_ms, 1_000)
     end
   end
 end

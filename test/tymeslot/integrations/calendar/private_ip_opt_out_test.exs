@@ -25,17 +25,17 @@ defmodule Tymeslot.Integrations.Calendar.PrivateIpOptOutTest do
   @private_url "http://127.0.0.1:5232"
   @public_url "https://caldav.example.com"
 
-  describe "SsrfGuard.allow_private?/0" do
+  describe "SsrfGuard.allow_private_for_calendar?/0" do
     test "defaults to false" do
       with_config(:tymeslot, :allow_private_ips_for_calendar, false)
 
-      refute SsrfGuard.allow_private?()
+      refute SsrfGuard.allow_private_for_calendar?()
     end
 
     test "reflects the operator opt-in" do
       with_config(:tymeslot, :allow_private_ips_for_calendar, true)
 
-      assert SsrfGuard.allow_private?()
+      assert SsrfGuard.allow_private_for_calendar?()
     end
   end
 

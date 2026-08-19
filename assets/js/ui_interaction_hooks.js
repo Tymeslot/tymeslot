@@ -1,19 +1,5 @@
 // UI interaction hooks for LiveView
-// Handles user interactions like confirmations, external links, and page reloads
-
-// Confirmation dialog hook
-export const ConfirmDelete = {
-  mounted() {
-    this.el.addEventListener('click', (e) => {
-      const message = this.el.dataset.confirm || 'Are you sure?';
-      if (!confirm(message)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
-  }
-};
-
+// Handles user interactions like external links and page reloads
 
 // Page reload hook
 export const PageReload = {

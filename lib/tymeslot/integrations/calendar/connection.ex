@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.Connection do
   @moduledoc """
-  Business logic for connection validation with timeout semantics and provider checks.
+  Business logic for connection validation and provider checks.
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -18,25 +18,6 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   @type user_id :: pos_integer()
 
   @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
-
-  @doc """
-  Validate an integration's connection with a timeout.
-  """
-  @spec validate(CalendarIntegrationSchema.t(), user_id(), keyword()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
-  def validate(integration, user_id, opts \\ []) do
-    timeout = Keyword.get(opts, :timeout, 10_000)
-
-    task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        validate_connection(integration, user_id)
-      end)
-
-    case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
-      {:ok, result} -> result
-      nil -> {:error, :timeout}
-    end
-  end
 
   @spec validate_connection(CalendarIntegrationSchema.t(), user_id()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, term()}

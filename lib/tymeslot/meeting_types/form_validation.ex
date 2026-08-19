@@ -103,16 +103,18 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
     end
   end
 
-  # `:stripe_required` is treated as allowed at this layer: the host has the
-  # plan but no charges-enabled Connect account yet. The schema changeset
-  # (driven by `FormMapper.payment_opts/1`'s `host_charges_enabled`) is the
-  # authority on whether a price may actually be persisted without a live
-  # account.
+  # Uses the shared boolean predicate for the yes/no decision (it already
+  # treats `:stripe_required` as allowed: the host has the plan but no
+  # charges-enabled Connect account yet, and the schema changeset, driven by
+  # `FormMapper.payment_opts/1`'s `host_charges_enabled`, is the authority on
+  # whether a price may actually be persisted without a live account). Falls
+  # back to the raw `check_access/2` reason only when denied, since callers
+  # render that reason into a specific message.
   defp gate_payment(user_id, %{payment_required: true}) do
-    case Features.check_access(user_id, :meeting_payments) do
-      :ok -> :ok
-      {:error, :stripe_required} -> :ok
-      {:error, _reason} = error -> error
+    if Features.meeting_payments_allowed?(user_id) do
+      :ok
+    else
+      Features.check_access(user_id, :meeting_payments)
     end
   end
 

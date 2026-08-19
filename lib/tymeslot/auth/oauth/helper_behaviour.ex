@@ -12,7 +12,6 @@ defmodule Tymeslot.Auth.OAuth.HelperBehaviour do
   @callback validate_state(Plug.Conn.t(), String.t() | nil) :: :ok | {:error, :invalid_state}
   @callback clear_oauth_state(Plug.Conn.t()) :: Plug.Conn.t()
   @callback get_callback_url(atom()) :: String.t()
-  @callback get_full_callback_url_from_conn(Plug.Conn.t(), String.t()) :: String.t()
 
   @type oauth_callback_params :: %{
           required(:code) => String.t(),

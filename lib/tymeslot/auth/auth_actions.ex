@@ -109,16 +109,19 @@ defmodule Tymeslot.Auth.AuthActions do
   """
   @spec reset_password(String.t(), String.t(), String.t(), term()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
-  def reset_password(token, password, password_confirmation, _socket) do
+  def reset_password(token, password, password_confirmation, socket) do
     if Config.password_auth_enabled?() do
-      do_reset_password(token, password, password_confirmation)
+      do_reset_password(token, password, password_confirmation,
+        ip: ClientIP.get(socket),
+        user_agent: ClientIP.get_user_agent(socket)
+      )
     else
       {:error, password_auth_disabled_message()}
     end
   end
 
-  defp do_reset_password(token, password, password_confirmation) do
-    case PasswordReset.reset_password(token, password, password_confirmation) do
+  defp do_reset_password(token, password, password_confirmation, opts) do
+    case PasswordReset.reset_password(token, password, password_confirmation, opts) do
       {:ok, _user, _message} ->
         {:ok, :password_reset_success,
          dgettext(
@@ -177,34 +180,6 @@ defmodule Tymeslot.Auth.AuthActions do
     do: {:error, %{base: [dgettext("auth", "Invalid input format")]}}
 
   # State Management
-
-  @doc """
-  Updates socket with loading state.
-  """
-  @spec set_loading(Phoenix.LiveView.Socket.t(), boolean()) :: Phoenix.LiveView.Socket.t()
-  def set_loading(socket, loading) do
-    assign(socket, :loading, loading)
-  end
-
-  @doc """
-  Updates socket with error state.
-  """
-  @spec set_errors(Phoenix.LiveView.Socket.t(), %{atom() => String.t()}) ::
-          Phoenix.LiveView.Socket.t()
-  def set_errors(socket, errors) do
-    socket
-    |> assign(:errors, errors)
-    |> assign(:loading, false)
-  end
-
-  @doc """
-  Updates socket with form data.
-  """
-  @spec set_form_data(Phoenix.LiveView.Socket.t(), %{String.t() => term()}) ::
-          Phoenix.LiveView.Socket.t()
-  def set_form_data(socket, form_data) do
-    assign(socket, :form_data, form_data)
-  end
 
   @doc """
   Transitions to a new authentication state.

@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Integrations.Video.RoomData
+  alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
 
   @capabilities Capabilities.new!(
@@ -113,12 +114,14 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     do: {:error, dgettext("dashboard_integrations", "Base URL is required")}
 
   defp validate_base_url(url) do
-    UrlValidation.validate_http_url(url, block_private_ips: true)
+    UrlValidation.validate_http_url(url,
+      block_private_ips: not SsrfGuard.allow_private_for_video?()
+    )
   end
 
   defp test_api_connection(base_url, api_key) do
     headers = build_api_headers(api_key)
-    options = [timeout: 5_000, ssrf_protect: true]
+    options = [timeout: 5_000] ++ HttpHelpers.ssrf_options()
 
     # Always try HTTPS first; if it fails due to network/connection, fall back to HTTP
     handle_api_response(
@@ -266,7 +269,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
     # Try HTTPS first, then HTTP
     case HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
-           Config.http_client_module().post(url, "", headers, ssrf_protect: true)
+           Config.http_client_module().post(url, "", headers, HttpHelpers.ssrf_options())
          end) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         case Jason.decode(body) do

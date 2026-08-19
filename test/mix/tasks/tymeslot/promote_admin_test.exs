@@ -39,5 +39,17 @@ defmodule Mix.Tasks.Tymeslot.PromoteAdminTest do
 
       assert Repo.reload!(user).is_admin
     end
+
+    test "reports a no-op, not a promotion, when the user is already an admin" do
+      admin = insert(:user, is_admin: true)
+
+      output =
+        capture_io(fn ->
+          PromoteAdmin.run([admin.email])
+        end)
+
+      assert output =~ "already an admin"
+      refute output =~ "Promoted"
+    end
   end
 end

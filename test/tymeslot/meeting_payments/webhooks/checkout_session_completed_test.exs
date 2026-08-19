@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
 
   describe "handle/1" do
@@ -99,6 +100,42 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
       assert :ok = CheckoutSessionCompleted.handle(event)
       assert_enqueued(worker: EmailWorker)
+    end
+
+    # The public booking page reads occupancy from the organiser's connected
+    # calendars, so without this write a paid booking blocks nothing and its
+    # slot keeps being offered — permanently, for a type with no video room.
+    test "schedules the calendar write that takes the booked slot off the page" do
+      user = insert(:user)
+
+      meeting =
+        insert(:meeting,
+          status: "awaiting_payment",
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: nil
+        )
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_CALENDAR"
+        )
+
+      event =
+        completed_event("evt_CALENDAR", %{
+          "id" => "cs_TEST_CALENDAR",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_CALENDAR"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      assert_enqueued(
+        worker: CalendarEventWorker,
+        args: %{"action" => "create", "meeting_id" => meeting.id}
+      )
     end
 
     test "broadcasts :paid via PubSub after a successful transition" do
@@ -232,6 +269,70 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert confirmed_meeting.status == "confirmed"
     end
 
+    test "skips confirmation when payment_status is not yet paid (async payment method)" do
+      meeting = insert(:meeting, status: "awaiting_payment")
+
+      bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_ASYNC"
+        )
+
+      event =
+        completed_event("evt_ASYNC", %{
+          "id" => "cs_TEST_ASYNC",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_ASYNC",
+          "payment_status" => "unpaid"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      assert Repo.reload!(bp).status == "pending"
+      {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded_meeting.status == "awaiting_payment"
+      refute_enqueued(worker: CalendarEventWorker)
+    end
+
+    test "rolls back and returns an error, instead of :ok, when the calendar enqueue fails" do
+      meeting = insert(:meeting, status: "awaiting_payment")
+
+      bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_ENQUEUE_FAIL"
+        )
+
+      event =
+        completed_event("evt_ENQUEUE_FAIL", %{
+          "id" => "cs_TEST_ENQUEUE_FAIL",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_ENQUEUE_FAIL"
+        })
+
+      :meck.new(Oban, [:passthrough])
+      :meck.expect(Oban, :insert, fn _job -> {:error, :queue_not_available} end)
+
+      try do
+        assert {:error, _reason} = CheckoutSessionCompleted.handle(event)
+      after
+        :meck.unload(Oban)
+      end
+
+      # The whole state transition rolled back with the failed enqueue — a
+      # Stripe redelivery or the reconciler sweep must still find work to do.
+      reloaded_bp = Repo.reload!(bp)
+      assert reloaded_bp.status == "pending"
+      assert is_nil(reloaded_bp.last_event_id)
+
+      {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded_meeting.status == "awaiting_payment"
+
+      refute_enqueued(worker: CalendarEventWorker)
+    end
+
     test "backfills stripe_charge_id from an atom-keyed payment intent (real adapter shape)" do
       meeting = insert(:meeting, status: "awaiting_payment")
 
@@ -271,7 +372,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       "id" => event_id,
       "type" => "checkout.session.completed",
       "created" => System.os_time(:second),
-      "data" => %{"object" => object}
+      "data" => %{"object" => Map.put_new(object, "payment_status", "paid")}
     }
   end
 end

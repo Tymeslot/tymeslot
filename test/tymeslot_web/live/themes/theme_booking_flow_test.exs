@@ -191,6 +191,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       profile = insert(:profile, user: user, booking_theme: "1", username: "past-fuzzer")
       _integration = insert(:calendar_integration, user: user, is_active: true)
 
+      # `/:username/:slug/book` resolves the slug into a meeting type, so the
+      # deep link needs one to reach the booking form at all.
+      insert(:meeting_type, user: user, name: "30 Minutes", duration_minutes: 30, is_active: true)
+
       # Date in the past
       past_date = Date.to_string(Date.add(Date.utc_today(), -1))
       time = "10:00 AM"
@@ -571,6 +575,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       user = insert(:user)
       profile = insert(:profile, user: user, booking_theme: "1", username: "race-condition")
       _integration = insert(:calendar_integration, user: user, is_active: true)
+
+      insert(:meeting_type, user: user, name: "30 Minutes", duration_minutes: 30, is_active: true)
 
       date = Date.to_string(next_business_day(Date.utc_today()))
       time = "10:00 AM"

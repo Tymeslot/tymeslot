@@ -10,14 +10,14 @@ defmodule Tymeslot.Polls.Confirm do
   subscribers are notified.
   """
 
-  require Logger
-
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries}
+  alias Tymeslot.Repo
 
   @available_responses [:yes, :if_need_be]
 
@@ -41,13 +41,56 @@ defmodule Tymeslot.Polls.Confirm do
   @spec confirm(Ecto.UUID.t(), Ecto.UUID.t(), integer()) ::
           {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, reason()}
   def confirm(poll_id, slot_id, user_id) do
-    with {:ok, poll} <- Polls.get_poll_for_host(poll_id, user_id),
+    case Repo.transaction(fn -> claim_and_mint(poll_id, slot_id, user_id) end) do
+      {:ok, meeting} ->
+        # Both effects belong after the commit: the cache must not be rebuilt
+        # from a meeting that is still uncommitted, and subscribers must not be
+        # told about a confirmation that could still roll back.
+        AvailabilityCache.invalidate_for_user(user_id)
+        Polls.broadcast_update(poll_id)
+        {:ok, meeting}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Everything that decides whether the poll may be confirmed, and everything
+  # that acts on that decision, commits as one transaction opened by a locking
+  # read. The meeting and the status flip therefore land together or not at
+  # all, so no crash, timeout or restart can strand a minted meeting against a
+  # poll that still reads as open.
+  defp claim_and_mint(poll_id, slot_id, user_id) do
+    with {:ok, poll} <- lock_poll(poll_id, user_id),
          :ok <- ensure_open(poll),
          {:ok, slot} <- resolve_slot(poll, slot_id),
          {:ok, primary} <- resolve_primary(poll, slot),
-         {:ok, meeting} <- create_meeting(poll, slot, primary) do
-      finalize(poll, meeting)
+         {:ok, meeting} <- create_meeting(poll, slot, primary),
+         {:ok, _poll} <-
+           PollQueries.update(PollSchema.confirm_changeset(poll, confirm_attrs(meeting))) do
+      PollScheduler.cancel_deadline_jobs(poll.id)
+      meeting
+    else
+      # Nothing here may query: a failing booking has already rolled back the
+      # transaction at its own level, which leaves the connection able to do
+      # nothing but roll back.
+      {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  defp lock_poll(poll_id, user_id) do
+    case PollQueries.lock_for_user(poll_id, user_id) do
+      nil -> {:error, :not_found}
+      poll -> {:ok, poll}
+    end
+  end
+
+  defp confirm_attrs(meeting) do
+    %{
+      status: :confirmed,
+      confirmed_meeting_id: meeting.id,
+      confirmed_at: DateTime.utc_now(:second)
+    }
   end
 
   defp ensure_open(%PollSchema{status: :open}), do: :ok
@@ -132,31 +175,4 @@ defmodule Tymeslot.Polls.Confirm do
   defp map_booking_result({:ok, meeting}), do: {:ok, meeting}
   defp map_booking_result({:error, :time_conflict}), do: {:error, :slot_taken}
   defp map_booking_result({:error, reason}), do: {:error, reason}
-
-  defp finalize(poll, meeting) do
-    attrs = %{
-      status: :confirmed,
-      confirmed_meeting_id: meeting.id,
-      confirmed_at: DateTime.utc_now(:second)
-    }
-
-    case PollQueries.update(PollSchema.confirm_changeset(poll, attrs)) do
-      {:ok, _poll} ->
-        PollScheduler.cancel_deadline_jobs(poll.id)
-        Polls.broadcast_update(poll.id)
-        {:ok, meeting}
-
-      {:error, changeset} ->
-        # Known rare partial-failure window: the meeting is already minted but
-        # the poll could not be flipped to :confirmed, leaving it open with an
-        # orphaned meeting. Full idempotent recovery is out of scope for v1; log
-        # both ids so an operator can reconcile manually.
-        Logger.error("Poll confirmed a meeting but failed to update poll status",
-          poll_id: poll.id,
-          meeting_id: meeting.id
-        )
-
-        {:error, changeset}
-    end
-  end
 end

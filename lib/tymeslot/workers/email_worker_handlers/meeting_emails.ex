@@ -6,69 +6,20 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   require Logger
 
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
-  alias Tymeslot.Meetings.ParticipantQueries
-  alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
   alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_confirmation_emails(%{"meeting_id" => meeting_id}) do
     with_meeting(meeting_id, "confirmation emails", &send_confirmation_emails/1)
-  end
-
-  @spec handle_seat_confirmation_emails(%{String.t() => term()}) ::
-          :ok | {:error, term()} | {:discard, String.t()}
-  def handle_seat_confirmation_emails(%{
-        "meeting_id" => meeting_id,
-        "participant_id" => participant_id
-      }) do
-    with_meeting(meeting_id, "seat confirmation emails", fn meeting ->
-      case find_live_recipient(meeting, participant_id) do
-        nil -> {:discard, "Participant not found or cancelled"}
-        recipient -> send_seat_confirmation_emails(meeting, recipient)
-      end
-    end)
-  end
-
-  @spec handle_seat_cancellation_emails(%{String.t() => term()}) ::
-          :ok | {:error, term()} | {:discard, String.t()}
-  def handle_seat_cancellation_emails(
-        %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
-      ) do
-    with_meeting(meeting_id, "seat cancellation emails", fn meeting ->
-      case ParticipantQueries.get(participant_id) do
-        {:ok, participant} ->
-          notify_organizer? = Map.get(args, "notify_organizer", true)
-          send_seat_cancellation_emails(meeting, participant, notify_organizer?)
-
-        {:error, :not_found} ->
-          {:discard, "Participant not found"}
-      end
-    end)
-  end
-
-  @spec handle_seat_reschedule_emails(%{String.t() => term()}) ::
-          :ok | {:error, term()} | {:discard, String.t()}
-  def handle_seat_reschedule_emails(
-        %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
-      ) do
-    with_meeting(meeting_id, "seat reschedule emails", fn meeting ->
-      with {:ok, participant} <- ParticipantQueries.get(participant_id),
-           {:ok, old_event} <- parse_old_event(args) do
-        send_seat_reschedule_emails(meeting, participant, old_event)
-      else
-        {:error, :not_found} -> {:discard, "Participant not found"}
-        {:error, :invalid_snapshot} -> {:discard, "Invalid old-event snapshot"}
-      end
-    end)
   end
 
   @spec handle_reminder_emails(%{String.t() => term()}) ::
@@ -188,155 +139,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     {organizer_result, attendee_result} =
       Config.email_service_module().send_cancellation_emails(appointment_details)
 
-    summarize_dual_send(
+    DeliveryOutcome.from_dual_send(
       "cancellation",
       [meeting_id: meeting.id],
       organizer_result,
       attendee_result
     )
-  end
-
-  defp find_live_recipient(meeting, participant_id) do
-    meeting
-    |> Meetings.recipients()
-    |> Enum.find(&(&1.participant_id == participant_id))
-  end
-
-  # One participant's confirmation plus the organiser's per-seat notification.
-  # Idempotency is job-level (no sent flags on participants): a full failure
-  # retries, a partial failure discards so the retry cannot duplicate the
-  # email that already went out — mirroring the cancellation-email semantics.
-  defp send_seat_confirmation_emails(meeting, recipient) do
-    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
-    email_service = Config.email_service_module()
-
-    organizer_result =
-      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
-
-    attendee_result =
-      email_service.send_appointment_confirmation_to_attendee(recipient.email, details)
-
-    send_participant_guest_confirmations(meeting, recipient, details, email_service)
-
-    summarize_dual_send(
-      "seat confirmation",
-      [meeting_id: meeting.id, participant_id: recipient.participant_id],
-      organizer_result,
-      attendee_result
-    )
-  end
-
-  # The cancelled participant is looked up by id, not through `recipients/1`,
-  # precisely because they are no longer live. The attendee email is the
-  # existing `AppointmentCancellation` template, whose cancel ICS already
-  # bumps `ical_sequence + 1` on the meeting UID, removing the event from
-  # that participant's calendar copy only.
-  defp send_seat_cancellation_emails(meeting, participant, notify_organizer?) do
-    recipient = Recipient.from_participant(participant)
-    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
-    email_service = Config.email_service_module()
-
-    attendee_result =
-      email_service.send_cancellation_email_to_attendee(recipient.email, details)
-
-    organizer_result =
-      if notify_organizer? do
-        email_service.send_cancellation_email_to_organizer(details.organizer_email, details)
-      else
-        {:ok, :skipped}
-      end
-
-    summarize_dual_send(
-      "seat cancellation",
-      [meeting_id: meeting.id, participant_id: participant.id],
-      organizer_result,
-      attendee_result
-    )
-  end
-
-  defp parse_old_event(%{
-         "old_uid" => uid,
-         "old_ical_sequence" => sequence,
-         "old_start_time" => start_iso,
-         "old_end_time" => end_iso
-       })
-       when is_binary(uid) and is_integer(sequence) do
-    with {:ok, start_time, _offset} <- DateTime.from_iso8601(start_iso),
-         {:ok, end_time, _offset} <- DateTime.from_iso8601(end_iso) do
-      {:ok, %{uid: uid, ical_sequence: sequence, start_time: start_time, end_time: end_time}}
-    else
-      _invalid -> {:error, :invalid_snapshot}
-    end
-  end
-
-  defp parse_old_event(_args), do: {:error, :invalid_snapshot}
-
-  defp send_seat_reschedule_emails(meeting, participant, old_event) do
-    recipient = Recipient.from_participant(participant)
-    details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
-    email_service = Config.email_service_module()
-
-    attendee_result =
-      email_service.send_seat_reschedule_to_participant(recipient.email, details, old_event)
-
-    organizer_result =
-      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
-
-    summarize_dual_send(
-      "seat reschedule",
-      [meeting_id: meeting.id, participant_id: participant.id],
-      organizer_result,
-      attendee_result
-    )
-  end
-
-  # :ok once both sides succeed, {:discard, _} on a partial send so a retry
-  # can't duplicate the email that already went out, {:error, _} if neither did.
-  defp summarize_dual_send(label, metadata, organizer_result, attendee_result) do
-    case {organizer_result, attendee_result} do
-      {{:ok, _organizer}, {:ok, _attendee}} ->
-        :ok
-
-      {organizer_result, attendee_result} ->
-        Logger.warning(
-          "Some emails may have failed",
-          metadata ++
-            [
-              label: label,
-              organizer_result: inspect(organizer_result),
-              attendee_result: inspect(attendee_result)
-            ]
-        )
-
-        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
-          {:discard, "Partial #{label} failure: retry would duplicate"}
-        else
-          {:error, "Failed to send #{label} emails"}
-        end
-    end
-  end
-
-  # Same mechanics as send_guest_confirmations/3, scoped to one participant's
-  # guests. Guests are stamped after a successful send so Oban retries only
-  # re-attempt unsent guests.
-  defp send_participant_guest_confirmations(meeting, recipient, details, email_service) do
-    recipient.participant_id
-    |> GuestQueries.list_unsent_for_participant()
-    |> Enum.each(fn guest ->
-      guest_details = guest_appointment_details(details, guest)
-
-      case email_service.send_guest_confirmation(guest.email, guest_details) do
-        {:ok, _result} ->
-          GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
-
-        other ->
-          Logger.error("Guest confirmation email failed",
-            meeting_id: meeting.id,
-            guest_email: guest.email,
-            result: inspect(other)
-          )
-      end
-    end)
   end
 
   defp send_confirmation_emails(meeting) do
@@ -424,7 +232,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     meeting.id
     |> GuestQueries.list_unsent_for_meeting()
     |> Enum.each(fn guest ->
-      details = guest_appointment_details(appointment_details, guest)
+      details = AppointmentBuilder.put_guest(appointment_details, guest)
 
       case email_service.send_guest_confirmation(guest.email, details) do
         {:ok, _result} ->
@@ -438,15 +246,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           )
       end
     end)
-  end
-
-  defp guest_appointment_details(appointment_details, guest) do
-    urls = Policy.guest_rsvp_urls(guest.rsvp_token)
-
-    appointment_details
-    |> Map.put(:guest_name, guest.name || guest.email)
-    |> Map.put(:guest_accept_url, urls.accept_url)
-    |> Map.put(:guest_decline_url, urls.decline_url)
   end
 
   # Group reminders are dispatched (one per-seat job per live participant,
@@ -493,21 +292,46 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
+  # Sends only to the recipient(s) not yet recorded as sent for this specific
+  # reminder config. A meeting can be re-enqueued after a partial send (e.g.
+  # the organizer succeeded and the attendee hit an open circuit breaker);
+  # without this, a retry would re-email the recipient who already got it.
   defp send_solo_reminder_emails(meeting, reminder_value, reminder_unit) do
+    status = reminder_sent_status(meeting, reminder_value, reminder_unit)
+    need_organizer? = !status.organizer
+    need_attendee? = !status.attendee
+
     appointment_details =
       AppointmentBuilder.from_meeting(meeting, %{value: reminder_value, unit: reminder_unit})
 
-    time_until = appointment_details.time_until
+    email_service = Config.email_service_module()
 
-    case Config.email_service_module().send_appointment_reminders(appointment_details, time_until) do
-      {organizer_result, attendee_result} ->
-        process_email_results(
-          meeting,
-          organizer_result,
-          attendee_result,
-          {:reminder, reminder_value, reminder_unit}
+    organizer_result =
+      if need_organizer? do
+        email_service.send_appointment_reminder_to_organizer(
+          appointment_details.organizer_email,
+          appointment_details
         )
-    end
+      else
+        {:ok, :skipped}
+      end
+
+    attendee_result =
+      if need_attendee? do
+        email_service.send_appointment_reminder_to_attendee(
+          appointment_details.attendee_email,
+          appointment_details
+        )
+      else
+        {:ok, :skipped}
+      end
+
+    process_email_results(
+      meeting,
+      organizer_result,
+      attendee_result,
+      {:reminder, reminder_value, reminder_unit}
+    )
   end
 
   defp send_reschedule_request_email(meeting) do
@@ -521,21 +345,35 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
-  # Confirmation flags are updated inline in send_confirmation_emails/1 as
-  # each email succeeds, so update_email_sent_flags/4 no-ops for it below.
+  # The per-recipient sent flags are recorded before the error is inspected,
+  # not after: a partial send (e.g. organizer succeeds, attendee hits an open
+  # circuit breaker) must be persisted even though the overall result is an
+  # error the worker will retry. Otherwise a retry re-sends to the recipient
+  # who already received it. Confirmation flags are the exception: they are
+  # updated inline in send_confirmation_emails/1 as each email succeeds, so
+  # update_email_sent_flags/4 no-ops for that type below.
   defp process_email_results(meeting, organizer_result, attendee_result, email_type) do
     organizer_success = match?({:ok, _result}, organizer_result)
     attendee_success = match?({:ok, _result}, attendee_result)
 
-    with nil <- check_email_errors(organizer_result, attendee_result),
-         :ok <- update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
-      log_email_results(meeting, email_type, organizer_success, attendee_success)
+    case update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
+      :ok ->
+        case check_email_errors(organizer_result, attendee_result) do
+          nil ->
+            log_email_results(meeting, email_type, organizer_success, attendee_success)
 
-      if email_success?(email_type, organizer_success, attendee_success) do
-        :ok
-      else
-        {:error, "Failed to send all emails"}
-      end
+            if email_success?(email_type, organizer_success, attendee_success) do
+              :ok
+            else
+              {:error, "Failed to send all emails"}
+            end
+
+          error ->
+            error
+        end
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -546,10 +384,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     do: organizer_success || attendee_success
 
   defp check_email_errors(organizer_result, attendee_result) do
+    results = [organizer_result, attendee_result]
+
     cond do
       match?({:error, :rate_limited}, organizer_result) or
           match?({:error, :rate_limited}, attendee_result) ->
         {:error, :rate_limited}
+
+      reason = DeliveryOutcome.actionable_reason(results) ->
+        {:error, reason}
 
       match?({:error, :invalid_email}, organizer_result) or
           match?({:error, :invalid_email}, attendee_result) ->
@@ -576,9 +419,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
          attendee_success
        ) do
     if organizer_success || attendee_success do
-      case MeetingQueries.append_reminder_sent(meeting, %{
+      case MeetingQueries.upsert_reminder_sent(meeting, %{
              value: reminder_value,
-             unit: reminder_unit
+             unit: reminder_unit,
+             organizer_sent: organizer_success,
+             attendee_sent: attendee_success
            }) do
         {:ok, _updated_meeting} ->
           :ok
@@ -627,17 +472,45 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp reminder_already_sent?(meeting, reminder_value, reminder_unit) do
+    status = reminder_sent_status(meeting, reminder_value, reminder_unit)
+    status.organizer and status.attendee
+  end
+
+  # Per-recipient delivery state for one reminder config. An entry with no
+  # matching `(value, unit)` means neither recipient has been sent to yet; an
+  # entry written before per-recipient tracking existed (no `organizer_sent`/
+  # `attendee_sent` keys) is treated as fully sent, since it predates this
+  # tracking and existing behaviour already skipped it entirely.
+  defp reminder_sent_status(meeting, reminder_value, reminder_unit) do
     reminder_value = ReminderUtils.parse_reminder_value(reminder_value)
     reminder_unit = ReminderUtils.normalize_reminder_unit(reminder_unit)
 
     meeting.reminders_sent
     |> List.wrap()
-    |> Enum.any?(fn reminder ->
+    |> Enum.find(fn reminder ->
       case reminder do
         %{"value" => value, "unit" => unit} -> value == reminder_value and unit == reminder_unit
         %{value: value, unit: unit} -> value == reminder_value and unit == reminder_unit
         _other -> false
       end
     end)
+    |> reminder_entry_status()
+  end
+
+  defp reminder_entry_status(nil), do: %{organizer: false, attendee: false}
+
+  defp reminder_entry_status(entry) do
+    %{
+      organizer: reminder_entry_flag(entry, "organizer_sent", :organizer_sent),
+      attendee: reminder_entry_flag(entry, "attendee_sent", :attendee_sent)
+    }
+  end
+
+  defp reminder_entry_flag(entry, string_key, atom_key) do
+    case entry do
+      %{^string_key => sent} when is_boolean(sent) -> sent
+      %{^atom_key => sent} when is_boolean(sent) -> sent
+      _other -> true
+    end
   end
 end

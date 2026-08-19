@@ -24,6 +24,7 @@ defmodule Tymeslot.Bookings.BookingZoomIntegrationTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
@@ -41,7 +42,10 @@ defmodule Tymeslot.Bookings.BookingZoomIntegrationTest do
     TestMocks.setup_calendar_mocks()
 
     user = insert(:user, email: "host@example.com", name: "Zoom Host")
-    _profile = insert(:profile, user: user, timezone: "America/New_York")
+    profile = insert(:profile, user: user, timezone: "America/New_York")
+    # Zoom integration is the subject here, so the host offers every hour of
+    # every day and the schedule never refuses the bookings these tests make.
+    _schedule = open_schedule_for(profile)
 
     zoom_integration =
       insert(:video_integration,

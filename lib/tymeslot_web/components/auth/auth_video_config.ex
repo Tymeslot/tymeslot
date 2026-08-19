@@ -13,8 +13,6 @@ defmodule TymeslotWeb.Components.Auth.AuthVideoConfig do
   @spec get_auth_video_config() :: %{
           required(:background_videos) => [map()],
           required(:poster) => String.t(),
-          required(:fallback_gradient) => String.t(),
-          required(:crossfade_enabled) => boolean(),
           required(:video_ids) => [String.t()]
         }
   def get_auth_video_config do
@@ -42,9 +40,6 @@ defmodule TymeslotWeb.Components.Auth.AuthVideoConfig do
         }
       ],
       poster: "/images/ui/posters/auth-background-poster.webp",
-      fallback_gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      # Auth flows support crossfading
-      crossfade_enabled: true,
       video_ids: ["auth-background-video-1", "auth-background-video-2"]
     }
   end
@@ -63,26 +58,6 @@ defmodule TymeslotWeb.Components.Auth.AuthVideoConfig do
   @spec auth_video_poster() :: String.t()
   def auth_video_poster do
     Map.get(get_auth_video_config(), :poster)
-  end
-
-  @doc """
-  Get fallback gradient for authentication flows.
-  """
-  @spec auth_fallback_gradient() :: String.t()
-  def auth_fallback_gradient do
-    Map.get(
-      get_auth_video_config(),
-      :fallback_gradient,
-      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-    )
-  end
-
-  @doc """
-  Check if authentication flows support crossfading videos.
-  """
-  @spec auth_crossfade_enabled?() :: boolean()
-  def auth_crossfade_enabled? do
-    Map.get(get_auth_video_config(), :crossfade_enabled, false)
   end
 
   @doc """

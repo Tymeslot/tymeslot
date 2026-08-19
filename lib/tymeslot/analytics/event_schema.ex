@@ -69,7 +69,4 @@ defmodule Tymeslot.Analytics.EventSchema do
     |> validate_length(:referrer_host, max: 255)
     |> TrackingParams.validate_tracking_params(:tracking_params)
   end
-
-  @spec valid_event_types() :: [String.t()]
-  def valid_event_types, do: @valid_event_types
 end

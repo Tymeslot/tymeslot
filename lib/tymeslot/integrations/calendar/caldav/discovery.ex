@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   defp url_validation_opts(opts) do
     base = [enforce_https_for_public: true, block_private_ips: true]
 
-    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private?())
+    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private_for_calendar?())
 
     if allow_private do
       Keyword.put(base, :block_private_ips, false)

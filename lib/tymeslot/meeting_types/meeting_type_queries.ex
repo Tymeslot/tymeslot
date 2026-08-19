@@ -225,51 +225,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Legacy function for individual meeting type creation.
-  Consider using bulk operations for better performance when creating multiple types.
-  Only creates types that don't already exist for the user.
-  """
-  @spec create_default_meeting_types_individual(integer()) ::
-          {:ok, [MeetingTypeSchema.t()]} | {:error, term()}
-  def create_default_meeting_types_individual(user_id) when is_integer(user_id) do
-    existing = existing_names(user_id)
-
-    default_types =
-      Enum.reject(
-        [
-          %{
-            user_id: user_id,
-            name: "15 Minutes",
-            description: "Quick chat or brief consultation",
-            duration_minutes: 15,
-            icon: "hero-bolt",
-            sort_order: 0,
-            allow_video: false,
-            reminder_config: [%{value: 30, unit: "minutes"}]
-          },
-          %{
-            user_id: user_id,
-            name: "30 Minutes",
-            description: "In-depth discussion or detailed review",
-            duration_minutes: 30,
-            icon: "hero-rocket-launch",
-            sort_order: 1,
-            allow_video: false,
-            reminder_config: [%{value: 30, unit: "minutes"}]
-          }
-        ],
-        fn type -> MapSet.member?(existing, type.name) end
-      )
-
-    handle_individual_defaults_creation(default_types)
-  end
-
-  @spec create_default_meeting_types_individual(term()) :: {:error, :invalid_user_id}
-  def create_default_meeting_types_individual(_invalid_user_id) do
-    {:error, :invalid_user_id}
-  end
-
-  @doc """
   Checks if a user has any meeting types.
   """
   @spec has_meeting_types?(integer()) :: boolean()
@@ -345,16 +300,5 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
         results
       end
     end)
-  end
-
-  defp handle_individual_defaults_creation([]), do: {:ok, []}
-
-  defp handle_individual_defaults_creation(types_to_create) when is_list(types_to_create) do
-    results = Enum.map(types_to_create, &create_meeting_type/1)
-
-    case Enum.find(results, fn {status, _value} -> status != :ok end) do
-      nil -> {:ok, Enum.map(results, fn {:ok, mt} -> mt end)}
-      _other -> {:error, :bulk_creation_failed}
-    end
   end
 end

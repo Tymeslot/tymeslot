@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload do
   `Tymeslot.Integrations.Video.Providers.ZoomProvider`.
   """
 
+  alias Tymeslot.Infrastructure.Logging.Redactor
+
   @doc """
   Resolves the `{start_time, end_time}` pair for the meeting from `config`.
 
@@ -67,7 +69,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload do
         {:error, "Zoom API error (#{status}): code #{code} - #{message}"}
 
       _other ->
-        {:error, "Zoom API error (#{status}): #{body}"}
+        # Undecodable body: still bounded and scrubbed before it reaches a log
+        # line, so a provider that answers with something unexpected cannot
+        # write an unbounded blob (or whatever it happens to contain) to disk.
+        {:error, "Zoom API error (#{status}): #{Redactor.redact_and_truncate(body)}"}
     end
   end
 

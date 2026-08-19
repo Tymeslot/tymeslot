@@ -109,13 +109,19 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   def reason_to_message(reason) do
     case reason do
       :no_username ->
-        "This scheduling page isn’t available yet. The organizer hasn’t set a username."
+        dgettext(
+          "booking",
+          "This scheduling page isn’t available yet. The organizer hasn’t set a username."
+        )
 
       :no_calendar ->
-        "This scheduling page isn't available right now. The organizer hasn't connected a calendar yet."
+        dgettext(
+          "booking",
+          "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
+        )
 
       _other_reason ->
-        "Complete setup to enable this feature"
+        dgettext("booking", "Complete setup to enable this feature")
     end
   end
 

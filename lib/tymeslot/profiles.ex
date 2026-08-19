@@ -291,7 +291,11 @@ defmodule Tymeslot.Profiles do
 
       {:ok, profile} ->
         %{
-          timezone: profile.timezone,
+          # A profile's timezone column is nullable, so fall back here as
+          # `get_user_timezone/1` does — the declared `timezone` type is
+          # non-nil, and every caller reads a usable zone rather than each
+          # remembering the fallback.
+          timezone: profile.timezone || get_default_timezone(),
           max_bookings_per_day: profile.max_bookings_per_day,
           max_bookings_per_week: profile.max_bookings_per_week,
           max_bookings_per_month: profile.max_bookings_per_month

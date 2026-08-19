@@ -30,7 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPICircuitBreakerTest do
 
       # Trip the Google circuit breaker (threshold is 5).
       Enum.each(1..5, fn _i ->
-        CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
+        CalendarCircuitBreaker.call(:google, fn -> {:provider_error, :api_failure} end)
       end)
 
       assert %{status: :open} = CalendarCircuitBreaker.status(:google)

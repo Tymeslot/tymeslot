@@ -1,4 +1,16 @@
 
+[1.11.1]
+* Let video integrations reach a server on a private network
+
+
+[1.11.0]
+* Keep the poll attendee stable when voters register together
+* Connect Nextcloud calendars on subdirectory installs
+* caldav: Stop Nextcloud discovery silently querying the DAV service root
+* Let admins set an email logo, brand name and accent colour
+* Add meeting polls for group scheduling
+
+
 [1.10.1]
 * Reject login redirect targets containing tab or newline characters
 

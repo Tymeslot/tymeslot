@@ -46,31 +46,6 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   end
 
   @doc """
-  Renders reCAPTCHA v3 fields and privacy notice if reCAPTCHA is active.
-
-  Includes:
-  - Hidden input field for the reCAPTCHA token
-  - Privacy notice with links to Google's Privacy Policy and Terms of Service
-
-  Only renders if reCAPTCHA is enabled and properly configured with keys.
-
-  ## Parameters
-
-    * `id_prefix` - Prefix for the field ID (e.g., "booking")
-    * `param_root` - Root parameter name (e.g., "booking")
-  """
-  attr :id_prefix, :string, required: true
-  attr :param_root, :string, required: true
-
-  @spec recaptcha_fields(map()) :: Phoenix.LiveView.Rendered.t()
-  def recaptcha_fields(assigns) do
-    ~H"""
-    <.recaptcha_token_field id_prefix={@id_prefix} param_root={@param_root} />
-    <.recaptcha_notice_block />
-    """
-  end
-
-  @doc """
   Renders only the hidden reCAPTCHA token input (no notice).
 
   Use this inside the booking `<.form>` when the privacy notice needs to be

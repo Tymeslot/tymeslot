@@ -75,32 +75,6 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   end
 
   @doc """
-  Logs rate limit exceeded events.
-
-  ## Parameters
-  - `operation`: The operation type being rate limited
-  - `identifier`: User identifier (email, user_id, etc.)
-  - `context`: Additional context map (optional)
-
-  ## Examples
-      log_rate_limit_exceeded("signup", "user@example.com")
-  """
-  @spec log_rate_limit_exceeded(String.t(), String.t() | integer(), logging_context()) :: :ok
-  def log_rate_limit_exceeded(operation, identifier, context \\ %{}) do
-    Logger.warning(
-      "Rate limit exceeded",
-      build_metadata(
-        [
-          {:operation, operation},
-          {:identifier, identifier},
-          {:event, "#{operation}_rate_limit_exceeded"}
-        ],
-        context
-      )
-    )
-  end
-
-  @doc """
   Logs validation failures.
 
   ## Parameters
@@ -181,32 +155,6 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
           {:event, "user_#{verification_type}_verified"}
         ],
         context
-      )
-    )
-  end
-
-  @doc """
-  Logs session creation events.
-
-  ## Parameters
-  - `user`: The user struct/map
-  - `session_info`: Session information (optional)
-  - `context`: Additional context map (optional)
-
-  ## Examples
-      log_session_created(%{id: 123, email: "user@example.com"})
-  """
-  @spec log_session_created(user_entity(), logging_context(), logging_context()) :: :ok
-  def log_session_created(user, session_info \\ %{}, context \\ %{}) do
-    Logger.info(
-      "Session created successfully",
-      build_metadata(
-        [
-          {:user_id, user.id},
-          {:email, user.email},
-          {:event, "session_created"}
-        ],
-        Map.merge(session_info, context)
       )
     )
   end

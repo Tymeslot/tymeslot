@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
@@ -38,6 +39,24 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @spec list_active_calendar_integrations(user_id()) :: [CalendarIntegrationSchema.t()]
   def list_active_calendar_integrations(user_id) do
     CalendarIntegrationQueries.list_active_for_user(user_id)
+  end
+
+  @doc """
+  The user's calendar display preferences. Returns the stored row if one
+  exists, otherwise an unsaved struct populated with defaults — callers that
+  need the defaults persisted must call `save_preferences/2` themselves.
+  """
+  @spec get_or_create_preferences(user_id()) :: struct()
+  def get_or_create_preferences(user_id) do
+    CalendarPreferencesQueries.get_or_create(user_id)
+  end
+
+  @doc """
+  Upserts the user's calendar display preferences.
+  """
+  @spec save_preferences(user_id(), map()) :: {:ok, struct()} | {:error, Ecto.Changeset.t()}
+  def save_preferences(user_id, attrs) do
+    CalendarPreferencesQueries.upsert(user_id, attrs)
   end
 
   @doc """
@@ -163,12 +182,16 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   the badge can't lie about an integration the user has just turned back on.
   """
   @spec toggle_calendar_integration(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | :duplicate_account}
   def toggle_calendar_integration(integration) do
     case CalendarIntegrationQueries.toggle_active(integration) do
       {:ok, %{is_active: true} = updated} = ok ->
         HealthCheck.mark_user_recovered(:calendar, updated.id)
         ok
+
+      :duplicate_account ->
+        {:error, :duplicate_account}
 
       result ->
         result
@@ -258,30 +281,6 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     case mark_needs_reauth(integration, message) do
       {:ok, _updated} -> {:discard, discard_reason}
       {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
-    end
-  end
-
-  @doc """
-  Fetches a calendar integration by ID, collapsing the
-  `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
-  after silently flagging the integration for reauthentication.
-
-  Use this in non-Oban callers that only care about the two-outcome
-  `{:ok, _} | {:error, :not_found}` shape.
-  """
-  @spec fetch_integration(integer()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
-  def fetch_integration(id) do
-    case CalendarIntegrationQueries.get(id) do
-      {:ok, integration} ->
-        {:ok, integration}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-
-      {:error, :requires_reencryption, stale} ->
-        flag_for_reauth(stale)
-        {:error, :not_found}
     end
   end
 

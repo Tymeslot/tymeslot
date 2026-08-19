@@ -190,17 +190,4 @@ defmodule Tymeslot.Availability.WeeklySchedule do
         end
     end
   end
-
-  @doc """
-  Gets available preset options.
-  """
-  @spec get_preset_options() :: list({String.t(), String.t()})
-  def get_preset_options do
-    [
-      {"9 AM - 5 PM", "9-5"},
-      {"8 AM - 6 PM", "8-6"},
-      {"10 AM - 6 PM", "10-6"},
-      {"Unavailable", "unavailable"}
-    ]
-  end
 end

@@ -38,24 +38,6 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   end
 
   @doc """
-  Renders a style tag with custom CSS.
-  """
-  attr :custom_css, :string, required: true
-
-  @spec render_custom_theme_styles(map()) :: Phoenix.LiveView.Rendered.t()
-  def render_custom_theme_styles(assigns) do
-    ~H"""
-    <%= if @custom_css && @custom_css != "" do %>
-      <style type="text/css">
-        :root {
-          <%= Phoenix.HTML.raw(@custom_css) %>
-        }
-      </style>
-    <% end %>
-    """
-  end
-
-  @doc """
   Gets the background style attribute for a customization.
   """
   @spec get_background_style(ThemeCustomizationSchema.t() | map() | nil) :: String.t()
