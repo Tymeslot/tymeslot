@@ -72,10 +72,17 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     end
   end
 
-  # No email is available in the CSRF-state and early-error branches; the
-  # masking helper drops a nil address cleanly. The OAuth code, state and
-  # client tokens are never recorded.
-  defp log_social_auth(provider, success, conn, details) do
+  @doc """
+  Records a social-auth audit entry via `SecurityLogger.log_social_auth_event/3`.
+
+  Shared by every OAuth entry point (callback flow here, and the
+  complete-registration controller) so the audit shape stays in one place.
+  No email is available in the CSRF-state and early-error branches; the
+  masking helper drops a nil address cleanly. The OAuth code, state and
+  client tokens are never recorded.
+  """
+  @spec log_social_auth(provider() | String.t(), boolean(), Plug.Conn.t(), map()) :: :ok
+  def log_social_auth(provider, success, conn, details) do
     SecurityLogger.log_social_auth_event(
       to_string(provider),
       success,
@@ -175,6 +182,11 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
           {:registration_required, conn, provider, build_registration_data(provider, user)}
       end
     else
+      log_social_auth(provider, false, conn, %{
+        email: Map.get(user, :email),
+        error_reason: "registration_disabled"
+      })
+
       {:error, :registration_disabled, provider, conn}
     end
   end
