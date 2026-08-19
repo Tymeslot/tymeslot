@@ -1,4 +1,8 @@
 
+[1.11.1]
+* Let video integrations reach a server on a private network
+
+
 [1.11.0]
 * Keep the poll attendee stable when voters register together
 * Connect Nextcloud calendars on subdirectory installs
