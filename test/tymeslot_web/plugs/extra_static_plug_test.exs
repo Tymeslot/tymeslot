@@ -124,10 +124,20 @@ defmodule TymeslotWeb.Plugs.ExtraStaticTest do
   end
 
   test "skips a source naming an absent application without crashing", %{conn: conn} do
+    absent = [at: "/", from: {:no_such_app_xyz, "priv/static"}, only: ["extra-fixture"]]
+
     setup_config(:tymeslot, :extra_static_sources, [
-      [at: "/", from: {:no_such_app_xyz, "priv/static"}, only: ["extra-fixture"]],
+      absent,
       [at: "/", from: @fixture_dir, only: ["extra-fixture"]]
     ])
+
+    # The plug memoises each source's built options in `:persistent_term`, keyed
+    # by the raw source term and never invalidated, so a source is validated
+    # (and its rejection logged) at most once per BEAM. Evict this one entry so
+    # the assertion below holds on a rerun within the same VM too. Erasing is a
+    # global GC, hence the guard: on a first run there is nothing to evict.
+    key = {TymeslotWeb.Plugs.ExtraStatic, absent}
+    if :persistent_term.get(key, nil), do: :persistent_term.erase(key)
 
     {conn, log} =
       with_log(fn -> get(conn, "/extra-fixture/hello.txt") end)
