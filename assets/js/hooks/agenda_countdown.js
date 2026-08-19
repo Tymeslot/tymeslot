@@ -5,31 +5,48 @@
  * the Join button as the appointment approaches — all client-side, so there are
  * no server round-trips just to tick a clock.
  *
+ * The band wording is never composed in JS: the server (see
+ * `TymeslotWeb.Dashboard.DashboardOverviewFormatters.countdown_templates/0`)
+ * renders each band's translated text with a `__N__` placeholder, and this
+ * hook only ever substitutes the live number into whichever template the
+ * server sent. That keeps the countdown's wording and band boundaries defined
+ * in exactly one place, in the user's locale, instead of duplicated in JS.
+ *
  * Attach to the countdown element. Required data attributes:
- *   data-start  — ISO-8601 start time of the appointment
- *   data-end    — ISO-8601 end time of the appointment
+ *   data-start        — ISO-8601 start time of the appointment
+ *   data-end          — ISO-8601 end time of the appointment
+ *   data-tpl-now      — translated text for "starting now"
+ *   data-tpl-minutes  — translated template, under an hour away
+ *   data-tpl-hours    — translated template, under a day away
+ *   data-tpl-days     — translated template, a day or more away
  *
  * Optional:
  *   data-join   — id of a Join element to reveal from T-10m until the end
  */
 const TICK_MS = 30_000;
 const JOIN_LEAD_MS = 10 * 60 * 1000;
+const PLACEHOLDER = "__N__";
 
-function relative(ms) {
-  if (ms <= 0) return "now";
-  const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `in ${Math.max(minutes, 1)}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    const rem = minutes % 60;
-    return rem ? `in ${hours}h ${rem}m` : `in ${hours}h`;
+function relative(ms, templates) {
+  if (ms <= 0) return templates.now;
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 3600) {
+    return templates.minutes.replace(PLACEHOLDER, Math.max(Math.floor(seconds / 60), 1));
   }
-  const days = Math.floor(hours / 24);
-  return `in ${days}d`;
+  if (seconds < 86_400) {
+    return templates.hours.replace(PLACEHOLDER, Math.floor(seconds / 3600));
+  }
+  return templates.days.replace(PLACEHOLDER, Math.floor(seconds / 86_400));
 }
 
 export const AgendaCountdown = {
   mounted() {
+    this._templates = {
+      now: this.el.dataset.tplNow,
+      minutes: this.el.dataset.tplMinutes,
+      hours: this.el.dataset.tplHours,
+      days: this.el.dataset.tplDays,
+    };
     this._render();
     this._timer = setInterval(() => this._render(), TICK_MS);
   },
@@ -48,7 +65,7 @@ export const AgendaCountdown = {
     const now = Date.now();
     const toStart = start - now;
 
-    this.el.textContent = relative(toStart);
+    this.el.textContent = relative(toStart, this._templates);
 
     const joinId = this.el.dataset.join;
     if (!joinId) return;

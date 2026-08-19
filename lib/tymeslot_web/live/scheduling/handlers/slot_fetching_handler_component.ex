@@ -21,8 +21,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
   - `fetch_available_slots/4` - Fetch available time slots for a given date
   - `maybe_reload_slots/1` - Conditionally reload slots if date is selected
-  - `handle_calendar_error/2` - Process calendar errors gracefully
+  - `load_slots/2` - Load slots for a specific date
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
 
@@ -87,7 +89,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
           socket
           |> assign(:available_slots, [])
           |> assign(:loading_slots, false)
-          |> assign(:calendar_error, "No timeslots available due to calendar parsing error")
+          |> assign(
+            :calendar_error,
+            dgettext("booking", "No timeslots available due to calendar parsing error")
+          )
 
         {:error, socket}
     end
@@ -124,35 +129,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
         {:ok, socket}
     end
-  end
-
-  @doc """
-  Handles calendar errors gracefully.
-
-  This function processes calendar errors and updates the socket state
-  with appropriate error messages and fallback states.
-
-  ## Examples
-
-      {:ok, socket} = SlotFetchingHandlerComponent.handle_calendar_error(socket, "Connection timeout")
-  """
-  @spec handle_calendar_error(Phoenix.LiveView.Socket.t(), String.t()) ::
-          {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_calendar_error(socket, reason) do
-    error_message =
-      case reason do
-        "timeout" -> "Calendar is temporarily unavailable. Please try again later."
-        "connection_error" -> "Unable to connect to calendar service."
-        _other -> "No timeslots available due to calendar parsing error"
-      end
-
-    socket =
-      socket
-      |> assign(:available_slots, [])
-      |> assign(:loading_slots, false)
-      |> assign(:calendar_error, error_message)
-
-    {:ok, socket}
   end
 
   @doc """

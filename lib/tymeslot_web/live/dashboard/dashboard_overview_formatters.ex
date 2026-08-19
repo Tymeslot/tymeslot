@@ -11,8 +11,13 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
+  # Stand-in substituted for the live value inside a translated template
+  # handed to the AgendaCountdown JS hook; see `countdown_templates/0`.
+  @placeholder "__N__"
+
   # Server-rendered starting text for the cockpit countdown; the AgendaCountdown
-  # JS hook replaces it live on mount and ticks it thereafter.
+  # JS hook re-ticks it client-side thereafter, filling `countdown_templates/0`
+  # rather than composing its own English strings.
   @spec relative_hint(Entry.t()) :: String.t()
   def relative_hint(entry) do
     diff = DateTime.diff(entry.start_at, DateTime.utc_now(), :second)
@@ -30,13 +35,40 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
   """
   @spec countdown(integer()) :: String.t()
   def countdown(seconds) when seconds < 3600,
-    do: dgettext("dashboard_home", "in %{minutes}m", minutes: max(div(seconds, 60), 1))
+    do: fill(minutes_template(), max(div(seconds, 60), 1))
 
   def countdown(seconds) when seconds < 86_400,
-    do: dgettext("dashboard_home", "in %{hours}h", hours: div(seconds, 3600))
+    do: fill(hours_template(), div(seconds, 3600))
 
   def countdown(seconds),
-    do: dgettext("dashboard_home", "in %{days}d", days: div(seconds, 86_400))
+    do: fill(days_template(), div(seconds, 86_400))
+
+  @doc """
+  Translated countdown templates for the `AgendaCountdown` JS hook, one per
+  band plus the "now" state, each still carrying `#{@placeholder}` where the
+  live value belongs. The hook fills the placeholder as it ticks so the band
+  boundaries and their wording live in exactly one place: here.
+  """
+  @spec countdown_templates() :: %{
+          now: String.t(),
+          minutes: String.t(),
+          hours: String.t(),
+          days: String.t()
+        }
+  def countdown_templates do
+    %{
+      now: dgettext("dashboard_home", "now"),
+      minutes: minutes_template(),
+      hours: hours_template(),
+      days: days_template()
+    }
+  end
+
+  defp minutes_template, do: dgettext("dashboard_home", "in %{minutes}m", minutes: @placeholder)
+  defp hours_template, do: dgettext("dashboard_home", "in %{hours}h", hours: @placeholder)
+  defp days_template, do: dgettext("dashboard_home", "in %{days}d", days: @placeholder)
+
+  defp fill(template, value), do: String.replace(template, @placeholder, Integer.to_string(value))
 
   @spec day_label(Entry.t(), String.t()) :: String.t()
   def day_label(entry, timezone) do

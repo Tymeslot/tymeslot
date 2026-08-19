@@ -410,16 +410,19 @@ msgstr "Tato funkce automatizace je k dispozici v tarifu Pro."
 msgid "Total"
 msgstr "Celkem"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Spustí se při změně času rezervace"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Spustí se po úspěšném vytvoření nové rezervace"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -576,3 +579,18 @@ msgstr "Historie doručení – %{name}"
 #, elixir-autogen, elixir-format
 msgid "Too many requests. Please slow down."
 msgstr "Příliš mnoho požadavků. Zpomalte prosím."
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled"
+msgstr "Schůzka byla zrušena"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Created"
+msgstr "Schůzka vytvořena"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled"
+msgstr "Schůzka přesunuta"

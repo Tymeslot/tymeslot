@@ -410,16 +410,19 @@ msgstr "Diese Automatisierungsfunktion ist im Pro-Tarif verfügbar."
 msgid "Total"
 msgstr "Gesamt"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Wird ausgelöst, wenn eine Buchungszeit geändert wird"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Wird ausgelöst, wenn eine neue Buchung erfolgreich erstellt wird"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -575,3 +578,18 @@ msgstr "Zustellverlauf - %{name}"
 #, elixir-autogen, elixir-format
 msgid "Too many requests. Please slow down."
 msgstr "Zu viele Anfragen. Bitte verlangsamen Sie."
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled"
+msgstr "Termin abgesagt"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Created"
+msgstr "Termin erstellt"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled"
+msgstr "Termin verschoben"
