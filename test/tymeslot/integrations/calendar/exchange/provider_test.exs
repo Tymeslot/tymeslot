@@ -3,9 +3,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
 
   @moduletag :integrations
 
+  import Mox
   import SweetXml, only: [sigil_x: 2]
 
   alias Tymeslot.ExchangeFixtures
+  alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
@@ -13,6 +15,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
+
+  setup :verify_on_exit!
 
   describe "provider identity" do
     test "declares its type, name and rate-limit bucket" do
@@ -248,6 +252,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       assert {:ok, [_interval]} = Provider.list_busy_intervals(config(), range())
     end
 
+    test "ignores a stored address that is blank and falls back to the username" do
+      # A cleared field arrives as `""`, not as nil: the column is written from
+      # a form. Addressing the operation to it asks the server about a mailbox
+      # named nothing, and the empty free/busy view that comes back reads as a
+      # mailbox with nothing in the diary.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+        assert body =~ "<t:Address>user@example.com</t:Address>"
+        respond(conn, ExchangeFixtures.availability_response())
+      end)
+
+      assert {:ok, [_interval]} =
+               Provider.list_busy_intervals(
+                 config(username: "user@example.com", provider_account_email: ""),
+                 range()
+               )
+    end
+
     test "refuses to read availability when no mailbox address can be resolved" do
       # `DOMAIN\samaccountname` is a valid on-premises login and not a mailbox
       # address. Sending it would fault, but the failure that matters is the
@@ -444,6 +466,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       assert second.calendar_id == "cal-3"
     end
 
+    test "drops a selected calendar the discovery named no folder id for" do
+      # A client carrying no folder id does not read nothing: `list_events/2`
+      # falls back to the mailbox's default calendar, so the window is synced
+      # twice under two different calendar ids and every meeting in it is
+      # duplicated in the grid. An empty id fares worse and faults the request.
+      integration =
+        integration(%{
+          calendar_list: [
+            %CalendarEntry{id: nil, name: "Unidentified", selected: true},
+            %CalendarEntry{id: "", name: "Also unidentified", selected: true},
+            %CalendarEntry{id: "cal-2", name: "Team", selected: true}
+          ]
+        })
+
+      assert [client] = Provider.build_client_configs(integration)
+      assert client.calendar_id == "cal-2"
+    end
+
     test "falls back to the mailbox's default calendar when nothing is selected" do
       assert [client] = Provider.build_client_configs(integration())
       assert client.calendar_id == :calendar
@@ -471,6 +511,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
 
       assert [client] = Provider.build_client_configs(integration())
       assert {:ok, []} = Provider.list_events(client, range())
+    end
+  end
+
+  describe "config from a persisted integration" do
+    test "carries the integration's opt-out of certificate verification to the transport" do
+      # `to_provider_config/1` is shaped for the CalDAV family and drops
+      # `verify_ssl`, so the merge in `to_config/1` is the only thing keeping
+      # it. Without it every on-premises server with a self-signed certificate
+      # fails its TLS handshake however the account owner set the option.
+      #
+      # Asserted at the HTTP-client boundary because Req.Test replaces the
+      # adapter, so no connect option ever reaches the stub plug.
+      with_config(:tymeslot, :http_client_module, HTTPClientMock)
+
+      expect(HTTPClientMock, :post, fn _url, _body, _headers, opts ->
+        assert opts[:connect_options] == [transport_opts: [verify: :verify_none]]
+
+        {:ok, %Req.Response{status: 200, body: ExchangeFixtures.find_folder_response()}}
+      end)
+
+      assert {:ok, [%CalendarEntry{id: "cal-1"}]} =
+               Provider.discover_calendars_for_integration(integration(%{verify_ssl: false}))
     end
   end
 
