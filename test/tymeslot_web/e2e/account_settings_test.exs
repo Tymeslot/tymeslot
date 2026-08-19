@@ -39,10 +39,20 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
       |> wait_for_live()
 
     # The new password is the one that now works.
+    session =
+      session
+      |> fill_in(text_field("email"), with: user.email)
+      |> fill_in(css("#password-input"), with: new_password)
+      |> click(css("button[type='submit']"))
+      |> wait_for_dashboard()
+
+    # Same screen at the narrowest supported viewport, reusing this session
+    # rather than paying for another login.
     session
-    |> fill_in(text_field("email"), with: user.email)
-    |> fill_in(css("#password-input"), with: new_password)
-    |> click(css("button[type='submit']"))
-    |> wait_for_dashboard()
+    |> resize_to_mobile()
+    |> visit("/dashboard/account")
+    |> wait_for_live()
+    |> assert_has(css("button[phx-click='toggle_password_form']"))
+    |> assert_no_horizontal_overflow("account settings at 320px")
   end
 end

@@ -64,6 +64,21 @@ defmodule TymeslotWeb.E2E.DashboardCalendarTest do
     |> assert_has(css("[data-event-id='#{event.id}']", text: "Renamed In Browser"))
   end
 
+  # The grid is the widest thing in the dashboard and demotes to a narrower view
+  # on small screens, so it is the most likely place for the shell to be pushed
+  # past the viewport.
+  feature "calendar grid fits the narrowest supported viewport", %{session: session} do
+    {session, user} = log_in_via_browser(session)
+    _integration = Factory.insert(:calendar_integration, user: user, is_active: true)
+
+    session
+    |> resize_to_mobile()
+    |> visit("/dashboard/calendar")
+    |> wait_for_live()
+    |> assert_has(css("[data-day-col]", count: :any, minimum: 1))
+    |> assert_no_horizontal_overflow("dashboard calendar at 320px")
+  end
+
   # Drag-to-create uses real mousedown/mousemove/mouseup events on an empty
   # day column. We dispatch synthetic MouseEvents via execute_script rather
   # than using Wallaby's cursor API because the CalendarCreate hook snaps
