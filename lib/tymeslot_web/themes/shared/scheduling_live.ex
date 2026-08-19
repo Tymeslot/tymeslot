@@ -157,6 +157,13 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         InfoHandlers.handle_payment_expired(socket, &transition_to/3)
       end
 
+      # Must stay last: a public page cannot afford to raise on a message it
+      # has no clause for. `handle_event/3` below already ends the same way.
+      @impl Phoenix.LiveView
+      def handle_info(message, socket) do
+        InfoHandlers.handle_unexpected(socket, message)
+      end
+
       @impl Phoenix.LiveView
       def handle_event("toggle_language_dropdown", _params, socket) do
         EventHandlers.handle_toggle_language_dropdown(socket)
@@ -484,7 +491,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # Override with multi-clause defp to handle custom schedule events.
       defp handle_theme_schedule_event(socket, _event, _data), do: {:noreply, socket}
 
-      defoverridable handle_theme_event: 3, handle_theme_schedule_event: 3
+      defoverridable handle_theme_event: 3, handle_theme_schedule_event: 3, handle_info: 2
     end
   end
 end

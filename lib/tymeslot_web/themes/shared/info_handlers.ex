@@ -178,4 +178,26 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
     {:noreply, transition_fun.(socket, :booking, %{})}
   end
+
+  @doc """
+  Ignores a message the scheduling LiveView has no clause for.
+
+  Without this the process raises, the theme error boundary catches it, and a
+  booker part-way through a booking is shown an error page over a message that
+  had nothing to do with them. The booking page is public and long-lived, so it
+  has to tolerate whatever reaches its mailbox: a late reply from a task whose
+  result is no longer wanted, or a library that posts to whichever process
+  called it.
+  """
+  @spec handle_unexpected(Phoenix.LiveView.Socket.t(), term()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_unexpected(socket, message) do
+    Logger.warning("Scheduling LiveView ignoring unexpected message",
+      message: inspect(message, limit: 50, printable_limit: 200),
+      current_state: socket.assigns[:current_state],
+      organizer_user_id: socket.assigns[:organizer_user_id]
+    )
+
+    {:noreply, socket}
+  end
 end

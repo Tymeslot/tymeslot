@@ -145,6 +145,39 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
       assert msg =~ "sub_abc123"
     end
+
+    test ":recipient_email_rejected includes the connect account identifier and reason" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced",
+          connect_account_id: 42
+        })
+
+      assert msg =~ "connect account 42"
+      assert msg =~ "bounced"
+    end
+
+    test ":recipient_email_rejected includes the booking payment identifier when no connect account is present" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced",
+          booking_payment_id: 7
+        })
+
+      assert msg =~ "booking payment 7"
+    end
+
+    test ":recipient_email_rejected falls back to summary and reason with no identifier" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced"
+        })
+
+      assert msg == "Recipient permanently undeliverable, email discarded: bounced"
+    end
   end
 
   describe "unhandled_crash" do
@@ -367,6 +400,66 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
     test "analytics_tracking_anomaly falls back to 'unknown' when :kind is absent" do
       key = AlertTypes.dedup_key(:analytics_tracking_anomaly, %{converting_visitors: 5})
       assert key == "analytics_tracking_anomaly:unknown"
+    end
+
+    # A rejected recipient's identity is the account it belongs to, not the
+    # rejection reason: two different hosts' bounces inside the same dedup
+    # window must raise two alerts, not collapse into one.
+    test "recipient_email_rejected differs across connect accounts" do
+      key_a =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          connect_account_id: 1
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          connect_account_id: 2
+        })
+
+      refute key_a == key_b
+    end
+
+    test "recipient_email_rejected is stable across differing reasons for the same connect account" do
+      key_a =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          connect_account_id: 1
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "mailbox full",
+          connect_account_id: 1
+        })
+
+      assert key_a == key_b
+      assert key_a =~ "recipient_email_rejected"
+      assert key_a =~ "1"
+    end
+
+    test "recipient_email_rejected differs across booking payments" do
+      key_a =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          booking_payment_id: 10
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          booking_payment_id: 20
+        })
+
+      refute key_a == key_b
+    end
+
+    test "recipient_email_rejected without an identifier falls back to the formatted message" do
+      metadata = %{summary: "Recipient permanently undeliverable", reason_message: "bounced"}
+
+      assert AlertTypes.dedup_key(:recipient_email_rejected, metadata) ==
+               AlertTypes.format_message(:recipient_email_rejected, metadata)
     end
   end
 end

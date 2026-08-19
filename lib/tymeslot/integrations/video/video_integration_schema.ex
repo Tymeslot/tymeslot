@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   Schema for video conferencing integrations (MiroTalk).
   """
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Integrations.Video.ProviderConfig
@@ -109,16 +110,61 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
       ProviderConfig.provider_constraint_list_all()
     )
     |> validate_provider_specific_fields()
+    |> clear_deleted_at_on_reactivation()
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
+    |> apply_active_uniqueness_constraints()
+  end
+
+  # `get_for_user/2` and `get/1` deliberately fetch soft-deleted rows (a
+  # reconnect reaches its row by id), so a reconnect that sets `is_active: true`
+  # via this changeset must also clear `deleted_at`. Otherwise the row lands in
+  # an impossible state: active yet marked deleted, which still sits inside the
+  # partial unique indexes below (they are not conditioned on `deleted_at`) and
+  # remains eligible for the disconnect worker's hard-delete sweep despite being
+  # back in use.
+  defp clear_deleted_at_on_reactivation(changeset) do
+    if get_change(changeset, :is_active) == true do
+      put_change(changeset, :deleted_at, nil)
+    else
+      changeset
+    end
+  end
+
+  # Shared by `changeset/2` and `activation_changeset/2`: both partial indexes
+  # are predicated on `is_active = true`, so any write that can set it true has
+  # to declare them or a genuine violation raises `Ecto.ConstraintError`
+  # instead of returning an invalid changeset the caller can render.
+  defp apply_active_uniqueness_constraints(changeset) do
+    changeset
     |> unique_constraint([:user_id, :provider, :provider_account_id],
       name: :unique_active_video_account_per_user,
-      message: "an integration for this account already exists"
+      # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
+      # through the "errors" domain at render time, so the changeset must
+      # carry the untranslated msgid — hence `dgettext_noop/2`, not
+      # `dgettext/2`, which would translate here and miss the lookup there.
+      message: dgettext_noop("errors", "an integration for this account already exists")
     )
     |> unique_constraint([:user_id, :provider],
       name: :unique_active_video_null_account_per_user,
-      message: "an integration for this provider already exists"
+      message: dgettext_noop("errors", "an integration for this provider already exists")
     )
+  end
+
+  @doc """
+  Changeset for flipping `is_active`.
+
+  Carries the same uniqueness declarations as the main changeset, because both
+  partial indexes are predicated on `is_active = true`: reactivating a row moves
+  it *into* the index and genuinely contends. A bare `Ecto.Changeset.change/2`
+  declares none of them, so a violation raises `Ecto.ConstraintError` instead of
+  returning an invalid changeset the caller can render.
+  """
+  @spec activation_changeset(t(), boolean()) :: Ecto.Changeset.t()
+  def activation_changeset(%__MODULE__{} = integration, is_active) do
+    integration
+    |> change(%{is_active: is_active})
+    |> apply_active_uniqueness_constraints()
   end
 
   @doc """

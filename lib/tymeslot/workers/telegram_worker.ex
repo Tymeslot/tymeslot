@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Meetings
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
@@ -161,11 +162,14 @@ defmodule Tymeslot.Workers.TelegramWorker do
         :ok
 
       {:ok, 401, _body} ->
-        auto_disable(integration, "Unauthorized (invalid bot token)")
-        {:discard, "Unauthorized"}
+        handle_unauthorized(integration, attempt)
 
-      {:ok, 400, body} ->
-        handle_400_error(integration, body, attempt)
+      # Telegram answers both "bot was blocked by the user" and "bot was kicked"
+      # with 403, deriving the body's `Forbidden:` prefix from that same code.
+      # 400 stays matched too: the description is the reliable signal, and an
+      # intermediary can rewrite the transport status.
+      {:ok, status, body} when status in [400, 403] ->
+        handle_rejection(integration, body, attempt)
 
       {:ok, 429, body} ->
         handle_rate_limit(body)
@@ -180,7 +184,48 @@ defmodule Tymeslot.Workers.TelegramWorker do
     end
   end
 
-  defp handle_400_error(integration, body, attempt) do
+  # A 401 means the bot token itself was rejected. In "own" mode that token
+  # belongs to this integration alone, so it is safe to treat as a permanent,
+  # per-integration failure. In "shared" mode the same token is used by every
+  # user on the deployment, so a 401 is the operator's shared credential
+  # having been rotated or revoked, not a fault of this integration: disabling
+  # it would silently disable Telegram for the whole deployment, one
+  # integration at a time, requiring a manual per-user re-enable. Surface it
+  # to the operator instead and leave the integration active.
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "own"} = integration, _attempt) do
+    auto_disable(integration, "Unauthorized (invalid bot token)")
+    {:discard, "Unauthorized"}
+  end
+
+  defp handle_unauthorized(%TelegramIntegrationSchema{bot_mode: "shared"} = integration, attempt) do
+    if attempt == 1 do
+      Logger.warning("Shared Telegram bot token rejected (401 Unauthorized)",
+        integration_id: integration.id
+      )
+
+      AdminAlerts.report(:integration_health_failure,
+        summary: "Shared Telegram bot token rejected (401 Unauthorized)",
+        context: %{integration_id: integration.id, bot_mode: "shared"}
+      )
+    end
+
+    {:discard, "Unauthorized"}
+  end
+
+  defp auto_disable(integration, reason) do
+    case Telegram.auto_disable(integration, reason) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning("Failed to auto-disable Telegram integration",
+          integration_id: integration.id,
+          reason: inspect(changeset)
+        )
+    end
+  end
+
+  defp handle_rejection(integration, body, attempt) do
     description = extract_error_description(body)
 
     cond do
@@ -208,14 +253,6 @@ defmodule Tymeslot.Workers.TelegramWorker do
       end
 
     {:snooze, retry_after}
-  end
-
-  defp auto_disable(integration, reason) do
-    TelegramQueries.update_integration(integration, %{
-      is_active: false,
-      disabled_at: DateTime.utc_now(),
-      disabled_reason: reason
-    })
   end
 
   defp extract_error_description(body) when is_binary(body) do

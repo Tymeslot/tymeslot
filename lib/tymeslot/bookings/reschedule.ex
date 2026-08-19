@@ -6,8 +6,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
@@ -16,7 +15,13 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoSyncWorker
 
-  @typedoc "Parameters for rescheduling a meeting to a new time slot."
+  @typedoc """
+  Parameters for rescheduling a meeting to a new time slot.
+
+  `duration` is accepted for shape-compatibility with the booking form but is
+  never used: the rescheduled meeting keeps the original meeting's persisted
+  duration (see `prepare_new_times/2`), never the request's.
+  """
   @type reschedule_params :: %{
           required(:date) => String.t(),
           required(:time) => String.t(),
@@ -39,9 +44,10 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   Returns `{:ok, meeting}` or `{:error, reason}`, where `reason` is either a
   semantic atom (`Tymeslot.Bookings.Errors.classified_error/0` — currently
-  `:meeting_not_found` when the lookup fails, `:slot_taken` when a
-  concurrent booking claims the new time first, or `:failed_to_update_meeting`
-  when persisting the new time fails for any other reason) or an arbitrary
+  `:meeting_not_found` when the lookup fails, `:slot_taken` when a concurrent
+  booking claims the new time first or the requested time is one the
+  organiser's schedule never offers, or `:failed_to_update_meeting` when
+  persisting the new time fails for any other reason) or an arbitrary
   policy/validation string from `Tymeslot.Bookings.Policy` or
   `Tymeslot.Bookings.Validation`.
   """
@@ -110,29 +116,46 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   # The rescheduled meeting keeps its meeting type, so the notice and window
   # rules re-checked here come from the same schedule the original booking used.
+  #
+  # The duration comes from the ORIGINAL meeting, never from `params`: a
+  # reschedule moves a meeting in time, it is not an opportunity to change its
+  # length, and `params.duration` is an attendee-supplied URL slug with no
+  # binding to what the meeting actually is (this stays true even when the
+  # meeting type has since been deleted and `fetch_meeting_type/2` falls back
+  # to `nil`).
   defp prepare_new_times(params, meeting) do
     organizer_user_id = meeting.organizer_user_id
     meeting_type = fetch_meeting_type(meeting.meeting_type_id, organizer_user_id)
+    duration_minutes = meeting.duration
+    config = Policy.scheduling_config(organizer_user_id, meeting_type)
 
     with {:ok, {start_datetime, end_datetime}} <-
            Validation.parse_meeting_times(
              params.date,
              params.time,
-             params.duration,
+             duration_minutes,
              params.user_timezone
            ),
+         {:ok, date} <- Date.from_iso8601(params.date),
+         :ok <- Validation.validate_booking_time(start_datetime, params.user_timezone, config),
          :ok <-
-           Validation.validate_booking_time(
+           ScheduleCheck.validate_slot_on_schedule(
+             date,
              start_datetime,
+             duration_minutes,
              params.user_timezone,
-             Policy.scheduling_config(organizer_user_id, meeting_type)
+             config
            ) do
       {:ok,
        %{
          start_time: start_datetime,
          end_time: end_datetime,
-         duration_minutes: TimeSlots.parse_duration(params.duration)
+         duration_minutes: duration_minutes
        }}
+    else
+      {:error, :slot_not_offered} -> {:error, :slot_taken}
+      {:error, :slot_availability_unverifiable} -> {:error, :slot_taken}
+      {:error, _reason} = error -> error
     end
   end
 

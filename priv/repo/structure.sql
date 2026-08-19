@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 851pY9qBv6UOIiRaukzRNKySlbqW7ZYVy1Brbb8N7G32qbUaCG7DNw39hxDJv1O
+\restrict RSDdvU4iwdm2BeVhj0l4Lhv7Pgdr77PU4woZri0gezqeCrG1bX60yKXrjXPdC0U
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -117,6 +117,9 @@ CREATE TABLE public.app_settings (
     admin_alert_email character varying(255),
     meeting_payments_enabled boolean,
     booking_analytics_enabled boolean,
+    email_brand_accent character varying(255),
+    email_brand_name character varying(255),
+    email_logo_path character varying(255),
     CONSTRAINT app_settings_singleton CHECK ((id = 1))
 );
 
@@ -181,7 +184,6 @@ ALTER SEQUENCE public.availability_breaks_id_seq OWNED BY public.availability_br
 
 CREATE TABLE public.availability_overrides (
     id bigint NOT NULL,
-    profile_id bigint NOT NULL,
     date date NOT NULL,
     override_type character varying(255) NOT NULL,
     start_time time(0) without time zone,
@@ -189,6 +191,7 @@ CREATE TABLE public.availability_overrides (
     reason character varying(255),
     inserted_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
+    schedule_id bigint NOT NULL,
     CONSTRAINT override_type_check CHECK (((override_type)::text = ANY ((ARRAY['unavailable'::character varying, 'custom_hours'::character varying, 'available'::character varying])::text[])))
 );
 
@@ -210,6 +213,42 @@ CREATE SEQUENCE public.availability_overrides_id_seq
 --
 
 ALTER SEQUENCE public.availability_overrides_id_seq OWNED BY public.availability_overrides.id;
+
+
+--
+-- Name: availability_schedules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.availability_schedules (
+    id bigint NOT NULL,
+    profile_id bigint NOT NULL,
+    name character varying(255) NOT NULL,
+    is_default boolean DEFAULT false NOT NULL,
+    buffer_minutes integer DEFAULT 15 NOT NULL,
+    min_advance_hours integer DEFAULT 3 NOT NULL,
+    advance_booking_days integer DEFAULT 90 NOT NULL,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: availability_schedules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.availability_schedules_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: availability_schedules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.availability_schedules_id_seq OWNED BY public.availability_schedules.id;
 
 
 --
@@ -242,6 +281,40 @@ CREATE TABLE public.booking_payments (
     updated_at timestamp with time zone NOT NULL,
     CONSTRAINT refunded_amount_within_bounds CHECK (((refunded_amount_cents >= 0) AND (refunded_amount_cents <= amount_cents)))
 );
+
+
+--
+-- Name: calendar_appearances; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.calendar_appearances (
+    id bigint NOT NULL,
+    calendar_integration_id bigint NOT NULL,
+    provider_calendar_id character varying(255) NOT NULL,
+    colour character varying(255),
+    hidden boolean DEFAULT false NOT NULL,
+    inserted_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: calendar_appearances_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.calendar_appearances_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: calendar_appearances_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.calendar_appearances_id_seq OWNED BY public.calendar_appearances.id;
 
 
 --
@@ -359,7 +432,9 @@ CREATE TABLE public.calendar_integrations (
     last_external_sync_at timestamp(0) without time zone,
     last_full_sync_at timestamp(0) without time zone,
     needs_reauth boolean DEFAULT false NOT NULL,
-    CONSTRAINT calendar_integrations_provider_check CHECK (((provider)::text = ANY ((ARRAY['caldav'::character varying, 'radicale'::character varying, 'nextcloud'::character varying, 'zimbra'::character varying, 'mailbox_org'::character varying, 'apple'::character varying, 'baikal'::character varying, 'google'::character varying, 'outlook'::character varying, 'demo'::character varying, 'debug'::character varying])::text[])))
+    subscription_url_encrypted bytea,
+    colour character varying(255),
+    CONSTRAINT calendar_integrations_provider_check CHECK (((provider)::text = ANY ((ARRAY['caldav'::character varying, 'radicale'::character varying, 'nextcloud'::character varying, 'zimbra'::character varying, 'mailbox_org'::character varying, 'apple'::character varying, 'baikal'::character varying, 'ics_url'::character varying, 'google'::character varying, 'outlook'::character varying, 'demo'::character varying, 'debug'::character varying])::text[])))
 );
 
 
@@ -394,7 +469,7 @@ CREATE TABLE public.calendar_preferences (
     inserted_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     week_start_day character varying(255) DEFAULT 'monday'::character varying NOT NULL,
-    time_format character varying(255) DEFAULT '12h'::character varying NOT NULL,
+    time_format character varying(255),
     show_week_numbers boolean DEFAULT false NOT NULL,
     show_weekends boolean DEFAULT true NOT NULL,
     desktop_reminders_enabled boolean DEFAULT false NOT NULL
@@ -444,45 +519,27 @@ CREATE TABLE public.connect_accounts (
 
 
 --
--- Name: disputes; Type: TABLE; Schema: public; Owner: -
+-- Name: event_colour_overrides; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.disputes (
-    id uuid NOT NULL,
-    stripe_dispute_id character varying(255) NOT NULL,
-    user_id bigint NOT NULL,
-    charge_id character varying(255) NOT NULL,
-    amount integer NOT NULL,
-    currency character varying(255) NOT NULL,
-    reason character varying(255),
-    status character varying(255) NOT NULL,
-    evidence_due_by timestamp(0) without time zone,
-    created_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
-);
-
-
---
--- Name: email_announcement_deliveries; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.email_announcement_deliveries (
+CREATE TABLE public.event_colour_overrides (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
-    announcement_key character varying(255) NOT NULL,
-    status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
-    delivered_at timestamp(0) without time zone,
-    skip_reason character varying(255),
+    colour character varying(255) NOT NULL,
+    meeting_id uuid,
+    calendar_integration_id bigint,
+    provider_uid character varying(255),
     inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
+    updated_at timestamp(0) without time zone NOT NULL,
+    CONSTRAINT event_colour_overrides_exactly_one_target CHECK ((((meeting_id IS NOT NULL) AND (calendar_integration_id IS NULL) AND (provider_uid IS NULL)) OR ((meeting_id IS NULL) AND (calendar_integration_id IS NOT NULL) AND (provider_uid IS NOT NULL))))
 );
 
 
 --
--- Name: email_announcement_deliveries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: event_colour_overrides_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.email_announcement_deliveries_id_seq
+CREATE SEQUENCE public.event_colour_overrides_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -491,43 +548,10 @@ CREATE SEQUENCE public.email_announcement_deliveries_id_seq
 
 
 --
--- Name: email_announcement_deliveries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: event_colour_overrides_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.email_announcement_deliveries_id_seq OWNED BY public.email_announcement_deliveries.id;
-
-
---
--- Name: email_announcement_dispatches; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.email_announcement_dispatches (
-    id bigint NOT NULL,
-    announcement_key character varying(255) NOT NULL,
-    dispatched_at timestamp(0) without time zone NOT NULL,
-    eligible_count integer DEFAULT 0 NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
-);
-
-
---
--- Name: email_announcement_dispatches_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.email_announcement_dispatches_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: email_announcement_dispatches_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.email_announcement_dispatches_id_seq OWNED BY public.email_announcement_dispatches.id;
+ALTER SEQUENCE public.event_colour_overrides_id_seq OWNED BY public.event_colour_overrides.id;
 
 
 --
@@ -570,92 +594,6 @@ CREATE SEQUENCE public.integration_health_states_id_seq
 --
 
 ALTER SEQUENCE public.integration_health_states_id_seq OWNED BY public.integration_health_states.id;
-
-
---
--- Name: legal_acceptances; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.legal_acceptances (
-    id uuid NOT NULL,
-    user_id bigint NOT NULL,
-    document_id bigint NOT NULL,
-    accepted_at timestamp(0) without time zone NOT NULL,
-    ip_address text,
-    user_agent text,
-    document_content_hash character varying(255)
-);
-
-
---
--- Name: legal_documents; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.legal_documents (
-    id bigint NOT NULL,
-    type character varying(255) NOT NULL,
-    version character varying(255) NOT NULL,
-    url character varying(255) NOT NULL,
-    effective_at timestamp(0) without time zone NOT NULL,
-    is_current boolean DEFAULT false NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
-    content text NOT NULL,
-    content_hash character varying(255) NOT NULL,
-    content_source character varying(255) NOT NULL,
-    CONSTRAINT legal_documents_type_check CHECK (((type)::text = ANY ((ARRAY['terms'::character varying, 'privacy'::character varying])::text[])))
-);
-
-
---
--- Name: legal_documents_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.legal_documents_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: legal_documents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.legal_documents_id_seq OWNED BY public.legal_documents.id;
-
-
---
--- Name: marketing_unsubscriptions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.marketing_unsubscriptions (
-    id bigint NOT NULL,
-    user_id bigint NOT NULL,
-    unsubscribed_at timestamp(0) without time zone NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
-);
-
-
---
--- Name: marketing_unsubscriptions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.marketing_unsubscriptions_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: marketing_unsubscriptions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.marketing_unsubscriptions_id_seq OWNED BY public.marketing_unsubscriptions.id;
 
 
 --
@@ -704,7 +642,14 @@ CREATE TABLE public.meeting_types (
     is_private boolean DEFAULT false NOT NULL,
     allow_guests boolean DEFAULT false NOT NULL,
     show_as_free boolean DEFAULT false NOT NULL,
-    attachments jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL
+    attachments jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL,
+    max_bookings_per_day integer,
+    max_bookings_per_week integer,
+    max_bookings_per_month integer,
+    availability_schedule_id bigint,
+    CONSTRAINT meeting_types_max_bookings_per_day_positive CHECK (((max_bookings_per_day IS NULL) OR (max_bookings_per_day > 0))),
+    CONSTRAINT meeting_types_max_bookings_per_month_positive CHECK (((max_bookings_per_month IS NULL) OR (max_bookings_per_month > 0))),
+    CONSTRAINT meeting_types_max_bookings_per_week_positive CHECK (((max_bookings_per_week IS NULL) OR (max_bookings_per_week > 0)))
 );
 
 
@@ -781,7 +726,7 @@ CREATE TABLE public.meetings (
     attendee_locale character varying(10) DEFAULT 'en'::character varying NOT NULL,
     calendar_sync_status character varying(255),
     calendar_sync_status_dismissed_at timestamp(0) without time zone,
-    provider_event_id character varying(255),
+    provider_event_id text,
     ical_sequence integer DEFAULT 0 NOT NULL,
     last_notified_state jsonb DEFAULT '{}'::jsonb NOT NULL,
     custom_fields_snapshot jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL,
@@ -795,7 +740,9 @@ CREATE TABLE public.meetings (
     tracking_params jsonb DEFAULT '{}'::jsonb NOT NULL,
     visitor_hash character varying(255),
     show_as_free boolean DEFAULT false NOT NULL,
-    attachments_snapshot jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL
+    attachments_snapshot jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL,
+    reschedule_requested_at timestamp(0) without time zone,
+    video_provider character varying(255)
 );
 
 
@@ -910,39 +857,6 @@ CREATE UNLOGGED TABLE public.oban_peers (
 
 
 --
--- Name: onboarding_emails_sent; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.onboarding_emails_sent (
-    id bigint NOT NULL,
-    user_id bigint NOT NULL,
-    action character varying(255) NOT NULL,
-    sent_at timestamp(0) without time zone NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
-);
-
-
---
--- Name: onboarding_emails_sent_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.onboarding_emails_sent_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: onboarding_emails_sent_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.onboarding_emails_sent_id_seq OWNED BY public.onboarding_emails_sent.id;
-
-
---
 -- Name: payment_transactions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -993,6 +907,75 @@ ALTER SEQUENCE public.payment_transactions_id_seq OWNED BY public.payment_transa
 
 
 --
+-- Name: poll_participants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.poll_participants (
+    id uuid NOT NULL,
+    poll_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    email character varying(255) NOT NULL,
+    token character varying(255) NOT NULL,
+    timezone character varying(255),
+    locale character varying(255) DEFAULT 'en'::character varying NOT NULL,
+    voted_at timestamp(0) without time zone,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: poll_time_slots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.poll_time_slots (
+    id uuid NOT NULL,
+    poll_id uuid NOT NULL,
+    start_time timestamp(0) without time zone NOT NULL,
+    end_time timestamp(0) without time zone NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: poll_votes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.poll_votes (
+    id uuid NOT NULL,
+    poll_participant_id uuid NOT NULL,
+    poll_time_slot_id uuid NOT NULL,
+    response character varying(255) NOT NULL,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: polls; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.polls (
+    id uuid NOT NULL,
+    user_id bigint NOT NULL,
+    meeting_type_id bigint,
+    title character varying(255) NOT NULL,
+    description text,
+    duration_minutes integer NOT NULL,
+    token character varying(255) NOT NULL,
+    status character varying(255) DEFAULT 'open'::character varying NOT NULL,
+    deadline_at timestamp(0) without time zone,
+    timezone character varying(255) NOT NULL,
+    confirmed_meeting_id uuid,
+    confirmed_at timestamp(0) without time zone,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
 -- Name: profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1000,9 +983,6 @@ CREATE TABLE public.profiles (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
     timezone character varying(255) DEFAULT NULL::character varying,
-    buffer_minutes integer DEFAULT 15,
-    advance_booking_days integer DEFAULT 90,
-    min_advance_hours integer DEFAULT 3,
     inserted_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     username character varying(255),
@@ -1013,7 +993,13 @@ CREATE TABLE public.profiles (
     primary_calendar_integration_id bigint,
     allowed_embed_domains character varying(255)[] DEFAULT ARRAY[]::character varying[],
     booking_page_published_at timestamp(0) without time zone,
-    freebusy_token character varying(255)
+    freebusy_token character varying(255),
+    max_bookings_per_day integer,
+    max_bookings_per_week integer,
+    max_bookings_per_month integer,
+    CONSTRAINT profiles_max_bookings_per_day_positive CHECK (((max_bookings_per_day IS NULL) OR (max_bookings_per_day > 0))),
+    CONSTRAINT profiles_max_bookings_per_month_positive CHECK (((max_bookings_per_month IS NULL) OR (max_bookings_per_month > 0))),
+    CONSTRAINT profiles_max_bookings_per_week_positive CHECK (((max_bookings_per_week IS NULL) OR (max_bookings_per_week > 0)))
 );
 
 
@@ -1041,16 +1027,6 @@ ALTER SEQUENCE public.profiles_id_seq OWNED BY public.profiles.id;
 --
 
 CREATE TABLE public.schema_migrations (
-    version bigint NOT NULL,
-    inserted_at timestamp(0) without time zone
-);
-
-
---
--- Name: schema_migrations_saas; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.schema_migrations_saas (
     version bigint NOT NULL,
     inserted_at timestamp(0) without time zone
 );
@@ -1125,35 +1101,33 @@ ALTER SEQUENCE public.slack_integrations_id_seq OWNED BY public.slack_integratio
 
 
 --
--- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
+-- Name: subscription_invoices; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.subscriptions (
+CREATE TABLE public.subscription_invoices (
     id bigint NOT NULL,
-    user_id bigint NOT NULL,
-    stripe_subscription_id character varying(255) NOT NULL,
-    stripe_customer_id character varying(255) NOT NULL,
-    plan character varying(255) NOT NULL,
-    status character varying(255) NOT NULL,
-    current_period_start timestamp(0) without time zone,
-    current_period_end timestamp(0) without time zone,
-    cancel_at_period_end boolean DEFAULT false,
-    canceled_at timestamp(0) without time zone,
+    stripe_invoice_id character varying(255) NOT NULL,
+    user_id bigint,
+    subscription_id character varying(255),
+    number character varying(255),
+    currency character varying(255),
+    amount_cents integer,
+    issued_at timestamp(0) without time zone,
+    hosted_invoice_url text,
+    invoice_pdf_url text,
+    host_deleted_at timestamp(0) without time zone,
+    status character varying(255),
+    paid_at timestamp(0) without time zone,
     inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
-    trial_started_at timestamp(0) without time zone,
-    trial_ends_at timestamp(0) without time zone,
-    trial_period_days integer DEFAULT 7,
-    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
-    billing_interval character varying(255)
+    updated_at timestamp(0) without time zone NOT NULL
 );
 
 
 --
--- Name: subscriptions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: subscription_invoices_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.subscriptions_id_seq
+CREATE SEQUENCE public.subscription_invoices_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -1162,10 +1136,10 @@ CREATE SEQUENCE public.subscriptions_id_seq
 
 
 --
--- Name: subscriptions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: subscription_invoices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.subscriptions_id_seq OWNED BY public.subscriptions.id;
+ALTER SEQUENCE public.subscription_invoices_id_seq OWNED BY public.subscription_invoices.id;
 
 
 --
@@ -1362,12 +1336,12 @@ CREATE TABLE public.users (
     email_change_token_hash character varying(255),
     reset_token_hash character varying(255),
     signup_ip character varying(255),
-    marketing_unsubscribed_at timestamp(0) without time zone,
     is_admin boolean DEFAULT false NOT NULL,
     dashboard_tour_seen_at timestamp(0) without time zone,
     last_active_at timestamp(0) without time zone,
     dashboard_setup_done_items character varying(255)[] DEFAULT ARRAY[]::character varying[] NOT NULL,
-    dashboard_setup_dismissed_at timestamp(0) without time zone
+    dashboard_setup_dismissed_at timestamp(0) without time zone,
+    locale character varying(255)
 );
 
 
@@ -1419,7 +1393,8 @@ CREATE TABLE public.video_integrations (
     provider_account_id character varying(255),
     provider_account_email character varying(255),
     needs_reauth boolean DEFAULT false NOT NULL,
-    sync_error text
+    sync_error text,
+    deleted_at timestamp(0) without time zone
 );
 
 
@@ -1502,7 +1477,7 @@ CREATE TABLE public.webhooks (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
     name character varying(255) NOT NULL,
-    url character varying(255) NOT NULL,
+    url text NOT NULL,
     events character varying(255)[] DEFAULT ARRAY[]::character varying[] NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     last_triggered_at timestamp(0) without time zone,
@@ -1541,13 +1516,13 @@ ALTER SEQUENCE public.webhooks_id_seq OWNED BY public.webhooks.id;
 
 CREATE TABLE public.weekly_availability (
     id bigint NOT NULL,
-    profile_id bigint NOT NULL,
     day_of_week integer NOT NULL,
     is_available boolean DEFAULT false,
     start_time time(0) without time zone,
     end_time time(0) without time zone,
     inserted_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    schedule_id bigint NOT NULL
 );
 
 
@@ -1599,6 +1574,20 @@ ALTER TABLE ONLY public.availability_overrides ALTER COLUMN id SET DEFAULT nextv
 
 
 --
+-- Name: availability_schedules id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.availability_schedules ALTER COLUMN id SET DEFAULT nextval('public.availability_schedules_id_seq'::regclass);
+
+
+--
+-- Name: calendar_appearances id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_appearances ALTER COLUMN id SET DEFAULT nextval('public.calendar_appearances_id_seq'::regclass);
+
+
+--
 -- Name: calendar_integrations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1613,17 +1602,10 @@ ALTER TABLE ONLY public.calendar_preferences ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- Name: email_announcement_deliveries id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: event_colour_overrides id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.email_announcement_deliveries ALTER COLUMN id SET DEFAULT nextval('public.email_announcement_deliveries_id_seq'::regclass);
-
-
---
--- Name: email_announcement_dispatches id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.email_announcement_dispatches ALTER COLUMN id SET DEFAULT nextval('public.email_announcement_dispatches_id_seq'::regclass);
+ALTER TABLE ONLY public.event_colour_overrides ALTER COLUMN id SET DEFAULT nextval('public.event_colour_overrides_id_seq'::regclass);
 
 
 --
@@ -1631,20 +1613,6 @@ ALTER TABLE ONLY public.email_announcement_dispatches ALTER COLUMN id SET DEFAUL
 --
 
 ALTER TABLE ONLY public.integration_health_states ALTER COLUMN id SET DEFAULT nextval('public.integration_health_states_id_seq'::regclass);
-
-
---
--- Name: legal_documents id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.legal_documents ALTER COLUMN id SET DEFAULT nextval('public.legal_documents_id_seq'::regclass);
-
-
---
--- Name: marketing_unsubscriptions id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.marketing_unsubscriptions ALTER COLUMN id SET DEFAULT nextval('public.marketing_unsubscriptions_id_seq'::regclass);
 
 
 --
@@ -1659,13 +1627,6 @@ ALTER TABLE ONLY public.meeting_types ALTER COLUMN id SET DEFAULT nextval('publi
 --
 
 ALTER TABLE ONLY public.oban_jobs ALTER COLUMN id SET DEFAULT nextval('public.oban_jobs_id_seq'::regclass);
-
-
---
--- Name: onboarding_emails_sent id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.onboarding_emails_sent ALTER COLUMN id SET DEFAULT nextval('public.onboarding_emails_sent_id_seq'::regclass);
 
 
 --
@@ -1697,10 +1658,10 @@ ALTER TABLE ONLY public.slack_integrations ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- Name: subscriptions id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: subscription_invoices id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.subscriptions ALTER COLUMN id SET DEFAULT nextval('public.subscriptions_id_seq'::regclass);
+ALTER TABLE ONLY public.subscription_invoices ALTER COLUMN id SET DEFAULT nextval('public.subscription_invoices_id_seq'::regclass);
 
 
 --
@@ -1799,11 +1760,27 @@ ALTER TABLE ONLY public.availability_overrides
 
 
 --
+-- Name: availability_schedules availability_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.availability_schedules
+    ADD CONSTRAINT availability_schedules_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: booking_payments booking_payments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.booking_payments
     ADD CONSTRAINT booking_payments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: calendar_appearances calendar_appearances_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_appearances
+    ADD CONSTRAINT calendar_appearances_pkey PRIMARY KEY (id);
 
 
 --
@@ -1831,27 +1808,11 @@ ALTER TABLE ONLY public.connect_accounts
 
 
 --
--- Name: disputes disputes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: event_colour_overrides event_colour_overrides_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.disputes
-    ADD CONSTRAINT disputes_pkey PRIMARY KEY (id);
-
-
---
--- Name: email_announcement_deliveries email_announcement_deliveries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.email_announcement_deliveries
-    ADD CONSTRAINT email_announcement_deliveries_pkey PRIMARY KEY (id);
-
-
---
--- Name: email_announcement_dispatches email_announcement_dispatches_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.email_announcement_dispatches
-    ADD CONSTRAINT email_announcement_dispatches_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.event_colour_overrides
+    ADD CONSTRAINT event_colour_overrides_pkey PRIMARY KEY (id);
 
 
 --
@@ -1860,30 +1821,6 @@ ALTER TABLE ONLY public.email_announcement_dispatches
 
 ALTER TABLE ONLY public.integration_health_states
     ADD CONSTRAINT integration_health_states_pkey PRIMARY KEY (id);
-
-
---
--- Name: legal_acceptances legal_acceptances_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.legal_acceptances
-    ADD CONSTRAINT legal_acceptances_pkey PRIMARY KEY (id);
-
-
---
--- Name: legal_documents legal_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.legal_documents
-    ADD CONSTRAINT legal_documents_pkey PRIMARY KEY (id);
-
-
---
--- Name: marketing_unsubscriptions marketing_unsubscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.marketing_unsubscriptions
-    ADD CONSTRAINT marketing_unsubscriptions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1943,14 +1880,6 @@ ALTER TABLE ONLY public.oban_peers
 
 
 --
--- Name: onboarding_emails_sent onboarding_emails_sent_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.onboarding_emails_sent
-    ADD CONSTRAINT onboarding_emails_sent_pkey PRIMARY KEY (id);
-
-
---
 -- Name: payment_transactions payment_transactions_amount_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1983,6 +1912,38 @@ ALTER TABLE public.payment_transactions
 
 
 --
+-- Name: poll_participants poll_participants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_participants
+    ADD CONSTRAINT poll_participants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: poll_time_slots poll_time_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_time_slots
+    ADD CONSTRAINT poll_time_slots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: poll_votes poll_votes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: polls polls_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: profiles profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2007,14 +1968,6 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
--- Name: schema_migrations_saas schema_migrations_saas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.schema_migrations_saas
-    ADD CONSTRAINT schema_migrations_saas_pkey PRIMARY KEY (version);
-
-
---
 -- Name: slack_deliveries slack_deliveries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2031,11 +1984,11 @@ ALTER TABLE ONLY public.slack_integrations
 
 
 --
--- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: subscription_invoices subscription_invoices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.subscriptions
-    ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.subscription_invoices
+    ADD CONSTRAINT subscription_invoices_pkey PRIMARY KEY (id);
 
 
 --
@@ -2169,17 +2122,31 @@ CREATE INDEX availability_breaks_weekly_start_time_index ON public.availability_
 
 
 --
--- Name: availability_overrides_profile_id_date_index; Type: INDEX; Schema: public; Owner: -
+-- Name: availability_overrides_schedule_id_date_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX availability_overrides_profile_id_date_index ON public.availability_overrides USING btree (profile_id, date);
+CREATE UNIQUE INDEX availability_overrides_schedule_id_date_index ON public.availability_overrides USING btree (schedule_id, date);
 
 
 --
--- Name: availability_overrides_profile_id_index; Type: INDEX; Schema: public; Owner: -
+-- Name: availability_schedules_one_default_per_profile; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX availability_overrides_profile_id_index ON public.availability_overrides USING btree (profile_id);
+CREATE UNIQUE INDEX availability_schedules_one_default_per_profile ON public.availability_schedules USING btree (profile_id) WHERE is_default;
+
+
+--
+-- Name: availability_schedules_profile_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX availability_schedules_profile_id_index ON public.availability_schedules USING btree (profile_id);
+
+
+--
+-- Name: availability_schedules_profile_id_name_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX availability_schedules_profile_id_name_index ON public.availability_schedules USING btree (profile_id, name);
 
 
 --
@@ -2236,6 +2203,13 @@ CREATE UNIQUE INDEX booking_payments_stripe_checkout_session_id_index ON public.
 --
 
 CREATE UNIQUE INDEX booking_payments_stripe_payment_intent_id_index ON public.booking_payments USING btree (stripe_payment_intent_id) WHERE (stripe_payment_intent_id IS NOT NULL);
+
+
+--
+-- Name: calendar_appearances_integration_calendar_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX calendar_appearances_integration_calendar_index ON public.calendar_appearances USING btree (calendar_integration_id, provider_calendar_id);
 
 
 --
@@ -2309,45 +2283,17 @@ CREATE UNIQUE INDEX connect_accounts_user_id_live_unique_index ON public.connect
 
 
 --
--- Name: disputes_status_index; Type: INDEX; Schema: public; Owner: -
+-- Name: event_colour_overrides_user_external_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX disputes_status_index ON public.disputes USING btree (status);
-
-
---
--- Name: disputes_stripe_dispute_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX disputes_stripe_dispute_id_index ON public.disputes USING btree (stripe_dispute_id);
+CREATE UNIQUE INDEX event_colour_overrides_user_external_index ON public.event_colour_overrides USING btree (user_id, calendar_integration_id, provider_uid) WHERE (provider_uid IS NOT NULL);
 
 
 --
--- Name: disputes_user_id_index; Type: INDEX; Schema: public; Owner: -
+-- Name: event_colour_overrides_user_meeting_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX disputes_user_id_index ON public.disputes USING btree (user_id);
-
-
---
--- Name: email_announcement_deliveries_announcement_key_user_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX email_announcement_deliveries_announcement_key_user_id_index ON public.email_announcement_deliveries USING btree (announcement_key, user_id);
-
-
---
--- Name: email_announcement_deliveries_user_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX email_announcement_deliveries_user_id_index ON public.email_announcement_deliveries USING btree (user_id);
-
-
---
--- Name: email_announcement_dispatches_announcement_key_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX email_announcement_dispatches_announcement_key_index ON public.email_announcement_dispatches USING btree (announcement_key);
+CREATE UNIQUE INDEX event_colour_overrides_user_meeting_index ON public.event_colour_overrides USING btree (user_id, meeting_id) WHERE (meeting_id IS NOT NULL);
 
 
 --
@@ -2414,48 +2360,6 @@ CREATE INDEX integration_health_states_user_id_status_index ON public.integratio
 
 
 --
--- Name: legal_acceptances_document_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX legal_acceptances_document_id_index ON public.legal_acceptances USING btree (document_id);
-
-
---
--- Name: legal_acceptances_user_id_document_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX legal_acceptances_user_id_document_id_index ON public.legal_acceptances USING btree (user_id, document_id);
-
-
---
--- Name: legal_documents_one_current_per_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX legal_documents_one_current_per_type ON public.legal_documents USING btree (type) WHERE (is_current = true);
-
-
---
--- Name: legal_documents_type_is_current_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX legal_documents_type_is_current_index ON public.legal_documents USING btree (type, is_current);
-
-
---
--- Name: legal_documents_type_version_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX legal_documents_type_version_index ON public.legal_documents USING btree (type, version);
-
-
---
--- Name: marketing_unsubscriptions_user_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX marketing_unsubscriptions_user_id_index ON public.marketing_unsubscriptions USING btree (user_id);
-
-
---
 -- Name: meeting_guests_meeting_id_email_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2474,6 +2378,13 @@ CREATE INDEX meeting_guests_meeting_id_index ON public.meeting_guests USING btre
 --
 
 CREATE UNIQUE INDEX meeting_guests_rsvp_token_index ON public.meeting_guests USING btree (rsvp_token);
+
+
+--
+-- Name: meeting_types_availability_schedule_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meeting_types_availability_schedule_id_index ON public.meeting_types USING btree (availability_schedule_id);
 
 
 --
@@ -2771,13 +2682,6 @@ CREATE INDEX oban_jobs_state_queue_priority_scheduled_at_id_index ON public.oban
 
 
 --
--- Name: onboarding_emails_sent_user_id_action_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX onboarding_emails_sent_user_id_action_index ON public.onboarding_emails_sent USING btree (user_id, action);
-
-
---
 -- Name: one_default_per_user; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2831,6 +2735,76 @@ CREATE INDEX payment_transactions_subscription_id_index ON public.payment_transa
 --
 
 CREATE INDEX payment_transactions_user_id_index ON public.payment_transactions USING btree (user_id);
+
+
+--
+-- Name: poll_participants_poll_id_email_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_participants_poll_id_email_index ON public.poll_participants USING btree (poll_id, email);
+
+
+--
+-- Name: poll_participants_poll_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX poll_participants_poll_id_index ON public.poll_participants USING btree (poll_id);
+
+
+--
+-- Name: poll_participants_token_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_participants_token_index ON public.poll_participants USING btree (token);
+
+
+--
+-- Name: poll_time_slots_poll_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX poll_time_slots_poll_id_index ON public.poll_time_slots USING btree (poll_id);
+
+
+--
+-- Name: poll_time_slots_poll_id_start_time_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_time_slots_poll_id_start_time_index ON public.poll_time_slots USING btree (poll_id, start_time);
+
+
+--
+-- Name: poll_votes_poll_participant_id_poll_time_slot_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_votes_poll_participant_id_poll_time_slot_id_index ON public.poll_votes USING btree (poll_participant_id, poll_time_slot_id);
+
+
+--
+-- Name: poll_votes_poll_time_slot_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX poll_votes_poll_time_slot_id_index ON public.poll_votes USING btree (poll_time_slot_id);
+
+
+--
+-- Name: polls_meeting_type_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX polls_meeting_type_id_index ON public.polls USING btree (meeting_type_id);
+
+
+--
+-- Name: polls_token_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX polls_token_index ON public.polls USING btree (token);
+
+
+--
+-- Name: polls_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX polls_user_id_index ON public.polls USING btree (user_id);
 
 
 --
@@ -2967,31 +2941,17 @@ CREATE UNIQUE INDEX slack_integrations_user_team_unique_index ON public.slack_in
 
 
 --
--- Name: subscriptions_plan_index; Type: INDEX; Schema: public; Owner: -
+-- Name: subscription_invoices_stripe_invoice_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX subscriptions_plan_index ON public.subscriptions USING btree (plan);
-
-
---
--- Name: subscriptions_status_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX subscriptions_status_index ON public.subscriptions USING btree (status);
+CREATE UNIQUE INDEX subscription_invoices_stripe_invoice_id_index ON public.subscription_invoices USING btree (stripe_invoice_id);
 
 
 --
--- Name: subscriptions_stripe_subscription_id_index; Type: INDEX; Schema: public; Owner: -
+-- Name: subscription_invoices_user_id_issued_at_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX subscriptions_stripe_subscription_id_index ON public.subscriptions USING btree (stripe_subscription_id);
-
-
---
--- Name: subscriptions_user_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX subscriptions_user_id_index ON public.subscriptions USING btree (user_id);
+CREATE INDEX subscription_invoices_user_id_issued_at_index ON public.subscription_invoices USING btree (user_id, issued_at);
 
 
 --
@@ -3282,17 +3242,10 @@ CREATE INDEX webhooks_user_id_is_active_index ON public.webhooks USING btree (us
 
 
 --
--- Name: weekly_availability_profile_id_day_of_week_index; Type: INDEX; Schema: public; Owner: -
+-- Name: weekly_availability_schedule_id_day_of_week_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX weekly_availability_profile_id_day_of_week_index ON public.weekly_availability USING btree (profile_id, day_of_week);
-
-
---
--- Name: weekly_availability_profile_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX weekly_availability_profile_id_index ON public.weekly_availability USING btree (profile_id);
+CREATE UNIQUE INDEX weekly_availability_schedule_id_day_of_week_index ON public.weekly_availability USING btree (schedule_id, day_of_week);
 
 
 --
@@ -3320,11 +3273,19 @@ ALTER TABLE ONLY public.availability_breaks
 
 
 --
--- Name: availability_overrides availability_overrides_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: availability_overrides availability_overrides_schedule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.availability_overrides
-    ADD CONSTRAINT availability_overrides_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+    ADD CONSTRAINT availability_overrides_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.availability_schedules(id) ON DELETE CASCADE;
+
+
+--
+-- Name: availability_schedules availability_schedules_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.availability_schedules
+    ADD CONSTRAINT availability_schedules_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 
 --
@@ -3333,6 +3294,14 @@ ALTER TABLE ONLY public.availability_overrides
 
 ALTER TABLE ONLY public.booking_payments
     ADD CONSTRAINT booking_payments_meeting_id_fkey FOREIGN KEY (meeting_id) REFERENCES public.meetings(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendar_appearances calendar_appearances_calendar_integration_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendar_appearances
+    ADD CONSTRAINT calendar_appearances_calendar_integration_id_fkey FOREIGN KEY (calendar_integration_id) REFERENCES public.calendar_integrations(id) ON DELETE CASCADE;
 
 
 --
@@ -3368,6 +3337,30 @@ ALTER TABLE ONLY public.connect_accounts
 
 
 --
+-- Name: event_colour_overrides event_colour_overrides_calendar_integration_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_colour_overrides
+    ADD CONSTRAINT event_colour_overrides_calendar_integration_id_fkey FOREIGN KEY (calendar_integration_id) REFERENCES public.calendar_integrations(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_colour_overrides event_colour_overrides_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_colour_overrides
+    ADD CONSTRAINT event_colour_overrides_meeting_id_fkey FOREIGN KEY (meeting_id) REFERENCES public.meetings(id) ON DELETE CASCADE;
+
+
+--
+-- Name: event_colour_overrides event_colour_overrides_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_colour_overrides
+    ADD CONSTRAINT event_colour_overrides_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: integration_health_states integration_health_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3376,19 +3369,19 @@ ALTER TABLE ONLY public.integration_health_states
 
 
 --
--- Name: legal_acceptances legal_acceptances_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.legal_acceptances
-    ADD CONSTRAINT legal_acceptances_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.legal_documents(id);
-
-
---
 -- Name: meeting_guests meeting_guests_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.meeting_guests
     ADD CONSTRAINT meeting_guests_meeting_id_fkey FOREIGN KEY (meeting_id) REFERENCES public.meetings(id) ON DELETE CASCADE;
+
+
+--
+-- Name: meeting_types meeting_types_availability_schedule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.meeting_types
+    ADD CONSTRAINT meeting_types_availability_schedule_id_fkey FOREIGN KEY (availability_schedule_id) REFERENCES public.availability_schedules(id) ON DELETE SET NULL;
 
 
 --
@@ -3456,6 +3449,62 @@ ALTER TABLE ONLY public.payment_transactions
 
 
 --
+-- Name: poll_participants poll_participants_poll_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_participants
+    ADD CONSTRAINT poll_participants_poll_id_fkey FOREIGN KEY (poll_id) REFERENCES public.polls(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_time_slots poll_time_slots_poll_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_time_slots
+    ADD CONSTRAINT poll_time_slots_poll_id_fkey FOREIGN KEY (poll_id) REFERENCES public.polls(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_votes poll_votes_poll_participant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_poll_participant_id_fkey FOREIGN KEY (poll_participant_id) REFERENCES public.poll_participants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_votes poll_votes_poll_time_slot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_poll_time_slot_id_fkey FOREIGN KEY (poll_time_slot_id) REFERENCES public.poll_time_slots(id) ON DELETE CASCADE;
+
+
+--
+-- Name: polls polls_confirmed_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_confirmed_meeting_id_fkey FOREIGN KEY (confirmed_meeting_id) REFERENCES public.meetings(id) ON DELETE SET NULL;
+
+
+--
+-- Name: polls polls_meeting_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_meeting_type_id_fkey FOREIGN KEY (meeting_type_id) REFERENCES public.meeting_types(id) ON DELETE SET NULL;
+
+
+--
+-- Name: polls polls_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: profiles profiles_primary_calendar_integration_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3493,6 +3542,14 @@ ALTER TABLE ONLY public.slack_deliveries
 
 ALTER TABLE ONLY public.slack_integrations
     ADD CONSTRAINT slack_integrations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscription_invoices subscription_invoices_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_invoices
+    ADD CONSTRAINT subscription_invoices_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -3560,18 +3617,18 @@ ALTER TABLE ONLY public.webhooks
 
 
 --
--- Name: weekly_availability weekly_availability_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: weekly_availability weekly_availability_schedule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.weekly_availability
-    ADD CONSTRAINT weekly_availability_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+    ADD CONSTRAINT weekly_availability_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.availability_schedules(id) ON DELETE CASCADE;
 
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 851pY9qBv6UOIiRaukzRNKySlbqW7ZYVy1Brbb8N7G32qbUaCG7DNw39hxDJv1O
+\unrestrict RSDdvU4iwdm2BeVhj0l4Lhv7Pgdr77PU4woZri0gezqeCrG1bX60yKXrjXPdC0U
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3742,9 +3799,32 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260626080816);
 INSERT INTO public."schema_migrations" (version) VALUES (20260629084457);
 INSERT INTO public."schema_migrations" (version) VALUES (20260630114709);
 INSERT INTO public."schema_migrations" (version) VALUES (20260701135118);
+INSERT INTO public."schema_migrations" (version) VALUES (20260701154011);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702140136);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702165041);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702180346);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702180350);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702200554);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702201528);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702214204);
+INSERT INTO public."schema_migrations" (version) VALUES (20260708112716);
+INSERT INTO public."schema_migrations" (version) VALUES (20260716094322);
+INSERT INTO public."schema_migrations" (version) VALUES (20260717144920);
+INSERT INTO public."schema_migrations" (version) VALUES (20260717144928);
+INSERT INTO public."schema_migrations" (version) VALUES (20260717150103);
+INSERT INTO public."schema_migrations" (version) VALUES (20260725055344);
+INSERT INTO public."schema_migrations" (version) VALUES (20260802184220);
+INSERT INTO public."schema_migrations" (version) VALUES (20260803110357);
+INSERT INTO public."schema_migrations" (version) VALUES (20260803110359);
+INSERT INTO public."schema_migrations" (version) VALUES (20260803133153);
+INSERT INTO public."schema_migrations" (version) VALUES (20260803133933);
+INSERT INTO public."schema_migrations" (version) VALUES (20260805125809);
+INSERT INTO public."schema_migrations" (version) VALUES (20260805130542);
+INSERT INTO public."schema_migrations" (version) VALUES (20260806121616);
+INSERT INTO public."schema_migrations" (version) VALUES (20260806162257);
+INSERT INTO public."schema_migrations" (version) VALUES (20260811180804);
+INSERT INTO public."schema_migrations" (version) VALUES (20260811180806);
+INSERT INTO public."schema_migrations" (version) VALUES (20260811181002);
+INSERT INTO public."schema_migrations" (version) VALUES (20260811182123);
+INSERT INTO public."schema_migrations" (version) VALUES (20260817104115);
+INSERT INTO public."schema_migrations" (version) VALUES (20260819084327);

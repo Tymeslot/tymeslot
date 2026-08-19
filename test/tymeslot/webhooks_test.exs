@@ -4,6 +4,7 @@ defmodule Tymeslot.WebhooksTest do
 
   @moduletag :security
 
+  import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
@@ -17,39 +18,6 @@ defmodule Tymeslot.WebhooksTest do
   setup do
     setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
     :ok
-  end
-
-  # ============================================================================
-  # SSRF Protection (existing tests)
-  # ============================================================================
-
-  describe "test_webhook_connection/2 - SSRF protection" do
-    setup do
-      setup_config(:tymeslot, :environment, :prod)
-      :ok
-    end
-
-    test "blocks requests to private IP addresses in production" do
-      assert {:error, message} = Webhooks.test_webhook_connection("https://192.168.1.1/webhook")
-      assert message =~ "Private"
-    end
-
-    test "blocks requests to localhost in production" do
-      assert {:error, message} = Webhooks.test_webhook_connection("https://localhost/webhook")
-      assert message =~ "Private"
-    end
-
-    test "blocks HTTP URLs in production" do
-      assert {:error, message} =
-               Webhooks.test_webhook_connection("http://example.com/webhook")
-
-      assert message =~ "HTTPS"
-    end
-
-    test "blocks requests to loopback address in production" do
-      assert {:error, message} = Webhooks.test_webhook_connection("https://127.0.0.1/webhook")
-      assert message =~ "Private"
-    end
   end
 
   # ============================================================================

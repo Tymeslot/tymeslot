@@ -58,7 +58,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
             picker <- integer(0..9_999),
             max_runs: 30
           ) do
-      %{user: user, profile_id: profile_id} = create_bookable_profile(timezone: timezone)
+      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: timezone)
 
       stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
         {:ok, events}
@@ -71,7 +71,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
           timezone,
           timezone,
           events,
-          %{profile_id: profile_id}
+          %{schedule_id: schedule_id}
         )
 
       # When the generated events wipe out the whole day the invariant holds

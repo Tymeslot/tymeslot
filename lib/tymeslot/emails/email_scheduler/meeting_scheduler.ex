@@ -3,7 +3,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
 
   alias Ecto.Changeset
   alias Tymeslot.Emails.EmailScheduler.Helpers
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorker
@@ -122,26 +122,30 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
             priority: 2,
             scheduled_at: scheduled_at,
             unique: [
-              # Prevent duplicate reminders across long lead times (10 years in seconds)
+              # Prevent duplicate reminders across long lead times (10 years in seconds).
+              # Restricted to :incomplete states (excludes completed/cancelled/discarded) so
+              # that a reminder which already fired never blocks a reschedule from enqueueing
+              # a fresh one for the new time.
               period: 315_360_000,
               fields: [:args, :queue],
-              keys: [:action, :meeting_id, :reminder_value, :reminder_unit]
+              keys: [:action, :meeting_id, :reminder_value, :reminder_unit],
+              states: :incomplete
             ]
           )
           |> Oban.insert()
 
         case result do
-          {:ok, _job} ->
-            Logger.info("Reminder email job scheduled",
-              meeting_id: meeting_id,
-              scheduled_at: scheduled_at
+          {:ok, %{conflict?: true}} ->
+            Logger.info("Reminder email job already exists, skipping duplicate",
+              meeting_id: meeting_id
             )
 
             :ok
 
-          {:error, %Changeset{errors: [unique: _unique_error]}} ->
-            Logger.info("Reminder email job already exists, skipping duplicate",
-              meeting_id: meeting_id
+          {:ok, _job} ->
+            Logger.info("Reminder email job scheduled",
+              meeting_id: meeting_id,
+              scheduled_at: scheduled_at
             )
 
             :ok
@@ -169,7 +173,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @spec cancel_reminder_emails(term()) :: :ok
   def cancel_reminder_emails(meeting_id) do
     {deleted, _result} =
-      ObanJobQueries.delete_reminder_jobs_for_meeting(meeting_id, EmailWorker, %{})
+      Jobs.delete_reminder_jobs_for_meeting(meeting_id, EmailWorker, %{})
 
     Logger.info("Cancelled pending reminder email jobs",
       meeting_id: meeting_id,
@@ -219,7 +223,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   defp delete_existing_reminder_jobs(meeting_id, reminder_value, reminder_unit) do
-    ObanJobQueries.delete_reminder_jobs_for_meeting(
+    Jobs.delete_reminder_jobs_for_meeting(
       meeting_id,
       EmailWorker,
       %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit}

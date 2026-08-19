@@ -59,12 +59,6 @@ defmodule Tymeslot.Notifications.Recipients do
       :reschedule ->
         {:both, base_recipients}
 
-      :video_room_created ->
-        {:both, base_recipients}
-
-      :video_room_failed ->
-        {:organizer_only, base_recipients}
-
       _unknown_type ->
         {:both, base_recipients}
     end
@@ -92,9 +86,7 @@ defmodule Tymeslot.Notifications.Recipients do
   @spec should_receive_notification?(atom(), atom(), term()) :: boolean()
   def should_receive_notification?(recipient_type, notification_type, _unused_meeting) do
     case {recipient_type, notification_type} do
-      {:organizer, :video_room_failed} -> true
       {:organizer, _any_type} -> true
-      {:attendee, :video_room_failed} -> false
       {:attendee, _any_type} -> true
       _invalid_combination -> false
     end

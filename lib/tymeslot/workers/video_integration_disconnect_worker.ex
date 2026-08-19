@@ -28,6 +28,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.VideoRoom.ErrorPolicy
 
   require Logger
 
@@ -97,9 +98,17 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         DateTime.utc_now()
       )
 
-    failures = Enum.count(meetings, &(delete_room(integration, &1) == :error))
+    results = Enum.map(meetings, &delete_room(integration, &1))
 
-    finish(integration, attempt, length(meetings), failures)
+    if :circuit_open in results do
+      # The provider's breaker is open: every remaining call in this batch
+      # would fail instantly too. Snooze past the recovery window rather than
+      # burning one of this job's five attempts on calls known to be refused.
+      ErrorPolicy.to_result(:circuit_open, attempt)
+    else
+      failures = Enum.count(results, &(&1 == :error))
+      finish(integration, attempt, length(meetings), failures)
+    end
   end
 
   defp finish(integration, _attempt, total, 0), do: purge(integration, total, 0)
@@ -126,7 +135,42 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     {:error, :room_cleanup_incomplete}
   end
 
+  # Re-checks the row immediately before deleting it. `integration` was loaded
+  # at the start of this attempt, but `drain/2` in between makes one network
+  # call per upcoming meeting — long enough for the user to reconnect the same
+  # account, which reactivates this exact row (`is_active: true, deleted_at:
+  # nil`, see `VideoIntegrationSchema.clear_deleted_at_on_reactivation/1`).
+  # Deleting a row this stale read has become live would drop a reconnected
+  # user's working integration out from under them, so the queued purge is
+  # skipped once the row is no longer soft-deleted.
   defp purge(integration, total, failures) do
+    case VideoIntegrationQueries.get(integration.id) do
+      {:ok, %{deleted_at: nil}} ->
+        Logger.info("Video integration reconnected before purge, skipping delete",
+          integration_id: integration.id
+        )
+
+        :ok
+
+      {:ok, current} ->
+        delete_integration(current, total, failures)
+
+      {:error, :not_found} ->
+        :ok
+
+      {:error, :requires_reencryption, %{deleted_at: nil}} ->
+        Logger.info("Video integration reconnected before purge, skipping delete",
+          integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, :requires_reencryption, current} ->
+        delete_integration(current, total, failures)
+    end
+  end
+
+  defp delete_integration(integration, total, failures) do
     case VideoIntegrationQueries.delete(integration) do
       {:ok, _deleted} ->
         Logger.info("Video integration purged after room cleanup",
@@ -160,6 +204,9 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
 
       {:error, :meeting_not_found} ->
         clear_room(meeting)
+
+      {:error, :circuit_open} ->
+        :circuit_open
 
       {:error, reason} ->
         Logger.warning("Failed to delete provider room during disconnect",

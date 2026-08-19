@@ -308,27 +308,6 @@ defmodule TymeslotWeb.VideoOAuthController do
     end
   end
 
-  defp create_or_update_google_meet_integration(tokens, integration_id) do
-    token_attrs = %{
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      token_expires_at: tokens.expires_at,
-      oauth_scope: tokens.scope,
-      is_active: true,
-      provider_account_id: tokens[:provider_account_id],
-      provider_account_email: tokens[:provider_account_email]
-    }
-
-    Video.match_or_create_oauth_integration(
-      tokens.user_id,
-      "google_meet",
-      "Google Meet",
-      tokens[:provider_account_id],
-      integration_id,
-      token_attrs
-    )
-  end
-
   defp validate_zoom_tokens(tokens) do
     if is_binary(tokens[:provider_account_id]) and tokens[:provider_account_id] != "" do
       :ok
@@ -337,44 +316,41 @@ defmodule TymeslotWeb.VideoOAuthController do
     end
   end
 
-  defp create_or_update_zoom_integration(tokens, integration_id) do
-    token_attrs = %{
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      token_expires_at: tokens.expires_at,
-      oauth_scope: tokens.scope,
-      is_active: true,
-      provider_account_id: tokens[:provider_account_id],
-      provider_account_email: tokens[:provider_account_email]
-    }
+  # Google Meet and Zoom differed only in the two literals; Teams adds the two
+  # Microsoft-specific fields. Naming that difference beats three copies of one
+  # token map, where a new credential field lands in some copies and not others.
+  defp create_or_update_google_meet_integration(tokens, integration_id),
+    do: create_or_update_integration(tokens, integration_id, "google_meet", "Google Meet")
 
-    Video.match_or_create_oauth_integration(
-      tokens.user_id,
-      "zoom",
-      "Zoom",
-      tokens[:provider_account_id],
-      integration_id,
-      token_attrs
-    )
-  end
+  defp create_or_update_zoom_integration(tokens, integration_id),
+    do: create_or_update_integration(tokens, integration_id, "zoom", "Zoom")
 
   defp create_or_update_teams_integration(tokens, integration_id) do
-    token_attrs = %{
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      token_expires_at: tokens.expires_at,
-      oauth_scope: tokens.scope,
-      is_active: true,
+    create_or_update_integration(tokens, integration_id, "teams", "Microsoft Teams", %{
       tenant_id: tokens.tenant_id,
-      teams_user_id: tokens.teams_user_id,
-      provider_account_id: tokens[:provider_account_id],
-      provider_account_email: tokens[:provider_account_email]
-    }
+      teams_user_id: tokens.teams_user_id
+    })
+  end
+
+  defp create_or_update_integration(tokens, integration_id, slug, display_name, extra \\ %{}) do
+    token_attrs =
+      Map.merge(
+        %{
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          token_expires_at: tokens.expires_at,
+          oauth_scope: tokens.scope,
+          is_active: true,
+          provider_account_id: tokens[:provider_account_id],
+          provider_account_email: tokens[:provider_account_email]
+        },
+        extra
+      )
 
     Video.match_or_create_oauth_integration(
       tokens.user_id,
-      "teams",
-      "Microsoft Teams",
+      slug,
+      display_name,
       tokens[:provider_account_id],
       integration_id,
       token_attrs

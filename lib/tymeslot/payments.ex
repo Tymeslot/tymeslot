@@ -6,14 +6,19 @@ defmodule Tymeslot.Payments do
 
   require Logger
 
+  alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
+
   alias Tymeslot.Payments.{
+    CustomerLookup,
     DatabaseOperations,
+    PubSub,
     SubscriptionFlow,
     SubscriptionInvoice,
     SubscriptionInvoices,
     Subscriptions
   }
 
+  @type transaction :: PaymentTransaction.t()
   @type stripe_id :: String.t()
 
   @doc """
@@ -185,4 +190,44 @@ defmodule Tymeslot.Payments do
       metadata
     )
   end
+
+  @doc """
+  Reads a user id out of Stripe metadata, which carries it as a string.
+
+  Returns `nil` for anything that is not a whole number, so a malformed or
+  absent value never becomes a wrong user.
+  """
+  @spec parse_user_id(any()) :: integer() | nil
+  defdelegate parse_user_id(id), to: CustomerLookup
+
+  @doc """
+  Records a checkout session's outcome against its transaction row, attaching
+  the subscription it produced.
+  """
+  @spec update_transaction_for_subscription(String.t(), String.t(), String.t(), map()) ::
+          {:ok, transaction()} | {:error, term()}
+  defdelegate update_transaction_for_subscription(
+                checkout_session_id,
+                subscription_id,
+                status,
+                metadata
+              ),
+              to: DatabaseOperations
+
+  @doc """
+  Broadcasts a subscription lifecycle event to the payment-events topic.
+  """
+  @spec broadcast_subscription_event(%{
+          required(:event) => atom(),
+          required(:user_id) => integer(),
+          optional(atom()) => term()
+        }) :: :ok
+  defdelegate broadcast_subscription_event(event_data), to: PubSub
+
+  @doc """
+  The PubSub server payment events are broadcast on, or `nil` when none is
+  running.
+  """
+  @spec get_pubsub_server() :: module() | nil
+  defdelegate get_pubsub_server, to: PubSub
 end

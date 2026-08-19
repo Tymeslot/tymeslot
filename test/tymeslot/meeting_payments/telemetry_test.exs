@@ -104,7 +104,8 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
           "object" => %{
             "id" => "cs_TEL_OK",
             "client_reference_id" => meeting.id,
-            "payment_intent" => "pi_TEL_OK"
+            "payment_intent" => "pi_TEL_OK",
+            "payment_status" => "paid"
           }
         }
       }
@@ -137,7 +138,8 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
           "object" => %{
             "id" => "cs_TEL_ANALYTICS",
             "client_reference_id" => meeting.id,
-            "payment_intent" => "pi_TEL_ANALYTICS"
+            "payment_intent" => "pi_TEL_ANALYTICS",
+            "payment_status" => "paid"
           }
         }
       }
@@ -177,7 +179,8 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
           "object" => %{
             "id" => "cs_TEL_RECOVERED",
             "client_reference_id" => meeting.id,
-            "payment_intent" => "pi_TEL_RECOVERED"
+            "payment_intent" => "pi_TEL_RECOVERED",
+            "payment_status" => "paid"
           }
         }
       }
@@ -251,7 +254,8 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
           "object" => %{
             "id" => "cs_STATUS",
             "client_reference_id" => meeting.id,
-            "payment_intent" => "pi_STATUS"
+            "payment_intent" => "pi_STATUS",
+            "payment_status" => "paid"
           }
         }
       }

@@ -148,9 +148,6 @@ config :tymeslot, :radicale,
   password: "test",
   calendar_path: "/test/calendar.ics/"
 
-# Configure auth for test
-config :tymeslot, :auth, success_redirect_path: "/dashboard"
-
 # OAuth state secrets for test (signs/validates the `state` parameter).
 # Tests typically mock State.validate/2, but OAuthStateGuard still reads
 # these configs to pass them through, so they must be present.

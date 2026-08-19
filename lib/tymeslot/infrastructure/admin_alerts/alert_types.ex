@@ -33,7 +33,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning},
     payment_event_enqueue_failed: %{category: "Payment", severity: :error},
-    analytics_tracking_anomaly: %{category: "Analytics", severity: :warning}
+    analytics_tracking_anomaly: %{category: "Analytics", severity: :warning},
+    recipient_email_rejected: %{category: "Email", severity: :warning}
   }
 
   @doc "Returns the full registry map for enumeration and lookup."
@@ -106,6 +107,18 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     reason = Map.get(metadata, :reason, "unknown")
 
     "invalid_calendar_event:#{provider}:#{integration_id}:#{reason}"
+  end
+
+  # Call sites identify the affected recipient through whichever id they have
+  # to hand (a Connect account, a booking payment), never the raw reason —
+  # Postmark's rejection payload doesn't carry the address. Dedup on that id
+  # so two different hosts' bounces in the same window raise two alerts, not
+  # one; falls back to the full message when no id is available.
+  def dedup_key(:recipient_email_rejected, metadata) do
+    case recipient_email_rejected_identifier(metadata) do
+      nil -> format_message(:recipient_email_rejected, metadata)
+      identifier -> "recipient_email_rejected:#{identifier}"
+    end
   end
 
   def dedup_key(type, metadata), do: format_message(type, metadata)
@@ -218,8 +231,26 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "Unhandled #{kind} crash: #{detail}"
   end
 
+  def format_message(:recipient_email_rejected, metadata) do
+    summary = Map.get(metadata, :summary, "Recipient permanently undeliverable")
+    reason = Map.get(metadata, :reason_message, "unknown")
+
+    case recipient_email_rejected_identifier(metadata) do
+      nil -> "#{summary}: #{reason}"
+      identifier -> "#{summary} (#{identifier}): #{reason}"
+    end
+  end
+
   def format_message(type, _metadata) do
     "Alert: #{type}"
+  end
+
+  defp recipient_email_rejected_identifier(metadata) do
+    cond do
+      id = Map.get(metadata, :connect_account_id) -> "connect account #{id}"
+      id = Map.get(metadata, :booking_payment_id) -> "booking payment #{id}"
+      true -> nil
+    end
   end
 
   defp format_reason(reason) when is_exception(reason), do: Exception.message(reason)

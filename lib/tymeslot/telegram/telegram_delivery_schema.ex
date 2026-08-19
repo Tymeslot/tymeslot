@@ -63,5 +63,5 @@ defmodule Tymeslot.Telegram.TelegramDeliverySchema do
       when is_integer(status) and status >= 200 and status < 300,
       do: true
 
-  def successful?(_delivery), do: false
+  def successful?(%__MODULE__{}), do: false
 end

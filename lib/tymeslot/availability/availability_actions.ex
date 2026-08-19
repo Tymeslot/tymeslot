@@ -221,7 +221,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   # user just made.
   defp invalidate_for_schedule(schedule_id) do
     with %{profile_id: profile_id} <- AvailabilityScheduleQueries.get(schedule_id),
-         %{user_id: user_id} <- ProfileQueries.get_profile(profile_id) do
+         %{user_id: user_id} <- ProfileQueries.get_with_user(profile_id) do
       AvailabilityCache.invalidate_for_user(user_id)
     else
       _other -> :ok
