@@ -1,0 +1,68 @@
+defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
+  use ExUnit.Case, async: false
+
+  @moduletag :integrations
+
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
+  alias Tymeslot.Test.LogCapture
+
+  # EWS states its failures as its own response codes rather than as an HTTP
+  # status, so they reach the shared vocabulary as `{:response_code, code}`.
+  # Left unmapped they fall into the catch-all, which tells the account owner
+  # only that something unexpected happened and logs the whole tuple as an
+  # unknown error — for a failure whose cause the server named exactly.
+  describe "sanitize_error_message/2 on an EWS response code" do
+    test "says access was denied when the server said so" do
+      message =
+        ErrorHandler.sanitize_error_message({:response_code, "ErrorAccessDenied"}, :exchange)
+
+      assert message =~ "Access denied"
+      refute message =~ "unexpected"
+    end
+
+    test "keeps the generic sentence for a code with no advice attached" do
+      message =
+        ErrorHandler.sanitize_error_message({:response_code, "ErrorTimeoutExpired"}, :exchange)
+
+      refute message =~ "Access denied"
+    end
+
+    test "logs the code itself rather than an unknown error" do
+      LogCapture.attach()
+
+      ErrorHandler.sanitize_error_message({:response_code, "ErrorTimeoutExpired"}, :exchange)
+
+      assert_receive {:captured_log, %{level: :error, msg: msg, meta: meta}}
+      assert LogCapture.message_text(msg) == "Calendar provider error"
+      assert meta.error == "ErrorTimeoutExpired"
+      assert meta.provider == :exchange
+    end
+  end
+
+  describe "classify_and_format/3 on an EWS response code" do
+    test "classifies a denied mailbox as a permission failure" do
+      # The category is what callers act on, and `:unknown` routes a fixable
+      # permissions problem to "try again later".
+      assert {:permission, message} =
+               ErrorHandler.classify_and_format({:response_code, "ErrorAccessDenied"}, :exchange)
+
+      assert message =~ "permission"
+    end
+
+    test "classifies a mailbox that is not there as a configuration failure" do
+      assert {:config, _message} =
+               ErrorHandler.classify_and_format(
+                 {:response_code, "ErrorNonExistentMailbox"},
+                 :exchange
+               )
+    end
+
+    test "leaves a code it has no advice for unknown" do
+      assert {:unknown, _message} =
+               ErrorHandler.classify_and_format(
+                 {:response_code, "ErrorTimeoutExpired"},
+                 :exchange
+               )
+    end
+  end
+end

@@ -97,6 +97,15 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       when reason in [:network_error, :server_error, :server_unresponsive],
       do: :network
 
+  # EWS names its failures in its own vocabulary rather than through an HTTP
+  # status, so an Exchange failure arrives as `{:response_code, code}`. Only
+  # the two an operator actually hits are named: a mailbox the account cannot
+  # read, and one that is not there. Everything else falls through to
+  # `:unknown` deliberately — a category is a promise about what to do next,
+  # and there is nothing to say about a code we have no advice for.
+  def categorize_error({:response_code, "ErrorAccessDenied"}), do: :permission
+  def categorize_error({:response_code, "ErrorNonExistentMailbox"}), do: :config
+
   def categorize_error(_error), do: :unknown
 
   @doc """
