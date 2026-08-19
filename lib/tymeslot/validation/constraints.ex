@@ -33,6 +33,9 @@ defmodule Tymeslot.Validation.Constraints do
   @spec duration_minutes_range() :: Range.t()
   def duration_minutes_range, do: 1..480
 
+  @spec slot_interval_minutes_range() :: Range.t()
+  def slot_interval_minutes_range, do: 5..480
+
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
 
@@ -81,6 +84,12 @@ defmodule Tymeslot.Validation.Constraints do
   @spec duration_minutes_opts() :: keyword()
   def duration_minutes_opts do
     range = duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec slot_interval_minutes_opts() :: keyword()
+  def slot_interval_minutes_opts do
+    range = slot_interval_minutes_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 
