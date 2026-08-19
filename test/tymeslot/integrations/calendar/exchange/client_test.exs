@@ -82,11 +82,20 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         assert Elixir.Base.decode64!(encoded) == "user@example.com:secret"
 
         assert ["text/xml; charset=utf-8"] = Conn.get_req_header(conn, "content-type")
+        assert ["text/xml"] = Conn.get_req_header(conn, "accept")
 
         conn
         |> Conn.put_resp_content_type("text/xml")
         |> Conn.resp(200, ok_envelope())
       end)
+
+      assert {:ok, _doc} = Client.call(@config, Requests.find_folder())
+    end
+  end
+
+  describe "call/2 response" do
+    test "returns the parsed response document" do
+      respond_with(200, ok_envelope())
 
       assert {:ok, doc} = Client.call(@config, Requests.find_folder())
 
@@ -178,6 +187,20 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       assert {:error, :server_error} = Client.call(@config, "<m:FindFolder/>")
     end
 
+    test "does not report a parse failure for a 500 the status already explains" do
+      # A reverse proxy answering 500 with an HTML error page is the common
+      # case, and the body is parsed only to look for a fault. Warning about
+      # its parseability describes the wrong failure to the operator.
+      LogCapture.attach()
+
+      respond_with(500, "<html><body>502 Bad Gateway</body>")
+
+      assert {:error, :server_error} = Client.call(@config, "<m:FindFolder/>")
+
+      messages = Enum.map(LogCapture.drain(), &LogCapture.message_text(&1.msg))
+      refute Enum.any?(messages, &(&1 =~ "not parseable XML"))
+    end
+
     test "maps an unparseable 200 body to :malformed_xml" do
       respond_with(200, "<html><body>Sign in")
 
@@ -196,6 +219,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, :econnrefused) end)
 
       assert {:error, :network_error} = Client.call(@config, "<m:FindFolder/>")
+    end
+
+    test "logs a base URL it cannot parse without raising over it" do
+      # What a user typing a host into the EWS field produces. The SSRF guard
+      # refuses it, which routes it through the same error handler a refused
+      # connection takes, and that handler must survive a URL with no scheme:
+      # raising there would turn a recoverable failure into an Oban crash.
+      LogCapture.attach()
+      with_config(:tymeslot, :environment, :prod)
+
+      ReqTest.stub(:tymeslot_http, fn _conn -> flunk("request must not leave the node") end)
+
+      config = %{@config | base_url: "mail.example.com/EWS/Exchange.asmx"}
+
+      assert {:error, :network_error} = Client.call(config, "<m:FindFolder/>")
+
+      logged = Enum.map_join(LogCapture.drain(), "\n", &LogCapture.dump/1)
+
+      assert logged =~ "Exchange EWS request failed"
+      assert logged =~ "(unparseable url)"
     end
   end
 
@@ -293,6 +336,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
     @describetag :security
 
     setup do
+      LogCapture.attach(logger_level: :debug)
       with_config(:tymeslot, :environment, :prod)
       with_config(:tymeslot, :allow_private_ips_for_calendar, false)
       with_config(:tymeslot, :dns_resolver_module, ExchangeSsrfPrivateResolver)
@@ -319,8 +363,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         @config
         | base_url: "https://svc:#{@leak_canary}@exchange.corp/EWS/Exchange.asmx"
       }
-
-      LogCapture.attach(logger_level: :debug)
 
       ReqTest.stub(:tymeslot_http, fn _conn -> flunk("request must not leave the node") end)
 

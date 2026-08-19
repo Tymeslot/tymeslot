@@ -73,20 +73,18 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   it in the SOAP envelope is this function's job.
   """
   @spec call(config(), String.t()) :: {:ok, Soap.document()} | {:error, error_reason()}
-  def call(%{base_url: url} = config, body) do
+  def call(%{base_url: url} = config, body) when is_binary(url) do
     envelope = Soap.envelope(body)
 
     case Config.http_client_module().post(url, envelope, headers(config), options(config)) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         Soap.parse(response_body)
 
-      # The one status where the body is worth parsing before the status is
-      # believed: this is how EWS reports every request-level error.
       {:ok, %Req.Response{status: 500, body: response_body}} ->
         soap_fault_or_server_error(response_body)
 
       {:ok, %Req.Response{status: status}} ->
-        {:error, status_reason(status, url)}
+        status_error(status, url)
 
       {:error, reason} ->
         transport_error(reason, url)
@@ -99,27 +97,30 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   # `:malformed_xml` or `{:unexpected_status, 500}`, because what the caller
   # can act on is the same in either case and the status is what said so.
   defp soap_fault_or_server_error(body) do
-    case Soap.parse(body) do
+    # `log: false`: this body is parsed only to look for a fault, so one that
+    # is not XML is the expected shape of a proxy error page rather than an
+    # anomaly, and a parse warning would describe a status failure.
+    case Soap.parse(body, log: false) do
       {:error, {:soap_fault, _message}} = fault -> fault
       _no_fault -> {:error, :server_error}
     end
   end
 
-  defp status_reason(status, _url) when is_map_key(@status_reasons, status),
-    do: Map.fetch!(@status_reasons, status)
+  defp status_error(status, _url) when is_map_key(@status_reasons, status),
+    do: {:error, Map.fetch!(@status_reasons, status)}
 
-  defp status_reason(status, _url) when status >= 500, do: :server_error
+  defp status_error(status, _url) when status >= 500, do: {:error, :server_error}
 
   # An unmodelled status reaches the operator as a code and nothing else
   # unless it is logged here; the provider collapses every non-auth failure
   # into one user-facing sentence.
-  defp status_reason(status, url) do
+  defp status_error(status, url) do
     Logger.warning("Exchange EWS request returned an unhandled status",
       endpoint: loggable_url(url),
       status: status
     )
 
-    {:unexpected_status, status}
+    {:error, {:unexpected_status, status}}
   end
 
   defp transport_error(%Mint.TransportError{reason: :timeout}, _url), do: {:error, :timeout}
@@ -141,6 +142,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   # says everything the operator needs and can carry nothing else.
   defp error_label(%module{reason: reason}), do: "#{inspect(module)}: #{inspect(reason)}"
   defp error_label(%module{}), do: inspect(module)
+
+  # Unreachable today: `HTTPClient` returns only exception structs. It stays
+  # because without it a non-struct term would raise `FunctionClauseError` from
+  # inside the error handler itself, turning a recoverable network failure into
+  # an Oban crash.
   defp error_label(other), do: inspect(other)
 
   defp headers(%{username: username, password: password})

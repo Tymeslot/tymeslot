@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Test.LogCapture
 
   # Binds the EWS namespaces to prefixes no xpath in this codebase spells, so
   # anything that resolves against it can only have resolved by namespace URI.
@@ -107,6 +108,19 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
       body = ~s(<?xml version="1.0"?><!DOCTYPE r SYSTEM "http://127.0.0.1:1/e.dtd"><r>hi</r>)
 
       assert {:error, :malformed_xml} = Soap.parse(body)
+    end
+
+    test "keeps the parser's quotation of the body out of the log" do
+      # xmerl names the offending element in its own error reason, so inspecting
+      # that reason lifts a fragment of the document into the log line. The
+      # document is calendar data from the user's mailbox.
+      LogCapture.attach()
+
+      assert {:error, :malformed_xml} = Soap.parse("<a><PrivateMeetingSubject></a>")
+
+      event = LogCapture.await_log("not parseable XML")
+
+      refute LogCapture.dump(event) =~ "PrivateMeetingSubject"
     end
 
     test "returns an error rather than raising when the parser itself blows up" do

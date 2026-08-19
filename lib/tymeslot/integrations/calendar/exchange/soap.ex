@@ -78,11 +78,17 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   and `{:error, :malformed_xml}` when the body is not XML at all. A fault is a
   normal outcome on this path (EWS answers one for a malformed request), so it
   is a typed error rather than an exception.
+
+  A body that is not XML at all is logged as an anomaly. Pass `log: false`
+  where it is not one: a caller that classifies the response by its HTTP status
+  regardless (EWS answers a 500 with an IIS or reverse-proxy error page as a
+  matter of course) would otherwise leave the operator reading a parse warning
+  that describes a status failure.
   """
-  @spec parse(String.t()) ::
+  @spec parse(String.t(), keyword()) ::
           {:ok, document()} | {:error, {:soap_fault, String.t()} | :malformed_xml}
-  def parse(body) when is_binary(body) do
-    with {:ok, doc} <- parse_document(body) do
+  def parse(body, opts \\ []) when is_binary(body) do
+    with {:ok, doc} <- parse_document(body, opts) do
       # The fault element is detected before its text is read: a fault whose
       # `faultstring` is empty is still a fault, and reading the text first
       # would make it indistinguishable from no fault at all.
@@ -144,23 +150,45 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
 
   # Only the parse itself is guarded: widening the guards over the fault xpath
   # would report a bug there as `:malformed_xml`.
-  defp parse_document(body) do
+  defp parse_document(body, opts) do
     {:ok, SweetXml.parse(body, quiet: true, dtd: :none, namespace_conformant: true)}
   rescue
     # Most malformed input leaves through the `catch` below, but not all of
     # it: xmerl raises on some, a malformed hexadecimal character reference
     # (`&#xZZ;`) among them.
-    error -> malformed_xml(error)
+    error -> malformed_xml(error, opts)
   catch
     # xmerl signals a fatal parse error by exiting rather than by raising, so
     # both escape routes have to be covered to keep this a typed error.
-    :exit, reason -> malformed_xml(reason)
+    :exit, reason -> malformed_xml(reason, opts)
   end
 
-  # The body itself is never logged: it is calendar data from the user's mailbox.
-  defp malformed_xml(cause) do
-    Logger.warning("Exchange SOAP response is not parseable XML", error: inspect(cause))
+  defp malformed_xml(cause, opts) do
+    if Keyword.get(opts, :log, true) do
+      Logger.warning("Exchange SOAP response is not parseable XML", error: cause_label(cause))
+    end
 
     {:error, :malformed_xml}
   end
+
+  # The body itself is never logged: it is calendar data from the user's
+  # mailbox. Nor is the parser's reason term, which quotes it: an unmatched end
+  # tag arrives as `{:endtag_does_not_match, {:was, :a, :should_have_been,
+  # :Leaked}}`, naming an element out of the document. Only the shape of the
+  # failure and where it happened survive, and neither can carry input.
+  defp cause_label({:fatal, {reason, _file, {:line, line}, {:col, column}}}),
+    do: "#{failure_tag(reason)} at line #{line}, column #{column}"
+
+  defp cause_label(%FunctionClauseError{module: module, function: function, arity: arity}),
+    do: "no function clause in #{inspect(module)}.#{function}/#{arity}"
+
+  defp cause_label(%module{}), do: inspect(module)
+  defp cause_label(_other), do: "unrecognised parse failure"
+
+  defp failure_tag(reason) when is_atom(reason), do: reason
+
+  defp failure_tag(reason) when is_tuple(reason) and tuple_size(reason) > 0,
+    do: failure_tag(elem(reason, 0))
+
+  defp failure_tag(_reason), do: :unknown
 end
