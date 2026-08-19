@@ -109,10 +109,17 @@ defmodule Tymeslot.Auth.Authentication do
   # Records the attempt against the account lockout tracker and audits the
   # moment the account crosses a lockout threshold.
   #
-  # The transition is observable only here: `check_auth_rate_limit/2` runs
-  # before password verification, so once an account is throttled or locked
-  # this path is never reached again. The audit entry therefore fires once per
-  # lockout rather than once per subsequent attempt.
+  # `check_auth_rate_limit/2` runs *before* this, as a read-only pre-check
+  # (`AccountLockout.check_lockout_status/1`) that returns an error without
+  # recording anything once the failure count reaches the throttle threshold
+  # (10 in the last hour). Because that pre-check short-circuits
+  # `authenticate_with_password/3` before this function can record another
+  # failure, the count freezes at the throttle threshold under sequential
+  # brute force: the lock threshold (20) is never reached via this path, so
+  # only `:account_throttled` fires here in practice. The 1-hour sliding
+  # window in `AccountLockout.check_lockout_status/1` also means the audit
+  # entry recurs roughly hourly as old attempts age out and throttling
+  # re-triggers, rather than firing once.
   defp record_auth_attempt(user, success, opts) do
     case RateLimiter.record_auth_attempt(user.email, success) do
       {:error, lockout_type, _message}
