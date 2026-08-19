@@ -106,6 +106,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   def categorize_error({:response_code, "ErrorAccessDenied"}), do: :permission
   def categorize_error({:response_code, "ErrorNonExistentMailbox"}), do: :config
 
+  # The one Exchange failure the provider states itself rather than relaying:
+  # the integration names no address `GetUserAvailability` can be addressed to,
+  # which is a setting the account owner can fill in and so the same category
+  # the mailbox that is not there gets.
+  #
+  # Its two siblings, `:no_response_messages` and `:no_response_code`, stay
+  # `:unknown` on purpose. Both mean a well-formed response stated no outcome
+  # at all — a reverse proxy answering for EWS, or a server that could not use
+  # the time-zone block — so there is no setting to point at and nothing to say
+  # beyond that something unexpected happened and the read was refused rather
+  # than answered empty.
+  def categorize_error(:no_mailbox_address), do: :config
+
   def categorize_error(_error), do: :unknown
 
   @doc """

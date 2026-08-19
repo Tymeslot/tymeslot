@@ -60,6 +60,17 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
                )
     end
 
+    test "classifies a mailbox address the account does not carry as a configuration failure" do
+      # The one failure the Exchange provider invents rather than relays, and a
+      # pure configuration problem with an exact remedy: nothing names an
+      # address `GetUserAvailability` can be addressed to. `:unknown` routes it
+      # to "an unexpected error occurred, please try again", which never fixes
+      # it and hides that the account owner can.
+      assert {:config, message} = ErrorHandler.classify_and_format(:no_mailbox_address, :exchange)
+
+      assert message =~ "configuration"
+    end
+
     test "leaves a code it has no advice for unknown" do
       assert {:unknown, _message} =
                ErrorHandler.classify_and_format(
