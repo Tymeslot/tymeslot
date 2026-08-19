@@ -24,11 +24,6 @@ defmodule Tymeslot.Integrations.Telemetry do
       [:tymeslot, :integration, :operation, :stop],
       [:tymeslot, :integration, :operation, :exception],
 
-      # API calls
-      [:tymeslot, :integration, :api_call, :start],
-      [:tymeslot, :integration, :api_call, :stop],
-      [:tymeslot, :integration, :api_call, :exception],
-
       # OAuth operations
       [:tymeslot, :integration, :oauth, :token_refresh],
       [:tymeslot, :integration, :oauth, :authorization],
@@ -131,9 +126,6 @@ defmodule Tymeslot.Integrations.Telemetry do
       [:tymeslot, :integration, :operation, :exception] ->
         :error
 
-      [:tymeslot, :integration, :api_call, :exception] ->
-        :error
-
       [:tymeslot, :integration, :health_check] when metadata.success == false ->
         :warning
 
@@ -188,34 +180,6 @@ defmodule Tymeslot.Integrations.Telemetry do
          _event_name
        ) do
     "Integration operation failed: #{metadata.operation} - #{metadata.reason}"
-  end
-
-  defp format_event_message(
-         [:tymeslot, :integration, :api_call, :start],
-         _measurements,
-         metadata,
-         _event_name
-       ) do
-    "API call started: #{metadata.provider} - #{metadata.operation}"
-  end
-
-  defp format_event_message(
-         [:tymeslot, :integration, :api_call, :stop],
-         measurements,
-         metadata,
-         _event_name
-       ) do
-    duration_ms = System.convert_time_unit(measurements.duration, :native, :millisecond)
-    "API call completed: #{metadata.provider} - #{metadata.operation} (#{duration_ms}ms)"
-  end
-
-  defp format_event_message(
-         [:tymeslot, :integration, :api_call, :exception],
-         _measurements,
-         metadata,
-         _event_name
-       ) do
-    "API call failed: #{metadata.provider} - #{metadata.operation} - #{metadata.reason}"
   end
 
   defp format_event_message(
@@ -295,17 +259,6 @@ defmodule Tymeslot.Integrations.Metrics do
       ),
       Metrics.summary(
         "tymeslot.integration.operation.duration",
-        tags: [:provider, :operation],
-        unit: {:native, :millisecond}
-      ),
-
-      # API call metrics
-      Metrics.counter(
-        "tymeslot.integration.api_call.count",
-        tags: [:provider, :operation, :result]
-      ),
-      Metrics.summary(
-        "tymeslot.integration.api_call.duration",
         tags: [:provider, :operation],
         unit: {:native, :millisecond}
       ),

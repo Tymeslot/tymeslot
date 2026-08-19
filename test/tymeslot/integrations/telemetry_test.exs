@@ -22,7 +22,6 @@ defmodule Tymeslot.Integrations.TelemetryTest do
       assert [:tymeslot, :integration, :operation, :start] in events
       assert [:tymeslot, :integration, :operation, :stop] in events
       assert [:tymeslot, :integration, :operation, :exception] in events
-      assert [:tymeslot, :integration, :api_call, :start] in events
       assert [:tymeslot, :integration, :health_check] in events
       assert [:tymeslot, :cache, :hit] in events
       assert [:tymeslot, :cache, :miss] in events
