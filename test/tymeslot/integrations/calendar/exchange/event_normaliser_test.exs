@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
 
   setup :capture_admin_alerts
 
+  alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
@@ -375,7 +376,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
                assert {:ok, []} = EventNormaliser.normalise_events(items([item]), @context)
              end) =~ "Skipping unusable Exchange calendar item"
 
-      assert_receive {:send_alert, :invalid_calendar_event, _payload}
+      assert_receive {:send_alert, :invalid_calendar_event, payload}
+
+      # The identifier is rendered straight into the operator's email, and
+      # this is the one item that has none, so a blank one would arrive as
+      # "(event_id: )" and name nothing at all.
+      assert AlertTypes.format_message(:invalid_calendar_event, payload) =~
+               "(event_id: unknown)"
     end
   end
 

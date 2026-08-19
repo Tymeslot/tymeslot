@@ -95,6 +95,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
         event
 
       {:error, reason} ->
+        # `attrs.uid` is `""` exactly when the item carried neither a UID nor
+        # an item id, which is itself one of the reasons an item is rejected.
+        # `AlertTypes` renders this value straight into the operator's email,
+        # so a blank one would arrive as "(event_id: )".
+        uid = presence(attrs.uid) || "unknown"
+
         # A skipped item is silent data loss in the organiser's diary, so it
         # gets a warning and an operator alert rather than a debug line, which
         # is what the CalDAV and Google paths do with theirs. Only identifiers
@@ -102,13 +108,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
         # mailbox content and must not reach a log line or an alert email.
         Logger.warning("Skipping unusable Exchange calendar item",
           calendar_integration_id: context.calendar_integration_id,
-          event_uid: attrs.uid,
+          event_uid: uid,
           reason: reason
         )
 
         AdminAlerts.send_alert(:invalid_calendar_event, %{
           provider: :exchange,
-          event_uid: attrs.uid,
+          event_uid: uid,
           reason: reason,
           calendar_integration_id: context.calendar_integration_id
         })

@@ -35,6 +35,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
 
+  require Logger
+
   @type error_reason :: {:response_code, String.t()} | :no_response_messages
 
   # A FindFolder response carries no marker for the mailbox's default
@@ -73,13 +75,35 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery do
   end
 
   defp to_entries(folders) do
-    folders
-    |> Enum.map(&to_entry/1)
-    # A folder id is what makes an entry usable: it is how the folder is named
-    # back to the server and how a user's selection is stored. An entry
-    # without one would occupy a row in the calendar list that can never sync.
-    |> Enum.reject(&is_nil(&1.id))
-    |> mark_primary()
+    {usable, dropped} =
+      folders
+      |> Enum.map(&to_entry/1)
+      |> Enum.split_with(&identified?/1)
+
+    log_dropped(dropped)
+    mark_primary(usable)
+  end
+
+  # A folder id is what makes an entry usable: it is how the folder is named
+  # back to the server and how a user's selection is stored. An entry without
+  # one would occupy a row in the calendar list that can never sync.
+  defp identified?(%CalendarEntry{id: nil}), do: false
+  defp identified?(%CalendarEntry{}), do: true
+
+  # A calendar missing from the picker is as invisible to its owner as a
+  # meeting missing from the diary, so dropping one is stated rather than left
+  # silent. Only the count travels: a folder's display name is mailbox
+  # content. No operator alert accompanies it, unlike the one
+  # `Exchange.EventNormaliser` raises for a dropped item: discovery carries no
+  # `calendar_integration_id` to name in an alert, and every alert type
+  # describes an event rather than a folder.
+  defp log_dropped([]), do: :ok
+
+  defp log_dropped(dropped) do
+    Logger.warning("Skipping Exchange calendar folders carrying no folder id",
+      provider: :exchange,
+      count: length(dropped)
+    )
   end
 
   defp to_entry(folder) do

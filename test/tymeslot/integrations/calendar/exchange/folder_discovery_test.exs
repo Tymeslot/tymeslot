@@ -1,6 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscoveryTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -97,18 +99,40 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscoveryTest do
     end
 
     test "drops a folder carrying no folder id, since nothing could sync it" do
-      folder = """
-      <t:CalendarFolder>
-        <t:DisplayName>Ghost</t:DisplayName>
-      </t:CalendarFolder>
-      """
+      capture_log(fn ->
+        assert {:ok, entries} =
+                 FolderDiscovery.parse_calendars(
+                   response(idless_folder() <> calendar_folder("cal-1", "Team"))
+                 )
 
-      assert {:ok, entries} =
-               FolderDiscovery.parse_calendars(
-                 response(folder <> calendar_folder("cal-1", "Team"))
-               )
+        assert Enum.map(entries, & &1.id) == ["cal-1"]
+      end)
+    end
 
-      assert Enum.map(entries, & &1.id) == ["cal-1"]
+    test "says so in the log when it drops a folder, naming no mailbox content" do
+      # A calendar the picker never offers is as invisible to its owner as a
+      # meeting missing from the diary, so the drop has to leave a trace. The
+      # display name is the mailbox owner's data and must not be in it.
+      log =
+        capture_log(fn ->
+          assert {:ok, [_only]} =
+                   FolderDiscovery.parse_calendars(
+                     response(idless_folder() <> calendar_folder("cal-1", "Team"))
+                   )
+        end)
+
+      assert log =~ "Skipping Exchange calendar folders carrying no folder id"
+      refute log =~ "Ghost"
+    end
+
+    test "logs nothing when every folder carries an id" do
+      log =
+        capture_log(fn ->
+          assert {:ok, [_only]} =
+                   FolderDiscovery.parse_calendars(response(calendar_folder("cal-1", "Team")))
+        end)
+
+      refute log =~ "Skipping Exchange calendar folders"
     end
 
     test "returns an empty list when the mailbox has no calendar folders" do
@@ -183,6 +207,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscoveryTest do
       assert second.name == "Team"
       assert second.primary == false
     end
+  end
+
+  # A calendar folder the server answered without a `FolderId`, which is what
+  # a `Default` folder shape must never do but a broken one might.
+  defp idless_folder do
+    """
+    <t:CalendarFolder>
+      <t:DisplayName>Ghost</t:DisplayName>
+    </t:CalendarFolder>
+    """
   end
 
   defp calendar_folder(id, name) do
