@@ -119,6 +119,17 @@ defmodule TymeslotWeb.Router do
     get "/", RootRedirectController, :index
   end
 
+  # Answering a booking request from the link in the host's email. No session
+  # is required — the signed token in the path is the authorisation — but
+  # nothing is decided by loading the page; see `TymeslotWeb.MeetingRequestLive`.
+  scope "/", TymeslotWeb do
+    pipe_through :browser
+
+    live_session :meeting_request, on_mount: [TymeslotWeb.Hooks.LocaleHook] do
+      live "/meeting-request/:token", MeetingRequestLive, :show
+    end
+  end
+
   # =============================================================================
   # Authentication Routes
   # =============================================================================
