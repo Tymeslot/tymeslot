@@ -106,6 +106,64 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert event.end_date == ~D[2026-09-04]
     end
 
+    test "reads the all-day date off the item's own zone when the server supplies one" do
+      # Kiritimati is UTC+14, past the reach of any anchor, so this date can
+      # only be right if `StartTimeZone` was honoured. Its `Id` is the Windows
+      # name a real Exchange server sends, not an IANA one.
+      item =
+        all_day_item("2026-09-02T10:00:00Z", "2026-09-03T10:00:00Z",
+          zone: "Line Islands Standard Time"
+        )
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.start_date == ~D[2026-09-03]
+      assert event.end_date == ~D[2026-09-04]
+    end
+
+    test "falls back to the anchor when the item's zone is one we cannot map" do
+      # A Berlin item, so the anchor gets it right; the point is that an
+      # unrecognised zone name is discarded rather than raising or nilling the
+      # date out.
+      item =
+        all_day_item("2026-09-02T22:00:00Z", "2026-09-03T22:00:00Z",
+          zone: "Neverland Standard Time"
+        )
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.start_date == ~D[2026-09-03]
+      assert event.end_date == ~D[2026-09-04]
+    end
+
+    test "marks a cancelled item cancelled so it stops blocking the diary" do
+      item =
+        String.replace(
+          @timed_item,
+          "<t:IsAllDayEvent>false</t:IsAllDayEvent>",
+          "<t:IsAllDayEvent>false</t:IsAllDayEvent>\n<t:IsCancelled>true</t:IsCancelled>"
+        )
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.status == :cancelled
+      refute CalendarEvent.blocking?(event)
+    end
+
+    test "leaves an item the server says is not cancelled blocking" do
+      item =
+        String.replace(
+          @timed_item,
+          "<t:IsAllDayEvent>false</t:IsAllDayEvent>",
+          "<t:IsAllDayEvent>false</t:IsAllDayEvent>\n<t:IsCancelled>false</t:IsCancelled>"
+        )
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.status == :confirmed
+      assert CalendarEvent.blocking?(event)
+    end
+
     test "maps a Free busy status to transparent so it does not block availability" do
       item = String.replace(@timed_item, "LegacyFreeBusyStatus>Busy", "LegacyFreeBusyStatus>Free")
 
@@ -229,13 +287,15 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
     end
   end
 
-  # An all-day item whose boundaries are rendered with the given instants. The
-  # two-argument form takes `"Z"` to mean the midnight-UTC pair a mailbox in
-  # UTC reports.
-  defp all_day_item("Z", "Z"),
-    do: all_day_item("2026-09-03T00:00:00Z", "2026-09-04T00:00:00Z")
+  # An all-day item whose boundaries are rendered with the given instants, and
+  # optionally carrying a `StartTimeZone`. The `"Z"` form means the
+  # midnight-UTC pair a mailbox in UTC reports.
+  defp all_day_item(start_at, end_at, opts \\ [])
 
-  defp all_day_item(start_at, end_at) do
+  defp all_day_item("Z", "Z", opts),
+    do: all_day_item("2026-09-03T00:00:00Z", "2026-09-04T00:00:00Z", opts)
+
+  defp all_day_item(start_at, end_at, opts) do
     """
     <t:CalendarItem>
       <t:ItemId Id="item-2" ChangeKey="ck-2"/>
@@ -245,9 +305,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       <t:End>#{end_at}</t:End>
       <t:IsAllDayEvent>true</t:IsAllDayEvent>
       <t:LegacyFreeBusyStatus>Busy</t:LegacyFreeBusyStatus>
+      #{start_time_zone(Keyword.get(opts, :zone))}
     </t:CalendarItem>
     """
   end
+
+  defp start_time_zone(nil), do: ""
+  defp start_time_zone(id), do: ~s(<t:StartTimeZone Id="#{id}"/>)
 
   # Returns the `CalendarItem` elements a `GetItem` response would yield, which
   # is the shape the `Provider` behaviour hands to `normalise_events/2`.

@@ -115,6 +115,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
       assert xml =~ ~s(<t:ItemId Id="a&amp;b" ChangeKey="c&quot;d"/>)
     end
 
+    test "asks for the cancellation flag and the item's time zone on top of the default shape" do
+      # Neither is in `BaseShape=Default`, and a server that does not implement
+      # them omits them from the response rather than faulting, so asking costs
+      # nothing and is the only way to get them where they exist.
+      xml = Requests.get_item([{"id-1", "ck-1"}])
+
+      assert xml =~ ~s(<t:FieldURI FieldURI="calendar:IsCancelled"/>)
+      assert xml =~ ~s(<t:FieldURI FieldURI="calendar:StartTimeZone"/>)
+    end
+
+    test "nests the extra properties inside the item shape where the schema puts them" do
+      assert {:ok, doc} =
+               [{"id-1", "ck-1"}] |> Requests.get_item() |> Soap.envelope() |> Soap.parse()
+
+      assert Soap.xpath(
+               doc,
+               ~x"//m:GetItem/m:ItemShape/t:AdditionalProperties/t:FieldURI/@FieldURI"sl
+             ) == ["calendar:IsCancelled", "calendar:StartTimeZone"]
+    end
+
     test "does not request MIME content" do
       xml = Requests.get_item([{"id-1", "ck-1"}])
 

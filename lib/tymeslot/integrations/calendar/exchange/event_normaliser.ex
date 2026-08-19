@@ -12,21 +12,25 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   posture the CalDAV and ICS paths take: a single malformed event must not
   empty an organiser's diary.
 
-  ## All-day events and the missing time zone
+  ## All-day events and the item's time zone
 
   EWS answers in UTC unless the request carries a `t:TimeZoneContext` header,
   and this provider sends none. An all-day event is midnight to midnight in
   the *item's* own zone, so a mailbox in Berlin reports 3 September as
   `2026-09-02T22:00:00Z`, and reading the UTC date straight off that value
   would file the event on the wrong day everywhere east of Greenwich.
-  `BaseShape=Default` returns no time zone to correct it with, so the date is
-  recovered by anchoring at local midday: shifting by twelve hours lands
-  inside the intended day for every offset in `-11:59..+12:00`, which is every
-  zone Exchange mailboxes realistically live in, and it is also correct when a
-  server reports the boundary with an explicit offset rather than in UTC. The
-  handful of zones past `+12:00` (Chatham, Samoa, Kiritimati) still land a day
-  early; fixing those properly means requesting the item's zone rather than
-  guessing at it.
+
+  `Requests.get_item/1` asks for `calendar:StartTimeZone`, and where the server
+  answers it the day is exact: the instant is shifted into the item's own zone
+  and the date read off there. Its `Id` attribute carries a *Windows* zone name
+  ("W. Europe Standard Time"), so it goes through `Timezones.sanitize/1` for
+  the CLDR mapping onto an IANA id.
+
+  Servers that do not implement the property drop it silently rather than
+  faulting, so a fallback is still needed. That fallback anchors inside the
+  local day by shifting the instant forward twelve hours before taking the
+  date, which is correct for every UTC offset in `-11:59..+12:00` and also when
+  a server reports the boundary with an explicit offset rather than in UTC.
   """
 
   # Only the sigil: every xpath goes through `Soap.xpath/2,3`, which binds the
@@ -35,6 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Timezones
 
   require Logger
 
@@ -92,11 +97,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
     uid = Soap.xpath(item, ~x"./t:UID/text()"s)
     all_day = Soap.xpath(item, ~x"./t:IsAllDayEvent/text()"s) == "true"
 
-    # `status` is deliberately absent, leaving the struct's `:confirmed`
-    # default. `BaseShape=Default` returns no cancellation flag, and a property
-    # this provider does not request cannot be read back: Exchange drops
-    # unsupported `AdditionalProperties` silently, so a branch keyed on one
-    # would be unreachable rather than merely untested.
     base = %{
       uid: presence(uid) || item_id,
       calendar_integration_id: context.calendar_integration_id,
@@ -108,6 +108,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
       location: presence(Soap.xpath(item, ~x"./t:Location/text()"s)),
       etag: presence(Soap.xpath(item, ~x"./t:ItemId/@ChangeKey"s)),
       all_day: all_day,
+      status: status(Soap.xpath(item, ~x"./t:IsCancelled/text()"s)),
       transparency: transparency(Soap.xpath(item, ~x"./t:LegacyFreeBusyStatus/text()"s)),
       provider_metadata: metadata(item)
     }
@@ -116,9 +117,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   end
 
   defp timing(item, true) do
+    zone = item_zone(item)
+
     %{
-      start_date: to_all_day_date(Soap.xpath(item, ~x"./t:Start/text()"s)),
-      end_date: to_all_day_date(Soap.xpath(item, ~x"./t:End/text()"s))
+      start_date: to_all_day_date(Soap.xpath(item, ~x"./t:Start/text()"s), zone),
+      end_date: to_all_day_date(Soap.xpath(item, ~x"./t:End/text()"s), zone)
     }
   end
 
@@ -128,6 +131,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
       end_at: to_datetime(Soap.xpath(item, ~x"./t:End/text()"s))
     }
   end
+
+  # A cancelled item must stop blocking: `CalendarEvent.blocking?/1` honours
+  # `:cancelled`, and every other provider maps its own cancellation flag the
+  # same way. A server that does not implement `IsCancelled` omits it, which
+  # reads back as `""` and leaves the event confirmed.
+  defp status("true"), do: :cancelled
+  defp status(_other), do: :confirmed
 
   # `Free` is the only status that does not consume the organiser's time.
   # `Tentative`, `Busy`, `OOF` and `WorkingElsewhere` all block, matching how
@@ -151,10 +161,32 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
     end
   end
 
-  defp to_all_day_date(value) do
+  # The `Id` attribute is a Windows zone name, not an IANA one, so it goes
+  # through the shared sanitiser that owns the CLDR mapping. A server that
+  # omits the element yields `""`, which sanitises to nil and leaves the
+  # anchor as the only path.
+  defp item_zone(item) do
+    item |> Soap.xpath(~x"./t:StartTimeZone/@Id"s) |> Timezones.sanitize()
+  end
+
+  defp to_all_day_date(value, zone) do
     case to_datetime(value) do
       nil -> nil
-      datetime -> datetime |> DateTime.add(@local_midday_anchor, :second) |> DateTime.to_date()
+      datetime -> all_day_date(datetime, zone)
+    end
+  end
+
+  defp all_day_date(datetime, nil) do
+    datetime |> DateTime.add(@local_midday_anchor, :second) |> DateTime.to_date()
+  end
+
+  # An unrecognised zone name is treated exactly like an absent one: the
+  # sanitiser passes anything it cannot map through unchanged, so this is the
+  # only place that finds out whether the name names a real zone.
+  defp all_day_date(datetime, zone) do
+    case DateTime.shift_zone(datetime, zone) do
+      {:ok, shifted} -> DateTime.to_date(shifted)
+      {:error, _reason} -> all_day_date(datetime, nil)
     end
   end
 
