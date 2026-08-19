@@ -70,16 +70,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   def all_themes, do: @themes
 
   @doc """
-  Returns all active themes (excludes deprecated themes).
-  """
-  @spec active_themes() :: %{theme_key() => theme_definition()}
-  def active_themes do
-    @themes
-    |> Enum.filter(fn {_key, theme} -> theme.status == :active end)
-    |> Map.new()
-  end
-
-  @doc """
   Gets a theme by its ID.
 
   ## Examples
@@ -93,22 +83,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   @spec get_theme_by_id(theme_id()) :: {:ok, theme_definition()} | {:error, :theme_not_found}
   def get_theme_by_id(id) when is_binary(id) do
     case Map.get(@id_to_theme_map, id) do
-      nil -> {:error, :theme_not_found}
-      theme -> {:ok, theme}
-    end
-  end
-
-  @doc """
-  Gets a theme by its key.
-
-  ## Examples
-
-      iex> Registry.get_theme_by_key(:quill)
-      {:ok, %{id: "1", key: :quill, name: "Quill", ...}}
-  """
-  @spec get_theme_by_key(theme_key()) :: {:ok, theme_definition()} | {:error, :theme_not_found}
-  def get_theme_by_key(key) when is_atom(key) do
-    case Map.get(@themes, key) do
       nil -> {:error, :theme_not_found}
       theme -> {:ok, theme}
     end
@@ -130,22 +104,6 @@ defmodule TymeslotWeb.Themes.Core.Registry do
     case Map.get(@id_to_key_map, id) do
       nil -> {:error, :invalid_theme_id}
       key -> {:ok, key}
-    end
-  end
-
-  @doc """
-  Converts a theme key to its ID.
-
-  ## Examples
-
-      iex> Registry.key_to_id(:quill)
-      {:ok, "1"}
-  """
-  @spec key_to_id(theme_key()) :: {:ok, theme_id()} | {:error, :invalid_theme_key}
-  def key_to_id(key) when is_atom(key) do
-    case Map.get(@themes, key) do
-      nil -> {:error, :invalid_theme_key}
-      %{id: id} -> {:ok, id}
     end
   end
 

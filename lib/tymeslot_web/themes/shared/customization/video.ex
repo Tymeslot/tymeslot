@@ -1,10 +1,8 @@
 defmodule TymeslotWeb.Themes.Shared.Customization.Video do
   @moduledoc """
   Helper functions for rendering theme-specific video elements.
-  Provides a unified interface while supporting theme-specific features like crossfading.
+  Provides a unified interface for rendering responsive `<source>` tags.
   """
-
-  use Phoenix.Component
 
   alias Tymeslot.Media.Transcoder
   alias Tymeslot.ThemeCustomizations.Validation
@@ -16,16 +14,10 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
     end)
   end
 
-  @doc """
-  Generate responsive video sources from a base video filename.
-  Automatically creates desktop, mobile, low, and original quality variants.
-
-  Examples:
-    generate_responsive_video_sources("blue-wave-desktop.mp4")
-    # Returns list of video source configs for all quality levels
-  """
+  # Generates responsive video sources from a base video filename.
+  # Automatically creates desktop, mobile, low, and original quality variants.
   @spec generate_responsive_video_sources(String.t()) :: list(map())
-  def generate_responsive_video_sources(desktop_filename) when is_binary(desktop_filename) do
+  defp generate_responsive_video_sources(desktop_filename) when is_binary(desktop_filename) do
     base_name =
       desktop_filename
       |> String.replace("-desktop.mp4", "")

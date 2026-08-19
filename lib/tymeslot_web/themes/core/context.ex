@@ -18,7 +18,6 @@ defmodule TymeslotWeb.Themes.Core.Context do
           theme_key: atom(),
           module: module(),
           customizations: map() | nil,
-          capabilities: map(),
           metadata: map(),
           preview_mode: boolean(),
           layout: layout()
@@ -28,7 +27,6 @@ defmodule TymeslotWeb.Themes.Core.Context do
             theme_key: nil,
             module: nil,
             customizations: nil,
-            capabilities: %{},
             metadata: %{},
             preview_mode: false,
             layout: :default
@@ -57,7 +55,6 @@ defmodule TymeslotWeb.Themes.Core.Context do
         theme_key: theme.key,
         module: module,
         customizations: load_customizations(theme_id, profile),
-        capabilities: extract_capabilities(theme),
         metadata: extract_metadata(theme),
         preview_mode: Keyword.get(options, :preview, false)
       }
@@ -182,10 +179,6 @@ defmodule TymeslotWeb.Themes.Core.Context do
       nil -> ThemeCustomizations.get_defaults(theme_id)
       customization -> ThemeCustomizations.to_map(customization)
     end
-  end
-
-  defp extract_capabilities(theme) do
-    theme.features
   end
 
   defp extract_metadata(theme) do
