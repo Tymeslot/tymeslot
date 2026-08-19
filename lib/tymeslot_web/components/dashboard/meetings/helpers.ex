@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
     DateTime.compare(meeting.end_time, DateTime.utc_now()) == :lt
   end
 
-  # Policy helpers (surface booleans and tooltips)
+  # Policy helpers (surface booleans)
   @spec can_cancel?(Ecto.Schema.t()) :: boolean()
   def can_cancel?(meeting) do
     case Policy.can_cancel_meeting?(meeting) do

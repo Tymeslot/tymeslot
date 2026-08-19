@@ -1,17 +1,15 @@
 defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   @moduledoc """
-  Calendar grid rendering and month/week navigation for the scheduling
-  flow.
+  Calendar grid rendering and week navigation for the scheduling flow.
 
-  Owns the data the schedule view binds against (calendar days, week
-  days, slot DateTimes) plus the navigation handlers that move the
-  visible window and trigger a re-fetch when the month changes.
+  Provides the calendar and week day data the schedule view templates
+  render directly, plus the week-navigation handler that moves the
+  visible window and triggers a re-fetch when the month changes.
   """
 
   alias Phoenix.Component
   alias Tymeslot.Availability.{BusinessHours, Calculate, Schedules}
   alias Tymeslot.Demo
-  alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -181,27 +179,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   end
 
   @doc """
-  Handles timezone change.
-  """
-  @spec handle_timezone_change(Phoenix.LiveView.Socket.t(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def handle_timezone_change(socket, timezone) do
-    socket
-    |> assign(:user_timezone, timezone)
-    |> update_calendar_data()
-  end
-
-  @doc """
-  Handles timezone search.
-  """
-  @spec handle_timezone_search(Phoenix.LiveView.Socket.t(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def handle_timezone_search(socket, search_term) do
-    filtered_timezones = Timezones.search(search_term)
-    assign(socket, :filtered_timezones, filtered_timezones)
-  end
-
-  @doc """
   Parses slot time string to DateTime for display.
   """
   @spec parse_slot_time(String.t()) :: DateTime.t()
@@ -234,29 +211,5 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     is_within_limit = Date.diff(date, today) <= Schedules.policy(schedule, :advance_booking_days)
 
     is_weekday && is_future && is_within_limit
-  end
-
-  defp update_calendar_data(socket) do
-    %{
-      current_month: current_month,
-      current_year: current_year,
-      user_timezone: user_timezone,
-      organizer_profile: organizer_profile
-    } = socket.assigns
-
-    # Use availability map if present, otherwise nil (will use business hours only)
-    availability_map = Map.get(socket.assigns, :month_availability_map)
-
-    calendar_days =
-      get_calendar_days(
-        user_timezone,
-        current_year,
-        current_month,
-        organizer_profile,
-        availability_map,
-        Map.get(socket.assigns, :meeting_type)
-      )
-
-    assign(socket, :calendar_days, calendar_days)
   end
 end
