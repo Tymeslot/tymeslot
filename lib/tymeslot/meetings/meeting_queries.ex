@@ -89,6 +89,58 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     end
   end
 
+  @doc """
+  Moves a meeting out of `"awaiting_approval"`, atomically.
+
+  The guard is in the `WHERE` clause rather than read-then-write, because
+  every exit from the approval gate races every other one: the host can
+  approve in the dashboard while the expiry job fires, or click Approve twice,
+  or decline from an email link a colleague already actioned. A changeset
+  update would let the second writer silently overwrite the first, producing a
+  confirmed meeting the host declined.
+
+  Exactly one caller wins and receives the updated meeting; every other gets
+  `{:error, :not_awaiting_approval}` and can say "already answered" rather
+  than acting twice. `Tymeslot.Meetings.Approval` is the only intended caller.
+
+  Bypasses the changeset deliberately — `update_all` takes plain columns — so
+  `updated_at` is set here rather than by `timestamps/1`.
+  """
+  @spec transition_from_awaiting_approval(String.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :not_awaiting_approval}
+  def transition_from_awaiting_approval(meeting_id, changes) when is_list(changes) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      from(m in Meeting,
+        where: m.id == ^meeting_id and m.status == "awaiting_approval",
+        select: m
+      )
+
+    case Repo.update_all(query, set: Keyword.put_new(changes, :updated_at, now)) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :not_awaiting_approval}
+    end
+  end
+
+  @doc """
+  Held requests whose deadline has passed, oldest first.
+
+  Backs the expiry sweep, which exists because a per-meeting scheduled job can
+  be lost to Oban pruning, a failed insert, or a deploy that straddles the
+  deadline. Ordering is oldest-first so the invitee kept waiting longest is
+  released first when a backlog is being worked through.
+  """
+  @spec list_expired_approval_requests(DateTime.t(), pos_integer()) :: [Meeting.t()]
+  def list_expired_approval_requests(%DateTime{} = now, limit) when is_integer(limit) do
+    Meeting
+    |> MeetingState.where_awaiting_approval()
+    |> where([m], not is_nil(m.approval_deadline_at) and m.approval_deadline_at <= ^now)
+    |> order_by([m], asc: m.approval_deadline_at)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
   @doc "Updates a meeting."
   @spec update_meeting(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def update_meeting(%Meeting{} = meeting, attrs) when is_map(attrs) do

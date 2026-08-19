@@ -7,13 +7,11 @@ defmodule Tymeslot.Bookings.Create do
   require Logger
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Bookings.{Activation, BuildParams, CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.Guests
@@ -21,7 +19,6 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.VideoRoomWorker
   alias UUID
 
   @type meeting_params :: %{
@@ -370,7 +367,7 @@ defmodule Tymeslot.Bookings.Create do
         # Post-creation side effects (emails/video) are now part of the transaction
         # This ensures that if meeting creation fails due to a race condition (unique index),
         # no side-effect jobs (Oban) are committed.
-        handle_post_creation_effects(meeting, opts)
+        Activation.activate(meeting, opts)
         meeting
       else
         {:error, reason} ->
@@ -460,91 +457,5 @@ defmodule Tymeslot.Bookings.Create do
 
   defp emit_booking_created do
     :telemetry.execute([:tymeslot, :booking, :created], %{count: 1}, %{})
-  end
-
-  defp handle_post_creation_effects(meeting, opts) do
-    # Calendar job was scheduled atomically with meeting creation
-
-    # If explicitly requested, create video room first when a provider is configured
-    if Keyword.get(opts, :with_video_room, false) do
-      if meeting.video_integration_id do
-        schedule_video_room_with_emails(meeting)
-      else
-        # No video provider configured, skip video job
-        schedule_email_notifications(meeting)
-      end
-    else
-      # Auto-detect: if the meeting has a specific video provider configured that supports
-      # API-based room creation, create the video room before sending emails so the email
-      # includes the join link.
-      case video_provider_for(meeting) do
-        {:ok, provider} when provider in [:mirotalk, :google_meet, :teams, :custom] ->
-          schedule_video_room_with_emails(meeting)
-
-        _other ->
-          # No supported auto-create provider (none/unknown/etc.)
-          schedule_email_notifications(meeting)
-      end
-    end
-  end
-
-  defp schedule_video_room_with_emails(meeting) do
-    case VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id) do
-      :ok ->
-        :ok
-
-      {:error, _reason} ->
-        # Fall back to email only
-        schedule_email_notifications(meeting)
-        :ok
-    end
-  end
-
-  defp schedule_email_notifications(meeting) do
-    alias Tymeslot.Notifications.Events
-
-    case Events.meeting_created(meeting) do
-      {:ok, _result} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule confirmation emails for meeting",
-          meeting_id: meeting.id,
-          error: inspect(reason)
-        )
-
-        :ok
-    end
-  end
-
-  defp video_provider_for(meeting) do
-    integration_result =
-      case meeting.video_integration_id do
-        nil -> {:error, :not_found}
-        id -> Video.fetch_integration_for_user(id, meeting.organizer_user_id)
-      end
-
-    case integration_result do
-      {:ok, integration} ->
-        # Convert stored provider string (e.g., "google_meet") to atom if known
-        provider =
-          case VideoProviderConfig.parse_known(integration.provider) do
-            {:ok, provider} ->
-              provider
-
-            {:error, :unknown} ->
-              Logger.warning("Video integration has an unrecognised provider",
-                video_integration_id: meeting.video_integration_id,
-                provider: integration.provider
-              )
-
-              :none
-          end
-
-        {:ok, provider}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-    end
   end
 end

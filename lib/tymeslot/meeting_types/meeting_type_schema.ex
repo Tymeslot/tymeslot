@@ -27,6 +27,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           reminder_config: [map()],
           payment_required: boolean(),
           price_cents: integer() | nil,
+          requires_approval: boolean(),
+          approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
           max_bookings_per_day: pos_integer() | nil,
           max_bookings_per_week: pos_integer() | nil,
@@ -57,6 +59,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:reminder_config, {:array, :map}, default: nil)
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
+    # Bookings on this meeting type are held until the host approves them,
+    # rather than confirmed on submission. `approval_window_hours` nil means
+    # "use `Constraints.default_approval_window_hours/0`", the same way a nil
+    # `availability_schedule_id` means "use the profile default".
+    field(:requires_approval, :boolean, default: false)
+    field(:approval_window_hours, :integer)
     field(:is_archived, :boolean, default: false)
     field(:max_bookings_per_day, :integer)
     field(:max_bookings_per_week, :integer)
@@ -141,6 +149,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :reminder_config,
       :payment_required,
       :price_cents,
+      :requires_approval,
+      :approval_window_hours,
       :is_archived,
       :max_bookings_per_day,
       :max_bookings_per_week,
@@ -153,6 +163,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_length(:description, max: Constraints.description_max_length())
     |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
+    |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
     |> validate_booking_limits(:meeting_types)
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
     |> normalize_slug()

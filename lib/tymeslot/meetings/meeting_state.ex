@@ -2,11 +2,11 @@ defmodule Tymeslot.Meetings.MeetingState do
   @moduledoc """
   Single owner of predicates derived from a meeting's two independent state
   axes: `status` (the booking lifecycle — pending, awaiting_payment,
-  confirmed, cancelled, completed) and `reschedule_requested_at` (whether the
-  organizer is currently awaiting the attendee to pick a new time). The two
-  axes are orthogonal: an organizer reschedule request no longer overwrites
-  `status`, so a `pending` or `awaiting_payment` meeting keeps that status
-  while a request is pending.
+  awaiting_approval, confirmed, cancelled, completed) and
+  `reschedule_requested_at` (whether the organizer is currently awaiting the
+  attendee to pick a new time). The two axes are orthogonal: an organizer
+  reschedule request no longer overwrites `status`, so a `pending` or
+  `awaiting_payment` meeting keeps that status while a request is pending.
 
   `status == "reschedule_requested"` is a legacy value: no code writes it any
   more, but it remains a valid enum member so historical (or unmigrated) rows
@@ -17,18 +17,22 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
-  @active_statuses ["confirmed", "pending", "reschedule_requested"]
+  @active_statuses ["confirmed", "pending", "awaiting_approval", "reschedule_requested"]
 
   # Statuses that occupy a calendar slot for conflict-detection purposes.
   # Combined with `exclude_voided_slots/1`, this is the query-side mirror of
   # `slot_void?/1`: a meeting only actually blocks a time window while it
   # holds one of these statuses AND has no pending reschedule request.
-  @occupying_statuses ["confirmed", "pending", "awaiting_payment"]
+  @occupying_statuses ["confirmed", "pending", "awaiting_payment", "awaiting_approval"]
 
   @doc """
   Whether the meeting still represents a live booking a user should be able
   to interact with (view, cancel, reschedule). Excludes cancelled,
   completed, awaiting_payment, and expired.
+
+  `awaiting_approval` is included: the invitee has committed to the time and
+  may withdraw or move their request while the host decides. Only the host's
+  agreement is missing, and that is what `confirmed` records.
 
   Does not gate calendar export: a meeting can be active with a void slot
   (e.g. a pending reschedule request), which must not be exportable. Use
@@ -100,6 +104,29 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec exclude_voided_slots(Ecto.Queryable.t()) :: Ecto.Query.t()
   def exclude_voided_slots(query) do
     where(query, [m], is_nil(m.reschedule_requested_at))
+  end
+
+  @doc """
+  Whether the meeting is held pending the host's manual approval.
+
+  Distinct from `awaiting_new_time?/1`: there the organizer is waiting on the
+  attendee, here the attendee is waiting on the organizer.
+  """
+  @spec awaiting_approval?(Meeting.t()) :: boolean()
+  def awaiting_approval?(%{status: "awaiting_approval"}), do: true
+  def awaiting_approval?(_meeting), do: false
+
+  @doc """
+  Query-side counterpart of `awaiting_approval?/1`.
+
+  Deliberately does not compose `exclude_voided_slots/1`: a held request
+  cannot carry a pending organizer reschedule request, because the host is
+  offered no reschedule action until they have approved the booking. Adding
+  the filter would imply a state that cannot occur.
+  """
+  @spec where_awaiting_approval(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_awaiting_approval(query) do
+    where(query, [m], m.status == "awaiting_approval")
   end
 
   @doc """
