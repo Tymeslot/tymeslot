@@ -16,35 +16,25 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   ## All-day events and the item's time zone
 
-  EWS answers in UTC unless the request carries a `t:TimeZoneContext` header,
-  and this provider sends none. An all-day event is midnight to midnight in
-  the *item's* own zone, so a mailbox in Berlin reports 3 September as
-  `2026-09-02T22:00:00Z`, and reading the UTC date straight off that value
-  would file the event on the wrong day everywhere east of Greenwich.
+  EWS answers in UTC and this provider sends no `t:TimeZoneContext` header, but
+  an all-day event is midnight to midnight in the *item's* own zone: a Berlin
+  mailbox reports 3 September as `2026-09-02T22:00:00Z`, so reading the UTC
+  date straight off that value misfiles the event everywhere east of Greenwich.
 
-  `Requests.get_item/1` asks for `calendar:StartTimeZone`, and where the server
-  answers it the day is exact: the instant is shifted into the item's own zone
-  and the date read off there. Its `Id` attribute carries a *Windows* zone name
-  ("W. Europe Standard Time"), so it goes through `Timezones.sanitize/1` for
-  the CLDR mapping onto an IANA id.
+  `Requests.get_item/1` asks for `calendar:StartTimeZone`, which makes the day
+  exact wherever the server answers it. Its `Id` attribute carries a *Windows*
+  zone name ("W. Europe Standard Time"), so it goes through
+  `Timezones.sanitize/1` for the CLDR mapping onto an IANA id.
 
-  Servers that do not implement the property drop it silently rather than
-  faulting, so a fallback is still needed. That fallback anchors inside the
-  local day: shifting the instant forward by `A` hours and then taking the date
-  lands on the intended day for every UTC offset in `(A-24, A]`, and is also
-  correct when a server reports the boundary with an explicit offset rather
-  than in UTC. No `A` is right everywhere. Inhabited offsets span
-  `-11:00..+14:00`, a 25-hour range, and any single anchor covers 24 of it.
-
-  `A` is thirteen hours, so the covered window is `(-11:00, +13:00]`. That
-  reaches New Zealand year-round, including the `+13:00` its five million
-  people keep from late September to early April, along with Samoa and Tonga.
-  Two zones are past the reach of any anchor and land a day early: Kiritimati
-  at `+14:00`, and the Chatham Islands in daylight time at `+13:45`. The
-  `-11:00` zones (Niue, American Samoa, Midway) land a day late, and are the
-  price of choosing this window over one shifted an hour earlier.
-  `StartTimeZone` is the exact answer for all four wherever a server provides
-  it.
+  Servers that drop the property silently rather than faulting need a fallback,
+  which anchors inside the local day: shifting the instant forward by `A` hours
+  before taking the date lands on the intended day for every UTC offset in
+  `(A-24, A]`, and is also correct when a server reports the boundary with an
+  explicit offset rather than in UTC. No `A` is right everywhere, because
+  inhabited offsets span 25 hours and any single anchor covers 24. `A` is
+  thirteen hours, so the window is `(-11:00, +13:00]`: it reaches New Zealand
+  year-round, and misfiles `-11:00`, `+13:45` and `+14:00`, which
+  `StartTimeZone` gets right wherever a server provides it.
   """
 
   # Only the sigil: every xpath goes through `Soap.xpath/2,3`, which binds the
@@ -64,18 +54,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
           synced_at: DateTime.t()
         }
 
-  # Thirteen hours, in seconds. See the module doc on all-day events for why
-  # this number and not another.
+  # See the module doc on all-day events for why this number and not another.
   @all_day_anchor 13 * 60 * 60
+
+  @doc """
+  Returns the `CalendarItem` elements of a parsed `GetItem` response.
+
+  A response message that did not succeed carries no `m:Items`, so it drops
+  out of this walk structurally and no per-message response-code check is
+  needed.
+  """
+  @spec parse_items(Soap.document()) :: [Soap.document()]
+  def parse_items(doc) do
+    Soap.xpath(doc, ~x"//m:GetItemResponseMessage/m:Items/t:CalendarItem"l)
+  end
 
   @doc """
   Normalises `CalendarItem` elements into `CalendarEvent` structs.
 
-  Takes the list the `Provider` behaviour's `normalise_events/2` callback is
-  defined over, not a whole document: extracting items from a `GetItem`
-  response is the provider's job, and doing it there means an error response
-  message (which carries no `m:Items`) drops out structurally rather than
-  needing a response-code check here.
+  Takes the list `parse_items/1` returns, which is the shape the `Provider`
+  behaviour's `normalise_events/2` callback is defined over, rather than a
+  whole document. Keeping the two steps apart lets a caller count what the
+  response carried before any of it is dropped.
   """
   @spec normalise_events([Soap.document()], context()) :: {:ok, [CalendarEvent.t()]}
   def normalise_events(items, context) when is_list(items) do
@@ -95,11 +95,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
         event
 
       {:error, reason} ->
-        # `attrs.uid` is `""` exactly when the item carried neither a UID nor
-        # an item id, which is itself one of the reasons an item is rejected.
+        # `attrs.uid` is nil exactly when the item carried neither a UID nor an
+        # item id, which is itself one of the reasons an item is rejected.
         # `AlertTypes` renders this value straight into the operator's email,
         # so a blank one would arrive as "(event_id: )".
-        uid = presence(attrs.uid) || "unknown"
+        uid = attrs.uid || "unknown"
 
         # A skipped item is silent data loss in the organiser's diary, so it
         # gets a warning and an operator alert rather than a debug line, which
@@ -124,23 +124,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   end
 
   defp extract(item, context) do
-    item_id = Soap.xpath(item, ~x"./t:ItemId/@Id"s)
-    uid = Soap.xpath(item, ~x"./t:UID/text()"s)
-    all_day = Soap.xpath(item, ~x"./t:IsAllDayEvent/text()"s) == "true"
+    item_id = Soap.text(item, ~x"./t:ItemId/@Id")
+    all_day = Soap.text(item, ~x"./t:IsAllDayEvent/text()") == "true"
 
     base = %{
-      uid: presence(uid) || item_id,
+      uid: Soap.text(item, ~x"./t:UID/text()") || item_id,
       calendar_integration_id: context.calendar_integration_id,
       provider: :exchange,
       provider_calendar_id: context.provider_calendar_id,
-      provider_event_id: presence(item_id),
+      provider_event_id: item_id,
       synced_at: context.synced_at,
-      summary: presence(Soap.xpath(item, ~x"./t:Subject/text()"s)),
-      location: presence(Soap.xpath(item, ~x"./t:Location/text()"s)),
-      etag: presence(Soap.xpath(item, ~x"./t:ItemId/@ChangeKey"s)),
+      summary: Soap.text(item, ~x"./t:Subject/text()"),
+      location: Soap.text(item, ~x"./t:Location/text()"),
+      etag: Soap.text(item, ~x"./t:ItemId/@ChangeKey"),
       all_day: all_day,
-      status: status(Soap.xpath(item, ~x"./t:IsCancelled/text()"s)),
-      transparency: transparency(Soap.xpath(item, ~x"./t:LegacyFreeBusyStatus/text()"s)),
+      status: map_status(Soap.text(item, ~x"./t:IsCancelled/text()")),
+      transparency: map_transparency(Soap.text(item, ~x"./t:LegacyFreeBusyStatus/text()")),
       provider_metadata: metadata(item)
     }
 
@@ -148,42 +147,49 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   end
 
   defp timing(item, true) do
-    zone = item_zone(item)
+    # Both boundaries are read in the zone `t:StartTimeZone` names, which is
+    # the only one `Requests.get_item/1` asks for. An all-day event does not
+    # cross zones, so the end boundary reusing it is not an approximation.
+    zone = start_zone(item)
 
     %{
-      start_date: to_all_day_date(Soap.xpath(item, ~x"./t:Start/text()"s), zone),
-      end_date: to_all_day_date(Soap.xpath(item, ~x"./t:End/text()"s), zone)
+      start_date: to_all_day_date(Soap.text(item, ~x"./t:Start/text()"), zone),
+      end_date: to_all_day_date(Soap.text(item, ~x"./t:End/text()"), zone)
     }
   end
 
   defp timing(item, false) do
     %{
-      start_at: to_datetime(Soap.xpath(item, ~x"./t:Start/text()"s)),
-      end_at: to_datetime(Soap.xpath(item, ~x"./t:End/text()"s))
+      start_at: to_datetime(Soap.text(item, ~x"./t:Start/text()")),
+      end_at: to_datetime(Soap.text(item, ~x"./t:End/text()"))
     }
   end
 
   # A cancelled item must stop blocking: `CalendarEvent.blocking?/1` honours
   # `:cancelled`, and every other provider maps its own cancellation flag the
   # same way. A server that does not implement `IsCancelled` omits it, which
-  # reads back as `""` and leaves the event confirmed.
-  defp status("true"), do: :cancelled
-  defp status(_other), do: :confirmed
+  # reads back as nil and leaves the event confirmed.
+  defp map_status("true"), do: :cancelled
+  defp map_status(_other), do: :confirmed
 
   # `Free` is the only status that does not consume the organiser's time.
-  # `Tentative`, `Busy`, `OOF` and `WorkingElsewhere` all block, matching how
-  # the Google and Outlook normalisers treat their equivalents.
-  defp transparency("Free"), do: :transparent
-  defp transparency(_other), do: :opaque
+  # `Tentative`, `Busy`, `OOF`, `WorkingElsewhere` and `NoData` all block,
+  # matching how the Google and Outlook normalisers treat their equivalents.
+  defp map_transparency("Free"), do: :transparent
+  defp map_transparency(_other), do: :opaque
 
   # Recorded because it is the only signal distinguishing a single item from an
   # expanded occurrence of a series, which the recurrence work will need.
   defp metadata(item) do
-    case presence(Soap.xpath(item, ~x"./t:CalendarItemType/text()"s)) do
+    case Soap.text(item, ~x"./t:CalendarItemType/text()") do
       nil -> %{}
       type -> %{"calendar_item_type" => type}
     end
   end
+
+  # An omitted boundary reads back as nil and leaves the field unset, which is
+  # what makes `CalendarEvent.new/1` reject the item.
+  defp to_datetime(nil), do: nil
 
   defp to_datetime(value) do
     case DateTime.from_iso8601(value) do
@@ -194,10 +200,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   # The `Id` attribute is a Windows zone name, not an IANA one, so it goes
   # through the shared sanitiser that owns the CLDR mapping. A server that
-  # omits the element yields `""`, which sanitises to nil and leaves the
-  # anchor as the only path.
-  defp item_zone(item) do
-    item |> Soap.xpath(~x"./t:StartTimeZone/@Id"s) |> Timezones.sanitize()
+  # omits the element yields nil, which sanitises to nil and leaves the anchor
+  # as the only path.
+  defp start_zone(item) do
+    item |> Soap.text(~x"./t:StartTimeZone/@Id") |> Timezones.sanitize()
   end
 
   defp to_all_day_date(value, zone) do
@@ -207,20 +213,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
     end
   end
 
-  defp all_day_date(datetime, nil) do
-    datetime |> DateTime.add(@all_day_anchor, :second) |> DateTime.to_date()
-  end
-
-  # An unrecognised zone name is treated exactly like an absent one: the
-  # sanitiser passes anything it cannot map through unchanged, so this is the
-  # only place that finds out whether the name names a real zone.
-  defp all_day_date(datetime, zone) do
+  # The exact route. An unrecognised zone name falls through to the anchor
+  # exactly as an absent one does: the sanitiser passes anything it cannot map
+  # through unchanged, so this is the only place that finds out whether the
+  # name names a real zone.
+  defp all_day_date(datetime, zone) when is_binary(zone) do
     case DateTime.shift_zone(datetime, zone) do
       {:ok, shifted} -> DateTime.to_date(shifted)
-      {:error, _reason} -> all_day_date(datetime, nil)
+      {:error, _reason} -> anchored_date(datetime)
     end
   end
 
-  defp presence(""), do: nil
-  defp presence(value), do: value
+  defp all_day_date(datetime, nil), do: anchored_date(datetime)
+
+  # The degraded route, for a server that named no zone. See the module doc on
+  # all-day events for which offsets the anchor reaches and which it misfiles.
+  defp anchored_date(datetime) do
+    datetime |> DateTime.add(@all_day_anchor, :second) |> DateTime.to_date()
+  end
 end

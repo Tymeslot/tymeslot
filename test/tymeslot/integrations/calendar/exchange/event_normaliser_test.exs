@@ -5,7 +5,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
-  import SweetXml, only: [sigil_x: 2]
   import Tymeslot.AdminAlertsCaptureHelpers
 
   @moduletag :integrations
@@ -360,7 +359,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
     test "raises no alert for a batch every item of which is usable" do
       assert {:ok, [_event]} = EventNormaliser.normalise_events(items([@timed_item]), @context)
 
-      refute_receive {:send_alert, :invalid_calendar_event, _payload}
+      # `normalise_events/2` sends the alert in-process before it returns, so a
+      # message that is going to arrive has already arrived by here and a
+      # timeout buys nothing.
+      refute_received {:send_alert, :invalid_calendar_event, _payload}
     end
 
     test "skips an item carrying neither a UID nor an item id" do
@@ -441,7 +443,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       </SOAP:Envelope>
       """)
 
-    Soap.xpath(doc, ~x"//m:GetItemResponseMessage/m:Items/t:CalendarItem"l)
+    EventNormaliser.parse_items(doc)
   end
 
   defp renamed_prefix_items(item) do
@@ -464,6 +466,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       </env:Envelope>
       """)
 
-    Soap.xpath(doc, ~x"//m:GetItemResponseMessage/m:Items/t:CalendarItem"l)
+    EventNormaliser.parse_items(doc)
   end
 end

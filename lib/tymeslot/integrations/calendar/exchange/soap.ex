@@ -141,6 +141,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
     SweetXml.xpath(node, bind(spec), bind_subspecs(subspecs))
   end
 
+  @doc """
+  Reads one text or attribute value, answering `nil` where EWS answers `""`.
+
+  A string-cast xpath returns `""` both for an element the server omitted and
+  for one it sent empty, and every reader on this path means "absent" by
+  either. Folding the emptiness check into the read keeps that decision in one
+  place instead of once per call site.
+
+  The spec is read as a string whatever cast modifier it carries, so
+  `~x"./t:UID/text()"` and `~x"./t:UID/text()"s` behave alike. SweetXml's `so`
+  modifier is not a substitute: it answers `""` for a missing element too.
+  """
+  @spec text(document(), xpath_spec()) :: String.t() | nil
+  def text(node, %SweetXpath{} = spec) do
+    case xpath(node, %{spec | cast_to: :string}) do
+      "" -> nil
+      value -> value
+    end
+  end
+
   defp bind_subspecs(subspecs) do
     Enum.map(subspecs, fn {key, value} -> {key, bind_subspec(value)} end)
   end

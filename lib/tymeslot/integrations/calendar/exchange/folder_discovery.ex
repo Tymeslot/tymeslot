@@ -108,8 +108,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery do
 
   defp to_entry(folder) do
     %CalendarEntry{
-      id: presence(Soap.xpath(folder, ~x"./t:FolderId/@Id"s)),
-      name: presence(Soap.xpath(folder, ~x"./t:DisplayName/text()"s)),
+      id: Soap.text(folder, ~x"./t:FolderId/@Id"),
+      name: Soap.text(folder, ~x"./t:DisplayName/text()"),
       type: "calendar",
       selected: false,
       read_only: false,
@@ -128,7 +128,4 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery do
 
   defp mark_sole_calendar([entry]), do: [%{entry | primary: true}]
   defp mark_sole_calendar(entries), do: entries
-
-  defp presence(""), do: nil
-  defp presence(value), do: value
 end
