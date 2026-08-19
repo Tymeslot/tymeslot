@@ -53,15 +53,16 @@ defmodule Tymeslot.Bookings.Policy do
     organizer_user_id
     |> resolve_schedule(meeting_type)
     |> policy_values()
-    |> Map.put(:owner_timezone, settings.timezone || Profiles.get_default_timezone())
+    |> Map.put(:owner_timezone, settings.timezone)
   end
 
   # `max_advance_booking_days` is this map's name for the schedule's
   # `advance_booking_days`; every other key is carried through unrenamed.
   # `schedule_id` is carried so callers can recompute the schedule's own
-  # windows from this config alone. `owner_timezone` (set by the caller, not
-  # here) falls back to `Profiles.get_default_timezone()` for a profile with
-  # none set — the same fallback the display path applies in
+  # windows from this config alone. `owner_timezone` is set by the caller from
+  # `Profiles.get_profile_settings/1`, which already resolves a profile with no
+  # timezone to `Profiles.get_default_timezone()` — the same fallback the
+  # display path applies in
   # `TymeslotWeb.Live.Scheduling.AvailabilityHelpers.get_owner_timezone/1` and
   # `CalendarHelpers.availability_config/2`, so a nil profile timezone
   # resolves to the same zone on both the display and enforcement paths.
