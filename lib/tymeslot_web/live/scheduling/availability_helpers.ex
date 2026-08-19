@@ -20,6 +20,26 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   import Component, only: [assign: 3]
 
   @doc """
+  Builds the availability config shared by the slot-list and calendar-range
+  paths.
+
+  Both paths must agree: the calendar's day dots and the slot panel are
+  computed from the same schedule policy, and a key present in one map but not
+  the other is exactly how a day comes to show bookable with nothing on it.
+  """
+  @spec schedule_config(map() | nil, map() | nil, (-> term()) | nil) :: map()
+  def schedule_config(schedule, meeting_type, limit_checker) do
+    %{
+      schedule_id: schedule && schedule.id,
+      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
+      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
+      slot_interval_minutes: meeting_type && Map.get(meeting_type, :slot_interval_minutes),
+      limit_checker: limit_checker
+    }
+  end
+
+  @doc """
   Gets available slots for a specific date.
   """
   @spec get_available_slots(
@@ -65,20 +85,15 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
                    context
                  ),
                duration_minutes <- parse_duration_minutes(duration) do
-            schedule =
-              Schedules.resolve_for(
-                ContextUtils.get_from_context(context, :meeting_type),
-                organizer_profile
-              )
+            meeting_type = ContextUtils.get_from_context(context, :meeting_type)
+            schedule = Schedules.resolve_for(meeting_type, organizer_profile)
 
-            config = %{
-              schedule_id: schedule && schedule.id,
-              max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-              min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-              buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-              limit_checker:
+            config =
+              schedule_config(
+                schedule,
+                meeting_type,
                 build_limit_checker(organizer_user_id, organizer_profile, context, date, date)
-            }
+              )
 
             Calculate.available_slots(
               date,
@@ -171,15 +186,13 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
                    ) do
               schedule = Schedules.resolve_for(meeting_type, organizer_profile)
 
-              config = %{
-                schedule_id: schedule && schedule.id,
-                max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-                min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-                buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-                duration_minutes: duration_minutes,
-                limit_checker:
+              config =
+                schedule
+                |> schedule_config(
+                  meeting_type,
                   build_limit_checker(user_id, organizer_profile, context, start_date, end_date)
-              }
+                )
+                |> Map.put(:duration_minutes, duration_minutes)
 
               Calculate.range_availability(
                 start_date,

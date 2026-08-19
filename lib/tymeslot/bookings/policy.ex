@@ -39,12 +39,16 @@ defmodule Tymeslot.Bookings.Policy do
           required(:buffer_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
-          required(:owner_timezone) => String.t()
+          required(:owner_timezone) => String.t(),
+          required(:slot_interval_minutes) => pos_integer() | nil
         }
   def scheduling_config(organizer_user_id \\ nil, meeting_type \\ nil)
 
   def scheduling_config(nil, _meeting_type) do
-    Map.put(policy_values(nil), :owner_timezone, Profiles.get_default_timezone())
+    nil
+    |> policy_values()
+    |> Map.put(:owner_timezone, Profiles.get_default_timezone())
+    |> Map.put(:slot_interval_minutes, nil)
   end
 
   def scheduling_config(organizer_user_id, meeting_type) do
@@ -54,6 +58,10 @@ defmodule Tymeslot.Bookings.Policy do
     |> resolve_schedule(meeting_type)
     |> policy_values()
     |> Map.put(:owner_timezone, settings.timezone)
+    |> Map.put(
+      :slot_interval_minutes,
+      meeting_type && Map.get(meeting_type, :slot_interval_minutes)
+    )
   end
 
   # `max_advance_booking_days` is this map's name for the schedule's
