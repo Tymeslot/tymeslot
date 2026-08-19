@@ -281,6 +281,50 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
   end
 
   @doc """
+  Converts a loaded schema record into the plain map the provider read path
+  hands back from `list_events/2`.
+
+  The counterpart to `to_calendar_event/1`, for the providers whose
+  `list_events/2` reads the local cache rather than the network
+  (`Ics.Provider`, `Exchange.Provider`). Unlike that function this one leaves
+  `status` and `transparency` as the database's own strings: the availability
+  path receives plain maps here, and `CalendarEvent.blocking?/1` matches those
+  two fields as strings on a map and as atoms only on a `CalendarEvent`
+  struct. Converting them would make every transparent or cancelled row block.
+
+  All-day rows carry `start_date`/`end_date` rather than `start_at`/`end_at`,
+  and are handed back as the `Date` values the conflict checker already
+  accepts from the CalDAV path.
+
+  `recurrence_rule` is deliberately dropped: occurrences were expanded before
+  they were cached, so leaving it on would have `EventsRead.expand_event/3`
+  expand every stored occurrence a second time.
+  """
+  @spec to_read_path_map(t()) :: map()
+  def to_read_path_map(%__MODULE__{} = record) do
+    {start_time, end_time} = read_path_times(record)
+
+    %{
+      uid: record.uid,
+      summary: record.summary,
+      description: record.description,
+      location: record.location,
+      start_time: start_time,
+      end_time: end_time,
+      all_day: record.all_day,
+      status: record.status,
+      transparency: record.transparency,
+      recurrence_rule: nil,
+      timezone: record.timezone
+    }
+  end
+
+  defp read_path_times(%__MODULE__{all_day: true} = record),
+    do: {record.start_date, record.end_date}
+
+  defp read_path_times(%__MODULE__{} = record), do: {record.start_at, record.end_at}
+
+  @doc """
   Converts a `CalendarEvent` struct into a map suitable for database upsert.
 
   Atom-valued fields are converted to strings for storage.

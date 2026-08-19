@@ -18,6 +18,12 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
       master's dates describe only its own first occurrence and would free up
       every later one.
 
+  Both are reached through the provider's explicitly-named live reads,
+  `Provider.list_busy_intervals/2` and `Provider.list_calendar_items/2`. This
+  worker is their only caller: `Provider.list_events/2` is the availability
+  callback and reads the cache these two write, so calling it from here would
+  have a sync re-persist whatever the last sync left behind.
+
   Both halves belong to the same integration, so each is replaced through
   `Calendar.Sync.full_refresh_for_role/3` rather than the unscoped full
   refresh: that one deletes *every* row an integration holds, which would have
@@ -149,7 +155,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
   defp fetch_all_calendars(integration, from, to) do
     integration
-    |> Provider.build_client_configs()
+    |> Provider.item_client_configs()
     |> Enum.reduce_while({:ok, []}, fn client, {:ok, acc} ->
       case fetch_one_calendar(integration, client, from, to) do
         {:ok, events} -> {:cont, {:ok, acc ++ events}}
@@ -168,7 +174,11 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
     }
 
     with {:ok, items} <-
-           Provider.list_events(client, start_time: from, end_time: to, calendar_id: calendar_id) do
+           Provider.list_calendar_items(client,
+             start_time: from,
+             end_time: to,
+             calendar_id: calendar_id
+           ) do
       Provider.normalise_events(items, context)
     end
   end

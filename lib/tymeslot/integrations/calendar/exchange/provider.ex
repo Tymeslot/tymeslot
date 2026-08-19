@@ -13,16 +13,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   it builds on neither `CaldavCommon` nor `OAuthBase` and implements the
   `Provider` behaviour directly, as `Ics.Provider` does.
 
-  ## Two reads, with different jobs
+  ## Two live reads, with different jobs
 
-  A sync window costs two independent reads, and neither subsumes the other.
+  A sync window costs two independent EWS reads, and neither subsumes the
+  other. **Neither is a `Provider` callback and neither is named like one**:
+  both are called only by `Tymeslot.Workers.SyncExchangeCalendarWorker`, and
+  the names say so on purpose (see the next section).
 
     * `list_busy_intervals/2` asks `GetUserAvailability` when the mailbox is
-      busy. It is the source of truth for availability.
-    * `list_events/2` asks `FindItem` over a `CalendarView` for the ids in
-      range, then one batched `GetItem` for their fields. It answers *what*
-      each event is: identity, subject, location, change key, which is what
-      the dashboard grid renders.
+      busy. It is the source of truth for availability, and its intervals are
+      cached as `busy_only` rows.
+    * `list_calendar_items/2` asks `FindItem` over a `CalendarView` for the
+      ids in range, then one batched `GetItem` for their fields. It answers
+      *what* each event is: identity, subject, location, change key, which is
+      what the dashboard grid renders, and its items are cached as
+      `display_only` rows. `item_client_configs/1` builds the one client per
+      selected folder that read fans out over.
 
   The split exists because the item path cannot see a recurring series. A
   server was observed answering a `CalendarView` with a single
@@ -36,10 +42,37 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   lists must never be merged: they are different populations, and the item one
   is known to be short.
 
-  `list_events/2` costs two round trips per window however many events fall in
-  it, because `GetItem` accepts every id at once. `FindItem` is used purely to
-  enumerate: it cannot return an item's iCalendar `UID` — the property is
-  silently dropped rather than faulted — and a cached event needs a stable uid.
+  `list_calendar_items/2` costs two round trips per window however many events
+  fall in it, because `GetItem` accepts every id at once. `FindItem` is used
+  purely to enumerate: it cannot return an item's iCalendar `UID` — the
+  property is silently dropped rather than faulted — and a cached event needs
+  a stable uid.
+
+  ## `list_events/2` reads the cache, never the network
+
+  The `Provider` callback is neither of those reads, and that is the whole
+  point of naming them apart. The availability path
+  (`Runtime.EventQueries.fetch_events_from_providers/3` →
+  `EventsRead.fetch_events_with_fallback/3` → `ProviderAdapter.get_events/3` →
+  `list_events/2`) runs on every booking page load, fans out over every client
+  the organiser has, and fails closed if any one of them fails. Answering it
+  from EWS would put a credentialed SOAP round trip on that page and hand an
+  on-premises server's downtime the power to close the organiser's diary. It
+  would also serve availability from the item path, which the section above
+  says must never happen. `Ics.Provider` documents the same trap and solves it
+  the same way.
+
+  So `list_events/2` reads the local event cache the sync worker last wrote,
+  under the availability path's own role filter: `display_only` rows are
+  excluded, so an Exchange integration serves its `busy_only` intervals and
+  never its known-incomplete item rows.
+
+  A client naming no integration is an error rather than an empty list. This
+  is the one place this provider deliberately departs from `Ics.Provider`,
+  which answers `{:ok, []}`: here `{:ok, []}` would report the mailbox as free
+  for the whole window under a success, which is the worst answer this
+  provider can give and the same reasoning that makes
+  `{:error, :no_mailbox_address}` an error in `list_busy_intervals/2`.
 
   ## Availability is whole-mailbox
 
@@ -61,6 +94,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Exchange.Client
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
@@ -69,6 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   alias Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery
   alias Tymeslot.Integrations.Calendar.Exchange.Requests
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
 
@@ -173,8 +208,38 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     |> discover_calendars()
   end
 
+  @doc """
+  Builds the single client the availability fan-out reads through.
+
+  One client, not one per selected folder, because this provider's
+  `list_events/2` reads the event cache and the cache is keyed by integration:
+  a client per folder would issue the same query once per folder and return
+  the same rows every time. It is also the honest shape for what the rows
+  describe — `GetUserAvailability` answers for a *mailbox*, so the busy time
+  cached under this integration is whole-mailbox however many folders the
+  owner selected.
+
+  The per-folder fan-out the item read needs lives in `item_client_configs/1`.
+  """
   @impl Tymeslot.Integrations.Calendar.Provider
   def build_client_configs(integration) do
+    [Map.put(to_config(integration), :calendar_integration_id, integration_id(integration))]
+  end
+
+  @doc """
+  Builds one client per selected calendar folder, for the item read.
+
+  Called only by `Tymeslot.Workers.SyncExchangeCalendarWorker`, which pairs it
+  with `list_calendar_items/2`. A selected calendar the discovery named no
+  folder id for is dropped rather than carried: a client with no folder id
+  does not read nothing, it reads the mailbox's default calendar, so the
+  window would be synced twice under two different calendar ids and every
+  meeting in it duplicated on the grid.
+
+  Falls back to the mailbox's default calendar when nothing is selected.
+  """
+  @spec item_client_configs(CalendarIntegrationSchema.t() | map()) :: [map()]
+  def item_client_configs(integration) do
     config = to_config(integration)
 
     case selected_calendar_ids(integration) do
@@ -190,19 +255,59 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   def build_booking_client_config(_integration), do: nil
 
   @doc """
+  Lists the integration's cached events for the requested range.
+
+  The availability read, and a **cache** read: it touches no network at all
+  (see the moduledoc for why, and `list_calendar_items/2` /
+  `list_busy_intervals/2` for the live reads the sync worker uses). Rows are
+  filtered exactly as the rest of the availability path filters them —
+  `display_only` excluded — and mapped into the plain-map shape `EventsRead`
+  consumes.
+
+  `{:error, :no_calendar_integration_id}` when the client names no
+  integration, because an empty success here reads as a mailbox with a free
+  diary.
+  """
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events(client, opts) do
+    from = Keyword.fetch!(opts, :start_time)
+    to = Keyword.fetch!(opts, :end_time)
+
+    case integration_id(client) do
+      nil ->
+        {:error, :no_calendar_integration_id}
+
+      id ->
+        events =
+          [id]
+          |> CalendarEventQueries.list_blocking_for_range(from, to)
+          |> Enum.map(&ProviderCalendarEventSchema.to_read_path_map/1)
+
+        {:ok, events}
+    end
+  end
+
+  @doc """
   Lists the raw calendar items falling in the requested range.
 
-  Answers the `t:CalendarItem` elements of a batched `GetItem`, which
-  `normalise_events/2` turns into `CalendarEvent` structs. This is the
-  dashboard grid's read; availability comes from `list_busy_intervals/2`, and
-  the two must not be conflated (see the moduledoc).
+  A **live** EWS read, called only by
+  `Tymeslot.Workers.SyncExchangeCalendarWorker`. Answers the `t:CalendarItem`
+  elements of a batched `GetItem`, which `normalise_events/2` turns into
+  `CalendarEvent` structs cached as `display_only` rows. This is the dashboard
+  grid's read; availability comes from `list_busy_intervals/2`, and the two
+  must not be conflated (see the moduledoc).
+
+  Deliberately not called `list_events/2`: that name belongs to the callback
+  the availability path reaches for, and answering that path from here is the
+  bug this split exists to prevent.
 
   A range holding no items skips the batch entirely: `GetItem` requires at
   least one `t:ItemId`, so an empty batch would be answered with a schema
   fault rather than an empty list.
   """
-  @impl Tymeslot.Integrations.Calendar.Provider
-  def list_events(client, opts) do
+  @spec list_calendar_items(map() | CalendarIntegrationSchema.t(), keyword()) ::
+          {:ok, [term()]} | {:error, term()}
+  def list_calendar_items(client, opts) do
     config = to_config(client)
     folder = Keyword.get(opts, :calendar_id) || Map.get(config, :calendar_id) || :calendar
     from = Keyword.fetch!(opts, :start_time)
@@ -217,7 +322,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @doc """
   Lists the mailbox's busy intervals over the requested range.
 
-  This is the availability read, and the only one that sees every occurrence
+  A **live** EWS read, called only by
+  `Tymeslot.Workers.SyncExchangeCalendarWorker`, whose intervals are cached as
+  the `busy_only` rows `list_events/2` then serves. It is the source of truth
+  for availability, and the only read that sees every occurrence
   of a recurring series. It answers plain maps carrying bounds and a busy
   type, never `CalendarEvent` structs: `GetUserAvailability` returns no item
   identity at all, so the intervals cannot be correlated back to the meetings
@@ -316,6 +424,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   end
 
   defp address_or_nil(_username), do: nil
+
+  # The availability client carries the integration it caches under; the
+  # diagnostic paths hand the persisted struct over directly. Anything else
+  # names no integration, and `list_events/2` refuses rather than answering an
+  # empty diary.
+  defp integration_id(%CalendarIntegrationSchema{id: id}), do: id
+  defp integration_id(config) when is_map(config), do: Map.get(config, :calendar_integration_id)
+  defp integration_id(_client), do: nil
 
   defp selected_calendar_ids(integration) do
     integration

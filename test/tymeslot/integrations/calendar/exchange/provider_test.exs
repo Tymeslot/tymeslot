@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
     end
   end
 
-  describe "list_events/2" do
+  describe "list_calendar_items/2" do
     test "enumerates ids then fetches them in one batch" do
       counter = :counters.new(1, [])
 
@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
         end
       end)
 
-      assert {:ok, [item]} = Provider.list_events(config(), range(calendar_id: "cal-1"))
+      assert {:ok, [item]} = Provider.list_calendar_items(config(), range(calendar_id: "cal-1"))
       assert item_id(item) == "item-1"
 
       # The whole point of the batch: however many ids the window holds, the
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
         end
       end)
 
-      assert {:ok, [_item]} = Provider.list_events(config(), range())
+      assert {:ok, [_item]} = Provider.list_calendar_items(config(), range())
       assert :counters.get(counter, 1) == 2
     end
 
@@ -136,7 +136,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
         respond(conn, ExchangeFixtures.empty_find_item_response())
       end)
 
-      assert {:ok, []} = Provider.list_events(config(), range())
+      assert {:ok, []} = Provider.list_calendar_items(config(), range())
 
       # `GetItem` demands at least one `t:ItemId`, so an empty batch is a
       # schema fault rather than an empty answer. The count is the assertion:
@@ -151,7 +151,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
         respond(conn, ExchangeFixtures.empty_find_item_response())
       end)
 
-      assert {:ok, []} = Provider.list_events(config(), range())
+      assert {:ok, []} = Provider.list_calendar_items(config(), range())
     end
 
     test "fails the read when FindItem states a failure, rather than emptying the diary" do
@@ -161,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       respond_with(200, ExchangeFixtures.failed_response("FindItem", "ErrorAccessDenied"))
 
       assert {:error, {:response_code, "ErrorAccessDenied"}} =
-               Provider.list_events(config(), range())
+               Provider.list_calendar_items(config(), range())
     end
 
     test "fails the read when every GetItem message states a failure" do
@@ -174,7 +174,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       )
 
       assert {:error, {:response_code, "ErrorAccessDenied"}} =
-               Provider.list_events(config(), range())
+               Provider.list_calendar_items(config(), range())
     end
 
     test "returns the readable items when only part of the GetItem batch failed" do
@@ -187,7 +187,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
         ])
       )
 
-      assert {:ok, [item]} = Provider.list_events(config(), range())
+      assert {:ok, [item]} = Provider.list_calendar_items(config(), range())
       assert item_id(item) == "item-1"
 
       # An item deleted between the enumeration and the fetch is the ordinary
@@ -200,7 +200,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
     test "surfaces a transport failure rather than an empty calendar" do
       respond_with(401, "")
 
-      assert {:error, :unauthorized} = Provider.list_events(config(), range())
+      assert {:error, :unauthorized} = Provider.list_calendar_items(config(), range())
     end
   end
 
@@ -340,7 +340,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
         end
       end)
 
-      assert {:ok, items} = Provider.list_events(config(), range())
+      assert {:ok, items} = Provider.list_calendar_items(config(), range())
       assert {:ok, intervals} = Provider.list_busy_intervals(config(), range())
 
       {:ok, events} =
@@ -463,7 +463,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
     end
   end
 
-  describe "build_client_configs/1" do
+  describe "item_client_configs/1" do
     test "builds one client per selected calendar" do
       integration =
         integration(%{
@@ -474,7 +474,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
           ]
         })
 
-      assert [first, second] = Provider.build_client_configs(integration)
+      assert [first, second] = Provider.item_client_configs(integration)
       assert first.calendar_id == "cal-1"
       assert second.calendar_id == "cal-3"
     end
@@ -493,15 +493,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
           ]
         })
 
-      assert [client] = Provider.build_client_configs(integration)
+      assert [client] = Provider.item_client_configs(integration)
       assert client.calendar_id == "cal-2"
     end
 
     test "falls back to the mailbox's default calendar when nothing is selected" do
-      assert [client] = Provider.build_client_configs(integration())
+      assert [client] = Provider.item_client_configs(integration())
       assert client.calendar_id == :calendar
     end
 
+    test "carries the credentials the transport authenticates with" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert ["Basic " <> encoded] = Conn.get_req_header(conn, "authorization")
+        assert Base.decode64!(encoded) == "user@example.com:secret"
+        respond(conn, ExchangeFixtures.empty_find_item_response())
+      end)
+
+      assert [client] = Provider.item_client_configs(integration())
+      assert {:ok, []} = Provider.list_calendar_items(client, range())
+    end
+  end
+
+  describe "build_client_configs/1" do
     test "carries the account's own mailbox address through to the availability read" do
       integration = integration(%{provider_account_email: "shared@example.com"})
 
@@ -515,15 +528,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       assert {:ok, [_interval]} = Provider.list_busy_intervals(client, range())
     end
 
-    test "carries the credentials the transport authenticates with" do
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        assert ["Basic " <> encoded] = Conn.get_req_header(conn, "authorization")
-        assert Base.decode64!(encoded) == "user@example.com:secret"
-        respond(conn, ExchangeFixtures.empty_find_item_response())
-      end)
+    test "builds one whole-mailbox client, whatever the folder selection" do
+      # The availability read is a cache read keyed by integration, so a
+      # client per folder would run the same query once per folder. It is also
+      # the honest shape: `GetUserAvailability` answers for a mailbox, not a
+      # folder.
+      integration =
+        integration(%{
+          calendar_list: [
+            %CalendarEntry{id: "cal-1", name: "Calendar", selected: true},
+            %CalendarEntry{id: "cal-3", name: "Rooms", selected: true}
+          ]
+        })
 
-      assert [client] = Provider.build_client_configs(integration())
-      assert {:ok, []} = Provider.list_events(client, range())
+      assert [client] = Provider.build_client_configs(integration)
+      refute Map.has_key?(client, :calendar_id)
+    end
+
+    test "carries the integration the availability read caches under" do
+      # Without this the cache read has nothing to look the rows up by, and
+      # `list_events/2` refuses rather than reporting a free diary.
+      assert [client] = Provider.build_client_configs(integration(%{id: 4242}))
+      assert client.calendar_integration_id == 4242
     end
   end
 

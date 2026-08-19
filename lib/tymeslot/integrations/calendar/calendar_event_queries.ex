@@ -11,6 +11,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   It is also where the `role` column is honoured on both sides: `in_range/2`
   is the availability read and `full_refresh_for_role/3` the replacement a
   provider with more than one read path needs.
+  `list_blocking_for_range/3` is `in_range/2`'s one departure from the
+  canonical-struct rule, and exists so the role filter is written once rather
+  than once per shape; see its own doc.
   """
 
   import Ecto.Query
@@ -43,6 +46,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   Every provider but Exchange writes only `both` rows, so neither filter
   changes what they return.
 
+  The `DateTime` clause is `list_blocking_for_range/3` converted to structs, so
+  the role filter this read applies is defined once rather than once per shape.
+
   Returns a list of `CalendarEvent` structs.
   """
   @spec in_range([integer()], {DateTime.t(), DateTime.t()} | {Date.t(), Date.t()}) ::
@@ -50,11 +56,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   def in_range([], _range), do: []
 
   def in_range(integration_ids, {%DateTime{} = range_start, %DateTime{} = range_end}) do
-    ProviderCalendarEventSchema
-    |> where([e], e.calendar_integration_id in ^integration_ids)
-    |> where([e], e.role != ^@role_display_only)
-    |> ProviderCalendarEventQueries.where_overlapping_range(range_start, range_end)
-    |> Repo.all()
+    integration_ids
+    |> list_blocking_for_range(range_start, range_end)
     |> Enum.map(&ProviderCalendarEventSchema.to_calendar_event/1)
   end
 
@@ -72,6 +75,38 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
     )
     |> Repo.all()
     |> Enum.map(&ProviderCalendarEventSchema.to_calendar_event/1)
+  end
+
+  @doc """
+  Returns the cached rows for the given integration IDs that overlap the range
+  and are allowed to block availability.
+
+  This is the **availability** read at row level: `display_only` rows are
+  excluded, because such a row describes an event the grid should render but
+  whose times cannot be trusted to block — Exchange's item path answers a
+  recurring series as a single master dated to its first occurrence, so
+  blocking on it would free up every later occurrence. `busy_only` rows, which
+  the display read excludes, are returned here.
+
+  `in_range/2` is the same read in canonical `CalendarEvent` terms and is
+  defined in terms of this one, so the two cannot disagree about which rows may
+  block. Providers whose `list_events/2` reads the cache call this directly
+  rather than `in_range/2`, because they must hand back the database's own
+  string-valued `status`/`transparency`: that is the shape
+  `CalendarEvent.blocking?/1` matches on for plain maps, and the atoms a
+  `CalendarEvent` carries would make every transparent or cancelled row block.
+  """
+  @spec list_blocking_for_range([integer()], DateTime.t(), DateTime.t()) :: [
+          ProviderCalendarEventSchema.t()
+        ]
+  def list_blocking_for_range([], _range_start, _range_end), do: []
+
+  def list_blocking_for_range(integration_ids, range_start, range_end) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id in ^integration_ids)
+    |> where([e], e.role != ^@role_display_only)
+    |> ProviderCalendarEventQueries.where_overlapping_range(range_start, range_end)
+    |> Repo.all()
   end
 
   @doc """

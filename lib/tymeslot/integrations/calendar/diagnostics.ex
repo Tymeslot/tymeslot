@@ -63,6 +63,16 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   Fetches raw events from the provider and normalises them into `CalendarEvent` structs.
 
   Returns `{:ok, [CalendarEvent.t()]}` or `{:error, reason}`.
+
+  Pairs `list_events/2` with `normalise_events/2`, which only holds for
+  providers whose `list_events/2` answers the provider's own raw
+  representation — the CalDAV and OAuth families. It does **not** hold for the
+  cache-backed providers (`ics_url`, `exchange`), whose `list_events/2` reads
+  the local event cache and hands back plain maps their normaliser was never
+  defined over. Probe those through `fetch_fresh_events/3`, which consumes the
+  same plain maps the availability path does; connectivity for any provider is
+  `check_provider_connectivity/1`, which asks `check_connectivity/1` rather
+  than inferring reachability from a fetch.
   """
   @spec fetch_and_normalise_provider_events(integration(), DateTime.t(), DateTime.t()) ::
           {:ok, list()} | {:error, any()}
