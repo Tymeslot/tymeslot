@@ -54,6 +54,7 @@ defmodule Tymeslot.Meetings.Approval do
   require Logger
 
   alias Tymeslot.Bookings.Activation
+  alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
@@ -135,6 +136,7 @@ defmodule Tymeslot.Meetings.Approval do
         Logger.info("Booking request approved", meeting_id: confirmed.id, uid: confirmed.uid)
         AvailabilityCache.invalidate_for_user(confirmed.organizer_user_id)
         Orchestrator.cancel_request_notifications(confirmed)
+        confirm_calendar_event(confirmed)
         Activation.activate(confirmed, with_video_room: true)
         {:ok, confirmed}
 
@@ -196,6 +198,32 @@ defmodule Tymeslot.Meetings.Approval do
         )
 
         error
+    end
+  end
+
+  # The booking already wrote a tentative event to hold the slot; approving it
+  # has to turn that event into a real one. Without this the host's calendar
+  # keeps showing a maybe for a meeting they agreed to, and every app reading
+  # that calendar — including their colleagues' free/busy — reads it the same
+  # way. The builder derives `status` from the meeting, so re-pushing the event
+  # is the whole flip.
+  #
+  # Best-effort, like every other calendar write: the approval is committed and
+  # a failed push is retried by the worker rather than undoing it.
+  defp confirm_calendar_event(%Meeting{provider_event_id: nil}), do: :ok
+
+  defp confirm_calendar_event(meeting) do
+    case CalendarJobs.schedule_job(meeting, "update") do
+      {:ok, _status} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule calendar update after approval",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
     end
   end
 
