@@ -39,8 +39,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   All URLs (static and template) must:
   - Use HTTP or HTTPS scheme
   - Have a valid, resolvable host
-  - Not point to private or loopback addresses (in perform_connection_test only)
   - Be reachable (in perform_connection_test only)
+
+  The reachability probe is the only outbound request this provider ever makes:
+  a booking hands the URL to the browser rather than fetching it. That probe
+  goes through `Tymeslot.Security.SsrfGuard`, so in `:prod` a host resolving to
+  a private, loopback, or link-local address is refused unless the operator has
+  set `ALLOW_PRIVATE_IPS_FOR_VIDEO` (see `SsrfGuard.allow_private_for_video?/0`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -50,6 +55,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.TemplateConfig
+  alias Tymeslot.Security.SsrfBlockedError
+  alias Tymeslot.Security.SsrfGuard
 
   require Logger
 
@@ -227,7 +234,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
             String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
           with :ok <- assert_http_or_https(test_url),
-               :ok <- assert_public_host(test_url),
                {:ok, status} <- check_reachable(test_url) do
             # Shares the msgid the non-2xx branches use: the caller wraps a
             # success in "✓ Custom provider configured - …", so the status
@@ -353,41 +359,19 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     end
   end
 
-  defp assert_public_host(url) do
-    uri = URI.parse(url)
-    host = uri.host
-
-    with true <- is_binary(host) and host != "",
-         {:ok, ip} <- :inet.getaddr(String.to_charlist(host), :inet),
-         false <- private_or_loopback_ip?(ip) do
-      :ok
-    else
-      false ->
-        {:error, dgettext("dashboard_integrations", "Invalid hostname in URL")}
-
-      {:error, _reason} ->
-        {:error,
-         dgettext("dashboard_integrations", "Could not resolve host: %{host}", host: host)}
-
-      true ->
-        {:error,
-         dgettext("dashboard_integrations", "URL resolves to a private or loopback address")}
-    end
-  end
-
-  defp private_or_loopback_ip?({127, _b, _c, _d}), do: true
-  defp private_or_loopback_ip?({10, _b, _c, _d}), do: true
-  defp private_or_loopback_ip?({192, 168, _c, _d}), do: true
-  defp private_or_loopback_ip?({169, 254, _c, _d}), do: true
-  defp private_or_loopback_ip?({172, second, _c, _d}) when second >= 16 and second <= 31, do: true
-  defp private_or_loopback_ip?(_public_ip), do: false
-
+  # `ssrf_protect: true` hands the private-address decision to `SsrfGuard`,
+  # which resolves every A and AAAA record and is gated to `:prod` — so a local
+  # video container stays reachable in development, and an operator running one
+  # on an internal network opts in with ALLOW_PRIVATE_IPS_FOR_VIDEO. The guard
+  # also pins `redirect: false`, which is why no redirect options are passed:
+  # following a 3xx would let a public host bounce the probe onto an internal
+  # address. A redirecting URL is reported by its 3xx status instead.
   defp check_reachable(url) do
     opts = [
       receive_timeout: 3_000,
       connect_options: [timeout: 3_000],
-      redirect: true,
-      max_redirects: 3
+      ssrf_protect: true,
+      ssrf_allow_private: SsrfGuard.allow_private_for_video?()
     ]
 
     case Config.http_client_module().head(url, [], opts) do
@@ -398,8 +382,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         do_get(url, opts)
 
       {:ok, %{status: status}} ->
-        {:error,
-         dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+        {:error, http_status_message(status)}
+
+      {:error, %SsrfBlockedError{}} ->
+        {:error, private_address_message()}
 
       {:error, _reason} ->
         do_get(url, opts)
@@ -412,8 +398,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         {:ok, status}
 
       {:ok, %{status: status}} ->
-        {:error,
-         dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+        {:error, http_status_message(status)}
+
+      {:error, %SsrfBlockedError{}} ->
+        {:error, private_address_message()}
 
       {:error, exception} when is_exception(exception) ->
         case exception do
@@ -431,6 +419,16 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         {:error, unreachable_url_message(inspect(reason))}
     end
   end
+
+  defp http_status_message(status),
+    do: dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)
+
+  defp private_address_message,
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "URL resolves to a private or loopback address"
+      )
 
   defp url_timeout_message,
     do: dgettext("dashboard_integrations", "Connection timeout while reaching the URL")

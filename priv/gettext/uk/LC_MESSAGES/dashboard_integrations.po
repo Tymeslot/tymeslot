@@ -998,11 +998,6 @@ msgstr "Не вдалося перевірити підключення"
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Не вдалося визначити ваш обліковий запис. Спробуйте ще раз. Якщо проблема не зникне, видаліть інтеграцію та додайте її знову."
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
-#, elixir-autogen, elixir-format
-msgid "Could not resolve host: %{host}"
-msgstr "Не вдалося визначити хост: %{host}"
-
 #: lib/tymeslot/integrations/shared/oauth/account_match.ex
 #, elixir-autogen, elixir-format
 msgid "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."
@@ -1064,7 +1059,6 @@ msgid "Invalid URL scheme. Only http and https are supported"
 msgstr "Недійсна схема URL-адреси. Підтримуються лише http і https"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid hostname in URL"
 msgstr "Некоректне ім'я хоста в URL-адресі"

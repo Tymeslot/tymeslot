@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Security.SsrfGuard
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -243,9 +244,14 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     end)
   end
 
+  # Save-time counterpart of the request-time guard: an operator who has opted
+  # into private-address video hosts must also be able to store one, or the
+  # switch permits a URL that can never be entered.
   defp apply_url_validations(changeset, fields) do
+    block_private_ips = not SsrfGuard.allow_private_for_video?()
+
     Enum.reduce(fields, changeset, fn field, acc ->
-      URLValidator.validate_url(acc, field, block_private_ips: true)
+      URLValidator.validate_url(acc, field, block_private_ips: block_private_ips)
     end)
   end
 

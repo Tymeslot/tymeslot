@@ -35,10 +35,15 @@ defmodule Tymeslot.Security.SsrfGuard do
   Enforcement is gated to `:prod` — the environment in which the managed SaaS
   and self-hosted deployments run — so that local development and tests can
   still target loopback CalDAV/video containers. Self-hosters who genuinely run
-  an integration on a private network opt out via
-  `config :tymeslot, :allow_private_ips_for_calendar, true`
-  (`ALLOW_PRIVATE_IPS_FOR_CALENDAR=true`), the same bypass honoured at save time
-  through `allow_private?/0`.
+  an integration on a private network opt out per subsystem:
+
+    * calendar — `config :tymeslot, :allow_private_ips_for_calendar, true`
+      (`ALLOW_PRIVATE_IPS_FOR_CALENDAR=true`), read by `allow_private_for_calendar?/0`
+    * video — `config :tymeslot, :allow_private_ips_for_video, true`
+      (`ALLOW_PRIVATE_IPS_FOR_VIDEO=true`), read by `allow_private_for_video?/0`
+
+  Both bypasses are honoured at save time as well as at request time, so a URL
+  the operator is allowed to reach is also a URL they are allowed to store.
   """
 
   alias Tymeslot.Security.{DnsResolution, UrlValidation}
@@ -49,11 +54,15 @@ defmodule Tymeslot.Security.SsrfGuard do
   Returns `:ok` when the request is permitted (public host, non-prod
   environment, or an explicit private-IP allowance) and `{:error, reason}`
   when it must be blocked.
+
+  The allowance defaults to the calendar opt-out; video call sites pass
+  `allow_private: allow_private_for_video?()` so the two subsystems can be
+  relaxed independently.
   """
   @spec validate(String.t(), keyword()) :: :ok | {:error, atom() | String.t()}
   def validate(url, opts \\ []) do
     cond do
-      Keyword.get(opts, :allow_private, allow_private?()) ->
+      Keyword.get(opts, :allow_private, allow_private_for_calendar?()) ->
         :ok
 
       not production?() ->
@@ -67,7 +76,7 @@ defmodule Tymeslot.Security.SsrfGuard do
   end
 
   @doc """
-  Whether the operator has opted out of calendar/video private-IP SSRF protection.
+  Whether the operator has opted out of calendar private-IP SSRF protection.
 
   Exposed so the save-time validators (`CredentialFields`, the
   `CalendarIntegrationSchema` changeset) and the provider-level URL and
@@ -76,12 +85,27 @@ defmodule Tymeslot.Security.SsrfGuard do
   persist a URL can disagree, and the operator-facing switch silently does
   nothing because a URL it permits can never be saved.
 
-  This is the calendar/video-scoped sibling of
+  This is the calendar-scoped sibling of
   `Tymeslot.Webhooks.SsrfValidator.allow_private?/0`.
   """
-  @spec allow_private?() :: boolean()
-  def allow_private? do
+  @spec allow_private_for_calendar?() :: boolean()
+  def allow_private_for_calendar? do
     Application.get_env(:tymeslot, :allow_private_ips_for_calendar, false)
+  end
+
+  @doc """
+  Whether the operator has opted out of video private-IP SSRF protection.
+
+  Video is its own subsystem: a self-hoster running MiroTalk or their own
+  meeting server on an internal network should not have to relax calendar SSRF
+  to reach it. `ALLOW_PRIVATE_IPS_FOR_CALENDAR` nevertheless still satisfies
+  video, because it shipped documented as covering both and revoking that would
+  silently break the deployments already relying on it.
+  """
+  @spec allow_private_for_video?() :: boolean()
+  def allow_private_for_video? do
+    Application.get_env(:tymeslot, :allow_private_ips_for_video, false) or
+      allow_private_for_calendar?()
   end
 
   defp production? do
