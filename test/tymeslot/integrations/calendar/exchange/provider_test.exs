@@ -59,7 +59,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       assert {:error, :read_only} = Provider.delete_event(config(), "uid", [])
     end
 
-    test "resolve no booking client, so an Exchange calendar can never be a booking target" do
+    test "answer no booking client config, which is what a booking target is built from" do
+      # The guarantee this stands in for — that
+      # `Runtime.ClientManager.booking_client/1` can never resolve an Exchange
+      # integration — cannot be asserted yet: `:exchange` is absent from
+      # `ProviderConfig`'s provider list, so that path answers nil before it
+      # reaches this callback at all, and a test there would pass for the
+      # registry's reason rather than for this one. It belongs with the
+      # registration.
       assert Provider.build_booking_client_config(integration()) == nil
     end
   end
@@ -336,22 +343,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       assert {:ok, items} = Provider.list_events(config(), range())
       assert {:ok, intervals} = Provider.list_busy_intervals(config(), range())
 
-      # The item path is short by three days; the interval path is not. Merging
-      # the two lists, or serving availability from the items, loses exactly
-      # the three occurrences an organiser would then be double-booked over.
-      assert length(items) == 1
+      {:ok, events} =
+        Provider.normalise_events(items, %{
+          calendar_integration_id: 7,
+          provider_calendar_id: "cal-1",
+          synced_at: ~U[2026-09-01 09:00:00Z]
+        })
 
+      # The item path answers the series itself, dated to its first occurrence
+      # and saying so: `RecurringMaster` is the only signal in the response
+      # that the one item stands for more days than it states.
+      assert [%{provider_metadata: %{"calendar_item_type" => "RecurringMaster"}} = event] = events
+      assert event.start_at == ~U[2026-09-01 10:00:00Z]
+
+      # The interval path is not short. Merging the two lists, or serving
+      # availability from the items, loses exactly the three occurrences an
+      # organiser would then be double-booked over.
       assert Enum.map(intervals, & &1.start_at) == [
                ~U[2026-09-01 10:00:00Z],
                ~U[2026-09-02 10:00:00Z],
                ~U[2026-09-03 10:00:00Z],
                ~U[2026-09-04 10:00:00Z]
              ]
-
-      # Neither list carries the other's shape: items are XML elements, and
-      # intervals are maps that no `CalendarItem` xpath can be run over.
-      assert Enum.all?(items, &is_tuple/1)
-      assert Enum.all?(intervals, &is_map/1)
     end
   end
 

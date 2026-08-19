@@ -21,10 +21,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
     end
 
     test "keeps the generic sentence for a code with no advice attached" do
+      # Asserted positively: a `refute` alone passes for every other sentence
+      # in the vocabulary too, so it cannot tell the generic clause from one
+      # that hands the account owner advice about a different failure.
       message =
         ErrorHandler.sanitize_error_message({:response_code, "ErrorTimeoutExpired"}, :exchange)
 
-      refute message =~ "Access denied"
+      assert message == "An error occurred while communicating with the calendar service."
     end
 
     test "logs the code itself rather than an unknown error" do
