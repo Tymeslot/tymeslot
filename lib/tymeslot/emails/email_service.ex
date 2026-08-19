@@ -62,6 +62,14 @@ defmodule Tymeslot.Emails.EmailService do
   defdelegate send_appointment_confirmation_to_attendee(attendee_email, appointment_details),
     to: AppointmentEmails
 
+  @doc "Tells an invitee their booking request was received but is not yet confirmed."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_booking_request_received(meeting), to: AppointmentEmails
+
+  @doc "Asks the host to approve or decline a booking request, or reminds them."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_booking_approval_request(variant, meeting, urls, locale), to: AppointmentEmails
+
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_guest_confirmation(guest_email, appointment_details), to: AppointmentEmails
 

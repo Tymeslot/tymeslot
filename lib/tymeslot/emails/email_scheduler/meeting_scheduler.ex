@@ -54,6 +54,93 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the pair of emails a held booking produces: the invitee's
+  acknowledgement and the host's request to answer.
+
+  One job sends both, so an invitee cannot be told their request is with the
+  host while the host's copy fails independently.
+  """
+  @spec schedule_request_emails(term()) :: :ok | {:error, String.t()}
+  def schedule_request_emails(meeting_id) do
+    %{"action" => "send_booking_request_emails", "meeting_id" => meeting_id}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 0,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> insert_job("Booking request emails", meeting_id)
+  end
+
+  @doc """
+  Schedules the single reminder sent to a host who has not yet answered.
+
+  Fires at `send_at`, halfway through the approval window. Uniqueness is keyed
+  on the meeting alone with a ten-year period, so a reschedule that re-enters
+  the gate cannot stack a second nudge on the first; the deletion in
+  `cancel_approval_emails/1` is what allows a genuinely new one.
+  """
+  @spec schedule_approval_nudge(term(), DateTime.t()) :: :ok | {:error, String.t()}
+  def schedule_approval_nudge(meeting_id, %DateTime{} = send_at) do
+    delete_existing_approval_jobs(meeting_id)
+
+    %{"action" => "send_booking_approval_nudge", "meeting_id" => meeting_id}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 1,
+      scheduled_at: send_at,
+      unique: [period: 315_360_000, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> insert_job("Approval nudge", meeting_id)
+  end
+
+  @doc """
+  Deletes any pending nudge for a meeting.
+
+  Called on every exit from the approval gate. A nudge that fires after the
+  host has already answered would ask them to decide something they decided.
+  """
+  @spec cancel_approval_emails(term()) :: :ok
+  def cancel_approval_emails(meeting_id) do
+    delete_existing_approval_jobs(meeting_id)
+    :ok
+  end
+
+  defp delete_existing_approval_jobs(meeting_id) do
+    ObanJobQueries.delete_jobs_by_action(
+      EmailWorker,
+      "send_booking_approval_nudge",
+      meeting_id
+    )
+  end
+
+  # Shared insert-and-report used by the approval jobs. A unique-conflict is
+  # success: the job we wanted already exists.
+  defp insert_job(changeset, label, meeting_id) do
+    case Oban.insert(changeset) do
+      {:ok, _job} ->
+        Logger.info("Approval email job scheduled", meeting_id: meeting_id, email_job: label)
+        :ok
+
+      {:error, %Changeset{errors: [unique: _details]}} ->
+        Logger.info("Approval email job already exists, skipping duplicate",
+          meeting_id: meeting_id,
+          email_job: label
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule approval email job",
+          meeting_id: meeting_id,
+          email_job: label,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
   Schedules cancellation emails to be sent immediately with high priority.
   """
   @spec schedule_cancellation_emails(term()) :: :ok | {:error, String.t()}

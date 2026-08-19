@@ -35,7 +35,10 @@ defmodule Tymeslot.Bookings.Activation do
   @api_created_providers [:mirotalk, :google_meet, :teams, :custom]
 
   @doc """
-  Runs the side effects that make a confirmed meeting real.
+  Runs the side effects a newly created or newly confirmed meeting needs.
+
+  A meeting still awaiting the host's approval takes the request fan-out; any
+  other status takes the confirmation one.
 
   With `with_video_room: true` the caller asserts the booking flow wants a
   room whenever the meeting has an integration; without it, the provider is
@@ -49,15 +52,27 @@ defmodule Tymeslot.Bookings.Activation do
   def activate(meeting, opts \\ [])
 
   # A booking still held for the host to approve is not a booking anyone has
-  # agreed to. Refusing here rather than at each call site means no future
-  # caller can accidentally send a confirmation for a meeting the host has not
-  # accepted; `Tymeslot.Meetings.Approval` calls back in once it has confirmed.
+  # agreed to, so none of the confirmation work runs. Branching here rather
+  # than at each call site means no future caller can accidentally send a
+  # confirmation for a meeting the host has not accepted;
+  # `Tymeslot.Meetings.Approval` calls back in once it has confirmed.
+  #
+  # The request still has to reach people — the invitee needs telling their
+  # booking is not final, and the host cannot approve what they never heard
+  # about — so it takes the request fan-out instead.
   def activate(%Meeting{status: "awaiting_approval"} = meeting, _opts) do
-    Logger.debug("Skipping activation for a booking awaiting approval",
-      meeting_id: meeting.id
-    )
+    case Events.meeting_requested(meeting) do
+      {:ok, _result} ->
+        :ok
 
-    :ok
+      {:error, reason} ->
+        Logger.error("Failed to schedule booking request emails",
+          meeting_id: meeting.id,
+          error: inspect(reason)
+        )
+
+        :ok
+    end
   end
 
   def activate(%Meeting{} = meeting, opts) do

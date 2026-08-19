@@ -10,6 +10,7 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
   import Ecto.Changeset
 
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
+  alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Webhooks.SsrfValidator
@@ -53,11 +54,9 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
     timestamps(type: :utc_datetime)
   end
 
-  @valid_events [
-    "meeting.created",
-    "meeting.cancelled",
-    "meeting.rescheduled"
-  ]
+  # Sourced from `Tymeslot.Notifications.EventTypes` so a new event cannot be
+  # published by the dispatchers while remaining unselectable here.
+  @valid_events EventTypes.all()
 
   @required_fields [:name, :url, :user_id]
   @optional_fields [

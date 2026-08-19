@@ -169,6 +169,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Records that the host has been nudged about an unanswered request.
+
+  The durable half of the nudge's idempotency: the Oban unique key stops a
+  second job being enqueued, this stops a retry of the same job sending a
+  second copy after the first send succeeded but the job then failed.
+  """
+  @spec mark_approval_nudge_sent(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def mark_approval_nudge_sent(%Meeting{} = meeting) do
+    meeting
+    |> Changeset.change(approval_nudge_sent_at: DateTime.utc_now(:second))
+    |> Repo.update()
+  end
+
+  @doc """
   Marks an email as sent for a meeting.
 
   ## Examples

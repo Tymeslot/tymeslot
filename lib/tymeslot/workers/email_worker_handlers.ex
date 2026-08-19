@@ -18,6 +18,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails},
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
+    "send_booking_request_emails" => {MeetingEmails, :handle_booking_request_emails},
+    "send_booking_approval_nudge" => {MeetingEmails, :handle_booking_approval_nudge},
     "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders},
     "send_poll_host_nudge" => {PollEmails, :handle_host_nudge},
     "send_email_change_confirmations" => {AuthEmails, :handle_email_change_confirmations},

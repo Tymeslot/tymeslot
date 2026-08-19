@@ -6,9 +6,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   require Logger
 
+  alias Tymeslot.Auth
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -49,6 +52,84 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         else
           send_reminder_emails(meeting, reminder_value, reminder_unit)
         end
+      end
+    end)
+  end
+
+  @doc """
+  Sends the invitee's acknowledgement and the host's request, in that order.
+
+  Both are guarded on the meeting still being held. A request answered, or
+  withdrawn by the invitee, between enqueue and execution must not produce an
+  email telling either party it is still open.
+  """
+  @spec handle_booking_request_emails(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_booking_request_emails(%{"meeting_id" => meeting_id}) do
+    with_held_request(meeting_id, "booking request emails", fn meeting ->
+      service = Config.email_service_module()
+
+      with {:ok, _attendee} <- service.send_booking_request_received(meeting),
+           {:ok, _host} <- send_approval_request(:request, meeting, service) do
+        :ok
+      end
+    end)
+  end
+
+  @doc """
+  Reminds a host who has not answered yet, once, partway through the window.
+
+  `approval_nudge_sent_at` is the durable guard: an Oban retry after a
+  successful send would otherwise deliver a second copy.
+  """
+  @spec handle_booking_approval_nudge(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_booking_approval_nudge(%{"meeting_id" => meeting_id}) do
+    with_held_request(meeting_id, "approval nudge", fn meeting ->
+      if meeting.approval_nudge_sent_at do
+        Logger.info("Skipping approval nudge - already sent", meeting_id: meeting_id)
+        :ok
+      else
+        send_nudge(meeting)
+      end
+    end)
+  end
+
+  defp send_nudge(meeting) do
+    with {:ok, _sent} <- send_approval_request(:nudge, meeting, Config.email_service_module()),
+         {:ok, _meeting} <- MeetingQueries.mark_approval_nudge_sent(meeting) do
+      :ok
+    end
+  end
+
+  defp send_approval_request(variant, meeting, service) do
+    urls = Policy.approval_urls(ApprovalToken.sign(meeting))
+    service.send_booking_approval_request(variant, meeting, urls, host_locale(meeting))
+  end
+
+  # The host reads their mail in their own language, not the invitee's.
+  defp host_locale(%{organizer_user_id: nil}), do: Locales.default_locale()
+
+  defp host_locale(meeting) do
+    case Auth.get_user(meeting.organizer_user_id) do
+      %{locale: locale} when is_binary(locale) -> locale
+      _no_explicit_choice -> Locales.default_locale()
+    end
+  end
+
+  # Every approval email is only meaningful while the request is still open.
+  defp with_held_request(meeting_id, action, fun) do
+    with_meeting(meeting_id, action, fn meeting ->
+      if MeetingState.awaiting_approval?(meeting) do
+        fun.(meeting)
+      else
+        Logger.info("Skipping approval email - request already answered",
+          meeting_id: meeting_id,
+          email_action: action,
+          status: meeting.status
+        )
+
+        {:discard, "Meeting #{meeting.status}"}
       end
     end)
   end

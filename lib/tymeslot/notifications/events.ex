@@ -35,6 +35,30 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
+  Handles a booking request being raised on a meeting type requiring approval.
+
+  Fires `meeting.requested` rather than `meeting.created`. Consumers already
+  read `meeting.created` as "a confirmed booking exists", and a held request
+  is not one; it fires later, when the host approves. Meeting types without
+  approval are unaffected and keep firing `meeting.created` on submission.
+  """
+  @spec meeting_requested(term()) :: {:ok, term()} | {:error, term()}
+  def meeting_requested(meeting) do
+    result =
+      send_notifications(:meeting_requested, meeting, fn ->
+        Orchestrator.schedule_request_notifications(meeting)
+      end)
+
+    # The host learns about the request through whichever channel they watch,
+    # so these fire now rather than at approval.
+    Dispatcher.dispatch(:meeting_requested, meeting)
+    TelegramDispatcher.dispatch(:meeting_requested, meeting)
+    SlackDispatcher.dispatch(:meeting_requested, meeting)
+
+    result
+  end
+
+  @doc """
   Handles meeting cancellation event.
   """
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}

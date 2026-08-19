@@ -115,6 +115,29 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Deletes any pending job for one meeting and one action.
+
+  Generalises the reminder deletion below for the approval jobs, which key on
+  the meeting alone. Worker names are normalised through `Worker.to_string/1`
+  for the same reason: Oban stores them without the `Elixir.` prefix, so a raw
+  module name would silently match nothing and leave the job to fire.
+  """
+  @spec delete_jobs_by_action(module(), String.t(), term()) :: {non_neg_integer(), nil}
+  def delete_jobs_by_action(worker_module, action, meeting_id) do
+    worker_name = Worker.to_string(worker_module)
+    args_match = %{"action" => action, "meeting_id" => meeting_id}
+
+    Repo.delete_all(
+      from(j in Job,
+        where: j.queue == "emails",
+        where: j.worker == ^worker_name,
+        where: j.state in ["available", "scheduled", "retryable"],
+        where: fragment("? @> ?::jsonb", j.args, type(^args_match, :map))
+      )
+    )
+  end
+
+  @doc """
   Deletes existing reminder email jobs for a meeting to avoid duplicates
   when rescheduling.
   """

@@ -6,6 +6,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   require Logger
 
+  alias Tymeslot.Clock
+  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
@@ -34,6 +36,50 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
         error
     end
+  end
+
+  @doc """
+  Schedules the emails a held booking produces, and the nudge that follows.
+
+  Deliberately not `schedule_meeting_notifications/1`: no reminders are
+  scheduled here. Reminding an invitee about a meeting nobody has agreed to
+  would contradict the acknowledgement they just received, and the reminders
+  are scheduled in full once the host approves.
+  """
+  @spec schedule_request_notifications(%{atom() => term()}) ::
+          {:ok, :notifications_scheduled} | {:error, term()}
+  def schedule_request_notifications(meeting) do
+    Logger.info("Scheduling booking request notifications", meeting_id: meeting.id)
+
+    with :ok <- MeetingScheduler.schedule_request_emails(meeting.id),
+         :ok <- schedule_approval_nudge(meeting) do
+      {:ok, :notifications_scheduled}
+    end
+  end
+
+  # Halfway through the window, so a host who missed the first email still has
+  # as long again to act. A request whose deadline has already passed, or which
+  # has no deadline recorded, gets no nudge: there is nothing left to save.
+  defp schedule_approval_nudge(%{approval_deadline_at: nil}), do: :ok
+
+  defp schedule_approval_nudge(meeting) do
+    requested_at = meeting.approval_requested_at || Clock.utc_now()
+    seconds_remaining = DateTime.diff(meeting.approval_deadline_at, requested_at)
+
+    if seconds_remaining > 0 do
+      send_at = DateTime.add(requested_at, div(seconds_remaining, 2), :second)
+      MeetingScheduler.schedule_approval_nudge(meeting.id, send_at)
+    else
+      :ok
+    end
+  end
+
+  @doc """
+  Cancels any pending nudge for a booking request that has been answered.
+  """
+  @spec cancel_request_notifications(%{atom() => term()}) :: :ok
+  def cancel_request_notifications(meeting) do
+    MeetingScheduler.cancel_approval_emails(meeting.id)
   end
 
   @doc """

@@ -120,6 +120,40 @@ defmodule Tymeslot.Bookings.CreateApprovalTest do
       refute_enqueued(worker: EmailWorker, args: %{"action" => "send_reminder_emails"})
     end
 
+    test "sends the request emails instead of a confirmation", %{
+      user: user,
+      form_data: form_data
+    } do
+      meeting_type = insert(:meeting_type, user: user, requires_approval: true)
+
+      assert {:ok, meeting} = book(user, form_data, meeting_type)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_booking_request_emails", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "schedules a single nudge halfway through the window", %{
+      user: user,
+      form_data: form_data
+    } do
+      meeting_type =
+        insert(:meeting_type, user: user, requires_approval: true, approval_window_hours: 10)
+
+      assert {:ok, meeting} = book(user, form_data, meeting_type, 5)
+
+      assert [job] =
+               Enum.filter(
+                 all_enqueued(worker: EmailWorker),
+                 &(&1.args["action"] == "send_booking_approval_nudge")
+               )
+
+      # Halfway leaves a host who missed the first email as long again to act.
+      expected = DateTime.add(meeting.approval_requested_at, 5 * 3600, :second)
+      assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), expected) == :eq
+    end
+
     test "creates no video room for a booking nobody has agreed to", %{
       user: user,
       form_data: form_data

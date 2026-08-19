@@ -8,6 +8,11 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
 
   @callback send_appointment_confirmation_to_organizer(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
+  @callback send_booking_request_received(struct()) :: {:ok, any()} | {:error, any()}
+
+  @callback send_booking_approval_request(atom(), struct(), map(), String.t()) ::
+              {:ok, any()} | {:error, any()}
+
   @callback send_appointment_confirmation_to_attendee(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
   @callback send_guest_confirmation(String.t(), appointment_details()) ::
