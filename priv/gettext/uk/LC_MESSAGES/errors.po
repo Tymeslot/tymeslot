@@ -233,11 +233,13 @@ msgid "This page doesn't exist"
 msgstr "Такої сторінки не існує"
 
 #: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "an integration for this account already exists"
 msgstr "інтеграція для цього облікового запису вже існує"
 
 #: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "an integration for this provider already exists"
 msgstr "інтеграція для цього провайдера вже існує"

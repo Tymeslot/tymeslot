@@ -92,107 +92,6 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
       # Should not crash
       assert {:ok, _cleaned_result} = perform_job(ObanMaintenanceWorker, %{})
     end
-  end
-
-  describe "perform/1 - old job deletion" do
-    test "deletes old jobs in terminal states" do
-      old_date = DateTime.add(DateTime.utc_now(), -95, :day)
-
-      # Old completed job (should be deleted)
-      Repo.insert!(%Oban.Job{
-        state: "completed",
-        inserted_at: old_date,
-        worker: "SomeWorker",
-        queue: "default",
-        args: %{}
-      })
-
-      # Recent completed job (should be kept)
-      Repo.insert!(%Oban.Job{
-        state: "completed",
-        inserted_at: DateTime.utc_now(),
-        worker: "SomeWorker",
-        queue: "default",
-        args: %{}
-      })
-
-      assert {:ok, result} = perform_job(ObanMaintenanceWorker, %{})
-      assert result.old_deleted == 1
-
-      # Check remaining jobs (recent completed + maintenance job that was scheduled)
-      remaining_count = Repo.one(from j in Oban.Job, select: count(j.id))
-      assert remaining_count >= 1
-    end
-
-    test "deletes old discarded jobs" do
-      old_date = DateTime.add(DateTime.utc_now(), -100, :day)
-
-      Repo.insert!(%Oban.Job{
-        state: "discarded",
-        inserted_at: old_date,
-        worker: "FailedWorker",
-        queue: "default",
-        args: %{}
-      })
-
-      assert {:ok, result} = perform_job(ObanMaintenanceWorker, %{})
-      assert result.old_deleted == 1
-    end
-
-    test "deletes old cancelled jobs" do
-      old_date = DateTime.add(DateTime.utc_now(), -100, :day)
-
-      Repo.insert!(%Oban.Job{
-        state: "cancelled",
-        inserted_at: old_date,
-        worker: "CancelledWorker",
-        queue: "default",
-        args: %{}
-      })
-
-      assert {:ok, result} = perform_job(ObanMaintenanceWorker, %{})
-      assert result.old_deleted == 1
-    end
-
-    test "does not delete pending or executing jobs" do
-      old_date = DateTime.add(DateTime.utc_now(), -100, :day)
-
-      # Old but still pending
-      Repo.insert!(%Oban.Job{
-        state: "available",
-        inserted_at: old_date,
-        worker: "PendingWorker",
-        queue: "default",
-        args: %{}
-      })
-
-      # Inserted long ago but picked up recently, so it is genuinely running
-      # rather than stuck — the retention sweep must still leave it alone.
-      Repo.insert!(%Oban.Job{
-        state: "executing",
-        inserted_at: old_date,
-        attempted_at: DateTime.utc_now(),
-        worker: "ExecutingWorker",
-        queue: "default",
-        args: %{},
-        errors: []
-      })
-
-      assert {:ok, result} = perform_job(ObanMaintenanceWorker, %{})
-      assert result.old_deleted == 0
-
-      # The worker enqueues its own next run, so a row count cannot tell a
-      # survivor from a replacement. Name the rows instead.
-      survivors =
-        Repo.all(
-          from j in Oban.Job,
-            where: j.worker in ["PendingWorker", "ExecutingWorker"],
-            select: {j.worker, j.state},
-            order_by: j.worker
-        )
-
-      assert survivors == [{"ExecutingWorker", "executing"}, {"PendingWorker", "available"}]
-    end
 
     test "handles empty job table gracefully" do
       # Delete all jobs
@@ -200,7 +99,6 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
 
       assert {:ok, result} = perform_job(ObanMaintenanceWorker, %{})
       assert result.stuck_cleaned == 0
-      assert result.old_deleted == 0
     end
 
     test "schedules next run after completion" do

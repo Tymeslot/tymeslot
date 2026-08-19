@@ -10,13 +10,18 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   Idempotent — replaying an event whose id matches the stored
   `last_event_id` is a no-op, as is delivering an event for a meeting
-  that is no longer in `awaiting_payment`.
+  that is no longer in `awaiting_payment`. Also a no-op when the session's
+  `payment_status` is not `"paid"` (an asynchronous payment method still
+  settling), matching the gate `ReconcileAwaitingPayments.dispatch/2`
+  applies when it replays this same event.
   """
 
   require Logger
 
   alias Tymeslot.Bookings.Activation
+  alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
@@ -48,11 +53,29 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         {:ok, :idempotent_replay}
 
       payment ->
-        classify(run(payment, event_id, object))
+        handle_payment(payment, event_id, object)
     end
   end
 
   defp do_handle(_other), do: {{:error, :invalid_event}, :error}
+
+  # Mirrors the `%{"payment_status" => "paid"} = session` gate
+  # `ReconcileAwaitingPayments.dispatch/2` applies before replaying this same
+  # event. Without it, an asynchronous payment method (e.g. SEPA Direct
+  # Debit) fires this event with `payment_status: "unpaid"` and this handler
+  # would confirm the meeting before the money has actually settled.
+  defp handle_payment(payment, event_id, %{"payment_status" => "paid"} = object) do
+    classify(run(payment, event_id, object))
+  end
+
+  defp handle_payment(payment, _event_id, object) do
+    Logger.info("checkout.session.completed: payment not yet paid, skipping",
+      payment_id: payment.id,
+      payment_status: object["payment_status"]
+    )
+
+    {:ok, :ok}
+  end
 
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, _reason} = err), do: {err, :error}
@@ -163,7 +186,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     with {:ok, meeting} <- fetch_meeting(payment.meeting_id),
          {:proceed, transition} <- check_transition(meeting, payment),
          {:ok, paid} <- mark_paid(payment, event_id, object),
-         {:ok, confirmed} <- MeetingQueries.update_meeting(meeting, post_payment_status(meeting)) do
+         {:ok, confirmed} <- MeetingQueries.update_meeting(meeting, post_payment_status(meeting)),
+         {:ok, _job_status} <- schedule_calendar_creation(confirmed) do
       {transition, paid, confirmed}
     else
       :no_op ->
@@ -205,6 +229,31 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   defp meeting_type_for(meeting),
     do: MeetingTypes.get_meeting_type(meeting.meeting_type_id, meeting.organizer_user_id)
+
+  # Scheduled inside the same DB transaction as `mark_paid`/the meeting
+  # transition: `CalendarJobs.schedule_job/2` inserts through Oban's
+  # configured repo, which is this same `Repo`, so the insert commits
+  # atomically with the payment/meeting state change. If the insert fails
+  # (a transient DB error, not the absorbed unique-constraint conflict —
+  # see `CalendarJobs.schedule_job/2`), rolling back here leaves the
+  # booking_payment "pending" and the meeting "awaiting_payment", so a
+  # Stripe redelivery of this same event — no longer blocked by the
+  # `last_event_id` replay guard, since that write rolled back too — or the
+  # next `ReconcileAwaitingPayments` sweep can retry the whole transition.
+  defp schedule_calendar_creation(meeting) do
+    case CalendarJobs.schedule_job(meeting, "create") do
+      {:ok, _status} = ok ->
+        ok
+
+      {:error, reason} ->
+        Logger.error("checkout.session.completed: failed to schedule calendar job",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        {:error, reason}
+    end
+  end
 
   defp fetch_meeting(nil), do: {:error, :meeting_missing}
   defp fetch_meeting(meeting_id), do: MeetingQueries.get_meeting(meeting_id)
@@ -261,11 +310,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)
   end
 
-  # Shared with the free booking path so the two cannot drift, and so a booking
-  # that landed in the approval gate is not activated here: `activate/2`
-  # refuses a held meeting, and `Approval.approve/1` calls back in once the
-  # host says yes.
+  # The public booking page derives occupancy from the organiser's connected
+  # calendars alone, so a booking only stops being offered once it has been
+  # written there as an event. The free path schedules that write inside the
+  # booking transaction; a paid booking is not confirmed until this webhook
+  # lands, so its write is scheduled inside `run_in_transaction/3` above
+  # (`schedule_calendar_creation/1`), atomically with the payment/meeting
+  # transition. Everything below here is best-effort and does not need to be
+  # atomic with that state change.
+  #
+  # The video room and the emails are `Bookings.Activation`'s, shared with the
+  # free path so the two cannot drift. It also refuses to confirm a booking
+  # that landed in the approval gate: a paid request is not a booking anyone
+  # has agreed to, so it takes the request fan-out instead, and
+  # `Meetings.Approval` calls back in once the host says yes.
   defp enqueue_post_payment_effects(meeting, _payment) do
+    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
     Activation.activate(meeting, with_video_room: true)
   end
 end

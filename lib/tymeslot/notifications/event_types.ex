@@ -2,12 +2,10 @@ defmodule Tymeslot.Notifications.EventTypes do
   @moduledoc """
   The wire names of meeting notification events, defined once.
 
-  Webhooks, Telegram and Slack all publish the same event vocabulary, and each
-  carried its own copy of the atom-to-string mapping until this module existed.
-  Three copies of a lookup table is where drift lives: an event added to one
-  reaches its subscribers under a different name from the others, and the
-  fallback (`to_string/1`) turns a missing clause into a plausible-looking
-  `"meeting_requested"` rather than an error anyone would notice.
+  Slack, Telegram and webhooks all subscribe to the same events and all name
+  them the same way on the wire, so the mapping lives once here rather than
+  three byte-identical times, where the fourth event added would have landed in
+  two channels and not the third.
 
   ## What each name promises
 
@@ -39,13 +37,18 @@ defmodule Tymeslot.Notifications.EventTypes do
   def all, do: Map.values(@mapping)
 
   @doc """
-  Converts an internal event atom to its wire name.
+  Converts an internal event atom to the event-type string channels store and
+  filter on.
 
-  Falls back to `to_string/1` for atoms with no entry, matching the behaviour
-  the three dispatchers had before they shared this table.
+  Raises on an atom with no known wire name rather than falling back to
+  `to_string/1`: a typo'd or newly-added event atom that silently produces an
+  unsubscribable wire name is a worse failure than a crash at the call site.
   """
   @spec to_event_type(atom()) :: String.t()
   def to_event_type(atom) when is_atom(atom) do
-    Map.get(@mapping, atom, to_string(atom))
+    case Map.fetch(@mapping, atom) do
+      {:ok, wire_name} -> wire_name
+      :error -> raise ArgumentError, "unknown event type: #{inspect(atom)}"
+    end
   end
 end

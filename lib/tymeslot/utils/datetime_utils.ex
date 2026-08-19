@@ -13,6 +13,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Timezones
 
   @doc """
@@ -98,12 +99,16 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
   @doc """
   Returns the current DateTime in the given timezone, falling back to UTC.
+
+  Reads "now" through `Tymeslot.Clock` rather than the system clock directly,
+  so callers (booking cut-off and availability-window checks among them) stay
+  freezable in tests instead of racing the wall clock.
   """
   @spec now_in_timezone(String.t()) :: DateTime.t()
   def now_in_timezone(timezone) do
-    case DateTime.now(timezone) do
+    case DateTime.shift_zone(Clock.utc_now(), timezone) do
       {:ok, dt} -> dt
-      _other -> DateTime.utc_now()
+      _other -> Clock.utc_now()
     end
   end
 

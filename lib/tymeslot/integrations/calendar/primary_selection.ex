@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimarySelection do
 
     # Acquire an advisory lock scoped to this user to prevent two concurrent
     # first-integration inserts from both seeing count == 1.
-    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [1, user_id])
+    CalendarIntegrationQueries.acquire_primary_lock(user_id)
 
     existing_count = CalendarIntegrationQueries.count_for_user(user_id)
 

@@ -21,7 +21,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
   - `fetch_available_slots/4` - Fetch available time slots for a given date
   - `maybe_reload_slots/1` - Conditionally reload slots if date is selected
+  - `load_slots/2` - Load slots for a specific date
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
 
@@ -48,7 +51,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
           String.t() | integer(),
           String.t()
         ) :: {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
-  def fetch_available_slots(socket, date, duration, timezone) do
+  def fetch_available_slots(socket, date, _duration, timezone) do
     # Prepare context map for better performance and to avoid extra DB lookups in core
     context = %{
       demo_mode: socket.assigns[:demo_mode],
@@ -57,12 +60,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
       debug_calendar_module: socket.private[:debug_calendar_module]
     }
 
-    # Prefer the integer from meeting_type to avoid slug-parsing issues
-    duration_to_fetch =
-      case socket.assigns[:meeting_type] do
-        %{duration_minutes: mins} when is_integer(mins) -> mins
-        _other -> duration
-      end
+    # Single resolver for display and submit, so the offered slots can't
+    # drift from the duration the domain will validate against.
+    duration_to_fetch = AvailabilityHelpers.duration_minutes(socket)
 
     case AvailabilityHelpers.get_available_slots(
            date,
@@ -89,7 +89,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
           socket
           |> assign(:available_slots, [])
           |> assign(:loading_slots, false)
-          |> assign(:calendar_error, "No timeslots available due to calendar parsing error")
+          |> assign(
+            :calendar_error,
+            dgettext("booking", "No timeslots available due to calendar parsing error")
+          )
 
         {:error, socket}
     end

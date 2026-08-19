@@ -16,7 +16,6 @@ msgstr ""
 msgid "%{count} hours"
 msgstr "%{count} ore"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} minutes"
@@ -195,7 +194,6 @@ msgstr "Agosto"
 msgid "Available Times"
 msgstr "Orari disponibili"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
@@ -301,7 +299,6 @@ msgstr "La nuova scheda non si è aperta?"
 msgid "Done"
 msgstr "Fatto"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Duration"
@@ -374,6 +371,7 @@ msgstr "Ciao! Sono %{name}."
 msgid "I acknowledge the above"
 msgstr "Confermo quanto sopra"
 
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
@@ -1407,143 +1405,137 @@ msgstr "%{weekday} %{day} %{month}, %{time}"
 msgid "Times shown in %{timezone}"
 msgstr "Orari mostrati in %{timezone}"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
-msgid "%{name} has been sent the confirmation and the calendar invite."
-msgstr "%{name} ha ricevuto la conferma e l'invito al calendario."
+msgid "Complete setup to enable this feature"
+msgstr "Completa la configurazione per abilitare questa funzione"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "%{name} would like to book time with you."
-msgstr "%{name} vorrebbe prenotare un incontro con te."
+msgid "Invalid meeting duration selected"
+msgstr "Durata dell’incontro selezionata non valida"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Approve booking"
-msgstr "Conferma la prenotazione"
+msgid "Please select a date"
+msgstr "Seleziona una data"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Back"
-msgstr "Indietro"
+msgid "Please select a date and time"
+msgstr "Seleziona una data e un orario"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Booking declined"
-msgstr "Prenotazione rifiutata"
+msgid "Please select a meeting duration"
+msgstr "Seleziona la durata dell’incontro"
 
-#: lib/tymeslot_web/live/meeting_request_live.ex
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Booking request"
-msgstr "Richiesta di prenotazione"
+msgid "Please select a time"
+msgstr "Seleziona un orario"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
-msgid "Decline"
-msgstr "Rifiuta"
+msgid "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
+msgstr "Questa pagina di prenotazione non è al momento disponibile. L’organizzatore non ha ancora collegato un calendario."
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
-msgid "Decline booking"
-msgstr "Rifiuta la prenotazione"
+msgid "This scheduling page isn’t available yet. The organizer hasn’t set a username."
+msgstr "Questa pagina di prenotazione non è ancora disponibile. L’organizzatore non ha ancora impostato un nome utente."
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "From"
-msgstr "Da"
+msgid "Cannot cancel a completed meeting"
+msgstr "Impossibile annullare una riunione conclusa"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "If you don't answer by %{deadline}, this request lapses and the slot is released."
-msgstr "Se non rispondi entro %{deadline}, la richiesta decade e l'orario torna disponibile."
+msgid "Cannot cancel a meeting that has already occurred"
+msgstr "Impossibile annullare una riunione già svolta"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Link not recognised"
-msgstr "Link non riconosciuto"
+msgid "Cannot cancel a meeting that has already started"
+msgstr "Impossibile annullare una riunione già iniziata"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting"
-msgstr "Incontro"
+msgid "Cannot reschedule a cancelled meeting"
+msgstr "Impossibile riprogrammare una riunione annullata"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Message"
-msgstr "Messaggio"
+msgid "Cannot reschedule a completed meeting"
+msgstr "Impossibile riprogrammare una riunione conclusa"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Nobody answered in time, so the slot was released and %{name} was told."
-msgstr "Nessuno ha risposto in tempo, quindi l'orario è stato liberato e %{name} è stato avvisato."
+msgid "Cannot reschedule a meeting that has already occurred"
+msgstr "Impossibile riprogrammare una riunione già svolta"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Not set"
-msgstr "Non impostato"
+msgid "Cannot reschedule a meeting that has already started"
+msgstr "Impossibile riprogrammare una riunione già iniziata"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Reason (optional)"
-msgstr "Motivo (facoltativo)"
+msgid "Meeting is already cancelled"
+msgstr "La riunione è già stata annullata"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
 #, elixir-autogen, elixir-format
-msgid "Request expired"
-msgstr "Richiesta scaduta"
+msgid "No timeslots available due to calendar parsing error"
+msgstr "Nessuna fascia oraria disponibile a causa di un errore di analisi del calendario"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Shared with %{name}."
-msgstr "Verrà condiviso con %{name}."
+msgid "Attendee email is required"
+msgstr "L’indirizzo email del partecipante è obbligatorio"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "The slot is free again and %{name} has been told."
-msgstr "L'orario è di nuovo disponibile e %{name} è stato avvisato."
+msgid "Attendee name is required"
+msgstr "Il nome del partecipante è obbligatorio"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "This link is no longer valid. It may have expired, or the request may have been removed."
-msgstr "Questo link non è più valido. Potrebbe essere scaduto o la richiesta potrebbe essere stata rimossa."
+msgid "Booking requires at least %{hours} hours in advance"
+msgstr "La prenotazione richiede almeno %{hours} ore di anticipo"
 
-#: lib/tymeslot_web/live/meeting_request_live.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "This meeting's start time has already passed."
-msgstr "L'orario di inizio di questo incontro è già passato."
+msgid "Booking time must be in the future"
+msgstr "L’orario della prenotazione deve essere nel futuro"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "This meeting's start time has passed, so it can no longer be confirmed."
-msgstr "L'orario di inizio è passato, quindi l'incontro non può più essere confermato."
+msgid "End time must be after start time"
+msgstr "L’orario di fine deve essere successivo all’orario di inizio"
 
-#: lib/tymeslot_web/live/meeting_request_live.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "This request had already been answered."
-msgstr "Questa richiesta era già stata gestita."
+msgid "Failed to create meeting"
+msgstr "Impossibile creare la riunione"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Too late to answer"
-msgstr "Troppo tardi per rispondere"
+msgid "Failed to update meeting status"
+msgstr "Impossibile aggiornare lo stato della riunione"
 
-#: lib/tymeslot_web/live/meeting_request_live.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Too many attempts. Try again in a moment."
-msgstr "Troppi tentativi. Riprova tra poco."
+msgid "The guest email must differ from your own address"
+msgstr "L’indirizzo email dell’ospite deve essere diverso dal tuo"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "Type"
-msgstr "Tipo"
+msgid "Title is required"
+msgstr "Il titolo è obbligatorio"
 
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "When"
-msgstr "Quando"
-
-#: lib/tymeslot_web/live/meeting_request_live/view.ex
-#, elixir-autogen, elixir-format
-msgid "the person who booked"
-msgstr "la persona che ha prenotato"
+msgid "You cannot book more than %{days} days in advance"
+msgstr "Non puoi prenotare con più di %{days} giorni di anticipo"

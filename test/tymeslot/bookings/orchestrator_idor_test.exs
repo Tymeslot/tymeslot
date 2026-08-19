@@ -19,6 +19,7 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
   @moduletag :security
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
   import Tymeslot.MeetingTestHelpers
 
@@ -127,7 +128,8 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
     end
 
     test "allows rescheduling when organizer_user_id matches the meeting owner" do
-      %{user: owner} = create_user_with_profile()
+      %{user: owner, profile: owner_profile} = create_user_with_profile()
+      _schedule = open_schedule_for(owner_profile)
       owner_meeting = insert_meeting_for_user(owner)
 
       params = %{

@@ -317,7 +317,7 @@ defmodule Tymeslot.Availability.Schedules do
   # missing link in the walk, is a no-op: invalidation must never turn a
   # successful edit into an error.
   defp invalidate_cache({:ok, _result} = outcome, %{profile_id: profile_id}) do
-    case ProfileQueries.get_profile(profile_id) do
+    case ProfileQueries.get_with_user(profile_id) do
       %{user_id: user_id} -> AvailabilityCache.invalidate_for_user(user_id)
       _no_profile -> :ok
     end

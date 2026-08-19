@@ -44,7 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   integration tests against a local server) by passing `allow_private_ips: true`
   in `opts`, or for the whole deployment by the operator's
   `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out, read via
-  `Tymeslot.Security.SsrfGuard.allow_private?/0`. The production default is
+  `Tymeslot.Security.SsrfGuard.allow_private_for_calendar?/0`. The production default is
   `false` in both cases.
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
@@ -56,7 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
         dgettext("dashboard_calendar_providers", "Invalid URL format")
       )
 
-    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private?())
+    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private_for_calendar?())
 
     UrlValidation.validate_http_url(url,
       invalid_message: invalid_message,

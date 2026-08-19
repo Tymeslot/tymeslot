@@ -124,13 +124,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:payment_price, get_payment_price(type))
   end
 
-  defp payments_feature_enabled?(%{id: user_id}) do
-    case Features.check_access(user_id, :meeting_payments) do
-      :ok -> true
-      {:error, :stripe_required} -> true
-      _other -> false
-    end
-  end
+  defp payments_feature_enabled?(%{id: user_id}),
+    do: Features.meeting_payments_allowed?(user_id)
 
   defp payments_feature_enabled?(_user), do: false
 

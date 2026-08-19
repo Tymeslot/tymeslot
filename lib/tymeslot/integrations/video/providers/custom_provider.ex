@@ -39,8 +39,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   All URLs (static and template) must:
   - Use HTTP or HTTPS scheme
   - Have a valid, resolvable host
-  - Not point to private or loopback addresses (in perform_connection_test only)
   - Be reachable (in perform_connection_test only)
+
+  The reachability probe is the only outbound request this provider ever makes:
+  a booking hands the URL to the browser rather than fetching it. That probe
+  goes through `Tymeslot.Security.SsrfGuard`, so in `:prod` a host resolving to
+  a private, loopback, or link-local address is refused unless the operator has
+  set `ALLOW_PRIVATE_IPS_FOR_VIDEO` (see `SsrfGuard.allow_private_for_video?/0`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -50,6 +55,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.TemplateConfig
+  alias Tymeslot.Security.SsrfBlockedError
+  alias Tymeslot.Security.SsrfGuard
 
   require Logger
 
@@ -227,7 +234,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
             String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
           with :ok <- assert_http_or_https(test_url),
-               :ok <- assert_public_host(test_url),
                {:ok, status} <- check_reachable(test_url) do
             # Shares the msgid the non-2xx branches use: the caller wraps a
             # success in "✓ Custom provider configured - …", so the status
@@ -353,67 +359,60 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     end
   end
 
-  defp assert_public_host(url) do
-    uri = URI.parse(url)
-    host = uri.host
+  # The host is user-supplied, so every hop is classified in its own right.
+  # `ssrf_protect: true` hands the private-address decision to `SsrfGuard`,
+  # which resolves every A and AAAA record, is gated to `:prod` so a local video
+  # container stays reachable in development, and honours the operator's
+  # ALLOW_PRIVATE_IPS_FOR_VIDEO opt-out. It also forcibly sets `redirect: false`
+  # and validates only the URL it is handed, so letting the client follow
+  # redirects itself would leave every hop after the first unchecked: a host
+  # that resolves publicly can 302 straight to 127.0.0.1 or the cloud metadata
+  # endpoint. Following them here reports status, timeout and
+  # connection-refused apart. Same shape as the ICS feed fetcher, which has the
+  # identical problem.
+  @max_redirects 3
 
-    with true <- is_binary(host) and host != "",
-         {:ok, ip} <- :inet.getaddr(String.to_charlist(host), :inet),
-         false <- private_or_loopback_ip?(ip) do
-      :ok
-    else
-      false ->
-        {:error, dgettext("dashboard_integrations", "Invalid hostname in URL")}
-
-      {:error, _reason} ->
-        {:error,
-         dgettext("dashboard_integrations", "Could not resolve host: %{host}", host: host)}
-
-      true ->
-        {:error,
-         dgettext("dashboard_integrations", "URL resolves to a private or loopback address")}
-    end
-  end
-
-  defp private_or_loopback_ip?({127, _b, _c, _d}), do: true
-  defp private_or_loopback_ip?({10, _b, _c, _d}), do: true
-  defp private_or_loopback_ip?({192, 168, _c, _d}), do: true
-  defp private_or_loopback_ip?({169, 254, _c, _d}), do: true
-  defp private_or_loopback_ip?({172, second, _c, _d}) when second >= 16 and second <= 31, do: true
-  defp private_or_loopback_ip?(_public_ip), do: false
-
-  defp check_reachable(url) do
-    opts = [
+  # Built per call rather than as a module attribute: the opt-out is read from
+  # application config at runtime, and an attribute would freeze it at compile
+  # time.
+  defp probe_opts do
+    [
       receive_timeout: 3_000,
       connect_options: [timeout: 3_000],
-      redirect: true,
-      max_redirects: 3
+      ssrf_protect: true,
+      ssrf_allow_private: SsrfGuard.allow_private_for_video?()
     ]
+  end
 
-    case Config.http_client_module().head(url, [], opts) do
-      {:ok, %{status: status}} when status in 200..399 ->
-        {:ok, status}
+  defp check_reachable(url), do: check_reachable(url, @max_redirects)
 
+  defp check_reachable(_url, hops_left) when hops_left < 0 do
+    {:error, dgettext("dashboard_integrations", "URL redirects too many times")}
+  end
+
+  defp check_reachable(url, hops_left) do
+    case Config.http_client_module().head(url, [], probe_opts()) do
       {:ok, %{status: 405}} ->
-        do_get(url, opts)
+        do_get(url, hops_left)
 
-      {:ok, %{status: status}} ->
-        {:error,
-         dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+      {:ok, response} ->
+        classify_probe(response, url, hops_left)
+
+      {:error, %SsrfBlockedError{}} ->
+        {:error, blocked_url_message()}
 
       {:error, _reason} ->
-        do_get(url, opts)
+        do_get(url, hops_left)
     end
   end
 
-  defp do_get(url, opts) do
-    case Config.http_client_module().get(url, [], opts) do
-      {:ok, %{status: status}} when status in 200..399 ->
-        {:ok, status}
+  defp do_get(url, hops_left) do
+    case Config.http_client_module().get(url, [], probe_opts()) do
+      {:ok, response} ->
+        classify_probe(response, url, hops_left)
 
-      {:ok, %{status: status}} ->
-        {:error,
-         dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+      {:error, %SsrfBlockedError{}} ->
+        {:error, blocked_url_message()}
 
       {:error, exception} when is_exception(exception) ->
         case exception do
@@ -431,6 +430,43 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         {:error, unreachable_url_message(inspect(reason))}
     end
   end
+
+  defp classify_probe(%{status: status} = response, url, hops_left) when status in 300..399 do
+    case redirect_target(response, url) do
+      {:ok, target} -> check_reachable(target, hops_left - 1)
+      :error -> {:ok, status}
+    end
+  end
+
+  defp classify_probe(%{status: status}, _url, _hops_left) when status in 200..299 do
+    {:ok, status}
+  end
+
+  defp classify_probe(%{status: status}, _url, _hops_left) do
+    {:error,
+     dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+  end
+
+  defp redirect_target(response, current_url) do
+    location =
+      case response do
+        %{headers: %{"location" => [value | _rest]}} -> value
+        %{headers: %{"location" => value}} when is_binary(value) -> value
+        _no_location -> nil
+      end
+
+    case location && URI.merge(URI.parse(current_url), location) do
+      %URI{scheme: scheme, host: host} = uri
+      when scheme in ["http", "https"] and is_binary(host) ->
+        {:ok, URI.to_string(uri)}
+
+      _other ->
+        :error
+    end
+  end
+
+  defp blocked_url_message,
+    do: dgettext("dashboard_integrations", "URL resolves to a private or loopback address")
 
   defp url_timeout_message,
     do: dgettext("dashboard_integrations", "Connection timeout while reaching the URL")

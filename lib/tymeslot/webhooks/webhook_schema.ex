@@ -136,14 +136,29 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
   @spec valid_events() :: [String.t()]
   def valid_events, do: @valid_events
 
+  @max_failure_count 10
+
   @doc """
   Checks if webhook should be active (not disabled by failures)
   """
   @spec should_be_active?(t()) :: boolean()
   def should_be_active?(%__MODULE__{is_active: false}), do: false
   def should_be_active?(%__MODULE__{disabled_at: %DateTime{}}), do: false
-  def should_be_active?(%__MODULE__{failure_count: count}) when count >= 10, do: false
-  def should_be_active?(_webhook), do: true
+
+  def should_be_active?(%__MODULE__{failure_count: count}) when count >= @max_failure_count,
+    do: false
+
+  def should_be_active?(%__MODULE__{}), do: true
+
+  @doc """
+  Consecutive delivery failures after which a webhook auto-disables.
+
+  Named rather than repeated as a literal at each site, as Slack and Telegram
+  already do: the count is checked here and again where the failure is
+  recorded, and two copies of a threshold drift.
+  """
+  @spec max_failure_count() :: pos_integer()
+  def max_failure_count, do: @max_failure_count
 
   @doc """
   Checks if webhook is subscribed to a specific event

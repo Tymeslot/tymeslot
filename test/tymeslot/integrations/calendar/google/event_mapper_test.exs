@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
+  alias TymeslotWeb.Endpoint
 
   describe "uuid_to_google_event_id/1 — base32hex fast path" do
     test "strips hyphens from a standard UUID and returns lowercased base32hex" do
@@ -342,7 +343,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
 
       result = EventMapper.add_tymeslot_fingerprint(body)
 
-      assert result["source"] == %{"title" => "Tymeslot", "url" => "https://tymeslot.app"}
+      # The instance's own URL, not the hosted service's: a self-hoster's
+      # events must not point their attendees at a site they have no part in.
+      assert result["source"] ==
+               %{"title" => "Tymeslot", "url" => Endpoint.url()}
+
       assert result["extendedProperties"] == %{"private" => %{"createdBy" => "tymeslot"}}
     end
 

@@ -12,6 +12,8 @@ defmodule Tymeslot.Bookings.CreateUtmTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
+  import Tymeslot.AvailabilityTestHelpers
+
   defmodule MockCalendar do
     @moduledoc """
     Lightweight mock calendar module used to keep `Bookings.Create` from
@@ -116,8 +118,9 @@ defmodule Tymeslot.Bookings.CreateUtmTest do
   # Builds a valid meeting_params + form_data pair that `Bookings.Create.execute/3`
   # will accept, on top of a freshly inserted user/profile.
   defp build_executable_booking_context do
-    user = insert(:user)
-    _profile = insert(:profile)
+    # Tracking params are the subject here, so the host offers every hour of
+    # every day and the schedule never refuses the booking.
+    %{user: user} = create_always_bookable_profile(timezone: "America/New_York")
 
     meeting_params = %{
       date: Date.add(Date.utc_today(), 1),

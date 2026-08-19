@@ -47,6 +47,15 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           Logger.warning("Circuit breaker open", service: service_type, provider: provider)
           error
 
+        {:provider_error, reason} ->
+          Logger.error("Operation failed",
+            service: service_type,
+            provider: provider,
+            error: inspect(reason)
+          )
+
+          {:error, reason}
+
         {:error, reason} = error ->
           Logger.error("Operation failed",
             service: service_type,

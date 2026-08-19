@@ -215,16 +215,27 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Returns `true` if at least one admin has a `password_hash` set — i.e. is
-  capable of signing in via email + password. Used by the lockout-protection
-  check in `Tymeslot.AppSettings` to refuse disabling password authentication
-  while any admin still depends on it.
+  Returns `true` if at least one admin can actually sign in with email +
+  password today.
+
+  Mirrors the gate `Tymeslot.Auth.Authentication.verify_user_password/2`
+  applies at login: a `password_hash` alone is not enough — the account must
+  also not be OAuth-only (`provider` is `nil`/`"email"`) and must be verified
+  (`verified_at` set), or the login attempt is rejected before the password
+  is even checked. Counting an admin who cannot pass that gate would let the
+  lockout guard in `Tymeslot.AppSettings.LockoutPolicy` permit disabling the
+  last working sign-in path. If `verify_user_password/2`'s conditions change,
+  this query must change with them.
   """
   @spec any_admin_uses_password_auth?(module()) :: boolean()
   def any_admin_uses_password_auth?(repo \\ Repo) do
     repo.exists?(
       from(u in UserSchema,
-        where: u.is_admin and not is_nil(u.password_hash),
+        where:
+          u.is_admin and
+            not is_nil(u.password_hash) and
+            not is_nil(u.verified_at) and
+            (is_nil(u.provider) or u.provider == "email"),
         select: 1,
         limit: 1
       )

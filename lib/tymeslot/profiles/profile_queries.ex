@@ -80,29 +80,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
-  Gets a profile by profile ID, returning `nil` if not found.
-  Preloads the associated user for convenience.
-  """
-  @spec get_profile(integer()) :: ProfileSchema.t() | nil
-  def get_profile(profile_id) when is_integer(profile_id) do
-    case Repo.get(ProfileSchema, profile_id) do
-      nil -> nil
-      profile -> Repo.preload(profile, :user)
-    end
-  end
-
-  @doc """
-  Gets a profile by profile ID, raising if not found.
-  Preloads the associated user for convenience.
-  """
-  @spec get_profile!(integer()) :: ProfileSchema.t()
-  def get_profile!(profile_id) when is_integer(profile_id) do
-    ProfileSchema
-    |> Repo.get!(profile_id)
-    |> Repo.preload(:user)
-  end
-
-  @doc """
   Updates a profile.
   """
   @spec update_profile(ProfileSchema.t(), map()) ::
@@ -133,6 +110,10 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
   @doc """
   Gets a profile with preloaded user.
+
+  Keyed by *profile* id. `get_by_user_id/1` is the user-keyed lookup, and
+  `Tymeslot.Profiles.get_profile/1` on the context in front of this module is
+  user-keyed too: the two ids are not interchangeable.
   """
   @spec get_with_user(integer()) :: ProfileSchema.t() | nil
   def get_with_user(profile_id) do
@@ -140,6 +121,16 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     |> where([p], p.id == ^profile_id)
     |> preload(:user)
     |> Repo.one()
+  end
+
+  @doc """
+  Gets a profile with preloaded user, raising if not found.
+  """
+  @spec get_with_user!(integer()) :: ProfileSchema.t()
+  def get_with_user!(profile_id) do
+    ProfileSchema
+    |> Repo.get!(profile_id)
+    |> Repo.preload(:user)
   end
 
   @doc """

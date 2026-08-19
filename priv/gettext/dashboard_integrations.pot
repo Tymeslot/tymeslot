@@ -982,11 +982,6 @@ msgstr ""
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
-#, elixir-autogen, elixir-format
-msgid "Could not resolve host: %{host}"
-msgstr ""
-
 #: lib/tymeslot/integrations/shared/oauth/account_match.ex
 #, elixir-autogen, elixir-format
 msgid "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."
@@ -1048,7 +1043,6 @@ msgid "Invalid URL scheme. Only http and https are supported"
 msgstr ""
 
 #: lib/tymeslot/integrations/video/input_validation.ex
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid hostname in URL"
 msgstr ""
@@ -1252,4 +1246,9 @@ msgstr[1] ""
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
+msgstr ""
+
+#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#, elixir-autogen, elixir-format
+msgid "URL redirects too many times"
 msgstr ""

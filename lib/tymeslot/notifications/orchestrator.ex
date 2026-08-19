@@ -9,7 +9,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Meetings.ApprovalJobs
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
@@ -206,35 +205,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Handles video room notifications.
-  """
-  @spec handle_video_room_notifications(%{atom() => term()}, :created | :failed) ::
-          {:ok, atom()} | :ok | {:error, term()}
-  def handle_video_room_notifications(meeting, video_room_status) do
-    notification_type =
-      case video_room_status do
-        :created -> :video_room_created
-        :failed -> :video_room_failed
-      end
-
-    recipients = Recipients.determine_recipients(meeting, notification_type)
-    content = ContentBuilder.build_video_room_details(meeting, video_room_status)
-
-    with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content) do
-      case video_room_status do
-        :created ->
-          # Update existing confirmation emails with video room info
-          update_confirmation_notifications(meeting, content)
-
-        :failed ->
-          # Send fallback notification to organizer
-          send_immediate_notifications(:video_room_failed, content)
-      end
-    end
-  end
-
-  @doc """
   Schedules calendar invitation emails for a list of attendees.
 
   Enqueues one Oban job per attendee via EmailScheduler. Logs warnings for
@@ -368,35 +338,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
             {:ok, :reschedules_partially_sent}
         end
-
-      :video_room_failed ->
-        # For now, just log this as we don't have this specific method yet
-        Logger.info("Video room failed notification", content: content)
-        {:ok, :video_room_notification_logged}
     end
-  end
-
-  defp update_confirmation_notifications(meeting, _content) do
-    # Update already-scheduled reminder emails with video room information
-    Logger.info("Updating scheduled notifications with video room info",
-      meeting_id: meeting.id
-    )
-
-    # Acknowledge pending reminder jobs (emails re-fetch meeting data at send time)
-    {:ok, count} = ObanJobQueries.update_pending_reminder_jobs(meeting)
-
-    if count > 0 do
-      Logger.info("Pending reminder jobs acknowledged",
-        meeting_id: meeting.id,
-        updated_count: count
-      )
-    else
-      Logger.info("No pending reminder jobs required updates",
-        meeting_id: meeting.id
-      )
-    end
-
-    {:ok, :confirmation_updated}
   end
 
   # Module getters for dependency injection in tests

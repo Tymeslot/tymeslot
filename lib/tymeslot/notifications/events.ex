@@ -219,22 +219,6 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
-  Handles video room creation success event.
-  """
-  @spec video_room_created(term()) :: {:ok, term()} | {:error, term()}
-  def video_room_created(meeting) do
-    Orchestrator.handle_video_room_notifications(meeting, :created)
-  end
-
-  @doc """
-  Handles video room creation failure event.
-  """
-  @spec video_room_failed(term()) :: {:ok, term()} | {:error, term()}
-  def video_room_failed(meeting) do
-    Orchestrator.handle_video_room_notifications(meeting, :failed)
-  end
-
-  @doc """
   Handles meeting reminder trigger event.
   """
   @spec reminder_triggered(term()) :: {:ok, atom()}
@@ -258,12 +242,6 @@ defmodule Tymeslot.Notifications.Events do
 
       :meeting_rescheduled ->
         meeting.status == "confirmed"
-
-      :video_room_created ->
-        meeting.video_room_enabled == true
-
-      :video_room_failed ->
-        meeting.video_room_enabled == false
 
       :reminder_triggered ->
         meeting.status == "confirmed" and

@@ -86,34 +86,6 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
-  Deletes old jobs in terminal states (completed, discarded, cancelled).
-  Returns {deleted_count, nil}.
-  """
-  @spec delete_old_terminal_jobs(DateTime.t()) :: {non_neg_integer(), nil}
-  def delete_old_terminal_jobs(cutoff_date) do
-    Repo.delete_all(
-      from(j in Job,
-        where: j.state in ["completed", "discarded", "cancelled"],
-        where: j.inserted_at < ^cutoff_date
-      )
-    )
-  end
-
-  @doc """
-  Acknowledges pending reminder jobs for a meeting.
-  Reminder emails re-fetch meeting data at send time, so no job updates are required.
-  """
-  @spec update_pending_reminder_jobs(map()) :: {:ok, integer()}
-  def update_pending_reminder_jobs(_meeting) do
-    # Since EmailWorker.perform (via EmailWorkerHandlers) re-fetches the meeting
-    # from the database before sending any email, we don't actually need to
-    # update the job arguments. The worker will automatically pick up the
-    # newly added video_room_id/meeting_url from the database.
-
-    # We just return success here to satisfy the Orchestrator.
-    {:ok, 0}
-  end
-
   @doc """
   Deletes any pending job for one meeting and one action.
 

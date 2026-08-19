@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Dashboard.DashboardOverviewFormatters
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :entry, Entry, required: true
@@ -287,18 +288,9 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
     cond do
       DateTime.compare(now, end_at) != :lt -> nil
       DateTime.compare(now, start_at) != :lt -> dgettext("dashboard_home", "In progress")
-      true -> countdown(DateTime.diff(start_at, now, :second))
+      true -> DashboardOverviewFormatters.countdown(DateTime.diff(start_at, now, :second))
     end
   end
-
-  defp countdown(seconds) when seconds < 3600,
-    do: dgettext("dashboard_home", "in %{minutes}m", minutes: max(div(seconds, 60), 1))
-
-  defp countdown(seconds) when seconds < 86_400,
-    do: dgettext("dashboard_home", "in %{hours}h", hours: div(seconds, 3600))
-
-  defp countdown(seconds),
-    do: dgettext("dashboard_home", "in %{days}d", days: div(seconds, 86_400))
 
   defp clock(datetime, tz, time_format),
     do: datetime |> local(tz) |> TimeFormat.format(time_format)

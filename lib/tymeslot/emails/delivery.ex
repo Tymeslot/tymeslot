@@ -38,22 +38,25 @@ defmodule Tymeslot.Emails.Delivery do
         subject: email.subject
       )
 
-      CircuitBreakerSupervisor.email_breaker_name()
-      |> CircuitBreaker.call(fn -> do_deliver(email) end)
-      |> restore_rejection()
+      CircuitBreaker.call(
+        CircuitBreakerSupervisor.email_breaker_name(),
+        fn -> do_deliver(email) end,
+        classify: &classify_outcome/1
+      )
     end
   end
 
-  # A permanent recipient rejection is a completed round-trip to the provider:
-  # the API answered, and the answer was "this address is dead". Letting the
-  # breaker count that as a failure means a handful of suppressed addresses can
-  # open it and block *all* outbound mail, so `do_deliver/1` hands the breaker a
-  # success and the rejection is turned back into an error out here, where the
-  # breaker can no longer see it.
-  defp restore_rejection({:ok, {:recipient_rejected, _reason} = rejection}),
-    do: {:error, rejection}
-
-  defp restore_rejection(result), do: result
+  # `BreakerOutcome`'s default classifier only recognises a narrow set of
+  # transport/HTTP error shapes; Tymeslot supports several mail adapters
+  # (Postmark, SendGrid, Mailgun, AhaSend, SMTP) whose error reasons don't
+  # share one shape (Postmark's is a bare `{status, body}`, not the
+  # `{:http_error, status, body}` tuple the default classifier looks for).
+  # `do_deliver/1` already sorts every failure into permanent/timeout/transient
+  # via `classify/1` before it gets here, so that triage is reused directly
+  # instead of guessing again from the raw reason.
+  defp classify_outcome({:error, {:recipient_rejected, _reason}}), do: :ignore
+  defp classify_outcome({:error, _reason}), do: :failure
+  defp classify_outcome(_other), do: :success
 
   defp do_deliver(email) do
     case Mailer.deliver(email) do
@@ -73,9 +76,10 @@ defmodule Tymeslot.Emails.Delivery do
   defp handle_delivery_error(email, reason),
     do: handle_delivery_error(classify(reason), email, reason)
 
-  # The provider has permanently rejected the address. Reported as a success to
-  # the breaker (see `restore_rejection/1`) and unwrapped back into an error by
-  # `deliver/1`.
+  # The provider has permanently rejected the address. Reported to the caller
+  # as an error, but `BreakerOutcome.classify/1` leaves the breaker untouched
+  # for it: a handful of suppressed addresses must not open a breaker that
+  # blocks *all* outbound mail.
   defp handle_delivery_error(:permanent, email, reason) do
     Logger.warning("Email permanently undeliverable — recipient rejected by the provider",
       to: email.to,
@@ -83,7 +87,7 @@ defmodule Tymeslot.Emails.Delivery do
       reason: inspect(reason)
     )
 
-    {:ok, {:recipient_rejected, reason}}
+    {:error, {:recipient_rejected, reason}}
   end
 
   # A client-side timeout is ambiguous: the SMTP server has very likely already

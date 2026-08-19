@@ -65,7 +65,7 @@ defmodule Tymeslot.Telegram.BotSetup do
       {:ok, status, response_body} ->
         Logger.error("Failed to register Telegram bot webhook",
           status: status,
-          response: response_body,
+          response: truncate(response_body, 2000),
           attempt: attempt + 1
         )
 
@@ -102,4 +102,16 @@ defmodule Tymeslot.Telegram.BotSetup do
       error
     end
   end
+
+  defp truncate(text, max) when is_binary(text) do
+    if String.length(text) > max do
+      String.slice(text, 0, max)
+    else
+      text
+    end
+  end
+
+  # A JSON response reaches us already decoded, so bound its inspected form
+  # rather than logging an unbounded term.
+  defp truncate(other, max), do: other |> inspect() |> truncate(max)
 end

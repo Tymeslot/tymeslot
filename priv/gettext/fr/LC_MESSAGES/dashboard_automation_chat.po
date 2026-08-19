@@ -707,3 +707,8 @@ msgstr "Vos intégrations Slack"
 #, elixir-autogen, elixir-format
 msgid "Your Telegram Integrations"
 msgstr "Vos intégrations Telegram"
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "our Slack docs"
+msgstr "notre documentation Slack"

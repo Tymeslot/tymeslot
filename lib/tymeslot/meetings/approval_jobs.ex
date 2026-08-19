@@ -20,7 +20,7 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
 
   require Logger
 
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
 
   @doc """
@@ -64,7 +64,7 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
   """
   @spec cancel(%{atom() => term()}) :: :ok
   def cancel(meeting) do
-    {deleted, _returning} = ObanJobQueries.delete_meeting_jobs(ApprovalExpiryWorker, meeting.id)
+    {deleted, _returning} = Jobs.delete_meeting_jobs(ApprovalExpiryWorker, meeting.id)
 
     if deleted > 0 do
       Logger.info("Cancelled approval expiry", meeting_id: meeting.id, jobs_deleted: deleted)
