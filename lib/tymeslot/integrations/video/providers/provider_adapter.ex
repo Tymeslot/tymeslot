@@ -188,7 +188,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
           if callback_exported?(provider_module, :update_meeting_room, 2) do
-            with_breaker(provider_type, fn ->
+            with_breaker(provider_type, config, fn ->
               # Optional callback resolved at runtime via the guard above; apply/3
               # keeps the static type checker from flagging providers that omit it.
               # credo:disable-for-next-line Credo.Check.Refactor.Apply
@@ -222,7 +222,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
           if callback_exported?(provider_module, :delete_meeting_room, 2) do
-            with_breaker(provider_type, fn ->
+            with_breaker(provider_type, config, fn ->
               # Optional callback resolved at runtime via the guard above; apply/3
               # keeps the static type checker from flagging providers that omit it.
               # credo:disable-for-next-line Credo.Check.Refactor.Apply
@@ -312,13 +312,26 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   #
   # Room creation additionally splits per-tenant work (credential/scope
   # resolution) out of the breaker-guarded call itself — see `create_room/3`.
-  defp with_breaker(provider_type, fun) do
+  defp with_breaker(provider_type, config, fun) do
     if ProviderConfig.circuit_breaker_enabled?(provider_type) do
-      VideoCircuitBreaker.call(provider_type, fun)
+      VideoCircuitBreaker.with_breaker(provider_type, [host: breaker_host(config)], fun)
     else
       fun.()
     end
   end
+
+  # Self-hosted providers (MiroTalk) carry a per-tenant `base_url`; extracting
+  # its host lets `VideoCircuitBreaker` key the breaker per host instead of
+  # sharing one breaker across every tenant on the provider. OAuth providers'
+  # configs have no `base_url`, so this is a no-op for them.
+  defp breaker_host(%{base_url: base_url}) when is_binary(base_url) do
+    case URI.parse(base_url) do
+      %URI{host: host} when is_binary(host) -> host
+      _other -> nil
+    end
+  end
+
+  defp breaker_host(_config), do: nil
 
   # A provider's `create_meeting_room/1` callback typically bundles per-tenant
   # credential/scope resolution with the actual outbound API call, so wrapping
@@ -345,21 +358,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
          callback_exported?(provider_module, :finish_create_meeting_room, 2) do
       create_room_with_precheck(provider_type, provider_module, config)
     else
-      with_breaker(provider_type, fn -> provider_module.create_meeting_room(config) end)
+      with_breaker(provider_type, config, fn -> provider_module.create_meeting_room(config) end)
     end
   end
 
   defp create_room_with_precheck(provider_type, provider_module, config) do
     case provider_module.precheck_create_meeting_room(config) do
       {:ok, token} ->
-        with_breaker(provider_type, fn ->
+        with_breaker(provider_type, config, fn ->
           provider_module.finish_create_meeting_room(token, config)
         end)
 
       {:provider_error, reason} ->
         # Let the breaker witness the failure without repeating the network
-        # call that already happened during the precheck.
-        with_breaker(provider_type, fn -> {:error, reason} end)
+        # call that already happened during the precheck. Tagged
+        # `{:provider_error, reason}` rather than `{:error, reason}` so
+        # `BreakerOutcome` classifies it `:failure` outright instead of
+        # re-guessing from `reason`'s shape; `with_breaker`/`VideoCircuitBreaker`
+        # unwrap the tag back to a plain `{:error, reason}` for the caller.
+        with_breaker(provider_type, config, fn -> {:provider_error, reason} end)
 
       {:error, _reason} = error ->
         error

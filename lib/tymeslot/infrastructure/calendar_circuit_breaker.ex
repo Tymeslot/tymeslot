@@ -120,6 +120,15 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
         Logger.warning("Calendar host circuit breaker open", provider: provider, host: host)
         error
 
+      {:provider_error, reason} ->
+        Logger.error("Calendar host operation failed",
+          provider: provider,
+          host: host,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+
       {:error, reason} = error ->
         Logger.error("Calendar host operation failed",
           provider: provider,

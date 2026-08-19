@@ -32,8 +32,9 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   breaker cannot wedge on a permission it handed out and never heard about.
   """
 
-  use GenServer
+  use GenServer, restart: :transient
   require Logger
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Metrics
 
   @default_config %{
@@ -92,26 +93,65 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   - `:ok` if the function returns bare `:ok`
   - `{:ok, result}` if the function returns `{:ok, result}` or any other non-error value
   - `{:error, :circuit_open}` if the circuit is open
+  - `{:provider_error, reason}` if the function returns that explicitly
   - `{:error, reason}` if the function fails
+
+  ## Options
+  - `:classify` - a `(term() -> BreakerOutcome.outcome())` function applied to
+    the (normalised) return value to decide whether it should trip the
+    breaker (`:failure`), count towards closing it (`:success`), or leave
+    breaker state untouched (`:ignore`, e.g. a local validation error or a
+    4xx that says nothing about the provider's health). Defaults to
+    `BreakerOutcome.classify/1`.
+
+  An exception raised by the function itself is not evidence the provider is
+  down, so it is always classified `:ignore` regardless of `:classify`; an
+  `exit` or `throw` is recorded the same way and then re-raised, so the
+  breaker is never left blind by a termination path that skips reporting.
   """
-  @spec call(GenServer.server(), (-> any())) :: :ok | {:ok, any()} | {:error, any()}
-  def call(breaker_name, fun) when is_function(fun, 0) do
+  @spec call(GenServer.server(), (-> any()), keyword()) ::
+          :ok | {:ok, any()} | {:error, any()} | {:provider_error, any()}
+  def call(breaker_name, fun, opts \\ []) when is_function(fun, 0) do
+    classify_fun = Keyword.get(opts, :classify, &BreakerOutcome.classify/1)
+
     # Bookkeeping only, so this returns without waiting on anything external.
     # The function itself runs here, in the caller, and its outcome is reported
     # back after the fact.
     case GenServer.call(breaker_name, :request_permission, @permission_timeout) do
       :allow ->
-        result = execute_function(fun)
-        GenServer.cast(breaker_name, {:record_outcome, outcome(result)})
-        result
+        run_protected(breaker_name, fun, classify_fun)
 
       {:error, :circuit_open} = refusal ->
         refusal
     end
   end
 
-  defp outcome({:error, _reason}), do: :failure
-  defp outcome(_success), do: :success
+  defp run_protected(breaker_name, fun, classify_fun) do
+    {result, outcome} = execute_function(fun, classify_fun)
+    GenServer.cast(breaker_name, {:record_outcome, outcome})
+    result
+  catch
+    kind, reason ->
+      Logger.error("Circuit breaker caught a non-local exit",
+        name: breaker_name,
+        kind: kind,
+        reason: inspect(reason)
+      )
+
+      GenServer.cast(breaker_name, {:record_outcome, :ignore})
+      :erlang.raise(kind, reason, __STACKTRACE__)
+  end
+
+  @doc """
+  Reports an outcome directly, for callers that already have a result in hand
+  (already classified, or produced outside `call/3`) rather than a function
+  for the breaker to run and classify itself. An `:ignore` outcome leaves
+  breaker state untouched.
+  """
+  @spec record(GenServer.server(), BreakerOutcome.outcome()) :: :ok
+  def record(breaker_name, outcome) when outcome in [:success, :failure, :ignore] do
+    GenServer.cast(breaker_name, {:record_outcome, outcome})
+  end
 
   @doc """
   Gets the current status of the circuit breaker.
@@ -123,9 +163,14 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   @doc """
   Resets the circuit breaker to closed state.
+
+  Clears the persisted ETS snapshot directly (not just via the cast) so a
+  reset issued while the breaker process is down or restarting cannot be
+  silently dropped and resurrect a stale `:open` snapshot on the next start.
   """
   @spec reset(GenServer.server()) :: :ok
   def reset(breaker_name) do
+    safe_ets_delete(@state_table, breaker_name)
     GenServer.cast(breaker_name, :reset)
   end
 
@@ -248,6 +293,12 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   # Outcome recording: the caller ran the work and is telling us how it went.
 
+  # An outcome that says nothing about the provider's health (a local
+  # validation error, a 4xx, a nested `:circuit_open`) must not trip the
+  # breaker and must not count towards closing it either — state is left
+  # completely untouched, in every status.
+  defp record_outcome(:ignore, state), do: state
+
   defp record_outcome(:success, %State{status: :closed} = state) do
     %{state | success_count: state.success_count + 1}
   end
@@ -314,19 +365,24 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   # transition it would have caused has already happened.
   defp record_outcome(_outcome, %State{status: :open} = state), do: state
 
-  defp execute_function(fun) do
-    case fun.() do
-      :ok -> :ok
-      {:ok, _result} = success -> success
-      {:error, _reason} = error -> error
-      # Handle non-standard returns
-      result -> {:ok, result}
-    end
+  defp execute_function(fun, classify_fun) do
+    result = normalize_result(fun.())
+    {result, classify_fun.(result)}
   rescue
     error ->
+      # An exception out of our own code is not evidence the provider is
+      # down, so it is never classified `:failure` — but it must still be
+      # reported (as `:ignore`) so the breaker isn't left blind.
       Logger.error("Circuit breaker caught exception", error: inspect(error))
-      {:error, error}
+      {{:error, error}, :ignore}
   end
+
+  defp normalize_result(:ok), do: :ok
+  defp normalize_result({:ok, _result} = success), do: success
+  defp normalize_result({:error, _reason} = error), do: error
+  defp normalize_result({:provider_error, _reason} = error), do: error
+  # Handle non-standard returns
+  defp normalize_result(result), do: {:ok, result}
 
   defp maybe_reset_window(state, now) do
     if now - state.window_start >= state.config.time_window do
@@ -382,9 +438,23 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     end
   end
 
+  defp safe_ets_delete(table, key) do
+    if :ets.whereis(table) != :undefined do
+      :ets.delete(table, key)
+    end
+
+    :ok
+  end
+
   @impl GenServer
   def handle_info(:timeout, state) do
     Logger.info("Circuit breaker stopping due to inactivity", name: state.name)
+
+    # `restart: :transient` (see `use GenServer` above) means this `:normal`
+    # stop is not immediately restarted, so the reap is real: drop the
+    # persisted snapshot too, otherwise a dynamic per-host breaker that goes
+    # idle leaves its row in the shared ETS table forever.
+    safe_ets_delete(@state_table, state.name)
 
     {:stop, :normal, state}
   end

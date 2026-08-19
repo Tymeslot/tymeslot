@@ -55,7 +55,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       # The google_meet config has failure_threshold: 5
       for _i <- 1..5 do
         VideoCircuitBreaker.call(:google_meet, fn ->
-          {:error, :simulated_failure}
+          {:provider_error, :simulated_failure}
         end)
       end
 
@@ -141,7 +141,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       # Cause failures to open circuit (teams has threshold of 5)
       for _i <- 1..5 do
         VideoCircuitBreaker.call(:teams, fn ->
-          {:error, :simulated_failure}
+          {:provider_error, :simulated_failure}
         end)
       end
 
@@ -159,7 +159,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       # Open the circuit first
       for _i <- 1..5 do
         VideoCircuitBreaker.call(:mirotalk, fn ->
-          {:error, :failure}
+          {:provider_error, :failure}
         end)
       end
 

@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
@@ -109,24 +110,18 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   # A rejected/expired grant (`invalid_grant`, `invalid_client`,
   # `access_denied`) is the tenant's credential, not Graph's availability —
-  # matches the permanent-auth markers `HealthCheck.ResponseHandler` already
-  # uses for the same OAuth error shape (both Teams and Zoom refresh through
-  # the shared `ErrorParser.build_message/3`). Anything else (network error,
-  # an unrecognised HTTP status) is handed back for the breaker to witness.
-  @permanent_credential_error_markers ~w(invalid_grant invalid_client access_denied)
-
+  # `BreakerOutcome.permanent_credential_error?/1` shares this rule with
+  # `HealthCheck.ResponseHandler`'s reauth fast-path (both Teams and Zoom
+  # refresh through the shared `ErrorParser.build_message/3`). Anything else
+  # (network error, an unrecognised HTTP status) is handed back for the
+  # breaker to witness.
   defp classify_token_result({:ok, _token} = ok), do: ok
 
   defp classify_token_result({:error, reason} = error) do
-    if permanent_credential_error?(reason), do: error, else: {:provider_error, reason}
+    if BreakerOutcome.permanent_credential_error?(reason),
+      do: error,
+      else: {:provider_error, reason}
   end
-
-  defp permanent_credential_error?(reason) when is_binary(reason) do
-    tokens = reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
-    Enum.any?(@permanent_credential_error_markers, &(&1 in tokens))
-  end
-
-  defp permanent_credential_error?(_reason), do: false
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do

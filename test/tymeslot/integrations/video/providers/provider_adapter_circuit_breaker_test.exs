@@ -59,7 +59,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterCircuitBreakerTes
     %{config: %{failure_threshold: threshold}} = CircuitBreaker.status(@breaker)
 
     for _attempt <- 1..threshold do
-      CircuitBreaker.call(@breaker, fn -> {:error, :induced} end)
+      CircuitBreaker.call(@breaker, fn -> {:error, :induced} end,
+        classify: fn _result -> :failure end
+      )
     end
   end
 end
