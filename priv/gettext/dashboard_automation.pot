@@ -113,7 +113,6 @@ msgstr ""
 msgid "Copy"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
@@ -166,7 +165,6 @@ msgstr ""
 msgid "Disabled"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -186,11 +184,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Events to Subscribe *"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
@@ -289,7 +282,6 @@ msgstr ""
 msgid "Request timestamp"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
@@ -435,7 +427,6 @@ msgstr ""
 msgid "Unable to verify subscription status. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update Webhook"
@@ -471,13 +462,11 @@ msgstr ""
 msgid "Webhook Integration Guide"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Name"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
@@ -543,7 +532,6 @@ msgstr ""
 msgid "Your Webhooks"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "My n8n Automation"

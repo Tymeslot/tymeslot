@@ -113,7 +113,6 @@ msgstr "Підключіть обліковий запис Stripe, щоб вик
 msgid "Copy"
 msgstr "Копіювати"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
@@ -166,7 +165,6 @@ msgstr "Видалити вебхук?"
 msgid "Disabled"
 msgstr "Вимкнено"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -187,11 +185,6 @@ msgstr "Помилка: %{message}"
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
 msgstr "Підписки на події"
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Events to Subscribe *"
-msgstr "Події для підписки *"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
@@ -289,7 +282,6 @@ msgstr "Згенерувати новий токен?"
 msgid "Request timestamp"
 msgstr "Час запиту"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
@@ -435,7 +427,6 @@ msgstr "Не вдалося виконати цю дію. Спробуйте щ�
 msgid "Unable to verify subscription status. Please try again."
 msgstr "Не вдалося перевірити статус підписки. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update Webhook"
@@ -471,13 +462,11 @@ msgstr "Деталі вебхука"
 msgid "Webhook Integration Guide"
 msgstr "Посібник з інтеграції вебхуків"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Name"
 msgstr "Назва вебхука"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
@@ -543,7 +532,6 @@ msgstr "Що таке вебхуки?"
 msgid "Your Webhooks"
 msgstr "Ваші вебхуки"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "My n8n Automation"

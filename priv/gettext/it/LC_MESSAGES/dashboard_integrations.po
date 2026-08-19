@@ -193,7 +193,6 @@ msgstr "Collegane uno per aggiungere automaticamente un link video alle riunioni
 msgid "Connected"
 msgstr "Collegato"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -486,11 +485,6 @@ msgstr "Trattino basso mancante: {{meeting_id}} non {{meetingid}}"
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
 msgstr "Nessun URL configurato"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
-msgstr "Nessun calendario selezionato"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -868,11 +862,6 @@ msgstr "%{status} - richiede attenzione"
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Impossibile riattivare - un'altra integrazione attiva utilizza già questo account"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
-msgstr "Nessun calendario selezionato - non verrà sincronizzato nulla finché non ne selezioni almeno uno."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format

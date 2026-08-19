@@ -113,7 +113,6 @@ msgstr "Verbinden Sie ein Stripe-Konto, um diese Automatisierung zu nutzen."
 msgid "Copy"
 msgstr "Kopieren"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
@@ -166,7 +165,6 @@ msgstr "Webhook löschen?"
 msgid "Disabled"
 msgstr "Deaktiviert"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -187,11 +185,6 @@ msgstr "Fehler: %{message}"
 #, elixir-autogen, elixir-format
 msgid "Event Subscriptions"
 msgstr "Ereignis-Abonnements"
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Events to Subscribe *"
-msgstr "Zu abonnierende Ereignisse *"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
@@ -289,7 +282,6 @@ msgstr "Token neu generieren?"
 msgid "Request timestamp"
 msgstr "Anfrage-Zeitstempel"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
@@ -435,7 +427,6 @@ msgstr "Diese Aktion konnte nicht ausgeführt werden. Bitte versuchen Sie es ern
 msgid "Unable to verify subscription status. Please try again."
 msgstr "Abonnementstatus konnte nicht verifiziert werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update Webhook"
@@ -471,13 +462,11 @@ msgstr "Webhook-Details"
 msgid "Webhook Integration Guide"
 msgstr "Webhook-Integrationsleitfaden"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Name"
 msgstr "Webhook-Name"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
@@ -543,7 +532,6 @@ msgstr "Was sind Webhooks?"
 msgid "Your Webhooks"
 msgstr "Ihre Webhooks"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "My n8n Automation"

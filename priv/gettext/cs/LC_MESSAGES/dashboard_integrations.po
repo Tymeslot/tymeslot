@@ -193,7 +193,6 @@ msgstr "Připojte jednoho z nich, aby se k online schůzkám po rezervaci auto
 msgid "Connected"
 msgstr "Připojeno"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -486,11 +485,6 @@ msgstr "Chybí podtržítko: {{meeting_id}}, nikoli {{meetingid}}"
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
 msgstr "Není nastavena žádná URL"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
-msgstr "Nejsou vybrány žádné kalendáře"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -869,11 +863,6 @@ msgstr "%{status} – vyžaduje pozornost"
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Nelze znovu aktivovat – tento účet už používá jiná aktivní integrace"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
-msgstr "Nejsou vybrány žádné kalendáře – dokud alespoň jeden nevyberete, nic se nebude synchronizovat."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format

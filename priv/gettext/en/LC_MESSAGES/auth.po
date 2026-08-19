@@ -83,11 +83,6 @@ msgstr ""
 msgid "Confirm your new password"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Contact Support"
-msgstr ""
-
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Create a password"
@@ -160,11 +155,6 @@ msgstr ""
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
-msgid "Go to Login"
-msgstr ""
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
 msgid "Invalid Link"
 msgstr ""
 
@@ -223,11 +213,6 @@ msgstr ""
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
-msgid "Need help?"
-msgstr ""
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
 msgid "New Password"
 msgstr ""
 
@@ -245,11 +230,6 @@ msgstr ""
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
-msgstr ""
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Password Changed"
 msgstr ""
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
@@ -505,11 +485,6 @@ msgstr ""
 msgid "Your password has been reset. You can now log in with your new credentials."
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your password has been successfully updated. You can now log in with your new credentials."
-msgstr ""
-
 #: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g. John Doe"
@@ -584,11 +559,6 @@ msgstr ""
 #: lib/tymeslot_web/live/auth_live/state_helper.ex
 #, elixir-autogen, elixir-format
 msgid "No pending registration found. Please sign in again."
-msgstr ""
-
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Please correct the errors in the form."
 msgstr ""
 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex

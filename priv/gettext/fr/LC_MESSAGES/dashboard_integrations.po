@@ -193,7 +193,6 @@ msgstr "Connectez-en un pour que les réunions en ligne reçoivent automatiqueme
 msgid "Connected"
 msgstr "Connecté"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -486,11 +485,6 @@ msgstr "Tiret bas manquant : {{meeting_id}} et non {{meetingid}}"
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
 msgstr "Aucune URL configurée"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
-msgstr "Aucun calendrier sélectionné"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -868,11 +862,6 @@ msgstr "%{status} - nécessite votre attention"
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Réactivation impossible - une autre intégration active utilise déjà ce compte"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
-msgstr "Aucun calendrier sélectionné - rien ne sera synchronisé tant que vous n’en aurez pas choisi au moins un."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format

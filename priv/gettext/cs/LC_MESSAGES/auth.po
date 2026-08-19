@@ -83,11 +83,6 @@ msgstr "Potvrzení nového hesla"
 msgid "Confirm your new password"
 msgstr "Potvrďte své nové heslo"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Contact Support"
-msgstr "Kontaktovat podporu"
-
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Create a password"
@@ -160,11 +155,6 @@ msgstr "Zapomenuté heslo?"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
-msgid "Go to Login"
-msgstr "Přejít na přihlášení"
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
 msgid "Invalid Link"
 msgstr "Neplatný odkaz"
 
@@ -223,11 +213,6 @@ msgstr "Chybí informace o poskytovateli OAuth. Zkuste to prosím znovu."
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
-msgid "Need help?"
-msgstr "Potřebujete pomoc?"
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
 msgid "New Password"
 msgstr "Nové heslo"
 
@@ -246,11 +231,6 @@ msgstr "Nebo pokračujte přes"
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Heslo"
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Password Changed"
-msgstr "Heslo bylo změněno"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -506,11 +486,6 @@ msgstr "Váš e-mail byl úspěšně ověřen. Přihlášení proběhlo automati
 msgid "Your password has been reset. You can now log in with your new credentials."
 msgstr "Vaše heslo bylo obnoveno. Nyní se můžete přihlásit novými údaji."
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your password has been successfully updated. You can now log in with your new credentials."
-msgstr "Vaše heslo bylo úspěšně aktualizováno. Nyní se můžete přihlásit novými údaji."
-
 #: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g. John Doe"
@@ -586,11 +561,6 @@ msgstr "Přijatá data OAuth jsou neplatná. Zkuste to prosím znovu."
 #, elixir-autogen, elixir-format
 msgid "No pending registration found. Please sign in again."
 msgstr "Nebyla nalezena žádná rozpracovaná registrace. Přihlaste se prosím znovu."
-
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Please correct the errors in the form."
-msgstr "Opravte prosím chyby ve formuláři."
 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format

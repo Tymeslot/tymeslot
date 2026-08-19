@@ -193,7 +193,6 @@ msgstr "Підключіть платформу, щоб посилання на 
 msgid "Connected"
 msgstr "Підключено"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -486,11 +485,6 @@ msgstr "Відсутній символ підкреслення: {{meeting_id}}
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
 msgstr "URL-адресу не налаштовано"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
-msgstr "Жодного календаря не вибрано"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -869,11 +863,6 @@ msgstr "%{status} - потребує уваги"
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Неможливо активувати повторно - цей обліковий запис уже використовується іншою активною інтеграцією"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
-msgstr "Жодного календаря не вибрано - синхронізація не почнеться, доки ви не виберете хоча б один."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format

@@ -193,7 +193,6 @@ msgstr ""
 msgid "Connected"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -485,11 +484,6 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
@@ -867,11 +861,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
 msgstr ""
 
 #: lib/tymeslot_web/helpers/integration_providers.ex

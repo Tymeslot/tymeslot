@@ -83,11 +83,6 @@ msgstr "Conferma la nuova password"
 msgid "Confirm your new password"
 msgstr "Conferma la tua nuova password"
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Contact Support"
-msgstr "Contatta l'assistenza"
-
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Create a password"
@@ -160,11 +155,6 @@ msgstr "Password dimenticata?"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
-msgid "Go to Login"
-msgstr "Vai all'accesso"
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
 msgid "Invalid Link"
 msgstr "Link non valido"
 
@@ -223,11 +213,6 @@ msgstr "Informazioni sul provider OAuth mancanti. Riprova."
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
-msgid "Need help?"
-msgstr "Hai bisogno di aiuto?"
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
 msgid "New Password"
 msgstr "Nuova password"
 
@@ -246,11 +231,6 @@ msgstr "Oppure continua con"
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "Password"
-
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Password Changed"
-msgstr "Password modificata"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex
 #, elixir-autogen, elixir-format
@@ -505,11 +485,6 @@ msgstr "La tua email è stata verificata con successo! Ora hai effettuato l'acce
 msgid "Your password has been reset. You can now log in with your new credentials."
 msgstr "La tua password è stata reimpostata. Ora puoi accedere con le tue nuove credenziali."
 
-#: lib/tymeslot_web/components/auth/session/password_reset_component.ex
-#, elixir-autogen, elixir-format
-msgid "Your password has been successfully updated. You can now log in with your new credentials."
-msgstr "La tua password è stata aggiornata con successo. Ora puoi accedere con le tue nuove credenziali."
-
 #: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g. John Doe"
@@ -585,11 +560,6 @@ msgstr "Dati OAuth ricevuti non validi. Riprova."
 #, elixir-autogen, elixir-format
 msgid "No pending registration found. Please sign in again."
 msgstr "Nessuna registrazione in sospeso trovata. Accedi di nuovo."
-
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Please correct the errors in the form."
-msgstr "Correggi gli errori nel modulo."
 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format

@@ -193,7 +193,6 @@ msgstr "Verbinden Sie einen, damit Online-Termine bei der Buchung automatisch ei
 msgid "Connected"
 msgstr "Verbunden"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -486,11 +485,6 @@ msgstr "Fehlender Unterstrich: {{meeting_id}} statt {{meetingid}}"
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
 msgstr "Keine URL konfiguriert"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
-msgstr "Keine Kalender ausgewählt"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -868,11 +862,6 @@ msgstr "%{status} - Aufmerksamkeit erforderlich"
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Reaktivierung nicht möglich - eine andere aktive Integration verwendet dieses Konto bereits"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
-msgstr "Keine Kalender ausgewählt - es wird nichts synchronisiert, bis Sie mindestens einen auswählen."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
