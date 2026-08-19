@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ubX9CpL4lkOJamucgQbxaXlcp9abbwHzadxXni5yRTE9oGXYI3ZbBWsbR3rg2Yh
+\restrict RSDdvU4iwdm2BeVhj0l4Lhv7Pgdr77PU4woZri0gezqeCrG1bX60yKXrjXPdC0U
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -907,6 +907,75 @@ ALTER SEQUENCE public.payment_transactions_id_seq OWNED BY public.payment_transa
 
 
 --
+-- Name: poll_participants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.poll_participants (
+    id uuid NOT NULL,
+    poll_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    email character varying(255) NOT NULL,
+    token character varying(255) NOT NULL,
+    timezone character varying(255),
+    locale character varying(255) DEFAULT 'en'::character varying NOT NULL,
+    voted_at timestamp(0) without time zone,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: poll_time_slots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.poll_time_slots (
+    id uuid NOT NULL,
+    poll_id uuid NOT NULL,
+    start_time timestamp(0) without time zone NOT NULL,
+    end_time timestamp(0) without time zone NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: poll_votes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.poll_votes (
+    id uuid NOT NULL,
+    poll_participant_id uuid NOT NULL,
+    poll_time_slot_id uuid NOT NULL,
+    response character varying(255) NOT NULL,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
+-- Name: polls; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.polls (
+    id uuid NOT NULL,
+    user_id bigint NOT NULL,
+    meeting_type_id bigint,
+    title character varying(255) NOT NULL,
+    description text,
+    duration_minutes integer NOT NULL,
+    token character varying(255) NOT NULL,
+    status character varying(255) DEFAULT 'open'::character varying NOT NULL,
+    deadline_at timestamp(0) without time zone,
+    timezone character varying(255) NOT NULL,
+    confirmed_meeting_id uuid,
+    confirmed_at timestamp(0) without time zone,
+    inserted_at timestamp(0) without time zone NOT NULL,
+    updated_at timestamp(0) without time zone NOT NULL
+);
+
+
+--
 -- Name: profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1408,7 +1477,7 @@ CREATE TABLE public.webhooks (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
     name character varying(255) NOT NULL,
-    url character varying(255) NOT NULL,
+    url text NOT NULL,
     events character varying(255)[] DEFAULT ARRAY[]::character varying[] NOT NULL,
     is_active boolean DEFAULT true NOT NULL,
     last_triggered_at timestamp(0) without time zone,
@@ -1840,6 +1909,38 @@ ALTER TABLE ONLY public.payment_transactions
 
 ALTER TABLE public.payment_transactions
     ADD CONSTRAINT payment_transactions_tax_amount_non_negative CHECK ((tax_amount >= 0)) NOT VALID;
+
+
+--
+-- Name: poll_participants poll_participants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_participants
+    ADD CONSTRAINT poll_participants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: poll_time_slots poll_time_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_time_slots
+    ADD CONSTRAINT poll_time_slots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: poll_votes poll_votes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: polls polls_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_pkey PRIMARY KEY (id);
 
 
 --
@@ -2637,6 +2738,76 @@ CREATE INDEX payment_transactions_user_id_index ON public.payment_transactions U
 
 
 --
+-- Name: poll_participants_poll_id_email_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_participants_poll_id_email_index ON public.poll_participants USING btree (poll_id, email);
+
+
+--
+-- Name: poll_participants_poll_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX poll_participants_poll_id_index ON public.poll_participants USING btree (poll_id);
+
+
+--
+-- Name: poll_participants_token_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_participants_token_index ON public.poll_participants USING btree (token);
+
+
+--
+-- Name: poll_time_slots_poll_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX poll_time_slots_poll_id_index ON public.poll_time_slots USING btree (poll_id);
+
+
+--
+-- Name: poll_time_slots_poll_id_start_time_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_time_slots_poll_id_start_time_index ON public.poll_time_slots USING btree (poll_id, start_time);
+
+
+--
+-- Name: poll_votes_poll_participant_id_poll_time_slot_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX poll_votes_poll_participant_id_poll_time_slot_id_index ON public.poll_votes USING btree (poll_participant_id, poll_time_slot_id);
+
+
+--
+-- Name: poll_votes_poll_time_slot_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX poll_votes_poll_time_slot_id_index ON public.poll_votes USING btree (poll_time_slot_id);
+
+
+--
+-- Name: polls_meeting_type_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX polls_meeting_type_id_index ON public.polls USING btree (meeting_type_id);
+
+
+--
+-- Name: polls_token_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX polls_token_index ON public.polls USING btree (token);
+
+
+--
+-- Name: polls_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX polls_user_id_index ON public.polls USING btree (user_id);
+
+
+--
 -- Name: profiles_allowed_embed_domains_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3278,6 +3449,62 @@ ALTER TABLE ONLY public.payment_transactions
 
 
 --
+-- Name: poll_participants poll_participants_poll_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_participants
+    ADD CONSTRAINT poll_participants_poll_id_fkey FOREIGN KEY (poll_id) REFERENCES public.polls(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_time_slots poll_time_slots_poll_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_time_slots
+    ADD CONSTRAINT poll_time_slots_poll_id_fkey FOREIGN KEY (poll_id) REFERENCES public.polls(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_votes poll_votes_poll_participant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_poll_participant_id_fkey FOREIGN KEY (poll_participant_id) REFERENCES public.poll_participants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: poll_votes poll_votes_poll_time_slot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.poll_votes
+    ADD CONSTRAINT poll_votes_poll_time_slot_id_fkey FOREIGN KEY (poll_time_slot_id) REFERENCES public.poll_time_slots(id) ON DELETE CASCADE;
+
+
+--
+-- Name: polls polls_confirmed_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_confirmed_meeting_id_fkey FOREIGN KEY (confirmed_meeting_id) REFERENCES public.meetings(id) ON DELETE SET NULL;
+
+
+--
+-- Name: polls polls_meeting_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_meeting_type_id_fkey FOREIGN KEY (meeting_type_id) REFERENCES public.meeting_types(id) ON DELETE SET NULL;
+
+
+--
+-- Name: polls polls_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.polls
+    ADD CONSTRAINT polls_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: profiles profiles_primary_calendar_integration_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3401,7 +3628,7 @@ ALTER TABLE ONLY public.weekly_availability
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ubX9CpL4lkOJamucgQbxaXlcp9abbwHzadxXni5yRTE9oGXYI3ZbBWsbR3rg2Yh
+\unrestrict RSDdvU4iwdm2BeVhj0l4Lhv7Pgdr77PU4woZri0gezqeCrG1bX60yKXrjXPdC0U
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3584,6 +3811,7 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260708112716);
 INSERT INTO public."schema_migrations" (version) VALUES (20260716094322);
 INSERT INTO public."schema_migrations" (version) VALUES (20260717144920);
 INSERT INTO public."schema_migrations" (version) VALUES (20260717144928);
+INSERT INTO public."schema_migrations" (version) VALUES (20260717150103);
 INSERT INTO public."schema_migrations" (version) VALUES (20260725055344);
 INSERT INTO public."schema_migrations" (version) VALUES (20260802184220);
 INSERT INTO public."schema_migrations" (version) VALUES (20260803110357);
@@ -3599,3 +3827,4 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260811180806);
 INSERT INTO public."schema_migrations" (version) VALUES (20260811181002);
 INSERT INTO public."schema_migrations" (version) VALUES (20260811182123);
 INSERT INTO public."schema_migrations" (version) VALUES (20260817104115);
+INSERT INTO public."schema_migrations" (version) VALUES (20260819084327);

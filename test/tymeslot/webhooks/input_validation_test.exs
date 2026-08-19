@@ -146,6 +146,21 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       assert {:error, errors} = InputValidation.validate_webhook_form(params)
       assert Map.has_key?(errors, :name)
     end
+
+    test "strips null bytes from url" do
+      # PostgreSQL rejects null bytes even though they are valid UTF-8, so an
+      # unsanitised NUL in the URL would reach the changeset and raise a
+      # Postgrex error (22021) on insert instead of failing validation here.
+      params = %{
+        "name" => "My Webhook",
+        "url" => "https://example.com/hook?x=a\x00b",
+        "events" => []
+      }
+
+      assert {:ok, validated} = InputValidation.validate_webhook_form(params)
+      refute validated.url =~ "\x00"
+      assert validated.url == "https://example.com/hook?x=ab"
+    end
   end
 
   # `Tymeslot.Security.RateLimiter.Integrations` states the rule: never one

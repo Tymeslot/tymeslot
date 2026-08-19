@@ -16,11 +16,14 @@ defmodule Tymeslot.Security.PrivateIPv4 do
   - `172.16.0.0/12` — class B private (RFC 1918)
   - `192.0.0.0/24` — IETF protocol assignments (RFC 6890)
   - `192.168.0.0/16` — class C private (RFC 1918)
+  - `224.0.0.0/4` — multicast (RFC 5771)
+  - `240.0.0.0/4` — reserved for future use, including the `255.255.255.255`
+    limited broadcast address (RFC 1112, RFC 919)
   """
 
   @doc """
   Returns true when the 4-tuple IPv4 address falls in a private,
-  loopback, link-local, or unspecified range.
+  loopback, link-local, multicast, reserved, or unspecified range.
   """
   @spec private?(:inet.ip4_address()) :: boolean()
   # 0.0.0.0/8 — unspecified / "this" network
@@ -39,5 +42,9 @@ defmodule Tymeslot.Security.PrivateIPv4 do
   def private?({192, 0, 0, _d}), do: true
   # 192.168.0.0/16 — class C private
   def private?({192, 168, _c, _d}), do: true
+  # 224.0.0.0/4 — multicast (224.0.0.0–239.255.255.255)
+  def private?({a, _b, _c, _d}) when a >= 224 and a <= 239, do: true
+  # 240.0.0.0/4 — reserved for future use, including 255.255.255.255
+  def private?({a, _b, _c, _d}) when a >= 240, do: true
   def private?(_other), do: false
 end

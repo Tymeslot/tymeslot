@@ -125,8 +125,9 @@ defmodule Tymeslot.Webhooks.InputValidation do
   end
 
   defp sanitize_text_fields(params, metadata) do
-    with {:ok, sanitized_name} <- sanitize_field_for_form(params["name"], :name, metadata) do
-      {:ok, Map.put(params, "name", sanitized_name)}
+    with {:ok, sanitized_name} <- sanitize_field_for_form(params["name"], :name, metadata),
+         {:ok, sanitized_url} <- sanitize_field_for_form(params["url"], :url, metadata) do
+      {:ok, params |> Map.put("name", sanitized_name) |> Map.put("url", sanitized_url)}
     end
   end
 

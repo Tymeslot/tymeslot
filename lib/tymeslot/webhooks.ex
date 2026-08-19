@@ -11,14 +11,16 @@ defmodule Tymeslot.Webhooks do
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Features
-  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UrlValidation
 
   alias Tymeslot.Webhooks.{
+    HttpDelivery,
     PayloadBuilder,
     SsrfValidator,
     WebhookDeliverySchema,
@@ -173,32 +175,27 @@ defmodule Tymeslot.Webhooks do
 
   @doc """
   Tests a webhook connection by sending a test payload.
+
+  Delegates transport to `HttpDelivery.post/3`, which re-validates every
+  redirect hop with `SsrfValidator` rather than following redirects blind:
+  a host that resolves publicly at the initial check must not be able to
+  302 the probe to a private or loopback address.
   """
   @spec test_webhook_connection(String.t(), String.t() | nil) :: :ok | {:error, String.t()}
   def test_webhook_connection(url, token \\ nil) do
-    strict? =
-      Application.get_env(:tymeslot, :environment, :prod) == :prod and
-        not SsrfValidator.allow_private?()
-
-    with :ok <-
-           UrlValidation.validate_http_url(url,
-             block_private_ips: strict?,
-             enforce_https: strict?
-           ) do
+    with :ok <- SsrfValidator.check(url) do
       payload = PayloadBuilder.build_test_payload()
       headers = build_headers(payload, token)
 
-      case Config.http_client_module().post(url, Jason.encode!(payload), headers,
-             receive_timeout: 10_000
-           ) do
-        {:ok, %{status: status}} when status >= 200 and status < 300 ->
+      case HttpDelivery.post(url, Jason.encode!(payload), headers) do
+        {:ok, status, _body} when status >= 200 and status < 300 ->
           :ok
 
-        {:ok, %{status: status}} ->
+        {:ok, status, _body} ->
           {:error, "Webhook returned status #{status}"}
 
-        {:error, %{reason: reason}} ->
-          {:error, "Connection failed: #{inspect(reason)}"}
+        {:error, :blocked_by_ssrf} ->
+          {:error, "URL resolves to a private or restricted address"}
 
         {:error, reason} ->
           {:error, "Connection failed: #{inspect(reason)}"}
@@ -328,18 +325,20 @@ defmodule Tymeslot.Webhooks do
     [
       %{
         value: "meeting.created",
-        label: "Meeting Created",
-        description: "Triggered when a new booking is created"
+        label: dgettext("dashboard_automation", "Meeting Created"),
+        description:
+          dgettext("dashboard_automation", "Triggers when a new booking is successfully created")
       },
       %{
         value: "meeting.cancelled",
-        label: "Meeting Cancelled",
-        description: "Triggered when a booking is cancelled"
+        label: dgettext("dashboard_automation", "Meeting Cancelled"),
+        description:
+          dgettext("dashboard_automation", "Triggers when an existing booking is cancelled")
       },
       %{
         value: "meeting.rescheduled",
-        label: "Meeting Rescheduled",
-        description: "Triggered when a booking time is changed"
+        label: dgettext("dashboard_automation", "Meeting Rescheduled"),
+        description: dgettext("dashboard_automation", "Triggers when a booking time is changed")
       }
     ]
   end

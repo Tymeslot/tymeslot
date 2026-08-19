@@ -42,6 +42,18 @@ defmodule Tymeslot.Security.PrivateIPv4Test do
       refute PrivateIPv4.private?({192, 0, 1, 0})
     end
 
+    test "multicast 224.0.0.0/4 — boundary checks" do
+      refute PrivateIPv4.private?({223, 255, 255, 255})
+      assert PrivateIPv4.private?({224, 0, 0, 0})
+      assert PrivateIPv4.private?({239, 255, 255, 255})
+      assert PrivateIPv4.private?({240, 0, 0, 0})
+    end
+
+    test "reserved 240.0.0.0/4 — boundary checks" do
+      assert PrivateIPv4.private?({240, 0, 0, 0})
+      assert PrivateIPv4.private?({255, 255, 255, 255})
+    end
+
     test "public addresses" do
       refute PrivateIPv4.private?({8, 8, 8, 8})
       refute PrivateIPv4.private?({1, 1, 1, 1})
