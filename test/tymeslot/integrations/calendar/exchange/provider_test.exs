@@ -373,6 +373,17 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       assert {:error, message} = Provider.perform_connection_test(config())
       assert message =~ "EWS"
     end
+
+    test "reports the denial when the server refused the folder read under a 200" do
+      # EWS states this failure in the body, not in the status, so a test that
+      # stops at the HTTP layer tells the account owner the connection works
+      # and leaves discovery and sync to fail afterwards.
+      respond_with(200, ExchangeFixtures.failed_response("FindFolder", "ErrorAccessDenied"))
+
+      assert {:error, message} = Provider.perform_connection_test(config())
+      assert message =~ "Access denied"
+      refute message =~ "successful"
+    end
   end
 
   describe "check_connectivity/1" do
@@ -386,6 +397,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       respond_with(503, "")
 
       assert {:error, :server_error} = Provider.check_connectivity(config())
+    end
+
+    test "refuses to call an endpoint reachable when it denied the folder read" do
+      respond_with(200, ExchangeFixtures.failed_response("FindFolder", "ErrorAccessDenied"))
+
+      assert {:error, {:response_code, "ErrorAccessDenied"}} =
+               Provider.check_connectivity(config())
     end
   end
 

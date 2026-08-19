@@ -143,8 +143,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def perform_connection_test(config) do
-    case Client.call(to_config(config), Requests.find_folder()) do
-      {:ok, _doc} ->
+    case find_folder(config) do
+      {:ok, _messages} ->
         {:ok, dgettext("dashboard_calendar_providers", "Exchange connection successful")}
 
       {:error, :not_found} ->
@@ -255,8 +255,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def check_connectivity(client) do
-    case Client.call(to_config(client), Requests.find_folder()) do
-      {:ok, _doc} -> {:ok, %{status: :ok}}
+    case find_folder(client) do
+      {:ok, _messages} -> {:ok, %{status: :ok}}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -271,6 +271,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   def delete_event(_client, _uid, _opts \\ []), do: {:error, :read_only}
 
   # --- Private ---
+
+  # The reachability probe both connection callbacks run. It reads the
+  # response code rather than stopping at the HTTP status, because EWS states
+  # a refusal in the body: a `FindFolder` the account may not read is answered
+  # with a well-formed 200 whose message says `ErrorAccessDenied`. Reporting
+  # that as a working connection tells the account owner the setup succeeded
+  # and leaves discovery and every sync afterwards to fail without explanation.
+  #
+  # The messages themselves are discarded here; the folders they carry are
+  # `discover_calendars/1`'s business, and it applies the same guard through
+  # `FolderDiscovery.parse_calendars/1`.
+  defp find_folder(client) do
+    with {:ok, doc} <- Client.call(to_config(client), Requests.find_folder()) do
+      Soap.require_success(doc, "FindFolderResponseMessage")
+    end
+  end
 
   defp fetch_items(_config, []), do: {:ok, []}
 
