@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -69,6 +70,44 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       post_commit_reconciliation(integration, calendar_events)
       :ok
     end
+  end
+
+  @doc """
+  Replaces every cached row an integration holds under one `role`, in a single
+  transaction, with the given events.
+
+  For providers whose sync has more than one read path writing into the same
+  integration. Exchange is the only one today: its busy-time read owns the
+  `busy_only` rows and its item read owns the `display_only` ones, and an
+  unscoped full refresh would have each half delete the other's rows every
+  cycle.
+
+  Pure DB write. **No `post_commit_reconciliation/2`, deliberately**, and not
+  merely as the read-only-mirror argument `SyncIcsCalendarWorker` makes:
+  reconciliation resolves a vanished event to a Tymeslot meeting *by uid*
+  (`Meetings.ExternalCalendarChanges.find_linked_meeting/3`) and cancels it,
+  notifying both parties. Rows written through here can carry a synthesised
+  uid, because a busy interval arrives with no identity of any kind, so a uid
+  collision would cancel a real confirmed booking. The synthesised uids are
+  namespaced to make that collision unreachable; not running the
+  reconciliation at all is the structural half of the same defence, and both
+  are wanted.
+  """
+  @spec full_refresh_for_role(CalendarIntegrationSchema.t(), String.t(), [CalendarEvent.t()]) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def full_refresh_for_role(%CalendarIntegrationSchema{} = integration, role, calendar_events)
+      when is_binary(role) and is_list(calendar_events) do
+    CalendarEventQueries.full_refresh_for_role(integration.id, role, calendar_events)
+  rescue
+    e ->
+      Logger.error("Calendar event cache role refresh raised an exception",
+        calendar_integration_id: integration.id,
+        role: role,
+        event_count: length(calendar_events),
+        reason: Exception.message(e)
+      )
+
+      {:error, Exception.message(e)}
   end
 
   @doc """

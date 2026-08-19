@@ -464,4 +464,62 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
       assert length(ProviderCalendarEventQueries.search(user.id, "repeat", limit: 2)) == 2
     end
   end
+
+  describe "list_for_range/4 and the role discriminator" do
+    setup do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      %{integration: integration}
+    end
+
+    test "excludes busy_only rows, which carry no identity to render", %{
+      integration: integration
+    } do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "busy-row",
+        role: "busy_only",
+        start_at: ~U[2026-06-15 10:00:00Z],
+        end_at: ~U[2026-06-15 11:00:00Z]
+      )
+
+      assert in_june(integration) == []
+    end
+
+    test "returns display_only rows, which exist only to be shown", %{integration: integration} do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "display-row",
+        role: "display_only",
+        start_at: ~U[2026-06-15 10:00:00Z],
+        end_at: ~U[2026-06-15 11:00:00Z]
+      )
+
+      assert [%{uid: "display-row"}] = in_june(integration)
+    end
+
+    test "still returns the default `both` rows every other provider writes", %{
+      integration: integration
+    } do
+      row =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "ordinary-row",
+          start_at: ~U[2026-06-15 10:00:00Z],
+          end_at: ~U[2026-06-15 11:00:00Z]
+        )
+
+      assert row.role == "both"
+      assert [%{uid: "ordinary-row"}] = in_june(integration)
+    end
+  end
+
+  defp in_june(integration) do
+    ProviderCalendarEventQueries.list_for_range(
+      [integration.id],
+      ~U[2026-06-01 00:00:00Z],
+      ~U[2026-06-30 23:59:59Z]
+    )
+  end
 end

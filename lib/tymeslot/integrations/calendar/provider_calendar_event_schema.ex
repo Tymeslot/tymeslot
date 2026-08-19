@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
 
@@ -59,6 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           provider: String.t() | nil,
           provider_calendar_id: String.t() | nil,
           provider_event_id: String.t() | nil,
+          role: String.t(),
           summary: String.t() | nil,
           description: String.t() | nil,
           location: String.t() | nil,
@@ -110,6 +112,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     field :provider, :string
     field :provider_calendar_id, :string
     field :provider_event_id, :string
+
+    # Which read path owns the row, and therefore which reads may return it.
+    # Insert-time identity: deliberately absent from
+    # `ProviderCalendarEventQueries.replace_fields/0` and from the changeset's
+    # castable fields, so no partial update can re-file a row. See migration
+    # 20260819170109 for how it composes with `transparency` and `status`.
+    field :role, :string, default: EventRole.both()
 
     # Content
     field :summary, :string
