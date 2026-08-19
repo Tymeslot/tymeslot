@@ -192,6 +192,37 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
     end
   end
 
+  describe "require_success/2" do
+    test "returns every response message when all of them succeeded" do
+      {:ok, doc} = Soap.parse(messages(["NoError", "NoError"]))
+
+      assert {:ok, messages} = Soap.require_success(doc, "GetItemResponseMessage")
+      assert Soap.response_codes(messages) == ["NoError", "NoError"]
+    end
+
+    test "surfaces the first stated failure rather than the messages" do
+      # A failed message carries no payload, so reading past it answers the
+      # empty list, which callers cannot tell from an empty mailbox.
+      {:ok, doc} = Soap.parse(messages(["NoError", "ErrorAccessDenied"]))
+
+      assert Soap.require_success(doc, "GetItemResponseMessage") ==
+               {:error, {:response_code, "ErrorAccessDenied"}}
+    end
+
+    test "treats a message stating no response code as a failure" do
+      {:ok, doc} = Soap.parse(messages([nil]))
+
+      assert Soap.require_success(doc, "GetItemResponseMessage") == {:error, {:response_code, ""}}
+    end
+
+    test "reports a document carrying no such response message at all" do
+      {:ok, doc} = Soap.parse(messages(["NoError"]))
+
+      assert Soap.require_success(doc, "FindFolderResponseMessage") ==
+               {:error, :no_response_messages}
+    end
+  end
+
   describe "response_code/1" do
     test "returns an empty string for a message carrying no ResponseCode" do
       body = """
@@ -243,5 +274,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
                ]
              ) == [%{code: "NoError", item: %{subject: "Standup"}}]
     end
+  end
+
+  # One `GetItem` response per code, `nil` meaning a message stating none.
+  defp messages(codes) do
+    payload =
+      Enum.map_join(codes, "\n", fn
+        nil ->
+          ~s(<m:GetItemResponseMessage ResponseClass="Success"/>)
+
+        code ->
+          "<m:GetItemResponseMessage><m:ResponseCode>#{code}</m:ResponseCode></m:GetItemResponseMessage>"
+      end)
+
+    """
+    <?xml version="1.0"?>
+    <SOAP:Envelope xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/">
+      <SOAP:Body>
+        <m:GetItemResponse xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages">
+          <m:ResponseMessages>#{payload}</m:ResponseMessages>
+        </m:GetItemResponse>
+      </SOAP:Body>
+    </SOAP:Envelope>
+    """
   end
 end

@@ -40,6 +40,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   @typedoc "An xpath expression, as built by SweetXml's `~x` sigil."
   @type xpath_spec :: %SweetXpath{}
 
+  @typedoc """
+  Why a response could not be read as a success.
+
+  `{:response_code, code}` carries the server's own code, EWS's vocabulary for
+  what went wrong (`"ErrorAccessDenied"`, `"ErrorNonExistentMailbox"`), and
+  `""` where the message stated none. `:no_response_messages` means the
+  document carried no message of the requested name at all.
+  """
+  @type failure :: :no_response_messages | {:response_code, String.t()}
+
   @types_ns "http://schemas.microsoft.com/exchange/services/2006/types"
   @messages_ns "http://schemas.microsoft.com/exchange/services/2006/messages"
   @soap_ns "http://schemas.xmlsoap.org/soap/envelope/"
@@ -122,6 +132,39 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   @spec response_code(document()) :: String.t()
   def response_code(message) do
     xpath(message, ~x"./m:ResponseCode/text()"s)
+  end
+
+  @doc """
+  Returns the response messages of `message_name`, or the first stated failure.
+
+  Every read on this path wants the same thing: the messages, but only if the
+  server said they mean anything. Skipping a failed message instead answers an
+  empty payload, and no caller can tell that apart from a mailbox that really
+  is empty — a discovery reporting no calendars, or a sync reporting no
+  events, both of which get persisted as the truth. Failing here keeps the
+  server's own words in the error term, where they can be mapped to something
+  the account owner can act on.
+
+  A document carrying no message of that name at all is its own failure rather
+  than an empty list, for the same reason: the operation was asked for and
+  nothing answered it.
+  """
+  @spec require_success(document(), String.t()) :: {:ok, [document()]} | {:error, failure()}
+  def require_success(doc, message_name) do
+    case response_messages(doc, message_name) do
+      [] -> {:error, :no_response_messages}
+      messages -> first_failure(messages)
+    end
+  end
+
+  # A message stating no code at all reads back as `""`, which is not
+  # `"NoError"` and so fails here. That is deliberate: `""` is not a valid EWS
+  # response code, so the message stated no outcome and is not evidence of one.
+  defp first_failure(messages) do
+    case Enum.find(messages, &(response_code(&1) != "NoError")) do
+      nil -> {:ok, messages}
+      failed -> {:error, {:response_code, response_code(failed)}}
+    end
   end
 
   @doc "Binds the EWS prefixes (`t:`, `m:`, `s:`) onto an xpath expression."

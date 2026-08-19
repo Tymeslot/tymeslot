@@ -15,9 +15,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery do
   message back. Skipping a message that did not succeed would answer
   `{:ok, []}` for a mailbox that could not be enumerated at all, which the
   caller cannot tell apart from a mailbox holding no calendars and would
-  persist as an emptied calendar list. The response code is surfaced instead,
-  so the failure stays visible and callers can map it (`ErrorAccessDenied`
-  and `ErrorNonExistentMailbox` being the ones an operator actually hits).
+  persist as an emptied calendar list. `Soap.require_success/2` surfaces the
+  response code instead, so the failure stays visible and callers can map it
+  (`ErrorAccessDenied` and `ErrorNonExistentMailbox` being the ones an
+  operator actually hits).
 
   ## Entries are not flagged read-only
 
@@ -37,7 +38,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery do
 
   require Logger
 
-  @type error_reason :: {:response_code, String.t()} | :no_response_messages
+  @type error_reason :: Soap.failure()
 
   # A FindFolder response carries no marker for the mailbox's default
   # calendar: `DistinguishedFolderId` is a request-only element, and the
@@ -57,16 +58,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery do
   @spec parse_calendars(Soap.document()) ::
           {:ok, [CalendarEntry.t()]} | {:error, error_reason()}
   def parse_calendars(doc) do
-    case Soap.response_messages(doc, "FindFolderResponseMessage") do
-      [] -> {:error, :no_response_messages}
-      messages -> parse_messages(messages)
-    end
-  end
-
-  defp parse_messages(messages) do
-    case Enum.find(messages, &(Soap.response_code(&1) != "NoError")) do
-      nil -> {:ok, messages |> Enum.flat_map(&calendar_folders/1) |> to_entries()}
-      failed -> {:error, {:response_code, Soap.response_code(failed)}}
+    case Soap.require_success(doc, "FindFolderResponseMessage") do
+      {:ok, messages} -> {:ok, messages |> Enum.flat_map(&calendar_folders/1) |> to_entries()}
+      {:error, _reason} = error -> error
     end
   end
 
