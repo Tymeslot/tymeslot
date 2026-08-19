@@ -28,8 +28,11 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
   @widths [320, 480, 640, 860, 1280]
   @height 800
-  # Sub-pixel rounding in the WebDriver bridge can show scrollWidth one px
-  # over innerWidth even when the page fits — tolerate that one px.
+
+  # Sub-pixel rounding in the WebDriver bridge can show a measurement one px
+  # over the viewport even when the element fits. Shared with the
+  # `assert_no_horizontal_overflow/2` in `E2EHelpers`, which carries its own
+  # copy: the tolerance is a property of the bridge, not of either module.
   @overflow_tolerance 1
 
   # Both shipping themes, overridden at view time via `?theme=`.
@@ -277,31 +280,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   end
 
   # ── Layout assertions ─────────────────────────────────────────────────
-
-  defp assert_no_horizontal_overflow(session, context) do
-    me = self()
-    ref = make_ref()
-
-    session =
-      execute_script(
-        session,
-        "return [document.documentElement.scrollWidth, window.innerWidth];",
-        fn [scroll_width, inner_width] ->
-          send(me, {:overflow, ref, scroll_width, inner_width})
-        end
-      )
-
-    assert_receive {:overflow, ^ref, scroll_width, inner_width}, 5_000
-
-    assert scroll_width <= inner_width + @overflow_tolerance,
-           """
-           Horizontal overflow at #{context}:
-             scrollWidth = #{scroll_width}px
-             innerWidth  = #{inner_width}px
-           """
-
-    session
-  end
 
   # Stronger than assert_cta_reachable: on Quill's bounded-card model the pinned
   # actions must sit fully inside the viewport at short heights — proving the
