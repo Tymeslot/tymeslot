@@ -2,6 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
   use Tymeslot.MockCase, async: false
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
   describe "list_providers/0" do
@@ -207,6 +208,34 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     end
   end
 
+  describe "the registry map and ProviderConfig.get_provider_module/1" do
+    # Two hand-maintained provider-to-module tables, and nothing has ever
+    # asked them to agree. They are not interchangeable at runtime:
+    # ProviderAdapter resolves a persisted integration through the registry,
+    # while the validate-then-test path in Calendar.Creation resolves the same
+    # provider through ProviderConfig. A table that drifts sends the two down
+    # different modules for one provider, and neither side raises.
+    #
+    # `list_providers_with_metadata/0` is used rather than `get_provider/1`
+    # because the calendar registry overrides `get_provider/1` to delegate to
+    # ProviderConfig — asking it would compare ProviderConfig with itself.
+    test "resolve every provider to the same module" do
+      registry_modules =
+        Map.new(ProviderRegistry.list_providers_with_metadata(), fn %{type: type, module: module} ->
+          {type, module}
+        end)
+
+      config_modules =
+        Map.new(config_providers(), fn provider ->
+          {provider, ProviderConfig.get_provider_module(provider)}
+        end)
+
+      assert registry_modules != %{}
+      assert config_modules != %{}
+      assert registry_modules == config_modules
+    end
+  end
+
   describe "default_provider/0" do
     test "returns the default calendar provider" do
       assert ProviderRegistry.default_provider() == :caldav
@@ -294,5 +323,15 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
       result = ProviderRegistry.create_client(:caldav, config)
       assert {:error, _reason} = result
     end
+  end
+
+  # `provider_constraint_list/0` rather than `valid_providers/0`: the latter is
+  # filtered by the runtime toggles, so a provider pinned off in config would
+  # drop out of the comparison and take any drift with it.
+  defp config_providers do
+    Enum.map(ProviderConfig.provider_constraint_list(), fn name ->
+      {:ok, provider} = ProviderConfig.parse_known(name)
+      provider
+    end)
   end
 end
