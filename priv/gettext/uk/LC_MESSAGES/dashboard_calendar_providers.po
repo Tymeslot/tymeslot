@@ -1138,3 +1138,8 @@ msgstr "Кінцеву точку EWS не знайдено. Зазвичай в
 #, elixir-autogen, elixir-format
 msgid "Exchange connection successful"
 msgstr "Підключення до Exchange успішне"
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "On-premises Microsoft Exchange Server, read-only"
+msgstr "Локальний сервер Microsoft Exchange, лише для перегляду"

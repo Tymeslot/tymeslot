@@ -1138,3 +1138,8 @@ msgstr "Koncový bod EWS nebyl nalezen. Obvykle končí na /EWS/Exchange.asmx."
 #, elixir-autogen, elixir-format
 msgid "Exchange connection successful"
 msgstr "Připojení k serveru Exchange proběhlo úspěšně"
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "On-premises Microsoft Exchange Server, read-only"
+msgstr "Místní server Microsoft Exchange, jen pro čtení"

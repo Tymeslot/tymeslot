@@ -1137,3 +1137,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Exchange connection successful"
 msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "On-premises Microsoft Exchange Server, read-only"
+msgstr ""
