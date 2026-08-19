@@ -154,6 +154,7 @@ defmodule Tymeslot.Bookings.Reschedule do
        }}
     else
       {:error, :slot_not_offered} -> {:error, :slot_taken}
+      {:error, :slot_availability_unverifiable} -> {:error, :slot_taken}
       {:error, _reason} = error -> error
     end
   end

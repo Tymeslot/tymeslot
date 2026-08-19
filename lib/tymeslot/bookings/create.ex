@@ -125,24 +125,33 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp prepare_booking_data(meeting_params, form_data) do
+    # The duration used to compute the slot and to gate ScheduleCheck's
+    # granularity comes from the resolved meeting type, never the request,
+    # whenever a type is known — mirroring Reschedule, which pins duration to
+    # the persisted meeting rather than trusting `params.duration`. Only an
+    # unresolvable type (ad-hoc booking, or one that fails
+    # `validate_meeting_type_active/1` a few steps later) falls back to the
+    # client-supplied value.
+    meeting_type = resolve_meeting_type_for_duration(meeting_params)
+    duration_minutes = effective_duration_minutes(meeting_params, meeting_type)
+
     with {:ok, date_string} <- normalize_date_input(meeting_params.date),
          {:ok, {start_datetime, end_datetime}} <-
            Validation.parse_meeting_times(
              date_string,
              meeting_params.time,
-             meeting_params.duration,
+             duration_minutes,
              meeting_params.user_timezone
            ),
          {:ok, date} <- Date.from_iso8601(date_string) do
       meeting_uid = UUID.uuid4()
-
-      duration_minutes = TimeSlots.parse_duration(meeting_params.duration)
 
       booking_data = %{
         meeting_uid: meeting_uid,
         start_datetime: start_datetime,
         end_datetime: end_datetime,
         duration_minutes: duration_minutes,
+        meeting_type: meeting_type,
         user_timezone: meeting_params.user_timezone,
         form_data: form_data,
         date: date,
@@ -172,6 +181,22 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp default_locale, do: Locales.default_locale()
+
+  defp resolve_meeting_type_for_duration(meeting_params) do
+    type_id = Map.get(meeting_params, :meeting_type_id)
+    user_id = Map.get(meeting_params, :organizer_user_id)
+
+    if is_integer(type_id) and is_integer(user_id) do
+      MeetingTypes.get_meeting_type(type_id, user_id)
+    end
+  end
+
+  defp effective_duration_minutes(_meeting_params, %{duration_minutes: minutes})
+       when is_integer(minutes),
+       do: minutes
+
+  defp effective_duration_minutes(meeting_params, _unresolved_type),
+    do: TimeSlots.parse_duration(meeting_params.duration)
 
   defp normalize_date_input(%Date{} = date), do: {:ok, Date.to_iso8601(date)}
   defp normalize_date_input(date) when is_binary(date), do: {:ok, date}
@@ -486,6 +511,7 @@ defmodule Tymeslot.Bookings.Create do
     time_conflict: :slot_taken,
     slot_unavailable: :slot_taken,
     slot_not_offered: :slot_taken,
+    slot_availability_unverifiable: :slot_taken,
     availability_unverifiable: :slot_taken,
     booking_limit_reached: :booking_limit_reached,
     organizer_required: :organizer_required,

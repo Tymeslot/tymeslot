@@ -130,28 +130,35 @@ defmodule Tymeslot.Availability.Calculate do
   The answer comes from `available_slots/6` with an empty event list, so a
   booking cannot drift from the list the booking page rendered: calendar
   conflicts stay the caller's business, the schedule's own windows and breaks
-  are this function's. Anything that leaves the slot list unobtainable answers
-  `true`, so an unrelated failure can never refuse an otherwise valid booking.
+  are this function's.
+
+  Returns `{:error, reason}` — never a bare `false` — when the slot list or
+  the timezone shift is itself unobtainable, so a caller can tell "not
+  offered" apart from "could not be determined" and choose to refuse rather
+  than silently wave the booking through on an unrelated failure.
   """
-  @spec offers_slot?(
+  @spec offers_slot(
           Date.t(),
           DateTime.t(),
           pos_integer(),
           String.t(),
           String.t(),
           availability_config()
-        ) :: boolean()
-  def offers_slot?(date, start_datetime, duration_minutes, user_timezone, owner_timezone, config) do
+        ) :: {:ok, boolean()} | {:error, any()}
+  def offers_slot(date, start_datetime, duration_minutes, user_timezone, owner_timezone, config) do
     with {:ok, slots} <-
            available_slots(date, duration_minutes, user_timezone, owner_timezone, [], config),
          {:ok, local_start} <- DateTime.shift_zone(start_datetime, user_timezone) do
-      Enum.any?(slots, &starts_at?(&1, local_start))
-    else
-      _unobtainable -> true
+      {:ok, Enum.any?(slots, &starts_at?(&1, date, local_start))}
     end
   end
 
-  defp starts_at?(slot, %DateTime{hour: hour, minute: minute}) do
+  defp starts_at?(slot, date, %DateTime{} = local_start) do
+    Date.compare(DateTime.to_date(local_start), date) == :eq and
+      time_matches?(slot, local_start)
+  end
+
+  defp time_matches?(slot, %DateTime{hour: hour, minute: minute}) do
     case TimeSlots.parse_time_slot(slot) do
       %Time{hour: ^hour, minute: ^minute} -> true
       _other -> false

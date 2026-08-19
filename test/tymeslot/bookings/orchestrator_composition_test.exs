@@ -54,6 +54,9 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
 
     user = insert(:user, email: "organiser@example.com", name: "Organiser")
     profile = insert(:profile, user: user, timezone: "Europe/Berlin")
+    # Booking composition is the subject here, so the host offers every hour
+    # of every day and the schedule never refuses the bookings these tests make.
+    _schedule = open_schedule_for(profile)
 
     meeting_type =
       insert(:meeting_type, user: user, name: "Intro", duration_minutes: 30, is_active: true)

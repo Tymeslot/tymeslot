@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   alias Phoenix.Component
   alias Tymeslot.Availability.{Calculate, Schedules}
   alias Tymeslot.Demo
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -244,6 +245,12 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   # The month grid and the week strip fallback answer the same availability
   # question, so both build their `availability_config` from this single
   # place rather than carrying their own copy of the policy keys.
+  #
+  # `owner_timezone` falls back to `Profiles.get_default_timezone()` for a
+  # profile with none set — the same fallback the enforcement path applies in
+  # `Tymeslot.Bookings.Policy.scheduling_config/2` and the real availability
+  # path applies in `AvailabilityHelpers.get_owner_timezone/1`, so a nil
+  # profile timezone resolves to the same zone everywhere.
   @spec availability_config(map() | nil, map()) :: %{
           required(:schedule_id) => integer() | nil,
           required(:max_advance_booking_days) => pos_integer(),
@@ -257,7 +264,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
       min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
       buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-      owner_timezone: organizer_profile.timezone
+      owner_timezone: organizer_profile.timezone || Profiles.get_default_timezone()
     }
   end
 end
