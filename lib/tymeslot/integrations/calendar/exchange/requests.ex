@@ -19,6 +19,17 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   MIME multipart message whose `text/calendar` part is quoted-printable
   encoded, so reaching the iCalendar inside costs a MIME parse and a QP decode
   to obtain fields that `BaseShape=Default` already returns as typed XML.
+
+  ## Paging is not implemented
+
+  Neither builder requests an indexed page view, so `FindItem` returns at most
+  the server's `FindCountLimit` worth of items and truncates the rest. Nothing
+  reads `IncludesLastItemInRange` either, so a folder or sync window larger
+  than that limit is silently short rather than an error: the response carries
+  `IncludesLastItemInRange="false"` and the events past the cut simply never
+  reach the caller. Paging is deliberately left out of this phase; adding it
+  means an `m:IndexedPageItemView` on `find_item/3` and a loop driven by that
+  attribute.
   """
 
   @doc "Enumerates the mailbox's folders so calendars can be picked out."
@@ -39,11 +50,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   folder id string.
   """
   @spec find_item(:calendar | String.t(), DateTime.t(), DateTime.t()) :: String.t()
-  def find_item(folder, %DateTime{} = from, %DateTime{} = to) do
+  def find_item(folder, %DateTime{} = from, %DateTime{} = to)
+      when folder == :calendar or is_binary(folder) do
     """
     <m:FindItem Traversal="Shallow">
       <m:ItemShape><t:BaseShape>IdOnly</t:BaseShape></m:ItemShape>
-      <m:CalendarView StartDate="#{iso(from)}" EndDate="#{iso(to)}"/>
+      <m:CalendarView StartDate="#{calendar_view_time(from)}" EndDate="#{calendar_view_time(to)}"/>
       <m:ParentFolderIds>#{folder_element(folder)}</m:ParentFolderIds>
     </m:FindItem>
     """
@@ -80,9 +92,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   # EWS ids are base64 and so cannot contain XML metacharacters, but they reach
   # this module from the server and from the database rather than from a
   # constant, so they are escaped rather than trusted to be well-formed.
-  defp escape(value) do
+  defp escape(value) when is_binary(value) do
     value
-    |> to_string()
     |> String.replace("&", "&amp;")
     |> String.replace("<", "&lt;")
     |> String.replace(">", "&gt;")
@@ -95,7 +106,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   # own offset. Shifting to `Etc/UTC` needs no timezone database, and
   # `DateTime.to_iso8601/1` renders a UTC datetime with a `Z` suffix, so no
   # offset rewriting is needed afterwards.
-  defp iso(datetime) do
+  defp calendar_view_time(datetime) do
     datetime
     |> DateTime.shift_zone!("Etc/UTC")
     |> DateTime.truncate(:second)

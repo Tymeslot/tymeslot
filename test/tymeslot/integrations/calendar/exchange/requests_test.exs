@@ -1,9 +1,12 @@
 defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
   use ExUnit.Case, async: true
 
+  import SweetXml, only: [sigil_x: 2]
+
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Exchange.Requests
+  alias Tymeslot.Integrations.Calendar.Exchange.Soap
 
   @from ~U[2026-09-01 00:00:00Z]
   @to ~U[2026-10-01 00:00:00Z]
@@ -15,6 +18,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
       assert xml =~ ~s(<m:FindFolder Traversal="Deep">)
       assert xml =~ ~s(<t:DistinguishedFolderId Id="msgfolderroot"/>)
       assert xml =~ ~s(<t:BaseShape>Default</t:BaseShape>)
+    end
+
+    test "is well-formed XML the enveloped values read back out of" do
+      assert {:ok, doc} = Requests.find_folder() |> Soap.envelope() |> Soap.parse()
+
+      assert Soap.xpath(doc, ~x"//m:FindFolder/@Traversal"s) == "Deep"
+      assert Soap.xpath(doc, ~x"//m:FindFolder/m:FolderShape/t:BaseShape/text()"s) == "Default"
+
+      assert Soap.xpath(doc, ~x"//m:ParentFolderIds/t:DistinguishedFolderId/@Id"s) ==
+               "msgfolderroot"
     end
   end
 
@@ -48,7 +61,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
     test "escapes XML metacharacters in the folder id" do
       xml = Requests.find_item(~s(a"b&c<d>e'f), @from, @to)
 
-      refute xml =~ ~s(Id="a"b&c")
       assert xml =~ ~s(<t:FolderId Id="a&quot;b&amp;c&lt;d&gt;e&apos;f"/>)
     end
 
@@ -56,6 +68,35 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
       xml = Requests.find_item(:calendar, @from, @to)
 
       assert xml =~ ~s(<t:DistinguishedFolderId Id="calendar"/>)
+    end
+
+    test "is well-formed XML the enveloped values read back out of" do
+      assert {:ok, doc} =
+               "AAABBB==" |> Requests.find_item(@from, @to) |> Soap.envelope() |> Soap.parse()
+
+      assert Soap.xpath(doc, ~x"//m:FindItem/@Traversal"s) == "Shallow"
+      assert Soap.xpath(doc, ~x"//m:FindItem/m:ItemShape/t:BaseShape/text()"s) == "IdOnly"
+      assert Soap.xpath(doc, ~x"//m:CalendarView/@StartDate"s) == "2026-09-01T00:00:00Z"
+      assert Soap.xpath(doc, ~x"//m:CalendarView/@EndDate"s) == "2026-10-01T00:00:00Z"
+      assert Soap.xpath(doc, ~x"//m:ParentFolderIds/t:FolderId/@Id"s) == "AAABBB=="
+    end
+
+    test "escapes the folder id into one the parser reads back unchanged" do
+      folder = ~s(a"b&c<d>e'f)
+
+      assert {:ok, doc} =
+               folder |> Requests.find_item(@from, @to) |> Soap.envelope() |> Soap.parse()
+
+      assert Soap.xpath(doc, ~x"//m:ParentFolderIds/t:FolderId/@Id"s) == folder
+    end
+
+    test "refuses a folder that is neither :calendar nor an id" do
+      # Produced at runtime rather than written as `:default`, which the type
+      # checker rejects against the guarded head before the guard under test
+      # is reached.
+      folder = Enum.random([:default])
+
+      assert_raise FunctionClauseError, fn -> Requests.find_item(folder, @from, @to) end
     end
   end
 
@@ -87,6 +128,19 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
       no_ids = Enum.take([{"id-1", "ck-1"}], 0)
 
       assert_raise FunctionClauseError, fn -> Requests.get_item(no_ids) end
+    end
+
+    test "is well-formed XML however many ids the batch joins" do
+      for ids <- [[{"id-1", "ck-1"}], [{"id-1", "ck-1"}, {"id-2", "ck-2"}, {"id-3", "ck-3"}]] do
+        assert {:ok, doc} = ids |> Requests.get_item() |> Soap.envelope() |> Soap.parse()
+
+        assert Soap.xpath(doc, ~x"//m:ItemIds/t:ItemId/@Id"sl) == Enum.map(ids, &elem(&1, 0))
+
+        assert Soap.xpath(doc, ~x"//m:ItemIds/t:ItemId/@ChangeKey"sl) ==
+                 Enum.map(ids, &elem(&1, 1))
+
+        assert Soap.xpath(doc, ~x"//m:GetItem/m:ItemShape/t:BaseShape/text()"s) == "Default"
+      end
     end
   end
 end
