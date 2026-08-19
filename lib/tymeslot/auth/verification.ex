@@ -10,7 +10,7 @@ defmodule Tymeslot.Auth.Verification do
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.{RateLimiter, Token}
+  alias Tymeslot.Security.{RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -142,7 +142,7 @@ defmodule Tymeslot.Auth.Verification do
         do_verify_user_email(socket_or_conn, user)
 
       {:error, :rate_limited, message} ->
-        AccountLogging.log_rate_limit_exceeded("email_verification", user.id, %{
+        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
           ip_address: ip_address
         })
 

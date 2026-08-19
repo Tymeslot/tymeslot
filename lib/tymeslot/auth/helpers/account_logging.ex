@@ -75,32 +75,6 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   end
 
   @doc """
-  Logs rate limit exceeded events.
-
-  ## Parameters
-  - `operation`: The operation type being rate limited
-  - `identifier`: User identifier (email, user_id, etc.)
-  - `context`: Additional context map (optional)
-
-  ## Examples
-      log_rate_limit_exceeded("signup", "user@example.com")
-  """
-  @spec log_rate_limit_exceeded(String.t(), String.t() | integer(), logging_context()) :: :ok
-  def log_rate_limit_exceeded(operation, identifier, context \\ %{}) do
-    Logger.warning(
-      "Rate limit exceeded",
-      build_metadata(
-        [
-          {:operation, operation},
-          {:identifier, identifier},
-          {:event, "#{operation}_rate_limit_exceeded"}
-        ],
-        context
-      )
-    )
-  end
-
-  @doc """
   Logs validation failures.
 
   ## Parameters

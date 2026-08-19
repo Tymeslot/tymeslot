@@ -19,7 +19,6 @@ defmodule Tymeslot.Auth.SignupSecurity do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
@@ -91,7 +90,11 @@ defmodule Tymeslot.Auth.SignupSecurity do
           :ok
 
         {:error, :rate_limited, reason} ->
-          AccountLogging.log_rate_limit_exceeded("signup", email, %{ip_address: metadata[:ip]})
+          SecurityLogger.log_rate_limit_violation(email, "signup", %{
+            ip_address: metadata[:ip],
+            user_agent: metadata[:user_agent]
+          })
+
           {:error, :rate_limited, reason}
       end
     else

@@ -221,22 +221,19 @@ defmodule Tymeslot.Auth.PasswordResetTest do
         PasswordReset.initiate_reset("ratelimit-audit@example.com", ip: "192.168.1.101")
       end
 
-      # AccountLogging emits at :warning, which config/test.exs already pins the
-      # primary level to, so the level does not need lowering here.
-      LogCapture.with_capture(fn ->
+      # SecurityLogger emits at :info; config/test.exs pins the primary level
+      # to :warning, so lower it for the duration of the call.
+      LogCapture.with_capture([logger_level: :info], fn ->
         assert {:error, :rate_limited, _message} =
                  PasswordReset.initiate_reset("ratelimit-audit@example.com", ip: "192.168.1.101")
       end)
 
-      assert_receive {:captured_log,
-                      %{
-                        level: :warning,
-                        meta: %{event: "password_reset_rate_limit_exceeded"} = meta
-                      }}
+      assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
 
-      assert meta.operation == "password_reset"
-      assert meta.identifier == "ratelimit-audit@example.com"
+      assert meta.limit_type == "password_reset"
+      assert meta.email_masked == "r***@example.com"
       assert meta.ip_address == "192.168.1.101"
+      refute inspect(meta) =~ "ratelimit-audit@example.com"
     end
   end
 

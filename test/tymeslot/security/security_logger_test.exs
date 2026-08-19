@@ -180,6 +180,36 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
       refute inspect(meta) =~ "Alice@Example.COM"
       refute inspect(meta) =~ "alice@example.com"
     end
+
+    test "forwards an identifier-shaped provider unchanged" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{provider: "nextcloud"})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "test_event"} = meta}}
+      assert meta.provider == "nextcloud"
+    end
+
+    test "drops a provider carrying unvalidated user input rather than logging it verbatim" do
+      malicious = "<script>alert(1)</script>\nX-Injected: true"
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{provider: malicious})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "test_event"} = meta}}
+      assert meta.provider == nil
+      refute inspect(meta) =~ malicious
+    end
+
+    test "drops an over-long provider value" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{provider: String.duplicate("a", 33)})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "test_event"} = meta}}
+      assert meta.provider == nil
+    end
   end
 
   describe "log_blocked_input/3" do
@@ -282,6 +312,38 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
       assert_receive {:captured_log, %{meta: %{event_type: "account_lockout"} = meta}}
       assert meta.lockout_type == "throttled"
       assert meta.user_id == nil
+    end
+  end
+
+  describe "log_rate_limit_violation/3" do
+    test "names an email identifier as a masked email, never raw" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_rate_limit_violation("dave@example.com", "signup", %{
+          ip_address: "203.0.113.9",
+          user_agent: "curl/8.0"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+      assert meta.email_masked == "d***@example.com"
+      assert meta.user_id == nil
+      assert meta.limit_type == "signup"
+      assert meta.ip_address == "203.0.113.9"
+      assert meta.user_agent == "curl/8.0"
+      refute inspect(meta) =~ "dave@example.com"
+    end
+
+    test "names an integer identifier as a user id, not an email" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_rate_limit_violation(42, "email_verification", %{
+          ip_address: "203.0.113.9"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+      assert meta.user_id == 42
+      assert meta.email_masked == nil
+      assert meta.limit_type == "email_verification"
     end
   end
 

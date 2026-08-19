@@ -54,7 +54,7 @@ defmodule Tymeslot.Auth.PasswordReset do
         :ok
 
       {:error, :rate_limited, message} ->
-        AccountLogging.log_rate_limit_exceeded("password_reset", email, %{ip_address: ip})
+        SecurityLogger.log_rate_limit_violation(email, "password_reset", %{ip_address: ip})
         {:error, :rate_limited, message}
     end
   end

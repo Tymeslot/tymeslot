@@ -10,7 +10,7 @@ defmodule Tymeslot.Auth.Registration do
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter, SecurityLogger}
   alias TymeslotWeb.Helpers.ClientIP
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
@@ -104,7 +104,7 @@ defmodule Tymeslot.Auth.Registration do
           :ok
 
         {:error, :rate_limited, message} ->
-          AccountLogging.log_rate_limit_exceeded("signup", email, %{ip_address: ip})
+          SecurityLogger.log_rate_limit_violation(email, "signup", %{ip_address: ip})
           {:error, :rate_limited, message}
       end
     end

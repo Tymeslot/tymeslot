@@ -65,18 +65,18 @@ defmodule Tymeslot.Auth.SignupRateLimitTest do
       assert {:ok, _user, _message} = Registration.register_user(signup_params(i), conn)
     end
 
-    # AccountLogging emits at :warning, which config/test.exs already pins the
-    # primary level to, so the level does not need lowering here.
-    LogCapture.with_capture(fn ->
+    # SecurityLogger emits at :info; config/test.exs pins the primary level to
+    # :warning, so lower it for the duration of the call.
+    LogCapture.with_capture([logger_level: :info], fn ->
       assert {:error, :rate_limited, _message} =
                Registration.register_user(signup_params(16), conn)
     end)
 
-    assert_receive {:captured_log,
-                    %{level: :warning, meta: %{event: "signup_rate_limit_exceeded"} = meta}}
+    assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
 
-    assert meta.operation == "signup"
-    assert meta.identifier == "gate-plus-register-16@example.com"
+    assert meta.limit_type == "signup"
+    assert meta.email_masked == "g***@example.com"
     assert meta.ip_address == "203.0.113.9"
+    refute inspect(meta) =~ "gate-plus-register-16@example.com"
   end
 end
