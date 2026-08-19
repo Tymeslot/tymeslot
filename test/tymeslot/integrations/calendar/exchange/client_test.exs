@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
-  use Tymeslot.CalDAVCase, async: false
+  use Tymeslot.ExchangeCase, async: false
 
   @moduletag :integrations
 
@@ -10,56 +10,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
   alias Tymeslot.Test.LogCapture
 
   setup :verify_on_exit!
-
-  # A synthetic stand-in used wherever a test has to prove a password did not
-  # reach an error term or a log line: distinctive enough that a match cannot
-  # be a coincidence, and nowhere near a real credential.
-  @leak_canary "corr3ct-horse-batt3ry-staple"
-
-  @config %{
-    base_url: "https://mail.example.com/EWS/Exchange.asmx",
-    username: "user@example.com",
-    password: "secret",
-    verify_ssl: true
-  }
-
-  defp ok_envelope do
-    """
-    <?xml version="1.0" encoding="utf-8"?>
-    <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-      <s:Body>
-        <m:FindFolderResponse
-            xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages"
-            xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types">
-          <m:ResponseMessages>
-            <m:FindFolderResponseMessage ResponseClass="Success">
-              <m:ResponseCode>NoError</m:ResponseCode>
-            </m:FindFolderResponseMessage>
-          </m:ResponseMessages>
-        </m:FindFolderResponse>
-      </s:Body>
-    </s:Envelope>
-    """
-  end
-
-  defp fault_envelope(message) do
-    """
-    <?xml version="1.0" encoding="utf-8"?>
-    <SOAP:Envelope xmlns:SOAP="http://schemas.xmlsoap.org/soap/envelope/">
-      <SOAP:Body><SOAP:Fault>
-        <faultstring>#{message}</faultstring>
-      </SOAP:Fault></SOAP:Body>
-    </SOAP:Envelope>
-    """
-  end
-
-  defp respond_with(status, body) do
-    ReqTest.stub(:tymeslot_http, fn conn ->
-      conn
-      |> Conn.put_resp_content_type("text/xml")
-      |> Conn.resp(status, body)
-    end)
-  end
 
   describe "call/2 request shape" do
     test "posts the operation inside a SOAP envelope with Basic authentication" do
@@ -77,9 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         assert body =~ ~r{<soap:Body>\s*<m:FindFolder}
 
         assert ["Basic " <> encoded] = Conn.get_req_header(conn, "authorization")
-        # `Base` is aliased to CalDAV.Base by the case template, so Elixir's own
-        # Base module needs its full name here.
-        assert Elixir.Base.decode64!(encoded) == "user@example.com:secret"
+        assert Base.decode64!(encoded) == "user@example.com:secret"
 
         assert ["text/xml; charset=utf-8"] = Conn.get_req_header(conn, "content-type")
         assert ["text/xml"] = Conn.get_req_header(conn, "accept")
@@ -89,7 +37,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         |> Conn.resp(200, ok_envelope())
       end)
 
-      assert {:ok, _doc} = Client.call(@config, Requests.find_folder())
+      assert {:ok, _doc} = Client.call(config(), Requests.find_folder())
     end
   end
 
@@ -97,7 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
     test "returns the parsed response document" do
       respond_with(200, ok_envelope())
 
-      assert {:ok, doc} = Client.call(@config, Requests.find_folder())
+      assert {:ok, doc} = Client.call(config(), Requests.find_folder())
 
       # Proves the returned value is the parsed *response*, not merely some
       # document: a caller can read the response message straight out of it.
@@ -110,37 +58,37 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
     test "maps 401 to :unauthorized" do
       respond_with(401, "Unauthorized")
 
-      assert {:error, :unauthorized} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :unauthorized} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "maps 403 to :forbidden" do
       respond_with(403, "Forbidden")
 
-      assert {:error, :forbidden} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :forbidden} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "maps 404 to :not_found" do
       respond_with(404, "Not Found")
 
-      assert {:error, :not_found} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :not_found} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "maps 408 to :timeout" do
       respond_with(408, "Request Timeout")
 
-      assert {:error, :timeout} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :timeout} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "maps 429 to :rate_limited" do
       respond_with(429, "Too Many Requests")
 
-      assert {:error, :rate_limited} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :rate_limited} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "maps an unmodelled 4xx to :unexpected_status with the code" do
       respond_with(415, "Unsupported Media Type")
 
-      assert {:error, {:unexpected_status, 415}} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, {:unexpected_status, 415}} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "logs the server's own explanation of an unmodelled status" do
@@ -151,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
 
       respond_with(415, "<html><body>The request filtering module is configured</body></html>")
 
-      assert {:error, {:unexpected_status, 415}} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, {:unexpected_status, 415}} = Client.call(config(), "<m:FindFolder/>")
 
       event = LogCapture.await_log("unhandled status")
 
@@ -161,7 +109,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
     test "maps a 5xx that is not a fault to :server_error" do
       respond_with(503, "busy")
 
-      assert {:error, :server_error} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :server_error} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "maps a redirect to :unexpected_status rather than following it" do
@@ -171,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         |> Conn.resp(302, "")
       end)
 
-      assert {:error, {:unexpected_status, 302}} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, {:unexpected_status, 302}} = Client.call(config(), "<m:FindFolder/>")
     end
   end
 
@@ -180,26 +128,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       respond_with(500, fault_envelope("Invalid SOAP envelope"))
 
       assert {:error, {:soap_fault, "Invalid SOAP envelope"}} =
-               Client.call(@config, "<m:FindFolder/>")
+               Client.call(config(), "<m:FindFolder/>")
     end
 
     test "surfaces a fault returned with HTTP 200" do
       respond_with(200, fault_envelope("The specified folder could not be found"))
 
       assert {:error, {:soap_fault, "The specified folder could not be found"}} =
-               Client.call(@config, "<m:FindFolder/>")
+               Client.call(config(), "<m:FindFolder/>")
     end
 
     test "treats a 500 whose body is not a fault as a server error" do
       respond_with(500, "<html><body>Proxy Error</body></html>")
 
-      assert {:error, :server_error} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :server_error} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "treats a 500 whose body is not XML at all as a server error" do
       respond_with(500, "Internal Server Error")
 
-      assert {:error, :server_error} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :server_error} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "does not report a parse failure for a 500 the status already explains" do
@@ -210,7 +158,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
 
       respond_with(500, "<html><body>502 Bad Gateway</body>")
 
-      assert {:error, :server_error} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :server_error} = Client.call(config(), "<m:FindFolder/>")
 
       messages = Enum.map(LogCapture.drain(), &LogCapture.message_text(&1.msg))
       refute Enum.any?(messages, &(&1 =~ "not parseable XML"))
@@ -219,7 +167,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
     test "maps an unparseable 200 body to :malformed_xml" do
       respond_with(200, "<html><body>Sign in")
 
-      assert {:error, :malformed_xml} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :malformed_xml} = Client.call(config(), "<m:FindFolder/>")
     end
   end
 
@@ -227,13 +175,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
     test "maps a transport timeout to :timeout" do
       ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, :timeout) end)
 
-      assert {:error, :timeout} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :timeout} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "maps any other transport failure to :network_error" do
       ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, :econnrefused) end)
 
-      assert {:error, :network_error} = Client.call(@config, "<m:FindFolder/>")
+      assert {:error, :network_error} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "logs a base URL it cannot parse without raising over it" do
@@ -246,7 +194,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
 
       ReqTest.stub(:tymeslot_http, fn _conn -> flunk("request must not leave the node") end)
 
-      config = %{@config | base_url: "mail.example.com/EWS/Exchange.asmx"}
+      config = config(base_url: "mail.example.com/EWS/Exchange.asmx")
 
       assert {:error, :network_error} = Client.call(config, "<m:FindFolder/>")
 
@@ -275,7 +223,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         {:ok, %Req.Response{status: 200, body: ok_envelope()}}
       end)
 
-      assert {:ok, _doc} = Client.call(@config, "<m:FindFolder/>")
+      assert {:ok, _doc} = Client.call(config(), "<m:FindFolder/>")
     end
 
     test "disables certificate verification only when the integration opts out" do
@@ -285,7 +233,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         {:ok, %Req.Response{status: 200, body: ok_envelope()}}
       end)
 
-      assert {:ok, _doc} = Client.call(%{@config | verify_ssl: false}, "<m:FindFolder/>")
+      assert {:ok, _doc} = Client.call(config(verify_ssl: false), "<m:FindFolder/>")
     end
 
     test "honours a per-integration request timeout" do
@@ -295,8 +243,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
         {:ok, %Req.Response{status: 200, body: ok_envelope()}}
       end)
 
-      assert {:ok, _doc} =
-               Client.call(Map.put(@config, :request_timeout, 5_000), "<m:FindFolder/>")
+      assert {:ok, _doc} = Client.call(config(request_timeout: 5_000), "<m:FindFolder/>")
     end
   end
 
@@ -309,8 +256,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
     end
 
     test "keeps the password out of every error term and every log line" do
-      config = %{@config | password: @leak_canary}
-      encoded = Elixir.Base.encode64("#{config.username}:#{config.password}")
+      config = config(password: leak_canary())
+      encoded = Base.encode64("#{config.username}:#{config.password}")
 
       failures = [
         fn conn -> Conn.resp(conn, 401, "Unauthorized") end,
@@ -342,7 +289,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       end)
 
       assert_raise ArgumentError, fn ->
-        Client.call(%{@config | password: nil}, "<m:FindFolder/>")
+        Client.call(config(password: nil), "<m:FindFolder/>")
       end
     end
   end
@@ -365,7 +312,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
 
       assert {:error, :network_error} =
                Client.call(
-                 %{@config | base_url: "https://exchange.corp/EWS/Exchange.asmx"},
+                 config(base_url: "https://exchange.corp/EWS/Exchange.asmx"),
                  "<m:FindFolder/>"
                )
     end
@@ -374,10 +321,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       # SsrfBlockedError carries the request URL, so this is the one failure
       # that would put a base URL into the logs whole. A base URL should never
       # carry userinfo, but nothing stops one being saved with it.
-      config = %{
-        @config
-        | base_url: "https://svc:#{@leak_canary}@exchange.corp/EWS/Exchange.asmx"
-      }
+      config = config(base_url: "https://svc:#{leak_canary()}@exchange.corp/EWS/Exchange.asmx")
 
       ReqTest.stub(:tymeslot_http, fn _conn -> flunk("request must not leave the node") end)
 
@@ -386,7 +330,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       logged = Enum.map_join(LogCapture.drain(), "\n", &LogCapture.dump/1)
 
       assert logged =~ "https://exchange.corp"
-      refute logged =~ @leak_canary
+      refute logged =~ leak_canary()
       refute logged =~ "svc:"
     end
   end
