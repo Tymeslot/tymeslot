@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Integrations.Calendar.Shared.HttpLogging
 
   require Logger
 
@@ -83,8 +84,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
       {:ok, %Req.Response{status: 500, body: response_body}} ->
         soap_fault_or_server_error(response_body)
 
-      {:ok, %Req.Response{status: status}} ->
-        status_error(status, url)
+      {:ok, %Req.Response{status: status, body: response_body}} ->
+        status_error(status, response_body, url)
 
       {:error, reason} ->
         transport_error(reason, url)
@@ -106,18 +107,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
     end
   end
 
-  defp status_error(status, _url) when is_map_key(@status_reasons, status),
+  defp status_error(status, _body, _url) when is_map_key(@status_reasons, status),
     do: {:error, Map.fetch!(@status_reasons, status)}
 
-  defp status_error(status, _url) when status >= 500, do: {:error, :server_error}
+  defp status_error(status, _body, _url) when status >= 500, do: {:error, :server_error}
 
-  # An unmodelled status reaches the operator as a code and nothing else
-  # unless it is logged here; the provider collapses every non-auth failure
-  # into one user-facing sentence.
-  defp status_error(status, url) do
+  # An unmodelled status reaches the operator as a code and nothing else unless
+  # it is logged here; the provider collapses every non-auth failure into one
+  # user-facing sentence. The body carries the server's own explanation, and a
+  # bare 415 covers a dozen causes: an EWS endpoint behind IIS or a reverse
+  # proxy answers one with an HTML page saying which.
+  defp status_error(status, body, url) do
     Logger.warning("Exchange EWS request returned an unhandled status",
-      endpoint: loggable_url(url),
-      status: status
+      endpoint: HttpLogging.loggable_url(url),
+      status: status,
+      body: HttpLogging.body_excerpt(body)
     )
 
     {:error, {:unexpected_status, status}}
@@ -129,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
 
   defp transport_error(reason, url) do
     Logger.warning("Exchange EWS request failed",
-      endpoint: loggable_url(url),
+      endpoint: HttpLogging.loggable_url(url),
       error: error_label(reason)
     )
 
@@ -182,17 +186,4 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
     do: [connect_options: [transport_opts: [verify: :verify_none]]]
 
   defp tls_options(_config), do: []
-
-  # Scheme and host only. A configured EWS URL should carry no userinfo, and
-  # rebuilding the URL from its parts guarantees that one which does cannot
-  # reach the logs.
-  defp loggable_url(url) do
-    case URI.parse(url) do
-      %URI{scheme: scheme, host: host} when is_binary(scheme) and is_binary(host) ->
-        "#{scheme}://#{host}"
-
-      _unparseable ->
-        "(unparseable url)"
-    end
-  end
 end

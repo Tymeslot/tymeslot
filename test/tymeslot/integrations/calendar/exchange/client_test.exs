@@ -143,6 +143,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       assert {:error, {:unexpected_status, 415}} = Client.call(@config, "<m:FindFolder/>")
     end
 
+    test "logs the server's own explanation of an unmodelled status" do
+      # The code alone does not diagnose one: a 415 covers a dozen causes, and
+      # an EWS endpoint behind IIS or a reverse proxy answers with a page
+      # saying which.
+      LogCapture.attach()
+
+      respond_with(415, "<html><body>The request filtering module is configured</body></html>")
+
+      assert {:error, {:unexpected_status, 415}} = Client.call(@config, "<m:FindFolder/>")
+
+      event = LogCapture.await_log("unhandled status")
+
+      assert LogCapture.user_metadata(event).body =~ "request filtering module"
+    end
+
     test "maps a 5xx that is not a fault to :server_error" do
       respond_with(503, "busy")
 
