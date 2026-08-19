@@ -7,15 +7,38 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   Which operations exist and what their payloads mean belongs to
   `Exchange.Requests` and the normaliser modules.
 
-  Parsing goes through SweetXml with entity expansion disabled and namespace
-  conformance on, matching the posture `CalDAV.XmlHandler` takes for the same
-  reason: the XML on this path comes from a server the user nominated, so it is
-  not trusted input.
+  The XML on this path comes from a server the user nominated, so it is not
+  trusted input. Parsing therefore runs with `dtd: :none`, which refuses to
+  fetch an external DTD (xmerl would otherwise resolve a `SYSTEM` identifier
+  in a `DOCTYPE`), and with namespace conformance on. Entity declarations are
+  refused by xmerl itself, so no expansion is possible either way.
+
+  Unlike `CalDAV.XmlHandler`, this module applies no size cap of its own. EWS
+  bodies reach it through `Tymeslot.Infrastructure.HTTPClient`, which streams
+  every response through a byte budget (`:max_response_bytes`) and aborts the
+  transfer once it is exceeded, so the size bound is already enforced at the
+  transport layer.
+
+  Callers extract values with `xpath/2,3` here rather than with
+  `SweetXml.xpath/2,3`, because this one binds the `t:`, `m:` and `s:`
+  prefixes onto the expression and onto every subspec. SweetXml offers no
+  document-level namespace option: bindings live on the expression itself, and
+  each subspec carries its own, so an unbound prefix in a nested extraction
+  yields `""` rather than an error.
   """
 
-  import SweetXml
+  import SweetXml, except: [xpath: 2, xpath: 3]
 
   require Logger
+
+  @typedoc """
+  A parsed XML node: the document root returned by `parse/1`, or any element
+  within it. An `xmlElement` record, opaque to callers beyond `xpath/2,3`.
+  """
+  @type document :: tuple()
+
+  @typedoc "An xpath expression, as built by SweetXml's `~x` sigil."
+  @type xpath_spec :: %SweetXpath{}
 
   @types_ns "http://schemas.microsoft.com/exchange/services/2006/types"
   @messages_ns "http://schemas.microsoft.com/exchange/services/2006/messages"
@@ -28,7 +51,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
 
   @namespaces [t: @types_ns, m: @messages_ns, s: @soap_ns]
 
-  @doc "Wraps a request body in a SOAP envelope with the EWS version header."
+  @doc """
+  Wraps a request body in a SOAP envelope with the EWS version header.
+
+  `body` is interpolated verbatim, so the caller owns its well-formedness and
+  any escaping its values need. That is deliberate: callers pass an XML
+  fragment they built, not text to be escaped.
+  """
   @spec envelope(String.t()) :: String.t()
   def envelope(body) do
     """
@@ -50,20 +79,77 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   normal outcome on this path (EWS answers one for a malformed request), so it
   is a typed error rather than an exception.
   """
-  @spec parse(String.t()) :: {:ok, tuple()} | {:error, {:soap_fault, String.t()} | :malformed_xml}
+  @spec parse(String.t()) ::
+          {:ok, document()} | {:error, {:soap_fault, String.t()} | :malformed_xml}
   def parse(body) when is_binary(body) do
-    # `namespace_conformant: true` is load-bearing, not defensive. Without it
-    # xmerl matches an xpath prefix against the literal prefix in the document,
-    # so `//m:GetItemResponseMessage` would silently return `[]` for any server
-    # that binds the messages namespace to a prefix other than `m`. With it,
-    # names are compared by namespace URI and the prefix stops mattering.
-    doc = SweetXml.parse(body, quiet: true, dtd: :none, namespace_conformant: true)
-
-    case xpath(doc, add_namespace(~x"//s:Fault/faultstring/text()"s, :s, @soap_ns)) do
-      "" -> {:ok, doc}
-      fault -> {:error, {:soap_fault, fault}}
+    with {:ok, doc} <- parse_document(body) do
+      # The fault element is detected before its text is read: a fault whose
+      # `faultstring` is empty is still a fault, and reading the text first
+      # would make it indistinguishable from no fault at all.
+      case xpath(doc, ~x"//s:Fault"o) do
+        nil -> {:ok, doc}
+        fault -> {:error, {:soap_fault, SweetXml.xpath(fault, ~x"./faultstring/text()"s)}}
+      end
     end
+  end
+
+  @doc "Returns every response message of the given local name."
+  @spec response_messages(document(), String.t()) :: [document()]
+  def response_messages(doc, message_name) do
+    xpath(doc, ~x"//m:ResponseMessages/m:#{message_name}"l)
+  end
+
+  @doc "Returns the `ResponseCode` text of each given response message."
+  @spec response_codes([document()]) :: [String.t()]
+  def response_codes(messages) do
+    Enum.map(messages, &response_code/1)
+  end
+
+  @doc """
+  Returns the `ResponseCode` text of one response message.
+
+  A message carrying no `m:ResponseCode` yields `""`, as does one carrying an
+  empty element. The two are not distinguished, and need not be: `""` is not a
+  valid EWS response code either way, so both mean "this message stated no
+  outcome" and callers can treat them as one case.
+  """
+  @spec response_code(document()) :: String.t()
+  def response_code(message) do
+    xpath(message, ~x"./m:ResponseCode/text()"s)
+  end
+
+  @doc "Binds the EWS prefixes (`t:`, `m:`, `s:`) onto an xpath expression."
+  @spec bind(xpath_spec()) :: xpath_spec()
+  def bind(%SweetXpath{} = expr) do
+    Enum.reduce(@namespaces, expr, fn {prefix, uri}, acc -> add_namespace(acc, prefix, uri) end)
+  end
+
+  @doc """
+  `SweetXml.xpath/3` with the EWS prefixes bound on the spec and every subspec.
+
+  Subspecs nest: a value of `[expression, key: expression]` is descended into,
+  so every expression in the tree is bound however deep it sits.
+  """
+  @spec xpath(document(), xpath_spec(), keyword()) :: term()
+  def xpath(node, spec, subspecs \\ []) do
+    SweetXml.xpath(node, bind(spec), bind_subspecs(subspecs))
+  end
+
+  defp bind_subspecs(subspecs) do
+    Enum.map(subspecs, fn {key, value} -> {key, bind_subspec(value)} end)
+  end
+
+  defp bind_subspec(%SweetXpath{} = expr), do: bind(expr)
+  defp bind_subspec([%SweetXpath{} = expr | nested]), do: [bind(expr) | bind_subspecs(nested)]
+
+  # Only the parse itself is guarded: widening the guards over the fault xpath
+  # would report a bug there as `:malformed_xml`.
+  defp parse_document(body) do
+    {:ok, SweetXml.parse(body, quiet: true, dtd: :none, namespace_conformant: true)}
   rescue
+    # Most malformed input leaves through the `catch` below, but not all of
+    # it: xmerl raises on some, a malformed hexadecimal character reference
+    # (`&#xZZ;`) among them.
     error -> malformed_xml(error)
   catch
     # xmerl signals a fatal parse error by exiting rather than by raising, so
@@ -71,38 +157,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
     :exit, reason -> malformed_xml(reason)
   end
 
-  @doc "Returns every response-message element of the given local name."
-  @spec response_messages(tuple(), String.t()) :: [tuple()]
-  def response_messages(doc, message_name) do
-    xpath(doc, message_path(message_name))
-  end
-
-  @doc "Returns the `ResponseCode` text of each given response message."
-  @spec response_codes([tuple()]) :: [String.t()]
-  def response_codes(messages) do
-    Enum.map(messages, &response_code/1)
-  end
-
-  @doc "Returns the `ResponseCode` text of one response message."
-  @spec response_code(tuple()) :: String.t()
-  def response_code(message) do
-    xpath(message, add_namespace(~x"./m:ResponseCode/text()"s, :m, @messages_ns))
-  end
-
-  @doc "The namespace bindings callers pass to their own xpath expressions."
-  @spec namespaces() :: keyword()
-  def namespaces, do: @namespaces
-
   # The body itself is never logged: it is calendar data from the user's mailbox.
   defp malformed_xml(cause) do
     Logger.warning("Exchange SOAP response is not parseable XML", error: inspect(cause))
 
     {:error, :malformed_xml}
-  end
-
-  defp message_path(message_name) do
-    "//m:#{message_name}"
-    |> SweetXml.sigil_x(~c"l")
-    |> add_namespace(:m, @messages_ns)
   end
 end
