@@ -27,9 +27,12 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   import Tymeslot.Factory
 
   alias Ecto.UUID
+  alias Oban.Job
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.TelegramWorker
   alias Tymeslot.Workers.WebhookWorker
 
@@ -151,6 +154,32 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
                all_enqueued(worker: WebhookWorker)
 
       assert meeting_id == meeting.id
+    end
+  end
+
+  describe "execute/4 re-arms a reminder that already fired" do
+    test "schedules a fresh reminder for the new time, even though the previous reminder already completed",
+         %{user: user, meeting: meeting} do
+      assert :ok = Orchestrator.schedule_reminder_notifications(meeting)
+
+      assert [%{id: reminder_job_id}] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_reminder_emails"})
+
+      # Simulate the reminder having already fired, as it will have for any
+      # reschedule that happens after the original reminder's send time.
+      {1, nil} =
+        Repo.update_all(from(j in Job, where: j.id == ^reminder_job_id),
+          set: [state: "completed", completed_at: DateTime.utc_now()]
+        )
+
+      new_params = reschedule_params_for(future_datetime(11, :day))
+      assert {:ok, updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+
+      assert [%{scheduled_at: new_scheduled_at, state: "scheduled"} = new_job] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_reminder_emails"})
+
+      refute new_job.id == reminder_job_id
+      assert DateTime.compare(new_scheduled_at, updated.start_time) == :lt
     end
   end
 

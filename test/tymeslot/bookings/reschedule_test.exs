@@ -198,14 +198,26 @@ defmodule Tymeslot.Bookings.RescheduleTest do
                  args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
                )
 
-      expect(Tymeslot.EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
-        {{:ok, "sent"}, {:ok, "sent"}}
+      expect(Tymeslot.EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email,
+                                                                                    _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email,
+                                                                                   _details ->
+        {:ok, "sent"}
       end)
 
       assert :ok = EmailWorkerHandlers.execute_email_action(job.args["action"], job.args)
 
       {:ok, after_send} = MeetingQueries.get_meeting(meeting.id)
-      assert %{"value" => 30, "unit" => "minutes"} in after_send.reminders_sent
+
+      assert %{
+               "value" => 30,
+               "unit" => "minutes",
+               "organizer_sent" => true,
+               "attendee_sent" => true
+             } in after_send.reminders_sent
     end
   end
 

@@ -244,23 +244,48 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     |> Map.put(:guest_decline_url, urls.decline_url)
   end
 
+  # Sends only to the recipient(s) not yet recorded as sent for this specific
+  # reminder config. A meeting can be re-enqueued after a partial send (e.g.
+  # the organizer succeeded and the attendee hit an open circuit breaker);
+  # without this, a retry would re-email the recipient who already got it.
   defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
     Logger.info("Sending reminder emails", meeting_id: meeting.id, uid: meeting.uid)
+
+    status = reminder_sent_status(meeting, reminder_value, reminder_unit)
+    need_organizer? = !status.organizer
+    need_attendee? = !status.attendee
 
     appointment_details =
       AppointmentBuilder.from_meeting(meeting, %{value: reminder_value, unit: reminder_unit})
 
-    time_until = appointment_details.time_until
+    email_service = Config.email_service_module()
 
-    case Config.email_service_module().send_appointment_reminders(appointment_details, time_until) do
-      {organizer_result, attendee_result} ->
-        process_email_results(
-          meeting,
-          organizer_result,
-          attendee_result,
-          {:reminder, reminder_value, reminder_unit}
+    organizer_result =
+      if need_organizer? do
+        email_service.send_appointment_reminder_to_organizer(
+          appointment_details.organizer_email,
+          appointment_details
         )
-    end
+      else
+        {:ok, :skipped}
+      end
+
+    attendee_result =
+      if need_attendee? do
+        email_service.send_appointment_reminder_to_attendee(
+          appointment_details.attendee_email,
+          appointment_details
+        )
+      else
+        {:ok, :skipped}
+      end
+
+    process_email_results(
+      meeting,
+      organizer_result,
+      attendee_result,
+      {:reminder, reminder_value, reminder_unit}
+    )
   end
 
   defp send_reschedule_request_email(meeting) do
@@ -305,14 +330,19 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
+  # The per-recipient sent flags are recorded before the error is inspected,
+  # not after: a partial send (e.g. organizer succeeds, attendee hits an open
+  # circuit breaker) must be persisted even though the overall result is an
+  # error the worker will retry. Otherwise a retry re-sends to the recipient
+  # who already received it.
   defp process_email_results(meeting, organizer_result, attendee_result, email_type) do
     organizer_success = match?({:ok, _result}, organizer_result)
     attendee_success = match?({:ok, _result}, attendee_result)
 
-    case check_email_errors(organizer_result, attendee_result) do
-      nil ->
-        case update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
-          :ok ->
+    case update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
+      :ok ->
+        case check_email_errors(organizer_result, attendee_result) do
+          nil ->
             log_email_results(meeting, email_type, organizer_success, attendee_success)
 
             if organizer_success || attendee_success do
@@ -321,11 +351,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
               {:error, "Failed to send all emails"}
             end
 
-          {:error, _reason} = error ->
+          error ->
             error
         end
 
-      error ->
+      {:error, _reason} = error ->
         error
     end
   end
@@ -381,9 +411,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
          attendee_success
        ) do
     if organizer_success || attendee_success do
-      case MeetingQueries.append_reminder_sent(meeting, %{
+      case MeetingQueries.upsert_reminder_sent(meeting, %{
              value: reminder_value,
-             unit: reminder_unit
+             unit: reminder_unit,
+             organizer_sent: organizer_success,
+             attendee_sent: attendee_success
            }) do
         {:ok, _updated_meeting} ->
           :ok
@@ -433,17 +465,45 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp reminder_already_sent?(meeting, reminder_value, reminder_unit) do
+    status = reminder_sent_status(meeting, reminder_value, reminder_unit)
+    status.organizer and status.attendee
+  end
+
+  # Per-recipient delivery state for one reminder config. An entry with no
+  # matching `(value, unit)` means neither recipient has been sent to yet; an
+  # entry written before per-recipient tracking existed (no `organizer_sent`/
+  # `attendee_sent` keys) is treated as fully sent, since it predates this
+  # tracking and existing behaviour already skipped it entirely.
+  defp reminder_sent_status(meeting, reminder_value, reminder_unit) do
     reminder_value = ReminderUtils.parse_reminder_value(reminder_value)
     reminder_unit = ReminderUtils.normalize_reminder_unit(reminder_unit)
 
     meeting.reminders_sent
     |> List.wrap()
-    |> Enum.any?(fn reminder ->
+    |> Enum.find(fn reminder ->
       case reminder do
         %{"value" => value, "unit" => unit} -> value == reminder_value and unit == reminder_unit
         %{value: value, unit: unit} -> value == reminder_value and unit == reminder_unit
         _other -> false
       end
     end)
+    |> reminder_entry_status()
+  end
+
+  defp reminder_entry_status(nil), do: %{organizer: false, attendee: false}
+
+  defp reminder_entry_status(entry) do
+    %{
+      organizer: reminder_entry_flag(entry, "organizer_sent", :organizer_sent),
+      attendee: reminder_entry_flag(entry, "attendee_sent", :attendee_sent)
+    }
+  end
+
+  defp reminder_entry_flag(entry, string_key, atom_key) do
+    case entry do
+      %{^string_key => sent} when is_boolean(sent) -> sent
+      %{^atom_key => sent} when is_boolean(sent) -> sent
+      _other -> true
+    end
   end
 end
