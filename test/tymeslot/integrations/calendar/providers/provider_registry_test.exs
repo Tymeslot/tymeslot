@@ -238,6 +238,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
                :caldav,
                :debug,
                :demo,
+               :exchange,
                :google,
                :ics_url,
                :mailbox_org,
@@ -247,7 +248,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
                :zimbra
              ]
 
-      assert ProviderRegistry.provider_count() == 12
+      assert ProviderRegistry.provider_count() == 13
     end
   end
 

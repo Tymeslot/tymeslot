@@ -42,10 +42,20 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     :ics_url,
     :google,
     :outlook,
+    :exchange,
     :demo
   ]
   @oauth_providers [:google, :outlook]
   @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal]
+
+  # Exchange Web Services is its own family: SOAP over HTTPS with credentials.
+  # It is deliberately not CalDAV — no PROPFIND discovery, no href/etag model —
+  # and not OAuth, because on-premises Exchange authenticates with Windows
+  # credentials rather than a token endpoint. Every "is this CalDAV?" branch
+  # must therefore answer no rather than yes with a carve-out: adding it to
+  # `@caldav_based_providers` would have `ProviderAdapter` and `CaldavCommon`
+  # build a CalDAV client for a SOAP provider.
+  @ews_providers [:exchange]
 
   # Providers that subscribe to a published feed rather than talking a
   # calendar protocol. They are deliberately *not* CalDAV-family: they carry
@@ -180,6 +190,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
+    exchange: %{
+      icon: "exchange",
+      description:
+        dgettext_noop(
+          "dashboard_calendar_providers",
+          "On-premises Microsoft Exchange Server, read-only"
+        ),
+      button_text: "Connect Exchange",
+      click_event: "connect_provider",
+      circuit_breaker_enabled: true
+    },
     demo: %{
       icon: "demo",
       description: dgettext_noop("dashboard_calendar_providers", "Homepage demo provider"),
@@ -274,6 +295,29 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   """
   @spec caldav_based_provider_strings() :: list(String.t())
   def caldav_based_provider_strings, do: @caldav_based_provider_strings
+
+  @ews_provider_strings Enum.map(@ews_providers, &Atom.to_string/1)
+
+  @doc """
+  Returns EWS-based providers.
+  """
+  @spec ews_providers() :: list(atom())
+  def ews_providers, do: @ews_providers
+
+  @doc """
+  Returns EWS-based providers as strings, for matching against database
+  string values such as `integration.provider`.
+  """
+  @spec ews_provider_strings() :: list(String.t())
+  def ews_provider_strings, do: @ews_provider_strings
+
+  @doc """
+  Checks if a provider speaks Exchange Web Services.
+  """
+  @spec ews?(atom() | String.t()) :: boolean()
+  def ews?(provider) when is_atom(provider), do: provider in @ews_providers
+  def ews?(provider) when is_binary(provider), do: provider in @ews_provider_strings
+  def ews?(_provider), do: false
 
   # Order follows @providers — the canonical provider list — for deterministic results.
   @providers_with_circuit_breakers for p <- @providers,
@@ -507,6 +551,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
+  def display_name(:exchange), do: "Microsoft Exchange"
   def display_name(:debug), do: "Debug Provider"
   def display_name(:demo), do: "Demo Provider"
   def display_name(_provider), do: "Unknown Provider"
@@ -531,6 +576,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   def get_provider_module(:google), do: Tymeslot.Integrations.Calendar.Google.Provider
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider
+  def get_provider_module(:exchange), do: Tymeslot.Integrations.Calendar.Exchange.Provider
   def get_provider_module(:debug), do: Tymeslot.Integrations.Calendar.DebugCalendarProvider
   def get_provider_module(:demo), do: Tymeslot.Integrations.Calendar.DemoCalendarProvider
   def get_provider_module(_provider), do: nil

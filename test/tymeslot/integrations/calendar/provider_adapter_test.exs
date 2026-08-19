@@ -153,6 +153,34 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
       refute adapter_client.client == integration
     end
 
+    test "Exchange: hands the provider a client it can read a config out of" do
+      integration = %CalendarIntegrationSchema{
+        id: 5,
+        provider: "exchange",
+        base_url: "https://mail.example.com/EWS/Exchange.asmx",
+        username_encrypted: nil,
+        password_encrypted: nil,
+        verify_ssl: true
+      }
+
+      assert {:ok, adapter_client} = ProviderAdapter.new_client_from_integration(integration)
+      assert adapter_client.provider_type == :exchange
+
+      assert adapter_client.provider_module ==
+               Tymeslot.Integrations.Calendar.Exchange.Provider
+
+      # EWS is not CalDAV, so no CalDAV client is built for it. Asserting the
+      # struct came through is not enough on its own — what matters is that
+      # the provider can turn it into a request config, which is the step that
+      # silently yields nothing if the adapter hands over the wrong shape.
+      assert [config] =
+               Tymeslot.Integrations.Calendar.Exchange.Provider.build_client_configs(
+                 adapter_client.client
+               )
+
+      assert config.base_url == "https://mail.example.com/EWS/Exchange.asmx"
+    end
+
     test "returns {:error, _} for an unknown provider" do
       integration = %CalendarIntegrationSchema{id: 4, provider: "unknown"}
       assert {:error, _reason} = ProviderAdapter.new_client_from_integration(integration)

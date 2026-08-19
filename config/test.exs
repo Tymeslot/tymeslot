@@ -184,6 +184,7 @@ config :tymeslot, :calendar_providers, %{
   baikal: [enabled: true],
   google: [enabled: true],
   outlook: [enabled: true],
+  exchange: [enabled: true],
   demo: [enabled: false],
   debug: [enabled: false]
 }

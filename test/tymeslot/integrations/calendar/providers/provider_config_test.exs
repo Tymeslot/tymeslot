@@ -193,4 +193,69 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
       end)
     end
   end
+
+  describe "exchange provider" do
+    test "is a known, enabled provider" do
+      assert :exchange in ProviderConfig.all_providers()
+      assert ProviderConfig.valid_provider?(:exchange)
+      assert {:ok, :exchange} = ProviderConfig.parse("exchange")
+      assert {:ok, :exchange} = ProviderConfig.parse_known("exchange")
+    end
+
+    test "resolves to the Exchange provider module" do
+      assert ProviderConfig.get_provider_module(:exchange) ==
+               Tymeslot.Integrations.Calendar.Exchange.Provider
+    end
+
+    test "has a display name and metadata" do
+      assert ProviderConfig.display_name(:exchange) == "Microsoft Exchange"
+      assert ProviderConfig.icon(:exchange) == "exchange"
+      assert ProviderConfig.circuit_breaker_enabled?(:exchange)
+    end
+
+    test "is its own family, neither CalDAV nor a subscription" do
+      assert ProviderConfig.ews?(:exchange)
+      refute ProviderConfig.caldav_based?(:exchange)
+      refute ProviderConfig.subscription?(:exchange)
+      refute ProviderConfig.oauth_provider?(:exchange)
+    end
+
+    test "is kept out of the lists that build a CalDAV client" do
+      refute :exchange in ProviderConfig.caldav_based_providers()
+      refute "exchange" in ProviderConfig.caldav_based_provider_strings()
+      refute :exchange in ProviderConfig.subscription_providers()
+      refute :exchange in ProviderConfig.oauth_providers()
+    end
+
+    test "is allowed by the database constraint list" do
+      assert "exchange" in ProviderConfig.provider_constraint_list()
+    end
+  end
+
+  describe "ews?/1" do
+    test "answers for the string form the database stores" do
+      assert ProviderConfig.ews?("exchange")
+      assert ProviderConfig.ews_providers() == [:exchange]
+      assert ProviderConfig.ews_provider_strings() == ["exchange"]
+    end
+
+    test "answers false for every other provider" do
+      others =
+        ProviderConfig.provider_constraint_list()
+        |> Enum.map(fn name ->
+          {:ok, provider} = ProviderConfig.parse_known(name)
+          provider
+        end)
+        |> Enum.reject(&(&1 == :exchange))
+
+      assert others != []
+      assert Enum.reject(others, &(ProviderConfig.ews?(&1) == false)) == []
+    end
+
+    test "answers false for a non-provider term" do
+      refute ProviderConfig.ews?("caldav")
+      refute ProviderConfig.ews?(nil)
+      refute ProviderConfig.ews?(%{})
+    end
+  end
 end

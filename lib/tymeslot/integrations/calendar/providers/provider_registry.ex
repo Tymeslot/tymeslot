@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
       ics_url: Tymeslot.Integrations.Calendar.Ics.Provider,
       google: Tymeslot.Integrations.Calendar.Google.Provider,
       outlook: Tymeslot.Integrations.Calendar.Outlook.Provider,
+      exchange: Tymeslot.Integrations.Calendar.Exchange.Provider,
       debug: Tymeslot.Integrations.Calendar.DebugCalendarProvider,
       demo: Tymeslot.Integrations.Calendar.DemoCalendarProvider
     }

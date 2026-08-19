@@ -7,10 +7,17 @@ defmodule Tymeslot.Integrations.Calendar.ValidateConfigNoNetworkContractTest do
   connectivity probe into `validate_config/1`, so `Calendar.Creation`'s
   "validate, then test" sequence during integration creation silently probed
   the user-supplied host twice — once completely un-rate-limited. This test
-  iterates every member of `ProviderConfig.caldav_based_providers/0` with a
-  complete, well-formed config and asserts `Tymeslot.HTTPClientMock` is never
-  called, so a provider that regresses back to probing the network fails
-  loudly here rather than silently double-charging a rate limit bucket.
+  iterates every credentialed provider with a complete, well-formed config and
+  asserts `Tymeslot.HTTPClientMock` is never called, so a provider that
+  regresses back to probing the network fails loudly here rather than silently
+  double-charging a rate limit bucket.
+
+  The list is `caldav_based_providers/0` plus `ews_providers/0` rather than
+  every registered provider: those are the ones that take a user-supplied host
+  and a credential, which is what makes a probe inside `validate_config/1`
+  possible in the first place. Adding a credentialed provider means adding it
+  to `@example_urls` here; a provider absent from that map fails on the
+  `Map.fetch!` rather than passing unnoticed.
   """
 
   use Tymeslot.DataCase, async: true
@@ -33,11 +40,15 @@ defmodule Tymeslot.Integrations.Calendar.ValidateConfigNoNetworkContractTest do
     zimbra: "https://mail.example.com",
     mailbox_org: "https://dav.mailbox.org",
     apple: "https://caldav.icloud.com",
-    baikal: "https://baikal.example.com/dav.php"
+    baikal: "https://baikal.example.com/dav.php",
+    exchange: "https://mail.example.com/EWS/Exchange.asmx"
   }
 
+  @credentialed_providers ProviderConfig.caldav_based_providers() ++
+                            ProviderConfig.ews_providers()
+
   describe "validate_config/1 never touches the network" do
-    for provider <- ProviderConfig.caldav_based_providers() do
+    for provider <- @credentialed_providers do
       test "#{provider} accepts a complete config without an HTTP call" do
         provider = unquote(provider)
         module = ProviderConfig.get_provider_module(provider)

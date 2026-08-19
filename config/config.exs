@@ -382,6 +382,7 @@ config :tymeslot, :calendar_providers, %{
   baikal: [enabled: true],
   google: [enabled: true],
   outlook: [enabled: true],
+  exchange: [enabled: true],
   # Internal providers — never user-connectable. Disabled explicitly because
   # the runtime toggle defaults to enabled for any provider in @providers.
   demo: [enabled: false],
