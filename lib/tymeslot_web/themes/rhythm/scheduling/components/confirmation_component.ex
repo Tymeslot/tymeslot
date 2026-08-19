@@ -7,8 +7,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @impl Phoenix.LiveComponent
@@ -48,20 +50,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   </div>
 
                   <h1 class="confirmation-headline" data-testid="confirmation-heading">
-                    <%= if @is_rescheduling do %>
-                      {dgettext("booking", "Successfully Rescheduled!")}
-                    <% else %>
-                      {dgettext("booking", "You're All Set!")}
-                    <% end %>
+                    {headline(assigns)}
                   </h1>
                 </div>
 
                 <p class="confirmation-message">
-                  {dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
-                    name: @name,
-                    organizer: get_organizer_text(@organizer_profile)
-                  )}
+                  {confirmation_message(assigns)}
                 </p>
+
+                <ApprovalNotice.block
+                  :if={Approval.required?(assigns[:meeting_type])}
+                  organizer_name={Profiles.display_name(@organizer_profile)}
+                  stage={:after}
+                />
               </div>
 
               <div class="meeting-ticket">
@@ -191,6 +192,34 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
     case Profiles.display_name(organizer_profile) do
       nil -> ""
       name -> dgettext("booking", "with %{name}", name: name)
+    end
+  end
+
+  # See the Quill component: a held request must not be announced as a
+  # confirmed meeting, heading included.
+  defp headline(%{is_rescheduling: true}), do: dgettext("booking", "Successfully Rescheduled!")
+
+  defp headline(assigns) do
+    if Approval.required?(assigns[:meeting_type]) do
+      dgettext("booking", "Request sent!")
+    else
+      dgettext("booking", "You're All Set!")
+    end
+  end
+
+  defp confirmation_message(assigns) do
+    organizer = get_organizer_text(assigns[:organizer_profile])
+
+    if Approval.required?(assigns[:meeting_type]) do
+      dgettext("booking", "%{name}, your request %{organizer} has been sent.",
+        name: assigns[:name],
+        organizer: organizer
+      )
+    else
+      dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
+        name: assigns[:name],
+        organizer: organizer
+      )
     end
   end
 end

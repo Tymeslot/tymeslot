@@ -6,10 +6,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -201,6 +203,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
                   <SecurityFields.recaptcha_notice_block />
 
+                  <ApprovalNotice.block
+                    :if={Approval.required?(assigns[:meeting_type])}
+                    organizer_name={get_organizer_name(@organizer_profile, @username_context)}
+                    stage={:before}
+                  />
+
                   <div class="booking-actions">
                     <.action_button
                       type="button"
@@ -225,9 +233,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       class="flex-1"
                       title={get_submit_title(@submitting, @form)}
                     >
-                      {if @is_rescheduling,
-                        do: dgettext("booking", "reschedule_meeting"),
-                        else: dgettext("booking", "book_meeting")} 🎆
+                      {submit_label(assigns)} 🎆
                     </.loading_button>
                   </div>
                 </div>
@@ -241,6 +247,20 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   end
 
   # Helper functions
+
+  # "Book" is a promise the button cannot keep on a gated meeting type, where
+  # pressing it sends a request. Naming the action honestly is the cheapest
+  # part of this whole feature and the one a visitor reads last.
+  defp submit_label(%{is_rescheduling: true}), do: dgettext("booking", "reschedule_meeting")
+
+  defp submit_label(assigns) do
+    if Approval.required?(assigns[:meeting_type]) do
+      dgettext("booking", "Request meeting")
+    else
+      dgettext("booking", "book_meeting")
+    end
+  end
+
   defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
 
   defp get_organizer_name(organizer_profile, username_context) do

@@ -6,10 +6,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -192,6 +195,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
             <SecurityFields.recaptcha_notice_block />
 
+            <ApprovalNotice.block
+              :if={Approval.required?(assigns[:meeting_type])}
+              organizer_name={organizer_display_name(assigns)}
+              stage={:before}
+            />
+
             <div class="slide-actions horizontal">
               <button
                 type="button"
@@ -235,9 +244,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   </svg>
                   <span>{dgettext("booking", "Verifying...")}</span>
                 <% else %>
-                  {if @is_rescheduling,
-                    do: dgettext("booking", "reschedule_meeting"),
-                    else: dgettext("booking", "submit")}
+                  {submit_label(assigns)}
                 <% end %>
               </button>
             </div>
@@ -249,4 +256,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   end
 
   defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
+  # "Submit" is vague enough to survive a gated meeting type, but naming the
+  # action makes the difference visible at the moment of committing.
+  defp submit_label(%{is_rescheduling: true}), do: dgettext("booking", "reschedule_meeting")
+
+  defp submit_label(assigns) do
+    if Approval.required?(assigns[:meeting_type]) do
+      dgettext("booking", "Request meeting")
+    else
+      dgettext("booking", "submit")
+    end
+  end
+
+  defp organizer_display_name(assigns) do
+    Profiles.display_name(assigns[:organizer_profile]) || assigns[:username_context]
+  end
 end

@@ -7,8 +7,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Demo
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.FlagHelpers
@@ -97,6 +99,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                       <div class="duration-info">
                         <div class="duration-name">
                           {meeting_type.name}
+                          <ApprovalNotice.pill :if={Approval.required?(meeting_type)} />
                         </div>
                         <div class="duration-time">
                           {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}

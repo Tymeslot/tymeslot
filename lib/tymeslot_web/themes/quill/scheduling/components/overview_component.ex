@@ -7,8 +7,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Demo
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   import TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
@@ -37,6 +39,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   attr :description, :string, required: true
   attr :icon, :string, required: true
   attr :selected, :boolean, default: false
+  attr :requires_approval, :boolean, default: false
   attr :target, :any, default: nil
 
   defp duration_card(assigns) do
@@ -54,6 +57,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
           <div class="flex items-start justify-between gap-2 mb-1">
             <h3 class="duration-card-title font-bold flex-1">
               {@title}
+              <ApprovalNotice.pill :if={@requires_approval} />
             </h3>
             <span class="duration-card-badge inline-block px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap mt-1">
               {@badge || @duration}
@@ -134,6 +138,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                             description={meeting_type.description}
                             icon={meeting_type.icon || "hero-clock"}
                             selected={assigns[:selected_duration] == slug}
+                            requires_approval={Approval.required?(meeting_type)}
                             target={@myself}
                           />
                         <% end %>

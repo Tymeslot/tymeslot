@@ -7,8 +7,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents
@@ -71,11 +73,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         class="mb-1"
                         title_class="section-header confirmation-title"
                       >
-                        <%= if @is_rescheduling do %>
-                          {dgettext("booking", "Meeting Rescheduled!")}
-                        <% else %>
-                          {dgettext("booking", "meeting_confirmed")}
-                        <% end %>
+                        {headline(assigns)}
                       </.section_header>
                       <p class="confirmation-subtitle text-quill-primary">
                         <%= if @is_rescheduling do %>
@@ -86,14 +84,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                             organizer: get_organizer_text(@organizer_profile)
                           )}
                         <% else %>
-                          {dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
-                            name: @name,
-                            organizer: get_organizer_text(@organizer_profile)
-                          )}
+                          {subtitle(assigns)}
                         <% end %>
                       </p>
                     </div>
                   </div>
+
+                  <ApprovalNotice.block
+                    :if={Approval.required?(assigns[:meeting_type])}
+                    organizer_name={Profiles.display_name(@organizer_profile)}
+                    stage={:after}
+                    class="mt-4"
+                  />
 
                   <.meeting_details_card title="">
                     <.booking_details
@@ -271,6 +273,36 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     case Profiles.display_name(organizer_profile) do
       nil -> ""
       name -> dgettext("booking", "with %{name}", name: name)
+    end
+  end
+
+  # A held request is not a confirmed meeting, and the screen that says so is
+  # the last thing an invitee sees before the emails arrive. Getting this wrong
+  # is what the whole feature exists to fix, so the heading changes too — not
+  # just a note underneath a heading that still says "Confirmed!".
+  defp headline(%{is_rescheduling: true}), do: dgettext("booking", "Meeting Rescheduled!")
+
+  defp headline(assigns) do
+    if Approval.required?(assigns[:meeting_type]) do
+      dgettext("booking", "Request sent!")
+    else
+      dgettext("booking", "meeting_confirmed")
+    end
+  end
+
+  defp subtitle(assigns) do
+    organizer = get_organizer_text(assigns[:organizer_profile])
+
+    if Approval.required?(assigns[:meeting_type]) do
+      dgettext("booking", "%{name}, your request %{organizer} has been sent.",
+        name: assigns[:name],
+        organizer: organizer
+      )
+    else
+      dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
+        name: assigns[:name],
+        organizer: organizer
+      )
     end
   end
 end

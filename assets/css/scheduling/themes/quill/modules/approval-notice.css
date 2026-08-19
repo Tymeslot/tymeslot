@@ -1,0 +1,102 @@
+/* ==========================================================================
+   Approval notice — the "this needs the host's approval" marker and block
+
+   Two sizes of one fact, matching the shared component
+   (TymeslotWeb.Themes.Shared.Components.ApprovalNotice):
+
+     .approval-pill    — beside a meeting type in the list
+     .approval-notice  — on the booking form and the confirmation screen
+
+   Amber rather than the theme primary throughout. Quill's primary reads as
+   "done" everywhere else in the flow, and this is the one thing on the page
+   that must not.
+   ========================================================================== */
+
+.approval-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  margin-left: var(--space-2xs);
+  padding: var(--space-hairline) var(--space-2xs);
+  border: var(--border-width-thin) solid var(--theme-warning);
+  border-radius: var(--radius-full);
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--theme-warning);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.approval-pill-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+.approval-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  margin-bottom: var(--space-md);
+  border: var(--border-width-thin) solid rgba(251, 191, 36, 0.35);
+  border-radius: var(--radius-lg);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.approval-notice-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  background: rgba(251, 191, 36, 0.18);
+  color: var(--theme-warning);
+}
+
+.approval-notice-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.approval-notice-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.approval-notice-title {
+  margin: 0;
+  color: var(--theme-warning);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.approval-notice-text {
+  margin: var(--space-3xs) 0 0;
+  color: var(--text-opacity-medium-high);
+  font-size: var(--theme-font-size-sm);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+/* The confirmation screen is centred; the notice reads better left-aligned
+   under it than inheriting the centring. */
+.approval-notice-after {
+  text-align: left;
+  margin-inline: auto;
+  max-width: 32rem;
+}
+
+/* Embeds are height-constrained, so the block drops to the essentials rather
+   than pushing the action button out of the visible area. */
+[data-embedded] .approval-notice {
+  padding: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+[data-embedded] .approval-notice-icon-wrapper {
+  display: none;
+}
