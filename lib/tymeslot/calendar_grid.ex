@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncDebugCalendarWorker
+  alias Tymeslot.Workers.SyncExchangeCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
@@ -43,6 +44,10 @@ defmodule Tymeslot.CalendarGrid do
   # CalDAV ones because the publisher's own regeneration schedule sits on top
   # of ours, so a feed being an hour old is normal rather than a symptom.
   @subscription_stale_minutes 75
+  # Exchange is swept on the same 30-minute cadence as a subscription, and for
+  # the same reason: no delta mechanism, so every run re-reads the whole
+  # window twice over. The buffer is the sweep interval plus queue wait.
+  @exchange_stale_minutes 45
 
   @doc """
   Returns all cached calendar events for the given integration IDs within a time range.
@@ -133,6 +138,7 @@ defmodule Tymeslot.CalendarGrid do
     service a manual refresh on its own)
   - `"debug"` → `SyncDebugCalendarWorker`
   - `"ics_url"` → `SyncIcsCalendarWorker`
+  - `"exchange"` → `SyncExchangeCalendarWorker`
   - any provider returned by `ProviderConfig.caldav_based_providers/0` →
     `SyncCalDavCalendarWorker`
 
@@ -373,6 +379,8 @@ defmodule Tymeslot.CalendarGrid do
 
   defp stale_threshold_minutes(%{provider: "ics_url"}), do: @subscription_stale_minutes
 
+  defp stale_threshold_minutes(%{provider: "exchange"}), do: @exchange_stale_minutes
+
   defp stale_threshold_minutes(%{provider: provider, caldav_sync_tier: tier})
        when provider in @caldav_providers do
     Map.get(@caldav_tier_stale_minutes, tier, @caldav_default_stale_minutes)
@@ -403,6 +411,14 @@ defmodule Tymeslot.CalendarGrid do
   defp enqueue_sync_worker(%{provider: "ics_url"} = integration) do
     %{"calendar_integration_id" => integration.id}
     |> SyncIcsCalendarWorker.new()
+    |> Oban.insert()
+  end
+
+  # EWS has no delta mode either: a refresh re-reads the whole window through
+  # both of the provider's reads.
+  defp enqueue_sync_worker(%{provider: "exchange"} = integration) do
+    %{"calendar_integration_id" => integration.id}
+    |> SyncExchangeCalendarWorker.new()
     |> Oban.insert()
   end
 

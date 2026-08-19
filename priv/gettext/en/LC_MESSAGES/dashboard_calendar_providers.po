@@ -1142,3 +1142,33 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "On-premises Microsoft Exchange Server, read-only"
 msgstr ""
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange reported no busy time at all, but the cache still holds some. Keeping it in place and retrying rather than treating your diary as free."
+msgstr ""
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange returned no calendar events, but the cache still holds some. Keeping them in place and retrying rather than emptying your calendar view."
+msgstr ""
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server answered the free/busy request with nothing Tymeslot could read. Retrying rather than treating your diary as free."
+msgstr ""
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the request."
+msgstr ""
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the stored credentials. Please reconnect the integration."
+msgstr ""
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
+msgstr ""

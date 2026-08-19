@@ -1143,3 +1143,33 @@ msgstr "Připojení k serveru Exchange proběhlo úspěšně"
 #, elixir-autogen, elixir-format
 msgid "On-premises Microsoft Exchange Server, read-only"
 msgstr "Místní server Microsoft Exchange, jen pro čtení"
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange reported no busy time at all, but the cache still holds some. Keeping it in place and retrying rather than treating your diary as free."
+msgstr "Exchange nenahlásil žádnou obsazenou dobu, ale v mezipaměti nějaká zůstává. Mezipaměť zůstane zachována a synchronizace se zopakuje, aby se váš diář nepovažoval za volný."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange returned no calendar events, but the cache still holds some. Keeping them in place and retrying rather than emptying your calendar view."
+msgstr "Exchange nevrátil žádné události kalendáře, ale v mezipaměti nějaké zůstávají. Události zůstanou zachovány a synchronizace se zopakuje, aby se zobrazení kalendáře nevyprázdnilo."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server answered the free/busy request with nothing Tymeslot could read. Retrying rather than treating your diary as free."
+msgstr "Server Exchange odpověděl na dotaz na volno/obsazeno něčím, co Tymeslot nedokáže přečíst. Pokus bude zopakován, aby se váš diář nepovažoval za volný."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the request."
+msgstr "Server Exchange odmítl požadavek."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the stored credentials. Please reconnect the integration."
+msgstr "Server Exchange odmítl uložené přihlašovací údaje. Připojte prosím integraci znovu."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
+msgstr "Tymeslot potřebuje e-mailovou adresu poštovní schránky, aby mohl číst její volno/obsazeno. Připojte prosím integraci znovu a adresu zadejte."

@@ -1142,3 +1142,33 @@ msgstr "Connessione a Exchange riuscita"
 #, elixir-autogen, elixir-format
 msgid "On-premises Microsoft Exchange Server, read-only"
 msgstr "Server Microsoft Exchange on-premise, di sola lettura"
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange reported no busy time at all, but the cache still holds some. Keeping it in place and retrying rather than treating your diary as free."
+msgstr "Exchange non ha segnalato alcun periodo occupato, ma la cache ne contiene ancora. La cache viene mantenuta e il tentativo verrà ripetuto invece di considerare libera la tua agenda."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange returned no calendar events, but the cache still holds some. Keeping them in place and retrying rather than emptying your calendar view."
+msgstr "Exchange non ha restituito alcun evento del calendario, ma la cache ne contiene ancora. Gli eventi vengono mantenuti e il tentativo verrà ripetuto invece di svuotare la vista del calendario."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server answered the free/busy request with nothing Tymeslot could read. Retrying rather than treating your diary as free."
+msgstr "Il server Exchange ha risposto alla richiesta di disponibilità con un contenuto che Tymeslot non è riuscito a leggere. Il tentativo verrà ripetuto invece di considerare libera la tua agenda."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the request."
+msgstr "Il server Exchange ha rifiutato la richiesta."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the stored credentials. Please reconnect the integration."
+msgstr "Il server Exchange ha rifiutato le credenziali salvate. Ricollega l'integrazione."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
+msgstr "Tymeslot ha bisogno dell'indirizzo e-mail della casella di posta per leggerne la disponibilità. Ricollega l'integrazione e indicalo."

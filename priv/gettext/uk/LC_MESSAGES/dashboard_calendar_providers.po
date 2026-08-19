@@ -1143,3 +1143,33 @@ msgstr "Підключення до Exchange успішне"
 #, elixir-autogen, elixir-format
 msgid "On-premises Microsoft Exchange Server, read-only"
 msgstr "Локальний сервер Microsoft Exchange, лише для перегляду"
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange reported no busy time at all, but the cache still holds some. Keeping it in place and retrying rather than treating your diary as free."
+msgstr "Exchange не повідомив про жодну зайнятість, але кеш досі містить її. Кеш збережено, і спробу буде повторено, замість вважати ваш розклад вільним."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange returned no calendar events, but the cache still holds some. Keeping them in place and retrying rather than emptying your calendar view."
+msgstr "Exchange не повернув жодної події календаря, але кеш досі містить їх. Події збережено, і спробу буде повторено, замість очищення вигляду календаря."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server answered the free/busy request with nothing Tymeslot could read. Retrying rather than treating your diary as free."
+msgstr "Сервер Exchange відповів на запит про зайнятість тим, що Tymeslot не зміг прочитати. Спробу буде повторено, замість вважати ваш розклад вільним."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the request."
+msgstr "Сервер Exchange відхилив запит."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the stored credentials. Please reconnect the integration."
+msgstr "Сервер Exchange відхилив збережені облікові дані. Перепідключіть інтеграцію."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
+msgstr "Tymeslot потребує адресу електронної пошти поштової скриньки, щоб читати її зайнятість. Перепідключіть інтеграцію та вкажіть її."
