@@ -45,6 +45,11 @@ defmodule Tymeslot.Jobs do
     to: ObanJobQueries
 
   @doc """
+  Deletes pending poll email jobs (deadline reminders and host nudges) for a poll.
+  """
+  defdelegate delete_poll_jobs(poll_id, worker_module), to: ObanJobQueries
+
+  @doc """
   Queues holding jobs older than `recent_cutoff`, with their depth.
   """
   defdelegate list_accumulated_jobs(recent_cutoff), to: ObanJobQueries

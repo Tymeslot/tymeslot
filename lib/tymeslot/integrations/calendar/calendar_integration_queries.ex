@@ -483,6 +483,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Acquires a transaction-scoped Postgres advisory lock keyed on the given
+  user, so two concurrent first-integration inserts can't both observe
+  `count_for_user/1 == 1`. Must be called from inside a `Repo.transaction/1`;
+  the lock releases automatically at commit or rollback.
+  """
+  @spec acquire_primary_lock(integer()) :: :ok
+  def acquire_primary_lock(user_id) do
+    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [1, user_id])
+    :ok
+  end
+
+  @doc """
   Gets all calendar integrations (for consistency checks).
   Used by data consistency service.
   """

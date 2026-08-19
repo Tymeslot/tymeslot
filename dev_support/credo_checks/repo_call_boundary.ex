@@ -62,26 +62,11 @@ defmodule CredoChecks.RepoCallBoundary do
   alias Credo.IssueMeta
   alias Credo.SourceFile
 
-  @flagged_functions [
-    :get,
-    :get!,
-    :get_by,
-    :get_by!,
-    :one,
-    :one!,
-    :all,
-    :exists?,
-    :insert,
-    :insert!,
-    :update,
-    :update!,
-    :delete,
-    :delete!,
-    :insert_all,
-    :update_all,
-    :delete_all,
-    :aggregate
-  ]
+  # Everything except these three orchestration concerns is a query/mutation
+  # call and must live in a `*_queries.ex` or `*_schema.ex` file. This is an
+  # allowlist, not a denylist, so a newly-called `Repo.*` function is flagged
+  # by default rather than silently passing until someone remembers to list it.
+  @allowed_functions [:transaction, :rollback, :preload]
 
   @doc false
   @impl Credo.Check
@@ -122,6 +107,11 @@ defmodule CredoChecks.RepoCallBoundary do
   end
 
   defp collect_alias(ast, acc), do: {ast, acc}
+
+  # `Ecto.Repo` itself is the behaviour, never an app repo the codebase calls
+  # queries on directly; the only place it appears is `Ecto.Repo.t()` in a
+  # `@spec`, which is a type reference, not a call to flag.
+  defp repo_module?([:Ecto, :Repo]), do: false
 
   # A module reference points at a repo when its last segment ends in "Repo"
   # (e.g. `Repo`, `Tymeslot.SaasRepo`).
@@ -178,7 +168,7 @@ defmodule CredoChecks.RepoCallBoundary do
          issue_meta,
          repo_aliases
        ) do
-    if func_name in @flagged_functions and repo_reference?(aliases, repo_aliases) do
+    if func_name not in @allowed_functions and repo_reference?(aliases, repo_aliases) do
       module_prefix = aliases |> Enum.map(&Atom.to_string/1) |> Enum.join(".")
 
       issue =
