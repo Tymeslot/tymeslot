@@ -18,6 +18,12 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
       advance. That one evaluates against the current row plus the proposed
       attributes, and carries no consistency risk: the authoritative check
       still runs under the lock.
+
+  `would_cause_lockout?/2` also carries the `meeting_payments_enabled` guard:
+  not an authentication path, but this is the only point `update/1` checks
+  the merged, about-to-be-committed row, so a race-conditioned enable with no
+  Stripe platform credentials configured is refused here too rather than
+  only being greyed out in the UI.
   """
 
   alias Tymeslot.AppSettings.Env
@@ -26,7 +32,8 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
 
   @doc """
   Whether applying `attrs` on top of `merged_row` would leave zero usable
-  authentication paths.
+  authentication paths, or would enable meeting payments with no Stripe
+  platform credentials configured.
   """
   @spec would_cause_lockout?(map(), map()) :: boolean()
   # Lockout protection: refuse any update that would leave zero usable auth
@@ -39,10 +46,20 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
   # be locked out — which is also the only way a fresh install can disable
   # everything before its first admin signs in.
   def would_cause_lockout?(merged_row, attrs) do
-    Auth.any_admin?() and
-      currently_has_usable_path?() and
-      not password_usable_after?(merged_row, attrs) and
-      not sso_usable_after?(merged_row, attrs)
+    (Auth.any_admin?() and
+       currently_has_usable_path?() and
+       not password_usable_after?(merged_row, attrs) and
+       not sso_usable_after?(merged_row, attrs)) or
+      meeting_payments_would_be_unusable?(merged_row, attrs)
+  end
+
+  # Mirrors `locked_states_for(:meeting_payments_enabled, ...)` below so the
+  # UI hint and the actual write-path enforcement cannot drift apart: a
+  # concurrent request that races past the UI's greyed-out toggle must still
+  # be refused here, under the row lock.
+  defp meeting_payments_would_be_unusable?(merged_row, attrs) do
+    next_effective_value(:meeting_payments_enabled, merged_row, attrs) == true and
+      not MeetingPayments.platform_configured?()
   end
 
   defp currently_has_usable_path? do

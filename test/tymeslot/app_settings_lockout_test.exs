@@ -97,6 +97,27 @@ defmodule Tymeslot.AppSettingsLockoutTest do
       assert Application.get_env(:tymeslot, :password_auth_enabled) == false
     end
 
+    test "allows disabling password_auth_enabled when the only password admin is unverified" do
+      # An unverified admin has a password_hash on file but cannot pass
+      # Authentication.verify_user_password/2's gate, so they are not a
+      # usable password-auth path and must not block the toggle.
+      clamp_sso_disabled()
+      insert(:user, is_admin: true, verified_at: nil)
+
+      assert {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
+      assert Application.get_env(:tymeslot, :password_auth_enabled) == false
+    end
+
+    test "allows disabling password_auth_enabled when the only password admin is OAuth-only" do
+      # provider != "email"/nil means the login gate rejects password sign-in
+      # outright, regardless of the leftover password_hash.
+      clamp_sso_disabled()
+      insert(:user, is_admin: true, provider: "google", google_user_id: "google-456")
+
+      assert {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
+      assert Application.get_env(:tymeslot, :password_auth_enabled) == false
+    end
+
     test "allows updates to unrelated settings even with a password-auth admin" do
       insert(:user, is_admin: true)
 
@@ -261,6 +282,33 @@ defmodule Tymeslot.AppSettingsLockoutTest do
 
       assert {:error, :would_lock_out} =
                AppSettings.update(%{oauth_auth_enabled: false})
+    end
+  end
+
+  # `locked_states_for(:meeting_payments_enabled, ...)` greys the toggle out
+  # in the UI when no Stripe platform key is configured, but that is only a
+  # hint: the actual enforcement has to live on the write path, or a
+  # race-conditioned or scripted request could enable payments with no way
+  # to complete Stripe Connect onboarding.
+  describe "lockout protection — meeting payments write-path guard" do
+    test "refuses to enable meeting_payments_enabled with no Stripe platform key configured" do
+      Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+
+      assert {:error, :would_lock_out} =
+               AppSettings.update(%{meeting_payments_enabled: true})
+
+      assert Application.get_env(:tymeslot, :meeting_payments_enabled) in [false, nil]
+    end
+
+    test "allows enabling meeting_payments_enabled once a Stripe platform key is configured" do
+      Application.put_env(:stripity_stripe, :api_key, "sk_test_51Hxxxxxxxxxxxxxxxxxxxxxx")
+
+      on_exit(fn ->
+        Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+      end)
+
+      assert {:ok, _settings} = AppSettings.update(%{meeting_payments_enabled: true})
+      assert Application.get_env(:tymeslot, :meeting_payments_enabled) == true
     end
   end
 end

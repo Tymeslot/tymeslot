@@ -20,6 +20,7 @@ defmodule Mix.Tasks.Tymeslot.PromoteAdmin do
   use Mix.Task
 
   alias Ecto.Changeset
+  alias Tymeslot.Auth
   alias Tymeslot.Release
 
   @shortdoc "Promote an existing user to admin"
@@ -28,7 +29,12 @@ defmodule Mix.Tasks.Tymeslot.PromoteAdmin do
   def run([email]) when is_binary(email) do
     Mix.Task.run("app.start")
 
+    already_admin? = match?(%{is_admin: true}, Auth.get_user_by_email(email))
+
     case Release.promote_admin(email) do
+      {:ok, user} when already_admin? ->
+        Mix.shell().info("#{user.email} (id: #{user.id}) is already an admin; no change made.")
+
       {:ok, user} ->
         Mix.shell().info("Promoted #{user.email} (id: #{user.id}) to admin.")
 
