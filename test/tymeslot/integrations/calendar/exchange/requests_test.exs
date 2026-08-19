@@ -163,4 +163,145 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
       end
     end
   end
+
+  describe "get_user_availability/3" do
+    test "asks one mailbox for a detailed view over the given window" do
+      xml = Requests.get_user_availability("alex@example.com", @from, @to)
+
+      assert xml =~ ~s(<m:GetUserAvailabilityRequest>)
+      assert xml =~ ~s(<t:Address>alex@example.com</t:Address>)
+      assert xml =~ ~s(<t:AttendeeType>Required</t:AttendeeType>)
+      assert xml =~ ~s(<t:RequestedView>Detailed</t:RequestedView>)
+    end
+
+    test "renders the window without a zone suffix, since the request names one" do
+      # A `FreeBusyViewOptions` bound is an unqualified local time read in the
+      # request's `t:TimeZone`. A `Z` on it violates the schema, and a schema
+      # violation here is answered with an empty body rather than a fault.
+      xml = Requests.get_user_availability("alex@example.com", @from, @to)
+
+      assert xml =~ ~s(<t:StartTime>2026-09-01T00:00:00</t:StartTime>)
+      assert xml =~ ~s(<t:EndTime>2026-10-01T00:00:00</t:EndTime>)
+      refute xml =~ ~s(00:00:00Z</t:StartTime>)
+      refute xml =~ ~s(00:00:00Z</t:EndTime>)
+    end
+
+    test "renders the window in UTC whatever zone it arrives in" do
+      berlin_from = DateTime.shift_zone!(@from, "Europe/Berlin")
+      berlin_to = DateTime.shift_zone!(@to, "Europe/Berlin")
+
+      xml = Requests.get_user_availability("alex@example.com", berlin_from, berlin_to)
+
+      assert xml =~ ~s(<t:StartTime>2026-09-01T00:00:00</t:StartTime>)
+      assert xml =~ ~s(<t:EndTime>2026-10-01T00:00:00</t:EndTime>)
+    end
+
+    test "drops sub-second precision from the window" do
+      xml =
+        Requests.get_user_availability(
+          "alex@example.com",
+          %{@from | microsecond: {123_456, 6}},
+          @to
+        )
+
+      assert xml =~ ~s(<t:StartTime>2026-09-01T00:00:00</t:StartTime>)
+    end
+
+    test "escapes XML metacharacters in the address" do
+      xml = Requests.get_user_availability(~s(a"b&c<d>e'f@example.com), @from, @to)
+
+      assert xml =~ ~s(<t:Address>a&quot;b&amp;c&lt;d&gt;e&apos;f@example.com</t:Address>)
+    end
+
+    test "sends a complete standard-time rule, since a partial one is answered with nothing" do
+      doc = enveloped("alex@example.com")
+
+      assert_time_rule(doc, "StandardTime")
+    end
+
+    test "sends a complete daylight-time rule, since a partial one is answered with nothing" do
+      doc = enveloped("alex@example.com")
+
+      assert_time_rule(doc, "DaylightTime")
+    end
+
+    test "biases the time zone to zero so the window and the answer are both UTC" do
+      doc = enveloped("alex@example.com")
+
+      assert Soap.xpath(doc, ~x"//m:GetUserAvailabilityRequest/t:TimeZone/t:Bias/text()"s) == "0"
+    end
+
+    test "orders the request's elements as the schema's sequence demands" do
+      # xmerl accepts any order; the server does not, and answers a body with
+      # no response code rather than a fault when the order is wrong.
+      xml = Requests.get_user_availability("alex@example.com", @from, @to)
+
+      assert xml =~
+               ~r{<t:TimeZone>\s*<t:Bias>.*</t:Bias>\s*<t:StandardTime>.*</t:StandardTime>\s*<t:DaylightTime>.*</t:DaylightTime>\s*</t:TimeZone>\s*<m:MailboxDataArray>.*</m:MailboxDataArray>\s*<t:FreeBusyViewOptions>}s
+    end
+
+    test "orders each time rule's children as the schema's sequence demands" do
+      xml = Requests.get_user_availability("alex@example.com", @from, @to)
+
+      assert xml =~
+               ~r{<t:StandardTime>\s*<t:Bias>.*</t:Bias>\s*<t:Time>.*</t:Time>\s*<t:DayOrder>.*</t:DayOrder>\s*<t:Month>.*</t:Month>\s*<t:DayOfWeek>.*</t:DayOfWeek>\s*</t:StandardTime>}s
+    end
+
+    test "is well-formed XML the enveloped values read back out of" do
+      doc = enveloped("alex@example.com")
+
+      assert Soap.xpath(doc, ~x"//m:MailboxDataArray/t:MailboxData/t:Email/t:Address/text()"s) ==
+               "alex@example.com"
+
+      assert Soap.xpath(doc, ~x"//t:FreeBusyViewOptions/t:RequestedView/text()"s) == "Detailed"
+
+      assert Soap.xpath(doc, ~x"//t:FreeBusyViewOptions/t:TimeWindow/t:StartTime/text()"s) ==
+               "2026-09-01T00:00:00"
+
+      assert Soap.xpath(doc, ~x"//t:FreeBusyViewOptions/t:TimeWindow/t:EndTime/text()"s) ==
+               "2026-10-01T00:00:00"
+    end
+
+    test "escapes the address into one the parser reads back unchanged" do
+      address = ~s(a"b&c<d>e'f@example.com)
+
+      assert Soap.xpath(
+               enveloped(address),
+               ~x"//m:MailboxDataArray/t:MailboxData/t:Email/t:Address/text()"s
+             ) == address
+    end
+
+    test "refuses an address that is not a string" do
+      # Produced at runtime rather than written as an atom, which the type
+      # checker rejects against the guarded head before the guard is reached.
+      address = Enum.random([:alex])
+
+      assert_raise FunctionClauseError, fn ->
+        Requests.get_user_availability(address, @from, @to)
+      end
+    end
+  end
+
+  defp enveloped(address) do
+    {:ok, doc} =
+      address
+      |> Requests.get_user_availability(@from, @to)
+      |> Soap.envelope()
+      |> Soap.parse()
+
+    doc
+  end
+
+  # Every child is asserted rather than the rule's presence: an incomplete
+  # `SerializableTimeZoneTime` is what makes the server answer an empty body
+  # with no fault and no response code, which reads as a free calendar.
+  defp assert_time_rule(doc, rule) do
+    base = "//m:GetUserAvailabilityRequest/t:TimeZone/t:#{rule}"
+
+    assert Soap.xpath(doc, ~x"#{base}/t:Bias/text()"s) == "0"
+    assert Soap.xpath(doc, ~x"#{base}/t:Time/text()"s) == "00:00:00"
+    assert Soap.xpath(doc, ~x"#{base}/t:DayOrder/text()"s) == "1"
+    assert Soap.xpath(doc, ~x"#{base}/t:Month/text()"s) == "1"
+    assert Soap.xpath(doc, ~x"#{base}/t:DayOfWeek/text()"s) == "Sunday"
+  end
 end

@@ -20,6 +20,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   encoded, so reaching the iCalendar inside costs a MIME parse and a QP decode
   to obtain fields that `BaseShape=Default` already returns as typed XML.
 
+  ## Busy time comes from a different operation
+
+  `FindItem` over a `CalendarView` does not expand a recurring series on every
+  server. A grommunio mailbox answers one `RecurringMaster` dated to the
+  series' first occurrence, and nothing at all for a window covering later
+  ones, so the item path cannot see the third week of a weekly standup.
+  `get_user_availability/3` is the operation that does expand it, and
+  `Exchange.FreeBusy` reads its answer; the item path feeds the dashboard grid
+  rather than availability.
+
   ## Paging is not implemented
 
   Neither builder requests an indexed page view, so `FindItem` returns at most
@@ -102,6 +112,60 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
     """
   end
 
+  @doc """
+  Asks for one mailbox's busy intervals over a window.
+
+  `GetUserAvailability` is the only EWS operation that expands a recurring
+  series, so it is what decides busy time; `Exchange.FreeBusy` parses the
+  answer.
+
+  The `t:TimeZone` block is not decoration. Omitting it, or sending a partial
+  one, makes the server answer an empty body carrying no fault and no response
+  code, which is indistinguishable from a free calendar unless the reader
+  refuses to read it as one. A bias of zero with placeholder standard and
+  daylight rules puts that zone on UTC, which is what the window boundaries
+  below are shifted into and what the answer comes back in.
+  """
+  @spec get_user_availability(String.t(), DateTime.t(), DateTime.t()) :: String.t()
+  def get_user_availability(email, %DateTime{} = from, %DateTime{} = to)
+      when is_binary(email) do
+    """
+    <m:GetUserAvailabilityRequest>
+      <t:TimeZone>
+        <t:Bias>0</t:Bias>
+        <t:StandardTime>
+          <t:Bias>0</t:Bias>
+          <t:Time>00:00:00</t:Time>
+          <t:DayOrder>1</t:DayOrder>
+          <t:Month>1</t:Month>
+          <t:DayOfWeek>Sunday</t:DayOfWeek>
+        </t:StandardTime>
+        <t:DaylightTime>
+          <t:Bias>0</t:Bias>
+          <t:Time>00:00:00</t:Time>
+          <t:DayOrder>1</t:DayOrder>
+          <t:Month>1</t:Month>
+          <t:DayOfWeek>Sunday</t:DayOfWeek>
+        </t:DaylightTime>
+      </t:TimeZone>
+      <m:MailboxDataArray>
+        <t:MailboxData>
+          <t:Email><t:Address>#{escape(email)}</t:Address></t:Email>
+          <t:AttendeeType>Required</t:AttendeeType>
+        </t:MailboxData>
+      </m:MailboxDataArray>
+      <t:FreeBusyViewOptions>
+        <t:TimeWindow>
+          <t:StartTime>#{availability_window_time(from)}</t:StartTime>
+          <t:EndTime>#{availability_window_time(to)}</t:EndTime>
+        </t:TimeWindow>
+        <t:MergedFreeBusyIntervalInMinutes>30</t:MergedFreeBusyIntervalInMinutes>
+        <t:RequestedView>Detailed</t:RequestedView>
+      </t:FreeBusyViewOptions>
+    </m:GetUserAvailabilityRequest>
+    """
+  end
+
   defp folder_element(:calendar), do: ~s(<t:DistinguishedFolderId Id="calendar"/>)
   defp folder_element(id) when is_binary(id), do: ~s(<t:FolderId Id="#{escape(id)}"/>)
 
@@ -117,15 +181,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
     |> String.replace("'", "&apos;")
   end
 
-  # The shift normalises the caller's zone away: `CalendarView` bounds are
-  # absolute instants, and a zoned bound would otherwise be rendered with its
-  # own offset. Shifting to `Etc/UTC` needs no timezone database, and
-  # `DateTime.to_iso8601/1` renders a UTC datetime with a `Z` suffix, so no
-  # offset rewriting is needed afterwards.
-  defp calendar_view_time(datetime) do
+  # `DateTime.to_iso8601/1` renders a UTC datetime with a `Z` suffix, which is
+  # what a `CalendarView` bound wants: it is an absolute instant.
+  defp calendar_view_time(datetime), do: datetime |> in_utc() |> DateTime.to_iso8601()
+
+  # A `FreeBusyViewOptions` bound is the opposite: an unqualified local time,
+  # read in whatever zone the request's `t:TimeZone` block names. That block
+  # names UTC, so the instant is right, but a `Z` suffix on it is a schema
+  # violation and the naive rendering is what drops it.
+  defp availability_window_time(datetime) do
+    datetime |> in_utc() |> DateTime.to_naive() |> NaiveDateTime.to_iso8601()
+  end
+
+  # The shift normalises the caller's zone away; a zoned bound would otherwise
+  # be rendered with its own offset. Shifting to `Etc/UTC` needs no timezone
+  # database.
+  defp in_utc(datetime) do
     datetime
     |> DateTime.shift_zone!("Etc/UTC")
     |> DateTime.truncate(:second)
-    |> DateTime.to_iso8601()
   end
 end
