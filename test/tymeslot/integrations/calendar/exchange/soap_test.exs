@@ -192,6 +192,31 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SoapTest do
     end
   end
 
+  describe "succeeded?/1" do
+    test "reads a message stating NoError as a success" do
+      {:ok, doc} = Soap.parse(messages(["NoError"]))
+      [message] = Soap.response_messages(doc, "GetItemResponseMessage")
+
+      assert Soap.succeeded?(message)
+    end
+
+    test "reads a message stating a failure code as a failure" do
+      {:ok, doc} = Soap.parse(messages(["ErrorAccessDenied"]))
+      [message] = Soap.response_messages(doc, "GetItemResponseMessage")
+
+      refute Soap.succeeded?(message)
+    end
+
+    test "reads a message stating no code at all as a failure" do
+      # `""` is not a valid EWS response code, so the message stated no
+      # outcome and is not evidence of one.
+      {:ok, doc} = Soap.parse(messages([nil]))
+      [message] = Soap.response_messages(doc, "GetItemResponseMessage")
+
+      refute Soap.succeeded?(message)
+    end
+  end
+
   describe "require_success/2" do
     test "returns every response message when all of them succeeded" do
       {:ok, doc} = Soap.parse(messages(["NoError", "NoError"]))

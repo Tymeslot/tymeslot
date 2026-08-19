@@ -135,6 +135,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
   end
 
   @doc """
+  Returns whether one response message states success.
+
+  A message stating no code at all reads back as `""`, which is not `"NoError"`
+  and so counts as a failure. That is deliberate: `""` is not a valid EWS
+  response code, so the message stated no outcome and is not evidence of one.
+
+  Read from `m:ResponseCode` rather than from the message's `ResponseClass`
+  attribute, so that the one thing separating a readable message from an
+  unreadable one is stated in a single place: this predicate is the only
+  definition of success on the EWS path, and every caller that partitions
+  messages goes through it.
+  """
+  @spec succeeded?(document()) :: boolean()
+  def succeeded?(message), do: response_code(message) == "NoError"
+
+  @doc """
   Returns the response messages of `message_name`, or the first stated failure.
 
   Every read on this path wants the same thing: the messages, but only if the
@@ -157,11 +173,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Soap do
     end
   end
 
-  # A message stating no code at all reads back as `""`, which is not
-  # `"NoError"` and so fails here. That is deliberate: `""` is not a valid EWS
-  # response code, so the message stated no outcome and is not evidence of one.
   defp first_failure(messages) do
-    case Enum.find(messages, &(response_code(&1) != "NoError")) do
+    case Enum.find(messages, &(not succeeded?(&1))) do
       nil -> {:ok, messages}
       failed -> {:error, {:response_code, response_code(failed)}}
     end

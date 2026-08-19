@@ -317,7 +317,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   defp require_readable_batch(doc) do
     case Soap.response_messages(doc, "GetItemResponseMessage") do
       [] -> {:error, :no_response_messages}
-      messages -> classify_batch(messages, Enum.reject(messages, &succeeded?/1))
+      messages -> classify_batch(messages, Enum.reject(messages, &Soap.succeeded?/1))
     end
   end
 
@@ -338,10 +338,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
     :ok
   end
-
-  # A message stating no code at all reads back as `""`, which is not
-  # `"NoError"` and so counts as failed, matching `Soap.require_success/2`.
-  defp succeeded?(message), do: Soap.response_code(message) == "NoError"
 
   # The response code is read before the items are. A `FindItem` message that
   # failed carries no `m:RootFolder`, so walking straight to the ids answers
