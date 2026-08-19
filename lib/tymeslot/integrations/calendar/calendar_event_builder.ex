@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Utils.MapKeys
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Endpoint
@@ -45,6 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       location: meeting.meeting_url || meeting.location,
       conference_url: meeting.meeting_url,
       transparency: if(Map.get(meeting, :show_as_free), do: :transparent, else: :opaque),
+      status: event_status(meeting),
       attachments: build_attachments(meeting),
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
@@ -52,6 +54,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       attendee_email: meeting.attendee_email,
       reminders: build_reminders(meeting)
     }
+  end
+
+  # A booking held for the host's manual approval is written to their calendar
+  # as TENTATIVE: the slot has to be visibly taken, or the availability grid —
+  # which reads provider events, not the meetings table — would keep offering
+  # it to the next visitor. `CalendarEvent.blocking?/1` treats tentative as
+  # blocking for exactly this reason, and `mix calendar_audit`'s tentative
+  # scenario pins that against every live provider. Approval rewrites the
+  # event as CONFIRMED; declining deletes it.
+  #
+  # Note for Outlook: Graph has no event status independent of free/busy, so a
+  # `show_as_free` meeting resolves to "free" there and can never also read as
+  # tentative. That is a provider limit, not something to work around here.
+  defp event_status(meeting) do
+    if MeetingState.awaiting_approval?(meeting), do: :tentative, else: :confirmed
   end
 
   # The meeting stores the reminders chosen at booking time as `%{value:,

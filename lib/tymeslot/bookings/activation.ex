@@ -46,7 +46,21 @@ defmodule Tymeslot.Bookings.Activation do
   success would only invite callers to roll back a booking that exists.
   """
   @spec activate(Meeting.t(), keyword()) :: :ok
-  def activate(%Meeting{} = meeting, opts \\ []) do
+  def activate(meeting, opts \\ [])
+
+  # A booking still held for the host to approve is not a booking anyone has
+  # agreed to. Refusing here rather than at each call site means no future
+  # caller can accidentally send a confirmation for a meeting the host has not
+  # accepted; `Tymeslot.Meetings.Approval` calls back in once it has confirmed.
+  def activate(%Meeting{status: "awaiting_approval"} = meeting, _opts) do
+    Logger.debug("Skipping activation for a booking awaiting approval",
+      meeting_id: meeting.id
+    )
+
+    :ok
+  end
+
+  def activate(%Meeting{} = meeting, opts) do
     if wants_video_room?(meeting, opts) do
       schedule_video_room_with_emails(meeting)
     else

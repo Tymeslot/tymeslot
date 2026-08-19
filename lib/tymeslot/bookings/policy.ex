@@ -9,6 +9,7 @@ defmodule Tymeslot.Bookings.Policy do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
@@ -158,50 +159,86 @@ defmodule Tymeslot.Bookings.Policy do
     # Get reminder configuration
     reminders = get_meeting_reminders(meeting_type_record)
 
+    # A meeting type requiring manual approval holds its bookings instead of
+    # confirming them. The deadline is stamped here, at request time, rather
+    # than derived later: the meeting type's window can be edited — or the type
+    # archived — while a request is outstanding, and the deadline promised to
+    # the invitee must not move underneath them.
+    %{status: status, approval_requested_at: requested_at, approval_deadline_at: deadline_at} =
+      approval_attributes(meeting_type_record, params.start_datetime)
+
     # Build complete meeting attributes map
-    Map.merge(
+    %{
+      uid: meeting_uid,
+      title: "#{meeting_type_name} with #{form_data["name"]}",
+      summary: "#{meeting_type_name} with #{form_data["name"]}",
+      description: (meeting_type_record && meeting_type_record.description) || "",
+      start_time: params.start_datetime,
+      end_time: params.end_datetime,
+      duration: params.duration_minutes,
+      location: nil,
+      meeting_type: meeting_type_name,
+      meeting_type_id: resolved_meeting_type_id,
+      organizer_name: org_name,
+      organizer_email: org_email,
+      organizer_title: nil,
+      organizer_user_id: organizer_user_id,
+      calendar_integration_id: calendar_integration_id,
+      calendar_path: calendar_path,
+      video_integration_id: video_integration_id,
+      attendee_name: form_data["name"],
+      attendee_email: form_data["email"],
+      attendee_message: form_data["message"],
+      attendee_phone: nil,
+      attendee_company: nil,
+      attendee_timezone: Timezones.normalize(user_timezone),
+      attendee_locale: params.attendee_locale || default_locale(),
+      status: status,
+      approval_requested_at: requested_at,
+      approval_deadline_at: deadline_at,
+      reminders: reminders,
+      show_as_free: (meeting_type_record && meeting_type_record.show_as_free) || false,
+      attachments_snapshot: attachments_snapshot(meeting_type_record),
+      custom_fields_snapshot: params.custom_fields_snapshot,
+      custom_field_answers: params.custom_field_answers
+    }
+    |> Map.merge(source_attribution(params))
+    |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
+  end
+
+  # Where the booking came from: the UTM parameters and referrer captured on
+  # the booking page, plus the cookieless key joining this meeting to that
+  # page view in analytics. Grouped so the attributes map states the booking
+  # itself rather than burying it under eight tracking keys.
+  defp source_attribution(%BuildParams{} = params) do
+    %{
+      utm_source: params.utm_source,
+      utm_medium: params.utm_medium,
+      utm_campaign: params.utm_campaign,
+      utm_content: params.utm_content,
+      utm_term: params.utm_term,
+      referrer_host: params.referrer_host,
+      tracking_params: params.tracking_params,
+      visitor_hash: params.visitor_hash
+    }
+  end
+
+  # A booking on a meeting type requiring manual approval is held rather than
+  # confirmed, and carries the clock the host is answering against. Everything
+  # else confirms on submission exactly as before, with all three keys nil.
+  defp approval_attributes(meeting_type_record, start_datetime) do
+    if Approval.required?(meeting_type_record) and not is_nil(start_datetime) do
+      requested_at = DateTime.truncate(Clock.utc_now(), :second)
+
       %{
-        uid: meeting_uid,
-        title: "#{meeting_type_name} with #{form_data["name"]}",
-        summary: "#{meeting_type_name} with #{form_data["name"]}",
-        description: (meeting_type_record && meeting_type_record.description) || "",
-        start_time: params.start_datetime,
-        end_time: params.end_datetime,
-        duration: params.duration_minutes,
-        location: nil,
-        meeting_type: meeting_type_name,
-        meeting_type_id: resolved_meeting_type_id,
-        organizer_name: org_name,
-        organizer_email: org_email,
-        organizer_title: nil,
-        organizer_user_id: organizer_user_id,
-        calendar_integration_id: calendar_integration_id,
-        calendar_path: calendar_path,
-        video_integration_id: video_integration_id,
-        attendee_name: form_data["name"],
-        attendee_email: form_data["email"],
-        attendee_message: form_data["message"],
-        attendee_phone: nil,
-        attendee_company: nil,
-        attendee_timezone: Timezones.normalize(user_timezone),
-        attendee_locale: params.attendee_locale || default_locale(),
-        status: "confirmed",
-        reminders: reminders,
-        show_as_free: (meeting_type_record && meeting_type_record.show_as_free) || false,
-        attachments_snapshot: attachments_snapshot(meeting_type_record),
-        custom_fields_snapshot: params.custom_fields_snapshot,
-        custom_field_answers: params.custom_field_answers,
-        utm_source: params.utm_source,
-        utm_medium: params.utm_medium,
-        utm_campaign: params.utm_campaign,
-        utm_content: params.utm_content,
-        utm_term: params.utm_term,
-        referrer_host: params.referrer_host,
-        tracking_params: params.tracking_params,
-        visitor_hash: params.visitor_hash
-      },
-      build_meeting_action_urls(meeting_uid, org_username)
-    )
+        status: "awaiting_approval",
+        approval_requested_at: requested_at,
+        approval_deadline_at:
+          Approval.deadline_for(meeting_type_record, requested_at, start_datetime)
+      }
+    else
+      %{status: "confirmed", approval_requested_at: nil, approval_deadline_at: nil}
+    end
   end
 
   # Snapshots host-uploaded meeting-type attachments as plain maps so the

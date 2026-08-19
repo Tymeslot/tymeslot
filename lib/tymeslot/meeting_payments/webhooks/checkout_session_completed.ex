@@ -15,14 +15,16 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   require Logger
 
+  alias Tymeslot.Bookings.Activation
+  alias Tymeslot.Clock
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.VideoRoomWorker
 
   @event_type "checkout.session.completed"
 
@@ -161,7 +163,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     with {:ok, meeting} <- fetch_meeting(payment.meeting_id),
          {:proceed, transition} <- check_transition(meeting, payment),
          {:ok, paid} <- mark_paid(payment, event_id, object),
-         {:ok, confirmed} <- MeetingQueries.update_meeting(meeting, %{status: "confirmed"}) do
+         {:ok, confirmed} <- MeetingQueries.update_meeting(meeting, post_payment_status(meeting)) do
       {transition, paid, confirmed}
     else
       :no_op ->
@@ -171,6 +173,38 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         Repo.rollback(reason)
     end
   end
+
+  # Payment clearing does not always mean the booking is on. Where the meeting
+  # type requires manual approval, the paid booking moves into the approval
+  # gate rather than straight to confirmed, and the host's clock starts here —
+  # they are only asked once the money has actually cleared. Declining or
+  # letting it lapse refunds through the ordinary cancellation path.
+  defp post_payment_status(meeting) do
+    meeting
+    |> meeting_type_for()
+    |> approval_status(meeting)
+  end
+
+  defp approval_status(meeting_type, meeting) do
+    if Approval.required?(meeting_type) do
+      requested_at = DateTime.truncate(Clock.utc_now(), :second)
+
+      %{
+        status: "awaiting_approval",
+        approval_requested_at: requested_at,
+        approval_deadline_at:
+          Approval.deadline_for(meeting_type, requested_at, meeting.start_time)
+      }
+    else
+      %{status: "confirmed"}
+    end
+  end
+
+  defp meeting_type_for(%{meeting_type_id: nil}), do: nil
+  defp meeting_type_for(%{organizer_user_id: nil}), do: nil
+
+  defp meeting_type_for(meeting),
+    do: MeetingTypes.get_meeting_type(meeting.meeting_type_id, meeting.organizer_user_id)
 
   defp fetch_meeting(nil), do: {:error, :meeting_missing}
   defp fetch_meeting(meeting_id), do: MeetingQueries.get_meeting(meeting_id)
@@ -227,12 +261,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)
   end
 
+  # Shared with the free booking path so the two cannot drift, and so a booking
+  # that landed in the approval gate is not activated here: `activate/2`
+  # refuses a held meeting, and `Approval.approve/1` calls back in once the
+  # host says yes.
   defp enqueue_post_payment_effects(meeting, _payment) do
-    if meeting.video_integration_id do
-      VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id)
-    else
-      _result = Events.meeting_created(meeting)
-      :ok
-    end
+    Activation.activate(meeting, with_video_room: true)
   end
 end
