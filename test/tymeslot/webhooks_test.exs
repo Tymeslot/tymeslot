@@ -4,7 +4,6 @@ defmodule Tymeslot.WebhooksTest do
 
   @moduletag :security
 
-  import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 

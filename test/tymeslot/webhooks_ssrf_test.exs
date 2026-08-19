@@ -13,7 +13,6 @@ defmodule Tymeslot.WebhooksSsrfTest do
 
   import Mox
   import Tymeslot.ConfigTestHelpers
-  import Tymeslot.Factory
 
   alias Tymeslot.Webhooks
 
