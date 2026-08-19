@@ -43,11 +43,10 @@ defmodule Tymeslot.Notifications.Orchestrator do
   def schedule_confirmation_notifications(meeting) do
     recipients = Recipients.determine_recipients(meeting, :confirmation)
     content = ContentBuilder.build_appointment_details(meeting)
-    timing = SchedulingRules.confirmation_email_timing()
 
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content),
-         result <- schedule_email_job(:confirmation, meeting.id, content, timing) do
+         result <- schedule_email_job(:confirmation, meeting.id) do
       case result do
         :ok -> :ok
         {:ok, _result} -> :ok
@@ -79,11 +78,10 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
     recipients = Recipients.determine_recipients(meeting, :reminder)
     content = ContentBuilder.build_reminder_details(meeting)
-    timing = SchedulingRules.reminder_email_timing()
 
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content) do
-      {result, scheduled_any?} = schedule_reminders(meeting, reminders, timing)
+      {result, scheduled_any?} = schedule_reminders(meeting, reminders)
 
       case {result, scheduled_any?} do
         {:ok, true} -> :ok
@@ -269,8 +267,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   defp schedule_email_job(
          notification_type,
          meeting_id,
-         _content,
-         _timing,
          schedule_at \\ nil,
          reminder_value \\ nil,
          reminder_unit \\ nil
@@ -348,13 +344,13 @@ defmodule Tymeslot.Notifications.Orchestrator do
     ReminderUtils.normalize_reminders(reminders)
   end
 
-  defp schedule_reminders(meeting, reminders, timing) do
+  defp schedule_reminders(meeting, reminders) do
     results =
       Enum.map(reminders, fn %{value: value, unit: unit} ->
         if SchedulingRules.should_schedule_reminder?(meeting.start_time, value, unit) do
           schedule_at = SchedulingRules.calculate_reminder_time(meeting.start_time, value, unit)
 
-          case schedule_email_job(:reminder, meeting.id, %{}, timing, schedule_at, value, unit) do
+          case schedule_email_job(:reminder, meeting.id, schedule_at, value, unit) do
             :ok -> {:ok, true}
             {:ok, _result} -> {:ok, true}
             error -> {error, false}
