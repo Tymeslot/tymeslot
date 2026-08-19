@@ -380,6 +380,28 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       assert result =~ "Too many"
     end
+
+    test "submit_reset_request spends one attempt, not two", %{conn: conn} do
+      email = "rl-reset-once-#{System.unique_integer([:positive])}@example.com"
+
+      # Spend 4 of the 5 hourly attempts, leaving exactly one. The request below
+      # must fit in it: the limit is charged in Auth.PasswordReset alone, so a
+      # second charge at the LiveView layer would reject a request still inside
+      # the budget, and reject it where nothing audits the rejection.
+      for _i <- 1..4 do
+        RateLimiter.check_password_reset_rate_limit(email, "test-rate-limit-ip")
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      result =
+        view
+        |> form("#reset-password-form", %{"email" => email})
+        |> render_submit()
+
+      refute result =~ "Too many"
+      assert result =~ "password reset instructions have been sent"
+    end
   end
 
   describe "rate limiting — verification resend" do
