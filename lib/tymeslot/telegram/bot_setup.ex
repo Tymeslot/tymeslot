@@ -111,5 +111,7 @@ defmodule Tymeslot.Telegram.BotSetup do
     end
   end
 
-  defp truncate(other, _max), do: other
+  # A JSON response reaches us already decoded, so bound its inspected form
+  # rather than logging an unbounded term.
+  defp truncate(other, max), do: other |> inspect() |> truncate(max)
 end
