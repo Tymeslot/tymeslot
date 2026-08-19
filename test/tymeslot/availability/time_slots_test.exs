@@ -430,4 +430,100 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end_dt = DateTime.new!(date, end_time, "Etc/UTC")
     {start_dt, end_dt, date}
   end
+
+  describe "generate_slots_for_range_with_breaks/6 with an explicit interval" do
+    setup do
+      date = ~D[2026-06-15]
+      {:ok, start_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
+      {:ok, end_dt} = DateTime.new(date, ~T[10:00:00], "Europe/London")
+
+      %{date: date, start_dt: start_dt, end_dt: end_dt}
+    end
+
+    test "an interval shorter than the duration produces overlapping starts",
+         %{date: date, start_dt: start_dt, end_dt: end_dt} do
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], 5)
+
+      assert List.first(slots) == "9:00 AM"
+      assert List.last(slots) == "9:30 AM"
+      assert length(slots) == 7
+      assert "9:05 AM" in slots
+    end
+
+    test "an interval longer than the duration produces fewer, rounder starts",
+         %{date: date, start_dt: start_dt, end_dt: end_dt} do
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 20, date, [], 60)
+
+      assert slots == ["9:00 AM"]
+    end
+
+    test "an interval that does not divide the window is still bounded by it",
+         %{date: date, start_dt: start_dt, end_dt: end_dt} do
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], 7)
+
+      assert List.first(slots) == "9:00 AM"
+      assert "9:07 AM" in slots
+      # Last start must still leave room for the full 30-minute meeting.
+      assert List.last(slots) == "9:28 AM"
+    end
+
+    test "a window shorter than the duration offers nothing regardless of interval",
+         %{date: date, start_dt: start_dt} do
+      {:ok, short_end} = DateTime.new(date, ~T[09:10:00], "Europe/London")
+
+      assert TimeSlots.generate_slots_for_range_with_breaks(start_dt, short_end, 30, date, [], 5) ==
+               []
+    end
+
+    test "a nil interval falls back to the duration",
+         %{date: date, start_dt: start_dt, end_dt: end_dt} do
+      with_nil =
+        TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], nil)
+
+      without = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+
+      assert with_nil == without
+    end
+
+    test "breaks are filtered by the meeting's length, not by the interval",
+         %{date: date, start_dt: start_dt, end_dt: end_dt} do
+      breaks = [{~T[09:20:00], ~T[09:30:00]}]
+
+      slots =
+        TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks, 5)
+
+      # A 30-minute meeting starting at 9:00 runs to 9:30 and so overlaps the
+      # break; every start before the break ends is excluded.
+      refute "9:00 AM" in slots
+      assert "9:30 AM" in slots
+    end
+
+    test "an explicit interval equal to the duration reproduces the default grid exactly",
+         %{date: date} do
+      {:ok, start_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
+
+      for duration <- [15, 20, 30, 45, 60],
+          window_minutes <- [30, 60, 90, 125, 240] do
+        {:ok, end_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
+        end_dt = DateTime.add(end_dt, window_minutes, :minute)
+
+        generalised =
+          TimeSlots.generate_slots_for_range_with_breaks(
+            start_dt,
+            end_dt,
+            duration,
+            date,
+            [],
+            duration
+          )
+
+        default =
+          TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, duration, date, [])
+
+        assert generalised == default,
+               "interval == duration must reproduce the default grid " <>
+                 "(duration #{duration}, window #{window_minutes})"
+      end
+    end
+  end
 end

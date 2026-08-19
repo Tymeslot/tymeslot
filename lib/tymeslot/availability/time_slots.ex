@@ -24,19 +24,28 @@ defmodule Tymeslot.Availability.TimeSlots do
     - duration_minutes: Meeting duration in minutes
     - selected_date: The date for slot generation
     - breaks: List of {start_time, end_time} tuples representing break periods
+    - interval_minutes: Optional spacing between slot starts. Defaults to the
+      meeting duration, which is the historical behaviour. A shorter interval
+      offers overlapping starts; a longer one offers fewer, rounder starts.
 
   Returns a list of formatted time strings like "9:00 AM", excluding slots that
   would overlap with break periods.
   """
-  @spec generate_slots_for_range_with_breaks(DateTime.t(), DateTime.t(), integer(), Date.t(), [
-          {Time.t(), Time.t()}
-        ]) :: [String.t()]
+  @spec generate_slots_for_range_with_breaks(
+          DateTime.t(),
+          DateTime.t(),
+          integer(),
+          Date.t(),
+          [{Time.t(), Time.t()}],
+          pos_integer() | nil
+        ) :: [String.t()]
   def generate_slots_for_range_with_breaks(
         start_dt,
         end_dt,
         duration_minutes,
         selected_date,
-        breaks
+        breaks,
+        interval_minutes \\ nil
       ) do
     start_date = DateTime.to_date(start_dt)
     end_date = DateTime.to_date(end_dt)
@@ -44,7 +53,8 @@ defmodule Tymeslot.Availability.TimeSlots do
     slot_range = determine_slot_range(start_date, end_date, selected_date, start_dt, end_dt)
 
     # Generate all possible slots first
-    all_slots = generate_slots_for_determined_range(slot_range, duration_minutes)
+    all_slots =
+      generate_slots_for_determined_range(slot_range, duration_minutes, interval_minutes)
 
     # Filter out slots that overlap with breaks
     case slot_range do
@@ -84,10 +94,11 @@ defmodule Tymeslot.Availability.TimeSlots do
     end
   end
 
-  defp generate_slots_for_determined_range(:no_slots, _duration_minutes), do: []
+  defp generate_slots_for_determined_range(:no_slots, _duration_minutes, _interval_minutes),
+    do: []
 
-  defp generate_slots_for_determined_range({start_dt, end_dt}, duration_minutes) do
-    generate_slots_for_single_day(start_dt, end_dt, duration_minutes)
+  defp generate_slots_for_determined_range({start_dt, end_dt}, duration_minutes, interval_minutes) do
+    generate_slots_for_single_day(start_dt, end_dt, duration_minutes, interval_minutes)
   end
 
   @doc """
@@ -140,13 +151,20 @@ defmodule Tymeslot.Availability.TimeSlots do
 
   # Private functions
 
-  defp generate_slots_for_single_day(start_dt, end_dt, duration_minutes) do
+  defp generate_slots_for_single_day(start_dt, end_dt, duration_minutes, interval_minutes) do
     total_minutes = DateTime.diff(end_dt, start_dt, :minute)
+    # A slot's length is always the duration; the interval only moves its start.
+    # Falling back to the duration makes this a strict generalisation of the
+    # duration-locked grid this replaced.
+    interval = interval_minutes || duration_minutes
 
     if total_minutes < duration_minutes do
       []
     else
-      slot_count = div(total_minutes, duration_minutes)
+      # The last legal start is the one that still leaves room for the full
+      # meeting, so the count is measured over `total - duration`, not `total`.
+      # With interval == duration this is exactly div(total, duration).
+      slot_count = div(total_minutes - duration_minutes, interval) + 1
 
       # Iteration walks forward in UTC. On a DST fall-back day the wall-clock
       # hour repeats, producing two DateTime structs with different offsets but
@@ -155,7 +173,7 @@ defmodule Tymeslot.Availability.TimeSlots do
       # occurrence.
       0..(slot_count - 1)
       |> Enum.map(fn i ->
-        slot_datetime = DateTime.add(start_dt, i * duration_minutes, :minute)
+        slot_datetime = DateTime.add(start_dt, i * interval, :minute)
         format_datetime_slot(slot_datetime)
       end)
       |> Enum.uniq()
