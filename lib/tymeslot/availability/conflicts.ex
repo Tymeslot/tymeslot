@@ -116,6 +116,7 @@ defmodule Tymeslot.Availability.Conflicts do
         config \\ %{}
       ) do
     duration_minutes = config |> Map.get(:duration_minutes, 30) |> max(1) |> min(1440)
+    slot_interval_minutes = Map.get(config, :slot_interval_minutes)
 
     %{
       buffer_minutes: buffer_minutes,
@@ -159,7 +160,8 @@ defmodule Tymeslot.Availability.Conflicts do
           window.end_dt,
           duration_minutes,
           date,
-          breaks
+          breaks,
+          slot_interval_minutes
         )
 
       Enum.any?(slots, fn slot ->
