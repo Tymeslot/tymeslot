@@ -303,3 +303,13 @@ msgstr "La disponibilité repose désormais sur des plannings nommés - horaires
 #, elixir-autogen, elixir-format
 msgid "Give every meeting type its own hours"
 msgstr "Donnez à chaque type de réunion ses propres horaires"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Approve bookings before they're confirmed"
+msgstr "Validez les réservations avant qu'elles ne soient confirmées"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on approval for a meeting type and its bookings wait for you. The slot is held so nobody else can take it, the person booking is told it's a request rather than a confirmed meeting, and your answer is one click from the email. Don't answer in time and the request lapses on its own."
+msgstr "Activez la validation pour un type de rendez-vous et ses réservations vous attendent. Le créneau est réservé pour que personne d'autre ne le prenne, la personne qui réserve sait qu'il s'agit d'une demande et non d'un rendez-vous confirmé, et votre réponse est à un clic depuis l'e-mail. Sans réponse dans les temps, la demande expire d'elle-même."
