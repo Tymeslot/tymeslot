@@ -327,8 +327,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @doc """
   Returns providers that have circuit-breaker monitoring enabled.
 
-  Ordered to match `@providers`. Includes both CalDAV-based and OAuth providers;
-  excludes providers whose metadata sets `circuit_breaker_enabled: false`.
+  Ordered to match `@providers`. Spans every provider family — CalDAV-based,
+  OAuth and EWS; excludes providers whose metadata sets
+  `circuit_breaker_enabled: false`.
   """
   @spec providers_with_circuit_breakers() :: list(atom())
   def providers_with_circuit_breakers, do: @providers_with_circuit_breakers
