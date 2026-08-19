@@ -180,6 +180,70 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusyTest do
                {:error, {:response_code, "ErrorProxyRequestNotAllowed"}}
     end
 
+    test "a granted view of `None` is an error, never an empty calendar" do
+      # EWS downgrades the requested view to the rights the caller holds, and
+      # the two rungs below `FreeBusy` carry no `t:CalendarEventArray` at all
+      # while still answering `NoError`. Read as `{:ok, []}`, a mailbox booked
+      # solid reports as free under a success code.
+      doc =
+        response("""
+        <m:FreeBusyResponseArray><m:FreeBusyResponse>
+          <m:ResponseMessage ResponseClass="Success">
+            <m:ResponseCode>NoError</m:ResponseCode>
+          </m:ResponseMessage>
+          <m:FreeBusyView>
+            <t:FreeBusyViewType>None</t:FreeBusyViewType>
+          </m:FreeBusyView>
+        </m:FreeBusyResponse></m:FreeBusyResponseArray>
+        """)
+
+      assert FreeBusy.parse_intervals(doc) == {:error, {:free_busy_view_type, "None"}}
+    end
+
+    test "a granted view of `MergedOnly` is an error, never an empty calendar" do
+      # This rung answers a merged bitmask string instead of the events: every
+      # `2` in it is a booked slot this reader cannot see.
+      doc =
+        response("""
+        <m:FreeBusyResponseArray><m:FreeBusyResponse>
+          <m:ResponseMessage ResponseClass="Success">
+            <m:ResponseCode>NoError</m:ResponseCode>
+          </m:ResponseMessage>
+          <m:FreeBusyView>
+            <t:FreeBusyViewType>MergedOnly</t:FreeBusyViewType>
+            <t:MergedFreeBusy>222200</t:MergedFreeBusy>
+          </m:FreeBusyView>
+        </m:FreeBusyResponse></m:FreeBusyResponseArray>
+        """)
+
+      assert FreeBusy.parse_intervals(doc) == {:error, {:free_busy_view_type, "MergedOnly"}}
+    end
+
+    test "reads the intervals of a granted `FreeBusy` view, the usual answer" do
+      doc = response(view(event("2026-11-02T09:00:00Z", "2026-11-02T09:15:00Z", "Busy")))
+
+      assert {:ok, [only]} = FreeBusy.parse_intervals(doc)
+      assert only.start_at == ~U[2026-11-02 09:00:00Z]
+    end
+
+    test "reads the intervals of a granted `Detailed` view" do
+      doc =
+        response(view(event("2026-11-02T09:00:00Z", "2026-11-02T09:15:00Z", "Busy"), "Detailed"))
+
+      assert {:ok, [only]} = FreeBusy.parse_intervals(doc)
+      assert only.start_at == ~U[2026-11-02 09:00:00Z]
+    end
+
+    test "reads the intervals of a server that names no granted view at all" do
+      # Absence is not one of the downgraded rungs: those name themselves. A
+      # server that omits the element has still answered `NoError` and still
+      # sent the events, and refusing to read them would break it for nothing.
+      doc = response(view(event("2026-11-02T09:00:00Z", "2026-11-02T09:15:00Z", "Busy"), nil))
+
+      assert {:ok, [only]} = FreeBusy.parse_intervals(doc)
+      assert only.start_at == ~U[2026-11-02 09:00:00Z]
+    end
+
     test "skips an interval whose start cannot be read rather than failing the batch" do
       doc =
         response(
@@ -282,6 +346,34 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusyTest do
       assert only.start_at == ~U[2026-11-02 09:00:00Z]
       assert only.end_at == ~U[2026-11-02 09:15:00Z]
     end
+
+    test "resolves the granted view by namespace rather than by prefix" do
+      # Same point as the test above, aimed at the one read whose failure is
+      # silent in it: an xpath resolving nothing here answers `nil`, which is
+      # read as a granted view and lets a downgraded response through.
+      {:ok, doc} =
+        Soap.parse("""
+        <?xml version="1.0"?>
+        <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+          <env:Body>
+            <msgs:GetUserAvailabilityResponse
+                xmlns:msgs="http://schemas.microsoft.com/exchange/services/2006/messages"
+                xmlns:types="http://schemas.microsoft.com/exchange/services/2006/types">
+              <msgs:FreeBusyResponseArray><msgs:FreeBusyResponse>
+                <msgs:ResponseMessage ResponseClass="Success">
+                  <msgs:ResponseCode>NoError</msgs:ResponseCode>
+                </msgs:ResponseMessage>
+                <msgs:FreeBusyView>
+                  <types:FreeBusyViewType>None</types:FreeBusyViewType>
+                </msgs:FreeBusyView>
+              </msgs:FreeBusyResponse></msgs:FreeBusyResponseArray>
+            </msgs:GetUserAvailabilityResponse>
+          </env:Body>
+        </env:Envelope>
+        """)
+
+      assert FreeBusy.parse_intervals(doc) == {:error, {:free_busy_view_type, "None"}}
+    end
   end
 
   defp event(start_at, end_at, busy_type) do
@@ -294,19 +386,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusyTest do
     """
   end
 
-  defp view(events) do
+  # `nil` omits the granted view entirely, which is what a server deviating
+  # from the schema sends.
+  defp view(events, view_type \\ "FreeBusy") do
     """
     <m:FreeBusyResponseArray><m:FreeBusyResponse>
       <m:ResponseMessage ResponseClass="Success">
         <m:ResponseCode>NoError</m:ResponseCode>
       </m:ResponseMessage>
       <m:FreeBusyView>
-        <t:FreeBusyViewType>FreeBusy</t:FreeBusyViewType>
+        #{view_type_element(view_type)}
         <t:CalendarEventArray>#{events}</t:CalendarEventArray>
       </m:FreeBusyView>
     </m:FreeBusyResponse></m:FreeBusyResponseArray>
     """
   end
+
+  defp view_type_element(nil), do: ""
+
+  defp view_type_element(view_type),
+    do: "<t:FreeBusyViewType>#{view_type}</t:FreeBusyViewType>"
 
   defp response(body) do
     {:ok, doc} =

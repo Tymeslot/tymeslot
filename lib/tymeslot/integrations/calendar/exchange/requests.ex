@@ -125,6 +125,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   refuses to read it as one. A bias of zero with placeholder standard and
   daylight rules puts that zone on UTC, which is what the window boundaries
   below are shifted into and what the answer comes back in.
+
+  `FreeBusy` is the view asked for rather than `Detailed`. The two return the
+  same intervals with the same busy types, verified against a live server, and
+  the server downgrades a `Detailed` request to `FreeBusy` anyway. `Detailed`
+  differs only in asking a permissioned server for the meeting subjects,
+  locations and item ids that `Exchange.FreeBusy` discards, so it costs
+  mailbox content for nothing.
   """
   @spec get_user_availability(String.t(), DateTime.t(), DateTime.t()) :: String.t()
   def get_user_availability(email, %DateTime{} = from, %DateTime{} = to)
@@ -160,7 +167,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
           <t:EndTime>#{availability_window_time(to)}</t:EndTime>
         </t:TimeWindow>
         <t:MergedFreeBusyIntervalInMinutes>30</t:MergedFreeBusyIntervalInMinutes>
-        <t:RequestedView>Detailed</t:RequestedView>
+        <t:RequestedView>FreeBusy</t:RequestedView>
       </t:FreeBusyViewOptions>
     </m:GetUserAvailabilityRequest>
     """

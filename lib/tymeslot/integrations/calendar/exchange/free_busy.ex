@@ -25,6 +25,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
 
   `Requests.get_user_availability/3` asks for one mailbox, so one
   `m:FreeBusyResponse` comes back and its response code decides the call.
+
+  The same reasoning covers the view the server granted: `MergedOnly` and
+  `None` are answered with a success code and no `t:CalendarEventArray`, so
+  they too are errors rather than an empty calendar.
   """
 
   # Only the sigil: every xpath goes through `Soap.xpath/2,3`, which binds the
@@ -43,7 +47,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
   """
   @type interval :: %{start_at: DateTime.t(), end_at: DateTime.t(), busy_type: atom()}
 
-  @type error_reason :: :no_response_code | {:response_code, String.t()}
+  @type error_reason ::
+          :no_response_code | {:response_code, String.t()} | {:free_busy_view_type, String.t()}
 
   # `Free` and `NoData` are the only values that leave the organiser bookable,
   # matching how `Exchange.EventNormaliser` reads `LegacyFreeBusyStatus`.
@@ -52,6 +57,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
   # under-blocking causes a double booking.
   @free_types ["Free", "NoData"]
   @busy_types %{"Busy" => :busy, "Tentative" => :tentative, "OOF" => :out_of_office}
+
+  # The rungs below `FreeBusy`, which EWS drops to when the caller's rights do
+  # not reach the view the request asked for. `MergedOnly` answers a merged
+  # bitmask string and `None` answers that nothing is available; neither
+  # carries a `t:CalendarEventArray`, and both arrive with a response code of
+  # `NoError`, so reading the events without reading the granted view answers
+  # `{:ok, []}` for a booked mailbox under a success code.
+  @unusable_views ["None", "MergedOnly"]
 
   @doc """
   Extracts every busy interval from a parsed `GetUserAvailability` response.
@@ -66,8 +79,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.FreeBusy do
     # and would answer `[]` for every response, successful ones included.
     case Soap.text(doc, ~x"//m:FreeBusyResponse/m:ResponseMessage/m:ResponseCode/text()") do
       nil -> {:error, :no_response_code}
-      "NoError" -> {:ok, intervals(doc)}
+      "NoError" -> granted_view(doc)
       code -> {:error, {:response_code, code}}
+    end
+  end
+
+  # The response echoes the view the server actually granted, which is
+  # routinely lower than the one asked for: the probed server answers
+  # `FreeBusy` to a `Detailed` request. `FreeBusy` and `Detailed` both carry
+  # the intervals; the two rungs below them do not.
+  #
+  # An absent element is read as a granted view rather than as a failure. By
+  # this point the server has stated `NoError` in a well-formed response
+  # message, so it is talking to us properly and omitting an element the
+  # schema requires; refusing to read the intervals it did send would turn a
+  # working setup into a hard error, and the shape this guard exists to catch
+  # names itself rather than staying silent.
+  defp granted_view(doc) do
+    case Soap.text(doc, ~x"//m:FreeBusyView/t:FreeBusyViewType/text()") do
+      view when view in @unusable_views -> {:error, {:free_busy_view_type, view}}
+      _view -> {:ok, intervals(doc)}
     end
   end
 

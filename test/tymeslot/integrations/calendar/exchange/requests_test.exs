@@ -165,13 +165,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
   end
 
   describe "get_user_availability/3" do
-    test "asks one mailbox for a detailed view over the given window" do
+    test "asks one mailbox for a free/busy view over the given window" do
       xml = Requests.get_user_availability("alex@example.com", @from, @to)
 
       assert xml =~ ~s(<m:GetUserAvailabilityRequest>)
       assert xml =~ ~s(<t:Address>alex@example.com</t:Address>)
       assert xml =~ ~s(<t:AttendeeType>Required</t:AttendeeType>)
-      assert xml =~ ~s(<t:RequestedView>Detailed</t:RequestedView>)
+      assert xml =~ ~s(<t:RequestedView>FreeBusy</t:RequestedView>)
+    end
+
+    test "does not ask for the detailed view, whose extra mailbox content is discarded" do
+      # `Detailed` returns the same intervals with the same busy types, and a
+      # server downgrades the request to `FreeBusy` regardless. All it adds is
+      # the subjects, locations and item ids that the reader throws away.
+      xml = Requests.get_user_availability("alex@example.com", @from, @to)
+
+      refute xml =~ "Detailed"
     end
 
     test "renders the window without a zone suffix, since the request names one" do
@@ -253,7 +262,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
       assert Soap.xpath(doc, ~x"//m:MailboxDataArray/t:MailboxData/t:Email/t:Address/text()"s) ==
                "alex@example.com"
 
-      assert Soap.xpath(doc, ~x"//t:FreeBusyViewOptions/t:RequestedView/text()"s) == "Detailed"
+      assert Soap.xpath(doc, ~x"//t:FreeBusyViewOptions/t:RequestedView/text()"s) == "FreeBusy"
 
       assert Soap.xpath(doc, ~x"//t:FreeBusyViewOptions/t:TimeWindow/t:StartTime/text()"s) ==
                "2026-09-01T00:00:00"
