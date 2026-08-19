@@ -7,11 +7,13 @@ defmodule TymeslotWeb.StripeConnectWebhookControllerTest do
   import Mox
 
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Payments.Webhooks.IdempotencyCache
 
   setup :verify_on_exit!
 
   setup do
     Application.put_env(:tymeslot, :stripe_connect_webhook_secret, "whsec_test_connect")
+    IdempotencyCache.clear_all()
 
     on_exit(fn ->
       Application.delete_env(:tymeslot, :stripe_connect_webhook_secret)
@@ -100,6 +102,46 @@ defmodule TymeslotWeb.StripeConnectWebhookControllerTest do
         |> post("/webhooks/stripe/connect", payload)
 
       assert response(conn, 200)
+    end
+
+    test "a replayed event is not redispatched (single fan-out for a duplicate delivery)", %{
+      conn: conn
+    } do
+      now = System.os_time(:second)
+      event_id = "evt_DUPLICATE"
+
+      # `expect/3` defaults to exactly one call: if the second delivery
+      # reached the handler again, this expectation would be violated.
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:ok,
+         %{
+           "id" => event_id,
+           "type" => "account.updated",
+           "created" => now,
+           "data" => %{"object" => %{"id" => "acct_UNKNOWN", "created" => now}}
+         }}
+      end)
+
+      payload =
+        ~s({"id":"#{event_id}","type":"account.updated","created":#{now}})
+
+      first =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("stripe-signature", "t=1,v1=GOOD")
+        |> assign(:raw_body, payload)
+        |> post("/webhooks/stripe/connect", payload)
+
+      assert response(first, 200)
+
+      second =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("stripe-signature", "t=1,v1=GOOD")
+        |> assign(:raw_body, payload)
+        |> post("/webhooks/stripe/connect", payload)
+
+      assert response(second, 200)
     end
 
     test "returns 503 when the webhook secret is not configured (so Stripe retries)", %{

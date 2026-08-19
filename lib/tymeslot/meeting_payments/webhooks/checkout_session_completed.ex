@@ -287,15 +287,35 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   #
   # Unconditional, exactly as on the free path: when a video room follows, its
   # worker schedules an *update* that adds the join link to the event this
-  # create already put on the calendar.
+  # create already put on the calendar. Mirrors `Bookings.Create`'s
+  # `schedule_video_room_with_emails/1`: if the video room enqueue fails, fall
+  # back to a plain confirmation email rather than leaving a paying attendee
+  # with no confirmation at all.
   defp enqueue_post_payment_effects(meeting, _payment) do
     AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
 
     if meeting.video_integration_id do
-      VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id)
+      schedule_video_room_with_emails(meeting)
     else
       _result = Events.meeting_created(meeting)
       :ok
+    end
+  end
+
+  defp schedule_video_room_with_emails(meeting) do
+    case VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error(
+          "checkout.session.completed: failed to schedule video room, falling back to email",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        _result = Events.meeting_created(meeting)
+        :ok
     end
   end
 end
