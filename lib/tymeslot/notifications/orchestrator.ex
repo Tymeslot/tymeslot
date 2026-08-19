@@ -143,35 +143,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Handles video room notifications.
-  """
-  @spec handle_video_room_notifications(%{atom() => term()}, :created | :failed) ::
-          {:ok, atom()} | :ok | {:error, term()}
-  def handle_video_room_notifications(meeting, video_room_status) do
-    notification_type =
-      case video_room_status do
-        :created -> :video_room_created
-        :failed -> :video_room_failed
-      end
-
-    recipients = Recipients.determine_recipients(meeting, notification_type)
-    content = ContentBuilder.build_video_room_details(meeting, video_room_status)
-
-    with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content) do
-      case video_room_status do
-        :created ->
-          # Update existing confirmation emails with video room info
-          update_confirmation_notifications(meeting, content)
-
-        :failed ->
-          # Send fallback notification to organizer
-          send_immediate_notifications(:video_room_failed, content)
-      end
-    end
-  end
-
-  @doc """
   Gets notification status for a meeting.
   """
   @spec get_notification_status(%{atom() => term()}) :: %{
@@ -326,23 +297,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
             {:ok, :reschedules_partially_sent}
         end
-
-      :video_room_failed ->
-        # For now, just log this as we don't have this specific method yet
-        Logger.info("Video room failed notification", content: content)
-        {:ok, :video_room_notification_logged}
     end
-  end
-
-  defp update_confirmation_notifications(meeting, _content) do
-    # Already-scheduled reminder emails re-fetch the meeting from the database
-    # at send time, so they pick up the new video_room_id/meeting_url on their
-    # own; there is no job to update here.
-    Logger.info("Video room added; pending reminder jobs will pick it up automatically",
-      meeting_id: meeting.id
-    )
-
-    {:ok, :confirmation_updated}
   end
 
   defp get_last_notification_time(meeting) do

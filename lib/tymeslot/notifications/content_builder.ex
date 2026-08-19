@@ -202,12 +202,6 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       :reschedule ->
         "Meeting Rescheduled: #{meeting.title}"
 
-      :video_room_created ->
-        "Video Room Ready: #{meeting.title}"
-
-      :video_room_failed ->
-        "Video Room Issue: #{meeting.title}"
-
       _other ->
         "Meeting Update: #{meeting.title}"
     end
