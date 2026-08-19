@@ -10,7 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   One unusable item costs that item rather than the whole batch, matching the
   posture the CalDAV and ICS paths take: a single malformed event must not
-  empty an organiser's diary.
+  empty an organiser's diary. Dropping it is still data loss, so it raises the
+  same `:invalid_calendar_event` operator alert those paths raise, which is
+  the only thing that makes a quietly missing meeting visible.
 
   ## All-day events and the item's time zone
 
@@ -28,15 +30,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
 
   Servers that do not implement the property drop it silently rather than
   faulting, so a fallback is still needed. That fallback anchors inside the
-  local day by shifting the instant forward twelve hours before taking the
-  date, which is correct for every UTC offset in `-11:59..+12:00` and also when
-  a server reports the boundary with an explicit offset rather than in UTC.
+  local day: shifting the instant forward by `A` hours and then taking the date
+  lands on the intended day for every UTC offset in `(A-24, A]`, and is also
+  correct when a server reports the boundary with an explicit offset rather
+  than in UTC. No `A` is right everywhere. Inhabited offsets span
+  `-11:00..+14:00`, a 25-hour range, and any single anchor covers 24 of it.
+
+  `A` is thirteen hours, so the covered window is `(-11:00, +13:00]`. That
+  reaches New Zealand year-round, including the `+13:00` its five million
+  people keep from late September to early April, along with Samoa and Tonga.
+  Two zones are past the reach of any anchor and land a day early: Kiritimati
+  at `+14:00`, and the Chatham Islands in daylight time at `+13:45`. The
+  `-11:00` zones (Niue, American Samoa, Midway) land a day late, and are the
+  price of choosing this window over one shifted an hour earlier.
+  `StartTimeZone` is the exact answer for all four wherever a server provides
+  it.
   """
 
   # Only the sigil: every xpath goes through `Soap.xpath/2,3`, which binds the
   # EWS namespace prefixes onto the spec and onto every subspec.
   import SweetXml, only: [sigil_x: 2]
 
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Timezones
@@ -49,8 +64,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
           synced_at: DateTime.t()
         }
 
-  # Half a day, in seconds. See the module doc on all-day events.
-  @local_midday_anchor 12 * 60 * 60
+  # Thirteen hours, in seconds. See the module doc on all-day events for why
+  # this number and not another.
+  @all_day_anchor 13 * 60 * 60
 
   @doc """
   Normalises `CalendarItem` elements into `CalendarEvent` structs.
@@ -79,14 +95,23 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
         event
 
       {:error, reason} ->
-        # A skipped item is silent data loss in the organiser's diary, so it is
-        # a warning rather than a debug line. Only the identifiers and the
-        # reason are logged: the subject and location are mailbox content.
+        # A skipped item is silent data loss in the organiser's diary, so it
+        # gets a warning and an operator alert rather than a debug line, which
+        # is what the CalDAV and Google paths do with theirs. Only identifiers
+        # and the reason travel: the subject, location and attendees are
+        # mailbox content and must not reach a log line or an alert email.
         Logger.warning("Skipping unusable Exchange calendar item",
           calendar_integration_id: context.calendar_integration_id,
           event_uid: attrs.uid,
           reason: reason
         )
+
+        AdminAlerts.send_alert(:invalid_calendar_event, %{
+          provider: :exchange,
+          event_uid: attrs.uid,
+          reason: reason,
+          calendar_integration_id: context.calendar_integration_id
+        })
 
         nil
     end
@@ -177,7 +202,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   end
 
   defp all_day_date(datetime, nil) do
-    datetime |> DateTime.add(@local_midday_anchor, :second) |> DateTime.to_date()
+    datetime |> DateTime.add(@all_day_anchor, :second) |> DateTime.to_date()
   end
 
   # An unrecognised zone name is treated exactly like an absent one: the

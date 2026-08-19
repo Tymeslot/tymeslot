@@ -1,10 +1,16 @@
 defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
-  use ExUnit.Case, async: true
+  # async: false — capturing admin alerts swaps the global
+  # `:admin_alerts_impl`, which application env makes visible to every other
+  # process.
+  use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
   import SweetXml, only: [sigil_x: 2]
+  import Tymeslot.AdminAlertsCaptureHelpers
 
   @moduletag :integrations
+
+  setup :capture_admin_alerts
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
@@ -106,6 +112,41 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert event.end_date == ~D[2026-09-04]
     end
 
+    test "files an all-day event on its own local day across the offsets the anchor covers" do
+      # The thirteen-hour anchor is exact for every UTC offset in
+      # `(-11:00, +13:00]`. The two eastern entries are what the twelve-hour
+      # anchor this replaced could not reach: Chatham in standard time, and
+      # New Zealand's daylight time, which five million people keep for
+      # roughly half the year.
+      for offset <- ["-10:00", "-05:00", "+00:00", "+02:00", "+12:00", "+12:45", "+13:00"] do
+        item = all_day_item("2026-09-03T00:00:00#{offset}", "2026-09-04T00:00:00#{offset}")
+
+        assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+        assert event.start_date == ~D[2026-09-03], "offset #{offset} start"
+        assert event.end_date == ~D[2026-09-04], "offset #{offset} end"
+      end
+    end
+
+    test "the anchor misfiles the offsets outside its window, which the item's zone fixes" do
+      # Documented cost rather than desired behaviour. `-11:00` (Niue,
+      # American Samoa, Midway) is what widening the window eastwards gave up;
+      # `+13:45` (Chatham in daylight time) and `+14:00` (Kiritimati) are past
+      # any anchor's reach, since inhabited offsets span 25 hours and an anchor
+      # covers 24.
+      misfiled = [
+        {"-11:00", ~D[2026-09-04]},
+        {"+13:45", ~D[2026-09-02]},
+        {"+14:00", ~D[2026-09-02]}
+      ]
+
+      for {offset, filed_on} <- misfiled do
+        item = all_day_item("2026-09-03T00:00:00#{offset}", "2026-09-04T00:00:00#{offset}")
+
+        assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+        assert event.start_date == filed_on, "offset #{offset}"
+      end
+    end
+
     test "reads the all-day date off the item's own zone when the server supplies one" do
       # Kiritimati is UTC+14, past the reach of any anchor, so this date can
       # only be right if `StartTimeZone` was honoured. Its `Id` is the Windows
@@ -205,7 +246,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       # below can only have been extracted by namespace URI. An unbound prefix
       # yields `""` rather than an error, which is how a namespace regression
       # reaches production looking like an empty calendar.
-      [item] =
+      # The all-day item is the second one because the flags that decide it
+      # (`IsAllDayEvent`, `IsCancelled`, `StartTimeZone`) all read back as `""`
+      # under an unbound prefix, and `""` is indistinguishable from the
+      # server's default answer on each. Only an item whose *correct* value is
+      # the non-default one can catch a regression there, so this one is
+      # all-day, cancelled, and dated from a zone the anchor gets wrong.
+      [timed, all_day] =
         renamed_prefix_items("""
         <types:CalendarItem>
           <types:ItemId Id="item-9" ChangeKey="ck-9"/>
@@ -218,9 +265,19 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
           <types:Location>Room 9</types:Location>
           <types:CalendarItemType>Single</types:CalendarItemType>
         </types:CalendarItem>
+        <types:CalendarItem>
+          <types:ItemId Id="item-10" ChangeKey="ck-10"/>
+          <types:UID>uid-10</types:UID>
+          <types:Start>2026-09-02T10:00:00Z</types:Start>
+          <types:End>2026-09-03T10:00:00Z</types:End>
+          <types:IsAllDayEvent>true</types:IsAllDayEvent>
+          <types:IsCancelled>true</types:IsCancelled>
+          <types:StartTimeZone Id="Line Islands Standard Time"/>
+        </types:CalendarItem>
         """)
 
-      assert {:ok, [event]} = EventNormaliser.normalise_events([item], @context)
+      assert {:ok, [event, all_day_event]} =
+               EventNormaliser.normalise_events([timed, all_day], @context)
 
       assert event.uid == "uid-9"
       assert event.provider_event_id == "item-9"
@@ -231,6 +288,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert event.end_at == ~U[2026-09-01 11:00:00Z]
       assert event.transparency == :transparent
       assert event.provider_metadata == %{"calendar_item_type" => "Single"}
+
+      assert all_day_event.all_day == true
+      assert all_day_event.status == :cancelled
+      assert all_day_event.start_date == ~D[2026-09-03]
+      assert all_day_event.end_date == ~D[2026-09-04]
     end
 
     test "normalises an empty batch to an empty list" do
@@ -272,6 +334,34 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert log =~ "Skipping unusable Exchange calendar item"
     end
 
+    test "raises an operator alert for a skipped item, carrying no mailbox content" do
+      # A dropped event is a meeting missing from the diary with nothing on
+      # screen to say so, which is what this alert exists to surface. The
+      # subject and location are the item owner's data and must not travel
+      # into an alert email.
+      undated = String.replace(@timed_item, ~r|<t:End>.*</t:End>|, "")
+
+      capture_log(fn ->
+        assert {:ok, []} = EventNormaliser.normalise_events(items([undated]), @context)
+      end)
+
+      assert_receive {:send_alert, :invalid_calendar_event, payload}
+
+      assert payload.provider == :exchange
+      assert payload.event_uid == "040000008200E00074C5B7101A82E008"
+      assert payload.calendar_integration_id == 7
+      assert payload.reason
+
+      refute payload |> inspect() |> String.contains?("Standup")
+      refute payload |> inspect() |> String.contains?("Room 1")
+    end
+
+    test "raises no alert for a batch every item of which is usable" do
+      assert {:ok, [_event]} = EventNormaliser.normalise_events(items([@timed_item]), @context)
+
+      refute_receive {:send_alert, :invalid_calendar_event, _payload}
+    end
+
     test "skips an item carrying neither a UID nor an item id" do
       item = """
       <t:CalendarItem>
@@ -284,6 +374,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert capture_log(fn ->
                assert {:ok, []} = EventNormaliser.normalise_events(items([item]), @context)
              end) =~ "Skipping unusable Exchange calendar item"
+
+      assert_receive {:send_alert, :invalid_calendar_event, _payload}
     end
   end
 
