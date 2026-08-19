@@ -42,12 +42,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       alias TymeslotWeb.Themes.Shared.BookingFlow
       alias TymeslotWeb.Themes.Shared.GuestBooking
 
+      alias TymeslotWeb.Components.MeetingUtils
+
       alias TymeslotWeb.Themes.Shared.{
         EventHandlers,
         InfoHandlers,
         LiveHelpers,
         PathHandlers,
-        SchedulingInit
+        SchedulingInit,
+        SlotGrouping
       }
 
       alias TymeslotWeb.Themes.Shared.StateMachineHelpers, as: StateMachine
@@ -199,6 +202,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           event in [:select_date, :select_time] ->
             handle_schedule_selection_events(socket, event, data)
 
+          event == :toggle_hour ->
+            handle_toggle_hour(socket, data)
+
           event in [
             :change_timezone,
             :search_timezone,
@@ -227,6 +233,29 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             new_time = if socket.assigns[:selected_time] == data, do: nil, else: data
             {:noreply, assign(socket, :selected_time, new_time)}
         end
+      end
+
+      # `expanded_hour` holds three states, not two: nil means "not chosen, so
+      # open the earliest hour", an integer means that hour, and :none means the
+      # booker closed it and it must stay closed until they choose again.
+      defp handle_toggle_hour(socket, hour) do
+        grouping =
+          SlotGrouping.group(
+            MeetingUtils.normalize_slot_list(socket.assigns[:available_slots] || []),
+            socket.assigns[:slot_interval_minutes],
+            socket.assigns[:duration_minutes]
+          )
+
+        current = SlotGrouping.effective_expanded_hour(socket.assigns[:expanded_hour], grouping)
+
+        next =
+          case Integer.parse(hour) do
+            {^current, ""} -> :none
+            {requested, ""} -> requested
+            _unparsable -> socket.assigns[:expanded_hour]
+          end
+
+        {:noreply, assign(socket, :expanded_hour, next)}
       end
 
       defp handle_timezone_events(socket, event, data) do

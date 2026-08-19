@@ -76,6 +76,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
         socket =
           socket
           |> assign(:available_slots, slots)
+          |> assign(:expanded_hour, nil)
+          |> assign(:slot_interval_minutes, slot_interval_minutes(socket))
+          |> assign(:duration_minutes, AvailabilityHelpers.duration_minutes(socket))
           |> assign(:loading_slots, false)
           |> assign(:calendar_error, nil)
 
@@ -88,6 +91,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
         socket =
           socket
           |> assign(:available_slots, [])
+          |> assign(:expanded_hour, nil)
+          |> assign(:slot_interval_minutes, slot_interval_minutes(socket))
+          |> assign(:duration_minutes, AvailabilityHelpers.duration_minutes(socket))
           |> assign(:loading_slots, false)
           |> assign(
             :calendar_error,
@@ -154,5 +160,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
       |> assign(:calendar_error, nil)
 
     {:ok, socket}
+  end
+
+  # The interval belongs to the resolved meeting type; an ad-hoc booking with no
+  # resolved type has none, and nil correctly means "use the meeting length".
+  defp slot_interval_minutes(socket) do
+    case socket.assigns[:meeting_type] do
+      %{slot_interval_minutes: minutes} -> minutes
+      _unresolved -> nil
+    end
   end
 end

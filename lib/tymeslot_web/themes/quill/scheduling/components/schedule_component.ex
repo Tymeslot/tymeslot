@@ -34,6 +34,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_hour", %{"hour" => hour}, socket) do
+    send(self(), {:step_event, :schedule, :toggle_hour, hour})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("change_timezone", %{"timezone" => timezone}, socket) do
     send(self(), {:step_event, :schedule, :change_timezone, timezone})
     {:noreply, socket}
