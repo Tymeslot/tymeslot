@@ -1,7 +1,23 @@
 defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
   @moduledoc """
-  Reports a single occurrence of a mirrored series that has been dragged to a
-  different time, and enqueues the rewrite that puts the block where it went.
+  Reports a single occurrence of a mirrored series that is no longer at the time
+  the rule places it — dragged elsewhere, or cancelled outright — and enqueues
+  the rewrite that corrects the placeholder.
+
+  ## Why one module answers for both
+
+  A move and a cancellation are one condition seen twice: the placeholder is
+  still expanding an occurrence that is not there. They are detected in the same
+  pass, over the same uncollapsed batch, from the same per-instance marker, and
+  they are corrected by the same `EXDATE` on the same placeholder. Splitting
+  them into two modules would state that once each and let the two drift, and a
+  series carrying both at once — which the live calendar this was built against
+  does — would then be assembled from two lists by every caller.
+
+  What separates them is one field of the description: a `new_start` instant
+  means the occurrence moved there, and `nil` means it is gone. `MoveCorrection`
+  renders the first as an `EXDATE`/`RDATE` pair and the second as a lone
+  `EXDATE`.
 
   ## What is broken, in both directions
 
@@ -101,6 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
   alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Capability
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteBack
+  alias Tymeslot.Integrations.Calendar.SyncLink.WriteBackQueries
 
   @kind "occurrence_moved"
 
@@ -135,7 +152,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
 
       series_links ->
         calendar_events
-        |> Enum.filter(&moved?/1)
+        |> Enum.filter(&diverged?/1)
         |> Enum.group_by(&series_key/1)
         |> Enum.each(fn {{uid, recurring_event_id}, moved} ->
           Enum.each(series_links, &record(&1, uid, recurring_event_id, moved))
@@ -159,6 +176,37 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
   # link whose capability is unknown. Silence is the safe reading: the write
   # path loads the association, so this is a caller that never wrote anything.
   defp mirrors_series?(_link), do: false
+
+  # The two ways an occurrence stops being at its scheduled time, asked as one
+  # question because they have one consequence: a placeholder still expanding an
+  # occurrence that is no longer there.
+  #
+  # They are separate predicates rather than a single loosened one because they
+  # are separately true. A cancelled occurrence carries `start_at ==
+  # original_start_at` — measured on the live API — so `moved?/1` answers false
+  # for it, correctly: nothing moved. Relaxing `moved?/1` to catch it would make
+  # it report every unmoved occurrence of every series as a move, which is the
+  # opposite failure and a far noisier one.
+  defp diverged?(event), do: cancelled?(event) or moved?(event)
+
+  # A cancellation is read from the status, which the normaliser already maps
+  # (`google/event_normaliser.ex:106`), and gated on the occurrence naming a
+  # series. A cancelled *one-off* event is not this: it is an ordinary deletion,
+  # already handled by `Sync.reconcile_deletions/3`, which withdraws the whole
+  # placeholder. Excepting an instant out of a series that does not exist would
+  # write an EXDATE against no RRULE.
+  #
+  # `original_start_at` is required rather than falling back to `start_at`
+  # because it is the instant the *rule* places the occurrence at, and that is
+  # what an EXDATE has to name. For a cancellation the two are equal in every
+  # live body measured, but an occurrence that was moved and then cancelled has
+  # a `start_at` at the moved time and a rule that still expands the original —
+  # excepting the moved instant would leave the original slot blocked forever.
+  defp cancelled?(%{status: :cancelled, recurring_event_id: id, original_start_at: original})
+       when is_binary(id) and not is_nil(original),
+       do: true
+
+  defp cancelled?(_event), do: false
 
   # A move is the marker differing from the start it was compared against —
   # never merely its presence. Google stamps `originalStartTime` on every
@@ -211,7 +259,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
     # second sighting would leave a correction unmade whenever the first
     # enqueue was lost — which is exactly what a plain enqueue arriving after
     # it does. Re-sending is cheap and idempotent; not sending is neither.
-    WriteBack.enqueue(link.id, uid, :upsert, moved: detail["occurrences"])
+    WriteBack.enqueue(link.id, uid, :upsert,
+      moved: carry_forward_cancellations(link.id, uid, detail["occurrences"])
+    )
 
     if already_recorded?(link.id, uid, detail) do
       :ok
@@ -220,10 +270,56 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MovedOccurrence do
     end
   end
 
+  # A cancellation detected on an earlier sync is carried onto this enqueue, and
+  # a move is not.
+  #
+  # The two differ in whether they can be re-detected. A moved occurrence keeps
+  # carrying its `originalStartTime` on every delta that contains it, so the
+  # freshest detection is the current truth and an older one must not outlive
+  # it — an organiser who drags an occurrence back gets a correction that
+  # disappears, which is exactly what `WriteBack`'s "fresh moves win" rule
+  # protects. A cancelled occurrence is reported by Google **once**. It cannot
+  # be re-detected, so dropping it here loses it permanently, and the second
+  # cancellation of a series would silently un-cancel the first.
+  #
+  # So cancellations accumulate across syncs and moves do not. They are keyed by
+  # the instant they except, so re-detecting the same cancellation twice is one
+  # entry rather than two, and a fresh entry for an instant always wins over a
+  # carried one.
+  defp carry_forward_cancellations(sync_link_id, uid, fresh) do
+    case WriteBackQueries.pending_moves(sync_link_id, uid) do
+      nil ->
+        fresh
+
+      pending when is_list(pending) ->
+        fresh_instants = MapSet.new(fresh, &Map.get(&1, "original_start"))
+
+        pending
+        |> Enum.filter(&cancellation?/1)
+        |> Enum.reject(&MapSet.member?(fresh_instants, Map.get(&1, "original_start")))
+        |> Enum.concat(fresh)
+        |> Enum.sort_by(&Map.get(&1, "original_start"))
+    end
+  end
+
+  defp cancellation?(%{"new_start" => nil}), do: true
+  defp cancellation?(_entry), do: false
+
   # Both sides as ISO 8601 strings, because `detail` is serialised to JSONB and
   # a `DateTime` would round-trip as a string anyway — doing it here means the
   # stored form is the one the dedup below compares, rather than two encodings
   # of the same instant failing to match.
+  # A cancellation has an instant to free and none to block, so `new_start` is
+  # `nil` — the shape `MoveCorrection` renders as a lone EXDATE. It is matched
+  # before the move clauses because a cancelled occurrence carries a perfectly
+  # readable `start_at`, and describing it as a move to that instant would emit
+  # an RDATE re-blocking the slot the cancellation just freed.
+  defp describe(%{status: :cancelled, all_day: true, original_start_at: original}),
+    do: %{original_start: Date.to_iso8601(original), new_start: nil}
+
+  defp describe(%{status: :cancelled, original_start_at: original}),
+    do: %{original_start: DateTime.to_iso8601(original), new_start: nil}
+
   defp describe(%{all_day: true, original_start_at: original, start_date: now}),
     do: %{original_start: Date.to_iso8601(original), new_start: Date.to_iso8601(now)}
 

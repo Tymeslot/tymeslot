@@ -32,6 +32,35 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   It holds a `DateTime` for a timed occurrence and a `Date` for an all-day one,
   matching whichever of `start_at`/`start_date` the same event fills, because
   the only question ever asked of it is whether it differs from that start.
+
+  ## Why a cancellation tombstone is one of these, and what `tombstone?` buys
+
+  Google reports a cancelled occurrence of a recurring series as a minimal
+  delta entry: an `id`, a `status`, a `recurringEventId`, an
+  `originalStartTime`, and nothing else — no `iCalUID`, no `start`, no `end`.
+  It is a statement that an occurrence is gone, not a description of an event,
+  and it is the **only** report Google ever makes of that cancellation.
+
+  Modelling it as its own type was considered and rejected. The one consumer,
+  `SyncLink.MovedOccurrence`, reads a cancellation and a move through the same
+  predicates over the same batch, because they are one condition seen twice —
+  a placeholder still expanding an occurrence that is not there. A separate
+  type would force that module to take two lists and re-state each predicate
+  against both shapes, and `Sync.post_commit_reconciliation/2` to thread a
+  second collection through every caller including the CalDAV reconciler. The
+  tombstone is therefore a `CalendarEvent` whose timing fields are legitimately
+  empty, and `validate_timing/1` excepts exactly that case rather than
+  loosening for everything.
+
+  `tombstone?/1` exists because the cache must never see one. A tombstone
+  carries the *series* uid, and `upsert_batch/1` deduplicates on
+  `{calendar_integration_id, uid}` keeping the last — so a tombstone reaching
+  the cache would overwrite the series row with `status: :cancelled` and nil
+  timing, destroying the row the placeholder is built from and taking every
+  still-scheduled occurrence with it. That is a worse failure than the one this
+  whole path exists to fix. `Sync.upsert_cache/2` filters on this flag, which
+  puts the guarantee at the single seam every provider's cache write already
+  funnels through rather than in each caller.
   """
 
   @type t :: %__MODULE__{
@@ -69,7 +98,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
           provider_updated_at: DateTime.t() | nil,
           provider_metadata: map(),
           raw_ical: String.t() | nil,
-          created_by_tymeslot: boolean()
+          created_by_tymeslot: boolean(),
+          tombstone?: boolean()
         }
 
   @enforce_keys [
@@ -116,7 +146,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
     links: [],
     reminders: [],
     provider_metadata: %{},
-    created_by_tymeslot: false
+    created_by_tymeslot: false,
+    tombstone?: false
   ]
 
   @spec new(map()) :: {:ok, t()} | {:error, String.t()}
@@ -151,6 +182,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   def blocking?(%{status: status}) when status in ["cancelled", "declined"], do: false
   def blocking?(%{transparency: "transparent"}), do: false
   def blocking?(%{}), do: true
+
+  @doc """
+  Returns `true` for a cancellation tombstone — an occurrence a provider has
+  reported as gone, carrying no timing of its own.
+
+  Read by `Sync.upsert_cache/2` to keep tombstones out of the cache. A
+  tombstone carries the *series* uid, so persisting one would overwrite the
+  series row and take every still-scheduled occurrence with it; see the
+  moduledoc.
+  """
+  @spec tombstone?(t()) :: boolean()
+  def tombstone?(%__MODULE__{tombstone?: true}), do: true
+  def tombstone?(%__MODULE__{}), do: false
 
   # --- Validation helpers ---
 
@@ -189,6 +233,43 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   # here rather than failing the whole batch insert further down. Each provider
   # already skips events this refuses, so one malformed event costs that event
   # instead of the entire calendar's sync.
+  # A cancellation tombstone has no timing to validate, and that is the shape
+  # the provider sends rather than a defect in it. Google reports a cancelled
+  # occurrence of a series as `id` + `status` + `recurringEventId` +
+  # `originalStartTime` and nothing more, so demanding a start here rejected the
+  # only notice of the cancellation Google ever gives — and, because the
+  # normaliser treats a rejection as a malformed event, raised an admin alert
+  # for an ordinary cancellation every time one happened.
+  #
+  # The exception is deliberately narrow: it requires the flag, the cancelled
+  # status, the series it excepts an instant out of, and the instant itself.
+  # `original_start_at` is what an EXDATE has to name, so a tombstone without
+  # one describes no correction and is still refused. Both timing pairs must be
+  # empty — a tombstone that somehow carried a start would reach the cache
+  # filter as an event-shaped row, and the flag alone would then be the only
+  # thing keeping it out.
+  defp validate_timing(
+         %{
+           tombstone?: true,
+           status: :cancelled,
+           recurring_event_id: id,
+           original_start_at: original
+         } = attrs
+       )
+       when is_binary(id) and id != "" and not is_nil(original) do
+    if attrs[:start_at] != nil or attrs[:end_at] != nil or attrs[:start_date] != nil or
+         attrs[:end_date] != nil do
+      {:error, "cancellation tombstones must not carry timing"}
+    else
+      :ok
+    end
+  end
+
+  defp validate_timing(%{tombstone?: true}),
+    do:
+      {:error,
+       "a cancellation tombstone requires :cancelled status, a recurring_event_id and an original_start_at"}
+
   defp validate_timing(%{all_day: true, start_date: %Date{}, end_date: %Date{}} = attrs) do
     if attrs[:start_at] != nil or attrs[:end_at] != nil do
       {:error, "all-day events must not have start_at or end_at"}
@@ -224,5 +305,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
     |> Map.put_new(:reminders, [])
     |> Map.put_new(:provider_metadata, %{})
     |> Map.put_new(:created_by_tymeslot, false)
+    |> Map.put_new(:tombstone?, false)
   end
 end

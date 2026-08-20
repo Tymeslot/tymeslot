@@ -62,6 +62,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   stripped. UUIDs may contain hyphens — those are stripped too. The result
   must be 5-1024 characters of lowercase a-v and 0-9 (base32hex). When the
   input does not satisfy that constraint a SHA-256 hash is used as fallback.
+
+  An id Google itself minted is returned unchanged; see
+  `provider_event_id?/1` for which shapes count and why.
   """
   @spec uuid_to_google_event_id(String.t()) :: String.t()
   def uuid_to_google_event_id(uid) when is_binary(uid) do
@@ -75,26 +78,72 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
       |> String.replace("-", "")
       |> String.downcase()
 
-    if String.match?(base, ~r/^[a-v0-9]{5,1024}$/) do
-      base
-    else
-      # Input is not a valid base32hex ID (e.g. arbitrary string UID) —
-      # hash the FULL uid to produce a deterministic, valid Google event ID.
-      #
-      # `hex_encode32/2`, not `encode32/2`. Standard base32 is a-z and 2-7;
-      # base32hex — the alphabet Google's event ids actually require — is a-v
-      # and 0-9. The two differ in exactly the characters that make an id
-      # invalid, so the fallback that exists to guarantee validity was emitting
-      # w, x, y and z and Google answered "Invalid resource id value" with a
-      # 400. At 32 characters nearly every hash contains one.
-      :sha256
-      |> :crypto.hash(uid)
-      |> Base.hex_encode32(case: :lower, padding: false)
-      |> String.slice(0, 32)
+    cond do
+      String.match?(base, ~r/^[a-v0-9]{5,1024}$/) ->
+        base
+
+      provider_event_id?(local_part(uid)) ->
+        local_part(uid)
+
+      true ->
+        # Input is not a valid base32hex ID (e.g. arbitrary string UID) —
+        # hash the FULL uid to produce a deterministic, valid Google event ID.
+        #
+        # `hex_encode32/2`, not `encode32/2`. Standard base32 is a-z and 2-7;
+        # base32hex — the alphabet Google's event ids actually require — is a-v
+        # and 0-9. The two differ in exactly the characters that make an id
+        # invalid, so the fallback that exists to guarantee validity was emitting
+        # w, x, y and z and Google answered "Invalid resource id value" with a
+        # 400. At 32 characters nearly every hash contains one.
+        :sha256
+        |> :crypto.hash(uid)
+        |> Base.hex_encode32(case: :lower, padding: false)
+        |> String.slice(0, 32)
     end
   end
 
+  @doc """
+  Whether this is an id Google minted rather than a UID Tymeslot did.
+
+  One occurrence of a recurring series is addressed by an *instance id*:
+  `{masterId}_{YYYYMMDD}T{HHMMSS}Z`. That is what `list_events/4` returns for
+  the occurrence, so it is the id every caller holds when it wants to write to
+  one — and it is not base32hex, because the underscore, the `T` and the `Z`
+  all sit outside `a-v0-9`.
+
+  Without this the hash fallback swallowed it. The real instance
+  `56km0ibouqobmlmh3g5ptdmp28_20260904T140000Z` became
+  `3k00t2b8doud77raa00g0mapusod4t7o`, and the DELETE addressed an id that has
+  never existed: Google answered 404 for an occurrence plainly visible in the
+  calendar, and on a mirrored series a cancelled occurrence was never withdrawn
+  from the target, going on blocking a slot nobody could book.
+
+  The rule is stated here once rather than at each write path, because the two
+  kinds of id are told apart by what they *are*, not by which call is about to
+  use one. `get_event/3` reached the same conclusion the other way — by opting
+  out of conversion entirely — and its exemption is now this rule's special
+  case rather than a second, separate one.
+
+  Deliberately a whole-string match on the instance shape, not a test for
+  "contains characters outside base32hex". Every UID Tymeslot mints is outside
+  that alphabet too — `Engine.target_uid_for/2` yields
+  `tymeslot-mirror-<digest>`, whose hyphens fail the fast path — and those
+  genuinely need converting. A wider exemption would send our own placeholder
+  UIDs to Google verbatim, which is the create path breaking rather than the
+  delete path fixed.
+  """
+  @spec provider_event_id?(String.t()) :: boolean()
+  def provider_event_id?(id) when is_binary(id) do
+    String.match?(id, ~r/^[a-v0-9]{5,1024}_\d{8}T\d{6}Z$/)
+  end
+
+  def provider_event_id?(_other), do: false
+
   # --- Private helpers ---
+
+  # Google mints an iCalUID as `{id}@google.com`, so the cached form of an
+  # instance carries the suffix while the id the write must address does not.
+  defp local_part(uid), do: uid |> String.split("@") |> hd()
 
   defp extract_event_fields(event_data) do
     timezone = get_field_value(event_data, :timezone)

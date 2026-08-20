@@ -69,6 +69,26 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
     `fetch_series/2` some other way, and for the same reason as the clause
     above: a skip reports that better than a raise.
 
+  ## The one answer that is not a skip: a deleted series
+
+  A master whose series has been deleted does **not** fail the fetch. Measured
+  on the live API: Google answers `get_event` for a deleted master with a full
+  body, `recurrence` array intact, and only `status` changed to `"cancelled"`.
+  The fetch succeeds, the rule reads fine, and the mirror is rewritten from a
+  series that no longer exists — which is how a deleted series' placeholder went
+  on blocking availability indefinitely.
+
+  That case answers `:series_deleted`, and it is deliberately not a skip. A skip
+  means "no placeholder this pass" and leaves the existing one standing for the
+  sweep to retry; a deleted series means the placeholder must come down. The
+  caller turns it into a withdrawal.
+
+  The check reads Google's `status` and therefore lives in the Google-side
+  reader. Graph spells the same fact as a boolean `isCancelled` and has no
+  `status` key, so a check hoisted into `resolve/2` would read `nil` for every
+  Outlook master and never fire; the CalDAV family expands series locally, never
+  sets `recurring_event_id`, and so never reaches this module at all.
+
   ## The request cost
 
   One `get_event/3` per recurring series per change — not one per occurrence,
@@ -181,8 +201,18 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
   `exceptions` holds the master's EXDATE lines verbatim — whole iCalendar
   property lines, keeping whichever `TZID` or `VALUE=DATE` parameter the master
   wrote, because the instant an occurrence was cancelled at is in those
-  parameters. They are written onto the placeholder alongside the rule, which is
-  what stops a cancelled occurrence from going on blocking its slot.
+  parameters. They are written onto the placeholder alongside the rule.
+
+  **This is not where a Google cancellation is found**, and believing it was
+  cost a live defect. Cancelling one occurrence through Google's own UI leaves
+  the master's `recurrence` array untouched: the series measured on the
+  organiser's calendar, with an occurrence genuinely cancelled, answered
+  `["RRULE:FREQ=WEEKLY;COUNT=5"]` and nothing else. Google records the
+  cancellation on the *instance* — a separate exception event carrying
+  `status: "cancelled"` — so this list is empty for exactly the case it was
+  thought to cover. A master imported from elsewhere may still carry EXDATEs,
+  which is why they are still forwarded; they are simply not what a cancellation
+  on Google produces. `SyncLink.MovedOccurrence` reads the instance instead.
 
   EXDATE only. `RDATE` adds occurrences the rule does not name and `EXRULE`
   removes a whole pattern; neither is a cancellation, and forwarding them
@@ -226,11 +256,12 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
 
   `:not_recurring` for an ordinary event, which is the common case and costs no
   request. `{:ok, series}` when the master was fetched and carries a rule.
-  `{:skip, reason}` in every other case — see the moduledoc for why the cached
-  rule is never the fallback.
+  `:series_deleted` when the master was fetched and says the series is gone —
+  a withdrawal, not a skip; see the moduledoc. `{:skip, reason}` in every other
+  case — see the moduledoc for why the cached rule is never the fallback.
   """
   @spec resolve(map(), CalendarIntegrationSchema.t() | any()) ::
-          :not_recurring | {:ok, series()} | {:skip, skip_reason()}
+          :not_recurring | {:ok, series()} | :series_deleted | {:skip, skip_reason()}
   def resolve(source, integration) do
     cond do
       not recurring?(source) ->
@@ -340,6 +371,41 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries do
   # at a single event — and is skipped rather than mirrored with an empty rule,
   # which would write a plain one-off block at the last occurrence's time: the
   # same wrong answer, arrived at by a different route.
+  # A deleted series answers this fetch rather than 404ing, and that is the
+  # whole reason the deletion went undetected for so long. Measured on the live
+  # API: deleting a `FREQ=WEEKLY;COUNT=3` master and then asking `get_event` for
+  # it returns a full 19-key body with its `recurrence` array **intact** and
+  # `status` flipped to `"cancelled"`. Nothing else changes — the rule, the
+  # timing and the iCalUID are all still there.
+  #
+  # So a cancelled master is indistinguishable from a live one to every reader
+  # that looks only at `recurrence`, which is what this function used to be, and
+  # the engine happily rewrote a placeholder from a series the organiser had
+  # deleted. The earlier reading of this defect assumed the fetch 404s and would
+  # have keyed a fix on `:master_fetch_failed`, a branch a deleted series never
+  # reaches; the status is the discriminator that actually fires, and it costs
+  # no extra call because the body is already here.
+  #
+  # It answers `:series_deleted` rather than a skip because the two mean
+  # opposite things to the caller. A skip is "no placeholder this pass", which
+  # leaves the existing one in place for the sweep to retry — exactly wrong for
+  # a series that is gone, whose placeholder must come down. See the moduledoc.
+  #
+  # This lives in the Google-side reader rather than in `resolve/2` because
+  # `status` is Google's spelling. Graph marks a cancelled event with a boolean
+  # `isCancelled` (`outlook/event_normaliser.ex:96`) and carries no `status`
+  # key at all, so a shared check would read `nil` for every Outlook master and
+  # silently never fire. The CalDAV family never arrives here: it expands series
+  # locally and never sets `recurring_event_id`, so `recurring?/1` refuses it
+  # first.
+  defp read_ical_recurrence(%{"status" => "cancelled"}, master_id) do
+    Logger.info("Series master reports the series deleted; withdrawing the mirror",
+      recurring_event_id: master_id
+    )
+
+    :series_deleted
+  end
+
   defp read_ical_recurrence(master, master_id) do
     lines = List.wrap(Map.get(master, "recurrence"))
 

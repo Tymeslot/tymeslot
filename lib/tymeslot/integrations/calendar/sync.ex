@@ -81,6 +81,9 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   Pure DB write — no broadcast, no meeting reconciliation. Safe to call
   inside a `Repo.transaction`; a rollback unwinds the upsert cleanly.
+
+  Cancellation tombstones are dropped here and never reach a row. See
+  `reject_tombstones/1` for why this is the seam that has to do it.
   """
   @spec upsert_cache(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
           {:ok, non_neg_integer()} | {:error, term()}
@@ -88,7 +91,11 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def upsert_cache(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
-    attrs_list = Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
+    attrs_list =
+      calendar_events
+      |> reject_tombstones()
+      |> Enum.map(&ProviderCalendarEventSchema.from_calendar_event/1)
+
     ProviderCalendarEventQueries.upsert_batch(attrs_list)
   rescue
     e ->
@@ -100,6 +107,28 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
       {:error, Exception.message(e)}
   end
+
+  # Detection must see a tombstone; the cache must never hold one. That split is
+  # the whole reason this function exists, and it is enforced here rather than
+  # asked of callers.
+  #
+  # `persist_normalised_events/2` hands the *same* list to `upsert_cache/2` and
+  # `post_commit_reconciliation/2`, because the second needs the uncollapsed
+  # batch the first collapses. A tombstone carries the **series** uid — that is
+  # what makes it reach the right mirror row — and `upsert_batch/1` deduplicates
+  # on `{calendar_integration_id, uid}` keeping the last entry. So a tombstone
+  # arriving after its siblings in one delta would overwrite the series' cache
+  # row with `status: :cancelled` and no timing at all, deleting the row the
+  # placeholder is expanded from and unblocking every occurrence still
+  # scheduled. That is a strictly worse failure than the stale block this path
+  # exists to clear.
+  #
+  # Filtering at the cache seam rather than at the call site covers every
+  # provider's write in one place — the CalDAV reconciler calls `upsert_cache/2`
+  # directly from inside its transaction — and leaves the detection side reading
+  # the full batch, which is the only place a per-instance marker still exists.
+  defp reject_tombstones(calendar_events),
+    do: Enum.reject(calendar_events, &CalendarEvent.tombstone?/1)
 
   @doc """
   Invalidates all cached availability data for a user after any sync mutation.
@@ -185,17 +214,51 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   # It is the loop-prevention input: an event on this calendar that is itself a
   # placeholder must not spawn another, and asking per event would issue a query
   # per synced event on every sync of every calendar.
+  #
+  # `mirror_uids_for_sync/1`, not `mirror_uids_for_integrations/1`: the latter
+  # is keyed on the mirror's *target*, so a placeholder that landed on the
+  # link's source — which is what a deauthorised target caused — matched
+  # nothing here and was mirrored again as though it were an ordinary event.
   defp enqueue_mirror_write_backs(_integration, _calendar_events, []), do: :ok
 
   defp enqueue_mirror_write_backs(integration, calendar_events, links) do
-    mirrors = CalendarSyncMirrorQueries.mirror_uids_for_integrations([integration.id])
-
-    calendar_events
-    |> Enum.filter(&Eligibility.worth_enqueueing?(&1, mirrors))
+    integration.id
+    |> filter_mirrorable(calendar_events)
     |> Enum.each(fn event ->
-      Enum.each(links, &WriteBack.enqueue(&1.id, event.uid, :upsert))
+      moved = preserve_corrections(event)
+      Enum.each(links, &WriteBack.enqueue(&1.id, event.uid, :upsert, moved))
     end)
   end
+
+  # A pending correction on a series has to be carried across this enqueue, and
+  # only a series pays for the lookup that does it.
+  #
+  # `WriteBack.enqueue/4` collapses onto a pending job by replacing its args
+  # wholesale, and this path enqueues a plain `upsert` for every event of every
+  # sync. A correction attached by `MovedOccurrence.report/2` is therefore
+  # destroyed by the next sync that touches the same series before the job runs.
+  #
+  # For a move that was survivable: the moved instance keeps carrying an
+  # `originalStartTime` differing from its `start`, so any delta containing it
+  # re-detects and re-attaches the correction. A **cancellation has no second
+  # chance**. Google reports a cancelled occurrence in exactly one delta and
+  # omits it from every later one, so once the args are replaced the EXDATE is
+  # gone permanently and the placeholder blocks the cleared slot forever.
+  # Measured live: the single write-back job that ran after a mid-series
+  # cancellation carried `moved = nil` and rewrote the placeholder to a bare
+  # rule.
+  #
+  # `:preserve` is the mechanism `SyncLinkReconcileWorker` and `Remirror`
+  # already use for precisely this reason. It was kept off this path because it
+  # costs a query per enqueue and this path runs per event per link on every
+  # sync. Gating it on the event naming a series keeps that argument intact —
+  # an ordinary event still pays nothing — while covering every event that can
+  # carry a correction, since only an occurrence of a series ever does.
+  defp preserve_corrections(%CalendarEvent{recurring_event_id: id})
+       when is_binary(id) and id != "",
+       do: [moved: :preserve]
+
+  defp preserve_corrections(_event), do: []
 
   defp maybe_reconcile_time_change(
          _integration,
@@ -237,6 +300,22 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       DateTime.truncate(meeting_start_time, :second),
       DateTime.truncate(event_start, :second)
     ) != :eq
+  end
+
+  @doc """
+  Drops the events on this calendar that are placeholders of our own.
+
+  Public because it is the only observable half of `enqueue_mirror_write_backs/3`
+  — the rest is an Oban insert — and the question it answers is the one that
+  went wrong: a placeholder redirected onto the link's *source* was invisible to
+  a set keyed on the mirror's target, so the source's next sync mirrored it
+  again.
+  """
+  @spec filter_mirrorable(integer(), [map()]) :: [map()]
+  def filter_mirrorable(integration_id, calendar_events) when is_integer(integration_id) do
+    mirrors = CalendarSyncMirrorQueries.mirror_uids_for_sync(integration_id)
+
+    Enum.filter(calendar_events, &Eligibility.worth_enqueueing?(&1, mirrors))
   end
 
   @doc """

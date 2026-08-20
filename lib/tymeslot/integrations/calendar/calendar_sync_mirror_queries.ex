@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
   """
   import Ecto.Query
 
+  alias Tymeslot.Integrations.Calendar.CalendarSyncLinkSchema
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId
   alias Tymeslot.Repo
@@ -76,6 +77,49 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncMirrorQueries do
     |> select([m], {m.target_integration_id, m.target_uid, m.target_provider_event_id})
     |> Repo.all()
     |> Enum.flat_map(&identifiers_for/1)
+    |> MapSet.new()
+  end
+
+  @doc """
+  The loop-prevention set for one calendar's inbound sync.
+
+  Unlike `mirror_uids_for_integrations/1`, which answers "which cached rows on
+  *these* calendars are placeholders" and is keyed on `target_integration_id`,
+  this answers the question the sync actually has: "is the event I just fetched
+  from this calendar one of ours?" Those differ whenever a placeholder is not on
+  the calendar it was written for.
+
+  That is not hypothetical. A mirror whose target had been deauthorised was
+  redirected by `BookingIntegrationResolver` onto the organiser's primary
+  calendar — the link's *source*. Keyed on the target, the source's own sync
+  found no match, read each placeholder as an ordinary event and mirrored it
+  again; one real event grew copies three generations deep inside two minutes.
+
+  So the rows are selected by the *link*, not by the mirror's target: every
+  placeholder belonging to a link that names this calendar at either end is
+  recognised, whichever end it ended up on. The set stays scoped to links this
+  calendar participates in, so one organiser's placeholders can never mask
+  another organiser's real events.
+
+  Keys are `{integration_id, identifier}` with `integration_id` fixed to the
+  calendar being synced, because that is the key
+  `Eligibility.already_a_mirror?/2` tests and the two must not drift.
+  """
+  @spec mirror_uids_for_sync(integer()) :: MapSet.t({integer(), String.t()})
+  def mirror_uids_for_sync(integration_id) when is_integer(integration_id) do
+    CalendarSyncMirrorSchema
+    |> join(:inner, [m], l in CalendarSyncLinkSchema, on: l.id == m.sync_link_id)
+    |> where(
+      [_m, l],
+      l.source_integration_id == ^integration_id or l.target_integration_id == ^integration_id
+    )
+    |> select([m], {m.target_uid, m.target_provider_event_id})
+    |> Repo.all()
+    |> Enum.flat_map(fn {target_uid, provider_event_id} ->
+      target_uid
+      |> ProviderEventId.cache_identities(provider_event_id)
+      |> Enum.map(&{integration_id, &1})
+    end)
     |> MapSet.new()
   end
 

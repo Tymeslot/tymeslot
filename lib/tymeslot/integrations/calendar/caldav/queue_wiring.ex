@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueueQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarManagement
 
@@ -61,7 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
          true <- caldav_provider?(integration),
          [_head | _tail] <- integration.calendar_paths do
       attrs = build_attrs(meeting, integration, action, event_data)
-      _result = ProviderCalendarEventQueries.upsert_queue_entry(attrs)
+      _result = ProviderCalendarEventQueueQueries.upsert_queue_entry(attrs)
 
       Logger.info("CalDAV queue wiring tagged cache row for offline retry",
         calendar_integration_id: integration_id,
@@ -89,7 +89,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   def clear(%{calendar_integration_id: nil}, _etag), do: :ok
 
   def clear(%{calendar_integration_id: integration_id, uid: uid}, etag) do
-    _result = ProviderCalendarEventQueries.mark_synced(integration_id, uid, etag)
+    _result = ProviderCalendarEventQueueQueries.mark_synced(integration_id, uid, etag)
     :ok
   end
 

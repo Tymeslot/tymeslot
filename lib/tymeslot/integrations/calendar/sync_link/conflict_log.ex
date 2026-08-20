@@ -107,10 +107,25 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
     last *inbound* sync fetched, which is the placeholder from *before* this
     write. Stamping it means the next pass compares our own change against a
     pre-change value and files the engine's write as a stranger's edit.
-  - **Falling back to timestamps.** Our write stamps `last_synced_at`; the
-    provider stamps `provider_updated_at` when it applies that same write,
-    necessarily later. "Changed after our write" is therefore true of our own
-    write as much as of a stranger's.
+  - **Falling back to timestamps *of the change*.** Our write stamps
+    `last_synced_at`; the provider stamps `provider_updated_at` when it applies
+    that same write, necessarily later. "Changed after our write" is therefore
+    true of our own write as much as of a stranger's. This was written down here
+    and then built anyway: `changed_after_write?/2` compared exactly that pair,
+    and every mirror pass inside the window below read the engine's own write as
+    an edit.
+
+  What does separate them is the timestamp of the *observation* rather than of
+  the change. The cached placeholder is only evidence about a state later than
+  our write if it was fetched later than our write, so the comparison is the
+  cache row's `synced_at` against the mapping's `updated_at` — see
+  `changed_after_write?/2`. The failure it closes is a loop, not a stray row:
+  the resolution for a divergence is to rewrite the placeholder, which mints a
+  new etag that the stale cache still does not match, so the next pass finds the
+  same divergence again. One live mirror wrote 40 `mirror_edited` rows in 17
+  seconds and stopped only when the target's inbound sync finally ran, half an
+  hour later — the rows show `target_etag_observed` frozen while
+  `target_etag_written` advanced, which is that loop's signature.
 
   `write_failed` and `occurrence_moved` never depended on a baseline and fire
   for every provider, unchanged.
@@ -369,11 +384,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
   # nothing to compare, and "changed" is not the safe reading of that.
   #
   # The second half is what keeps the engine's own write from looking like a
-  # direct edit. Writing the placeholder bumps its etag on the provider, so the
-  # target's next inbound sync caches an etag that differs from the one recorded
-  # at the previous write — through no organiser's doing. A change stamped no
-  # later than that write is therefore the write itself, and only one stamped
-  # after it is somebody else's edit.
+  # direct edit, and the question it has to answer is not "did the placeholder
+  # change after our write" but "have we *learned* anything about the
+  # placeholder since our write". Those come apart precisely in the window this
+  # guard exists for.
+
   # A divergence already recorded, and deliberately not recorded twice. The
   # engine stamps this after logging a delete race, because the race survives
   # into the retry — the placeholder's cached state does not change just because
@@ -414,16 +429,39 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictLog do
   defp etags_differ?(written, observed),
     do: EventProcessor.clean_etag(written) != EventProcessor.clean_etag(observed)
 
-  defp changed_after_write?(%{last_synced_at: %DateTime{} = written_at}, %{
-         provider_updated_at: %DateTime{} = observed_at
+  # The cached placeholder is an *observation*, and it is only evidence about a
+  # state later than our own write if it was fetched later than our own write.
+  # `synced_at` is when the target's inbound sync last learned anything about
+  # this placeholder; `updated_at` is when we last wrote the mapping. An
+  # observation older than our write describes the placeholder as it was
+  # *before* it, so an etag difference is our own un-synced write and nothing
+  # else — which is the whole of the defect this guard now closes.
+  #
+  # `provider_updated_at` cannot stand in for `synced_at`, and standing it in is
+  # what flooded the live installation. It records when the provider *applied* a
+  # change, and the provider applies our write moments after we record the row
+  # that issued it — measured at 10:01:30.311 against a mapping stamped
+  # 10:01:30.446, so our own write reads as "changed after our write" on the
+  # very next pass. That is the trap this module's moduledoc already names under
+  # "Falling back to timestamps"; the guard was written against the wrong half of
+  # it. The target then syncs on its own schedule, up to 30 minutes later, and
+  # for that whole window the cache holds the pre-write etag while every pass
+  # rewrites the placeholder and mints another — 40 rows in 17 seconds for one
+  # mirror, the observed etag frozen while the written one advanced.
+  #
+  # Stated once here rather than at each call site because `record_overwrite/2`
+  # and `record_delete_race/1` read the same observation through this predicate:
+  # `mirror_edited`, `both_changed` and `delete_race` all had the hole, and one
+  # statement is what keeps them from drifting into disagreeing about it.
+  defp changed_after_write?(%{updated_at: %DateTime{} = written_at}, %{
+         synced_at: %DateTime{} = observed_at
        }),
        do: DateTime.compare(observed_at, written_at) == :gt
 
-  # A target that reports no `provider_updated_at`, or a mapping written before
-  # the stamp existed, leaves the etag as the only signal there is. Suppressing
-  # the conflict there would mean such a provider never records one at all,
-  # which is a worse answer than the occasional row attributable to a write the
-  # engine made itself.
+  # `synced_at` is required on every cache row and the mapping's `updated_at` is
+  # a timestamp column, so neither is normally absent. Where one is — a row built
+  # in a test, or a mapping predating the column — the etag is the only signal
+  # there is, and suppressing the conflict would mean never recording one at all.
   defp changed_after_write?(_mirror, _placeholder), do: true
 
   # The source moved since the mapping was last written from it. Timestamps

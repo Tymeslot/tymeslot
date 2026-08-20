@@ -123,12 +123,21 @@ defmodule Tymeslot.Workers.SyncLinkWriteBackWorker do
   event could then run concurrently, racing to decide whether the placeholder
   survives, which is the thing uniqueness is here to prevent.
 
-  What remains is a write raised while another is executing being dropped rather
-  than deferred. That is a latency cost and not a lasting one:
-  `SyncLinkReconcileWorker` re-derives the same decision from the mapping rows
-  and the cache, so a delete lost this way is re-enqueued on the next sweep. A
-  placeholder outliving its event by one sweep is the accepted trade against two
-  writers on one placeholder.
+  What remains is a write raised while another is executing. Oban inserts
+  *nothing* in that case — it matches the executing job as the conflict, finds
+  no fields named for `:executing` in the `replace`, and returns the existing
+  row untouched — so the newer intent is dropped rather than deferred. That was
+  once written off here as a latency cost the reconcile sweep absorbs, and it is
+  not: the sweep re-derives a `delete` from state and so does recover one, but a
+  **cancellation correction cannot be re-derived from anything**. Google reports
+  a cancelled occurrence in exactly one delta, and the sweep's `moved: :preserve`
+  reads pending jobs — of which, after the drop, there are none carrying it.
+
+  So the enqueue site answers the executing conflict instead of accepting it:
+  `WriteBack` re-inserts the intent with `unique: false`, scheduled past the
+  running job. Uniqueness still admits one writer at a time, and nothing is
+  lost. See `WriteBack`'s moduledoc for why bypassing uniqueness is safe in
+  exactly that one place.
   """
   use Oban.Worker,
     queue: :calendar_events,

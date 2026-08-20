@@ -321,9 +321,25 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   # Best-effort: normalise all events via the provider, then delegate to
   # the shared persistence pipeline in `Sync`. Cancelled events are handled
   # separately — they are deleted from the cache and reconciled as deletions.
+  #
+  # A cancelled *occurrence* of a recurring series is deliberately not one of
+  # them, and the distinction is `recurringEventId`. Under `singleEvents=true`
+  # every occurrence shares the master's `iCalUID`, and the deletion path
+  # withdraws by uid — so routing a cancelled occurrence there deleted the
+  # series' only cache row and enqueued a withdrawal of the entire placeholder,
+  # removing every occurrence still happening in order to free the one that is
+  # not. Measured on a live calendar: cancelling one of five occurrences left
+  # the other four unmirrored.
+  #
+  # What it needs instead is an EXDATE at its own instant, which is a property
+  # of the occurrence rather than of the series, and is therefore read where
+  # per-instance markers still exist — `Sync.post_commit_reconciliation/2`, over
+  # the uncollapsed batch, by `SyncLink.MovedOccurrence`. So it stays with the
+  # active events and is normalised: the normaliser already maps `"cancelled"`
+  # to `:cancelled`, and `CalendarEvent.blocking?/1` already reads that status,
+  # so the cached row stops blocking availability without being removed.
   defp safe_process_events(integration, raw_events, calendar_id \\ nil) do
-    {cancelled, active} =
-      Enum.split_with(raw_events, fn event -> event["status"] == "cancelled" end)
+    {cancelled, active} = Enum.split_with(raw_events, &withdrawn?/1)
 
     Enum.each(cancelled, &process_cancelled_event(integration, &1))
 
@@ -344,6 +360,14 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       synced_at: DateTime.utc_now(:microsecond)
     }
   end
+
+  # A cancelled event that names no series is gone outright and is withdrawn. One
+  # that names a series is a single occurrence of something that still exists,
+  # and withdrawing it would take the rest of the series with it.
+  defp withdrawn?(%{"status" => "cancelled"} = event),
+    do: not is_binary(event["recurringEventId"])
+
+  defp withdrawn?(_event), do: false
 
   defp process_cancelled_event(integration, event) do
     Sync.reconcile_deletions(integration, [

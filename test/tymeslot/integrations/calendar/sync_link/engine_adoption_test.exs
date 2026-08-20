@@ -121,6 +121,46 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EngineAdoptionTest do
       refute Eligibility.worth_enqueueing?(cached_placeholder, mirrors)
     end
 
+    # The same placeholder, found on the link's *source* instead. It gets there
+    # when the target has lost its authorisation: `BookingIntegrationResolver`
+    # falls back to the organiser's primary calendar, so the write lands on the
+    # calendar the link reads from rather than the one it writes to.
+    #
+    # The set above cannot see it — `mirror_uids_for_integrations/1` is keyed on
+    # the mirror's target, which is correct for the calendar grid and the agenda
+    # and wrong for this question. The inbound sync therefore asks
+    # `mirror_uids_for_sync/1`, which selects by *link* and so covers both ends.
+    #
+    # Without this the source's own sync read each placeholder as a fresh event
+    # and mirrored it again, three generations inside two minutes on a live
+    # calendar. The test above passed throughout, because it built the event's
+    # integration and the mirror set from the same value.
+    test "a placeholder that landed on the link's source is recognised too", %{
+      user: user,
+      source: source,
+      link: link
+    } do
+      target_uid = Engine.target_uid_for(link.id, "source-uid-1")
+      google_id = EventMapper.uuid_to_google_event_id(target_uid)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _context ->
+        {:ok, %{uid: google_id}}
+      end)
+
+      assert :ok == Engine.mirror(link, source_event(source), user.id)
+
+      on_the_source = %{
+        calendar_integration_id: source.id,
+        uid: "#{google_id}@google.com"
+      }
+
+      refute Eligibility.worth_enqueueing?(
+               on_the_source,
+               CalendarSyncMirrorQueries.mirror_uids_for_sync(source.id)
+             ),
+             "a placeholder redirected onto the link's source was treated as a fresh event"
+    end
+
     # The constraint the fix must not break. The CalDAV family stores the UID it
     # is handed and answers a bare `:ok`, so there is no provider id to read
     # back — `target_uid` genuinely is the handle, and recording it is correct

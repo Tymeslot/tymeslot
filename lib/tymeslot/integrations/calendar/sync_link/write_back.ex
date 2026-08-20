@@ -28,6 +28,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.WriteBack do
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteBackQueries
   alias Tymeslot.Workers.SyncLinkWriteBackWorker
 
+  # Long enough that the job which caused the conflict has finished a provider
+  # round trip, short enough that a withdrawal is not visibly late. A mirror
+  # write is one create-or-update against Google or Outlook; the seconds-long
+  # tail belongs to the retry ladder, and a follow-up landing while the first
+  # job is still going merely conflicts again and defers again, which is the
+  # safe direction.
+  @defer_seconds 30
+
   @typedoc """
   `:upsert` covers both create and update — which one it is depends on whether a
   mapping row exists at the time the job runs, which the enqueue site cannot
@@ -55,8 +63,61 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.WriteBack do
   delete arriving while the upsert runs would vanish into it, the placeholder
   would be written for an event that no longer exists, and no pending job would
   remain to correct it. Naming only the states where a job has not yet started
-  leaves the delete to be inserted as its own job, which runs once the upsert
-  finishes.
+  leaves the running job alone.
+
+  ## Why the executing conflict needs its own insert
+
+  Leaving the running job alone is necessary and is not sufficient, and the
+  gap between those two was measured rather than reasoned about.
+
+  The worker's uniqueness window includes `:executing`, so an enqueue arriving
+  while a job runs *matches that job* as the conflict. Oban 2.23's
+  `Basic.resolve_conflict/4` then looks the job's state up in the `replace`
+  keyword — `Keyword.get(replace, :executing, [])` — finds nothing named, takes
+  no fields, and returns the existing row with `conflict?: true`. **Nothing is
+  inserted.** The newer intent is not deferred to a second job; it is dropped
+  on the floor, which is the opposite of what this moduledoc claimed before the
+  behaviour was put under test.
+
+  Two live consequences, both reproduced end to end through the ordinary sync
+  path in `WriteBackExecutingConflictTest`:
+
+  - a `delete` raised while an upsert runs vanishes, and the placeholder is
+    written for an event the organiser has already deleted;
+  - a **cancellation correction** raised while a plain upsert runs vanishes,
+    and this one is permanent. Google reports a cancelled occurrence in exactly
+    one delta, so nothing re-detects it, and the placeholder blocks the cleared
+    slot for as long as the series lives.
+
+  The obvious repair — dropping `:executing` from the uniqueness window so a
+  new job is simply inserted — is the one the worker's moduledoc already
+  refuses, and it is right to. Two jobs for one `{link, source event}` could
+  then run at once in a queue with ten slots, both find no mapping, and both
+  create a placeholder; `Engine`'s moduledoc documents that exact race and the
+  orphan compensation that only partly contains it.
+
+  So the conflict is answered rather than avoided. When the insert reports a
+  conflict against a job that is *executing*, the intent is re-inserted as its
+  own job, scheduled a short way out, under a uniqueness window narrowed to the
+  pending states.
+
+  Narrowing rather than disabling matters, and the difference was measured too.
+  `unique: false` preserves the intent and loses the collapsing: one sync
+  enqueues for the same pair twice — `MovedOccurrence.report/2` and then
+  `enqueue_mirror_write_backs/3` — so a cancellation sync landing mid-run left
+  *two* follow-ups, one carrying the correction and one not, and
+  `WriteBackQueries.pending_moves/2`' `limit(1)` then read whichever Postgres
+  returned first. Keeping the pending states in the window collapses the second
+  deferral onto the first and lets `replace` rewrite its args, which is the same
+  guarantee the ordinary path has: one pending job per pair, carrying the latest
+  intent.
+
+  Scheduling rather than making it available completes the argument. The
+  follow-up becomes runnable after the job that blocked it rather than beside
+  it, so one writer per placeholder still holds.
+
+  A conflict against any *pending* state needs none of this — `replace` names
+  those states, so the args were rewritten and the intent is already carried.
   """
   @spec enqueue(integer(), String.t(), operation(), keyword()) :: :ok
   def enqueue(sync_link_id, source_uid, operation, opts \\ [])
@@ -64,12 +125,15 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.WriteBack do
   def enqueue(sync_link_id, source_uid, operation, opts)
       when is_integer(sync_link_id) and is_binary(source_uid) and operation in [:upsert, :delete] and
              is_list(opts) do
-    %{
+    base = %{
       "sync_link_id" => sync_link_id,
       "source_uid" => source_uid,
       "operation" => Atom.to_string(operation)
     }
-    |> put_moves(sync_link_id, source_uid, Keyword.get(opts, :moved))
+
+    args = put_moves(base, sync_link_id, source_uid, Keyword.get(opts, :moved))
+
+    args
     |> SyncLinkWriteBackWorker.new(
       replace: [
         available: [:args],
@@ -78,10 +142,53 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.WriteBack do
       ]
     )
     |> Oban.insert()
+    |> defer_past_executing(args)
     |> log_enqueue_error(sync_link_id, source_uid)
 
     :ok
   end
+
+  # The executing conflict, answered rather than swallowed. See the moduledoc:
+  # Oban takes no fields for a state the `replace` does not name, so this insert
+  # wrote nothing at all and the intent would otherwise be gone.
+  #
+  # The follow-up narrows the uniqueness window to the *pending* states, and
+  # each half of that does one job:
+  #
+  # - dropping `:executing` is what lets the insert happen at all. The running
+  #   job is the only reason the ordinary insert conflicted, and it is precisely
+  #   the job this one is meant to follow.
+  # - keeping the pending states is what stops the deferrals piling up. One sync
+  #   enqueues for the same pair more than once — `MovedOccurrence.report/2` and
+  #   then `enqueue_mirror_write_backs/3` — and without this every one of them
+  #   would insert its own follow-up. They collapse onto the first instead, and
+  #   `replace` rewrites its args, so the single deferred job carries the latest
+  #   intent exactly as a pending job does on the ordinary path.
+  #
+  # Scheduling rather than making it available is the third half of the safety
+  # argument: the follow-up becomes runnable after the job that blocked it
+  # rather than beside it, so one writer per placeholder still holds.
+  #
+  # A conflict against a pending job is left alone: `replace` named that state,
+  # so the args carry the new intent already.
+  defp defer_past_executing({:ok, %Oban.Job{conflict?: true, state: "executing"}}, args) do
+    args
+    |> SyncLinkWriteBackWorker.new(
+      unique: [
+        keys: [:sync_link_id, :source_uid],
+        states: [:available, :scheduled, :retryable]
+      ],
+      replace: [
+        available: [:args],
+        scheduled: [:args],
+        retryable: [:args]
+      ],
+      schedule_in: @defer_seconds
+    )
+    |> Oban.insert()
+  end
+
+  defp defer_past_executing(result, _args), do: result
 
   # Moved occurrences travel on the job because they cannot be read at write
   # time: the cache keeps one row per series and the moved instance is collapsed

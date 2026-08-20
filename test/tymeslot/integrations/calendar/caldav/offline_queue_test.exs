@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueueQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
@@ -309,7 +309,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
       uids =
         integration.id
-        |> ProviderCalendarEventQueries.list_pending()
+        |> ProviderCalendarEventQueueQueries.list_pending()
         |> Enum.map(& &1.uid)
 
       assert uids == ["older", "newer"]
@@ -320,7 +320,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       row = insert_pending_row(integration, sync_state: "locally_modified", etag: "\"stale\"")
 
       assert {:ok, :updated} =
-               ProviderCalendarEventQueries.mark_synced(integration.id, row.uid, "\"fresh\"")
+               ProviderCalendarEventQueueQueries.mark_synced(integration.id, row.uid, "\"fresh\"")
 
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "synced"
@@ -334,7 +334,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       row = insert_pending_row(integration, sync_state: "locally_modified")
 
       assert :ok =
-               ProviderCalendarEventQueries.mark_sync_failed(
+               ProviderCalendarEventQueueQueries.mark_sync_failed(
                  integration.id,
                  row.uid,
                  "502 Bad Gateway"
@@ -346,7 +346,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert after_first.sync_last_error == "502 Bad Gateway"
 
       assert :ok =
-               ProviderCalendarEventQueries.mark_sync_failed(
+               ProviderCalendarEventQueueQueries.mark_sync_failed(
                  integration.id,
                  row.uid,
                  "503 Service Unavailable"
@@ -376,7 +376,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
         sync_state: "locally_created"
       }
 
-      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_queue_entry(base_attrs)
+      assert {:ok, 1} = ProviderCalendarEventQueueQueries.upsert_queue_entry(base_attrs)
 
       first =
         Repo.get_by!(ProviderCalendarEventSchema,
@@ -387,7 +387,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert first.sync_state == "locally_created"
 
       updated_attrs = Map.put(base_attrs, :sync_state, "locally_modified")
-      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_queue_entry(updated_attrs)
+      assert {:ok, 1} = ProviderCalendarEventQueueQueries.upsert_queue_entry(updated_attrs)
 
       second =
         Repo.get_by!(ProviderCalendarEventSchema,

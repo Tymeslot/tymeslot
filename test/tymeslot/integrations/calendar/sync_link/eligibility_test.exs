@@ -53,6 +53,32 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
              "a mirror living on a different integration must not disqualify this event"
     end
 
+    # The keying above is deliberate, and it is also the whole reason the caller
+    # has to hand this function the right set. A placeholder does not always sit
+    # on the calendar it was written for: when a link's target loses its
+    # authorisation, `BookingIntegrationResolver` substitutes the organiser's
+    # primary calendar and the placeholder lands on the link's *source*.
+    #
+    # Keyed on the mirror's target it matched nothing here, so the source's own
+    # sync read it as an ordinary event and mirrored it again — one real event
+    # grew copies three generations deep inside two minutes on a live calendar.
+    #
+    # This function is not the place that fixes it; `Sync.filter_mirrorable/2`
+    # is, by asking `mirror_uids_for_sync/1` for a link-scoped set. What is
+    # pinned here is the contract that makes that possible: given a set that
+    # *does* name the calendar the event was found on, the event is refused.
+    # Stated as its own test because every other case in this file builds both
+    # sides from `@integration_id`, so a mismatch could not be expressed at all.
+    test "a placeholder found on a calendar other than its target is still refused" do
+      placeholder_on_the_source = event(uid: "tymeslot-mirror-abc")
+
+      link_scoped_set = MapSet.new([{@integration_id, "tymeslot-mirror-abc"}])
+
+      refute Eligibility.mirror_source?(placeholder_on_the_source, link_scoped_set),
+             "a set naming the calendar the placeholder was found on must refuse it, " <>
+               "whichever calendar it was originally written for"
+    end
+
     test "a placeholder stays a leaf however many calendars mirror into its own" do
       # The link matrix lets one calendar receive from every other, so a
       # calendar can hold placeholders originating from four sources at once.
@@ -191,8 +217,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
     end
 
     # The target's capability never rescues an event refused for another
-    # reason. A recurring mirror is still a leaf; a recurring cancelled event
-    # still takes no time.
+    # reason. A recurring mirror is still a leaf, and a recurring transparent
+    # event still takes no time.
     test "a recurrence-capable pair does not override the other refusals" do
       recurring = [recurring_event_id: "master_abc123"]
 
@@ -204,14 +230,34 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.EligibilityTest do
              )
 
       refute Eligibility.mirror_source?(
-               event(recurring ++ [status: :cancelled]),
+               event(recurring ++ [transparency: :transparent]),
                MapSet.new(),
                "google",
                "google"
              )
+    end
 
+    # A cancelled row that names a series is one cancelled *occurrence*, not a
+    # cancelled series: the cache keeps one row per series and `upsert_batch/1`
+    # keeps the last entry, so the row reads `cancelled` as soon as the
+    # occurrence sorting last is. Refusing it withheld the write carrying the
+    # EXDATE that frees the cancelled slot, so the occurrence kept blocking its
+    # time because its own correction was declined — measured live on four
+    # cancelled occurrences of a running series.
+    test "a cancelled occurrence of a series is still a source, so its EXDATE can be written" do
+      assert Eligibility.mirror_source?(
+               event(recurring_event_id: "master_abc123", status: :cancelled),
+               MapSet.new(),
+               "google",
+               "google"
+             )
+    end
+
+    # The counterpart, and the reason this is a narrowing rather than a removal.
+    # An event naming no series is gone outright, and its placeholder must go.
+    test "a cancelled one-off is still refused" do
       refute Eligibility.mirror_source?(
-               event(recurring ++ [transparency: :transparent]),
+               event(status: :cancelled),
                MapSet.new(),
                "google",
                "google"

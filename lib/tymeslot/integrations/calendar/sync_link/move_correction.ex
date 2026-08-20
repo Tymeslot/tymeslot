@@ -12,7 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MoveCorrection do
   nothing at all covers the time it went to. `SyncLink.MovedOccurrence` reports
   that state; this is what repairs it.
 
-  ## Why a pair, and never one half
+  ## Why a pair, and never one half — for a move
 
   `EXDATE` at the original instant frees the slot the occurrence left. `RDATE`
   at the new instant blocks the slot it went to. Emitting only the first was
@@ -20,6 +20,24 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MoveCorrection do
   it removes the falsely-busy slot while leaving the genuinely-busy one
   bookable, which *widens* the double-booking window rather than closing it. So
   a move that cannot produce both lines produces neither.
+
+  ## Why a cancellation is the one correction that is a single line
+
+  A cancelled occurrence is expressed here as a `new_start` of `nil`, and it
+  renders an `EXDATE` with no `RDATE`. That is not the rejected half-correction
+  above: the rule that makes a lone EXDATE dangerous is that the meeting is
+  still happening *somewhere*, so freeing its old slot without blocking its new
+  one leaves a real meeting bookable over. A cancellation has no new slot. The
+  meeting is not happening at all, and an `RDATE` beside the `EXDATE` would
+  re-block the very time the organiser has just cleared — turning the fix into
+  a no-op that still reports success.
+
+  So the distinction the two carry is `new_start`: an instant means *moved
+  there*, `nil` means *gone*. Keeping them in one renderer rather than two
+  means the "these occurrences are no longer at their scheduled time" statement
+  is made once, and a series carrying both kinds at once — which the live
+  calendar this was measured on does — is one list rather than two that have to
+  be merged in the right order by every caller.
 
   ## Why this is not the expensive correction that was deferred
 
@@ -52,10 +70,16 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MoveCorrection do
   date-time for an all-day series writes the wrong kind of block.
   """
 
-  @typedoc "One move, as `SyncLink.MovedOccurrence` describes it."
+  @typedoc """
+  One correction, as `SyncLink.MovedOccurrence` describes it.
+
+  `new_start` is where the occurrence went, or `nil` when it was cancelled and
+  went nowhere. That single field is what separates the two, and it is why both
+  travel as one list.
+  """
   @type move :: %{
           original_start: DateTime.t() | Date.t(),
-          new_start: DateTime.t() | Date.t()
+          new_start: DateTime.t() | Date.t() | nil
         }
 
   @doc """
@@ -87,11 +111,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MoveCorrection do
   end
 
   @doc """
-  The `EXDATE`/`RDATE` pair for each move, in the order given.
+  The `EXDATE`/`RDATE` pair for each move, in the order given — or a lone
+  `EXDATE` for a cancellation, whose `new_start` is `nil`.
 
   A move whose two halves disagree in kind — a date against a date-time — is
   skipped rather than guessed at: there is no rendering that makes them a
-  matching pair, and half a correction is worse than none.
+  matching pair, and half a correction is worse than none. A `nil` `new_start`
+  is not such a disagreement; it is the cancellation case, and is rendered.
 
   `timezone` is the series' own. `nil` falls back to UTC rather than emitting a
   bare instant, which a provider is entitled to read in its own default zone.
@@ -110,6 +136,12 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.MoveCorrection do
 
         {%Date{} = original, %Date{} = new} ->
           ["EXDATE;VALUE=DATE:#{date(original)}", "RDATE;VALUE=DATE:#{date(new)}"]
+
+        {%DateTime{} = original, nil} ->
+          ["EXDATE;TZID=#{zone}:#{timed(original, zone)}"]
+
+        {%Date{} = original, nil} ->
+          ["EXDATE;VALUE=DATE:#{date(original)}"]
 
         _mismatched ->
           []

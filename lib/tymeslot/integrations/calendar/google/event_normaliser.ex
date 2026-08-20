@@ -19,6 +19,38 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
   predict. It is mapped to `original_start_at`, which lives on the in-flight
   struct and never reaches the cache; `CalendarEvent`'s moduledoc has the
   reasoning, and `SyncLink.MovedOccurrence` is what reads it.
+
+  ## The cancellation tombstone, and where its uid comes from
+
+  A cancelled occurrence arrives on the delta as six keys — `id`, `etag`,
+  `kind`, `status`, `recurringEventId`, `originalStartTime` — and nothing else.
+  No `start`, no `end`, and **no `iCalUID`**. It is the only report Google ever
+  makes of that cancellation: the occurrence is absent from every later delta.
+
+  That shape defeats the ordinary path twice over. The missing timing made
+  `CalendarEvent.new/1` reject it, so the cancellation was dropped and an admin
+  alert was raised for an event that was not malformed at all; a normal
+  cancellation is not an invalid event, and it is now excepted at both points.
+
+  The missing `iCalUID` is the subtler half. `uid` is normally
+  `raw["iCalUID"] || raw["id"]`, and for a tombstone that falls through to the
+  *instance* id — `{master}_{stamp}` — which nothing is keyed by: not the
+  series' cache row, not the mirror row, not the write-back job the correction
+  has to reach. The uid is therefore resolved from `recurringEventId` instead,
+  and the cache is asked first because it already holds the answer as fact:
+  every instance of the series shares one uid and collapses to one row carrying
+  both that uid and the master id.
+
+  Synthesising `"{recurringEventId}@google.com"` is the fallback, not the
+  primary, and the ordering is the whole point. The convention is real and
+  relied on elsewhere (`calendar_sync_mirror_queries.ex`, `provider_event_id.ex`,
+  `event_mapper.ex`), but it holds only for a series Google minted. An event
+  imported into Google keeps the foreign UID it arrived with, and synthesis
+  would then confidently produce a uid no row carries — a wrong answer where
+  the lookup would have given the right one. The lookup fails closed and the
+  synthesis guesses, so the guess only runs when there is nothing to fail
+  closed against: a series whose master has not been cached yet, where a
+  Google-minted id is also the overwhelmingly likelier case.
   """
 
   require Logger
@@ -26,6 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Timezones
 
   @spec normalise_events(list(map()), map()) :: {:ok, list(CalendarEvent.t())}
@@ -38,19 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
             [event | acc]
 
           {:error, reason} ->
-            Logger.warning("Skipping invalid Google calendar event",
-              reason: reason,
-              event_id: raw["id"],
-              calendar_integration_id: context.calendar_integration_id
-            )
-
-            AdminAlerts.send_alert(:invalid_calendar_event, %{
-              provider: :google,
-              event_id: raw["id"],
-              reason: reason,
-              calendar_integration_id: context.calendar_integration_id
-            })
-
+            skip(raw, reason, context)
             acc
         end
       end)
@@ -59,7 +80,95 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
     {:ok, events}
   end
 
+  # A tombstone is built from a different set of facts than an event, so it is
+  # assembled separately rather than by threading exceptions through the event
+  # path. It has no timing to parse, no timezone to read, no colour, no
+  # attendees — every one of those mappings would be reading keys the payload
+  # does not have — and its uid comes from the series rather than from itself.
   defp build_calendar_event(raw, context) do
+    if tombstone?(raw) do
+      build_tombstone(raw, context)
+    else
+      build_event(raw, context)
+    end
+  end
+
+  # The shape, stated as the delta states it: cancelled, naming a master, and
+  # carrying no `start`. The absent start is what separates a tombstone from a
+  # cancelled occurrence Google described in full — the latter is a complete
+  # event whose status happens to be cancelled, is cached as one, and is
+  # detected by `MovedOccurrence` through the ordinary path.
+  defp tombstone?(%{"status" => "cancelled"} = raw),
+    do: is_binary(raw["recurringEventId"]) and not Map.has_key?(raw, "start")
+
+  defp tombstone?(_raw), do: false
+
+  defp build_tombstone(raw, context) do
+    CalendarEvent.new(%{
+      uid: series_uid(raw, context),
+      provider: :google,
+      calendar_integration_id: context.calendar_integration_id,
+      provider_calendar_id: context.provider_calendar_id,
+      provider_event_id: raw["id"],
+      recurring_event_id: raw["recurringEventId"],
+      synced_at: context.synced_at,
+      status: :cancelled,
+      all_day: false,
+      original_start_at: parse_original_start(raw["originalStartTime"]),
+      etag: raw["etag"],
+      tombstone?: true
+    })
+  end
+
+  # Cache first, Google's convention second. The moduledoc has the reasoning:
+  # the lookup fails closed on a series that was cached under a foreign UID,
+  # where synthesis would answer confidently and wrongly.
+  defp series_uid(raw, context) do
+    master = raw["recurringEventId"]
+
+    case ProviderCalendarEventQueries.series_uid_for_master(
+           context.calendar_integration_id,
+           master
+         ) do
+      {:ok, uid} ->
+        uid
+
+      {:error, :not_found} ->
+        Logger.info("Synthesising a series uid for a cancellation tombstone",
+          recurring_event_id: master,
+          event_id: raw["id"],
+          calendar_integration_id: context.calendar_integration_id
+        )
+
+        "#{master}@google.com"
+    end
+  end
+
+  # A tombstone rejected by `CalendarEvent.new/1` is still not an admin alert.
+  # It reached here because the payload was cancelled, named a series and
+  # carried no start — a shape Google produces — so the failure is a missing
+  # `originalStartTime`, which is a provider oddity worth a log and not an
+  # operator page. Everything else keeps the alert it always had.
+  defp skip(raw, reason, context) do
+    Logger.warning("Skipping invalid Google calendar event",
+      reason: reason,
+      event_id: raw["id"],
+      calendar_integration_id: context.calendar_integration_id
+    )
+
+    unless tombstone?(raw) do
+      AdminAlerts.send_alert(:invalid_calendar_event, %{
+        provider: :google,
+        event_id: raw["id"],
+        reason: reason,
+        calendar_integration_id: context.calendar_integration_id
+      })
+    end
+
+    :ok
+  end
+
+  defp build_event(raw, context) do
     attrs =
       %{
         uid: raw["iCalUID"] || raw["id"],

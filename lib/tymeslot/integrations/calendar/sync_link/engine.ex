@@ -116,10 +116,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   alias Tymeslot.Integrations.Calendar.CalendarSyncMirrorSchema
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.SyncLink.ConflictLog
+  alias Tymeslot.Integrations.Calendar.SyncLink.DeletedSeries
+  alias Tymeslot.Integrations.Calendar.SyncLink.Eligibility
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorColour
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorPayload
   alias Tymeslot.Integrations.Calendar.SyncLink.MirrorRow
   alias Tymeslot.Integrations.Calendar.SyncLink.MoveCorrection
+  alias Tymeslot.Integrations.Calendar.SyncLink.OrphanCompensation
   alias Tymeslot.Integrations.Calendar.SyncLink.ProviderEventId
   alias Tymeslot.Integrations.Calendar.SyncLink.RecurringSeries
   alias Tymeslot.Integrations.Calendar.SyncLink.WriteEtag
@@ -170,6 +173,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   @spec mirror(CalendarSyncLinkSchema.t(), map(), integer(), opts()) :: result()
   def mirror(%CalendarSyncLinkSchema{} = link, source_event, user_id, opts \\ [])
       when is_integer(user_id) and is_list(opts) do
+    if Eligibility.target_writable?(link, user_id) do
+      do_mirror(link, source_event, user_id, opts)
+    else
+      {:discard, :target_unavailable}
+    end
+  end
+
+  defp do_mirror(link, source_event, user_id, opts) do
     source_uid = source_event.uid
     target_uid = target_uid_for(link.id, source_uid)
     final? = final_attempt?(opts)
@@ -177,6 +188,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
     case resolve_series(link, source_event, opts) do
       {:ok, series_opts} ->
         write(link, source_event, source_uid, target_uid, user_id, final?, series_opts)
+
+      # The series is gone: the placeholder comes down rather than being
+      # rewritten, and the source's cache row goes with it. See
+      # `SyncLink.DeletedSeries`.
+      :series_deleted ->
+        DeletedSeries.retire(link.source_integration_id, source_uid, fn ->
+          unmirror(link, source_uid, user_id, opts)
+        end)
 
       {:discard, reason} ->
         {:discard, reason}
@@ -210,11 +229,12 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
   # sweep is the retry, and the alternative to waiting for it is writing a block
   # at the wrong date.
   #
-  # The master's EXDATE lines travel with its rule and are written onto the
-  # placeholder, so a cancelled occurrence stops blocking time rather than being
-  # recorded as a gap. A *moved* occurrence still diverges and still cannot be
-  # seen from here — the cache holds one row per series, so the new time is not
-  # in it — which is why nothing is logged in its name; see `ConflictLog`.
+  # The master's EXDATE lines travel with its rule onto the placeholder. That
+  # covers a master carrying them, not a cancellation made through Google, which
+  # leaves the rule untouched and marks the *instance* — see `RecurringSeries`.
+  # A cancelled and a moved occurrence are both invisible from here, the cache
+  # holding one row per series, so both arrive on `opts[:moved]` from
+  # `SyncLink.MovedOccurrence` and are rendered by `MoveCorrection`.
   defp resolve_series(link, source_event, opts) do
     case RecurringSeries.resolve(source_event, link.source_integration) do
       :not_recurring ->
@@ -228,6 +248,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         ]
         |> MoveCorrection.apply_to(source_event, Keyword.get(opts, :moved, []))
         |> then(&{:ok, &1})
+
+      # An instruction to withdraw, passed through for `mirror/4`.
+      :series_deleted ->
+        :series_deleted
 
       {:skip, reason} ->
         Logger.info("Skipping the mirror for a series whose master could not be read",
@@ -377,42 +401,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Engine do
         :ok
 
       {:error, reason} ->
-        compensate_orphaned_mirror(link, target_uid, user_id)
+        OrphanCompensation.delete_orphan(link, target_uid, user_id, target_calendar_opts(link))
         {:error, reason}
-    end
-  end
-
-  # Best-effort. The original persistence failure is what the caller sees either
-  # way; this only decides whether the retry starts clean or starts with a
-  # duplicate waiting for it.
-  defp compensate_orphaned_mirror(link, target_uid, user_id) do
-    Logger.warning(
-      "Mirror mapping persistence failed after create; deleting orphaned placeholder to keep the retry idempotent",
-      sync_link_id: link.id,
-      target_integration_id: link.target_integration_id,
-      target_uid: target_uid
-    )
-
-    case CalendarEvents.delete_event(
-           target_uid,
-           {link.target_integration_id, user_id},
-           target_calendar_opts(link)
-         ) do
-      :ok ->
-        :ok
-
-      {:error, :not_found} ->
-        :ok
-
-      other ->
-        Logger.error("Failed to delete orphaned mirror placeholder after persistence failure",
-          sync_link_id: link.id,
-          target_integration_id: link.target_integration_id,
-          target_uid: target_uid,
-          result: inspect(other)
-        )
-
-        :ok
     end
   end
 

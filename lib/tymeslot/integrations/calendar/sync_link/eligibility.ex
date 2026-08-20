@@ -74,9 +74,20 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
     instead — see `SyncLink.UnmirrorableSeries`.
   - **Transparent.** The event does not consume the owner's time, so a
     placeholder for it would block availability that is genuinely free.
-  - **Cancelled or declined.** The time is not taken. This matches
-    `CalendarEvent.blocking?/1`, deliberately: an event that does not block
-    availability locally has no business blocking it on another calendar.
+  - **Cancelled or declined, and not part of a series.** The time is not taken.
+    This matches `CalendarEvent.blocking?/1`, deliberately: an event that does
+    not block availability locally has no business blocking it on another
+    calendar.
+
+    The series exemption is not a softening of that rule but a correction of
+    what the row means. A Google series is one cache row keyed on the shared
+    `iCalUID` and `upsert_batch/1` keeps the last entry, so a row reading
+    `cancelled` says *the occurrence that happened to sort last is cancelled* —
+    not that the series is. Treating it as the latter refused the very write
+    that carries the `EXDATE` freeing the cancelled slot, so the occurrence kept
+    blocking its time because its correction was declined. A series cancelled
+    outright arrives as deletions through `Sync.reconcile_deletions/3` instead,
+    which never asks this question.
 
   Both struct and cache-row shapes are accepted because the callers hold
   different ones — the sync path has `CalendarEvent` structs in hand, while the
@@ -124,6 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncLink.Capability
+  alias Tymeslot.Integrations.CalendarManagement
 
   @typedoc """
   The set of `{target_integration_id, target_uid}` pairs identifying every
@@ -202,6 +214,36 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
   @spec worth_enqueueing?(source(), mirror_set()) :: boolean()
   def worth_enqueueing?(event, mirrors), do: not already_a_mirror?(event, mirrors)
 
+  @doc """
+  Whether this link's target can receive a write at all.
+
+  Asked before a payload is built, and separately from `mirror_source?/4`, which
+  answers whether an event *should* be mirrored rather than whether the
+  destination still exists.
+
+  `BookingIntegrationResolver.resolve/1` answers a `{integration_id, user_id}`
+  context by falling back to the organiser's *primary* calendar when the named
+  integration is inactive. That is right for a booking, which has to land on
+  some calendar the organiser owns. It is wrong for a mirror, whose whole
+  purpose is to occupy one specific *other* calendar: a placeholder written to
+  the primary neither blocks the target nor is recognisable afterwards.
+
+  Live consequence when both of an organiser's Google accounts lost their
+  tokens: every mirror write was redirected onto the link's source calendar,
+  where it was organised by the source account and — keyed to the wrong
+  integration — invisible to loop prevention. The source's next sync read each
+  placeholder as a fresh event and mirrored it again, three generations inside
+  two minutes.
+  """
+  @spec target_writable?(map(), integer()) :: boolean()
+  def target_writable?(%{target_integration_id: target_id}, user_id)
+      when is_integer(target_id) and is_integer(user_id) do
+    case CalendarManagement.fetch_integration_for_user(target_id, user_id) do
+      {:ok, integration} -> integration.is_active
+      _not_found -> false
+    end
+  end
+
   defp already_a_mirror?(%{calendar_integration_id: integration_id, uid: uid}, mirrors)
        when is_integer(integration_id) and is_binary(uid),
        do: MapSet.member?(mirrors, {integration_id, uid})
@@ -248,6 +290,31 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.Eligibility do
   defp transparent?(%{transparency: transparency}),
     do: transparency in [:transparent, "transparent"]
 
-  defp off_the_calendar?(%{status: status}),
-    do: status in [:cancelled, :declined, "cancelled", "declined"]
+  # A cancelled row that names a series is **one cancelled occurrence**, not a
+  # cancelled series, and the difference decides whether the whole placeholder
+  # stands or falls.
+  #
+  # A Google series is one cache row keyed on the `iCalUID` every occurrence
+  # shares, and `upsert_batch/1` keeps the last entry — so the row standing for
+  # the series is whichever occurrence sorted last, and once that one is
+  # cancelled the row reads `status: "cancelled"` while the series is still
+  # running. Reading it as "off the calendar" refused the write that carries the
+  # `EXDATE` freeing the cancelled slot, which is the correction being asked
+  # for: the occurrence went on blocking its time precisely because the fix for
+  # it was declined. Measured live — four cancelled occurrences produced a
+  # correct `moved` list on the job and no EXDATE on the placeholder, the
+  # write-back discarding every one as `:not_an_eligible_source`.
+  #
+  # A series that is genuinely cancelled outright does not arrive this way. The
+  # master is deleted, and every occurrence leaves as a deletion through
+  # `Sync.reconcile_deletions/3`, which withdraws the placeholder by uid without
+  # consulting this rule at all.
+  #
+  # A cancelled *one-off* is unchanged: it names no series, so it is still off
+  # the calendar and its placeholder is still withdrawn.
+  defp off_the_calendar?(%{status: status} = event)
+       when status in [:cancelled, :declined, "cancelled", "declined"],
+       do: not recurring?(event)
+
+  defp off_the_calendar?(_event), do: false
 end

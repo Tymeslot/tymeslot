@@ -416,6 +416,37 @@ Two pieces remain, and only one of them is ordinary unfinished work.
 mirrored as a modified instance rather than as an `EXDATE`/`RDATE` pair — are
 unbuilt for every family.
 
+**Where a Google cancellation is actually found.** An earlier version of this
+document, and of `RecurringSeries`' moduledoc, said the `EXDATE` that frees a
+cancelled occurrence's slot is forwarded off the series master. Measured against
+the live API, that is not true for a cancellation made through Google: the
+master's `recurrence` array is left untouched. A five-occurrence series with one
+occurrence genuinely cancelled answered `["RRULE:FREQ=WEEKLY;COUNT=5"]` and
+nothing more.
+
+Google records the cancellation on the **instance** — a separate exception event
+carrying `status: "cancelled"`, a `recurringEventId`, and an `originalStartTime`
+naming the instant the rule places it at. Two consequences follow, and both are
+now built:
+
+- the instance is only visible on the **delta** path. A `syncToken` listing
+  implies `showDeleted=true`, so it is returned there; `list_events/4` and the
+  bootstrap send `singleEvents=true` with no `showDeleted` and simply omit it. A
+  634-event bootstrap of the same calendar contained zero cancelled items. A
+  full resync therefore cannot see a cancellation, and only re-establishes the
+  rule.
+- it shares the series' `iCalUID`, so the worker's cancelled-event split routed
+  it to `Sync.reconcile_deletions/3`, which withdraws by uid. One cancelled
+  occurrence deleted the series' only cache row and withdrew the **whole**
+  placeholder. `SyncGoogleCalendarWorker.withdrawn?/1` now keeps an occurrence
+  that names a series out of that path; a cancelled one-off, which names none,
+  still takes it.
+
+Detection is `SyncLink.MovedOccurrence`, which reads the instance in the same
+pre-dedup window it already reads moves in, and renders it through
+`MoveCorrection` as a lone `EXDATE` — no `RDATE`, because the occurrence went
+nowhere and blocking a new slot would undo the cancellation.
+
 **Outlook target support is refused rather than pending**, and the distinction
 matters for anyone reading this list as a queue. Graph has no `EXDATE`
 analogue: `patternedRecurrence` is `pattern` and `range` and nothing else,
@@ -438,7 +469,14 @@ moduledoc rather than left to be discovered from an empty list.
 Everything in stage C ships on tests and fixtures alone. The organiser's live
 installation has two Google integrations, no Outlook and no CalDAV calendar, so
 no part of the Outlook series path — nor the CalDAV finding — can be exercised
-against live data. The fixtures are written against the production mappers and
+against live data.
+
+The Google cancellation finding above is the exception: it was measured on that
+installation, on a real five-occurrence series with a real cancelled occurrence,
+by reading the master and the instance back from the API. The fixtures in
+`cancelled_occurrence_test.exs` and
+`sync_google_calendar_worker_cancelled_occurrence_test.exs` are those responses
+rather than composed ones. The fixtures are written against the production mappers and
 normalisers they mirror, and each names the function it copies, but that is
 evidence about the code rather than about a real provider response.
 
