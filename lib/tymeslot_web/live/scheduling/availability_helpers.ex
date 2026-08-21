@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ContextUtils
+  alias TymeslotWeb.Live.Scheduling.NextAvailable
 
   require Logger
 
@@ -308,6 +309,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         |> assign(:availability_status, :loaded)
         |> assign(:availability_task, nil)
         |> assign(:availability_task_ref, nil)
+        |> apply_auto_selection(context)
 
       {:error, reason} ->
         Logger.warning("Month availability fetch failed in sync mode", reason: inspect(reason))
@@ -317,6 +319,18 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         |> assign(:availability_status, :error)
         |> assign(:availability_task, nil)
         |> assign(:availability_task_ref, nil)
+    end
+  end
+
+  # The sync path resolves availability inside this call, so the auto-selection
+  # that production performs on the task result has to happen here too —
+  # otherwise it would be exercised by no test and ship unverified.
+  # A `:refetch` moves the window to the next month and recurses; the hop
+  # counter inside NextAvailable bounds the recursion.
+  defp apply_auto_selection(socket, context) do
+    case NextAvailable.apply(socket) do
+      {socket, :done} -> socket
+      {socket, :refetch} -> perform_sync_availability_fetch(socket, context)
     end
   end
 

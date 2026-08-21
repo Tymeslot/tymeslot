@@ -309,6 +309,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> assign(:current_year, current_year)
       |> assign(:current_month, current_month)
       |> assign(:duration, normalized_duration)
+      # `mount` reaches this entry before `handle_params` runs, so a date named
+      # in the URL is not yet on the socket. Seeding it here is what lets the
+      # auto-selection below see an explicit choice and leave it alone —
+      # without this, entering with `?date=` fires a slot fetch for the
+      # auto-picked day whose late result overwrites the requested day's slots.
+      |> maybe_assign_from_params(:selected_date, params["date"])
 
     # Trigger month availability fetch in background if not already loading or loaded for this month
     if AvailabilityHelpers.can_fetch_availability?(socket) do
