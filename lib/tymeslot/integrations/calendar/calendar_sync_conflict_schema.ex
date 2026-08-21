@@ -82,6 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictSchema do
           detail: map(),
           occurred_at: DateTime.t() | nil,
           sync_link: CalendarSyncLinkSchema.t() | Ecto.Association.NotLoaded.t() | nil,
+          dismissed_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -92,6 +93,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictSchema do
     field(:resolution, :string)
     field(:detail, :map, default: %{})
     field(:occurred_at, :utc_datetime_usec)
+
+    # When the organiser marked this resolution as seen. `nil` until they do,
+    # which is what every count and listing on the dashboard selects on.
+    field(:dismissed_at, :utc_datetime_usec)
 
     belongs_to(:sync_link, CalendarSyncLinkSchema)
 

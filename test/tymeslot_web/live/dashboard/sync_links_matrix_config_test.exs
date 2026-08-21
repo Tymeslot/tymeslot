@@ -37,16 +37,19 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
     insert(:calendar_integration, user: user, provider: "google", name: name, is_active: true)
   end
 
+  # The settings used to open from a dot inside the grid; they now live in the
+  # link's own card, expanded from its row. Same intent — "show me this link's
+  # settings" — through the control that replaced it.
   defp select_cell(view, link) do
     view
-    |> element(~s([phx-click="select_sync_cell"][phx-value-id="#{link.id}"]))
+    |> element("#sync-link-toggle-#{link.id}")
     |> render_click()
   end
 
   defp linked_pair(user) do
     work = calendar(user, "Work")
     personal = calendar(user, "Personal")
-    {:ok, _summary} = SyncLink.apply_matrix(user.id, [{work.id, personal.id}])
+    {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{work.id, personal.id} => :active})
     [link] = SyncLink.list_links(user.id)
     {work, personal, link}
   end
@@ -94,9 +97,9 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      # There is no link behind an unticked cell, so there is nothing to
-      # configure and no id to click.
-      refute html =~ ~s([phx-click="select_sync_cell"])
+      # A card exists only where a link does, so an unlinked pair offers
+      # nothing to configure.
+      refute html =~ ~s(phx-click="toggle_sync_link_card")
       assert work.id != personal.id
     end
   end
@@ -111,9 +114,13 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
 
       html =
         view
-        |> element("#sync-link-settings-form")
+        |> element("#sync-link-settings-#{link.id}")
         |> render_submit(%{
-          "sync_link" => %{"privacy_tier" => "generic_label", "generic_label" => "Held"}
+          "sync_link" => %{
+            "id" => to_string(link.id),
+            "privacy_tier" => "generic_label",
+            "generic_label" => "Held"
+          }
         })
 
       {:ok, saved} = CalendarSyncLinkQueries.get(link.id)
@@ -133,8 +140,10 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
 
       html =
         view
-        |> element("#sync-link-settings-form")
-        |> render_submit(%{"sync_link" => %{"privacy_tier" => "busy_only"}})
+        |> element("#sync-link-settings-#{link.id}")
+        |> render_submit(%{
+          "sync_link" => %{"id" => to_string(link.id), "privacy_tier" => "busy_only"}
+        })
 
       # A save that closed the panel would make a second change to the same
       # link a fresh hunt for its cell.
@@ -160,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
 
       html =
         view
-        |> element("#sync-link-settings-form")
+        |> element("#sync-link-settings-#{link.id}")
         |> render_submit(%{
           "sync_link" => %{
             "privacy_tier" => "busy_only",
@@ -188,7 +197,9 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
       other_target =
         insert(:calendar_integration, user: other, provider: "google", is_active: true)
 
-      {:ok, _summary} = SyncLink.apply_matrix(other.id, [{other_source.id, other_target.id}])
+      {:ok, _summary} =
+        SyncLink.apply_matrix(other.id, %{{other_source.id, other_target.id} => :active})
+
       [stranger_link] = SyncLink.list_links(other.id)
 
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
@@ -202,8 +213,10 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixConfigTest do
       select_cell(view, link)
 
       view
-      |> element("#sync-link-settings-form")
-      |> render_submit(%{"sync_link" => %{"privacy_tier" => "full_passthrough"}})
+      |> element("#sync-link-settings-#{link.id}")
+      |> render_submit(%{
+        "sync_link" => %{"id" => to_string(link.id), "privacy_tier" => "full_passthrough"}
+      })
 
       {:ok, untouched} =
         CalendarSyncLinkQueries.get(stranger_link.id)

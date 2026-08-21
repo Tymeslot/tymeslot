@@ -146,4 +146,70 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpersTest do
       assert DisplayHelpers.integration_label(integration(%{name: "   "})) == "Calendar"
     end
   end
+
+  describe "integration_name/1 and integration_qualifier/1" do
+    # The grid stacks these on two lines, so it needs the halves rather than the
+    # composed label. They are the same two values `integration_label/1` joins,
+    # exposed rather than recomputed: a second implementation of "which column
+    # disambiguates this provider" would drift from the first the next time a
+    # provider family is added, and the grid would disagree with every dropdown.
+    test "answer the two halves the label is composed from" do
+      integration = integration(%{provider_account_email: "organiser@example.com"})
+
+      assert DisplayHelpers.integration_name(integration) == "Google Calendar"
+      assert DisplayHelpers.integration_qualifier(integration) == "organiser@example.com"
+    end
+
+    test "compose back into the label for every provider family" do
+      # The invariant that keeps the grid and the dropdowns naming one calendar
+      # identically. Asserted per family because each takes a different clause
+      # through `qualifier/1`.
+      for integration <- [
+            integration(%{provider_account_email: "organiser@example.com"}),
+            integration(%{
+              name: "My Nextcloud",
+              provider: "nextcloud",
+              provider_account_id: "https://cloud.example.com||alice"
+            }),
+            integration(%{
+              name: "Team holidays",
+              provider: "ics_url",
+              base_url: "https://feeds.example.com"
+            })
+          ] do
+        name = DisplayHelpers.integration_name(integration)
+        qualifier = DisplayHelpers.integration_qualifier(integration)
+
+        assert DisplayHelpers.integration_label(integration) == "#{name} — #{qualifier}"
+      end
+    end
+
+    test "answer nil for a qualifier the name already carries" do
+      # `integration_label/1` suppresses the repetition by dropping the
+      # qualifier, so the split has to report the same suppression — otherwise
+      # the grid prints a second line the label deliberately omits.
+      integration =
+        integration(%{
+          name: "alice",
+          provider: "nextcloud",
+          provider_account_id: "https://cloud.example.com||alice"
+        })
+
+      assert DisplayHelpers.integration_name(integration) == "alice"
+      assert DisplayHelpers.integration_qualifier(integration) == nil
+    end
+
+    test "answer nil for a qualifier no column can supply" do
+      # An OAuth row with no email recorded. The name still has to render.
+      integration = integration(%{name: "Work", provider_account_email: nil})
+
+      assert DisplayHelpers.integration_name(integration) == "Work"
+      assert DisplayHelpers.integration_qualifier(integration) == nil
+    end
+
+    test "fall back to the placeholder name when the name is missing" do
+      assert DisplayHelpers.integration_name(integration(%{name: nil})) == "Calendar"
+      assert DisplayHelpers.integration_name(integration(%{name: "   "})) == "Calendar"
+    end
+  end
 end

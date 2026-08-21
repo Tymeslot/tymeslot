@@ -32,6 +32,41 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.TabNavTest do
       assert html =~ "Payments"
     end
 
+    # The bug this pins: the tab bar was a plain `flex` with no wrapping and no
+    # scrolling, so at 375px the four tabs needed 463px and the last two were
+    # painted past the edge with no gesture that could reach them. "Calendar
+    # sync" and "Payments" were not hard to find on a phone — they were
+    # unreachable, which is indistinguishable from the feature being absent.
+    #
+    # Asserted on the class rather than on a measurement because a rendered
+    # component has no viewport: what a test can hold is that the container is
+    # told it may wrap, and that is the whole fix.
+    test "lets the tabs wrap rather than overflowing a narrow viewport" do
+      html = render_nav(active_tab: :calendars, tabs: tabs())
+
+      assert html =~ "flex-wrap"
+    end
+
+    test "renders every tab it is given, however many there are" do
+      # A fifth tab must not silently fall off the end the way the fourth did.
+      # The count is what makes this a regression test rather than a restatement
+      # of the loop: the failure mode was a tab that rendered and could not be
+      # reached, so the assertion is that every id is present.
+      many =
+        tabs() ++
+          [
+            %{id: :sync_links, label: "Calendar sync", count: nil, status: :ok},
+            %{id: :extra, label: "Something else", count: nil, status: :ok}
+          ]
+
+      html = render_nav(active_tab: :calendars, tabs: many)
+
+      for tab <- many do
+        assert html =~ ~s(href="/dashboard/integrations?tab=#{tab.id}")
+        assert html =~ tab.label
+      end
+    end
+
     test "marks the active tab, and only it, as selected and underlined" do
       doc = Floki.parse_fragment!(render_nav(active_tab: :video, tabs: tabs()))
 

@@ -61,24 +61,37 @@ defmodule TymeslotWeb.Dashboard.SyncLinksGridCreationTest do
     html |> cell(source, target) |> Floki.attribute("disabled") != []
   end
 
-  # Ticks exactly one cell and saves the grid.
+  # Clicks one cell to mirroring and saves the grid — the browser's own
+  # sequence, since the grid has no inputs to post.
   #
   # Every one of these tests starts from an empty grid and asserts on what a
-  # single tick did or did not create, so the payload is that one cell set to
-  # "true" over a page whose every other checkbox renders unticked.
-  # `render_submit/2` merges over the form's rendered state, and an unticked
-  # box contributes only its hidden partner's "false" — so the merge already
-  # says "false" everywhere the tick does not reach, and naming the rest would
-  # add nothing. `SyncLinksMatrixTest` covers clearing a ticked cell, which is
-  # the case that does need every cell named.
-  #
-  # The id is passed rather than read off the rendered form on purpose: a cell
-  # the grid drew disabled, or never drew at all, is exactly what the
-  # forged-submission tests below have to be able to send.
+  # single click did or did not create, so one click is all that is staged.
+  # `SyncLinksMatrixTest` covers pausing and clearing, which need a cell
+  # clicked more than once.
   defp save_cell(view, cell) do
+    view |> element("##{cell}") |> render_click()
+
     view
     |> element("#sync-link-matrix-form")
-    |> render_submit(%{"matrix" => %{cell => "true"}})
+    |> render_submit(%{})
+  end
+
+  # The same save for a pair the grid refuses to offer. A disabled cell cannot
+  # be clicked, so the ids are pushed at the component's own event through a
+  # cell it *did* draw — which is the shape a forged submission takes, and the
+  # only way these two cases can reach the write path at all.
+  defp save_forged_cell(view, rendered_cell, source, target) do
+    view
+    |> element("##{rendered_cell}")
+    |> render_click(%{
+      "source" => to_string(source.id),
+      "target" => to_string(target.id),
+      "state" => "active"
+    })
+
+    view
+    |> element("#sync-link-matrix-form")
+    |> render_submit(%{})
   end
 
   describe "creating a link through the grid" do
@@ -117,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksGridCreationTest do
     end
 
     test "refuses a link onto a read-only subscription, however the id arrives", ctx do
-      %{conn: conn, user: user, source: source} = ctx
+      %{conn: conn, user: user, source: source, target: target} = ctx
 
       ics =
         insert(:calendar_integration,
@@ -134,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksGridCreationTest do
       # pushed at the component's own event rather than ticked in the grid.
       assert disabled?(html, source, ics)
 
-      html = save_cell(view, cell_id(source, ics))
+      html = save_forged_cell(view, cell_id(source, target), source, ics)
 
       # The changeset knows exactly why — the target is a read-only
       # subscription — and saying so is the difference between an organiser
@@ -150,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksGridCreationTest do
     # cannot tell whether it came from Tymeslot or from their calendar
     # provider.
     test "refuses that link in the organiser's own language", ctx do
-      %{conn: conn, user: user, source: source} = ctx
+      %{conn: conn, user: user, source: source, target: target} = ctx
 
       # Set on the user rather than with `put_locale/2` in the test process:
       # the dashboard's `AppLocaleHook` resolves the locale itself on mount,
@@ -168,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksGridCreationTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      html = save_cell(view, cell_id(source, ics))
+      html = save_forged_cell(view, cell_id(source, target), source, ics)
 
       # Asserted against the catalogue rather than a literal, so the assertion
       # cannot drift from the translation that ships. Looked up in an explicit

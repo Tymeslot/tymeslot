@@ -128,9 +128,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries do
   def list_for_links(sync_link_ids, opts) when is_list(sync_link_ids) do
     limit = Keyword.get(opts, :limit, @default_limit)
 
+    # Dismissed rows are excluded rather than marked: the listing is what backs
+    # the count, and a count that included rows the organiser has already
+    # cleared would never reach zero however many times they cleared it.
     ranked =
       CalendarSyncConflictSchema
-      |> where([c], c.sync_link_id in ^sync_link_ids)
+      |> where([c], c.sync_link_id in ^sync_link_ids and is_nil(c.dismissed_at))
       |> select([c], %{
         id: c.id,
         rank:
@@ -191,4 +194,29 @@ defmodule Tymeslot.Integrations.Calendar.CalendarSyncConflictQueries do
   end
 
   def prune_older_than(_days), do: {0, nil}
+
+  @doc """
+  Marks every undismissed conflict on these links as seen.
+
+  Takes link ids rather than a user id: this module is not user-scoped, and
+  the caller — `SyncLink.dismiss_conflicts/2` — has already resolved which
+  links the acting organiser owns. Passing ids that survived that check is what
+  keeps the authorisation in one place.
+
+  Already-dismissed rows are left alone rather than restamped, so the column
+  keeps recording when a resolution was *first* seen. That is the half that
+  answers "the warning came back": a second stamp would erase the evidence that
+  the row predates the last time the organiser cleared the list.
+  """
+  @spec dismiss_for_links([integer()], DateTime.t()) :: {:ok, non_neg_integer()}
+  def dismiss_for_links([], _now), do: {:ok, 0}
+
+  def dismiss_for_links(sync_link_ids, now) when is_list(sync_link_ids) do
+    {count, _returned} =
+      CalendarSyncConflictSchema
+      |> where([c], c.sync_link_id in ^sync_link_ids and is_nil(c.dismissed_at))
+      |> Repo.update_all(set: [dismissed_at: now, updated_at: now])
+
+    {:ok, count}
+  end
 end

@@ -86,16 +86,39 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
 
   The link matrix presents every ordered pair of the organiser's calendars
   together, so a save is a diff against what is already configured rather than
-  a series of creates: cells newly ticked become links, cells cleared become
+  a series of creates: cells newly filled become links, cells emptied become
   deletions, and — the rule the rest of this function exists to protect — cells
   that did not move are not touched at all.
 
-  That last one is not an optimisation. Recreating an unchanged link means
-  deleting it first, and `delete_link/2` withdraws every placeholder it has
-  written from the provider on its way out. A save that rebuilt the whole grid
-  would therefore tear down and rewrite every mirror in the set, turning a
-  no-op into a burst of provider writes and leaving the organiser's other
-  calendars briefly empty of the busy blocks that are the entire point.
+  ## The three states a cell carries
+
+  `cells` maps `{source_integration_id, target_integration_id}` to `:active` or
+  `:paused`; a pair absent from the map is deleted. The middle state is what
+  lets the grid stop being a delete button.
+
+  A cell used to mean "this link exists", so clearing one ran `delete_link/2`
+  and withdrew every placeholder the link had written — permanently, from a
+  single misclick, and the busy blocks it removed are deliberately
+  indistinguishable from ordinary events, so the organiser could not tell what
+  had gone. `:paused` is the reversible answer to "stop mirroring this": the
+  row keeps its privacy tier, its label and its target calendar, and writes
+  nothing until it is resumed. Deletion is still reachable, but only as a
+  deliberate action on the link itself.
+
+  A pair that is present in both the map and the database, differing only in
+  `enabled`, therefore moves through `toggle_enabled/3`. It must not be
+  recreated: the settings live on the row, and a delete-then-create would reset
+  every one of them to its default while tearing the placeholders down on the
+  way past.
+
+  ## Why an unmoved cell is not rewritten
+
+  Recreating an unchanged link means deleting it first, and `delete_link/2`
+  withdraws every placeholder it has written from the provider on its way out.
+  A save that rebuilt the whole grid would therefore tear down and rewrite
+  every mirror in the set, turning a no-op into a burst of provider writes and
+  leaving the organiser's other calendars briefly empty of the busy blocks that
+  are the entire point.
 
   ## Why this is not a transaction
 
@@ -113,23 +136,30 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
   result is reported honestly rather than rolled back, because the placeholders
   already removed cannot be restored by a database rollback.
 
-  Cells are `{source_integration_id, target_integration_id}` tuples. Anything
-  already linked but absent from the list is deleted, which is what makes
-  clearing a row of the grid work.
+  Anything already linked but absent from the map is deleted, which is what
+  makes clearing a row of the grid work.
   """
-  @spec apply_matrix(integer(), [{integer(), integer()}]) ::
+  @spec apply_matrix(integer(), %{{integer(), integer()} => :active | :paused}) ::
           {:ok, %{created: non_neg_integer(), deleted: non_neg_integer()}}
           | {:error, :not_found | :self_link | term()}
-  def apply_matrix(user_id, cells) when is_integer(user_id) and is_list(cells) do
-    desired = MapSet.new(cells)
+  def apply_matrix(user_id, cells) when is_integer(user_id) and is_map(cells) do
+    desired = MapSet.new(Map.keys(cells))
 
     with :ok <- validate_cells(user_id, desired) do
       existing = existing_cells(user_id)
 
-      to_create = MapSet.difference(desired, MapSet.new(Map.keys(existing)))
+      to_create = for {pair, state} <- cells, not is_map_key(existing, pair), do: {pair, state}
       to_delete = for {pair, link} <- existing, not MapSet.member?(desired, pair), do: link
 
-      with {:ok, created} <- create_cells(user_id, to_create) do
+      to_toggle =
+        for {pair, link} <- existing,
+            state = Map.get(cells, pair),
+            not is_nil(state),
+            link.enabled != (state == :active),
+            do: {link, state == :active}
+
+      with {:ok, created} <- create_cells(user_id, to_create),
+           :ok <- toggle_cells(user_id, to_toggle) do
         delete_cells(user_id, to_delete, created)
       end
     end
@@ -421,15 +451,31 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink do
     |> Map.new(&{{&1.source_integration_id, &1.target_integration_id}, &1})
   end
 
+  # A cell can arrive already paused: the grid stages a create and a pause
+  # together when a new cell is clicked twice before the save. `enabled` is set
+  # on the insert rather than toggled afterwards, so a paused create is one
+  # write and never briefly live.
   defp create_cells(user_id, to_create) do
-    Enum.reduce_while(to_create, {:ok, 0}, fn {source_id, target_id}, {:ok, count} ->
+    Enum.reduce_while(to_create, {:ok, 0}, fn {{source_id, target_id}, state}, {:ok, count} ->
       attrs = %{
         "source_integration_id" => source_id,
-        "target_integration_id" => target_id
+        "target_integration_id" => target_id,
+        "enabled" => state == :active
       }
 
       case create_link(user_id, attrs) do
         {:ok, _link} -> {:cont, {:ok, count + 1}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  # Neither created nor deleted, so it is absent from the summary: the counts
+  # report what the save added and removed, and a pause did neither.
+  defp toggle_cells(user_id, to_toggle) do
+    Enum.reduce_while(to_toggle, :ok, fn {link, enabled?}, :ok ->
+      case toggle_enabled(user_id, link.id, enabled?) do
+        {:ok, _link} -> {:cont, :ok}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)

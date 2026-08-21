@@ -51,6 +51,17 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
     )
   end
 
+  # What a permanent token-refresh failure leaves behind: the row stays, the
+  # link that points at it stays, and the integration is switched off pending a
+  # reconnection.
+  defp deactivate_for_reauth(ids) do
+    {_count, _no_returning} =
+      Repo.update_all(
+        from(i in CalendarIntegrationSchema, where: i.id in ^ids),
+        set: [is_active: false, needs_reauth: true]
+      )
+  end
+
   # An integration reconnected as a published feed keeps its row and its id, so
   # every link already pointing at it goes on doing so. `create_link/2` would
   # have refused an ICS target outright, so the only way to reach this state is
@@ -64,11 +75,12 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       )
   end
 
-  # The dot under a ticked cell is what opens that link's settings; there is no
-  # standalone form any more, so every per-link assertion starts here.
+  # A link's settings live in its own card, expanded from its row. There is no
+  # standalone form and no selection dot any more, so every per-link assertion
+  # starts by opening the card.
   defp select_cell(view, link) do
     view
-    |> element(~s([phx-click="select_sync_cell"][phx-value-id="#{link.id}"]))
+    |> element("#sync-link-toggle-#{link.id}")
     |> render_click()
   end
 
@@ -102,6 +114,50 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       assert html =~ "Connect a second calendar"
     end
 
+    # Both of the organiser's Google accounts lost their refresh token, so both
+    # rows were deactivated. The grid filters on `is_active`, which left the
+    # count below two and produced "Connect a second calendar before setting up
+    # mirroring" — advice to connect a third calendar to someone who has two,
+    # while the link between them was still in the database and simply had no
+    # row left to draw in. The count is the same; the reason is not, and only
+    # the reason tells the organiser what to do.
+    test "says the calendars need reconnecting rather than that they are missing",
+         %{conn: conn, user: user} do
+      source = google(user, "Work Google")
+      target = google(user, "Personal Google")
+
+      {:ok, _link} =
+        SyncLink.create_link(user.id, %{
+          "source_integration_id" => source.id,
+          "target_integration_id" => target.id
+        })
+
+      deactivate_for_reauth([source.id, target.id])
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      assert html =~ "Reconnect"
+
+      refute html =~ "Connect a second calendar",
+             "told an organiser with two calendars to connect another one"
+    end
+
+    # One calendar genuinely connected and one needing reconnection is still
+    # short of a usable pair, but the fix for it is reconnecting rather than
+    # connecting: the prompt has to follow the reason, not the count.
+    test "asks for a reconnection when the only other calendar needs one",
+         %{conn: conn, user: user} do
+      _live_one = google(user, "Work Google")
+      broken = google(user, "Personal Google")
+
+      deactivate_for_reauth([broken.id])
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      assert html =~ "Reconnect"
+      refute html =~ "Connect a second calendar"
+    end
+
     test "names both ends of every configured link", %{conn: conn, user: user} do
       source = google(user, "Work Google")
       target = google(user, "Personal Google")
@@ -127,17 +183,20 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       # Created straight through the context rather than by ticking the cell:
       # grid creation has its own module, and what is under test here is the
       # settings panel that opens once a link exists.
-      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{source.id, target.id}])
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{source.id, target.id} => :active})
       [link] = SyncLink.list_links(user.id)
 
       {:ok, source: source, target: target, link: link}
     end
 
-    defp choose_tier(view, tier, extra \\ %{}) do
-      params = Map.merge(%{"privacy_tier" => tier}, extra)
+    # The change event carries the link id the same way the rendered form does,
+    # through its hidden input: with every card able to be open at once, a
+    # validate that did not name its link could not be routed to one.
+    defp choose_tier(view, link, tier, extra \\ %{}) do
+      params = Map.merge(%{"id" => to_string(link.id), "privacy_tier" => tier}, extra)
 
       view
-      |> element("#sync-link-settings-form")
+      |> element("#sync-link-settings-#{link.id}")
       |> render_change(%{"sync_link" => params})
     end
 
@@ -152,14 +211,14 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       # ask for.
       refute html =~ ~s(name="sync_link[generic_label]")
 
-      html = choose_tier(view, "busy_only")
+      html = choose_tier(view, link, "busy_only")
       refute html =~ ~s(name="sync_link[generic_label]")
 
-      html = choose_tier(view, "generic_label")
+      html = choose_tier(view, link, "generic_label")
       assert html =~ ~s(name="sync_link[generic_label]")
 
       # Nor for the tier that copies the source's own title.
-      html = choose_tier(view, "full_passthrough")
+      html = choose_tier(view, link, "full_passthrough")
       refute html =~ ~s(name="sync_link[generic_label]")
     end
 
@@ -169,13 +228,14 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
       select_cell(view, link)
-      choose_tier(view, "generic_label")
+      choose_tier(view, link, "generic_label")
 
       html =
         view
-        |> element("#sync-link-settings-form")
+        |> element("#sync-link-settings-#{link.id}")
         |> render_submit(%{
           "sync_link" => %{
+            "id" => to_string(link.id),
             "privacy_tier" => "generic_label",
             "generic_label" => "Personal commitment"
           }
@@ -215,13 +275,17 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
       select_cell(view, link)
-      choose_tier(view, "generic_label")
+      choose_tier(view, link, "generic_label")
 
       html =
         view
-        |> element("#sync-link-settings-form")
+        |> element("#sync-link-settings-#{link.id}")
         |> render_submit(%{
-          "sync_link" => %{"privacy_tier" => "generic_label", "generic_label" => "   "}
+          "sync_link" => %{
+            "id" => to_string(link.id),
+            "privacy_tier" => "generic_label",
+            "generic_label" => "   "
+          }
         })
 
       assert [unchanged] = SyncLink.list_links(user.id)
@@ -242,8 +306,10 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       select_cell(view, link)
 
       view
-      |> element("#sync-link-settings-form")
-      |> render_submit(%{"sync_link" => %{"privacy_tier" => "busy_only"}})
+      |> element("#sync-link-settings-#{link.id}")
+      |> render_submit(%{
+        "sync_link" => %{"id" => to_string(link.id), "privacy_tier" => "busy_only"}
+      })
 
       assert [saved] = SyncLink.list_links(user.id)
       assert saved.privacy_tier == "busy_only"
@@ -261,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
           %{"id" => "personal@gmail.com", "name" => "Personal", "selected" => true}
         ])
 
-      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{source.id, target.id}])
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{source.id, target.id} => :active})
       [link] = SyncLink.list_links(user.id)
 
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
@@ -273,7 +339,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       html = select_cell(view, link)
 
       assert html =~ ~s(name="sync_link[target_calendar_id]")
-      assert html =~ ~s(id="sync-link-settings-calendar")
+      assert html =~ ~s(id="sync-link-calendar-#{link.id}")
       assert html =~ "Personal"
     end
 
@@ -290,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
           calendar_list: [%{"id" => "home", "name" => "Home", "selected" => true}]
         )
 
-      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{source.id, caldav.id}])
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{source.id, caldav.id} => :active})
       [link] = SyncLink.list_links(user.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
@@ -322,6 +388,8 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
     test "pauses a link and repaints it as paused", %{conn: conn, user: user, link: link} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
+      select_cell(view, link)
+
       html =
         view
         |> element("button[phx-click='toggle_sync_link'][phx-value-id='#{link.id}']")
@@ -342,6 +410,8 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       reconnect_as_subscription(link.target_integration_id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      select_cell(view, link)
 
       html =
         view
@@ -365,6 +435,8 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
       assert html =~ "Paused"
 
+      select_cell(view, link)
+
       html =
         view
         |> element("button[phx-click='toggle_sync_link'][phx-value-id='#{link.id}']")
@@ -382,6 +454,8 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
       assert has_element?(view, "#sync-link-#{link.id}")
+
+      select_cell(view, link)
 
       view
       |> element("button[phx-click='delete_sync_link'][phx-value-id='#{link.id}']")
@@ -407,7 +481,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
       assert SyncLink.list_links(user.id) == []
     end
 
-    test "leaves another organiser's link alone", %{conn: conn, user: user} do
+    test "leaves another organiser's link alone", %{conn: conn, user: user, link: link} do
       stranger = insert(:user)
       stranger_source = insert(:calendar_integration, user: stranger, provider: "google")
       stranger_target = insert(:calendar_integration, user: stranger, provider: "google")
@@ -419,6 +493,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
         })
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+      select_cell(view, link)
 
       # The id is never rendered for this user, so a click cannot produce it.
       # Overriding the params on their own link's button is the shape a forged
@@ -429,190 +504,6 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsTest do
 
       assert [_still_there] = SyncLink.list_links(stranger.id)
       assert length(SyncLink.list_links(user.id)) == 1
-    end
-  end
-
-  describe "the conflict log" do
-    setup %{user: user} do
-      source = google(user, "Work Google")
-      target = google(user, "Personal Google")
-
-      {:ok, link} =
-        SyncLink.create_link(user.id, %{
-          "source_integration_id" => source.id,
-          "target_integration_id" => target.id
-        })
-
-      {:ok, link: link}
-    end
-
-    test "says so when a link has resolved nothing", %{conn: conn, link: link} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      # A link with a clean history must not render an empty panel that reads
-      # as a missing feature.
-      refute has_element?(view, "#sync-link-conflicts-#{link.id}")
-    end
-
-    test "names every resolution it has made for a link", %{conn: conn, link: link} do
-      insert(:calendar_sync_conflict,
-        sync_link_id: link.id,
-        source_uid: "board-meeting-uid",
-        kind: "mirror_edited",
-        resolution: "source_won"
-      )
-
-      insert(:calendar_sync_conflict,
-        sync_link_id: link.id,
-        source_uid: "standup-uid",
-        kind: "delete_race",
-        resolution: "deletion_won"
-      )
-
-      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      assert has_element?(view, "#sync-link-conflicts-#{link.id}")
-
-      # Storing the resolution is not the feature; telling the organiser what
-      # happened to their event is. Both the plain-language reason and the event
-      # it happened to have to reach the page.
-      assert html =~ "edited on the target calendar"
-      assert html =~ "board-meeting-uid"
-      assert html =~ "deleted while the placeholder was edited"
-      assert html =~ "standup-uid"
-    end
-
-    test "explains a write that never landed", %{conn: conn, link: link} do
-      insert(:calendar_sync_conflict,
-        sync_link_id: link.id,
-        source_uid: "quarterly-review-uid",
-        kind: "write_failed",
-        resolution: "skipped",
-        detail: %{"error" => "forbidden", "operation" => "update"}
-      )
-
-      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      assert html =~ "could not be written to the target calendar"
-      assert html =~ "quarterly-review-uid"
-    end
-
-    # The visibility half of the recurrence gate, asserted where it has to land.
-    # A recurring source on a link that cannot carry a series is refused, and
-    # the refusal used to be `{:discard, :not_an_eligible_source}` and nothing
-    # else — an Oban outcome the organiser never sees. Their repeating meetings
-    # went unmirrored, the slots stayed bookable, and the dashboard said
-    # nothing.
-    #
-    # Recording the row is not the feature; the organiser reading the sentence
-    # is. A conflict row nobody renders is exactly the failure this suite's
-    # rule about rendered output was written for, so this asserts the painted
-    # page rather than the stored row.
-    test "warns that a repeating event is not being mirrored", %{conn: conn, link: link} do
-      insert(:calendar_sync_conflict,
-        sync_link_id: link.id,
-        source_uid: "weekly-standup-uid",
-        kind: "series_unsupported",
-        resolution: "skipped",
-        detail: %{
-          "unsupported_end" => "source",
-          "source_provider" => "outlook",
-          "target_provider" => "google"
-        }
-      )
-
-      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      assert has_element?(view, "#sync-link-conflicts-#{link.id}")
-
-      # The two things an organiser has to be able to act on: that this is a
-      # repeating event which is *not* being mirrored, and which event it is.
-      assert html =~ "repeating event"
-      assert html =~ "weekly-standup-uid"
-
-      # And the consequence spelled out, because "not mirrored" alone reads as
-      # a cosmetic gap rather than as time that can be double-booked.
-      assert html =~ "booked over"
-
-      # It must not fall through to the catch-all, which says only that the two
-      # calendars differed — true of every kind and actionable for none.
-      refute html =~ "The two calendars differed."
-    end
-
-    # The same sentence for the other end of the link, and the case an organiser
-    # with an Outlook target actually hits. Microsoft Graph has no EXDATE
-    # analogue — `patternedRecurrence` is `pattern` and `range` and nothing else
-    # — so a series mirrored there would keep blocking occurrences the organiser
-    # had cancelled. The link is refused instead, and this is the assertion that
-    # the refusal is legible rather than merely recorded.
-    #
-    # Asserted separately from the source-side row above because the rendered
-    # sentence is deliberately end-agnostic: a version that rendered only the
-    # detail it recognised, or that named the failing provider, would pass the
-    # test above and leave this one blank or wrong.
-    test "warns for an unmirrorable series when the TARGET is the incapable end", ctx do
-      %{conn: conn, link: link} = ctx
-
-      insert(:calendar_sync_conflict,
-        sync_link_id: link.id,
-        source_uid: "outlook-target-standup-uid",
-        kind: "series_unsupported",
-        resolution: "skipped",
-        detail: %{
-          "unsupported_end" => "target",
-          "source_provider" => "google",
-          "target_provider" => "outlook"
-        }
-      )
-
-      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      assert has_element?(view, "#sync-link-conflicts-#{link.id}")
-
-      assert html =~ "repeating event"
-      assert html =~ "outlook-target-standup-uid"
-      assert html =~ "booked over"
-
-      refute html =~ "The two calendars differed."
-    end
-
-    test "never shows another organiser's history, however the id arrives", ctx do
-      %{conn: conn, link: link} = ctx
-
-      stranger = insert(:user)
-      stranger_source = insert(:calendar_integration, user: stranger, provider: "google")
-      stranger_target = insert(:calendar_integration, user: stranger, provider: "google")
-
-      {:ok, theirs} =
-        SyncLink.create_link(stranger.id, %{
-          "source_integration_id" => stranger_source.id,
-          "target_integration_id" => stranger_target.id
-        })
-
-      insert(:calendar_sync_conflict,
-        sync_link_id: theirs.id,
-        source_uid: "their-private-event-uid",
-        kind: "mirror_edited"
-      )
-
-      insert(:calendar_sync_conflict,
-        sync_link_id: link.id,
-        source_uid: "my-own-event-uid",
-        kind: "mirror_edited"
-      )
-
-      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
-
-      # The history names event UIDs and the times two calendars diverged. The
-      # stranger's link id is never rendered here, so it can only arrive forged
-      # — pushed at the component's own event on their own link's control.
-      html =
-        view
-        |> element("button[phx-click='show_sync_link_conflicts']")
-        |> render_click(%{"id" => to_string(theirs.id)})
-
-      refute html =~ "their-private-event-uid"
-      assert render(view) =~ "my-own-event-uid"
     end
   end
 end

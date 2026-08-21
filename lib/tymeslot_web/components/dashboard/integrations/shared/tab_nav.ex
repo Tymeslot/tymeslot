@@ -18,7 +18,18 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
   @spec integrations_tab_nav(map()) :: Phoenix.LiveView.Rendered.t()
   def integrations_tab_nav(assigns) do
     ~H"""
-    <div role="tablist" class="flex gap-1 border-b border-tymeslot-200">
+    <%!-- `flex-wrap`, not a horizontal scroll. Four tabs need 463px and a
+          phone offers 343px, so without it the last two were painted past the
+          edge of a container that could not be scrolled — "Calendar sync" and
+          "Payments" were unreachable rather than merely awkward, which reads
+          to an organiser as the feature not existing.
+
+          Wrapping rather than scrolling because a tab bar is a map of what is
+          available: an organiser who cannot see that a tab exists will not
+          swipe to look for it, and the row that goes missing is always the
+          last one, which is always the newest. Two rows cost a few pixels of
+          header and keep every destination visible at once. --%>
+    <div role="tablist" class="flex flex-wrap gap-1 border-b border-tymeslot-200">
       <.link
         :for={tab <- @tabs}
         patch={~p"/dashboard/integrations?tab=#{tab.id}"}

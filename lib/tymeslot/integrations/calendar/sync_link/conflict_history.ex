@@ -72,4 +72,37 @@ defmodule Tymeslot.Integrations.Calendar.SyncLink.ConflictHistory do
     |> CalendarSyncConflictQueries.link_ids_for_user()
     |> CalendarSyncConflictQueries.list_for_links(opts)
   end
+
+  @doc """
+  Marks resolutions as seen — one link's, or every link the organiser owns.
+
+  The write side of the same rule the reads enforce. `dismiss_for_links/2` is
+  not user-scoped and would clear whatever ids it is handed, so the ids it gets
+  are derived from the acting user rather than taken from the browser: for the
+  whole-account case they come from `list_for_user/1`, and for a single link
+  the id is intersected with that list rather than trusted.
+
+  A forged id therefore dismisses nothing and answers `{:ok, 0}`, which is also
+  what an already-clear link answers. Reporting the same result for both is
+  deliberate: a distinct error would tell a prober that the id existed.
+  """
+  @spec dismiss(integer(), integer() | any() | :all) :: {:ok, non_neg_integer()}
+  def dismiss(user_id, :all) when is_integer(user_id) do
+    user_id
+    |> owned_link_ids()
+    |> CalendarSyncConflictQueries.dismiss_for_links(DateTime.utc_now())
+  end
+
+  def dismiss(user_id, link_id) when is_integer(user_id) do
+    user_id
+    |> owned_link_ids()
+    |> Enum.filter(&(&1 == link_id))
+    |> CalendarSyncConflictQueries.dismiss_for_links(DateTime.utc_now())
+  end
+
+  defp owned_link_ids(user_id) do
+    user_id
+    |> CalendarSyncLinkQueries.list_for_user()
+    |> Enum.map(& &1.id)
+  end
 end

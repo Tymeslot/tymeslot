@@ -104,33 +104,56 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   def integration_label(integration) do
     name = integration_name(integration)
 
-    case qualifier(integration) do
+    case integration_qualifier(integration) do
       nil -> name
-      qualifier -> join_label(name, qualifier)
+      qualifier -> "#{name} — #{qualifier}"
     end
   end
 
-  defp integration_name(%{name: name}) when is_binary(name) do
+  @doc """
+  The calendar's own name, without the account qualifier.
+
+  Exposed as a half of `integration_label/1` rather than duplicated, because
+  the link grid stacks the two on separate lines: a row header wide enough for
+  "Google Calendar — organiser@example.com" forces the grid past the viewport
+  before the third calendar, and truncating it hides the account, which is the
+  only half that tells two Google rows apart.
+  """
+  @spec integration_name(map()) :: String.t()
+  def integration_name(%{name: name}) when is_binary(name) do
     case String.trim(name) do
       "" -> fallback_name()
       trimmed -> trimmed
     end
   end
 
-  defp integration_name(_integration), do: fallback_name()
+  def integration_name(_integration), do: fallback_name()
 
-  defp fallback_name, do: dgettext("dashboard_common", "Calendar")
+  @doc """
+  The account the calendar belongs to, or `nil` where none can be shown.
 
-  # An em dash rather than parentheses: the qualifier is a second fact about the
-  # calendar, not an aside about the first, and it reads the same in every
-  # locale this ships in.
-  defp join_label(name, qualifier) do
-    if repeats?(name, qualifier) do
-      name
-    else
-      "#{name} — #{qualifier}"
+  `nil` covers two different cases that the caller renders identically — no
+  column carries an account (an OAuth row with no email recorded), and the name
+  already carries it, which `integration_label/1` has always suppressed. A
+  split that reported the qualifier anyway would print a second line the
+  composed label deliberately omits.
+
+  An em dash joins them in `integration_label/1` rather than parentheses: the
+  qualifier is a second fact about the calendar, not an aside about the first,
+  and it reads the same in every locale this ships in.
+  """
+  @spec integration_qualifier(map()) :: String.t() | nil
+  def integration_qualifier(integration) do
+    case qualifier(integration) do
+      nil ->
+        nil
+
+      qualifier ->
+        if repeats?(integration_name(integration), qualifier), do: nil, else: qualifier
     end
   end
+
+  defp fallback_name, do: dgettext("dashboard_common", "Calendar")
 
   # Whole words, not a substring: a username of "al" inside "Personal" is a
   # coincidence, and treating it as a repetition would drop the qualifier from

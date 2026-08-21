@@ -64,9 +64,11 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   alias Tymeslot.Integrations.Calendar.SyncLink.ConflictHistory
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SyncLinkCard
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SyncLinkConflictSummary
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SyncLinkMatrix
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SyncLinkSettingsPanel
-  alias TymeslotWeb.Dashboard.SyncLinks.ConflictLabels
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SyncLinkPairingPrompt
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SyncLinkStaging
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -77,7 +79,9 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
      |> assign(:form_values, %{})
      |> assign(:form_error, nil)
      |> assign(:matrix_error, nil)
-     |> assign(:selected_link_id, nil)
+     |> assign(:staged_cells, %{})
+     |> assign(:expanded_sources, MapSet.new())
+     |> assign(:expanded_links, MapSet.new())
      |> assign(:settings_values, %{})
      |> assign(:settings_error, nil)}
   end
@@ -94,57 +98,109 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
      |> assign_new(:form_values, fn -> %{} end)
      |> assign_new(:form_error, fn -> nil end)
      |> assign_new(:matrix_error, fn -> nil end)
-     |> assign_new(:selected_link_id, fn -> nil end)
+     |> assign_new(:staged_cells, fn -> %{} end)
+     |> assign_new(:expanded_sources, fn -> MapSet.new() end)
+     |> assign_new(:expanded_links, fn -> MapSet.new() end)
      |> assign_new(:settings_values, fn -> %{} end)
      |> assign_new(:settings_error, fn -> nil end)}
   end
 
-  # Selecting a cell is a read: it opens the settings for a link the organiser
-  # can already see. The id arrives off the wire, so the link is looked up in
-  # the assigns rather than trusted — a forged id finds nothing and the panel
-  # stays as it was, which also declines to tell a prober whether the id
-  # existed.
+  # Clicking a cell stages a change; nothing is written until the grid is
+  # saved. The ids arrive off the wire and are staged unvalidated on purpose:
+  # staging is a scratch pad, and both ends are checked against the acting
+  # user by `apply_matrix/2` when the save actually happens. A forged pair
+  # stages a cell that is not rendered and is refused on submit.
+  #
+  # The state the browser asks for is honoured rather than recomputed, so the
+  # cell the organiser saw is the transition they get. An unrecognised value
+  # leaves the grid alone rather than defaulting to a delete.
   @impl Phoenix.LiveComponent
-  def handle_event("select_sync_cell", %{"id" => id}, socket) do
-    case Enum.find(socket.assigns.links, &(&1.id == cast_id(id))) do
-      nil ->
-        {:noreply, socket}
+  def handle_event("cycle_sync_cell", params, socket) do
+    with {:ok, pair} <- SyncLinkStaging.cell_pair(params, &cast_id/1),
+         {:ok, state} <- SyncLinkStaging.cast_state(params["state"]) do
+      staged =
+        SyncLinkStaging.stage(socket.assigns.staged_cells, socket.assigns.links, pair, state)
 
-      link ->
-        {:noreply,
-         socket
-         |> assign(:selected_link_id, link.id)
-         |> assign(:settings_values, %{})
-         |> assign(:settings_error, nil)}
+      {:noreply, assign(socket, :staged_cells, staged)}
+    else
+      _unusable -> {:noreply, socket}
     end
   end
 
-  def handle_event("deselect_sync_cell", _params, socket) do
-    {:noreply, clear_selection(socket)}
+  # Which accordion sections are open, on the mobile layout. A pure view
+  # concern with nothing read and no id trusted: an unknown id expands a
+  # section that is not rendered.
+  def handle_event("toggle_sync_source", %{"id" => id}, socket) do
+    case cast_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      source_id ->
+        {:noreply,
+         assign(socket, :expanded_sources, toggle(socket.assigns.expanded_sources, source_id))}
+    end
+  end
+
+  def handle_event("discard_sync_link_matrix", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:staged_cells, %{})
+     |> assign(:matrix_error, nil)}
+  end
+
+  # Expansion is a pure view concern — no id is trusted and nothing is read —
+  # so an unknown id simply expands a card that is not rendered.
+  def handle_event("toggle_sync_link_card", %{"id" => id}, socket) do
+    case cast_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      link_id ->
+        {:noreply,
+         assign(socket, :expanded_links, toggle(socket.assigns.expanded_links, link_id))}
+    end
   end
 
   # The tier drives whether a label field is asked for, so the form round-trips
   # through here to keep that decision on the latest choice rather than on what
-  # was stored when the panel opened.
+  # was stored when the card opened.
+  #
+  # Values are keyed by link because every card can be open at once: a single
+  # in-flight map would show one card's unsaved tier inside all of them.
   def handle_event("validate_sync_link_settings", %{"sync_link" => params}, socket) do
-    {:noreply, assign(socket, :settings_values, params)}
+    case cast_id(params["id"]) do
+      nil ->
+        {:noreply, socket}
+
+      link_id ->
+        {:noreply,
+         assign(
+           socket,
+           :settings_values,
+           Map.put(socket.assigns.settings_values, link_id, params)
+         )}
+    end
   end
 
+  # The link id comes from the submitted form rather than from a selection,
+  # because there is no selection any more. It is still forgeable, so
+  # `update_link/3` re-verifies ownership of both ends — the id names which
+  # card to write, never which row may be written.
   def handle_event("save_sync_link_settings", %{"sync_link" => params}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case {socket.assigns.selected_link_id, RateLimiter.check_sync_link_write_rate_limit(user_id)} do
+    case {cast_id(params["id"]), RateLimiter.check_sync_link_write_rate_limit(user_id)} do
       {nil, _limit} ->
         {:noreply, socket}
 
       {link_id, :ok} ->
         save_settings(socket, user_id, link_id, params)
 
-      {_link_id, {:error, :rate_limited, message}} ->
-        {:noreply, assign(socket, :settings_error, message)}
+      {link_id, {:error, :rate_limited, message}} ->
+        {:noreply, assign(socket, :settings_error, {link_id, message})}
 
-      {_link_id, {:error, :invalid_user_id}} ->
-        {:noreply, assign(socket, :settings_error, generic_error())}
+      {link_id, {:error, :invalid_user_id}} ->
+        {:noreply, assign(socket, :settings_error, {link_id, generic_error()})}
     end
   end
 
@@ -154,14 +210,16 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   # budget the limiter's own docs describe as covering "rebuilding an entire
   # set of links in one sitting" — and being refused halfway would leave the
   # grid disagreeing with what is stored.
-  def handle_event("save_sync_link_matrix", params, socket) do
+  #
+  # The cells come from `staged_cells` rather than the submitted params: the
+  # grid's controls are buttons, not inputs, so the form carries no cell state
+  # at all. What is sent is the stored grid with the staged changes merged
+  # over it — the full desired result, which is what `apply_matrix/2` diffs
+  # against, and never a partial edit that would read as "delete everything
+  # the organiser did not touch this sitting".
+  def handle_event("save_sync_link_matrix", _params, socket) do
     user_id = socket.assigns.current_user.id
-
-    cells =
-      SyncLinkMatrix.parse_submission(
-        Map.get(params, "matrix", %{}),
-        socket.assigns.integrations
-      )
+    cells = SyncLinkStaging.desired(socket.assigns.staged_cells, socket.assigns.links)
 
     case RateLimiter.check_sync_link_write_rate_limit(user_id) do
       :ok -> apply_matrix(socket, user_id, cells)
@@ -201,12 +259,35 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
     end
   end
 
+  # Dismissal is a write, so it is metered — but on the existing sync-link
+  # bucket rather than one of its own. It is the same organiser writing to the
+  # same page's data, and a second bucket would let a caller alternate between
+  # the two to double the rate either one permits.
+  #
+  # The id goes to `ConflictHistory.dismiss/2`, which intersects it with the
+  # links the acting user owns; a forged id clears nothing.
+  def handle_event("dismiss_sync_link_conflicts", %{"id" => id}, socket) do
+    {:noreply, dismiss_conflicts(socket, cast_id(id))}
+  end
+
+  def handle_event("dismiss_all_sync_link_conflicts", _params, socket) do
+    {:noreply, dismiss_conflicts(socket, :all)}
+  end
+
   def handle_event("delete_sync_link", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
+    link_id = cast_id(id)
 
     with :ok <- RateLimiter.check_sync_link_write_rate_limit(user_id),
-         {:ok, _link} <- SyncLink.delete_link(user_id, cast_id(id)) do
-      {:noreply, refresh(socket, user_id)}
+         {:ok, _link} <- SyncLink.delete_link(user_id, link_id) do
+      # The card is gone, so its expansion and its in-flight values go with it
+      # — otherwise a later link reusing the id would open pre-expanded,
+      # holding a removed link's unsaved edits.
+      {:noreply,
+       socket
+       |> assign(:expanded_links, MapSet.delete(socket.assigns.expanded_links, link_id))
+       |> drop_values(link_id)
+       |> refresh(user_id)}
     else
       _refused -> {:noreply, refresh(socket, user_id)}
     end
@@ -217,24 +298,29 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
   defp save_settings(socket, user_id, link_id, params) do
     case SyncLink.update_link(user_id, link_id, params) do
       {:ok, _link} ->
-        # The selection is kept rather than cleared: a save that closed the
-        # panel would make a second change to the same link a fresh hunt for
-        # its cell. Cleared *values* though, so the panel re-reads what was
-        # actually stored rather than echoing the submission back.
+        # The card stays open: a save that collapsed it would make a second
+        # change to the same link a fresh hunt for its row. Its in-flight
+        # values are dropped though, so the card re-reads what was actually
+        # stored rather than echoing the submission back.
         {:noreply,
          socket
-         |> assign(:settings_values, %{})
+         |> drop_values(link_id)
          |> assign(:settings_error, nil)
          |> refresh(user_id)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply,
          socket
-         |> assign(:settings_values, params)
-         |> assign(:settings_error, first_error(changeset))}
+         |> keep_values(link_id, params)
+         |> assign(:settings_error, {link_id, first_error(changeset)})}
 
+      # Someone else's link, or none at all. The card is collapsed and its
+      # scratch values dropped; nothing is said about whether the id existed.
       {:error, :not_found} ->
-        {:noreply, clear_selection(socket)}
+        {:noreply,
+         socket
+         |> drop_values(link_id)
+         |> assign(:expanded_links, MapSet.delete(socket.assigns.expanded_links, link_id))}
 
       # A re-point withdraws the placeholders from the old target first, so a
       # provider that refuses the delete surfaces its own reason here — neither
@@ -247,23 +333,48 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
       {:error, _provider_refused} ->
         {:noreply,
          socket
-         |> assign(:settings_values, params)
-         |> assign(:settings_error, generic_error())}
+         |> keep_values(link_id, params)
+         |> assign(:settings_error, {link_id, generic_error()})}
     end
   end
 
-  defp clear_selection(socket) do
-    socket
-    |> assign(:selected_link_id, nil)
-    |> assign(:settings_values, %{})
-    |> assign(:settings_error, nil)
+  defp dismiss_conflicts(socket, nil), do: socket
+
+  defp dismiss_conflicts(socket, scope) do
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_sync_link_write_rate_limit(user_id) do
+      :ok ->
+        {:ok, _count} = ConflictHistory.dismiss(user_id, scope)
+        refresh(socket, user_id)
+
+      _refused ->
+        socket
+    end
   end
+
+  # Set membership flipped: both accordions — sources on mobile, links in the
+  # card list — are open/closed sets rather than a single selection, because
+  # comparing two links means having both on screen.
+  defp toggle(set, id) do
+    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
+  end
+
+  defp drop_values(socket, link_id),
+    do: assign(socket, :settings_values, Map.delete(socket.assigns.settings_values, link_id))
+
+  defp keep_values(socket, link_id, params),
+    do: assign(socket, :settings_values, Map.put(socket.assigns.settings_values, link_id, params))
 
   defp apply_matrix(socket, user_id, cells) do
     case SyncLink.apply_matrix(user_id, cells) do
       {:ok, _summary} ->
+        # Staging is cleared so the grid redraws from what was stored. Keeping
+        # it would leave every saved cell still counted as pending, and the
+        # organiser could not tell a saved grid from an unsaved one.
         {:noreply,
          socket
+         |> assign(:staged_cells, %{})
          |> assign(:matrix_error, nil)
          |> refresh(user_id)}
 
@@ -271,6 +382,9 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
         # The grid is redrawn from what was actually stored rather than from
         # what was submitted: a partly-applied save is reported honestly, and
         # a redraw from the submitted state would show links that do not exist.
+        # Staging is kept: the save failed, so the organiser's intent is still
+        # unapplied, and clearing it would silently discard the edit they were
+        # told did not happen.
         {:noreply,
          socket
          |> assign(:matrix_error, matrix_error_message(reason))
@@ -417,28 +531,13 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
     ]
   end
 
-  defp selected_link(_links, nil), do: nil
-  defp selected_link(links, link_id), do: Enum.find(links, &(&1.id == link_id))
-
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    selected = selected_link(assigns.links, assigns.selected_link_id)
-
-    # The picker's options come from the *link's* target, not from a form
-    # field: the pair is already decided by the cell that was clicked.
-    selected_target =
-      selected && Enum.find(assigns.integrations, &(&1.id == selected.target_integration_id))
-
     assigns =
       assigns
       |> assign(:source_options, source_options(assigns.integrations))
-      |> assign(:selected_link, selected)
-      |> assign(
-        :selected_without_calendar_choice?,
-        target_without_calendar_choice?(selected_target)
-      )
-      |> assign(:selected_calendar_options, target_calendar_options(selected_target))
       |> assign(:privacy_tier_options, privacy_tier_options())
+      |> assign(:total_conflicts, total_conflicts(assigns.conflicts, assigns.links))
 
     ~H"""
     <div class="space-y-8">
@@ -456,150 +555,85 @@ defmodule TymeslotWeb.Dashboard.SyncLinksSettingsComponent do
 
       <.info_box :if={@form_error} variant={:error}>{@form_error}</.info_box>
 
-      <%!-- Two calendars are the minimum a link can name, so the form is
-            pointless before then and the prompt says what to do instead. --%>
-      <.info_box :if={length(@source_options) < 2} variant={:info}>
-        {dgettext(
-          "dashboard_integrations",
-          "Connect a second calendar before setting up mirroring."
-        )}
-      </.info_box>
+      <SyncLinkPairingPrompt.sync_link_pairing_prompt
+        source_count={length(@source_options)}
+        integrations={@integrations}
+      />
 
-      <section :if={@links != []} class="space-y-3">
-        <h2 class="text-token-lg font-bold text-tymeslot-900">
-          {dgettext("dashboard_integrations", "Active links")}
-        </h2>
-
-        <ul class="space-y-3">
-          <li
-            :for={link <- @links}
-            id={"sync-link-#{link.id}"}
-            class="space-y-4 rounded-token-lg border border-tymeslot-200 bg-white p-4"
-          >
-            <div class="flex flex-wrap items-center justify-between gap-4">
-              <div class="min-w-0">
-                <p class="text-token-sm font-semibold text-tymeslot-900">
-                  {dgettext("dashboard_integrations", "%{source} to %{target}",
-                    source: DisplayHelpers.integration_label(link.source_integration),
-                    target: DisplayHelpers.integration_label(link.target_integration)
-                  )}
-                </p>
-                <p class="text-token-xs text-tymeslot-500">
-                  {privacy_tier_label(link)}
-                  <span :if={not link.enabled} class="ml-2 font-semibold text-amber-600">
-                    {dgettext("dashboard_integrations", "Paused")}
-                  </span>
-                </p>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  phx-click="toggle_sync_link"
-                  phx-value-id={link.id}
-                  phx-target={@myself}
-                  class="rounded-token-md border border-tymeslot-200 px-3 py-1.5 text-token-xs font-semibold text-tymeslot-700 hover:bg-tymeslot-50"
-                >
-                  {(link.enabled && dgettext("dashboard_integrations", "Pause")) ||
-                    dgettext("dashboard_integrations", "Resume")}
-                </button>
-                <button
-                  type="button"
-                  phx-click="delete_sync_link"
-                  phx-value-id={link.id}
-                  phx-target={@myself}
-                  class="rounded-token-md border border-red-200 px-3 py-1.5 text-token-xs font-semibold text-red-700 hover:bg-red-50"
-                >
-                  {dgettext("dashboard_integrations", "Remove")}
-                </button>
-              </div>
-            </div>
-
-            <%!-- Rendered only where there is a history. A link that has never
-                  diverged has nothing to explain, and an empty box under every
-                  link reads as a feature that failed to load. --%>
-            <section
-              :if={conflicts_for(@conflicts, link) != []}
-              id={"sync-link-conflicts-#{link.id}"}
-              class="space-y-2 border-t border-tymeslot-100 pt-3"
-            >
-              <div class="flex items-center justify-between gap-3">
-                <h3 class="text-token-xs font-semibold uppercase tracking-wide text-tymeslot-500">
-                  {dgettext("dashboard_integrations", "Recently resolved differences")}
-                </h3>
-                <button
-                  type="button"
-                  phx-click="show_sync_link_conflicts"
-                  phx-value-id={link.id}
-                  phx-target={@myself}
-                  class="text-token-xs font-semibold text-tymeslot-600 hover:text-tymeslot-900"
-                >
-                  {dgettext("dashboard_integrations", "Refresh")}
-                </button>
-              </div>
-
-              <ul class="space-y-2">
-                <li
-                  :for={conflict <- conflicts_for(@conflicts, link)}
-                  class="text-token-xs text-tymeslot-600"
-                >
-                  <p class="font-semibold text-tymeslot-800">
-                    {ConflictLabels.conflict_kind_label(conflict.kind)}
-                  </p>
-                  <p>{ConflictLabels.conflict_resolution_label(conflict.resolution)}</p>
-                  <p class="break-all font-mono text-tymeslot-400">{conflict.source_uid}</p>
-                </li>
-              </ul>
-            </section>
-          </li>
-        </ul>
-      </section>
+      <SyncLinkConflictSummary.sync_link_conflict_summary
+        total={@total_conflicts}
+        link_count={links_with_conflicts(@conflicts, @links)}
+        target={@myself}
+      />
 
       <SyncLinkMatrix.sync_link_matrix
         integrations={@integrations}
         links={@links}
+        staged_cells={@staged_cells}
+        expanded_sources={@expanded_sources}
         error={@matrix_error}
         target={@myself}
-        selected_link_id={@selected_link_id}
       />
 
-      <SyncLinkSettingsPanel.sync_link_settings
-        link={@selected_link}
-        values={@settings_values}
-        error={@settings_error}
-        tier_options={@privacy_tier_options}
-        calendar_options={@selected_calendar_options}
-        without_calendar_choice?={@selected_without_calendar_choice?}
-        target={@myself}
-      />
+      <section :if={@links != []} class="space-y-3">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 class="text-token-lg font-bold text-tymeslot-900">
+            {dgettext("dashboard_integrations", "Links")}
+          </h2>
+          <span class="text-token-xs text-tymeslot-500">
+            {dngettext(
+              "dashboard_integrations",
+              "%{count} link",
+              "%{count} links",
+              length(@links)
+            )}
+          </span>
+        </div>
+
+        <ul class="space-y-2">
+          <SyncLinkCard.sync_link_card
+            :for={link <- @links}
+            link={link}
+            conflicts={conflicts_for(@conflicts, link)}
+            expanded?={MapSet.member?(@expanded_links, link.id)}
+            values={Map.get(@settings_values, link.id, %{})}
+            error={settings_error_for(@settings_error, link)}
+            tier_options={@privacy_tier_options}
+            calendar_options={calendar_options_for(@integrations, link)}
+            without_calendar_choice?={without_calendar_choice_for?(@integrations, link)}
+            target={@myself}
+          />
+        </ul>
+      </section>
     </div>
     """
   end
 
+  # The options come from the *link's* target, so a card always offers the
+  # calendars of the calendar it actually writes to.
+  defp target_for(integrations, link),
+    do: Enum.find(integrations, &(&1.id == link.target_integration_id))
+
+  defp calendar_options_for(integrations, link),
+    do: integrations |> target_for(link) |> target_calendar_options()
+
+  defp without_calendar_choice_for?(integrations, link),
+    do: integrations |> target_for(link) |> target_without_calendar_choice?()
+
+  # An error belongs to the card whose save produced it, not to every open
+  # card: with several expanded at once, a shared error would report one link's
+  # refusal under all of them.
+  defp settings_error_for({link_id, message}, %{id: link_id}), do: message
+  defp settings_error_for(_other, _link), do: nil
+
   defp conflicts_for(conflicts, link), do: Map.get(conflicts, link.id, [])
 
-  # What the placeholder will actually say, not what tier was picked. The
-  # generic-label row quotes the organiser's own words back at them, because
-  # "Shown with a generic label" is a description of a setting rather than of
-  # the block their colleagues will see — and while the label had no input to
-  # arrive through, it was also false: every placeholder read "Busy".
-  defp privacy_tier_label(%{privacy_tier: "generic_label", generic_label: label})
-       when is_binary(label) and label != "" do
-    dgettext("dashboard_integrations", "Shown as \"%{label}\"", label: label)
-  end
+  # Counted over the links actually rendered rather than over every key in the
+  # map, so a conflict belonging to a link that has since been removed cannot
+  # inflate a total the organiser has no way to clear.
+  defp total_conflicts(conflicts, links),
+    do: links |> Enum.map(&length(conflicts_for(conflicts, &1))) |> Enum.sum()
 
-  defp privacy_tier_label(%{privacy_tier: tier}), do: privacy_tier_label(tier)
-
-  defp privacy_tier_label("busy_only"),
-    do: dgettext("dashboard_integrations", "Shown as busy, with no detail")
-
-  # A label-less row at that tier can only predate the input, and the honest
-  # sentence is the one describing what the target calendar shows today.
-  defp privacy_tier_label("generic_label"),
-    do: dgettext("dashboard_integrations", "Shown as busy, until a placeholder title is set")
-
-  defp privacy_tier_label("full_passthrough"),
-    do: dgettext("dashboard_integrations", "Shown with the original title")
-
-  defp privacy_tier_label(_tier), do: dgettext("dashboard_integrations", "Shown as busy")
+  defp links_with_conflicts(conflicts, links),
+    do: Enum.count(links, &(conflicts_for(conflicts, &1) != []))
 end

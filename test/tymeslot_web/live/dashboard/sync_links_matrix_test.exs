@@ -1,12 +1,13 @@
 defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
   @moduledoc """
-  The link grid: every ordered pair of the organiser's calendars as one
-  checkbox matrix, saved in a single submit.
+  The link grid: every ordered pair of the organiser's calendars as one matrix
+  of three-state cells, staged as they are clicked and saved in a single
+  submit.
 
   Storing the rows is not the feature — the grid reflecting them is. A cell
-  that renders unticked while its link exists sends the organiser to untick
-  something that is already off, so every assertion here reads the rendered
-  checkbox rather than the database.
+  that renders empty while its link exists sends the organiser to create
+  something that already exists, so every assertion here reads the rendered
+  cell rather than the database.
 
   The diagonal and the read-only columns are the two shapes the grid must
   refuse to offer. A self-link is rejected by a check constraint and an ICS
@@ -51,46 +52,79 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
   end
 
   defp ticked?(html, source, target) do
-    html |> cell(source, target) |> Floki.attribute("checked") != []
+    cell_state(html, cell_id(source, target)) == :active
   end
 
   defp disabled?(html, source, target) do
     html |> cell(source, target) |> Floki.attribute("disabled") != []
   end
 
-  # Every cell the grid offers is named explicitly — "true" for ticked, "false"
-  # for cleared. `render_submit/2` merges over the form's rendered state rather
-  # than replacing it, so omitting a cell leaves its rendered `checked` in the
-  # payload and unticking would be untestable. Naming every cell mirrors what
-  # the browser sends, because each checkbox is paired with a hidden "false".
-  defp save(view, ticked) do
-    ticked = MapSet.new(ticked)
+  defp paused?(html, source, target) do
+    cell_state(html, cell_id(source, target)) == :paused
+  end
 
-    # Every cell the page offered, so a cleared one is named "false" rather
-    # than merely omitted. Read off the rendered form so the payload matches
-    # what a browser would send for this exact grid.
-    payload =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.find(~s(#sync-link-matrix-form input[type="checkbox"]))
-      |> Enum.map(&(&1 |> Floki.attribute("id") |> List.first()))
-      |> Enum.reject(&is_nil/1)
-      |> Map.new(fn cell ->
-        {cell, if(MapSet.member?(ticked, cell), do: "true", else: "false")}
-      end)
+  # A cell is clicked to the state the test wants, then the grid is submitted.
+  # This is the browser's own sequence: clicking stages, saving writes, and
+  # nothing reaches a calendar in between. It replaces a helper that posted a
+  # map of checkbox values — the grid has no inputs any more, and a payload
+  # built by hand could assert a submission the UI cannot produce.
+  defp save(view, states) do
+    Enum.each(states, fn {cell, state} -> click_cell(view, cell, state) end)
 
     view
     |> element("#sync-link-matrix-form")
-    |> render_submit(%{"matrix" => Map.merge(payload, forged(ticked, payload))})
+    |> render_submit(%{})
   end
 
-  # A test that submits a cell the grid never rendered is exercising the
-  # forged-id path deliberately, so it is added rather than filtered away.
-  defp forged(ticked, payload) do
-    ticked
-    |> Enum.reject(&Map.has_key?(payload, &1))
-    |> Map.new(&{&1, "true"})
+  # Clicks the cell until it reads the wanted state, at most one full cycle.
+  # The cycle is off -> active -> paused -> off, so three clicks return any
+  # cell to where it started and a fourth would be a loop.
+  defp click_cell(view, cell, wanted) do
+    Enum.reduce_while(1..3, nil, fn _attempt, _acc ->
+      if cell_state(render(view), cell) == wanted do
+        {:halt, :ok}
+      else
+        {:cont, view |> element("##{cell}") |> render_click()}
+      end
+    end)
+  end
+
+  # A cell the grid never rendered cannot be clicked, so the forged-id path is
+  # exercised by pushing the component's own event with the ids under test.
+  defp push_cell(view, rendered_cell, source_id, target_id, state) do
+    # Overridden params on a cell the grid *did* render: the event has to reach
+    # the component that owns it, and a bare `render_click/3` on the view goes
+    # to the parent LiveView, which has no such handler.
+    view
+    |> element("##{rendered_cell}")
+    |> render_click(%{
+      "source" => to_string(source_id),
+      "target" => to_string(target_id),
+      "state" => to_string(state)
+    })
+
+    view
+    |> element("#sync-link-matrix-form")
+    |> render_submit(%{})
+  end
+
+  # Read off the rendered class rather than an attribute: the state a cell is
+  # in is exactly what it paints, and asserting on the paint is what catches a
+  # grid that stores the right thing and shows the wrong one.
+  defp cell_state(html, cell) do
+    classes =
+      html
+      |> Floki.parse_document!()
+      |> Floki.find("##{cell}")
+      |> Floki.attribute("class")
+      |> List.first()
+      |> to_string()
+
+    cond do
+      String.contains?(classes, "border-turquoise-600") -> :active
+      String.contains?(classes, "border-amber-300") -> :paused
+      true -> :off
+    end
   end
 
   defp pairs(user_id) do
@@ -121,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
       work = calendar(user, "Work")
       personal = calendar(user, "Personal")
 
-      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{work.id, personal.id}])
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{work.id, personal.id} => :active})
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
@@ -150,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      html = save(view, [cell_id(work, personal), cell_id(personal, work)])
+      html = save(view, [{cell_id(work, personal), :active}, {cell_id(personal, work), :active}])
 
       assert pairs(user.id) ==
                MapSet.new([{work.id, personal.id}, {personal.id, work.id}])
@@ -159,19 +193,39 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
       assert ticked?(html, personal, work)
     end
 
-    test "deletes a link for each cleared cell", ctx do
+    test "pauses a link on the click after the one that mirrors it", ctx do
+      # The reversible stop. A cell clicked once past active keeps its link and
+      # its settings, and writes nothing — which is what makes the grid safe to
+      # click on, since the destructive stop is a further click away.
       %{conn: conn, user: user} = ctx
       work = calendar(user, "Work")
       personal = calendar(user, "Personal")
 
-      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{work.id, personal.id}])
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{work.id, personal.id} => :active})
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      html = save(view, [])
+      html = save(view, [{cell_id(work, personal), :paused}])
+
+      assert pairs(user.id) == MapSet.new([{work.id, personal.id}])
+      assert [%{enabled: false}] = SyncLink.list_links(user.id)
+      assert paused?(html, work, personal)
+    end
+
+    test "deletes a link on the click after the one that pauses it", ctx do
+      %{conn: conn, user: user} = ctx
+      work = calendar(user, "Work")
+      personal = calendar(user, "Personal")
+
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{work.id, personal.id} => :active})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      html = save(view, [{cell_id(work, personal), :off}])
 
       assert pairs(user.id) == MapSet.new()
       refute ticked?(html, work, personal)
+      refute paused?(html, work, personal)
     end
 
     test "a cell the organiser never touched keeps its link", ctx do
@@ -180,12 +234,12 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
       personal = calendar(user, "Personal")
       team = calendar(user, "Team")
 
-      {:ok, _summary} = SyncLink.apply_matrix(user.id, [{work.id, personal.id}])
+      {:ok, _summary} = SyncLink.apply_matrix(user.id, %{{work.id, personal.id} => :active})
       [before] = SyncLink.list_links(user.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      save(view, [cell_id(work, personal), cell_id(work, team)])
+      save(view, [{cell_id(work, personal), :active}, {cell_id(work, team), :active}])
 
       # Re-saving the existing cell must not have torn the link down and built
       # a new one: that would withdraw its placeholders from the provider.
@@ -198,13 +252,14 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
     test "ignores a cell naming a calendar the organiser does not own", ctx do
       %{conn: conn, user: user} = ctx
       work = calendar(user, "Work")
-      _personal = calendar(user, "Personal")
+      personal = calendar(user, "Personal")
       stranger = insert(:calendar_integration, provider: "google", is_active: true)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
 
-      # The cell is not on the page; submitting it anyway is a forged id.
-      save(view, ["sync-cell-#{work.id}-#{stranger.id}"])
+      # The cell is not on the page, so it cannot be clicked; pushing the
+      # component's own event with the ids is the shape a forged one takes.
+      push_cell(view, cell_id(work, personal), work.id, stranger.id, :active)
 
       assert pairs(user.id) == MapSet.new()
     end
@@ -218,10 +273,89 @@ defmodule TymeslotWeb.Dashboard.SyncLinksMatrixTest do
 
       for _attempt <- 1..60, do: RateLimiter.check_sync_link_write_rate_limit(user.id)
 
-      html = save(view, [cell_id(work, personal)])
+      html = save(view, [{cell_id(work, personal), :active}])
 
       assert pairs(user.id) == MapSet.new()
       assert html =~ "reached the limit"
+    end
+  end
+
+  describe "staging a change" do
+    # The property the whole redesign rests on: a click edits the page, not a
+    # calendar. Without it the grid is a set of twenty live buttons, each one
+    # click from withdrawing placeholders.
+    test "clicking a cell writes nothing until the grid is saved", ctx do
+      %{conn: conn, user: user} = ctx
+      work = calendar(user, "Work")
+      personal = calendar(user, "Personal")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      html = view |> element("##{cell_id(work, personal)}") |> render_click()
+
+      assert SyncLink.list_links(user.id) == []
+      assert cell_state(html, cell_id(work, personal)) == :active
+    end
+
+    test "counts the staged changes and offers to discard them", ctx do
+      %{conn: conn, user: user} = ctx
+      work = calendar(user, "Work")
+      personal = calendar(user, "Personal")
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+      refute html =~ "change staged"
+
+      html = view |> element("##{cell_id(work, personal)}") |> render_click()
+      assert html =~ "1 change staged"
+
+      html = view |> element("##{cell_id(personal, work)}") |> render_click()
+      assert html =~ "2 changes staged"
+
+      html = view |> element("button[phx-click='discard_sync_link_matrix']") |> render_click()
+
+      refute html =~ "change staged"
+      assert cell_state(html, cell_id(work, personal)) == :off
+      assert SyncLink.list_links(user.id) == []
+    end
+
+    test "stops counting a cell clicked back to where it started", ctx do
+      # Three clicks is a full cycle. A grid that counted clicks rather than
+      # differences would report a pending change over a grid identical to the
+      # stored one, and the organiser would save to apply nothing.
+      %{conn: conn, user: user} = ctx
+      work = calendar(user, "Work")
+      personal = calendar(user, "Personal")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      html =
+        Enum.reduce(1..3, nil, fn _click, _acc ->
+          view |> element("##{cell_id(work, personal)}") |> render_click()
+        end)
+
+      refute html =~ "change staged"
+      assert cell_state(html, cell_id(work, personal)) == :off
+    end
+
+    test "keeps the staged grid when the save is refused", ctx do
+      # A refused save leaves the organiser's intent unapplied, so discarding
+      # it would silently throw away the edit they were just told did not
+      # happen.
+      %{conn: conn, user: user} = ctx
+      work = calendar(user, "Work")
+      personal = calendar(user, "Personal")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=sync_links")
+
+      view |> element("##{cell_id(work, personal)}") |> render_click()
+
+      for _attempt <- 1..60, do: RateLimiter.check_sync_link_write_rate_limit(user.id)
+
+      html = view |> element("#sync-link-matrix-form") |> render_submit(%{})
+
+      assert SyncLink.list_links(user.id) == []
+      assert html =~ "1 change staged"
+      assert cell_state(html, cell_id(work, personal)) == :active
     end
   end
 end
