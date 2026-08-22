@@ -18,11 +18,20 @@ defmodule Tymeslot.Emails.BrandingTest do
   setup :restore_app_settings_env
 
   setup do
-    on_exit(fn ->
+    # Cleared on the way in as well as on the way out. `on_exit` only tidies
+    # what *this* file wrote, and the directory is shared: the admin email
+    # branding tests store a logo through the same `Branding.store_logo/1` and
+    # leave `branding/` behind. Whenever ExUnit's seed ordered that file first,
+    # "stores nothing" found the directory already present and failed on a
+    # `refute File.exists?` that had nothing to do with the bytes it rejected.
+    clear_branding_dir = fn ->
       upload_dir()
       |> Path.join("branding")
       |> File.rm_rf()
-    end)
+    end
+
+    clear_branding_dir.()
+    on_exit(clear_branding_dir)
 
     :ok
   end
