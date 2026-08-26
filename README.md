@@ -153,6 +153,7 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 | **Docker** | [README-Docker.md](README-Docker.md) | Single container, Postgres included — recommended |
 | **Cloudron** | [README-Cloudron.md](README-Cloudron.md) | One-click install, automatic updates |
 | **Railway** | [Deploy →](https://railway.com/deploy/tymeslot) | One-click cloud, no server to manage |
+| **RepoCloud** | [Deploy →](https://repocloud.io/details/Tymeslot/) | One-click cloud hosting at half the cost |
 | **Managed Cloud** | [tymeslot.app](https://tymeslot.app) | Zero setup, free plan included |
 
 Full configuration reference — SMTP, OAuth, OIDC, reCAPTCHA, external Postgres, SSO-only mode — lives in the [Docker guide](README-Docker.md). The first user to register on a fresh install becomes admin and gets `/admin`, where runtime settings (registration on/off, password auth, video transcoding) can be toggled without a redeploy. For promoting further admins on each target, see [`docs/ADMIN.md`](docs/ADMIN.md).
