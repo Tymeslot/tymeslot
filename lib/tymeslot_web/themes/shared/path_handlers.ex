@@ -62,8 +62,20 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   defp build_query_params(socket, locale) do
     %{"locale" => locale}
-    |> maybe_put_query_param("theme", socket.assigns[:theme_id])
+    |> maybe_put_query_param("theme", preview_theme_id(socket))
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
+  end
+
+  # `:theme_id` is the id of the theme currently being rendered and is always
+  # assigned (see `SchedulingInit.assign_theme_state/2`), so it is not by itself
+  # a signal that the visitor is previewing anything. Emitting it unconditionally
+  # meant that *any* visitor who switched language landed on a URL carrying
+  # `theme=`, which `ThemeUtils.assign_theme_with_preview/2` reads as a preview and
+  # `BookingSubmissionHandlerComponent.booking_orchestrator/1` then fails closed —
+  # silently making booking impossible. Only carry it when the page really is a
+  # theme preview, so switching language mid-preview still keeps the theme.
+  defp preview_theme_id(socket) do
+    if socket.assigns[:theme_preview], do: socket.assigns[:theme_id], else: nil
   end
 
   defp get_slug(socket) do

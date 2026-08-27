@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "de")
-      assert path == "/johndoe?locale=de&theme=1"
+      assert path == "/johndoe?locale=de"
     end
 
     test "builds path for schedule action with duration" do
@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "uk")
-      assert path == "/johndoe/30-minutes?locale=uk&theme=2"
+      assert path == "/johndoe/30-minutes?locale=uk"
     end
 
     test "builds path for booking action" do
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "en")
-      assert path == "/johndoe/60-minutes/book?locale=en&theme=1"
+      assert path == "/johndoe/60-minutes/book?locale=en"
     end
 
     test "builds path for confirmation action" do
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "de")
-      assert path == "/johndoe/thank-you?locale=de&theme=2"
+      assert path == "/johndoe/thank-you?locale=de"
     end
 
     test "handles missing username context by falling back to root" do
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "en")
-      assert path == "/?locale=en&theme=1"
+      assert path == "/?locale=en"
     end
 
     test "handles special characters in username" do
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       path = PathHandlers.build_path_with_locale(socket, "en")
       # Note: username in URL should be already encoded or handled by router,
       # but PathHandlers just joins them.
-      assert path == "/john.doe@example.com?locale=en&theme=1"
+      assert path == "/john.doe@example.com?locale=en"
     end
 
     test "omits theme and duration if not in assigns" do
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "de")
-      assert path == "/johndoe?locale=de&reschedule_meeting_uid=abc-123&theme=1"
+      assert path == "/johndoe?locale=de&reschedule_meeting_uid=abc-123"
     end
 
     test "omits the reschedule uid when it is an empty string" do
@@ -126,7 +126,42 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "de")
-      assert path == "/johndoe?locale=de&theme=1"
+      assert path == "/johndoe?locale=de"
+    end
+
+    test "carries the theme while previewing so a locale switch keeps the preview" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :overview,
+          theme_id: "2",
+          theme_preview: true
+        }
+      }
+
+      path = PathHandlers.build_path_with_locale(socket, "de")
+      assert path == "/johndoe?locale=de&theme=2"
+    end
+
+    test "does not carry the theme for an ordinary visitor" do
+      # Regression: `:theme_id` is always assigned, so emitting it unconditionally
+      # put every visitor who switched language onto a `theme=` URL. That reads as a
+      # preview downstream and fails the booking closed, silently making it
+      # impossible to book after changing the language.
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :booking,
+          selected_duration: "30min",
+          theme_id: "1",
+          theme_preview: false
+        }
+      }
+
+      path = PathHandlers.build_path_with_locale(socket, "fr")
+
+      assert path == "/johndoe/30-minutes/book?locale=fr"
+      refute path =~ "theme="
     end
   end
 
