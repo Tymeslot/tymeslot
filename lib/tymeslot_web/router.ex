@@ -66,6 +66,16 @@ defmodule TymeslotWeb.Router do
     post "/webhook", TelegramWebhookController, :webhook
   end
 
+  # Booking creation for external systems (CRMs, automation platforms). Every
+  # request carries the organiser's booking API token in an `Authorization:
+  # Bearer` header, so it runs outside the session-based pipelines — see
+  # `TymeslotWeb.BookingApiController`.
+  scope "/api/v1", TymeslotWeb do
+    pipe_through :api
+
+    post "/bookings", BookingApiController, :create
+  end
+
   # Slack OAuth start/callback (authenticated browser flow — the user must be
   # logged in to begin the dance and the callback needs the session cookie to
   # redirect them back to /dashboard/automation).
