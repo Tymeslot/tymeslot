@@ -11,10 +11,12 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
   alias Ecto.UUID
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Webhooks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoom.Recovery
   alias Tymeslot.Workers.VideoRoomWorker
+  alias Tymeslot.Workers.WebhookWorker
   alias Tymeslot.ZoomOAuthHelperMock
 
   setup :verify_on_exit!
@@ -313,6 +315,82 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
 
       # Calendar update should be enqueued (if it fails, that's a separate concern)
       assert_enqueued(worker: CalendarEventWorker)
+    end
+  end
+
+  describe "perform/1 - the meeting.created fan-out" do
+    setup do
+      scenario = setup_video_scenario()
+
+      {:ok, webhook} =
+        Webhooks.create_webhook(scenario.user.id, %{
+          name: "Bookings",
+          url: "https://example.com/hooks/bookings",
+          events: ["meeting.created"]
+        })
+
+      Map.put(scenario, :webhook, webhook)
+    end
+
+    test "dispatches meeting.created once the room exists, not just the emails", %{
+      meeting: meeting
+    } do
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "send_emails" => true
+               })
+
+      # The emails were never the whole event. Holding them until the room
+      # exists is the point of this job; holding the webhook and dropping it is
+      # not.
+      assert_enqueued(worker: EmailWorker)
+      assert_enqueued(worker: WebhookWorker)
+    end
+
+    test "dispatches meeting.created when the room can never be created", %{user: user} do
+      # A different slot from the scenario's own meeting: an organiser cannot
+      # hold two confirmed meetings at one time, and the database says so.
+      start_time = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: nil,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30, :minute)
+        )
+
+      assert {:discard, "Video integration missing"} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "send_emails" => true},
+                 attempt: 1
+               )
+
+      # The attendees get their emails without a link; the subscriber has to
+      # learn about the booking all the same.
+      assert_enqueued(worker: EmailWorker)
+      assert_enqueued(worker: WebhookWorker)
+    end
+
+    test "stays silent when the notifications have already gone out", %{meeting: meeting} do
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "send_emails" => false
+               })
+
+      # `send_emails: false` means the caller already announced the booking.
+      # Announcing it again would deliver the attendee a second confirmation and
+      # the subscriber a duplicate event.
+      refute_enqueued(worker: EmailWorker)
+      refute_enqueued(worker: WebhookWorker)
     end
   end
 
