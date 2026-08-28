@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.BookingApi
+  alias Tymeslot.Profiles
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias TymeslotWeb.Dashboard.Automation.Defaults
@@ -76,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       socket
       |> assign(assigns)
       |> AutomationHelpers.load_webhooks()
+      |> load_booking_api()
       |> AutomationHelpers.maybe_load_telegram()
       |> AutomationHelpers.maybe_load_slack()
       |> maybe_subscribe_telegram()
@@ -149,6 +152,19 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
   def handle_event("hide_deliveries", params, socket),
     do: WebhookEventHandlers.handle_hide_deliveries(params, socket)
+
+  # ============================================================================
+  # Booking API Events
+  # ============================================================================
+
+  def handle_event("enable_booking_api", _params, socket),
+    do: {:noreply, update_booking_api(socket, &BookingApi.enable/1)}
+
+  def handle_event("regenerate_booking_api_token", _params, socket),
+    do: {:noreply, update_booking_api(socket, &BookingApi.regenerate_token/1)}
+
+  def handle_event("disable_booking_api", _params, socket),
+    do: {:noreply, update_booking_api(socket, &BookingApi.disable/1)}
 
   # ============================================================================
   # Telegram Events
@@ -353,6 +369,8 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
                     webhooks={@webhooks}
                     testing_connection={@testing_connection}
                     time_format={@time_format}
+                    booking_api_token={@booking_api_token}
+                    booking_api_endpoint_url={@booking_api_endpoint_url}
                     myself={@myself}
                   />
                 <% :telegram -> %>
@@ -381,6 +399,31 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   # ============================================================================
   # Private Helpers
   # ============================================================================
+
+  defp load_booking_api(socket) do
+    socket = assign(socket, :booking_api_endpoint_url, url(~p"/api/v1/bookings"))
+
+    case Profiles.get_or_create_profile(socket.assigns.current_user.id) do
+      {:ok, profile} ->
+        socket
+        |> assign(:booking_api_profile, profile)
+        |> assign(:booking_api_token, profile.booking_api_token)
+
+      _error ->
+        socket
+        |> assign(:booking_api_profile, nil)
+        |> assign(:booking_api_token, nil)
+    end
+  end
+
+  defp update_booking_api(%{assigns: %{booking_api_profile: %{} = profile}} = socket, fun) do
+    case fun.(profile) do
+      {:ok, _updated} -> load_booking_api(socket)
+      {:error, _changeset} -> socket
+    end
+  end
+
+  defp update_booking_api(socket, _fun), do: socket
 
   defp maybe_subscribe_telegram(%{assigns: %{telegram_subscribed: true}} = socket), do: socket
 
