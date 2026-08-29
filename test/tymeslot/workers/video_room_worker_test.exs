@@ -63,7 +63,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       result =
         perform_job(
           VideoRoomWorker,
-          %{"meeting_id" => meeting.id, "send_emails" => true},
+          %{"meeting_id" => meeting.id, "announce" => true},
           attempt: 1
         )
 
@@ -176,7 +176,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 5
                )
@@ -206,7 +206,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 6
                )
@@ -239,7 +239,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 5
                )
@@ -265,7 +265,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 5
                )
@@ -340,7 +340,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       assert :ok =
                perform_job(VideoRoomWorker, %{
                  "meeting_id" => meeting.id,
-                 "send_emails" => true
+                 "announce" => true
                })
 
       # The emails were never the whole event. Holding them until the room
@@ -367,7 +367,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       assert {:discard, "Video integration missing"} =
                perform_job(
                  VideoRoomWorker,
-                 %{"meeting_id" => meeting.id, "send_emails" => true},
+                 %{"meeting_id" => meeting.id, "announce" => true},
                  attempt: 1
                )
 
@@ -383,14 +383,30 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       assert :ok =
                perform_job(VideoRoomWorker, %{
                  "meeting_id" => meeting.id,
-                 "send_emails" => false
+                 "announce" => false
                })
 
-      # `send_emails: false` means the caller already announced the booking.
+      # `announce: false` means the caller already announced the booking.
       # Announcing it again would deliver the attendee a second confirmation and
       # the subscriber a duplicate event.
       refute_enqueued(worker: EmailWorker)
       refute_enqueued(worker: WebhookWorker)
+    end
+
+    test "announces a job still carrying the legacy send_emails key", %{meeting: meeting} do
+      expect_mirotalk_success()
+
+      # Recovery snoozes span days, so jobs enqueued before `send_emails` was
+      # renamed outlive the deploy that renames it. Reading only the new key
+      # would take the `false` default and lose the very event they were queued
+      # to raise.
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "send_emails" => true
+               })
+
+      assert_enqueued(worker: WebhookWorker)
     end
   end
 
@@ -448,16 +464,16 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => "123", "send_emails" => false}
+        args: %{"meeting_id" => "123", "announce" => false}
       )
     end
 
-    test "schedule_video_room_creation_with_emails/1 enqueues job" do
-      assert :ok = VideoRoomWorker.schedule_video_room_creation_with_emails("123")
+    test "schedule_video_room_creation_with_announcement/1 enqueues job" do
+      assert :ok = VideoRoomWorker.schedule_video_room_creation_with_announcement("123")
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => "123", "send_emails" => true}
+        args: %{"meeting_id" => "123", "announce" => true}
       )
     end
   end
