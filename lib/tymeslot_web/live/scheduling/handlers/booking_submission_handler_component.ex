@@ -274,6 +274,15 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   end
 
   defp handle_expired_preview(socket) do
+    # Log it. A blocked submission produces no meeting row, no email and no
+    # exception, so without this line the only trace is a flash the visitor
+    # sees and nobody else does. That is what made #84 so hard to pin down:
+    # the server log showed the submit being accepted and then simply stopping.
+    Logger.warning("Booking blocked: preview claimed without a valid owner token",
+      organizer_user_id: socket.assigns[:organizer_user_id],
+      theme_id: socket.assigns[:theme_id]
+    )
+
     socket =
       socket
       |> BookingGuards.release_submission()
@@ -338,12 +347,17 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   #      owner. Simulate via DemoOrchestrator: no DB row, email, or calendar
   #      event.
   #
-  #   2. `:theme_preview` true but `:owner_preview` false — the preview display
-  #      flag is active (so the owner believes they are in a simulation), but no
-  #      valid owner-bound token was present or it expired during the session.
-  #      Persisting a real booking here would be invisible to the owner. Fail
-  #      closed: return `:preview_without_valid_token` so the caller blocks the
-  #      submission with an explicit error.
+  #   2. `:theme_preview` true but `:owner_preview` false — the URL claimed a
+  #      preview (`?preview=`), so the owner believes they are in a simulation,
+  #      but no valid owner-bound token backed the claim or it expired during
+  #      the session. Persisting a real booking here would be invisible to the
+  #      owner. Fail closed: return `:preview_without_valid_token` so the caller
+  #      blocks the submission with an explicit error.
+  #
+  #      The claim must therefore only ever come from a parameter a visitor
+  #      cannot trip over by accident. `?theme=` used to set it, which turned
+  #      this branch into a silent booking outage for anyone who switched
+  #      language (#84); `PreviewMode.claimed?/1` now owns that rule.
   #
   #   3. Neither flag set — a normal public booking; dispatch to the real
   #      (or SaaS-demo-mode) orchestrator.

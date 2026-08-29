@@ -90,6 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   def categorize_error(:unauthorized), do: :auth
   def categorize_error(:forbidden), do: :permission
   def categorize_error(:not_found), do: :config
+  def categorize_error({:calendar_home_not_found, _url}), do: :config
   def categorize_error(:rate_limited), do: :rate_limit
   def categorize_error(:timeout), do: :timeout
 
@@ -98,6 +99,38 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       do: :network
 
   def categorize_error(_error), do: :unknown
+
+  @doc """
+  Copy for the handful of raw reasons whose category is too coarse to say
+  anything the account owner can act on, or `nil` when the category message is
+  good enough.
+
+  The categories exist to index copy, and seven buckets cannot distinguish
+  "your server URL is wrong" from "your server URL is fine, the calendars are
+  somewhere else" — both are `:config`. Where that difference is the whole
+  point of the message, it is written here against the raw reason instead.
+
+  Takes the same raw, untranslated error as `categorize_error/1`, and for the
+  same reason: this dispatches on the term, not on English text.
+
+  Consulted by both edges a raw reason reaches a user through:
+  `ErrorHandler.classify_and_format/3` for discovery, and
+  `ProviderCommon.test_caldav_provider_connection/2` for the connection test.
+  A reason added here is therefore specific on both, rather than only on the
+  path it happened to be written for.
+  """
+  @spec specific_message(any(), provider()) :: String.t() | nil
+  def specific_message({:calendar_home_not_found, url}, _provider) do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings.",
+      url: url
+    )
+  end
+
+  def specific_message({:error, reason}, provider), do: specific_message(reason, provider)
+
+  def specific_message(_error, _provider), do: nil
 
   @doc """
   Gets a user-friendly error message for a category and provider.

@@ -82,10 +82,15 @@ defmodule Tymeslot.Security.FieldValidators.EmailValidatorTest do
       assert :ok = EmailValidator.validate("user@example.io")
     end
 
-    test "rejects emails with invalid TLDs and shows the ending" do
-      {:error, msg} = EmailValidator.validate("user@example.or")
-      assert msg =~ "unrecognised domain ending"
-      assert msg =~ ".or"
+    test "accepts addresses on TLDs delegated since the list was first written" do
+      assert :ok = EmailValidator.validate("owner@eastvalleyliving.homes")
+      assert :ok = EmailValidator.validate("user@example.web")
+    end
+
+    test "rejects emails whose ending cannot be a TLD, and shows the ending" do
+      {:error, msg} = EmailValidator.validate("user@example.c0m")
+      assert msg =~ "invalid domain ending"
+      assert msg =~ ".c0m"
     end
 
     test "includes suggestion when confident" do
@@ -95,8 +100,8 @@ defmodule Tymeslot.Security.FieldValidators.EmailValidatorTest do
       assert msg =~ "did you mean .com?"
     end
 
-    test "omits suggestion when ambiguous" do
-      {:error, msg} = EmailValidator.validate("user@example.or")
+    test "omits suggestion when there is no confident correction" do
+      {:error, msg} = EmailValidator.validate("user@example.1")
       refute msg =~ "did you mean"
     end
 
