@@ -163,17 +163,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @doc "Builds the initial form data map from an existing meeting type or nil."
   @spec build_form_data(Ecto.Schema.t() | nil) :: map()
   def build_form_data(nil) do
-    %{"name" => "", "duration" => "30", "description" => "", "icon" => "none"}
+    %{
+      "name" => "",
+      "duration" => "30",
+      "slot_interval" => "",
+      "description" => "",
+      "icon" => "none"
+    }
   end
 
   def build_form_data(type) do
     %{
       "name" => type.name || "",
       "duration" => to_string(type.duration_minutes || 30),
+      "slot_interval" => slot_interval_form_value(type.slot_interval_minutes),
       "description" => type.description || "",
       "icon" => type.icon || "none"
     }
   end
+
+  # nil means "use the meeting type's own duration"; represented as a blank
+  # string so the form's "same as meeting length" option is selected.
+  defp slot_interval_form_value(nil), do: ""
+  defp slot_interval_form_value(minutes), do: to_string(minutes)
 
   @doc "Returns whether guests are allowed for an existing meeting type."
   @spec get_allow_guests(Ecto.Schema.t() | nil) :: boolean()

@@ -25,6 +25,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
     end
   end
 
+  def validate_and_update_field("slot_interval", value, metadata, acc_data, acc_errors) do
+    case MeetingSettingsInputValidation.validate_field(:slot_interval, value, metadata) do
+      {:ok, sanitized} ->
+        {Map.put(acc_data, "slot_interval", sanitized), Map.delete(acc_errors, :slot_interval)}
+
+      {:error, %{slot_interval: msg}} ->
+        {acc_data, Map.put(acc_errors, :slot_interval, msg)}
+    end
+  end
+
   def validate_and_update_field("description", value, metadata, acc_data, acc_errors) do
     case MeetingSettingsInputValidation.validate_field(:description, value, metadata) do
       {:ok, sanitized} ->

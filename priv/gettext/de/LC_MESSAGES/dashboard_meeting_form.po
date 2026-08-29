@@ -779,3 +779,23 @@ msgstr "Zeitplan aktualisiert und gespeichert"
 #, elixir-autogen, elixir-format
 msgid "Selected schedule is not one of yours"
 msgstr "Der gewählte Zeitplan gehört nicht zu Ihrem Konto"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} Min."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking slot interval"
+msgstr "Buchungsintervall"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "How far apart booking start times are offered. Leave as default to match the meeting length."
+msgstr "Abstand zwischen den angebotenen Startzeiten. Standard entspricht der Termindauer."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Same as meeting length"
+msgstr "Wie die Termindauer"

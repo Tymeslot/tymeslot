@@ -47,10 +47,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
 
+  # Common booking-grid spacings offered alongside the "same as meeting
+  # length" default; filtered against Constraints.slot_interval_minutes_range/0.
+  @common_slot_intervals [5, 10, 15, 20, 30, 45, 60, 90, 120]
+
   # Which form-error fields surface an indicator on which tab. Errors on
   # fields absent here (e.g. :base) render below the panels and need no dot.
   @tab_error_fields %{
-    "details" => [:name, :duration, :description, :icon],
+    "details" => [:name, :duration, :slot_interval, :description, :icon],
     "location" => [:video_integration, :calendar_integration, :target_calendar],
     "booking" => [:payment_required, :price_cents],
     "reminders" => [:reminder_config]
@@ -130,6 +134,35 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 )}
               </p>
             </div>
+          </div>
+
+          <% slot_interval_value =
+            Map.get(
+              @form_data,
+              "slot_interval",
+              if(@type, do: @type.slot_interval_minutes, else: "")
+            ) %>
+          <div>
+            <.input
+              type="select"
+              name="meeting_type[slot_interval]"
+              label={dgettext("dashboard_meeting_form", "Booking slot interval")}
+              value={slot_interval_value}
+              options={slot_interval_options(slot_interval_value)}
+              phx-change="validate_meeting_type"
+              phx-target={@myself}
+              errors={
+                FormValidationHelpers.field_errors(@form_errors, :slot_interval)
+                |> Enum.map(&Helpers.format_errors/1)
+              }
+              icon="hero-adjustments-horizontal"
+            />
+            <p class="mt-1 text-token-sm text-tymeslot-600">
+              {dgettext(
+                "dashboard_meeting_form",
+                "How far apart booking start times are offered. Leave as default to match the meeting length."
+              )}
+            </p>
           </div>
 
           <.input
@@ -342,6 +375,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     </div>
     """
   end
+
+  # `current_value` is whatever is currently stored/selected for this meeting
+  # type. It is folded into the option list even when it falls outside
+  # @common_slot_intervals, so a value written by something other than this
+  # form (a seed, an import, a support fix) still renders as itself instead of
+  # silently falling back to "Same as meeting length" — which the next
+  # autosave of any other field would then persist as the value's erasure.
+  defp slot_interval_options(current_value) do
+    range = Constraints.slot_interval_minutes_range()
+
+    intervals =
+      @common_slot_intervals
+      |> Enum.filter(&(&1 in range))
+      |> add_stored_interval(parse_interval(current_value))
+      |> Enum.sort()
+      |> Enum.map(
+        &{dgettext("dashboard_meeting_form", "%{minutes} min", minutes: &1), to_string(&1)}
+      )
+
+    [{dgettext("dashboard_meeting_form", "Same as meeting length"), ""} | intervals]
+  end
+
+  defp add_stored_interval(intervals, nil), do: intervals
+  defp add_stored_interval(intervals, interval), do: Enum.uniq([interval | intervals])
+
+  defp parse_interval(value) when is_integer(value), do: value
+
+  defp parse_interval(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {interval, ""} -> interval
+      _invalid -> nil
+    end
+  end
+
+  defp parse_interval(_value), do: nil
 
   defp form_tabs(form_errors) do
     tabs = [
