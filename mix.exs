@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.10.1",
+      version: "1.12.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -114,7 +114,7 @@ defmodule Tymeslot.MixProject do
       {:telemetry_poller, "~> 1.3"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2"},
+      {:dns_cluster, "~> 0.3"},
       {:dotenvy, "~> 1.1"},
       {:bandit, "~> 1.8"},
       {:caldav_client, "~> 2.0"},
@@ -169,7 +169,7 @@ defmodule Tymeslot.MixProject do
       # Test-quality Credo checks: tests that assert nothing, assert weakly, or
       # never reach application code. Introduced at :low priority, so they are
       # visible under --strict without gating until the backlog is triaged.
-      {:jump_credo_checks, "~> 0.4", only: [:dev, :test], runtime: false},
+      {:jump_credo_checks, "~> 0.5", only: [:dev, :test], runtime: false},
       {:flagpack, "~> 0.6"},
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},

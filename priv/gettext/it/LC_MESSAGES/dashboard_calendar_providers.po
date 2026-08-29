@@ -1172,3 +1172,8 @@ msgstr "Il server Exchange ha rifiutato le credenziali salvate. Ricollega l'inte
 #, elixir-autogen, elixir-format
 msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
 msgstr "Tymeslot ha bisogno dell'indirizzo e-mail della casella di posta per leggerne la disponibilità. Ricollega l'integrazione e indicalo."
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
+msgstr "Connessione a %{url} riuscita e le tue credenziali sono state accettate, ma non è stata trovata alcuna raccolta di calendari. Inserisci l’URL completo della tua raccolta di calendari, come indicato nelle impostazioni del tuo server di calendario."

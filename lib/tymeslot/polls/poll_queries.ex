@@ -37,6 +37,27 @@ defmodule Tymeslot.Polls.PollQueries do
     |> Repo.one()
   end
 
+  @doc """
+  Fetches a poll for its owner, locking the row for the surrounding transaction.
+
+  Must be called inside `Repo.transaction/1`. Confirmation reads the poll's
+  status and then writes it, so the read has to hold the row until the write
+  commits; without the lock two concurrent confirms both see `:open` and both
+  mint a meeting. Associations are preloaded by a second query rather than a
+  join, because Postgres rejects `FOR UPDATE` against an outer-joined row.
+  """
+  @spec lock_for_user(Ecto.UUID.t(), pos_integer()) :: PollSchema.t() | nil
+  def lock_for_user(id, user_id) do
+    PollSchema
+    |> where([p], p.id == ^id and p.user_id == ^user_id)
+    |> lock("FOR UPDATE")
+    |> Repo.one()
+    |> preload_associations()
+  end
+
+  defp preload_associations(nil), do: nil
+  defp preload_associations(poll), do: Repo.preload(poll, @preloads)
+
   @spec list_for_user(pos_integer()) :: [PollSchema.t()]
   def list_for_user(user_id) do
     PollSchema

@@ -993,11 +993,6 @@ msgstr "Convalida della connessione non riuscita"
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Impossibile identificare il tuo account. Riprova. Se il problema persiste, rimuovi e aggiungi di nuovo l'integrazione."
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
-#, elixir-autogen, elixir-format
-msgid "Could not resolve host: %{host}"
-msgstr "Impossibile risolvere l'host: %{host}"
-
 #: lib/tymeslot/integrations/shared/oauth/account_match.ex
 #, elixir-autogen, elixir-format
 msgid "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."
@@ -1059,7 +1054,6 @@ msgid "Invalid URL scheme. Only http and https are supported"
 msgstr "Schema dell'URL non valido. Sono supportati solo http e https"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid hostname in URL"
 msgstr "Nome host non valido nell'URL"

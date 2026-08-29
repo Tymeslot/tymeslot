@@ -229,7 +229,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   defp enqueue_post_payment_effects(meeting, _payment) do
     if meeting.video_integration_id do
-      VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id)
+      VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id)
     else
       _result = Events.meeting_created(meeting)
       :ok

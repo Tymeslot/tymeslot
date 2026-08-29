@@ -2,6 +2,19 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
   @moduledoc false
 
   alias Tymeslot.Security.SsrfBlockedError
+  alias Tymeslot.Security.SsrfGuard
+
+  @doc """
+  Request options that put a MiroTalk call behind the SSRF guard, scoped to the
+  video opt-out rather than the calendar one.
+
+  Defined once so a new call site cannot pick up `ssrf_protect: true` while
+  silently reading the wrong switch.
+  """
+  @spec ssrf_options() :: keyword()
+  def ssrf_options do
+    [ssrf_protect: true, ssrf_allow_private: SsrfGuard.allow_private_for_video?()]
+  end
 
   @doc """
   Attempts an HTTPS request first; falls back to the original base URL on

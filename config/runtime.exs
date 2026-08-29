@@ -772,12 +772,15 @@ if webhook_base_url && String.trim(webhook_base_url) != "" do
   config :tymeslot, :webhook_base_url, String.trim(webhook_base_url)
 end
 
-# Self-host escape hatch for SSRF protection on calendar and self-hosted video
-# integrations. In :prod, outbound requests to CalDAV servers and self-hosted
-# video (e.g. MiroTalk) whose hostname resolves to a private/loopback/link-local
-# address are blocked (Tymeslot.Security.SsrfGuard). Operators who intentionally
-# run those integrations on a private network — the common self-hosting case —
-# opt out by setting ALLOW_PRIVATE_IPS_FOR_CALENDAR=true.
+# Self-host escape hatch for SSRF protection on calendar integrations. In :prod,
+# outbound requests to CalDAV servers whose hostname resolves to a
+# private/loopback/link-local address are blocked (Tymeslot.Security.SsrfGuard).
+# Operators who intentionally run those integrations on a private network — the
+# common self-hosting case — opt out by setting ALLOW_PRIVATE_IPS_FOR_CALENDAR=true.
+#
+# For backwards compatibility this also satisfies video, which it was originally
+# documented as covering; ALLOW_PRIVATE_IPS_FOR_VIDEO below is the switch to
+# reach for now.
 #
 # This does NOT relax webhook SSRF protection (Tymeslot.Webhooks.SsrfValidator);
 # webhooks have their own switch (ALLOW_PRIVATE_IPS_FOR_WEBHOOKS below).
@@ -787,6 +790,14 @@ end
 if config_env() != :test and
      System.get_env("ALLOW_PRIVATE_IPS_FOR_CALENDAR") in ["true", "1", "yes"] do
   config :tymeslot, :allow_private_ips_for_calendar, true
+end
+
+# Video-scoped sibling of the above, covering both self-hosted MiroTalk and the
+# custom video link's reachability test. Set ALLOW_PRIVATE_IPS_FOR_VIDEO=true to
+# run a meeting server on an internal network without relaxing calendar SSRF.
+if config_env() != :test and
+     System.get_env("ALLOW_PRIVATE_IPS_FOR_VIDEO") in ["true", "1", "yes"] do
+  config :tymeslot, :allow_private_ips_for_video, true
 end
 
 # Webhook-scoped sibling of the above. In :prod, outbound webhook deliveries to

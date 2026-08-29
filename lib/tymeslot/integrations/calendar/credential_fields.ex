@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   addresses, which is what stops an authenticated user using the connect form to
   probe the server's own network. That block is lifted only by the operator's
   explicit `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out, read through
-  `Tymeslot.Security.SsrfGuard.allow_private?/0` so this surface, the changeset
+  `Tymeslot.Security.SsrfGuard.allow_private_for_calendar?/0` so this surface, the changeset
   and the request-time guard cannot drift apart.
   """
 
@@ -237,7 +237,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   defp do_validate_calendar_url(url) do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      block_private_ips: not SsrfGuard.allow_private?(),
+      block_private_ips: not SsrfGuard.allow_private_for_calendar?(),
       https_error_message:
         dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
       private_ip_error_message:

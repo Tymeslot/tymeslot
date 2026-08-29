@@ -5,8 +5,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
 
   import TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CurrentIndicator,
     only: [current_indicator: 1]
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
       <div class="flex items-center justify-between gap-3 md:justify-start">
         <%= if @profile && @profile.username do %>
           <a
-            href={"#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{@theme_id}"}
+            href={PreviewMode.owner_path(@profile.username, @profile.user_id, theme: @theme_id)}
             target="_blank"
             rel="noopener noreferrer"
             class="btn btn-secondary py-2.5 px-5 text-token-sm"

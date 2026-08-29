@@ -373,13 +373,20 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      # Missing joinUrl
+      # Missing joinUrl. The reason must be a tagged atom, not a sentence:
+      # `VideoRoom.ErrorPolicy` has to recognise it as terminal, and it cannot
+      # match on prose. Reported as free text, this burned all ten attempts and
+      # raised a permanent-failure alert every day the recovery scan re-queued.
       expect(HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "m1"})}}
       end)
 
-      assert {:error, message} = TeamsProvider.create_meeting_room(config)
-      assert String.contains?(message, "Teams meeting link was not generated")
+      # The orphan cleanup below.
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:error, :video_meeting_not_enabled} = TeamsProvider.create_meeting_room(config)
 
       # Audio conferencing missing
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
@@ -395,6 +402,63 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert {:ok, room_data} = TeamsProvider.create_meeting_room(config)
       assert room_data.provider_data.toll_number == nil
       assert room_data.provider_data.conference_id == nil
+    end
+
+    test "reports a missing Calendars.ReadWrite scope as a terminal reason" do
+      # The consent the integration holds only changes when the user reconnects
+      # it, so this is as unretryable as a missing licence. Reported as prose it
+      # was indistinguishable from a transient fault and cost ten attempts.
+      config = %{
+        access_token: "valid_token",
+        refresh_token: "refresh_token",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        oauth_scope: ""
+      }
+
+      assert {:error, :invalid_configuration} = TeamsProvider.create_meeting_room(config)
+    end
+
+    test "deletes the calendar event Graph created without a join link" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      # Graph answers 201: the event exists on the organiser's calendar even
+      # though it carries no Teams link. Left behind, every retry and every
+      # daily recovery scan deposits another placeholder in their calendar.
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "orphan-event-1"})}}
+      end)
+
+      test_pid = self()
+
+      expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+        send(test_pid, {:deleted, url})
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:error, :video_meeting_not_enabled} = TeamsProvider.create_meeting_room(config)
+
+      assert_received {:deleted, url}
+      assert url =~ "/me/events/orphan-event-1"
+    end
+
+    test "reports the failure even when the orphan cleanup cannot delete" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "orphan-event-2"})}}
+      end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:error, :timeout}
+      end)
+
+      # Cleanup is best-effort: a failure to tidy up must not change the
+      # outcome the caller's retry policy reads.
+      assert {:error, :video_meeting_not_enabled} = TeamsProvider.create_meeting_room(config)
     end
   end
 

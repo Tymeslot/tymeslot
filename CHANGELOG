@@ -1,4 +1,30 @@
 
+[1.12.0]
+* Stop a removed background video reporting a transcoding failure
+* Settle a conflicting calendar event change without retrying
+* Stop retrying Teams meetings an account cannot host
+* Keep the profile photo upload from crashing the page
+* Stop duplicate booking notifications when a video room arrives late
+* Find CalDAV calendars on servers that answer under a subpath
+* Stop rejecting valid email addresses on newer domain endings
+* Stop a stray theme= parameter blocking public bookings
+* Let owners test a booking from the theme preview links
+* notifications: Raise meeting.created for bookings with a video room
+* scheduling: Only carry theme= into locale redirects when previewing
+
+
+[1.11.1]
+* Let video integrations reach a server on a private network
+
+
+[1.11.0]
+* Keep the poll attendee stable when voters register together
+* Connect Nextcloud calendars on subdirectory installs
+* caldav: Stop Nextcloud discovery silently querying the DAV service root
+* Let admins set an email logo, brand name and accent colour
+* Add meeting polls for group scheduling
+
+
 [1.10.1]
 * Reject login redirect targets containing tab or newline characters
 

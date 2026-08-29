@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorMessages
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
 
@@ -44,7 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   integration tests against a local server) by passing `allow_private_ips: true`
   in `opts`, or for the whole deployment by the operator's
   `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out, read via
-  `Tymeslot.Security.SsrfGuard.allow_private?/0`. The production default is
+  `Tymeslot.Security.SsrfGuard.allow_private_for_calendar?/0`. The production default is
   `false` in both cases.
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
@@ -56,7 +57,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
         dgettext("dashboard_calendar_providers", "Invalid URL format")
       )
 
-    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private?())
+    allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private_for_calendar?())
 
     UrlValidation.validate_http_url(url,
       invalid_message: invalid_message,
@@ -145,8 +146,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
         {:error, not_found_msg}
 
       {:error, reason} ->
-        {:error, error_formatter.(reason)}
+        {:error, format_reason(reason, client.provider, error_formatter)}
     end
+  end
+
+  # A provider's `error_formatter` is a fallback: it knows the brand name, not
+  # the failure. Where `ErrorMessages` has copy written for this exact reason,
+  # that copy wins. The formatters flatten an unrecognised reason either to
+  # "an unexpected error occurred" or to `inspect(reason)` rendered into the
+  # flash, and both discard advice that was written to be shown here.
+  #
+  # Doing this once, where the reason meets the formatter, is what keeps the
+  # two formatter shapes from having to agree: a reason given specific copy
+  # reaches every CalDAV provider's connection test, whichever shape it uses.
+  defp format_reason(reason, provider, error_formatter) do
+    ErrorMessages.specific_message(reason, provider) || error_formatter.(reason)
   end
 
   @doc """

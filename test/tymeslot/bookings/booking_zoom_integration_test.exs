@@ -106,14 +106,14 @@ defmodule Tymeslot.Bookings.BookingZoomIntegrationTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting.id, "send_emails" => true}
+        args: %{"meeting_id" => meeting.id, "announce" => true}
       )
 
       # Step 2: run the worker — this is where the Zoom API calls fire.
       assert :ok =
                perform_job(VideoRoomWorker, %{
                  "meeting_id" => meeting.id,
-                 "send_emails" => true
+                 "announce" => true
                })
 
       # The Zoom meeting is now attached to the booking.
@@ -182,7 +182,7 @@ defmodule Tymeslot.Bookings.BookingZoomIntegrationTest do
       assert :ok =
                perform_job(VideoRoomWorker, %{
                  "meeting_id" => meeting.id,
-                 "send_emails" => true
+                 "announce" => true
                })
     end
   end

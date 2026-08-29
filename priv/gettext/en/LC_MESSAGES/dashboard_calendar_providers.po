@@ -1172,3 +1172,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
 msgstr ""
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
+msgstr ""

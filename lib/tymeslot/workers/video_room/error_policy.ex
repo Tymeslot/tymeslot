@@ -41,7 +41,8 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
     meeting_not_found: "Meeting not found",
     invalid_configuration: "Invalid configuration",
     video_integration_missing: "Video integration missing",
-    video_integration_inactive: "Video integration inactive"
+    video_integration_inactive: "Video integration inactive",
+    video_meeting_not_enabled: "Account cannot host video meetings"
   }
 
   @doc """
@@ -62,6 +63,12 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   def categorize(:not_found), do: {:error, :meeting_not_found}
   def categorize(:video_integration_missing), do: {:error, :video_integration_missing}
   def categorize(:video_integration_inactive), do: {:error, :video_integration_inactive}
+
+  # The provider reached the account and the account cannot host a meeting:
+  # a licence or tenant setting the organiser has to change, so no number of
+  # attempts will produce a link.
+  def categorize(:video_meeting_not_enabled), do: {:error, :video_meeting_not_enabled}
+
   def categorize(other), do: {:error, other}
 
   @doc """

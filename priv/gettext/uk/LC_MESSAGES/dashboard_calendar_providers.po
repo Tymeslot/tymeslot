@@ -1173,3 +1173,8 @@ msgstr "Сервер Exchange відхилив збережені обліков
 #, elixir-autogen, elixir-format
 msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
 msgstr "Tymeslot потребує адресу електронної пошти поштової скриньки, щоб читати її зайнятість. Перепідключіть інтеграцію та вкажіть її."
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
+msgstr "З'єднання з %{url} встановлено, ваші облікові дані прийнято, але колекції календарів не знайдено. Введіть повну URL-адресу вашої колекції календарів, як зазначено в налаштуваннях вашого календарного сервера."
