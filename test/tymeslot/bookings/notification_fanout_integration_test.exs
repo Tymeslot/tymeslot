@@ -20,6 +20,13 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
   and webhook delivery jobs land with the event type that transition
   promises. A regression here is silent in production: the booking still
   succeeds, the organiser simply never hears about it.
+
+  A booking whose meeting type creates a video room does not reach `Events` on
+  the booking path at all: it defers the whole event to `VideoRoomWorker` so
+  that every notification carries the join link. That branch is covered here
+  too, driving the job as well as the booking, because a fixture without a
+  video integration exercises only the other half of the `if` and is how this
+  module missed the event being dropped for every video booking.
   """
 
   use Tymeslot.DataCase, async: false
@@ -33,10 +40,12 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
   import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.WorkerTestHelpers
 
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule}
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.TestMocks
-  alias Tymeslot.Workers.{SlackWorker, TelegramWorker, WebhookWorker}
+  alias Tymeslot.Workers.{SlackWorker, TelegramWorker, VideoRoomWorker, WebhookWorker}
 
   setup :verify_on_exit!
 
@@ -110,6 +119,68 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
       assert {:ok, cancelled} = Cancel.execute(meeting.uid)
 
       assert_fanned_out(ctx, cancelled, "meeting.cancelled")
+    end
+  end
+
+  describe "a booking with a video room reaches every outbound channel" do
+    setup ctx do
+      integration =
+        insert(:video_integration, user: ctx.user, provider: "mirotalk", is_active: true)
+
+      video_type =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Fan-out Call",
+          duration_minutes: 30,
+          is_active: true,
+          allow_video: true,
+          video_integration_id: integration.id
+        )
+
+      %{video_type: video_type, video_integration: integration}
+    end
+
+    test "the deferred event fans out once the room exists", ctx do
+      params = booking_params(%{user: ctx.user, meeting_type: ctx.video_type})
+
+      assert {:ok, meeting} = Create.execute_with_video_room(params, form_data())
+
+      # Nothing has been announced yet: the booking handed the whole event to
+      # the job so the payload can carry the join link.
+      refute_enqueued(worker: WebhookWorker)
+
+      assert_enqueued(
+        worker: VideoRoomWorker,
+        args: %{"meeting_id" => meeting.id, "announce" => true}
+      )
+
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "announce" => true
+               })
+
+      assert_fanned_out(ctx, meeting, "meeting.created")
+    end
+
+    test "the event still fans out when the room can never be created", ctx do
+      params = booking_params(%{user: ctx.user, meeting_type: ctx.video_type})
+
+      assert {:ok, meeting} = Create.execute_with_video_room(params, form_data())
+
+      # A room that cannot be created must not cost the subscriber the booking.
+      {:ok, _inactive} = VideoIntegrationQueries.toggle_active(ctx.video_integration)
+
+      assert {:discard, _reason} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 1
+               )
+
+      assert_fanned_out(ctx, meeting, "meeting.created")
     end
   end
 
