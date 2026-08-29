@@ -401,6 +401,25 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   @doc """
+  Determines if the organiser may ask the attendee to pick a new time
+  (`Tymeslot.Bookings.RescheduleRequest`, the host-initiated flow that voids
+  the current slot and waits on the attendee).
+
+  Distinct from `can_reschedule_meeting?/1`: that one also gates the
+  attendee moving their own booking, including a still-held request, which
+  is allowed. This one refuses a held request outright, because the host
+  has no reschedule action until they have approved it — voiding the slot
+  here would leave a request that still reads as approvable pointing at
+  time that no longer holds.
+  """
+  @spec can_request_reschedule?(meeting_record()) :: :ok | {:error, String.t()}
+  def can_request_reschedule?(%{status: "awaiting_approval"}) do
+    {:error, "Cannot request a reschedule while the booking awaits approval"}
+  end
+
+  def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
+
+  @doc """
   Checks if a meeting is currently happening.
   Pure function that compares meeting times with current UTC time.
   """

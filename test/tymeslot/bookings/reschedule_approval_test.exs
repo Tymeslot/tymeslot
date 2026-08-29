@@ -20,6 +20,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
 
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.ApprovalJobs
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
@@ -127,6 +128,75 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
 
       assert_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
+    end
+
+    test "cancels reminders pinned to the old time rather than leaving them to fire" do
+      %{meeting: meeting, params: params} = gated_booking(true)
+
+      # Reminder created for the original (confirmed) slot.
+      :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes")
+
+      assert {:ok, _rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # The booking is back in the gate — nobody has agreed to the new time
+      # yet, so nothing should remind the attendee about it.
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
+    end
+  end
+
+  describe "rescheduling a held request" do
+    test "re-enters the gate with a fresh window rather than being left alone" do
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
+        })
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert rescheduled.status == "awaiting_approval"
+      assert reload(meeting).status == "awaiting_approval"
+
+      window = DateTime.diff(rescheduled.approval_deadline_at, rescheduled.approval_requested_at)
+      assert window == 12 * 3600
+    end
+  end
+
+  describe "rescheduling a booking whose status the gate is not meaningful for" do
+    test "awaiting_payment: leaves the status untouched instead of confirming it into the gate" do
+      %{meeting: meeting, params: params} = gated_booking(true, %{status: "awaiting_payment"})
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # A booking that never paid must not be revived into a state the host
+      # can approve — that would confirm a meeting nobody paid for.
+      assert rescheduled.status == "awaiting_payment"
+      refute_enqueued(worker: ApprovalExpiryWorker)
+    end
+
+    test "expired: leaves the status untouched instead of reviving a refunded request" do
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{
+          status: "expired",
+          approval_resolved_at: DateTime.utc_now(:second),
+          cancelled_at: DateTime.utc_now(:second)
+        })
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # An expired request was already released and refunded; reviving it
+      # into the gate would let the host approve a meeting the invitee has
+      # already been paid back for.
+      assert rescheduled.status == "expired"
+      refute_enqueued(worker: ApprovalExpiryWorker)
     end
   end
 

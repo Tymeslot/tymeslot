@@ -120,9 +120,11 @@ defmodule Tymeslot.Meetings.MeetingState do
   Query-side counterpart of `awaiting_approval?/1`.
 
   Deliberately does not compose `exclude_voided_slots/1`: a held request
-  cannot carry a pending organizer reschedule request, because the host is
-  offered no reschedule action until they have approved the booking. Adding
-  the filter would imply a state that cannot occur.
+  cannot carry a pending organizer reschedule request, because
+  `Tymeslot.Bookings.Policy.can_request_reschedule?/1` refuses that action
+  outright while the request awaits approval — the host has no reschedule
+  action until they have approved it. Adding the filter would imply a state
+  that cannot occur.
   """
   @spec where_awaiting_approval(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_awaiting_approval(query) do

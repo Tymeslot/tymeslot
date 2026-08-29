@@ -11,9 +11,20 @@ defmodule Tymeslot.Bookings.Reschedule do
   another one, and a confirmed booking that can be silently moved anywhere is
   the gate with an obvious hole in it.
 
-  So a reschedule on such a meeting type re-enters `"awaiting_approval"` with
-  a fresh window, the provider event goes back to tentative, and the invitee
-  is told a request was made rather than that their meeting has moved.
+  That only applies, though, when the booking's current status is one the
+  gate is meaningful for: `"confirmed"` (the host answered, and the reschedule
+  asks them again) or `"awaiting_approval"` (a held request being moved before
+  anyone has answered). A booking that never paid (`"awaiting_payment"`) or
+  one whose window already lapsed (`"expired"`, already released and
+  refunded) has nothing to gate; forcing either into `"awaiting_approval"`
+  would let the host approve a booking nobody paid for, or one the invitee
+  has already been refunded for. Their status is left untouched instead,
+  exactly as an ungated meeting type's is.
+
+  So a reschedule on such a meeting type, from one of those two statuses,
+  re-enters `"awaiting_approval"` with a fresh window, the provider event
+  goes back to tentative, and the invitee is told a request was made rather
+  than that their meeting has moved.
   """
 
   require Logger
@@ -25,7 +36,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.{Events, Orchestrator}
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -115,7 +126,7 @@ defmodule Tymeslot.Bookings.Reschedule do
           reminders_sent: [],
           reminder_email_sent: false
         },
-        gate_attributes(meeting_type, start_dt)
+        gate_attributes(meeting_type, start_dt, meeting)
       )
 
     case Repo.transaction(fn ->
@@ -135,18 +146,20 @@ defmodule Tymeslot.Bookings.Reschedule do
     end
   end
 
-  # On an ungated meeting type `status` is left untouched: it tracks the booking
-  # lifecycle (pending, awaiting_payment, confirmed, ...), which a reschedule
-  # never changes there.
+  # On an ungated meeting type, or on a gated one whose current status the
+  # gate is not meaningful for (see the module doc), `status` is left
+  # untouched: it tracks the booking lifecycle (pending, awaiting_payment,
+  # confirmed, ...), which a reschedule never changes there.
   #
-  # On a gated one the reschedule *is* a new request, so the whole approval
-  # record is reset rather than partially updated: a stale `approval_resolved_at`
-  # would make the new request look answered, and a stale
-  # `approval_nudge_sent_at` would suppress the nudge for a window that has not
-  # been nudged. The deadline is computed from now and capped at the new start
-  # time, exactly as an original booking's is.
-  defp gate_attributes(meeting_type, start_time) do
-    if Approval.required?(meeting_type) do
+  # On a gated one being moved from `"confirmed"` or `"awaiting_approval"`,
+  # the reschedule *is* a new request, so the whole approval record is reset
+  # rather than partially updated: a stale `approval_resolved_at` would make
+  # the new request look answered, and a stale `approval_nudge_sent_at` would
+  # suppress the nudge for a window that has not been nudged. The deadline is
+  # computed from now and capped at the new start time, exactly as an
+  # original booking's is.
+  defp gate_attributes(meeting_type, start_time, meeting) do
+    if Approval.required?(meeting_type) and reenters_gate?(meeting) do
       requested_at = DateTime.truncate(Clock.utc_now(), :second)
 
       %{
@@ -162,11 +175,23 @@ defmodule Tymeslot.Bookings.Reschedule do
     end
   end
 
+  # Only these two statuses mean the invitee is expecting a decision from the
+  # host: `"confirmed"` (the host already agreed, and the reschedule asks
+  # again) or `"awaiting_approval"` (a held request being moved before anyone
+  # has answered). `"awaiting_payment"` never reached the host in the first
+  # place, and `"expired"` already lapsed and was refunded by
+  # `Meetings.Approval` — reviving either into the gate would let the host
+  # approve a booking nobody paid for, or one the invitee was already given
+  # their money back for.
+  defp reenters_gate?(%{status: status}), do: status in ["confirmed", "awaiting_approval"]
+
   # A booking back in the gate has not been rescheduled from the invitee's
   # point of view — it has been re-requested. Sending the reschedule email
   # would tell them their meeting has moved to a time nobody has agreed to,
   # which is the confusion the whole feature exists to remove.
   defp announce(%{status: "awaiting_approval"} = updated, _original) do
+    cancel_stale_reminders(updated)
+
     case Events.meeting_requested(updated) do
       {:ok, _result} ->
         Logger.info("Reschedule returned the booking to the approval gate",
@@ -186,6 +211,27 @@ defmodule Tymeslot.Bookings.Reschedule do
   end
 
   defp announce(updated, original), do: send_reschedule_notifications(updated, original)
+
+  # A booking re-entering the gate must not carry reminders pinned to the
+  # time it was confirmed for before: left alone, they would fire and remind
+  # the attendee about a meeting nobody has agreed to yet. `Approval.approve/1`
+  # re-schedules them in full, through the same pipeline an ordinary
+  # confirmation uses, once the host answers — so this only ever needs to
+  # clear, never to re-pin.
+  defp cancel_stale_reminders(meeting) do
+    case Orchestrator.cancel_reminder_notifications(meeting) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to cancel stale reminder jobs on reschedule",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
 
   defp validate_can_reschedule(meeting) do
     Policy.can_reschedule_meeting?(meeting)
