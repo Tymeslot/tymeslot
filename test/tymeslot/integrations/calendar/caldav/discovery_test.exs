@@ -13,6 +13,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
     provider: :caldav
   }
 
+  # A server that speaks DAV only under a subpath — the shape that makes the
+  # origin root useless as the sole principal-probe target.
+  @subpath_client %{@caldav_client | base_url: "https://caldav.example.com/caldav"}
+
   # ---------------------------------------------------------------------------
   # test_connection/2
   # ---------------------------------------------------------------------------
@@ -193,6 +197,95 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
     end
   end
 
+  describe "discover_calendars/2 on a server mounted under a subpath" do
+    test "discovers calendars when only the supplied URL answers, not the origin root" do
+      # This server serves DAV at /caldav/ and 404s everywhere else, including
+      # `/`. The URL the account owner supplied is the only possible start for
+      # the principal chain, so a fallback that probes only the origin root can
+      # never recover from the wrong guessed path here.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        case conn.request_path do
+          "/caldav/" ->
+            xml_response(conn, principal_xml("/caldav/users/user/"))
+
+          "/caldav/users/user/" ->
+            xml_response(conn, calendar_home_set_xml("/caldav/users/user/calendars/"))
+
+          "/caldav/users/user/calendars/" ->
+            xml_response(conn, calendar_list_xml())
+
+          _unmounted ->
+            Conn.send_resp(conn, 404, "")
+        end
+      end)
+
+      assert {:ok, [calendar]} = Discovery.discover_calendars(@subpath_client, skip_breaker: true)
+
+      assert calendar.name == "Personal"
+      assert calendar.path == "/caldav/users/user/calendars/1/"
+      refute calendar.read_only
+    end
+
+    test "test_connection/2 succeeds against the same server" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        case conn.request_path do
+          "/caldav/" ->
+            xml_response(conn, principal_xml("/caldav/users/user/"))
+
+          "/caldav/users/user/" ->
+            xml_response(conn, calendar_home_set_xml("/caldav/users/user/calendars/"))
+
+          "/caldav/users/user/calendars/" ->
+            xml_response(conn, calendar_list_xml())
+
+          _unmounted ->
+            Conn.send_resp(conn, 404, "")
+        end
+      end)
+
+      assert {:ok, _message} =
+               Discovery.test_connection(@subpath_client, ip_address: "127.0.0.1")
+    end
+
+    test "reports accepted credentials with unreachable calendars as its own failure" do
+      # The principal probe proves the credentials are good; the calendar home
+      # then 404s. Reporting a bare :not_found here sends the account owner off
+      # to re-check the one thing already known to be correct.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        case conn.request_path do
+          "/caldav/" -> xml_response(conn, principal_xml("/caldav/users/user/"))
+          _missing -> Conn.send_resp(conn, 404, "")
+        end
+      end)
+
+      assert {:error, {:calendar_home_not_found, "https://caldav.example.com/caldav"}} =
+               Discovery.discover_calendars(@subpath_client, skip_breaker: true)
+    end
+
+    test "stops probing candidates once the server rejects the credentials" do
+      # A 401 is about the credentials, not the URL, so no further candidate is
+      # tried: re-presenting a rejected login to a server that locks accounts
+      # out on repeated failures makes the owner's situation worse.
+      call_count = :counters.new(1, [:atomics])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(call_count, 1, 1)
+
+        case conn.request_path do
+          "/caldav/calendars/user/" -> Conn.send_resp(conn, 404, "")
+          _everywhere_else -> Conn.send_resp(conn, 401, "")
+        end
+      end)
+
+      assert {:error, :unauthorized} =
+               Discovery.discover_calendars(@subpath_client, skip_breaker: true)
+
+      # The guessed path, then one principal probe. The origin-root candidate
+      # is never asked.
+      assert :counters.get(call_count, 1) == 2
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # discover_calendars/2 — URL validation (SSRF protection)
   # ---------------------------------------------------------------------------
@@ -240,6 +333,75 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
   # Stubs the full RFC 4791 discovery chain: the guessed discovery path returns
   # `initial_status`, then current-user-principal → calendar-home-set → an empty
   # calendar list each return 207.
+  defp xml_response(conn, body) do
+    conn
+    |> Conn.put_resp_header("content-type", "application/xml")
+    |> Conn.send_resp(207, body)
+  end
+
+  defp principal_xml(href) do
+    """
+    <D:multistatus xmlns:D="DAV:">
+      <D:response>
+        <D:propstat>
+          <D:prop>
+            <D:current-user-principal><D:href>#{href}</D:href></D:current-user-principal>
+          </D:prop>
+          <D:status>HTTP/1.1 200 OK</D:status>
+        </D:propstat>
+      </D:response>
+    </D:multistatus>
+    """
+  end
+
+  defp calendar_home_set_xml(href) do
+    """
+    <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+      <D:response>
+        <D:propstat>
+          <D:prop>
+            <C:calendar-home-set><D:href>#{href}</D:href></C:calendar-home-set>
+          </D:prop>
+          <D:status>HTTP/1.1 200 OK</D:status>
+        </D:propstat>
+      </D:response>
+    </D:multistatus>
+    """
+  end
+
+  # The collection itself plus one calendar, as a real server answers a Depth: 1
+  # PROPFIND — the non-calendar collection must be filtered out.
+  defp calendar_list_xml do
+    """
+    <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+      <D:response>
+        <D:href>/caldav/users/user/calendars/</D:href>
+        <D:propstat>
+          <D:prop>
+            <D:resourcetype><D:collection/></D:resourcetype>
+            <D:displayname>Calendars</D:displayname>
+          </D:prop>
+          <D:status>HTTP/1.1 200 OK</D:status>
+        </D:propstat>
+      </D:response>
+      <D:response>
+        <D:href>/caldav/users/user/calendars/1/</D:href>
+        <D:propstat>
+          <D:prop>
+            <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+            <D:displayname>Personal</D:displayname>
+            <D:current-user-privilege-set>
+              <D:privilege><D:read/></D:privilege>
+              <D:privilege><D:write/></D:privilege>
+            </D:current-user-privilege-set>
+          </D:prop>
+          <D:status>HTTP/1.1 200 OK</D:status>
+        </D:propstat>
+      </D:response>
+    </D:multistatus>
+    """
+  end
+
   defp stub_rfc4791_chain(opts) do
     initial_status = Keyword.fetch!(opts, :initial_status)
     call_count = :counters.new(1, [:atomics])

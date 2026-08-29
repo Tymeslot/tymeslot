@@ -189,7 +189,12 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      # RFC 4791 fallback probe on "/" → also 404
+      # RFC 4791 principal probe on the supplied URL ("/dav.php/") → also 404
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      # RFC 4791 principal probe on the origin root ("/") → also 404
       expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
