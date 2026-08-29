@@ -11,7 +11,12 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     for the job: wait it out, or stop trying.
   - `Tymeslot.Workers.VideoRoom.Recovery` takes over once ordinary retries are
     spent, pacing the remaining attempts against the moment the attendees
-    actually need the link and sending their emails without one meanwhile.
+    actually need the link and announcing the booking without one meanwhile.
+
+  When the caller asks for `send_emails`, it has deferred the whole
+  `meeting_created` event to this job rather than only its emails, so that every
+  notification carries the join link. This job is therefore what raises that
+  event for any booking with a video room.
 
   What is left here is the job itself: fetch the meeting, run the call under a
   timeout, and report the outcome.
@@ -26,6 +31,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   alias Ecto.Changeset
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.VideoRoom.{ErrorPolicy, Recovery}
 
   require Logger
@@ -175,8 +181,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     )
 
     if send_emails and Map.get(meeting, :id) do
-      Logger.info("Scheduling emails with video room info", meeting_id: meeting.id)
-      Meetings.schedule_email_notifications(meeting)
+      Logger.info("Announcing the meeting now its room exists", meeting_id: meeting.id)
+      Events.meeting_created(meeting)
     end
 
     :ok
@@ -189,9 +195,9 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
     cond do
       # No integration to call means no amount of retrying will produce a link,
-      # so give up now and let the attendees have their emails without one.
+      # so give up now and announce the booking without one.
       categorized in [:video_integration_missing, :video_integration_inactive] ->
-        if send_emails, do: Recovery.send_fallback_emails(meeting_id)
+        if send_emails, do: Recovery.send_fallback_notifications(meeting_id)
         {:discard, ErrorPolicy.discard_reason(categorized)}
 
       Recovery.recovering?(attempt, send_emails) ->

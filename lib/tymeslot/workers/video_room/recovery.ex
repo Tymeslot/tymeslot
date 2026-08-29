@@ -28,9 +28,9 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   nor waits past its own deadline.
   """
 
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Utils.ReminderUtils
 
   require Logger
@@ -69,33 +69,34 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   @spec enter(String.t(), pos_integer(), String.t()) :: decision()
   def enter(meeting_id, attempt, cause) do
     if attempt == @fallback_attempt do
-      Logger.warning("Video room creation entering recovery, sending fallback emails",
+      Logger.warning("Video room creation entering recovery, announcing without a room",
         meeting_id: meeting_id,
         attempts: @fallback_attempt,
         cause: cause
       )
 
-      send_fallback_emails(meeting_id)
+      send_fallback_notifications(meeting_id)
     end
 
     decide(meeting_id, attempt - @fallback_attempt + 1)
   end
 
   @doc """
-  Sends the meeting's emails without a video room link.
+  Announces the meeting without a video room link.
 
   Used both on entering recovery and when the failure is already known to be
-  unrecoverable, so the attendees still receive their confirmation.
+  unrecoverable, so the attendees still receive their confirmation and anything
+  subscribed to `meeting.created` still learns about the booking.
   """
-  @spec send_fallback_emails(String.t()) :: :ok
-  def send_fallback_emails(meeting_id) do
-    Logger.info("Sending emails without video room due to creation failure",
+  @spec send_fallback_notifications(String.t()) :: :ok
+  def send_fallback_notifications(meeting_id) do
+    Logger.info("Announcing the meeting without a video room after creation failed",
       meeting_id: meeting_id
     )
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Meetings.schedule_email_notifications(meeting)
+        Events.meeting_created(meeting)
         :ok
 
       {:error, _reason} ->
