@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -166,16 +167,23 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  # An invitee who withdraws a request they are still waiting on leaves two
-  # jobs behind: a nudge asking the host to answer, and an expiry to release a
-  # slot already released. Neither is harmless — the nudge asks a real person
-  # to decide something that no longer exists.
+  # An invitee who withdraws a request they are still waiting on leaves things
+  # behind that must not survive it: a nudge asking the host to answer and an
+  # expiry to release a slot already released (neither harmless — the nudge
+  # asks a real person to decide something that no longer exists), and, if
+  # the request was paid for, money for a booking that never got approved.
+  # This pipeline has no refund logic of its own for that money: the rule
+  # ("a held request that ended without becoming a meeting is refunded in
+  # full") belongs to `Approval.refund_unapproved_request/1`, which every
+  # other exit from the gate already goes through, and this is simply the one
+  # exit that does not arrive there on its own.
   #
   # Keyed on the status the meeting had *before* cancelling, because after it
   # the meeting no longer looks like a held request.
   defp stop_approval_clock(meeting) do
     if MeetingState.awaiting_approval?(meeting) do
       Orchestrator.cancel_request_notifications(meeting)
+      Approval.refund_unapproved_request(meeting)
     end
 
     :ok

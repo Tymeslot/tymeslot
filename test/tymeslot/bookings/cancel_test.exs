@@ -13,10 +13,13 @@ defmodule Tymeslot.Bookings.CancelTest do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.SendBookingPaymentRefunded
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
   import Tymeslot.MeetingTestHelpers
@@ -206,6 +209,70 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       assert {:error, "Cannot cancel a meeting that has already occurred"} =
                Cancel.validate_cancellation(loaded_meeting)
+    end
+  end
+
+  describe "withdrawing a held booking request" do
+    # The invitee is invited to withdraw by the "withdraw your request" link in
+    # the request-received email, and that link reaches `Cancel.execute/1`
+    # rather than `Approval.decline/2`. A request that never became a meeting
+    # gave them nothing, so the money must come back on this exit exactly as it
+    # does on the two `Approval` owns.
+    test "refunds a paid request in full" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_held_paid_request(user)
+      payment = BookingPaymentQueries.by_meeting_id(meeting.id)
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        assert params.charge == payment.stripe_charge_id
+        assert params.amount == 5000
+        {:ok, %{id: "re_withdrawn"}}
+      end)
+
+      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert cancelled.status == "cancelled"
+
+      reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
+      assert reloaded.status == "refunded"
+      assert reloaded.refunded_amount_cents == 5000
+
+      assert_enqueued(
+        worker: SendBookingPaymentRefunded,
+        args: %{booking_payment_id: payment.id}
+      )
+    end
+
+    # No `expect/3` is set on StripeAdapterMock, so Mox raises if the
+    # cancellation reaches Stripe at all.
+    test "does not touch Stripe when the request was never paid for" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 86_400,
+          duration: 3600,
+          status: "awaiting_approval"
+        })
+
+      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert cancelled.status == "cancelled"
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    # A confirmed booking the attendee cancels is the ordinary cancellation
+    # path, where the refund is the host's decision in the dashboard rather
+    # than automatic. Withdrawing a *held request* is the case that refunds.
+    test "leaves a confirmed booking's payment alone" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_held_paid_request(user, "confirmed")
+
+      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert cancelled.status == "cancelled"
+
+      reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
+      assert reloaded.status == "paid"
+      assert reloaded.refunded_amount_cents == 0
+      refute_enqueued(worker: SendBookingPaymentRefunded)
     end
   end
 
@@ -406,5 +473,27 @@ defmodule Tymeslot.Bookings.CancelTest do
       oauth_scope: "meeting:write:meeting meeting:delete:meeting",
       provider_account_id: nil
     )
+  end
+
+  defp insert_held_paid_request(user, status \\ "awaiting_approval") do
+    meeting =
+      insert_meeting_for_user(user, %{
+        start_offset: 86_400,
+        duration: 3600,
+        status: status
+      })
+
+    insert(:booking_payment, %{
+      meeting_id: meeting.id,
+      stripe_charge_id: "ch_TEST_#{System.unique_integer([:positive])}",
+      stripe_account_id: "acct_TEST",
+      amount_cents: 5000,
+      refunded_amount_cents: 0,
+      application_fee_cents: 0,
+      status: "paid",
+      paid_at: DateTime.utc_now(:second)
+    })
+
+    meeting
   end
 end

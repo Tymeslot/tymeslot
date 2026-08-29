@@ -33,11 +33,14 @@ defmodule Tymeslot.Meetings.Approval do
       other Tymeslot booking.
 
     * `decline/3` — the host says no. The meeting becomes `"cancelled"`, which
-      is not a compromise but the accurate status: the slot must be released,
-      the tentative calendar event removed, any payment refunded and the
-      attendee told, all of which the cancellation pipeline already does. What
-      distinguishes a decline from an invitee's own cancellation is
-      `approval_resolved_at` together with `decline_reason`.
+      is not a compromise but the accurate status: the slot is released, the
+      tentative calendar event removed, and the attendee told. A booking that
+      was paid for but never approved gave the attendee nothing, so `release/3`
+      refunds the full remaining balance itself rather than deferring to the
+      cancellation pipeline, which exists for a meeting the attendee actually
+      got to have and offers the host no such choice here. What distinguishes
+      a decline from an invitee's own cancellation is `approval_resolved_at`
+      together with `decline_reason`.
 
     * `expire/1` — nobody answered in time. Identical to a decline apart from
       the status (`"expired"`) and the wording the invitee receives: the host
@@ -53,10 +56,12 @@ defmodule Tymeslot.Meetings.Approval do
 
   require Logger
 
+  alias Ecto.UUID
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -210,9 +215,37 @@ defmodule Tymeslot.Meetings.Approval do
   #
   # Best-effort, like every other calendar write: the approval is committed and
   # a failed push is retried by the worker rather than undoing it.
-  defp confirm_calendar_event(%Meeting{provider_event_id: nil}), do: :ok
-
+  #
+  # "Has an event to flip" has to agree with `CalendarEventSync`'s own test
+  # for one (`present_identifier?(provider_event_id) or external_id?(uid)`):
+  # OAuth providers stamp `provider_event_id`, but CalDAV addresses its event
+  # by `uid` alone, so guarding on `provider_event_id` by itself would skip
+  # every CalDAV host and leave their calendar showing TENTATIVE forever.
   defp confirm_calendar_event(meeting) do
+    if addressable_calendar_event?(meeting) do
+      schedule_calendar_confirm(meeting)
+    else
+      :ok
+    end
+  end
+
+  defp addressable_calendar_event?(%Meeting{provider_event_id: provider_event_id, uid: uid}) do
+    present_identifier?(provider_event_id) or external_uid?(uid)
+  end
+
+  defp present_identifier?(identifier) when is_binary(identifier), do: byte_size(identifier) > 0
+  defp present_identifier?(_identifier), do: false
+
+  defp external_uid?(nil), do: false
+
+  defp external_uid?(uid) do
+    case UUID.cast(uid) do
+      {:ok, _uuid} -> false
+      :error -> true
+    end
+  end
+
+  defp schedule_calendar_confirm(meeting) do
     case CalendarJobs.schedule_job(meeting, "update") do
       {:ok, _status} ->
         :ok
@@ -229,18 +262,78 @@ defmodule Tymeslot.Meetings.Approval do
 
   # Everything that must happen once the slot is genuinely free again, in the
   # order that matters: stop the jobs that would contradict the outcome, take
-  # the hold off the host's calendar, then tell the invitee. Each step is
+  # the hold off the host's calendar, refund whatever the attendee paid for a
+  # booking that never got approved, then tell the invitee. Each step is
   # best-effort and logged by its own module; none of them may fail the
   # transition, which has already been committed and cannot be undone.
   defp after_release(%Meeting{status: status} = meeting) do
     Orchestrator.cancel_request_notifications(meeting)
     Meetings.cancel_calendar_event(meeting)
+    refund_unapproved_request(meeting)
     announce_release(meeting, status)
     :ok
   end
 
   defp announce_release(meeting, "expired"), do: Events.meeting_request_expired(meeting)
   defp announce_release(meeting, _declined), do: Events.meeting_declined(meeting)
+
+  @doc """
+  Refunds in full a held request that ended without becoming a meeting.
+
+  A booking that was paid for but never approved gave the attendee nothing,
+  so the full remaining balance goes back automatically: there is no
+  confirmed meeting to weigh against a partial refund, and so no host-facing
+  choice to offer (contrast `Meetings.Cancellation`, which cancels a meeting
+  the attendee did get to have). A payment row that was never actually paid
+  is quietly skipped, since it has nothing to refund.
+
+  Public because this rule applies to every way a held request stops being
+  held, not only the two this module resolves itself (`decline/2`,
+  `expire/1`, via `after_release/1`): an invitee who withdraws the request
+  reaches `Bookings.Cancel` instead, and that module calls this directly
+  rather than re-deciding the same rule. A failed refund is logged and never
+  fails the caller's transition, which is already committed.
+  """
+  @spec refund_unapproved_request(Meeting.t()) :: :ok
+  def refund_unapproved_request(meeting) do
+    case MeetingPayments.payment_for_meeting(meeting.id) do
+      %{paid_at: %DateTime{}} = payment -> refund_remaining(payment, meeting)
+      _unpaid_or_missing -> :ok
+    end
+  end
+
+  defp refund_remaining(payment, meeting) do
+    case MeetingPayments.refundable_remaining_cents(payment) do
+      0 ->
+        :ok
+
+      remaining_cents ->
+        issue_release_refund(payment, remaining_cents, meeting)
+    end
+  end
+
+  defp issue_release_refund(payment, remaining_cents, meeting) do
+    case MeetingPayments.issue_refund(payment, remaining_cents) do
+      {:ok, _refunded} ->
+        :ok
+
+      {:error, reason} ->
+        # A failed refund must not undo the already-committed release (see
+        # module docs on ordering). The approval window can run up to 336
+        # hours, so an expired request can plausibly fall outside Stripe's own
+        # refund window; that, and any other Stripe-side failure, ends up
+        # here rather than crashing the caller. Logged only: no entry in
+        # `AdminAlerts.AlertTypes`'s registry describes a refund attempt that
+        # failed rather than one Stripe already completed, so this is
+        # reported to whoever reviews the logs until the registry gains one.
+        Logger.error("Failed to refund a released booking request",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
 
   defp started?(%Meeting{start_time: nil}, _now), do: false
 

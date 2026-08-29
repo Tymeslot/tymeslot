@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
@@ -364,6 +365,91 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
 
       assert Repo.reload!(bp).stripe_charge_id == "ch_REAL"
+    end
+
+    test "a paid booking on a meeting type requiring approval moves into the gate, not confirmed" do
+      user = insert(:user)
+
+      meeting_type =
+        insert(:meeting_type, user: user, requires_approval: true, approval_window_hours: 12)
+
+      # Stamped at booking time by `Policy.approval_attributes/2`, exactly as
+      # a real paid-and-gated booking would carry them into this webhook.
+      requested_at = DateTime.utc_now(:second)
+
+      meeting =
+        insert(:meeting,
+          status: "awaiting_payment",
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          meeting_type_id: meeting_type.id,
+          approval_requested_at: requested_at,
+          approval_deadline_at: DateTime.add(requested_at, 12, :hour)
+        )
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_GATED"
+        )
+
+      event =
+        completed_event("evt_GATED", %{
+          "id" => "cs_TEST_GATED",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_GATED"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      {:ok, gated_meeting} = MeetingQueries.get_meeting(meeting.id)
+      assert gated_meeting.status == "awaiting_approval"
+
+      # Paid but not yet approved must not send a confirmation — only the
+      # request fan-out, exactly like the free gated path.
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_confirmation_emails"})
+
+      assert {:ok, approved} = Approval.approve(gated_meeting)
+      assert approved.status == "confirmed"
+    end
+
+    test "a gated booking whose meeting type has since been deleted still fails safe into the gate" do
+      user = insert(:user)
+      requested_at = DateTime.utc_now(:second)
+
+      # meeting_type_id points at nothing — as if the type were deleted or
+      # deactivated between booking and this webhook — so `Approval.required?/1`
+      # has no meeting type to ask. The meeting's own approval stamps, set at
+      # booking time, are what this handler must fall back to.
+      meeting =
+        insert(:meeting,
+          status: "awaiting_payment",
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          meeting_type_id: nil,
+          approval_requested_at: requested_at,
+          approval_deadline_at: DateTime.add(requested_at, 12, :hour)
+        )
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_MISSING_TYPE"
+        )
+
+      event =
+        completed_event("evt_MISSING_TYPE", %{
+          "id" => "cs_TEST_MISSING_TYPE",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_MISSING_TYPE"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded.status == "awaiting_approval"
     end
   end
 

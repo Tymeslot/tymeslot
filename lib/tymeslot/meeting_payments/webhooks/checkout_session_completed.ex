@@ -202,12 +202,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # type requires manual approval, the paid booking moves into the approval
   # gate rather than straight to confirmed, and the host's clock starts here —
   # they are only asked once the money has actually cleared. Declining or
-  # letting it lapse refunds through the ordinary cancellation path.
+  # letting it lapse refunds the full remaining balance directly
+  # (`Meetings.Approval.after_release/1`); there is no cancellation pipeline
+  # involved, because the attendee never got a confirmed meeting to weigh a
+  # partial refund against.
   defp post_payment_status(meeting) do
     meeting
     |> meeting_type_for()
     |> approval_status(meeting)
   end
+
+  defp approval_status(nil, meeting), do: fallback_approval_status(meeting)
 
   defp approval_status(meeting_type, meeting) do
     if Approval.required?(meeting_type) do
@@ -223,6 +228,20 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
       %{status: "confirmed"}
     end
   end
+
+  # The meeting type can be gone by the time payment clears — deleted or
+  # deactivated mid-checkout — leaving `Approval.required?/1` nothing to ask.
+  # Defaulting to `"confirmed"` there would fail open on an authorisation
+  # decision: it would confirm a booking the invitee was promised would wait
+  # for the host's approval. The meeting row already carries that promise
+  # from booking time (`Policy.approval_attributes/2` stamps
+  # `approval_requested_at` even on the paid path), so recover the answer
+  # from there instead of re-deriving it from a meeting type that may no
+  # longer reflect what the invitee was told.
+  defp fallback_approval_status(%{approval_requested_at: %DateTime{}}),
+    do: %{status: "awaiting_approval"}
+
+  defp fallback_approval_status(_meeting), do: %{status: "confirmed"}
 
   defp meeting_type_for(%{meeting_type_id: nil}), do: nil
   defp meeting_type_for(%{organizer_user_id: nil}), do: nil
