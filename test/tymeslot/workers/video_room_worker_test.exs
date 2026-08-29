@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
+  alias Oban.Job
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Webhooks
@@ -407,6 +408,53 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                })
 
       assert_enqueued(worker: WebhookWorker)
+    end
+
+    test "a room arriving after recovery announced the booking does not announce it twice" do
+      %{meeting: meeting} = setup_future_meeting_scenario()
+
+      {:ok, _webhook} =
+        Webhooks.create_webhook(meeting.organizer_user_id, %{
+          name: "Late room",
+          url: "https://example.com/hooks/late-room",
+          events: ["meeting.created"]
+        })
+
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :econnrefused}}
+      end)
+
+      # Ordinary retries are spent, so recovery announces the booking without a
+      # join link rather than leave the attendees waiting on one.
+      assert {:snooze, _seconds} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 5
+               )
+
+      assert_enqueued(worker: WebhookWorker)
+
+      # Recovery snoozes for hours, and every channel's Oban uniqueness window
+      # is five minutes wide, so by the time the next attempt runs none of them
+      # would suppress a repeat. Clearing the queue is what makes a second
+      # fan-out visible here rather than silently deduped.
+      Repo.delete_all(Job)
+
+      # The provider comes back and a later recovery attempt gets its room. The
+      # link is worth having, the second `meeting.created` is not: the
+      # subscriber would see the same booking arrive twice.
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 6
+               )
+
+      refute_enqueued(worker: WebhookWorker)
+      refute_enqueued(worker: EmailWorker)
     end
   end
 

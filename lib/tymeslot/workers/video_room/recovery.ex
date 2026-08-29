@@ -87,6 +87,11 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   Used both on entering recovery and when the failure is already known to be
   unrecoverable, so the attendees still receive their confirmation and anything
   subscribed to `meeting.created` still learns about the booking.
+
+  Recovery keeps retrying the room after this, and a late success announces the
+  booking on its own account. `Events.meeting_created/1` claims the event once
+  per meeting, so whichever of the two gets there first is the only one that
+  fans out.
   """
   @spec send_fallback_notifications(String.t()) :: :ok
   def send_fallback_notifications(meeting_id) do
