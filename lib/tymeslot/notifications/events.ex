@@ -50,7 +50,12 @@ defmodule Tymeslot.Notifications.Events do
       end)
 
     # The host learns about the request through whichever channel they watch,
-    # so these fire now rather than at approval.
+    # so dispatch is attempted on all three now rather than at approval. Only
+    # webhooks can actually carry this event today: the Slack and Telegram
+    # integration schemas still cap their selectable `events` at the
+    # pre-approval three (`SlackIntegrationSchema`, `TelegramIntegrationSchema`),
+    # so no integration can be subscribed to it yet and these two calls find
+    # nothing to notify until that allowlist is widened.
     Dispatcher.dispatch(:meeting_requested, meeting)
     TelegramDispatcher.dispatch(:meeting_requested, meeting)
     SlackDispatcher.dispatch(:meeting_requested, meeting)

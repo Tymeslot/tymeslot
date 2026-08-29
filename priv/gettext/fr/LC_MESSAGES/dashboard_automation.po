@@ -581,3 +581,33 @@ msgstr "Réunion créée"
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
 msgstr "Rendez-vous déplacé"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Declined"
+msgstr "Réservation refusée"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Request Expired"
+msgstr "Demande de réservation expirée"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Requested"
+msgstr "Réservation demandée"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when nobody answers a booking request before its deadline"
+msgstr "Se déclenche lorsque personne ne répond à une demande de réservation avant l’échéance"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when someone requests a booking on a meeting type that needs your approval"
+msgstr "Se déclenche lorsque quelqu’un demande une réservation pour un type de réunion nécessitant votre validation"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when you decline a booking request"
+msgstr "Se déclenche lorsque vous refusez une demande de réservation"
