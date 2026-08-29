@@ -133,6 +133,30 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     end
   end
 
+  @doc """
+  Handles the `:paid` PubSub message common to every theme's payment
+  processing LiveView.
+
+  Paid does not always mean confirmed: a meeting type can be both paid and
+  approval-gated, in which case the webhook moves the meeting to
+  `"awaiting_approval"` rather than `"confirmed"` (`CheckoutSessionCompleted.
+  approval_status/2`). Re-fetches the meeting, not just the payment, so the
+  page reads that status rather than assuming a successful payment finished
+  the booking.
+  """
+  @spec refresh_after_paid(LiveView.Socket.t()) :: LiveView.Socket.t()
+  def refresh_after_paid(socket) do
+    payment = MeetingPayments.payment_for_meeting(socket.assigns.meeting.id)
+
+    socket =
+      case MeetingQueries.get_meeting(socket.assigns.meeting.id) do
+        {:ok, meeting} -> Component.assign(socket, :meeting, meeting)
+        {:error, :not_found} -> socket
+      end
+
+    Component.assign(socket, :payment, payment)
+  end
+
   defp get_meeting(id) do
     case MeetingQueries.get_meeting(id) do
       {:ok, meeting} -> {:ok, meeting}

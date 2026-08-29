@@ -155,6 +155,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       socket
       |> assign(:submitting, false)
       |> assign(:meeting_uid, meeting.uid)
+      |> assign(:meeting_status, meeting.status)
       |> assign(:name, validated_data["name"])
       |> assign(:email, validated_data["email"])
       |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))

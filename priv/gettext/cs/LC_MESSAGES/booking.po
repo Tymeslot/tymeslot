@@ -1729,3 +1729,15 @@ msgstr "Pořadatel"
 #, elixir-autogen, elixir-format
 msgid "This booking needs approval"
 msgstr "Tato rezervace vyžaduje schválení"
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#, elixir-autogen, elixir-format
+msgid "Payment received"
+msgstr "Platba přijata"
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks, your payment went through. Your booking is not confirmed yet though:"
+msgstr "Děkujeme, platba proběhla úspěšně. Vaše rezervace ale zatím není potvrzena:"

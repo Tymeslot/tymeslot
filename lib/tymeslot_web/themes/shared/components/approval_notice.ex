@@ -14,8 +14,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.ApprovalNotice do
 
   A visitor who picks a time expects to have booked it. On a gated meeting
   type they have not, and the moment they find that out should be *before*
-  they submit, not in an email afterwards. Every stage of the flow therefore
-  carries the notice, escalating in detail as the commitment grows.
+  they submit, not in an email afterwards. Three stages carry the notice,
+  escalating in detail as the commitment grows: the overview (`pill/1`,
+  beside the gated type), the booking form (`block/1`, `stage: :before`),
+  and the confirmation screen (`block/1`, `stage: :after`). The schedule and
+  questions steps in between carry none — the visitor has already seen the
+  pill by then, and repeating the notice on every intermediate step would be
+  noise rather than disclosure.
 
   Follows the shared-component pattern of `MeetingDetails`: neutral class
   names here, visual treatment in each theme's own CSS, because the themes are

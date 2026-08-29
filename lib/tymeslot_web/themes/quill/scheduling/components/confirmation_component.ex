@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
@@ -76,22 +77,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         {headline(assigns)}
                       </.section_header>
                       <p class="confirmation-subtitle text-quill-primary">
-                        <%= if @is_rescheduling do %>
-                          {dgettext(
-                            "booking",
-                            "%{name}, your meeting %{organizer} has been rescheduled.",
-                            name: @name,
-                            organizer: get_organizer_text(@organizer_profile)
-                          )}
-                        <% else %>
-                          {subtitle(assigns)}
-                        <% end %>
+                        {subtitle(assigns)}
                       </p>
                     </div>
                   </div>
 
                   <ApprovalNotice.block
-                    :if={Approval.required?(assigns[:meeting_type])}
+                    :if={awaiting_approval?(assigns)}
                     organizer_name={Profiles.display_name(@organizer_profile)}
                     stage={:after}
                     class="mt-4"
@@ -279,30 +271,54 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   # A held request is not a confirmed meeting, and the screen that says so is
   # the last thing an invitee sees before the emails arrive. Getting this wrong
   # is what the whole feature exists to fix, so the heading changes too — not
-  # just a note underneath a heading that still says "Confirmed!".
-  defp headline(%{is_rescheduling: true}), do: dgettext("booking", "Meeting Rescheduled!")
-
+  # just a note underneath a heading that still says "Confirmed!". The
+  # approval check runs first: a gated reschedule re-enters the hold (see
+  # `Tymeslot.Bookings.Reschedule`), so `is_rescheduling` must not short-circuit
+  # it.
   defp headline(assigns) do
-    if Approval.required?(assigns[:meeting_type]) do
-      dgettext("booking", "Request sent!")
-    else
-      dgettext("booking", "meeting_confirmed")
+    cond do
+      awaiting_approval?(assigns) -> dgettext("booking", "Request sent!")
+      assigns[:is_rescheduling] -> dgettext("booking", "Meeting Rescheduled!")
+      true -> dgettext("booking", "meeting_confirmed")
     end
   end
 
   defp subtitle(assigns) do
     organizer = get_organizer_text(assigns[:organizer_profile])
 
-    if Approval.required?(assigns[:meeting_type]) do
-      dgettext("booking", "%{name}, your request %{organizer} has been sent.",
-        name: assigns[:name],
-        organizer: organizer
-      )
-    else
-      dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
-        name: assigns[:name],
-        organizer: organizer
-      )
+    cond do
+      awaiting_approval?(assigns) ->
+        dgettext("booking", "%{name}, your request %{organizer} has been sent.",
+          name: assigns[:name],
+          organizer: organizer
+        )
+
+      assigns[:is_rescheduling] ->
+        dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.",
+          name: assigns[:name],
+          organizer: organizer
+        )
+
+      true ->
+        dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
+          name: assigns[:name],
+          organizer: organizer
+        )
+    end
+  end
+
+  # Whether the booking this screen describes is actually held for the host's
+  # approval right now. The meeting's own status (assigned by
+  # `BookingSubmissionHandlerComponent.handle_booking_success/3` right after
+  # creation or reschedule) is the authoritative answer — it is what
+  # `Tymeslot.Bookings.Reschedule` may have re-gated, which the meeting type's
+  # `requires_approval` flag alone cannot tell. The embedded-payment
+  # confirmation path (`InfoHandlers.handle_payment_paid/2`) does not assign
+  # `meeting_status`, so it falls back to the type-level check there.
+  defp awaiting_approval?(assigns) do
+    case assigns[:meeting_status] do
+      nil -> Approval.required?(assigns[:meeting_type])
+      status -> MeetingState.awaiting_approval?(%{status: status})
     end
   end
 end

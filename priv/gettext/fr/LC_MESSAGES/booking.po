@@ -1731,3 +1731,15 @@ msgstr "L'organisateur"
 #, elixir-autogen, elixir-format
 msgid "This booking needs approval"
 msgstr "Cette réservation doit être validée"
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#, elixir-autogen, elixir-format
+msgid "Payment received"
+msgstr "Paiement reçu"
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks, your payment went through. Your booking is not confirmed yet though:"
+msgstr "Merci, votre paiement a bien été effectué. Votre réservation n’est cependant pas encore confirmée :"

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 </p>
 
                 <ApprovalNotice.block
-                  :if={Approval.required?(assigns[:meeting_type])}
+                  :if={awaiting_approval?(assigns)}
                   organizer_name={Profiles.display_name(@organizer_profile)}
                   stage={:after}
                 />
@@ -196,21 +197,21 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   end
 
   # See the Quill component: a held request must not be announced as a
-  # confirmed meeting, heading included.
-  defp headline(%{is_rescheduling: true}), do: dgettext("booking", "Successfully Rescheduled!")
-
+  # confirmed meeting, heading included. The approval check runs first: a
+  # gated reschedule re-enters the hold (see `Tymeslot.Bookings.Reschedule`),
+  # so `is_rescheduling` must not short-circuit it.
   defp headline(assigns) do
-    if Approval.required?(assigns[:meeting_type]) do
-      dgettext("booking", "Request sent!")
-    else
-      dgettext("booking", "You're All Set!")
+    cond do
+      awaiting_approval?(assigns) -> dgettext("booking", "Request sent!")
+      assigns[:is_rescheduling] -> dgettext("booking", "Successfully Rescheduled!")
+      true -> dgettext("booking", "You're All Set!")
     end
   end
 
   defp confirmation_message(assigns) do
     organizer = get_organizer_text(assigns[:organizer_profile])
 
-    if Approval.required?(assigns[:meeting_type]) do
+    if awaiting_approval?(assigns) do
       dgettext("booking", "%{name}, your request %{organizer} has been sent.",
         name: assigns[:name],
         organizer: organizer
@@ -220,6 +221,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
         name: assigns[:name],
         organizer: organizer
       )
+    end
+  end
+
+  # See the Quill component for why the meeting's own status, not the meeting
+  # type's `requires_approval` flag, is the primary source here.
+  defp awaiting_approval?(assigns) do
+    case assigns[:meeting_status] do
+      nil -> Approval.required?(assigns[:meeting_type])
+      status -> MeetingState.awaiting_approval?(%{status: status})
     end
   end
 end

@@ -21,6 +21,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
   @moduletag :bookings
 
   alias Ecto.Changeset
+  alias Phoenix.PubSub
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
@@ -115,6 +117,57 @@ defmodule TymeslotWeb.Live.Themes.ThemeApprovalDisclosureTest do
         # And the booking really is held, not merely described as one.
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: email)
         assert meeting.status == "awaiting_approval"
+      end
+    end
+
+    describe "#{theme}: the payment-processing return page" do
+      @tag :capture_log
+      test "does not say the booking is confirmed while it is awaiting approval", %{conn: conn} do
+        %{user: user} =
+          seed_booking_account(
+            unquote(theme_id),
+            "paid-gated-#{unquote(theme)}",
+            "America/New_York"
+          )
+
+        meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+        payment =
+          insert(:booking_payment,
+            meeting: meeting,
+            host_user_id: user.id,
+            status: "pending",
+            stripe_checkout_session_id: "cs_TEST"
+          )
+
+        {:ok, view, html} =
+          live(
+            conn,
+            ~p"/themes/#{unquote(theme)}/payment-processing/#{meeting.id}?session_id=cs_TEST"
+          )
+
+        assert html =~ "Confirming your payment"
+
+        # Simulate what the webhook does for a meeting type that also requires
+        # approval: the payment settles, but the meeting goes to the approval
+        # gate instead of being confirmed outright.
+        {:ok, _payment} =
+          BookingPaymentQueries.update(payment, %{
+            status: "paid",
+            paid_at: DateTime.utc_now(:second)
+          })
+
+        meeting
+        |> Changeset.change(status: "awaiting_approval")
+        |> Repo.update!()
+
+        PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
+
+        html = render(view)
+
+        refute html =~ "Booking confirmed"
+        assert html =~ "Payment received"
+        assert html =~ "not confirmed yet"
       end
     end
 
