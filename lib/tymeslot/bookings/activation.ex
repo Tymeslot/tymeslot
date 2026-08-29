@@ -30,9 +30,13 @@ defmodule Tymeslot.Bookings.Activation do
 
   # Providers whose rooms Tymeslot creates through an API call, and which
   # therefore need the video job to run before the confirmation email is
-  # composed. Anything else either has no room to create or carries a static
-  # link already present on the meeting.
-  @api_created_providers [:mirotalk, :google_meet, :teams, :custom]
+  # composed. This is every provider `Video` knows about except `:none` (no
+  # integration configured, so there is nothing to create) — currently
+  # `ProviderConfig`'s `@providers`, restated here rather than pulled from
+  # `ProviderConfig.all_providers/0` because that list is toggle-filtered: an
+  # integration a host already connected before its provider was disabled
+  # must still get its room created, not silently skip straight to `notify/1`.
+  @api_created_providers [:mirotalk, :google_meet, :teams, :zoom, :custom]
 
   @doc """
   Runs the side effects a newly created or newly confirmed meeting needs.
