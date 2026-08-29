@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Layouts do
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.MeetingRequestLive
 
   embed_templates "layouts/*"
 
@@ -265,10 +266,23 @@ defmodule TymeslotWeb.Layouts do
   page views.
 
   Pass `nonce` (the request's `@csp_nonce`) so the inline loader satisfies CSP.
+
+  Pass `live_module` (`assigns[:live_module]`, set automatically by
+  `Phoenix.LiveView.Controller.live_render/3` on every LiveView page) so this
+  renders nothing on `TymeslotWeb.MeetingRequestLive`: its URL carries a
+  long-lived `Phoenix.Token` that authorises approving or declining a booking
+  on the host's behalf, and the analytics vendor's script reports the page
+  path, which would ship that live credential to the analytics store and every
+  intermediate proxy.
   """
   attr :nonce, :string, default: nil
+  attr :live_module, :atom, default: nil
 
   @spec analytics_scripts(map()) :: Phoenix.LiveView.Rendered.t()
+  def analytics_scripts(%{live_module: MeetingRequestLive} = assigns) do
+    ~H""
+  end
+
   def analytics_scripts(assigns) do
     providers = Application.get_env(:tymeslot, :analytics_providers, nil)
     assigns = assign(assigns, :providers, filter_valid_providers(providers))
