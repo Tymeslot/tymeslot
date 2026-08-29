@@ -22,6 +22,14 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
+
+  setup do
+    # Every mount in this file resolves the same loopback client_ip, so a
+    # test that saturates the approval bucket must not bleed into the next.
+    RateLimiter.clear_all()
+    :ok
+  end
 
   defp held_meeting(attrs \\ %{}) do
     user = insert(:user)
@@ -120,10 +128,65 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
     end
   end
 
+  describe "answering is rate-limited" do
+    test "the mount captures a real client_ip rather than falling back to unknown", %{
+      conn: conn
+    } do
+      meeting = held_meeting()
+
+      {:ok, view, _html} = live(conn, request_path(meeting))
+
+      # Without `TymeslotWeb.Hooks.ClientInfoHook` in the route's
+      # `live_session`, every visitor resolves to the literal "unknown" and
+      # the rate limiter below shares one bucket across the whole instance.
+      client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip]
+
+      assert is_binary(client_ip) and byte_size(client_ip) > 0
+      assert client_ip != "unknown"
+    end
+
+    test "too many answers from the same client flash the limiter's message instead of acting", %{
+      conn: conn
+    } do
+      meeting = held_meeting()
+
+      {:ok, view, _html} = live(conn, request_path(meeting))
+
+      client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip]
+      Enum.each(1..20, fn _i -> RateLimiter.check_meeting_approval_rate_limit(client_ip) end)
+
+      html = view |> element("[data-testid='approve-request']") |> render_click()
+
+      assert html =~ "Too many attempts"
+      assert reload(meeting).status == "awaiting_approval"
+    end
+  end
+
   describe "links that should not work" do
     test "a token that is not ours is refused", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/meeting-request/not-a-real-token")
 
+      assert html =~ "Link not recognised"
+    end
+
+    test "approving from an unrecognised link does not crash the page", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/meeting-request/not-a-real-token")
+
+      # There is no held meeting to act on; sending the "approve" event
+      # directly (bypassing the rendered buttons, which is what an attacker
+      # replaying the phx event would do) must not raise.
+      html = render_click(view, "approve", %{})
+
+      assert html =~ "Link not recognised"
+    end
+
+    test "a request the invitee withdrew is not shown as declined by the host", %{conn: conn} do
+      meeting = held_meeting(%{status: "cancelled"})
+
+      {:ok, _view, html} = live(conn, request_path(meeting))
+
+      refute html =~ "Booking declined"
+      refute html =~ "has been told"
       assert html =~ "Link not recognised"
     end
 

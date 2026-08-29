@@ -76,9 +76,21 @@ defmodule TymeslotWeb.MeetingRequestLive do
       MeetingState.awaiting_approval?(meeting) -> :awaiting
       meeting.status == "confirmed" -> :approved
       meeting.status == "expired" -> :expired
-      true -> :declined
+      host_declined?(meeting) -> :declined
+      true -> :invalid
     end
   end
+
+  # Only the host's own decision produces the "declined" outcome.
+  # `status == "cancelled"` alone does not mean that: the invitee can
+  # withdraw a held request themselves, and that path never sets
+  # `approval_resolved_at` (see `MeetingSchema`'s note on the field). A
+  # completed meeting or a legacy `reschedule_requested` row has no accurate
+  # message here either, so everything but a genuine host decline falls back
+  # to the same "not currently answerable" wording used for an unrecognised
+  # token, rather than borrowing the decline copy.
+  defp host_declined?(%{status: "cancelled", approval_resolved_at: %DateTime{}}), do: true
+  defp host_declined?(_meeting), do: false
 
   @impl Phoenix.LiveView
   def handle_event("choose", %{"intent" => intent}, socket) do
@@ -90,19 +102,24 @@ defmodule TymeslotWeb.MeetingRequestLive do
   end
 
   def handle_event("approve", _params, socket) do
-    {:noreply, answer(socket, &Approval.approve/1, :approved)}
+    {:noreply, answer(socket, socket.assigns.meeting, &Approval.approve/1, :approved)}
   end
 
   def handle_event("decline", _params, socket) do
     reason = socket.assigns.decline_reason
 
-    {:noreply, answer(socket, &Approval.decline(&1, reason), :declined)}
+    {:noreply, answer(socket, socket.assigns.meeting, &Approval.decline(&1, reason), :declined)}
   end
 
-  defp answer(socket, action, success_state) do
+  # No held request to act on — a bad token, or the owner check in
+  # `load_request/2` failed — so the page is already showing the invalid
+  # state. Nothing to rate-limit or answer.
+  defp answer(socket, nil, _action, _success_state), do: socket
+
+  defp answer(socket, meeting, action, success_state) do
     case RateLimiter.check_meeting_approval_rate_limit(ClientIP.get(socket)) do
       :ok ->
-        apply_answer(socket, socket.assigns.meeting, action, success_state)
+        apply_answer(socket, meeting, action, success_state)
 
       {:error, :rate_limited, _message} ->
         put_flash(

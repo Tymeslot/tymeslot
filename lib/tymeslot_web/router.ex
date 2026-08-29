@@ -125,7 +125,8 @@ defmodule TymeslotWeb.Router do
   scope "/", TymeslotWeb do
     pipe_through :browser
 
-    live_session :meeting_request, on_mount: [TymeslotWeb.Hooks.LocaleHook] do
+    live_session :meeting_request,
+      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
       live "/meeting-request/:token", MeetingRequestLive, :show
     end
   end
