@@ -112,7 +112,11 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
 
       assert assigns(view).expanded_hour == :none
 
-      # And it stays closed: a re-render must not spring it back open.
+      # And it stays closed: a re-render must not spring it back open. The
+      # explicit render/1 is the point of this assertion — without it the
+      # second check merely re-reads the same state and pins nothing.
+      _html = render(view)
+
       assert assigns(view).expanded_hour == :none
 
       # Choosing again reopens.
@@ -121,6 +125,49 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
     end
 
     @tag :capture_log
+    test "a non-binary hour leaves the state untouched and the view alive",
+         %{conn: conn, profile: profile} do
+      %{view: view} = reach_loaded_slots(conn, profile)
+
+      toggle_hour(view, "11")
+      assert assigns(view).expanded_hour == 11
+
+      # The non-numeric *string* case above is handled by `Integer.parse/1`
+      # returning `:error`. A non-binary never reaches that call at all:
+      # `Integer.parse/1` requires a bitstring and raises `FunctionClauseError`
+      # otherwise. LiveView passes a non-"form" event payload through to
+      # `handle_event/3` verbatim from client JSON, so a crafted socket push
+      # can put any of these in `phx-value-hour` on the public booking page.
+      for payload <- [11, 11.5, ~c"11", %{"hour" => 11}, ["11"], nil, true] do
+        toggle_hour(view, payload)
+
+        assert Process.alive?(view.pid),
+               "a #{inspect(payload)} payload took the LiveView down"
+
+        assert assigns(view).expanded_hour == 11
+      end
+
+      assert render(view) =~ "time-slot-button"
+    end
+
+    test "a non-binary navigate_to_step leaves the flow untouched and the view alive",
+         %{conn: conn, profile: profile} do
+      %{view: view} = reach_loaded_slots(conn, profile)
+
+      state_before = assigns(view).current_state
+
+      # Same guard, same reason: `navigate_to_step` parses its payload with
+      # `Integer.parse/1` too, and it is reachable from the same public page.
+      for payload <- [1, %{"step" => 1}, nil] do
+        render_hook(view, "navigate_to_step", %{"step" => payload})
+
+        assert Process.alive?(view.pid),
+               "a #{inspect(payload)} step payload took the LiveView down"
+
+        assert assigns(view).current_state == state_before
+      end
+    end
+
     test "a non-numeric hour leaves the state untouched and the view alive",
          %{conn: conn, profile: profile} do
       %{view: view} = reach_loaded_slots(conn, profile)
@@ -151,6 +198,39 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
       wait_until(fn -> has_element?(view, "button.time-slot-button") end)
 
       assert assigns(view).expanded_hour == nil
+    end
+  end
+
+  describe "a same-date refetch (timezone change, lost-slot retry)" do
+    @tag :capture_log
+    test "a deliberate :none survives it", %{conn: conn, profile: profile} do
+      %{view: view, date: date} = reach_loaded_slots(conn, profile)
+
+      earliest = earliest_slot_hour(view)
+      toggle_hour(view, Integer.to_string(earliest))
+      assert assigns(view).expanded_hour == :none
+
+      # `{:fetch_available_slots, ...}` for the *same* date is exactly what a
+      # timezone change or a lost-slot retry sends — it must not reopen a
+      # deliberately collapsed hour.
+      refetch_same_date(view, date)
+
+      assert assigns(view).expanded_hour == :none
+    end
+
+    @tag :capture_log
+    test "a stored integer hour survives it", %{conn: conn, profile: profile} do
+      %{view: view, date: date} = reach_loaded_slots(conn, profile)
+
+      other_hour = List.last(slot_hours(view))
+      refute other_hour == earliest_slot_hour(view)
+
+      toggle_hour(view, Integer.to_string(other_hour))
+      assert assigns(view).expanded_hour == other_hour
+
+      refetch_same_date(view, date)
+
+      assert assigns(view).expanded_hour == other_hour
     end
   end
 
@@ -212,6 +292,17 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
 
   defp toggle_hour(view, hour) do
     send(view.pid, {:step_event, :schedule, :toggle_hour, hour})
+    render(view)
+  end
+
+  # `:fetch_available_slots` for the date already selected is the message
+  # both a timezone change and a lost-slot retry send — the production
+  # message itself, not a proxy for it.
+  defp refetch_same_date(view, date) do
+    duration = assigns(view).duration_minutes
+    timezone = assigns(view).user_timezone
+
+    send(view.pid, {:fetch_available_slots, date, duration, timezone})
     render(view)
   end
 

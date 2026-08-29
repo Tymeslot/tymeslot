@@ -64,6 +64,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
     # drift from the duration the domain will validate against.
     duration_to_fetch = AvailabilityHelpers.duration_minutes(socket)
 
+    # `:expanded_hour` is deliberately left untouched here. Resetting it on
+    # every fetch would spring a deliberately collapsed `:none` back open on
+    # a refetch the booker did not ask for (a timezone change, a lost-slot
+    # retry): those call this function for the *same* date, and it has
+    # nothing to do with the booker's previous hour selection. An explicit
+    # date pick — the one case that must reset it, since the open hour would
+    # describe a grid that no longer applies — resets it at the point the
+    # booker makes that choice, in `handle_schedule_date_selection/2`.
     case AvailabilityHelpers.get_available_slots(
            date,
            duration_to_fetch,
@@ -76,9 +84,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
         socket =
           socket
           |> assign(:available_slots, slots)
-          |> assign(:expanded_hour, nil)
-          |> assign(:slot_interval_minutes, slot_interval_minutes(socket))
-          |> assign(:duration_minutes, AvailabilityHelpers.duration_minutes(socket))
+          |> assign(:slot_interval_minutes, AvailabilityHelpers.slot_interval_minutes(socket))
+          |> assign(:duration_minutes, duration_to_fetch)
           |> assign(:loading_slots, false)
           |> assign(:calendar_error, nil)
 
@@ -91,9 +98,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
         socket =
           socket
           |> assign(:available_slots, [])
-          |> assign(:expanded_hour, nil)
-          |> assign(:slot_interval_minutes, slot_interval_minutes(socket))
-          |> assign(:duration_minutes, AvailabilityHelpers.duration_minutes(socket))
+          |> assign(:slot_interval_minutes, AvailabilityHelpers.slot_interval_minutes(socket))
+          |> assign(:duration_minutes, duration_to_fetch)
           |> assign(:loading_slots, false)
           |> assign(
             :calendar_error,
@@ -160,14 +166,5 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
       |> assign(:calendar_error, nil)
 
     {:ok, socket}
-  end
-
-  # The interval belongs to the resolved meeting type; an ad-hoc booking with no
-  # resolved type has none, and nil correctly means "use the meeting length".
-  defp slot_interval_minutes(socket) do
-    case socket.assigns[:meeting_type] do
-      %{slot_interval_minutes: minutes} -> minutes
-      _unresolved -> nil
-    end
   end
 end

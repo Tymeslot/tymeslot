@@ -32,7 +32,6 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
-  alias Tymeslot.Utils.DateTimeUtils.Display
 
   setup :verify_on_exit!
 
@@ -115,6 +114,65 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
 
       assert has_element?(view, slot_selector(expected))
       assert Enum.all?(rendered_times(view), &(TimeSlots.parse_time_slot(&1).hour == later))
+    end
+
+    @tag :capture_log
+    test "keeps the selection visible on its hour once that hour collapses",
+         %{conn: conn, profile: profile} do
+      view = reach_loaded_slots(conn, profile)
+
+      hours = rendered_hours(view)
+      open = List.first(hours)
+      later = List.last(hours)
+      refute open == later
+
+      chosen = view |> rendered_times() |> List.first()
+      view |> element(slot_selector(chosen)) |> render_click()
+
+      # Opening a different hour collapses the one holding the selection, so
+      # the chosen minute button leaves the DOM entirely. Without a marker on
+      # the hour itself the booker would have a selection with nothing on
+      # screen to show for it, while "next" stayed enabled.
+      view |> element("[data-testid='slot-hour'][phx-value-hour='#{later}']") |> render_click()
+
+      refute has_element?(view, slot_selector(chosen))
+
+      assert has_element?(
+               view,
+               "button.time-slot-button--hour.time-slot-button--selected[phx-value-hour='#{open}']"
+             )
+    end
+
+    @tag :capture_log
+    test "points aria-controls only at a panel that is actually in the DOM",
+         %{conn: conn, profile: profile} do
+      view = reach_loaded_slots(conn, profile)
+
+      hours = rendered_hours(view)
+      open = List.first(hours)
+      collapsed = List.last(hours)
+      refute open == collapsed
+
+      doc = document(view)
+      open_button = "[data-testid='slot-hour'][phx-value-hour='#{open}']"
+      collapsed_button = "[data-testid='slot-hour'][phx-value-hour='#{collapsed}']"
+
+      assert Floki.attribute(doc, open_button, "aria-controls") == [
+               "slot-hour-panel-#{open}"
+             ]
+
+      assert Floki.find(doc, "#slot-hour-panel-#{open}") != []
+
+      # A collapsed hour has no panel rendered, so it must not name one: an
+      # aria-controls pointing at a missing id is a dangling reference.
+      assert Floki.attribute(doc, collapsed_button, "aria-controls") == []
+      assert Floki.find(doc, "#slot-hour-panel-#{collapsed}") == []
+
+      # The control names itself rather than announcing a bare, unitless count.
+      # Asserted structurally so a locale change cannot break it.
+      [label] = Floki.attribute(doc, open_button, "aria-label")
+      assert String.trim(label) != ""
+      refute String.trim(label) =~ ~r/^\d+$/
     end
 
     @tag :capture_log

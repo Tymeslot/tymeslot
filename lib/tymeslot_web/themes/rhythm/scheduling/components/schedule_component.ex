@@ -320,7 +320,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                     <.slot_button
                                       slot_value={slot_value}
                                       selected={@selected_time == slot_value}
-                                      loading={@loading_slots}
                                       target={@myself}
                                     />
                                   <% end %>
@@ -330,6 +329,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                           <% {:hours, periods} -> %>
                             <% open =
                               SlotGrouping.effective_expanded_hour(@expanded_hour, grouping) %>
+                            <% selected_hour = SlotGrouping.selected_hour(grouping, @selected_time) %>
                             <%= for {period, hours} <- periods, hours != [] do %>
                               <div class="time-period-section">
                                 <h4 class="time-period-header">
@@ -341,18 +341,32 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                       type="button"
                                       class={[
                                         "time-slot time-slot--hour",
-                                        open == hour && "expanded"
+                                        open == hour && "expanded",
+                                        open != hour && selected_hour == hour && "selected"
                                       ]}
                                       data-testid="slot-hour"
                                       phx-click="toggle_hour"
                                       phx-value-hour={hour}
                                       phx-target={@myself}
                                       aria-expanded={to_string(open == hour)}
-                                      aria-controls={"slot-hour-panel-#{hour}"}
-                                      disabled={@loading_slots}
+                                      aria-controls={open == hour && "slot-hour-panel-#{hour}"}
+                                      aria-label={
+                                        dngettext(
+                                          "booking",
+                                          "%{hour}, %{count} available time",
+                                          "%{hour}, %{count} available times",
+                                          length(hour_slots),
+                                          hour: SlotGrouping.hour_label(hour),
+                                          count: length(hour_slots)
+                                        )
+                                      }
                                     >
-                                      <span class="slot-hour-label">{hour_label(hour)}</span>
-                                      <span class="slot-hour-count">{length(hour_slots)}</span>
+                                      <span class="slot-hour-label" aria-hidden="true">
+                                        {SlotGrouping.hour_label(hour)}
+                                      </span>
+                                      <span class="slot-hour-count" aria-hidden="true">
+                                        {length(hour_slots)}
+                                      </span>
                                     </button>
                                   <% end %>
                                 </div>
@@ -361,13 +375,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                     class="time-period-slots time-period-slots--minutes"
                                     id={"slot-hour-panel-#{hour}"}
                                     role="group"
-                                    aria-label={hour_label(hour)}
+                                    aria-label={SlotGrouping.hour_label(hour)}
                                   >
                                     <%= for slot_value <- hour_slots do %>
                                       <.slot_button
                                         slot_value={slot_value}
                                         selected={@selected_time == slot_value}
-                                        loading={@loading_slots}
                                         target={@myself}
                                       />
                                     <% end %>
@@ -425,9 +438,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
 
   # One definition of the slot button, so the flat grid and the minutes nested
   # under an expanded hour cannot drift apart in markup.
+  attr :slot_value, :string, required: true
+  attr :selected, :boolean, default: false
+  attr :loading, :boolean, default: false
+  attr :target, :any, required: true
+
+  @spec slot_button(map()) :: Phoenix.LiveView.Rendered.t()
   defp slot_button(assigns) do
     ~H"""
     <button
+      type="button"
       class={"time-slot #{if @selected, do: "selected", else: ""}"}
       data-testid="time-slot"
       data-time={@slot_value}
@@ -439,11 +459,5 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
       {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot_value))}
     </button>
     """
-  end
-
-  # Hour labels follow the same 12/24-hour convention as the slots themselves,
-  # so an hour and the times inside it can't disagree about how they read.
-  defp hour_label(hour) do
-    LocalizationHelpers.format_time_by_locale(Time.new!(hour, 0, 0))
   end
 end

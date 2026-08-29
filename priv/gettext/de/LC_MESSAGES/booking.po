@@ -1539,3 +1539,11 @@ msgstr "Titel ist erforderlich"
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Sie können nicht mehr als %{days} Tage im Voraus buchen"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{hour}, %{count} available time"
+msgid_plural "%{hour}, %{count} available times"
+msgstr[0] "%{hour}, %{count} verfügbare Zeit"
+msgstr[1] "%{hour}, %{count} verfügbare Zeiten"

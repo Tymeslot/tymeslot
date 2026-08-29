@@ -205,7 +205,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                               phx-value-time={slot_value}
                               slot={%{start_time: CalendarHelpers.parse_slot_time(slot_value)}}
                               selected={@selected_time == slot_value}
-                              disabled={@loading_slots}
                             />
                           <% end %>
                         </div>
@@ -213,6 +212,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                     <% end %>
                   <% {:hours, periods} -> %>
                     <% open = SlotGrouping.effective_expanded_hour(@expanded_hour, grouping) %>
+                    <% selected_hour = SlotGrouping.selected_hour(grouping, @selected_time) %>
                     <%= for {period, hours} <- periods, hours != [] do %>
                       <div>
                         <div class="time-period-label text-xs font-semibold mb-2 px-1">
@@ -224,18 +224,32 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                               type="button"
                               class={[
                                 "time-slot-button time-slot-button--hour",
-                                open == hour && "time-slot-button--expanded"
+                                open == hour && "time-slot-button--expanded",
+                                open != hour && selected_hour == hour && "time-slot-button--selected"
                               ]}
                               data-testid="slot-hour"
                               phx-click="toggle_hour"
                               phx-target={@target}
                               phx-value-hour={hour}
                               aria-expanded={to_string(open == hour)}
-                              aria-controls={"slot-hour-panel-#{hour}"}
-                              disabled={@loading_slots}
+                              aria-controls={open == hour && "slot-hour-panel-#{hour}"}
+                              aria-label={
+                                dngettext(
+                                  "booking",
+                                  "%{hour}, %{count} available time",
+                                  "%{hour}, %{count} available times",
+                                  length(hour_slots),
+                                  hour: SlotGrouping.hour_label(hour),
+                                  count: length(hour_slots)
+                                )
+                              }
                             >
-                              <span class="slot-hour-label">{hour_label(hour)}</span>
-                              <span class="slot-hour-count">{length(hour_slots)}</span>
+                              <span class="slot-hour-label" aria-hidden="true">
+                                {SlotGrouping.hour_label(hour)}
+                              </span>
+                              <span class="slot-hour-count" aria-hidden="true">
+                                {length(hour_slots)}
+                              </span>
                             </button>
                           <% end %>
                         </div>
@@ -244,7 +258,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                             class="time-slots-grid time-slots-grid--minutes"
                             id={"slot-hour-panel-#{hour}"}
                             role="group"
-                            aria-label={hour_label(hour)}
+                            aria-label={SlotGrouping.hour_label(hour)}
                           >
                             <%= for slot_value <- hour_slots do %>
                               <.time_slot_button
@@ -253,7 +267,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                                 phx-value-time={slot_value}
                                 slot={%{start_time: CalendarHelpers.parse_slot_time(slot_value)}}
                                 selected={@selected_time == slot_value}
-                                disabled={@loading_slots}
                               />
                             <% end %>
                           </div>
@@ -291,12 +304,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
       </div>
     </div>
     """
-  end
-
-  # Hour labels follow the same 12/24-hour convention as the slots themselves,
-  # so an hour and the times inside it can't disagree about how they read.
-  defp hour_label(hour) do
-    LocalizationHelpers.format_time_by_locale(Time.new!(hour, 0, 0))
   end
 
   @doc """

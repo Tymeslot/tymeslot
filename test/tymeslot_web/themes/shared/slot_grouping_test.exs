@@ -76,5 +76,19 @@ defmodule TymeslotWeb.Themes.Shared.SlotGroupingTest do
 
       assert SlotGrouping.effective_expanded_hour(nil, grouping) == nil
     end
+
+    test "falls back to the earliest hour when the stored hour holds no slots in this grouping" do
+      # A refetch that keeps the same date (timezone change, retry) can leave
+      # a previously stored hour (11) with nothing in the new grouping.
+      grouping = SlotGrouping.group(["9:05 AM", "2:00 PM"], 5, 30)
+
+      assert SlotGrouping.effective_expanded_hour(11, grouping) == 9
+    end
+
+    test "falls back to the earliest hour for an out-of-range visitor-supplied hour" do
+      grouping = SlotGrouping.group(["9:05 AM", "2:00 PM"], 5, 30)
+
+      assert SlotGrouping.effective_expanded_hour(47, grouping) == 9
+    end
   end
 end
