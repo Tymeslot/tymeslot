@@ -80,6 +80,20 @@ defmodule Tymeslot.Workers.VideoTranscoder do
         Logger.info("Video transcoding completed", theme_customization_id: id)
         :ok
 
+      # The source was replaced or removed while this job was queued or running.
+      # Retrying cannot bring the bytes back, and the status is deliberately not
+      # touched: a replacement upload has already set this customisation to
+      # `pending` for its own job, and marking it `failed` here would report the
+      # old video's fate against the new one.
+      {:error, :source_missing} ->
+        cleanup_variants(base_path)
+
+        Logger.info("Video source no longer present, cancelling transcode",
+          theme_customization_id: id
+        )
+
+        {:cancel, "Video source no longer present"}
+
       {:error, reason} ->
         cleanup_variants(base_path)
 

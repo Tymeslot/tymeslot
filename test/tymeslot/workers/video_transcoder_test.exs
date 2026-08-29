@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
 
   alias Tymeslot.Media.Transcoder
   alias Tymeslot.Repo
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Workers.VideoTranscoder
 
@@ -104,6 +105,59 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
 
       updated = Repo.get!(ThemeCustomizationSchema, theme_customization.id)
       assert updated.video_processing == "failed"
+    end
+  end
+
+  describe "perform/1 - source removed" do
+    test "cancels without retrying when the source video is gone" do
+      theme_customization = insert_theme_customization()
+
+      expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+
+      expect(Tymeslot.Media.TranscoderMock, :transcode, fn _src, _out, _opts ->
+        {:error, :source_missing}
+      end)
+
+      # {:cancel, _} stops the job outright. An {:error, _} here would spend all
+      # three attempts against a file that no longer exists and end in a
+      # permanent-failure admin alert.
+      assert {:cancel, "Video source no longer present"} =
+               perform_job(VideoTranscoder, %{
+                 "theme_customization_id" => theme_customization.id,
+                 "video_path" => "uploads/test-video.mp4"
+               })
+    end
+
+    test "leaves the processing status alone for a replacement upload to own" do
+      theme_customization = insert_theme_customization()
+
+      # What a replacement upload writes before enqueuing its own transcode.
+      :ok =
+        ThemeCustomizationQueries.update_video_processing_status(
+          theme_customization.id,
+          "pending"
+        )
+
+      expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+
+      expect(Tymeslot.Media.TranscoderMock, :transcode, fn _src, _out, _opts ->
+        {:error, :source_missing}
+      end)
+
+      assert {:cancel, _reason} =
+               perform_job(
+                 VideoTranscoder,
+                 %{
+                   "theme_customization_id" => theme_customization.id,
+                   "video_path" => "uploads/test-video.mp4"
+                 },
+                 attempt: 3
+               )
+
+      # Marking this "failed" would report the abandoned video's fate against
+      # the replacement that is still being processed.
+      updated = Repo.get!(ThemeCustomizationSchema, theme_customization.id)
+      assert updated.video_processing == "pending"
     end
   end
 
