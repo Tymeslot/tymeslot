@@ -189,7 +189,12 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      # RFC 4791 fallback probe on "/" → also 404
+      # RFC 4791 principal probe on the supplied URL ("/dav.php/") → also 404
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      # RFC 4791 principal probe on the origin root ("/") → also 404
       expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
@@ -197,6 +202,53 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
       assert {:error, message} = Provider.perform_connection_test(integration)
       assert message =~ "Baikal server not found"
       assert message =~ "/dav.php"
+    end
+
+    test "names the server when credentials are accepted but no calendar is reachable" do
+      # The principal probe proves the credentials, so the failure is about
+      # where the calendars live. This is the surface the "Test connection"
+      # button renders, and a reason Baikal's own formatter does not recognise
+      # arrives here as the inspected term.
+      integration = %{
+        base_url: "https://baikal.example.com/dav.php",
+        username: "alice",
+        password: "secret",
+        calendar_paths: [],
+        provider: :baikal
+      }
+
+      # Primary PROPFIND probe → 404, sending discovery to the RFC 4791 chain
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      # Principal probe on the supplied URL ("/dav.php/") → answers
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: principal_xml("/dav.php/principals/alice/")}}
+      end)
+
+      # The principal's calendar-home-set → answers
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{status: 207, body: calendar_home_set_xml("/dav.php/calendars/alice/")}}
+      end)
+
+      # The calendar home itself → gone
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert {:error, message} = Provider.perform_connection_test(integration)
+      assert message =~ "https://baikal.example.com/dav.php"
+      assert message =~ "credentials were accepted"
+
+      # What this failure used to flatten to: Baikal's brand-name formatter
+      # rendering the raw reason, and, had the guessed path 404 been reported
+      # instead, the not-found copy that sends the owner back to a URL already
+      # proven reachable.
+      refute message =~ "Baikal error"
+      refute message =~ "calendar_home_not_found"
+      refute message =~ "Baikal server not found"
     end
 
     test "is pure I/O — takes only the integration, no caller options" do

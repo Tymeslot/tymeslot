@@ -93,10 +93,14 @@ defmodule Tymeslot.Security.SecurityTest do
   end
 
   describe "validate_domain/1 TLD validation" do
-    test "rejects domains with invalid TLDs" do
-      {:error, msg} = Security.validate_domain("example.or")
-      assert msg =~ "unrecognised"
-      assert msg =~ ".or"
+    test "rejects domains whose ending cannot be a TLD" do
+      {:error, msg} = Security.validate_domain("example.c0m")
+      assert msg =~ "invalid domain ending"
+      assert msg =~ ".c0m"
+    end
+
+    test "accepts an embed domain on a newly delegated TLD" do
+      assert {:ok, "example.homes"} = Security.validate_domain("example.homes")
     end
 
     test "includes suggestion when confident" do
@@ -108,9 +112,9 @@ defmodule Tymeslot.Security.SecurityTest do
       assert {:ok, "*.example.com"} = Security.validate_domain("*.example.com")
     end
 
-    test "rejects wildcard domains with invalid TLDs" do
-      {:error, msg} = Security.validate_domain("*.example.or")
-      assert msg =~ "unrecognised"
+    test "rejects wildcard domains whose ending cannot be a TLD" do
+      {:error, msg} = Security.validate_domain("*.example.c0m")
+      assert msg =~ "invalid domain ending"
     end
   end
 end

@@ -6,6 +6,7 @@ defmodule Tymeslot.Notifications.Events do
 
   require Logger
 
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Slack.Dispatcher, as: SlackDispatcher
   alias Tymeslot.Telegram.Dispatcher, as: TelegramDispatcher
@@ -13,9 +14,36 @@ defmodule Tymeslot.Notifications.Events do
 
   @doc """
   Handles meeting creation event.
+
+  Raised at most once per meeting. A booking with a video room defers this
+  event to `Tymeslot.Workers.VideoRoomWorker` so the payload can carry the join
+  link, and that job announces the booking without one if the room is taking
+  too long — a room that then arrives on a later attempt would otherwise fan
+  the event out a second time, to every email, webhook, Telegram chat and Slack
+  channel subscribed to it.
+
+  The claim is taken before the fan-out rather than after it, so two callers
+  racing cannot both dispatch. A fan-out that then fails keeps the claim: every
+  channel here is best-effort and none of the callers retry the event, so
+  releasing it would buy nothing and would risk announcing twice instead.
   """
   @spec meeting_created(term()) :: {:ok, term()} | {:error, term()}
   def meeting_created(meeting) do
+    case MeetingQueries.claim_announcement(Map.get(meeting, :id)) do
+      :ok -> dispatch_meeting_created(meeting)
+      :already_announced -> already_announced(meeting)
+    end
+  end
+
+  defp already_announced(meeting) do
+    Logger.info("Meeting already announced, skipping the created event",
+      meeting_id: Map.get(meeting, :id)
+    )
+
+    {:ok, :already_announced}
+  end
+
+  defp dispatch_meeting_created(meeting) do
     # Send email notifications
     result =
       send_notifications(:meeting_created, meeting, fn ->

@@ -126,7 +126,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting.id, "send_emails" => true}
+        args: %{"meeting_id" => meeting.id, "announce" => true}
       )
     end
   end

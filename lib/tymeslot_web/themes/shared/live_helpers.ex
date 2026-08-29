@@ -140,11 +140,23 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   # does not re-carry the query param) can't silently drop it back to a real
   # booking. Defaults to false, so any path that never sets it fails closed.
   defp assign_owner_preview(socket, params) do
-    owner_preview? =
-      socket.assigns[:owner_preview] ||
-        PreviewToken.owner?(params["preview_token"], socket.assigns[:organizer_user_id])
+    verified_token = verified_preview_token(socket, params)
 
-    assign(socket, :owner_preview, owner_preview?)
+    socket
+    |> assign(:owner_preview, socket.assigns[:owner_preview] || verified_token != nil)
+    |> assign(:preview_token, socket.assigns[:preview_token] || verified_token)
+  end
+
+  # The token itself is kept, not just the boolean it produced, because a locale
+  # switch redirects out of this LiveView entirely and every assign is lost. The
+  # replacement page can only be told it is still a preview through the query
+  # string, so `PathHandlers` needs the original token to put back. Carried
+  # forward as-is rather than re-signed: switching language should not extend a
+  # preview session past the expiry the owner started it with.
+  defp verified_preview_token(socket, params) do
+    token = params["preview_token"]
+
+    if PreviewToken.owner?(token, socket.assigns[:organizer_user_id]), do: token
   end
 
   @doc """

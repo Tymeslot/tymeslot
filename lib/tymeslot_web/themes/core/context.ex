@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Core.Context do
 
   alias Phoenix.Component
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.Registry
 
   require Logger
@@ -79,7 +80,7 @@ defmodule TymeslotWeb.Themes.Core.Context do
         (profile && profile.booking_theme) ||
         Registry.default_theme_id()
 
-    preview_mode = Map.has_key?(params, "theme") || Map.has_key?(params, "preview")
+    preview_mode = PreviewMode.claimed?(params)
 
     context = new(theme_id, profile, preview: preview_mode)
 
