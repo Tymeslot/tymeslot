@@ -90,6 +90,33 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Fetches a meeting by ID only if the given `organizer_user_id` owns it.
+
+  Returns `{:ok, meeting}` when a matching meeting is found.
+  Returns `{:error, :not_found}` when no meeting exists with that ID, or when
+  the meeting exists but belongs to a different organizer.
+  """
+  @spec get_meeting_for_organizer(String.t(), integer()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def get_meeting_for_organizer(id, organizer_user_id) when is_integer(organizer_user_id) do
+    case UUID.cast(id) do
+      {:ok, uuid} ->
+        query =
+          from(m in Meeting,
+            where: m.id == ^uuid and m.organizer_user_id == ^organizer_user_id
+          )
+
+        case Repo.one(query) do
+          nil -> {:error, :not_found}
+          meeting -> {:ok, meeting}
+        end
+
+      :error ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc """
   Moves a meeting out of `"awaiting_approval"`, atomically.
 
   The guard is in the `WHERE` clause rather than read-then-write, because

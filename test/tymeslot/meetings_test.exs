@@ -234,6 +234,72 @@ defmodule Tymeslot.MeetingsTest do
       assert {:error, "Cannot reschedule a meeting that has already occurred"} =
                Meetings.send_reschedule_request(meeting)
     end
+
+    test "blocks a reschedule request against a held request awaiting approval" do
+      meeting =
+        insert(:meeting,
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.utc_now(:second),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
+        )
+
+      assert {:error, "Cannot request a reschedule while the booking awaits approval"} =
+               Meetings.send_reschedule_request(meeting)
+
+      # The slot must stay live: no reschedule_requested_at was stamped, so
+      # the still-outstanding request keeps pointing at a real time.
+      updated_meeting = Repo.get(MeetingSchema, meeting.id)
+      assert is_nil(updated_meeting.reschedule_requested_at)
+    end
+  end
+
+  describe "calendar_export/2" do
+    defp exportable_meeting(attrs) do
+      user = insert(:user)
+      start_time = DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
+      end_time = DateTime.add(start_time, 3600)
+
+      insert(
+        :meeting,
+        Keyword.merge(
+          [
+            organizer_user: user,
+            organizer_user_id: user.id,
+            start_time: start_time,
+            end_time: end_time
+          ],
+          attrs
+        )
+      )
+    end
+
+    test "exports a confirmed meeting with STATUS:CONFIRMED" do
+      meeting = exportable_meeting(status: "confirmed")
+
+      assert {:ok, ics} = Meetings.calendar_export(meeting.uid, meeting.organizer_user_id)
+      assert ics =~ "STATUS:CONFIRMED"
+      refute ics =~ "STATUS:TENTATIVE"
+    end
+
+    test "exports a held request with STATUS:TENTATIVE, not STATUS:CONFIRMED" do
+      meeting =
+        exportable_meeting(
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.utc_now(:second),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
+        )
+
+      assert {:ok, ics} = Meetings.calendar_export(meeting.uid, meeting.organizer_user_id)
+      assert ics =~ "STATUS:TENTATIVE"
+      refute ics =~ "STATUS:CONFIRMED"
+    end
+
+    test "returns not_found for a cancelled meeting" do
+      meeting = exportable_meeting(status: "cancelled")
+
+      assert {:error, :not_found} =
+               Meetings.calendar_export(meeting.uid, meeting.organizer_user_id)
+    end
   end
 
   describe "list_user_meetings_by_filter/3" do

@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
   @moduletag :database
   @moduletag :queries
 
+  alias Ecto.UUID
   alias Tymeslot.Meetings
 
   describe "get_meeting_for_user/2" do
@@ -54,6 +55,45 @@ defmodule Tymeslot.Meetings.QueriesTest do
 
       assert {:error, :not_found} =
                Meetings.get_meeting_by_uid_for_user(meeting.uid, "unauthorized@example.com")
+    end
+  end
+
+  describe "get_meeting_for_organizer/2" do
+    test "returns meeting when organizer_user_id matches" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      assert {:ok, found} = Meetings.get_meeting_for_organizer(meeting.id, user.id)
+      assert found.id == meeting.id
+    end
+
+    test "returns error when organizer_user_id does not match" do
+      user = insert(:user)
+      other_user = insert(:user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      assert {:error, :not_found} =
+               Meetings.get_meeting_for_organizer(meeting.id, other_user.id)
+    end
+
+    test "returns error when the requester is only the attendee, not the organizer" do
+      # Unlike get_meeting_for_user/2, attendee_email is never consulted here:
+      # an attendee holding a Tymeslot account under the booking email must
+      # not be treated as authorised to act on their own request.
+      user = insert(:user)
+      attendee = insert(:user)
+
+      meeting =
+        insert(:meeting, organizer_user_id: user.id, attendee_email: attendee.email)
+
+      assert {:error, :not_found} = Meetings.get_meeting_for_organizer(meeting.id, attendee.id)
+    end
+
+    test "returns error for non-existent id" do
+      user = insert(:user)
+
+      assert {:error, :not_found} =
+               Meetings.get_meeting_for_organizer(UUID.generate(), user.id)
     end
   end
 

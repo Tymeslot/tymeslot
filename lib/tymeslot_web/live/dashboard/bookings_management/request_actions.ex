@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   def fetch_held_request(socket, params) do
     with {:ok, validated_id} <- validate_meeting_id(params),
          {:ok, meeting} <-
-           Meetings.get_meeting_for_user(validated_id, socket.assigns.current_user.email) do
+           Meetings.get_meeting_for_organizer(validated_id, socket.assigns.current_user.id) do
       held_or_answered(meeting)
     else
       _not_found -> {:error, dgettext("dashboard_bookings", "That request could not be found.")}

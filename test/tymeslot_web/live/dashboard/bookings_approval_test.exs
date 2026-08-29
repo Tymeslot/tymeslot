@@ -123,6 +123,46 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     end
   end
 
+  describe "where a lapsed request appears" do
+    test "not among upcoming meetings, even while its slot is still ahead", %{
+      conn: conn,
+      user: user
+    } do
+      # The window closed with nobody answering, but the meeting's own start
+      # time can still be days away — "upcoming" has to read the resolved
+      # status, not just the clock, or a lapsed request looks like a live
+      # booking again.
+      held_meeting(user, %{status: "expired", attendee_name: "Sam Overdue"})
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings")
+
+      refute html =~ "Sam Overdue"
+    end
+
+    test "carries an honest badge once it falls into Past, not \"Scheduled\"", %{
+      conn: conn,
+      user: user
+    } do
+      past = DateTime.add(DateTime.utc_now(:second), -2, :hour)
+
+      held_meeting(user, %{
+        status: "expired",
+        attendee_name: "Sam Overdue",
+        start_time: past,
+        end_time: DateTime.add(past, 30, :minute),
+        approval_deadline_at: DateTime.add(past, 90, :minute)
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      render_click(element(view, "button", "Past"))
+      card = card_html(view)
+
+      assert card =~ "Sam Overdue"
+      assert card =~ "Expired"
+      refute card =~ "Scheduled"
+    end
+  end
+
   describe "the actions a held request offers" do
     test "approve and decline, not join, reschedule or cancel", %{conn: conn, user: user} do
       held_meeting(user)
@@ -200,6 +240,38 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       # Their invitee's address must not leak into this host's modal.
       refute html =~ "stranger@example.com"
+    end
+
+    test "the attendee cannot approve their own request, even signed in under the booking email",
+         %{user: host} do
+      attendee = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      insert(:profile, user: attendee)
+      meeting = held_meeting(host, %{attendee_email: attendee.email})
+
+      attendee_conn =
+        build_conn() |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(attendee)
+
+      {:ok, view, _html} = live(attendee_conn, ~p"/dashboard/meetings")
+
+      push_to_component(view, "approve_request", %{"id" => meeting.id})
+
+      assert reload(meeting).status == "awaiting_approval"
+    end
+
+    test "the attendee cannot decline their own request either", %{user: host} do
+      attendee = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      insert(:profile, user: attendee)
+      meeting = held_meeting(host, %{attendee_email: attendee.email})
+
+      attendee_conn =
+        build_conn() |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(attendee)
+
+      {:ok, view, _html} = live(attendee_conn, ~p"/dashboard/meetings")
+
+      html = push_to_component(view, "show_decline_modal", %{"id" => meeting.id})
+
+      refute html =~ "confirm_decline_request"
+      assert reload(meeting).status == "awaiting_approval"
     end
   end
 end
