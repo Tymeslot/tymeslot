@@ -32,7 +32,10 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   The availability read runs first and its failure ends the run without
   writing anything. The item read failing afterwards costs the grid its
   freshness and nothing more, which is the right way round: the busy rows are
-  already written and correct.
+  already written and correct. That partial success is not thrown away —
+  the availability cache is still invalidated and the external-sync stamp
+  still advances, because the diary the booking page serves really is fresh.
+  Only the job's verdict is an error, so Oban retries the item read.
 
   ## No incremental mechanism
 
@@ -43,14 +46,31 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
   ## What this worker deliberately does not do
 
-  It never calls `Calendar.Sync.post_commit_reconciliation/2`. That resolves a
-  vanished provider event to a Tymeslot meeting **by uid** and cancels it,
-  notifying both parties, and a busy interval's uid is synthesised rather than
-  the server's. `SyncIcsCalendarWorker` skips it too, on the narrower grounds
-  that a read-only mirror should not rewrite meetings; here it is also the
-  structural half of the defence against a synthesised uid cancelling a real
-  booking, the other half being the namespace
-  `Exchange.IntervalNormaliser` puts on those uids.
+  It calls neither reconciliation primitive, and the two are skipped for
+  different reasons.
+
+  `Calendar.Sync.reconcile_deletions/3` is the one that can cancel. A ref
+  naming no `provider_event_id` falls back to the `uid`, which reaches
+  `Meetings.ExternalCalendarChanges.find_linked_meeting/3` and can mark a
+  real confirmed booking `"externally_deleted"`, notifying both parties.
+  Every busy row written here carries a synthesised uid and no provider event
+  id, which is exactly the shape that fallback resolves. Nothing in this
+  worker computes a vanished set to hand it: `full_refresh_for_role/3`
+  replaces a role's rows wholesale, so a disappeared interval is a silent
+  cache deletion. Not calling it is the structural half of the defence; the
+  other half is the namespace `Exchange.IntervalNormaliser` puts on those
+  uids.
+
+  `Calendar.Sync.post_commit_reconciliation/2` could not cancel anything even
+  if it ran. It walks the events *present* in the sync rather than vanished
+  ones, returns early for every event whose `provider_event_id` is nil —
+  which is every synthesised busy row — resolves the rest by
+  `provider_event_id` rather than uid, and signals `:modified`, never
+  `:deleted`. It is skipped on `SyncIcsCalendarWorker`'s narrower grounds
+  instead: a read-only mirror of someone else's mailbox has no business
+  rewriting Tymeslot meetings whose times moved. Its other two effects, the
+  availability-cache invalidation and the grid broadcast, are wanted and are
+  done directly by `handle_result/2`.
 
   ## Failure handling
 
