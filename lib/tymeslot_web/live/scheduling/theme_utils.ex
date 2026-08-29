@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.Registry
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -41,35 +42,32 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   @doc """
   Assigns theme-related data including preview mode detection.
 
-  A page is a preview when the URL carries either `?theme=` (a theme-switch
-  preview, which also selects the previewed theme id) or `?preview=` (the
-  owner previewing their own published page, keeping the stored theme). Both
-  set `:theme_preview`, a **display-only** signal (it tunes rendering, e.g. the
-  `iframe_embed.js` standalone bail-out).
+  `?theme=` selects which theme renders, and nothing else. A page is a preview
+  only when the URL carries `?preview=` (`PreviewMode.claimed?/1`), which sets
+  `:theme_preview`.
 
-  It deliberately does NOT gate booking persistence: the booking page is
-  public, so simulate-vs-persist hangs off the verified, owner-bound
-  `:owner_preview` token instead (see `LiveHelpers.assign_owner_preview/2`).
+  `:theme_preview` is a claim, not an authorisation, and it is load-bearing in
+  two different ways. It tunes rendering (the `iframe_embed.js` standalone
+  bail-out), and it makes `BookingSubmissionHandlerComponent` fail a booking
+  closed when no valid owner token backs the claim, so that a preview whose
+  token expired mid-session cannot silently persist a real meeting the owner
+  never sees. Whether a booking is simulated rather than blocked hangs off the
+  verified, owner-bound `:owner_preview` token instead (see
+  `LiveHelpers.assign_owner_preview/2`).
+
+  Because the claim can block a booking, it must never be inferrable from a
+  parameter a visitor can pick up by accident. That is why `?theme=` no longer
+  counts: see `PreviewMode`.
   """
   @spec assign_theme_with_preview(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   def assign_theme_with_preview(socket, params) do
-    theme_switch = Map.has_key?(params, "theme")
-    theme_preview = theme_switch or Map.has_key?(params, "preview")
-
-    # Only a theme-switch preview picks the theme id from the URL; an owner
-    # preview keeps whatever theme is already assigned.
-    theme_id =
-      if theme_switch do
-        params["theme"] || socket.assigns[:theme_id] || Registry.default_theme_id()
-      else
-        socket.assigns[:theme_id] || Registry.default_theme_id()
-      end
+    theme_id = params["theme"] || socket.assigns[:theme_id] || Registry.default_theme_id()
 
     socket
     |> assign(:scheduling_theme_id, theme_id)
     |> assign(:scheduling_theme_css, ThemeInfo.get_css_file(theme_id))
-    |> assign(:theme_preview, theme_preview)
+    |> assign(:theme_preview, PreviewMode.claimed?(params))
   end
 
   @doc """
