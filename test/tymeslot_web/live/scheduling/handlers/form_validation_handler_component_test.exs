@@ -35,6 +35,31 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponentTes
     assert updated.assigns.form.params["email"] == "john@example.com"
   end
 
+  # Regression: issue #83. The shipped TLD snapshot was missing .homes, so a
+  # visitor with that address could not book. The snapshot is synced from IANA
+  # now (mix tymeslot.sync_tlds).
+  test "accepts an email on a TLD delegated after the list was first written" do
+    socket = %Socket{
+      assigns: %{__changed__: %{}, validation_errors: %{}, touched_fields: MapSet.new()}
+    }
+
+    email = "owner@eastvalleyliving.homes"
+
+    assert {:ok, field_checked} =
+             FormValidationHandlerComponent.validate_field(socket, "email", email)
+
+    assert field_checked.assigns.validation_errors == %{}
+
+    assert {:ok, form_checked} =
+             FormValidationHandlerComponent.validate_form(socket, %{
+               "name" => "Test Attendee",
+               "email" => email
+             })
+
+    assert form_checked.assigns.validation_errors == %{}
+    assert form_checked.assigns.form.params["email"] == email
+  end
+
   test "validate_field/3 validates fields" do
     socket = %Socket{assigns: %{__changed__: %{}, validation_errors: %{}}}
 

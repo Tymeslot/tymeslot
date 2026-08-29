@@ -1127,3 +1127,8 @@ msgstr "Umbenennen"
 #, elixir-autogen, elixir-format
 msgid "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
 msgstr "Der Buchungskalender existiert bei Outlook nicht mehr. Bitte verbinden Sie die Integration erneut und wählen Sie einen anderen Kalender."
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
+msgstr "Verbindung zu %{url} hergestellt, Ihre Zugangsdaten wurden akzeptiert, aber es wurde keine Kalendersammlung gefunden. Bitte geben Sie die vollständige URL Ihrer Kalendersammlung ein, wie sie in den Einstellungen Ihres Kalenderservers angezeigt wird."

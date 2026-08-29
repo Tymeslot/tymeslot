@@ -304,14 +304,14 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
         worker: Tymeslot.Workers.VideoRoomWorker,
         args: %{
           "meeting_id" => meeting.id,
-          "send_emails" => true
+          "announce" => true
         }
       )
 
       # Execute the video room job (this attaches the video URL and schedules email jobs)
       perform_job(Tymeslot.Workers.VideoRoomWorker, %{
         "meeting_id" => meeting.id,
-        "send_emails" => true
+        "announce" => true
       })
 
       # Reload meeting to get updated video room details

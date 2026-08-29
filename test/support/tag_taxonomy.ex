@@ -122,7 +122,10 @@ defmodule Tymeslot.Test.TagTaxonomy do
       # ~100s, and was the largest single cost in the suite that owns these
       # tests, so they are excluded by default and run on a schedule instead —
       # run with mix test --only catalogue_freshness
-      :catalogue_freshness
+      :catalogue_freshness,
+      # Fetches IANA's TLD list over the network to check priv/tlds.json has
+      # not gone stale — run with mix test --only tld_freshness
+      :tld_freshness
     ]
   }
 

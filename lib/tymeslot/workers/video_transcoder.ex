@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   require Logger
 
+  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Media.Transcoder
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
 
@@ -80,6 +81,15 @@ defmodule Tymeslot.Workers.VideoTranscoder do
         Logger.info("Video transcoding completed", theme_customization_id: id)
         :ok
 
+      # The source was replaced or removed while this job was queued or running.
+      # Retrying cannot bring the bytes back, and the status is deliberately not
+      # touched: the current video's fate belongs to whichever run owns it now,
+      # and marking it `failed` here would report the old video's fate against
+      # the new one.
+      {:error, :source_missing} ->
+        cleanup_variants(base_path)
+        handle_missing_source(id, job)
+
       {:error, reason} ->
         cleanup_variants(base_path)
 
@@ -89,6 +99,29 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
         Logger.error("Video transcoding failed", theme_customization_id: id, reason: reason)
         {:error, reason}
+    end
+  end
+
+  # A replacement uploaded while this job was executing could not insert a job
+  # of its own: uniqueness matched this row and `replace: [:args]` rewrote its
+  # args instead, which this running process never rereads. Check the row now;
+  # if the path has moved on, snooze so the next run picks the replacement up
+  # rather than letting it die with a cancelled job.
+  defp handle_missing_source(id, %Oban.Job{args: %{"video_path" => ran_path}} = job) do
+    case ObanJobQueries.get_current_args(job) do
+      %{"video_path" => current_path} when current_path != ran_path ->
+        Logger.info("Video source replaced mid-transcode, rerunning for the replacement",
+          theme_customization_id: id
+        )
+
+        {:snooze, 1}
+
+      _unchanged_or_gone ->
+        Logger.info("Video source no longer present, cancelling transcode",
+          theme_customization_id: id
+        )
+
+        {:cancel, "Video source no longer present"}
     end
   end
 

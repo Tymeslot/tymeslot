@@ -88,6 +88,12 @@ jobs:
       - name: migrations
         if: ${{ !cancelled() }}
         run: mix test --only migrations
+      # Fetches IANA's TLD list. Nightly is the point: the validator refuses
+      # any ending absent from priv/tlds.json, so this is what bounds how long
+      # a newly delegated TLD can be silently refused to a single day.
+      - name: tld_freshness
+        if: ${{ !cancelled() }}
+        run: mix test --only tld_freshness
       # `:e2e` is deliberately absent. The 11 Wallaby features need a Chrome
       # binary and a matching chromedriver, and no workflow in this repo
       # installs either; config/test.exs also pins the browser to a developer's

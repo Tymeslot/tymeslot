@@ -225,7 +225,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
 
       assert_enqueued(
         worker: Tymeslot.Workers.VideoRoomWorker,
-        args: %{"meeting_id" => pending.id, "send_emails" => false}
+        args: %{"meeting_id" => pending.id, "announce" => false}
       )
 
       refute_enqueued(

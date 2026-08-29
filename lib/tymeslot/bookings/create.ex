@@ -29,6 +29,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
@@ -517,45 +518,44 @@ defmodule Tymeslot.Bookings.Create do
     # If explicitly requested, create video room first when a provider is configured
     if Keyword.get(opts, :with_video_room, false) do
       if meeting.video_integration_id do
-        schedule_video_room_with_emails(meeting)
+        schedule_video_room_with_announcement(meeting)
       else
         # No video provider configured, skip video job
-        schedule_email_notifications(meeting)
+        announce_meeting(meeting)
       end
     else
       # Auto-detect: if the meeting has a specific video provider configured that supports
-      # API-based room creation, create the video room before sending emails so the email
-      # includes the join link.
+      # API-based room creation, create the video room before announcing the booking so
+      # every notification carries the join link.
       if Policy.auto_creates_video_room?(meeting) do
-        schedule_video_room_with_emails(meeting)
+        schedule_video_room_with_announcement(meeting)
       else
         # No supported auto-create provider (none/unknown/etc.)
-        schedule_email_notifications(meeting)
+        announce_meeting(meeting)
       end
     end
   end
 
-  defp schedule_video_room_with_emails(meeting) do
-    case VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id) do
+  defp schedule_video_room_with_announcement(meeting) do
+    case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
       :ok ->
         :ok
 
       {:error, _reason} ->
-        # Fall back to email only
-        schedule_email_notifications(meeting)
+        # The job that would have announced this booking never got queued, so
+        # announce it here instead, without a join link.
+        announce_meeting(meeting)
         :ok
     end
   end
 
-  defp schedule_email_notifications(meeting) do
-    alias Tymeslot.Notifications.Events
-
+  defp announce_meeting(meeting) do
     case Events.meeting_created(meeting) do
       {:ok, _result} ->
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to schedule confirmation emails for meeting",
+        Logger.error("Failed to announce meeting creation",
           meeting_id: meeting.id,
           error: inspect(reason)
         )

@@ -27,4 +27,13 @@ defmodule TymeslotWeb.E2E.LoginTest do
     |> click(css("button[type='submit']"))
     |> assert_has(css(".bg-red-50"))
   end
+
+  feature "login page fits the narrowest supported viewport", %{session: session} do
+    session
+    |> resize_to_mobile()
+    |> visit("/auth/login")
+    |> wait_for_live()
+    |> assert_has(css("#password-input"))
+    |> assert_no_horizontal_overflow("login page at 320px")
+  end
 end

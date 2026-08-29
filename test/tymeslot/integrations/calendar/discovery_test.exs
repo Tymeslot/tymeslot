@@ -162,6 +162,44 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
     end
   end
 
+  describe "classifying a reachable server whose calendars cannot be found" do
+    test "names the server and withholds the advice that would mislead" do
+      url = "https://calendar.example.com/caldav"
+
+      assert {:config, message} =
+               ErrorHandler.classify_and_format({:calendar_home_not_found, url}, :caldav)
+
+      # The URL is the part the account owner can act on, so it has to appear.
+      assert message =~ url
+      assert message =~ "credentials were accepted"
+
+      # `:config` normally advises checking the server URL and credentials —
+      # exactly the two things this failure has already proven correct. The
+      # category's message and its recovery suggestion must both be withheld,
+      # and nothing may be appended after the specific copy.
+      refute message =~ "configuration error"
+      refute message =~ "the server URL is correct"
+      assert String.ends_with?(message, "settings.")
+
+      # A plain :not_found shares the category and must still get that generic
+      # copy, or the two failures would read identically after all.
+      assert {:config, generic} = ErrorHandler.classify_and_format(:not_found, :caldav)
+      assert generic =~ "configuration error"
+      assert generic =~ "the server URL is correct"
+      refute generic =~ "credentials were accepted"
+    end
+
+    test "accepts the reason still wrapped in an :error tuple" do
+      # categorize_error/1 unwraps {:error, reason}; the message lookup has to
+      # agree with it, or a wrapped reason silently loses its specific copy
+      # while keeping its category.
+      wrapped = {:error, {:calendar_home_not_found, "https://calendar.example.com/caldav"}}
+
+      assert {:config, message} = ErrorHandler.classify_and_format(wrapped, :caldav)
+      assert message =~ "credentials were accepted"
+    end
+  end
+
   describe "error classification under a non-English locale" do
     setup do
       original = Application.get_env(:tymeslot, :pseudo_locale_enabled)

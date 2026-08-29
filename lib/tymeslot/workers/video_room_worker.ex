@@ -11,7 +11,12 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     for the job: wait it out, or stop trying.
   - `Tymeslot.Workers.VideoRoom.Recovery` takes over once ordinary retries are
     spent, pacing the remaining attempts against the moment the attendees
-    actually need the link and sending their emails without one meanwhile.
+    actually need the link and announcing the booking without one meanwhile.
+
+  When the caller asks for `announce`, it has deferred the whole
+  `meeting_created` event to this job rather than only its emails, so that every
+  notification carries the join link. This job is therefore what raises that
+  event for any booking with a video room.
 
   What is left here is the job itself: fetch the meeting, run the call under a
   timeout, and report the outcome.
@@ -26,6 +31,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   alias Ecto.Changeset
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.VideoRoom.{ErrorPolicy, Recovery}
 
   require Logger
@@ -34,13 +40,25 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   @backoff_base_ms 1_000
   @backoff_cap_ms 16_000
 
+  # Terminal failures that still owe the attendees a booking: there will never
+  # be a link, so the announcement goes out now rather than after the attempts
+  # are spent. Every terminal reason belongs here except `:meeting_not_found`,
+  # where there is no booking left to announce.
+  @announce_without_room [
+    :video_integration_missing,
+    :video_integration_inactive,
+    :video_meeting_not_enabled,
+    :invalid_configuration,
+    :unauthorized
+  ]
+
   # Deduplicate identical jobs within five minutes, so a retried booking step
   # cannot queue a second room creation for the same meeting.
-  @unique [period: 300, fields: [:args, :queue], keys: [:meeting_id, :send_emails]]
+  @unique [period: 300, fields: [:args, :queue], keys: [:meeting_id, :announce]]
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id} = args, attempt: attempt} = job) do
-    send_emails = Map.get(args, "send_emails", false)
+    announce = announce?(args)
     # Downstream specs take the id as a string, whatever the job args hold.
     meeting_id = to_string(meeting_id)
 
@@ -53,10 +71,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
         Logger.info("Starting video room creation",
           meeting_id: meeting_id,
-          send_emails: send_emails
+          announce: announce
         )
 
-        create_room(meeting_id, send_emails, attempt)
+        create_room(meeting_id, announce, attempt)
 
       {:error, :not_found} ->
         Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
@@ -65,38 +83,50 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   end
 
   @doc """
-  Schedules video room creation for a meeting whose emails have already gone out.
+  Schedules video room creation for a meeting already announced without a room.
   """
   @spec schedule_video_room_creation(String.t()) :: :ok | {:error, String.t()}
   def schedule_video_room_creation(meeting_id), do: schedule(meeting_id, false)
 
   @doc """
-  Schedules video room creation, holding the meeting's emails until it finishes.
+  Schedules video room creation, holding the booking's announcement until it
+  finishes.
 
-  The emails are sent once the room exists, or without a link if creation
-  ultimately fails, so the attendees are never left without a confirmation.
+  `meeting.created` is raised once the room exists, or without a link if
+  creation ultimately fails, so the attendees are never left without a
+  confirmation and no subscriber loses the event.
   """
-  @spec schedule_video_room_creation_with_emails(String.t()) :: :ok | {:error, String.t()}
-  def schedule_video_room_creation_with_emails(meeting_id), do: schedule(meeting_id, true)
+  @spec schedule_video_room_creation_with_announcement(String.t()) ::
+          :ok | {:error, String.t()}
+  def schedule_video_room_creation_with_announcement(meeting_id), do: schedule(meeting_id, true)
 
-  defp schedule(meeting_id, send_emails) do
-    %{"meeting_id" => meeting_id, "send_emails" => send_emails}
+  # `announce` was spelled `send_emails` while this job scheduled only the
+  # emails. Recovery snoozes span days, so jobs enqueued under the old spelling
+  # outlive the deploy that renames it; reading both keeps them announcing
+  # rather than silently falling back to the `false` default. Drop the second
+  # clause one release after this ships.
+  defp announce?(%{"announce" => announce}), do: announce
+  defp announce?(%{"send_emails" => send_emails}), do: send_emails
+  defp announce?(_args), do: false
+
+  defp schedule(meeting_id, announce) do
+    %{"meeting_id" => meeting_id, "announce" => announce}
     |> new(queue: :video_rooms, priority: 0, unique: @unique)
     |> Oban.insert()
-    |> handle_insert(meeting_id, send_emails)
+    |> handle_insert(meeting_id, announce)
   end
 
-  defp handle_insert({:ok, _job}, meeting_id, send_emails) do
+  defp handle_insert({:ok, _job}, meeting_id, announce) do
     Logger.info("Video room creation job scheduled",
       meeting_id: meeting_id,
-      send_emails: send_emails
+      announce: announce
     )
 
     :ok
   end
 
   # The uniqueness window did its job; the existing job will create the room.
-  defp handle_insert({:error, %Changeset{errors: [unique: _details]}}, meeting_id, _send_emails) do
+  defp handle_insert({:error, %Changeset{errors: [unique: _details]}}, meeting_id, _announce) do
     Logger.info("Video room creation job already exists, skipping duplicate",
       meeting_id: meeting_id
     )
@@ -104,7 +134,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     :ok
   end
 
-  defp handle_insert({:error, reason}, meeting_id, _send_emails) do
+  defp handle_insert({:error, reason}, meeting_id, _announce) do
     Logger.error("Failed to schedule video room creation",
       meeting_id: meeting_id,
       error: format_insert_error(reason)
@@ -140,7 +170,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   # The provider call runs in a supervised task so a hung connection cannot pin
   # the queue's worker for longer than the timeout.
-  defp create_room(meeting_id, send_emails, attempt) do
+  defp create_room(meeting_id, announce, attempt) do
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
         Meetings.add_video_room_to_meeting(meeting_id)
@@ -148,11 +178,11 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
     case Task.yield(task, @video_api_timeout_ms) || Task.shutdown(task) do
       {:ok, {:ok, meeting}} ->
-        handle_success(meeting, send_emails)
+        handle_success(meeting, announce)
 
       {:ok, {:error, reason}} ->
         reason
-        |> handle_failure(meeting_id, send_emails, attempt)
+        |> handle_failure(meeting_id, announce, attempt)
         |> to_oban_result(attempt)
 
       {:ok, other} ->
@@ -164,37 +194,42 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           timeout_ms: @video_api_timeout_ms
         )
 
-        handle_timeout(meeting_id, send_emails, attempt)
+        handle_timeout(meeting_id, announce, attempt)
     end
   end
 
-  defp handle_success(meeting, send_emails) do
+  defp handle_success(meeting, announce) do
     Logger.info("Video room created successfully",
       meeting_id: Map.get(meeting, :id),
       room_id: Map.get(meeting, :video_room_id)
     )
 
-    if send_emails and Map.get(meeting, :id) do
-      Logger.info("Scheduling emails with video room info", meeting_id: meeting.id)
-      Meetings.schedule_email_notifications(meeting)
+    # A room that arrives after recovery has already announced the booking
+    # without one must not announce it again; `meeting_created/1` claims the
+    # event once per meeting, so this call is a no-op in that case.
+    if announce and Map.get(meeting, :id) do
+      Logger.info("Announcing the meeting now its room exists", meeting_id: meeting.id)
+      Events.meeting_created(meeting)
     end
 
     :ok
   end
 
-  defp handle_failure(reason, meeting_id, send_emails, attempt) do
+  defp handle_failure(reason, meeting_id, announce, attempt) do
     Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
 
     {:error, categorized} = ErrorPolicy.categorize(reason)
 
     cond do
-      # No integration to call means no amount of retrying will produce a link,
-      # so give up now and let the attendees have their emails without one.
-      categorized in [:video_integration_missing, :video_integration_inactive] ->
-        if send_emails, do: Recovery.send_fallback_emails(meeting_id)
+      # No integration to call, or an account that cannot host a meeting, means
+      # no amount of retrying will produce a link, so give up now and announce
+      # the booking without one. Reaching `Recovery` instead would spend ten
+      # attempts and a permanent-failure alert to arrive at the same place.
+      categorized in @announce_without_room ->
+        if announce, do: Recovery.send_fallback_notifications(meeting_id)
         {:discard, ErrorPolicy.discard_reason(categorized)}
 
-      Recovery.recovering?(attempt, send_emails) ->
+      Recovery.recovering?(attempt, announce) ->
         Recovery.enter(meeting_id, attempt, "creation failed: #{inspect(reason)}")
 
       true ->
@@ -202,8 +237,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     end
   end
 
-  defp handle_timeout(meeting_id, send_emails, attempt) do
-    if Recovery.recovering?(attempt, send_emails) do
+  defp handle_timeout(meeting_id, announce, attempt) do
+    if Recovery.recovering?(attempt, announce) do
       Recovery.enter(meeting_id, attempt, "creation timed out")
     else
       {:error, "Video room creation timed out"}

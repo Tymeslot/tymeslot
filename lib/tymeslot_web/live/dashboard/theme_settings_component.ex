@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemePreview
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -149,7 +150,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
               <div class="flex gap-4">
                 <%= if LinkAccessPolicy.can_link?(@profile, @integration_status) do %>
                   <a
-                    href={"#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{theme_id}"}
+                    href={
+                      PreviewMode.owner_path(@profile.username, @profile.user_id, theme: theme_id)
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn btn-secondary flex-1 py-3 px-4 text-token-sm"

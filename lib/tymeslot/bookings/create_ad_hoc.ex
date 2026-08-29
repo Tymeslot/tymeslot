@@ -166,7 +166,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   defp handle_side_effects(meeting, video_integration_id)
        when is_integer(video_integration_id) do
-    case VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id) do
+    case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
       :ok -> :ok
       {:error, _error} -> schedule_notifications(meeting)
     end

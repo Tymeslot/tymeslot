@@ -110,7 +110,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # that the seat is lost.
   defp schedule_video_room(meeting, true = _created_meeting?) do
     Policy.auto_creates_video_room?(meeting) and
-      VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id) == :ok
+      VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) == :ok
   end
 
   defp schedule_video_room(_meeting, _joined_existing_slot), do: false

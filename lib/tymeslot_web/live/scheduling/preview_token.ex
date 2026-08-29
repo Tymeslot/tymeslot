@@ -12,11 +12,17 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewToken do
 
   Two properties follow:
 
-    * A visitor cannot forge a token, so a bare `?preview=true` on someone's
-      page persists a real booking like any other visit.
-    * A leaked token only ever simulates the *owner's own* page — `owner?/2`
-      requires the bound id to match the page being viewed — so it cannot be
+    * A visitor cannot forge a token, so a bare `?preview=true` never reaches
+      simulate mode. It does not book for real either: an unbacked preview
+      claim is failed closed by `BookingSubmissionHandlerComponent`, so that a
+      token expiring mid-session cannot turn the owner's test booking into a
+      real meeting they never see.
+    * A leaked token only ever simulates the *owner's own* page. `owner?/2`
+      requires the bound id to match the page being viewed, so it cannot be
       replayed against a third party to silently swallow their bookings.
+
+  `?preview=` and `?theme=` are display parameters, not authorisation, and
+  `PreviewMode` is the single place that says so.
   """
 
   alias Phoenix.Token

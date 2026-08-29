@@ -6,9 +6,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   import Tymeslot.TestHelpers.Eventually
   import Tymeslot.DashboardTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
+  alias TymeslotWeb.Live.Scheduling.PreviewToken
 
   setup :setup_dashboard_user_with_theme
 
@@ -30,6 +32,52 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       assert Repo.reload!(profile).booking_theme == "2"
       assert render(view) =~ "Current Style"
+    end
+  end
+
+  describe "Preview links" do
+    setup %{user: user, profile: profile} do
+      # Both links need a username; the theme-selection one is additionally
+      # gated on a bookable calendar being connected.
+      insert(:calendar_integration, user: user)
+
+      profile =
+        profile
+        |> Changeset.change(username: "preview-owner")
+        |> Repo.update!()
+
+      {:ok, profile: profile}
+    end
+
+    # Both entry points used to link `?theme=<id>` with no token at all. The
+    # page then rendered as a preview but had nothing authorising simulate
+    # mode, so the owner's own test booking hit the fail-closed branch and
+    # disappeared with a "Preview session expired" flash.
+
+    test "the theme-selection preview link authorises simulate mode", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      href = preview_href(view, profile.username)
+
+      assert_owner_preview_link(href, user.id)
+      assert URI.decode_query(URI.parse(href).query)["theme"]
+    end
+
+    test "the customization preview link authorises simulate mode", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      href = preview_href(view, profile.username)
+
+      assert_owner_preview_link(href, user.id)
+      assert URI.decode_query(URI.parse(href).query)["theme"] == "1"
     end
   end
 
@@ -407,5 +455,25 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       assert saved.background_type == "color"
       assert saved.background_value == "#123456"
     end
+  end
+
+  defp preview_href(view, username) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.attribute("a[href^='/#{username}?']", "href")
+    |> List.first()
+  end
+
+  # A preview link is only useful if it actually reaches simulate mode, so
+  # assert the token verifies against this owner rather than merely that some
+  # `preview_token=` substring is present.
+  defp assert_owner_preview_link(href, user_id) do
+    assert href, "expected a preview link on the page"
+
+    params = href |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+    assert params["preview"] == "true"
+    assert PreviewToken.owner?(params["preview_token"], user_id)
   end
 end

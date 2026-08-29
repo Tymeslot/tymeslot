@@ -45,4 +45,13 @@ defmodule TymeslotWeb.E2E.SignupTest do
     |> wait_for_dashboard()
     |> assert_has(css("#dashboard-root"))
   end
+
+  feature "signup page fits the narrowest supported viewport", %{session: session} do
+    session
+    |> resize_to_mobile()
+    |> visit("/auth/signup")
+    |> wait_for_live()
+    |> assert_has(css("input[name='user[email]']"))
+    |> assert_no_horizontal_overflow("signup page at 320px")
+  end
 end

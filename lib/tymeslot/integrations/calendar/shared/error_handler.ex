@@ -175,8 +175,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
           {error_category(), String.t()}
   def classify_and_format(error, provider, context \\ %{}) do
     category = ErrorMessages.categorize_error(error)
-    base_message = ErrorMessages.get_user_friendly_message(category, provider)
-    suggestions = ErrorMessages.get_recovery_suggestions(category, provider)
+
+    # A reason-specific message is already written about this exact failure and
+    # carries its own advice, so it replaces the category's message *and* its
+    # recovery suggestion rather than being appended to either.
+    {base_message, suggestions} =
+      case ErrorMessages.specific_message(error, provider) do
+        nil ->
+          {ErrorMessages.get_user_friendly_message(category, provider),
+           ErrorMessages.get_recovery_suggestions(category, provider)}
+
+        specific_message ->
+          {specific_message, nil}
+      end
 
     # Log the original error for debugging
     Logger.debug("Calendar provider error",

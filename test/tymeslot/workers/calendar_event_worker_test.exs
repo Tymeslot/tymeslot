@@ -411,6 +411,55 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       assert cache_row.sync_state == "locally_modified"
     end
 
+    test "a 412 conflict discards the job and hands the write to the offline queue" do
+      %{integration: integration, meeting: meeting} =
+        setup_calendar_scenario_with_paths()
+
+      uid = meeting.uid
+
+      # A 412 means the server's ETag moved on. Replaying the identical
+      # conditional PUT fails the same way every time, so the job must stop
+      # after one attempt rather than spend five and raise an admin alert.
+      expect(Tymeslot.CalendarMock, :update_event, fn ^uid, _data, _meeting ->
+        {:error, :precondition_failed}
+      end)
+
+      assert {:discard, reason} =
+               perform_job(
+                 CalendarEventWorker,
+                 %{"action" => "update", "meeting_id" => meeting.id},
+                 attempt: 1
+               )
+
+      assert reason =~ "offline replay"
+
+      # Discarding is only safe because the write is already queued: the offline
+      # queue replays it on the next sync under the row's conflict policy.
+      assert {:ok, cache_row} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, meeting.uid)
+
+      assert cache_row.sync_state == "locally_modified"
+    end
+
+    test "a 412 on a create retries instead of discarding" do
+      meeting = insert(:meeting)
+
+      # On a create the 412 comes from `If-None-Match: *` finding an event
+      # already at the UID. The offline queue replays creates without a
+      # conflict policy, so discarding here would loop silently forever;
+      # the ordinary retry path must keep the job (and its exhaustion alert).
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        {:error, :precondition_failed}
+      end)
+
+      assert {:error, :precondition_failed} =
+               perform_job(
+                 CalendarEventWorker,
+                 %{"action" => "create", "meeting_id" => meeting.id},
+                 attempt: 1
+               )
+    end
+
     test "failed delete job tags the cache row as locally_deleted" do
       %{integration: integration, meeting: meeting} =
         setup_calendar_scenario_with_paths()

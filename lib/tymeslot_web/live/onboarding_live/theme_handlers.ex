@@ -13,11 +13,10 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
 
   alias Phoenix.Component
   alias Phoenix.LiveView
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
-  alias TymeslotWeb.Live.Scheduling.PreviewToken
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
@@ -96,7 +95,12 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
          socket
          |> Component.assign(
            :theme_preview_url,
-           preview_url(username, socket.assigns.profile.user_id)
+           # Standalone, not `embed=1`: `preview=true` pins CSP
+           # `frame-ancestors 'self'` so it frames same-origin, and standalone
+           # keeps the video background and fills the frame to full height, so
+           # the modal shows the page exactly as invitees see it rather than a
+           # chrome-stripped, video-less card.
+           PreviewMode.owner_url(username, socket.assigns.profile.user_id)
          )
          |> Component.assign(:show_theme_preview, true)}
 
@@ -162,15 +166,6 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   # Booking-theme ids offered in onboarding, derived from the theme registry.
   defp theme_ids do
     Enum.map(ThemeInfo.theme_options(), fn {_name, id} -> id end)
-  end
-
-  # Same-origin owner-preview URL for the user's own page, loaded standalone (no
-  # `embed=1`). `preview=true` alone pins CSP `frame-ancestors 'self'` so it
-  # frames same-origin, and standalone — unlike embed mode — keeps the video
-  # background and fills the frame to full height, so the modal shows the page
-  # exactly as invitees see it rather than a chrome-stripped, video-less card.
-  defp preview_url(username, user_id) do
-    "#{Policy.app_url()}/#{username}?preview=true&preview_token=#{PreviewToken.sign(user_id)}"
   end
 
   # The preview needs a resolvable username. Most users set one on the profile

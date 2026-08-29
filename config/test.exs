@@ -221,12 +221,16 @@ config :tymeslot, :payment_retry, base_delay_ms: 1
 # request process to share the test's DB connection.
 # base_url is set dynamically in test_helper.exs via TymeslotWeb.Endpoint.url/0
 # so it respects the TEST_PORT env var.
+# Failure screenshots go to the system temp directory, not into the checkout:
+# they are disposable artefacts of a failed run, and writing them under test/
+# left untracked PNGs behind after every red e2e run. Wallaby mkdir_p's the
+# directory itself, so nothing has to create it.
 config :wallaby,
   otp_app: :tymeslot,
   ecto_repos: [Tymeslot.Repo],
   driver: Wallaby.Chrome,
   screenshot_on_failure: true,
-  screenshot_dir: Path.expand("../test/screenshots", __DIR__),
+  screenshot_dir: Path.join(System.tmp_dir!(), "tymeslot-screenshots"),
   chromedriver: [
     headless: true,
     binary: "/snap/chromium/current/usr/lib/chromium-browser/chrome"

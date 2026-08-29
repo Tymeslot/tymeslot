@@ -62,7 +62,7 @@ defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorkerTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting_missing.id, "send_emails" => false}
+        args: %{"meeting_id" => meeting_missing.id, "announce" => false}
       )
 
       enqueued = all_enqueued(worker: VideoRoomWorker)

@@ -9,12 +9,15 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
+  alias Oban.Job
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Webhooks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoom.Recovery
   alias Tymeslot.Workers.VideoRoomWorker
+  alias Tymeslot.Workers.WebhookWorker
   alias Tymeslot.ZoomOAuthHelperMock
 
   setup :verify_on_exit!
@@ -61,11 +64,93 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       result =
         perform_job(
           VideoRoomWorker,
-          %{"meeting_id" => meeting.id, "send_emails" => true},
+          %{"meeting_id" => meeting.id, "announce" => true},
           attempt: 1
         )
 
       assert {:discard, "Video integration missing"} = result
+      assert_enqueued(worker: EmailWorker)
+    end
+
+    test "discards on the first attempt when the account cannot host video meetings" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "teams",
+          oauth_scope: "Calendars.ReadWrite",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: integration.id
+        )
+
+      stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      # Graph creates the calendar event but returns no Teams link: the account
+      # has no Teams licence. That never changes on a retry.
+      stub(Tymeslot.HTTPClientMock, :request, fn
+        :post, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "orphan-1"})}}
+
+        :delete, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      # Ten attempts against this used to end in a permanent-failure alert, and
+      # the daily recovery scan re-queued it to fail again the next day.
+      assert {:discard, "Account cannot host video meetings"} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 1
+               )
+
+      # Giving up must not cost the attendees their booking: it is announced
+      # now, without a link, rather than after the attempts are spent.
+      assert_enqueued(worker: EmailWorker)
+    end
+
+    test "discards and still announces when the integration is missing required permissions" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      # No Calendars.ReadWrite consent: the provider reports this as
+      # `:invalid_configuration` before touching Graph, and only reconnecting
+      # the integration can change it.
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "teams",
+          oauth_scope: "",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: integration.id
+        )
+
+      stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      assert {:discard, "Invalid configuration"} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 1
+               )
+
+      # The whole `meeting_created` event was deferred to this job, so a
+      # terminal discard that skipped the announcement would silently notify
+      # no one of the booking.
       assert_enqueued(worker: EmailWorker)
     end
   end
@@ -174,7 +259,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 5
                )
@@ -204,7 +289,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 6
                )
@@ -237,7 +322,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 5
                )
@@ -263,7 +348,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  VideoRoomWorker,
                  %{
                    "meeting_id" => meeting.id,
-                   "send_emails" => true
+                   "announce" => true
                  },
                  attempt: 5
                )
@@ -313,6 +398,145 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
 
       # Calendar update should be enqueued (if it fails, that's a separate concern)
       assert_enqueued(worker: CalendarEventWorker)
+    end
+  end
+
+  describe "perform/1 - the meeting.created fan-out" do
+    setup do
+      scenario = setup_video_scenario()
+
+      {:ok, webhook} =
+        Webhooks.create_webhook(scenario.user.id, %{
+          name: "Bookings",
+          url: "https://example.com/hooks/bookings",
+          events: ["meeting.created"]
+        })
+
+      Map.put(scenario, :webhook, webhook)
+    end
+
+    test "dispatches meeting.created once the room exists, not just the emails", %{
+      meeting: meeting
+    } do
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "announce" => true
+               })
+
+      # The emails were never the whole event. Holding them until the room
+      # exists is the point of this job; holding the webhook and dropping it is
+      # not.
+      assert_enqueued(worker: EmailWorker)
+      assert_enqueued(worker: WebhookWorker)
+    end
+
+    test "dispatches meeting.created when the room can never be created", %{user: user} do
+      # A different slot from the scenario's own meeting: an organiser cannot
+      # hold two confirmed meetings at one time, and the database says so.
+      start_time = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: nil,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30, :minute)
+        )
+
+      assert {:discard, "Video integration missing"} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 1
+               )
+
+      # The attendees get their emails without a link; the subscriber has to
+      # learn about the booking all the same.
+      assert_enqueued(worker: EmailWorker)
+      assert_enqueued(worker: WebhookWorker)
+    end
+
+    test "stays silent when the notifications have already gone out", %{meeting: meeting} do
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "announce" => false
+               })
+
+      # `announce: false` means the caller already announced the booking.
+      # Announcing it again would deliver the attendee a second confirmation and
+      # the subscriber a duplicate event.
+      refute_enqueued(worker: EmailWorker)
+      refute_enqueued(worker: WebhookWorker)
+    end
+
+    test "announces a job still carrying the legacy send_emails key", %{meeting: meeting} do
+      expect_mirotalk_success()
+
+      # Recovery snoozes span days, so jobs enqueued before `send_emails` was
+      # renamed outlive the deploy that renames it. Reading only the new key
+      # would take the `false` default and lose the very event they were queued
+      # to raise.
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "send_emails" => true
+               })
+
+      assert_enqueued(worker: WebhookWorker)
+    end
+
+    test "a room arriving after recovery announced the booking does not announce it twice" do
+      %{meeting: meeting} = setup_future_meeting_scenario()
+
+      {:ok, _webhook} =
+        Webhooks.create_webhook(meeting.organizer_user_id, %{
+          name: "Late room",
+          url: "https://example.com/hooks/late-room",
+          events: ["meeting.created"]
+        })
+
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :econnrefused}}
+      end)
+
+      # Ordinary retries are spent, so recovery announces the booking without a
+      # join link rather than leave the attendees waiting on one.
+      assert {:snooze, _seconds} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 5
+               )
+
+      assert_enqueued(worker: WebhookWorker)
+
+      # Recovery snoozes for hours, and every channel's Oban uniqueness window
+      # is five minutes wide, so by the time the next attempt runs none of them
+      # would suppress a repeat. Clearing the queue is what makes a second
+      # fan-out visible here rather than silently deduped.
+      Repo.delete_all(Job)
+
+      # The provider comes back and a later recovery attempt gets its room. The
+      # link is worth having, the second `meeting.created` is not: the
+      # subscriber would see the same booking arrive twice.
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 6
+               )
+
+      refute_enqueued(worker: WebhookWorker)
+      refute_enqueued(worker: EmailWorker)
     end
   end
 
@@ -370,16 +594,16 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => "123", "send_emails" => false}
+        args: %{"meeting_id" => "123", "announce" => false}
       )
     end
 
-    test "schedule_video_room_creation_with_emails/1 enqueues job" do
-      assert :ok = VideoRoomWorker.schedule_video_room_creation_with_emails("123")
+    test "schedule_video_room_creation_with_announcement/1 enqueues job" do
+      assert :ok = VideoRoomWorker.schedule_video_room_creation_with_announcement("123")
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => "123", "send_emails" => true}
+        args: %{"meeting_id" => "123", "announce" => true}
       )
     end
   end

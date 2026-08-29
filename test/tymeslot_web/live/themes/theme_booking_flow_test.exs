@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Live.Scheduling.PreviewToken
 
@@ -118,6 +119,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
       {:ok, view, _html} = live(conn, ~p"/#{profile.username}?preview=true&timezone=#{timezone}")
 
+      LogCapture.attach()
       attendee_email = "blocked-attendee@example.com"
 
       fill_and_submit_booking_flow(view, "quill", "1", %{
@@ -140,6 +142,14 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       _drain = :sys.get_state(view.pid)
       assert render(view) =~ "Preview session expired"
       refute has_element?(view, "[data-testid='confirmation-heading']")
+
+      # And the block must not be silent. With no meeting row, no email and no
+      # exception, this line is the only server-side trace that a submission was
+      # dropped; its absence is what made #84 so hard to diagnose from the logs.
+      event = LogCapture.await_log("Booking blocked: preview claimed without a valid owner token")
+
+      assert event.level == :warning
+      assert event.meta.organizer_user_id == user.id
     end
 
     @tag :capture_log

@@ -28,15 +28,15 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   nor waits past its own deadline.
   """
 
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Utils.ReminderUtils
 
   require Logger
 
   # Attempts spent on ordinary retries before recovery takes over. The fallback
-  # emails (without a join link) go out on exactly this attempt, once.
+  # announcement (without a join link) goes out on exactly this attempt, once.
   @fallback_attempt 5
 
   # Recovery snoozes allowed after the fallback threshold.
@@ -52,54 +52,60 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   @doc """
   Whether this attempt has exhausted ordinary retries and entered recovery.
 
-  Recovery only applies to jobs that owe the attendees an email. A job created
-  without `send_emails` has no deadline to race, so it simply retries and gives
-  up on Oban's own schedule.
+  Recovery only applies to jobs that still owe the booking its announcement. A
+  job created without `announce` has no deadline to race, so it simply retries
+  and gives up on Oban's own schedule.
   """
   @spec recovering?(pos_integer(), boolean()) :: boolean()
-  def recovering?(attempt, send_emails), do: send_emails and attempt >= @fallback_attempt
+  def recovering?(attempt, announce), do: announce and attempt >= @fallback_attempt
 
   @doc """
   Enters recovery for a meeting and returns the resulting Oban decision.
 
-  On the first recovery attempt this also sends the confirmation emails without
-  a join link, so the attendees are not left waiting on an email that may never
-  come. `cause` is logged to distinguish a failing provider from a hanging one.
+  On the first recovery attempt this also announces the booking without a join
+  link, so the attendees are not left waiting on an email that may never come.
+  `cause` is logged to distinguish a failing provider from a hanging one.
   """
   @spec enter(String.t(), pos_integer(), String.t()) :: decision()
   def enter(meeting_id, attempt, cause) do
     if attempt == @fallback_attempt do
-      Logger.warning("Video room creation entering recovery, sending fallback emails",
+      Logger.warning("Video room creation entering recovery, announcing without a room",
         meeting_id: meeting_id,
         attempts: @fallback_attempt,
         cause: cause
       )
 
-      send_fallback_emails(meeting_id)
+      send_fallback_notifications(meeting_id)
     end
 
     decide(meeting_id, attempt - @fallback_attempt + 1)
   end
 
   @doc """
-  Sends the meeting's emails without a video room link.
+  Announces the meeting without a video room link.
 
   Used both on entering recovery and when the failure is already known to be
-  unrecoverable, so the attendees still receive their confirmation.
+  unrecoverable, so the attendees still receive their confirmation and anything
+  subscribed to `meeting.created` still learns about the booking.
+
+  Recovery keeps retrying the room after this, and a late success announces the
+  booking on its own account. `Events.meeting_created/1` claims the event once
+  per meeting, so whichever of the two gets there first is the only one that
+  fans out.
   """
-  @spec send_fallback_emails(String.t()) :: :ok
-  def send_fallback_emails(meeting_id) do
-    Logger.info("Sending emails without video room due to creation failure",
+  @spec send_fallback_notifications(String.t()) :: :ok
+  def send_fallback_notifications(meeting_id) do
+    Logger.info("Announcing the meeting without a video room after creation failed",
       meeting_id: meeting_id
     )
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Meetings.schedule_email_notifications(meeting)
+        Events.meeting_created(meeting)
         :ok
 
       {:error, _reason} ->
-        Logger.error("Could not fetch meeting for fallback email scheduling",
+        Logger.error("Could not fetch meeting for fallback announcement",
           meeting_id: meeting_id
         )
 

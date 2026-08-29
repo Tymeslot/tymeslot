@@ -240,9 +240,11 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
     end
 
     test "returns Nextcloud-specific :not_found message when server returns 404" do
-      # Discovery.test_connection performs an RFC 4791 fallback probe when the
-      # primary PROPFIND returns 404, so two requests are issued before
-      # {:error, :not_found} propagates back to the provider.
+      # Discovery.test_connection falls back to the RFC 4791 chain when the
+      # primary PROPFIND returns 404, asking the supplied URL for a principal
+      # before the origin root. Nextcloud's base URL is normalised to
+      # ".../remote.php/dav", so those are two distinct probes and three
+      # requests are issued before {:error, :not_found} reaches the provider.
       integration = %{
         base_url: "https://cloud.example.com",
         username: "alice",
@@ -255,7 +257,12 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      # RFC 4791 fallback probe on "/" → also 404
+      # RFC 4791 principal probe on the supplied URL (".../remote.php/dav/")
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      # RFC 4791 principal probe on the origin root ("/") → also 404
       expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 404, body: ""}}
       end)

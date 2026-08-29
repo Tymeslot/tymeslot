@@ -1,8 +1,8 @@
 defmodule Tymeslot.MeetingsContext.NotificationsTest do
   @moduledoc """
   Behaviour tests for the Meetings context covering notifications and
-  async calendar-event side effects: email scheduling, reminder lookups,
-  reschedule requests, and calendar-event create/cancel async paths.
+  async calendar-event side effects: reminder lookups, reschedule requests,
+  and calendar-event create/cancel async paths.
   """
 
   use Tymeslot.DataCase, async: true
@@ -24,15 +24,6 @@ defmodule Tymeslot.MeetingsContext.NotificationsTest do
     TestMocks.setup_calendar_mocks()
 
     :ok
-  end
-
-  describe "when scheduling email notifications" do
-    test "email notifications are scheduled for new meetings" do
-      %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user)
-
-      assert :ok = Meetings.schedule_email_notifications(meeting)
-    end
   end
 
   describe "when checking meetings needing reminders" do

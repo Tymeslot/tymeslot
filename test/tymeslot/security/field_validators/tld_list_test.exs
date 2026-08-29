@@ -95,6 +95,65 @@ defmodule Tymeslot.Security.FieldValidators.TLDListTest do
     end
   end
 
+  describe "validate_tld/2" do
+    test "accepts endings the snapshot carries because it is synced from IANA" do
+      # The endings issue #83 refused. They validate now because
+      # `mix tymeslot.sync_tlds` put them in the list, not because the gate
+      # stopped checking.
+      for tld <- ~w(homes web author merck ollo) do
+        assert TLDList.valid_public_tld?(tld)
+        assert :ok = TLDList.validate_tld(tld, "Email")
+      end
+    end
+
+    test "rejects a well-formed ending the snapshot does not carry" do
+      assert {:error, message} = TLDList.validate_tld("notatld", "Email")
+      assert message =~ "unrecognised domain ending (.notatld)"
+      assert message =~ "predates it and needs updating"
+    end
+
+    test "accepts known TLDs, including second-level and mixed case" do
+      assert :ok = TLDList.validate_tld("com", "Email")
+      assert :ok = TLDList.validate_tld("co.uk", "Email")
+      assert :ok = TLDList.validate_tld("COM", "Email")
+    end
+
+    test "accepts internationalised endings in punycode" do
+      assert :ok = TLDList.validate_tld("xn--fct429k", "Email")
+      assert :ok = TLDList.validate_tld("xn--11b4c3d", "Email")
+    end
+
+    test "rejects known mistypings and names the correction" do
+      assert {:error, message} = TLDList.validate_tld("con", "Email")
+      assert message == "Email has an unrecognised domain ending (.con) — did you mean .com?"
+
+      assert {:error, ocm_message} = TLDList.validate_tld("ocm", "Email")
+      assert ocm_message =~ "did you mean .com?"
+
+      assert {:error, ogr_message} = TLDList.validate_tld("ogr", "Domain")
+      assert ogr_message == "Domain has an unrecognised domain ending (.ogr) — did you mean .org?"
+    end
+
+    test "rejects special-use endings reserved by RFC 2606/6761" do
+      for tld <- ~w(localhost invalid internal example test local onion home arpa) do
+        assert {:error, message} = TLDList.validate_tld(tld, "Email")
+        assert message == "Email has a reserved domain ending (.#{tld})"
+      end
+    end
+
+    test "rejects endings that cannot be a TLD" do
+      for tld <- ~w(1 c0m x -com co- a) do
+        assert {:error, message} = TLDList.validate_tld(tld, "Email")
+        assert message =~ "invalid domain ending (.#{tld})"
+      end
+    end
+
+    test "uses the given label in the message" do
+      assert {:error, "Domain has an invalid domain ending (.1)"} =
+               TLDList.validate_tld("1", "Domain")
+    end
+  end
+
   describe "extract_tld/1" do
     test "extracts single-part TLD" do
       assert "com" = TLDList.extract_tld("example.com")

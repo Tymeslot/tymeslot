@@ -9,6 +9,21 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   alias Tymeslot.Repo
 
   @doc """
+  Returns the args currently stored on a job's row, or `nil` when no row exists.
+
+  A worker whose uniqueness covers `:executing` with `replace: [:args]` can have
+  its row's args rewritten by a conflicting insert while it runs; the running
+  process only ever sees the args it started with. Rereading the row is how such
+  a worker notices the replacement before it finishes.
+  """
+  @spec get_current_args(Job.t()) :: map() | nil
+  def get_current_args(%Job{id: id}) when is_integer(id) do
+    Repo.one(from(j in Job, where: j.id == ^id, select: j.args))
+  end
+
+  def get_current_args(%Job{}), do: nil
+
+  @doc """
   Counts maintenance worker jobs in active states.
 
   `suspended` is treated as active: a suspended job has not reached a terminal
