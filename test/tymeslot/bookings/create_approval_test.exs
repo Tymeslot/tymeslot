@@ -48,7 +48,7 @@ defmodule Tymeslot.Bookings.CreateApprovalTest do
 
   defp book(user, form_data, meeting_type, days_ahead \\ 1) do
     params = %{
-      date: Date.add(Date.utc_today(), days_ahead),
+      date: next_weekday(Date.add(Date.utc_today(), days_ahead)),
       time: "10:00",
       duration: "30min",
       user_timezone: "UTC",
@@ -57,6 +57,20 @@ defmodule Tymeslot.Bookings.CreateApprovalTest do
     }
 
     Create.execute(params, form_data)
+  end
+
+  # These tests give the organiser no availability schedule, so the booking
+  # path falls back to `Availability.BusinessHours`'s Monday-to-Friday hours.
+  # Without this the whole file fails every Saturday and Sunday, because the
+  # default `days_ahead` of 1 lands on a weekend and the schedule offers
+  # nothing there. Rolling forward keeps `days_ahead` meaning "soon" (1) or
+  # "far enough out that the window is not capped" (5), which is what the
+  # deadline assertions below actually depend on.
+  defp next_weekday(date) do
+    case Date.day_of_week(date) do
+      day when day <= 5 -> date
+      day -> Date.add(date, 8 - day)
+    end
   end
 
   describe "booking a meeting type that requires approval" do
