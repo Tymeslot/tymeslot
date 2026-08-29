@@ -76,10 +76,12 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewModeTest do
     end
 
     test "omits an empty theme rather than emitting a blank selector" do
-      assert PreviewMode.owner_path("alice", 42, theme: nil) ==
-               PreviewMode.owner_path("alice", 42, theme: "")
+      nil_path = PreviewMode.owner_path("alice", 42, theme: nil)
+      empty_path = PreviewMode.owner_path("alice", 42, theme: "")
 
-      refute PreviewMode.owner_path("alice", 42, theme: "") =~ "theme="
+      refute Map.has_key?(URI.decode_query(URI.parse(nil_path).query), "theme")
+      refute Map.has_key?(URI.decode_query(URI.parse(empty_path).query), "theme")
+      refute empty_path =~ "theme="
     end
 
     test "encodes a username that needs escaping" do
