@@ -42,11 +42,14 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   # Terminal failures that still owe the attendees a booking: there will never
   # be a link, so the announcement goes out now rather than after the attempts
-  # are spent.
+  # are spent. Every terminal reason belongs here except `:meeting_not_found`,
+  # where there is no booking left to announce.
   @announce_without_room [
     :video_integration_missing,
     :video_integration_inactive,
-    :video_meeting_not_enabled
+    :video_meeting_not_enabled,
+    :invalid_configuration,
+    :unauthorized
   ]
 
   # Deduplicate identical jobs within five minutes, so a retried booking step

@@ -116,6 +116,43 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       # now, without a link, rather than after the attempts are spent.
       assert_enqueued(worker: EmailWorker)
     end
+
+    test "discards and still announces when the integration is missing required permissions" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      # No Calendars.ReadWrite consent: the provider reports this as
+      # `:invalid_configuration` before touching Graph, and only reconnecting
+      # the integration can change it.
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "teams",
+          oauth_scope: "",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: integration.id
+        )
+
+      stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      assert {:discard, "Invalid configuration"} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 1
+               )
+
+      # The whole `meeting_created` event was deferred to this job, so a
+      # terminal discard that skipped the announcement would silently notify
+      # no one of the booking.
+      assert_enqueued(worker: EmailWorker)
+    end
   end
 
   describe "perform/1 - successful creation" do
