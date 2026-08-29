@@ -45,16 +45,39 @@ defmodule Tymeslot.Notifications.Orchestrator do
   scheduled here. Reminding an invitee about a meeting nobody has agreed to
   would contradict the acknowledgement they just received, and the reminders
   are scheduled in full once the host approves.
+
+  The three steps are scheduled independently rather than as a `with` chain:
+  the expiry has a cron backstop but the nudge does not, so a failure in the
+  request email must not leave the nudge (or the expiry) unarmed. Every step
+  always runs; a failure in any of them is logged and rolled into an overall
+  error for the caller.
   """
   @spec schedule_request_notifications(%{atom() => term()}) ::
           {:ok, :notifications_scheduled} | {:error, term()}
   def schedule_request_notifications(meeting) do
     Logger.info("Scheduling booking request notifications", meeting_id: meeting.id)
 
-    with :ok <- MeetingScheduler.schedule_request_emails(meeting.id),
-         :ok <- schedule_approval_nudge(meeting),
-         :ok <- ApprovalJobs.schedule_expiry(meeting) do
+    results = [
+      request_emails: MeetingScheduler.schedule_request_emails(meeting.id),
+      approval_nudge: schedule_approval_nudge(meeting),
+      expiry: ApprovalJobs.schedule_expiry(meeting)
+    ]
+
+    errors =
+      for {step, {:error, reason}} <- results do
+        Logger.error("Failed to schedule booking request notification step",
+          meeting_id: meeting.id,
+          step: step,
+          reason: inspect(reason)
+        )
+
+        {step, reason}
+      end
+
+    if errors == [] do
       {:ok, :notifications_scheduled}
+    else
+      {:error, errors}
     end
   end
 

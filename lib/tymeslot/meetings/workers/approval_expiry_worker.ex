@@ -32,6 +32,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -45,14 +46,31 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
   end
 
   defp expire_if_held(meeting) do
-    if MeetingState.awaiting_approval?(meeting) do
-      release(meeting)
-    else
-      # The host answered before the deadline, and the cancellation of this
-      # job lost the race with its own execution. Nothing is wrong.
-      {:discard, "Request already #{meeting.status}"}
+    cond do
+      not MeetingState.awaiting_approval?(meeting) ->
+        # The host answered before the deadline, and the cancellation of this
+        # job lost the race with its own execution. Nothing is wrong.
+        {:discard, "Request already #{meeting.status}"}
+
+      deadline_in_future?(meeting) ->
+        # `ApprovalJobs.schedule_expiry/1` deletes a meeting's existing expiry
+        # job before inserting a fresh one, but a delete that is itself lost
+        # (the same class of failure `ApprovalSweepWorker`'s module docs
+        # describe) can leave a stale job carrying an old, earlier deadline
+        # behind a request that was re-armed with a later one. Comparing the
+        # deadline here, not just the status, is what stops that stale job
+        # from releasing a request that is still legitimately live.
+        {:discard, "Request not due until #{meeting.approval_deadline_at}"}
+
+      true ->
+        release(meeting)
     end
   end
+
+  defp deadline_in_future?(%{approval_deadline_at: nil}), do: false
+
+  defp deadline_in_future?(%{approval_deadline_at: deadline}),
+    do: DateTime.compare(deadline, Clock.utc_now()) == :gt
 
   defp release(meeting) do
     case Approval.expire(meeting) do

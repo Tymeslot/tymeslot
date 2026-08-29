@@ -74,6 +74,24 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
 
       refute_enqueued(worker: ApprovalExpiryWorker)
     end
+
+    test "re-scheduling replaces the old job rather than losing to its uniqueness" do
+      meeting = held_meeting()
+      :ok = ApprovalJobs.schedule_expiry(meeting)
+
+      new_deadline = DateTime.add(meeting.approval_deadline_at, 11, :hour)
+      rearmed = %{meeting | approval_deadline_at: new_deadline}
+      assert :ok = ApprovalJobs.schedule_expiry(rearmed)
+
+      jobs =
+        Enum.filter(
+          Repo.all(Job),
+          &(&1.worker == "Tymeslot.Meetings.Workers.ApprovalExpiryWorker")
+        )
+
+      assert [only_job] = jobs
+      assert DateTime.compare(only_job.scheduled_at, new_deadline) == :eq
+    end
   end
 
   describe "ApprovalJobs.cancel/1" do
@@ -236,6 +254,19 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
     test "discards rather than retries when the meeting is gone" do
       assert {:discard, _reason} =
                perform_job(ApprovalExpiryWorker, %{"meeting_id" => UUID.generate()})
+    end
+
+    test "discards a stale job whose meeting was re-armed with a later deadline" do
+      # Still held, but the deadline this job carries is not the one on the
+      # meeting any more — the request was re-scheduled after this job was
+      # enqueued and its own replacement was lost.
+      meeting =
+        held_meeting(%{approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 6, :hour)})
+
+      assert {:discard, _reason} =
+               perform_job(ApprovalExpiryWorker, %{"meeting_id" => meeting.id})
+
+      assert reload(meeting).status == "awaiting_approval"
     end
   end
 

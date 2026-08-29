@@ -1,21 +1,17 @@
 defmodule Tymeslot.Meetings.ApprovalJobs do
   @moduledoc """
-  The background jobs a held booking request owns, and their removal.
+  The background job a held booking request's expiry owns, and its removal.
 
-  A request raised at 09:00 with a 24-hour window leaves two jobs sitting in
-  the queue: a nudge at 21:00 and an expiry at 09:00 the next day. Both are
-  wrong the instant the host answers, and both would be visible to the people
-  involved — a reminder to decide something already decided, and an expiry
-  that releases a slot the host accepted.
-
-  So every exit from the gate calls `cancel/1`, and it is deliberately one
-  call rather than two: a future exit path that remembers to cancel the nudge
-  and forgets the expiry is exactly the bug this shape prevents.
+  This module owns one job: the per-meeting expiry scheduled at
+  `approval_deadline_at`. The nudge is a separate job owned by
+  `Tymeslot.Emails.EmailScheduler.MeetingScheduler`; the two are cancelled
+  together, but by `Tymeslot.Notifications.Orchestrator.cancel_request_notifications/1`,
+  not by this module — `cancel/1` here removes only the expiry.
 
   Cancellation is best-effort by design. Deleting a job that has already
-  started executing is impossible, which is why neither job trusts the
-  deletion: both re-read the meeting and check it is still held before acting,
-  and `Approval`'s guarded transition refuses them if it is not.
+  started executing is impossible, which is why the job does not trust the
+  deletion: it re-reads the meeting and checks it is still held before
+  acting, and `Approval`'s guarded transition refuses it if it is not.
   """
 
   require Logger
@@ -30,11 +26,20 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
   until a host answers, which is the honest reading of "no deadline". A
   deadline already in the past schedules for now rather than in the past, so
   Oban runs it on the next tick instead of treating it as overdue.
+
+  Deletes any expiry already scheduled for this meeting first. A request that
+  re-enters the gate (e.g. an invitee reschedules a held request, which
+  raises a new deadline for it) must not lose its insert to Oban's own
+  uniqueness constraint on the *old* job: `unique` on `ApprovalExpiryWorker`
+  keys on `meeting_id` alone, so without this the old deadline would win
+  silently and release the slot early.
   """
   @spec schedule_expiry(%{atom() => term()}) :: :ok
   def schedule_expiry(%{approval_deadline_at: nil}), do: :ok
 
   def schedule_expiry(meeting) do
+    delete_expiry_jobs(meeting)
+
     inserted =
       %{"meeting_id" => meeting.id}
       |> ApprovalExpiryWorker.new(scheduled_at: meeting.approval_deadline_at)
@@ -60,11 +65,11 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
   end
 
   @doc """
-  Removes every pending job for a request that is no longer held.
+  Removes the pending expiry job for a request that is no longer held.
   """
   @spec cancel(%{atom() => term()}) :: :ok
   def cancel(meeting) do
-    {deleted, _returning} = Jobs.delete_meeting_jobs(ApprovalExpiryWorker, meeting.id)
+    {deleted, _returning} = delete_expiry_jobs(meeting)
 
     if deleted > 0 do
       Logger.info("Cancelled approval expiry", meeting_id: meeting.id, jobs_deleted: deleted)
@@ -72,4 +77,6 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
 
     :ok
   end
+
+  defp delete_expiry_jobs(meeting), do: Jobs.delete_meeting_jobs(ApprovalExpiryWorker, meeting.id)
 end
