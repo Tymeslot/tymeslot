@@ -25,6 +25,7 @@ defmodule Tymeslot.DataCase do
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Repo
+  alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
 
   using do
@@ -87,7 +88,7 @@ defmodule Tymeslot.DataCase do
 
   @doc """
   Resets the stateful components shared by the whole VM: the circuit breakers,
-  the rate-limiter ETS table, and the availability cache.
+  the rate-limiter and account-lockout ETS tables, and the availability cache.
 
   **Sync modules only, which is why this takes the test tags and does nothing
   for an async one.** None of that state is scoped to the test process, so a
@@ -135,6 +136,11 @@ defmodule Tymeslot.DataCase do
 
     # Clear rate limiter
     RateLimiter.clear_all()
+
+    # Clear the account-lockout table. It is a second VM-global ETS table,
+    # owned by AccountLockout.TableOwner rather than by Hammer, so the
+    # rate-limiter reset above does not reach it.
+    AccountLockout.clear_all()
 
     # Clear availability cache
     AvailabilityCache.clear_all()

@@ -9,6 +9,8 @@ defmodule Tymeslot.Notifications.EventsTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Oban.Job
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.{SlackWorker, TelegramWorker}
 
@@ -208,6 +210,59 @@ defmodule Tymeslot.Notifications.EventsTest do
           "meeting_id" => meeting.id
         }
       )
+    end
+
+    # A booking with a video room defers this event to `VideoRoomWorker`, which
+    # announces without a link once recovery gives up on the room and announces
+    # again if a late attempt finally creates one. Both reach here, so this is
+    # where the second one has to stop.
+    test "meeting_created/1 announces a meeting once, however often it is called", %{
+      meeting: meeting,
+      slack_integration: slack_integration,
+      telegram_integration: telegram_integration
+    } do
+      assert {:ok, _first} = Events.meeting_created(meeting)
+
+      assert_enqueued(
+        worker: TelegramWorker,
+        args: %{
+          "integration_id" => telegram_integration.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        }
+      )
+
+      assert_enqueued(
+        worker: SlackWorker,
+        args: %{
+          "integration_id" => slack_integration.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        }
+      )
+
+      # Every channel here dedupes on a five-minute Oban uniqueness window, so
+      # back-to-back calls in a test would look identical whether the event was
+      # claimed or not. Clearing the queue models the gap this actually has to
+      # survive: a recovering video room job announces the booking, then reaches
+      # its room hours later, long after those windows expired.
+      Repo.delete_all(Job)
+
+      assert {:ok, :already_announced} = Events.meeting_created(meeting)
+
+      refute_enqueued(worker: TelegramWorker)
+      refute_enqueued(worker: SlackWorker)
+    end
+
+    test "meeting_created/1 stamps the meeting with the moment it was announced", %{
+      meeting: meeting
+    } do
+      assert is_nil(meeting.announced_at)
+
+      assert {:ok, _result} = Events.meeting_created(meeting)
+
+      assert {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert %DateTime{} = reloaded.announced_at
     end
   end
 

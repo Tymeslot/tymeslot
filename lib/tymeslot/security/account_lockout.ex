@@ -83,6 +83,20 @@ defmodule Tymeslot.Security.AccountLockout do
   end
 
   @doc """
+  Clear every recorded failed attempt.
+
+  Test-only. The lockout table is VM-global and outlives the process that wrote
+  to it, so a test asserting an absolute attempt count needs the table reset
+  first; `Tymeslot.DataCase.reset_stateful_components/1` calls this for sync
+  modules, alongside the equivalent rate-limiter reset.
+  """
+  @spec clear_all() :: :ok
+  def clear_all do
+    :ets.delete_all_objects(@lockout_table)
+    :ok
+  end
+
+  @doc """
   Get current failed attempt count for an identifier.
   """
   @spec get_failed_attempt_count(String.t()) :: integer()

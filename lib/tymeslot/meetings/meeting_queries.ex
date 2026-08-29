@@ -210,6 +210,45 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Claims the `meeting.created` announcement for a meeting.
+
+  Returns `:ok` to exactly one caller and `:already_announced` to every one
+  after it, so an event deferred to `Tymeslot.Workers.VideoRoomWorker` cannot
+  fan out a second time when a room finally arrives after recovery has already
+  announced the booking without one.
+
+  The claim is a single conditional UPDATE rather than a read followed by a
+  write, so two callers racing on the same meeting cannot both win it.
+  """
+  @spec claim_announcement(term()) :: :ok | :already_announced
+  def claim_announcement(meeting_id) do
+    case UUID.cast(meeting_id) do
+      {:ok, uuid} -> claim_announcement_for(uuid)
+      # Nothing to dedupe against, so let the caller announce rather than
+      # swallow an event on the strength of an id we cannot look up.
+      :error -> :ok
+    end
+  end
+
+  defp claim_announcement_for(uuid) do
+    now = DateTime.utc_now(:second)
+
+    {claimed, _rows} =
+      Repo.update_all(
+        from(m in Meeting, where: m.id == ^uuid and is_nil(m.announced_at)),
+        set: [announced_at: now]
+      )
+
+    cond do
+      claimed == 1 -> :ok
+      Repo.exists?(from(m in Meeting, where: m.id == ^uuid)) -> :already_announced
+      # The meeting is gone, or was never persisted. Either way there is no
+      # stamp to read, and refusing to announce would be the worse failure.
+      true -> :ok
+    end
+  end
+
+  @doc """
   Marks an email as sent for a meeting.
 
   ## Examples

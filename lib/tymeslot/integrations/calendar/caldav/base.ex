@@ -88,6 +88,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :server_unresponsive
           | :sync_token_expired
           | :timeout
+          # Credentials were accepted but no calendar collection could be
+          # reached; carries the server URL to show the account owner.
+          | {:calendar_home_not_found, String.t()}
           | {:unexpected_status, pos_integer()}
           | String.t()
 

@@ -60,6 +60,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           approval_resolved_at: DateTime.t() | nil,
           approval_nudge_sent_at: DateTime.t() | nil,
           decline_reason: String.t() | nil,
+          announced_at: DateTime.t() | nil,
           organizer_email_sent: boolean(),
           attendee_email_sent: boolean(),
           reminder_email_sent: boolean(),
@@ -184,6 +185,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # (calendar deletion, refund resolution, cache invalidation) applies
     # unchanged.
     field(:decline_reason, :string)
+    # Notification tracking
+    # Stamped when `meeting.created` is raised, so the event is claimed once and
+    # cannot fan out twice; see `Tymeslot.Notifications.Events.meeting_created/1`.
+    field(:announced_at, :utc_datetime)
 
     # Email tracking
     field(:organizer_email_sent, :boolean, default: false)
@@ -286,6 +291,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :approval_resolved_at,
     :approval_nudge_sent_at,
     :decline_reason,
+    :announced_at,
     :calendar_sync_status,
     :calendar_sync_status_dismissed_at,
     :provider_event_id,

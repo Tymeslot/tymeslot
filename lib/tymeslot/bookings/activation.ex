@@ -81,7 +81,7 @@ defmodule Tymeslot.Bookings.Activation do
 
   def activate(%Meeting{} = meeting, opts) do
     if wants_video_room?(meeting, opts) do
-      schedule_video_room_with_emails(meeting)
+      schedule_video_room_with_announcement(meeting)
     else
       notify(meeting)
     end
@@ -95,8 +95,8 @@ defmodule Tymeslot.Bookings.Activation do
     end
   end
 
-  defp schedule_video_room_with_emails(meeting) do
-    case VideoRoomWorker.schedule_video_room_creation_with_emails(meeting.id) do
+  defp schedule_video_room_with_announcement(meeting) do
+    case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
       :ok -> :ok
       {:error, _reason} -> notify(meeting)
     end

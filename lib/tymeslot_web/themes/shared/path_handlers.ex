@@ -62,8 +62,38 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   defp build_query_params(socket, locale) do
     %{"locale" => locale}
-    |> maybe_put_query_param("theme", socket.assigns[:theme_id])
+    |> put_preview_params(socket)
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
+  end
+
+  # `theme` rides along here and nowhere else, which is the fix for #84. It used
+  # to be emitted on every locale switch from `:theme_id`, an assign that
+  # `SchedulingInit.assign_theme_state/2` always sets, so it was never a signal
+  # that anyone was previewing. Every visitor who changed the language landed on
+  # a `theme=` URL, which was then read as a preview and failed their booking
+  # closed, silently.
+  #
+  # The preview parameters have to be rebuilt as a set, not one by one. A locale
+  # switch is a full external redirect, so the LiveView that comes back has no
+  # assigns and knows only what the URL carries. Dropping `preview=` here would
+  # land the owner on a page that still looks like their preview but persists a
+  # real meeting; dropping `preview_token` would fail their booking closed. Both
+  # were live defects the moment `?theme=` stopped standing in for the claim.
+  defp put_preview_params(params, socket) do
+    if preview_session?(socket) do
+      params
+      |> Map.put("preview", "true")
+      |> maybe_put_query_param("theme", socket.assigns[:theme_id])
+      |> maybe_put_query_param("preview_token", socket.assigns[:preview_token])
+    else
+      params
+    end
+  end
+
+  # Either half is enough: `:theme_preview` is the URL's claim, `:owner_preview`
+  # the verified token, and internal navigation can leave only the latter set.
+  defp preview_session?(socket) do
+    socket.assigns[:theme_preview] || socket.assigns[:owner_preview] || false
   end
 
   defp get_slug(socket) do
