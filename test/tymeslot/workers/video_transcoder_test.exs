@@ -192,5 +192,46 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
         }
       )
     end
+
+    test "a replacement arriving mid-run snoozes so the next run transcodes it" do
+      theme_customization = insert_theme_customization()
+
+      {:ok, job} = VideoTranscoder.enqueue(theme_customization.id, "uploads/old.mp4")
+
+      # A replacement upload cannot insert a job of its own while this one is
+      # pending: uniqueness matches the row and only replaces its args, which
+      # the running process never rereads. `job` is the stale in-memory struct
+      # that process would still be holding.
+      assert {:ok, %Oban.Job{conflict?: true}} =
+               VideoTranscoder.enqueue(theme_customization.id, "uploads/new.mp4")
+
+      expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+
+      expect(Tymeslot.Media.TranscoderMock, :transcode, fn _src, _out, _opts ->
+        {:error, :source_missing}
+      end)
+
+      # Cancelling here would take the replacement's args to the grave; the job
+      # must come back and reread them instead. The fields below are what a
+      # fetched, running job carries: string-keyed args and execution stamps,
+      # which `Oban.insert`'s returned struct does not have.
+      job = %{
+        job
+        | args: %{
+            "theme_customization_id" => theme_customization.id,
+            "video_path" => "uploads/old.mp4"
+          },
+          attempt: 1,
+          attempted_at: DateTime.utc_now(),
+          scheduled_at: DateTime.utc_now()
+      }
+
+      assert {:snooze, 1} = perform_job(job)
+
+      # The status stays whatever the replacement upload set; this run must not
+      # report the old video's fate against the new one.
+      updated = Repo.get!(ThemeCustomizationSchema, theme_customization.id)
+      assert updated.video_processing != "failed"
+    end
   end
 end
