@@ -500,3 +500,8 @@ msgstr "На цей запит уже відповіли."
 #, elixir-autogen, elixir-format
 msgid "The slot is released immediately and %{name} is told it wasn't confirmed."
 msgstr "Час буде звільнено одразу, і %{name} дізнається, що бронювання не підтверджено."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Протерміновано"

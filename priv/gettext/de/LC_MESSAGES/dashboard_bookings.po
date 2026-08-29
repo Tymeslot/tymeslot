@@ -499,3 +499,8 @@ msgstr "Diese Anfrage wurde bereits beantwortet."
 #, elixir-autogen, elixir-format
 msgid "The slot is released immediately and %{name} is told it wasn't confirmed."
 msgstr "Der Termin wird sofort freigegeben und %{name} erfährt, dass er nicht bestätigt wurde."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Abgelaufen"
