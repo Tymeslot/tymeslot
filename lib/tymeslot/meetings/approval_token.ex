@@ -10,14 +10,22 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   current organiser is refused, so a link cannot be replayed against a booking
   that has since moved accounts.
 
+  It also carries the `approval_requested_at` the meeting was stamped with
+  when the token was issued, and is refused if that no longer matches the
+  meeting's current value. A meeting re-enters the approval gate on certain
+  reschedules (`Tymeslot.Bookings.Reschedule`), which stamps a fresh
+  `approval_requested_at` for the new request — without this check, every
+  token issued for an earlier request would still answer the new one, so a
+  stale or forwarded email could decide a request its recipient never saw.
+
   ## Lifetime
 
   Tokens are valid for `max_age/0` — long enough to cover the longest approval
   window plus a generous margin for a host who reads their mail late, short
   enough that a forwarded email does not stay actionable indefinitely. There
-  is no revocation list and none is needed: answering the request moves it out
-  of `"awaiting_approval"`, and the guarded transition then refuses every
-  later use of the token on its own.
+  is no revocation list beyond the `approval_requested_at` check above:
+  answering the request moves it out of `"awaiting_approval"`, and the
+  guarded transition then refuses every later use of the token on its own.
 
   ## What the token does not do
 
@@ -29,6 +37,7 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   """
 
   alias Phoenix.Token
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.SignedToken
   alias TymeslotWeb.Endpoint
@@ -44,14 +53,24 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   @spec max_age() :: pos_integer()
   def max_age, do: @max_age_seconds
 
-  @doc "Signs a token identifying one booking request and the host who owns it."
+  @doc """
+  Signs a token identifying one booking request and the host who owns it.
+
+  Binds the token to `approval_requested_at` as it stands right now, so a
+  later re-entry into the approval gate (which stamps a fresh value) leaves
+  this token unable to verify.
+  """
   @spec sign(Meeting.t()) :: String.t()
-  def sign(%Meeting{id: id, organizer_user_id: organizer_user_id}) do
-    Token.sign(Endpoint, @salt, {id, organizer_user_id})
+  def sign(%Meeting{id: id, organizer_user_id: organizer_user_id} = meeting) do
+    Token.sign(Endpoint, @salt, {id, organizer_user_id, meeting.approval_requested_at})
   end
 
   @doc """
   Verifies a token, returning the meeting and organiser ids it was issued for.
+
+  Also refuses a token whose `approval_requested_at` no longer matches the
+  meeting's current one, so a token from a previous request cannot answer a
+  new one issued after a re-entry into the approval gate.
 
   Says nothing about whether the request is still answerable; that is the
   caller's next question and `Tymeslot.Meetings.Approval` is where it is
@@ -64,9 +83,27 @@ defmodule Tymeslot.Meetings.ApprovalToken do
 
   def verify(_token), do: {:error, :invalid}
 
-  defp validate({meeting_id, organizer_user_id})
-       when is_binary(meeting_id) and is_integer(organizer_user_id),
-       do: {:ok, {meeting_id, organizer_user_id}}
+  defp validate({meeting_id, organizer_user_id, requested_at})
+       when is_binary(meeting_id) and is_integer(organizer_user_id) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} ->
+        if same_request?(meeting.approval_requested_at, requested_at) do
+          {:ok, {meeting_id, organizer_user_id}}
+        else
+          {:error, :stale}
+        end
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
 
   defp validate(_payload), do: {:error, :invalid}
+
+  defp same_request?(nil, nil), do: true
+
+  defp same_request?(%DateTime{} = current, %DateTime{} = issued),
+    do: DateTime.compare(current, issued) == :eq
+
+  defp same_request?(_current, _issued), do: false
 end
