@@ -2309,3 +2309,8 @@ msgstr "Цей час знову доступний для бронювання.
 #, elixir-autogen, elixir-format
 msgid "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot."
 msgstr "%{organizer} не відповів(ла) на ваш запит вчасно, тому час звільнено. Ви можете обрати інший час."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "For %{name}, that's %{time}."
+msgstr "Для %{name} це %{time}."

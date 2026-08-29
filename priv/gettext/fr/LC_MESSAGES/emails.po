@@ -2303,3 +2303,8 @@ msgstr "Ce créneau est de nouveau disponible à la réservation."
 #, elixir-autogen, elixir-format
 msgid "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot."
 msgstr "%{organizer} n'a pas traité votre demande à temps, le créneau a donc été libéré. Vous pouvez choisir un autre créneau."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "For %{name}, that's %{time}."
+msgstr "Pour %{name}, c’est %{time}."

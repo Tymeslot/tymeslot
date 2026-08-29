@@ -32,6 +32,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     Urls
   }
 
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -151,16 +152,11 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
       start_time_attendee_tz: attendee_time,
       duration: meeting.duration,
       location: meeting.location,
-      location_type: location_type(meeting),
+      location_type: BookingRequestLocation.type(meeting),
       meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
       timezone: meeting.attendee_timezone || "UTC"
     }
   end
-
-  defp location_type(%Meeting{meeting_url: url}) when is_binary(url), do: :video
-  defp location_type(%Meeting{location: "Phone Call"}), do: :phone
-  defp location_type(%Meeting{location: "In Person"}), do: :in_person
-  defp location_type(_meeting), do: :custom
 
   defp text_body_for(variant, meeting, details, locale) do
     """
