@@ -217,6 +217,21 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     {:discard, "Meeting not found"}
   end
 
+  defp handle_error_result(:precondition_failed, _job) do
+    # A 412 means the server's ETag no longer matches the one we sent: someone
+    # else changed the event. Replaying the identical conditional PUT cannot
+    # resolve that — it fails the same way on every attempt, and spends the
+    # job's remaining attempts to arrive at a permanent-failure alert.
+    #
+    # The write is not lost. `tag_for_offline_queue/2` has already marked the
+    # cache row `locally_modified`, and `CalDAV.OfflineQueue` replays it on the
+    # next sync cycle under the row's conflict policy — `:keep_local` for events
+    # Tymeslot owns, which force-writes and actually settles the conflict.
+    Logger.info("Calendar event changed on the server, handing the write to the offline queue")
+
+    {:discard, "Conflicting server-side change; queued for offline replay"}
+  end
+
   defp handle_error_result(:circuit_open, _job) do
     # The host circuit breaker is open — the CalDAV server is unreachable right now.
     # Snooze for the circuit recovery timeout (2 min for caldav/zimbra) so the breaker
