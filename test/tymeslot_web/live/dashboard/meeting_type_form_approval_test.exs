@@ -118,6 +118,55 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormApprovalTest do
     end
   end
 
+  describe "typing an invalid window" do
+    test "a non-numeric value surfaces an error rather than becoming the default silently", %{
+      conn: conn
+    } do
+      view = gated_form(conn)
+
+      html =
+        view
+        |> element("[data-testid='approval-window-hours']")
+        |> render_change(%{"meeting_type" => %{"approval_window_hours" => "abc"}})
+
+      assert html =~ "Enter a whole number of hours"
+    end
+
+    test "zero and a negative number are refused the same way", %{conn: conn} do
+      view = gated_form(conn)
+
+      for bad <- ["0", "-5"] do
+        html =
+          view
+          |> element("[data-testid='approval-window-hours']")
+          |> render_change(%{"meeting_type" => %{"approval_window_hours" => bad}})
+
+        assert html =~ "Enter a whole number of hours"
+      end
+    end
+
+    test "does not overwrite a previously saved good value with a parse failure", %{
+      conn: conn,
+      user: user
+    } do
+      view = gated_form(conn)
+
+      view
+      |> element("[data-testid='approval-window-hours']")
+      |> render_change(%{"meeting_type" => %{"approval_window_hours" => "6"}})
+
+      view
+      |> element("[data-testid='approval-window-hours']")
+      |> render_change(%{"meeting_type" => %{"approval_window_hours" => "abc"}})
+
+      submit(view, %{"name" => "Kept the good value", "duration" => "30"})
+
+      saved = saved_type(user, "Kept the good value")
+
+      assert saved.approval_window_hours == 6
+    end
+  end
+
   describe "editing an existing meeting type" do
     test "shows the saved window rather than the default", %{conn: conn, user: user} do
       type =

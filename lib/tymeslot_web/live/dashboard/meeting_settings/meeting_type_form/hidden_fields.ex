@@ -145,8 +145,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
         value={to_string(@requires_approval)}
       />
       <%!-- Blank rather than the default: an unset window means "resolve the
-            application default at read time", not "freeze today's value". --%>
+            application default at read time", not "freeze today's value".
+            Only rendered while approval is off: once it's on, ApprovalSection
+            renders the real, editable input under this same name, and a
+            second input sharing that name would let this stale mirror
+            silently overwrite whatever the host just typed there. --%>
       <input
+        :if={!@requires_approval}
         type="hidden"
         name="meeting_type[approval_window_hours]"
         value={if @approval_window_hours, do: to_string(@approval_window_hours), else: ""}

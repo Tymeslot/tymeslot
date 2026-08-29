@@ -809,3 +809,8 @@ msgstr "Les invités reçoivent un e-mail « demande reçue » au lieu d'une con
 #, elixir-autogen, elixir-format
 msgid "hours"
 msgstr "heures"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a whole number of hours, or leave blank to use the default."
+msgstr "Saisissez un nombre entier d’heures, ou laissez le champ vide pour utiliser la valeur par défaut."

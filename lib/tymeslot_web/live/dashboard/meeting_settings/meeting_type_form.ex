@@ -259,16 +259,43 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   def handle_event("update_approval_window", params, socket) do
     # The input sits inside the meeting-type form, so the event carries the
     # whole form's params under "meeting_type".
-    hours =
+    raw =
       params
       |> Map.get("meeting_type", %{})
       |> Map.get("approval_window_hours")
-      |> parse_approval_window()
 
-    {:noreply,
-     socket
-     |> assign(:approval_window_hours, hours)
-     |> Autosave.maybe_run()}
+    case parse_approval_window(raw) do
+      {:ok, hours} ->
+        {:noreply,
+         socket
+         |> assign(:approval_window_hours, hours)
+         |> assign(
+           :form_errors,
+           FormValidationHelpers.delete_field_error(
+             socket.assigns.form_errors,
+             :approval_window_hours
+           )
+         )
+         |> Autosave.maybe_run()}
+
+      # Leave the stored value and last successful save untouched: surfacing
+      # the error and stopping here is what stops a half-typed number from
+      # autosaving over a good previously saved window.
+      :error ->
+        {:noreply,
+         assign(
+           socket,
+           :form_errors,
+           Map.put(
+             socket.assigns.form_errors,
+             :approval_window_hours,
+             dgettext(
+               "dashboard_meeting_form",
+               "Enter a whole number of hours, or leave blank to use the default."
+             )
+           )
+         )}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -460,14 +487,28 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # Blank is a real choice here: it means "use the application default", which
   # the domain resolves at read time. So a cleared field stores nil rather than
   # reverting to whatever the default happened to be when it was cleared.
-  defp parse_approval_window(nil), do: nil
+  #
+  # Blank is a real choice ({:ok, nil}, "use the application default"), but
+  # anything else unparseable is an actual mistake, not a second way to spell
+  # blank: coercing "abc", "-1" or "2.5" to nil would silently replace
+  # whatever window was previously saved with the default the moment the host
+  # mistypes. The caller surfaces `:error` instead of assigning it.
+  defp parse_approval_window(nil), do: {:ok, nil}
 
   defp parse_approval_window(value) when is_binary(value) do
-    case Integer.parse(String.trim(value)) do
-      {hours, ""} when hours > 0 -> hours
-      _other -> nil
+    case String.trim(value) do
+      "" ->
+        {:ok, nil}
+
+      trimmed ->
+        case Integer.parse(trimmed) do
+          {hours, ""} when hours > 0 -> {:ok, hours}
+          _other -> :error
+        end
     end
   end
+
+  defp parse_approval_window(_value), do: :error
 
   defp parse_booking_limit(nil), do: nil
 

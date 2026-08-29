@@ -809,3 +809,8 @@ msgstr "Замість підтвердження гості отримують 
 #, elixir-autogen, elixir-format
 msgid "hours"
 msgstr "годин"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a whole number of hours, or leave blank to use the default."
+msgstr "Введіть ціле число годин або залиште порожнім, щоб використати типове значення."
