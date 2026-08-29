@@ -71,6 +71,51 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       assert {:discard, "Video integration missing"} = result
       assert_enqueued(worker: EmailWorker)
     end
+
+    test "discards on the first attempt when the account cannot host video meetings" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "teams",
+          oauth_scope: "Calendars.ReadWrite",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: integration.id
+        )
+
+      stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      # Graph creates the calendar event but returns no Teams link: the account
+      # has no Teams licence. That never changes on a retry.
+      stub(Tymeslot.HTTPClientMock, :request, fn
+        :post, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "orphan-1"})}}
+
+        :delete, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      # Ten attempts against this used to end in a permanent-failure alert, and
+      # the daily recovery scan re-queued it to fail again the next day.
+      assert {:discard, "Account cannot host video meetings"} =
+               perform_job(
+                 VideoRoomWorker,
+                 %{"meeting_id" => meeting.id, "announce" => true},
+                 attempt: 1
+               )
+
+      # Giving up must not cost the attendees their booking: it is announced
+      # now, without a link, rather than after the attempts are spent.
+      assert_enqueued(worker: EmailWorker)
+    end
   end
 
   describe "perform/1 - successful creation" do

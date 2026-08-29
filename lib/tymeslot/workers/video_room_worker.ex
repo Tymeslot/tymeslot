@@ -40,6 +40,15 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   @backoff_base_ms 1_000
   @backoff_cap_ms 16_000
 
+  # Terminal failures that still owe the attendees a booking: there will never
+  # be a link, so the announcement goes out now rather than after the attempts
+  # are spent.
+  @announce_without_room [
+    :video_integration_missing,
+    :video_integration_inactive,
+    :video_meeting_not_enabled
+  ]
+
   # Deduplicate identical jobs within five minutes, so a retried booking step
   # cannot queue a second room creation for the same meeting.
   @unique [period: 300, fields: [:args, :queue], keys: [:meeting_id, :announce]]
@@ -209,9 +218,11 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     {:error, categorized} = ErrorPolicy.categorize(reason)
 
     cond do
-      # No integration to call means no amount of retrying will produce a link,
-      # so give up now and announce the booking without one.
-      categorized in [:video_integration_missing, :video_integration_inactive] ->
+      # No integration to call, or an account that cannot host a meeting, means
+      # no amount of retrying will produce a link, so give up now and announce
+      # the booking without one. Reaching `Recovery` instead would spend ten
+      # attempts and a permanent-failure alert to arrive at the same place.
+      categorized in @announce_without_room ->
         if announce, do: Recovery.send_fallback_notifications(meeting_id)
         {:discard, ErrorPolicy.discard_reason(categorized)}
 

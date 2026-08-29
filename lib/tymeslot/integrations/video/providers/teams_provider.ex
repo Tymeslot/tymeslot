@@ -216,11 +216,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
           "Required one of: #{inspect(required_scopes)}. User needs to re-authenticate."
       )
 
-      {:error,
-       dgettext(
-         "dashboard_integrations",
-         "Teams integration is missing required permissions. Please disconnect and reconnect your Microsoft Teams integration in the dashboard to grant the necessary permissions for creating meetings."
-       )}
+      # Tagged, not prose, for the same reason as `:video_meeting_not_enabled`:
+      # the consent the integration was granted only changes when the user
+      # reconnects it, so retrying this job cannot help, and the caller's error
+      # policy has to be able to see that. The user is told to reconnect through
+      # the dashboard's integration health badge, not through this reason.
+      {:error, :invalid_configuration}
     end
   end
 
@@ -295,10 +296,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     {start_time, end_time} = get_meeting_times(config)
     meeting_payload = build_meeting_payload(start_time, end_time, config)
 
-    headers = [
-      {"Authorization", "Bearer #{token}"},
-      {"Content-Type", "application/json"}
-    ]
+    headers = graph_headers(token)
 
     url = "#{@graph_api_base_url}/me/events"
 
@@ -310,7 +308,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
            []
          ) do
       {:ok, %Req.Response{status: 201, body: body}} ->
-        parse_meeting_response(body)
+        parse_meeting_response(token, body)
 
       {:ok, %Req.Response{status: 401, body: body}} ->
         # The access token was rejected by Graph even though it had survived
@@ -383,14 +381,14 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
-  defp parse_meeting_response(body) do
+  defp parse_meeting_response(token, body) do
     case Jason.decode(body) do
-      {:ok, event} -> extract_join_info(event)
+      {:ok, event} -> extract_join_info(token, event)
       error -> error
     end
   end
 
-  defp extract_join_info(event) do
+  defp extract_join_info(token, event) do
     join_url = get_in(event, ["onlineMeeting", "joinUrl"]) || event["onlineMeetingUrl"]
 
     if join_url do
@@ -403,9 +401,43 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
          "passcode" => nil
        }}
     else
-      {:error,
-       "Teams meeting link was not generated for this event. Please ensure your account has Teams enabled."}
+      # Graph answered 201, so the calendar event exists on the account even
+      # though it carries no Teams link — the account cannot host Teams
+      # meetings. Left behind, every attempt would deposit another placeholder
+      # in the organiser's calendar, so the event is removed before the failure
+      # is reported. A tagged reason rather than a sentence: the caller's error
+      # policy has to recognise this as terminal, and it cannot match on prose.
+      delete_orphaned_event(token, event["id"])
+      {:error, :video_meeting_not_enabled}
     end
+  end
+
+  # Best-effort: the room creation has already failed and the caller's outcome
+  # does not change either way, so a failed cleanup is logged, never raised.
+  defp delete_orphaned_event(_token, nil), do: :ok
+
+  defp delete_orphaned_event(token, event_id) do
+    url = "#{@graph_api_base_url}/me/events/#{URI.encode(event_id)}"
+
+    case Config.http_client_module().request(:delete, url, "", graph_headers(token), []) do
+      {:ok, %Req.Response{status: status}} when status in [200, 202, 204] ->
+        Logger.info("Deleted Teams calendar event left without a join link")
+        :ok
+
+      other ->
+        Logger.warning("Could not delete Teams calendar event left without a join link",
+          result: inspect(other)
+        )
+
+        :ok
+    end
+  end
+
+  defp graph_headers(token) do
+    [
+      {"Authorization", "Bearer #{token}"},
+      {"Content-Type", "application/json"}
+    ]
   end
 
   defp personal_account?(config) do
