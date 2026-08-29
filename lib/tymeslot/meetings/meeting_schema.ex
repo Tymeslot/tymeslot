@@ -55,6 +55,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           cancelled_at: DateTime.t() | nil,
           cancellation_reason: String.t() | nil,
           reschedule_requested_at: DateTime.t() | nil,
+          announced_at: DateTime.t() | nil,
           organizer_email_sent: boolean(),
           attendee_email_sent: boolean(),
           reminder_email_sent: boolean(),
@@ -164,6 +165,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # attendee books a new time.
     field(:reschedule_requested_at, :utc_datetime)
 
+    # Notification tracking
+    # Stamped when `meeting.created` is raised, so the event is claimed once and
+    # cannot fan out twice; see `Tymeslot.Notifications.Events.meeting_created/1`.
+    field(:announced_at, :utc_datetime)
+
     # Email tracking
     field(:organizer_email_sent, :boolean, default: false)
     field(:attendee_email_sent, :boolean, default: false)
@@ -260,6 +266,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :cancelled_at,
     :cancellation_reason,
     :reschedule_requested_at,
+    :announced_at,
     :calendar_sync_status,
     :calendar_sync_status_dismissed_at,
     :provider_event_id,
