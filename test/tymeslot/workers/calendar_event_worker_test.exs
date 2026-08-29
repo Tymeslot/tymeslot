@@ -441,6 +441,25 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       assert cache_row.sync_state == "locally_modified"
     end
 
+    test "a 412 on a create retries instead of discarding" do
+      meeting = insert(:meeting)
+
+      # On a create the 412 comes from `If-None-Match: *` finding an event
+      # already at the UID. The offline queue replays creates without a
+      # conflict policy, so discarding here would loop silently forever;
+      # the ordinary retry path must keep the job (and its exhaustion alert).
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        {:error, :precondition_failed}
+      end)
+
+      assert {:error, :precondition_failed} =
+               perform_job(
+                 CalendarEventWorker,
+                 %{"action" => "create", "meeting_id" => meeting.id},
+                 attempt: 1
+               )
+    end
+
     test "failed delete job tags the cache row as locally_deleted" do
       %{integration: integration, meeting: meeting} =
         setup_calendar_scenario_with_paths()

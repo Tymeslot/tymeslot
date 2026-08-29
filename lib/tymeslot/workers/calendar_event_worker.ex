@@ -217,7 +217,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     {:discard, "Meeting not found"}
   end
 
-  defp handle_error_result(:precondition_failed, _job) do
+  defp handle_error_result(:precondition_failed, %Oban.Job{args: %{"action" => "update"}}) do
     # A 412 means the server's ETag no longer matches the one we sent: someone
     # else changed the event. Replaying the identical conditional PUT cannot
     # resolve that — it fails the same way on every attempt, and spends the
@@ -230,6 +230,15 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     Logger.info("Calendar event changed on the server, handing the write to the offline queue")
 
     {:discard, "Conflicting server-side change; queued for offline replay"}
+  end
+
+  defp handle_error_result(:precondition_failed, _job) do
+    # Only an update may hand a 412 to the offline queue. On a create the 412
+    # comes from `If-None-Match: *` finding an event already at the UID, and the
+    # queue replays creates without a conflict policy, so it would 412 again on
+    # every sync cycle without ever alerting anyone. Keep the ordinary retry
+    # path, whose exhaustion still surfaces the problem.
+    {:error, :precondition_failed}
   end
 
   defp handle_error_result(:circuit_open, _job) do
