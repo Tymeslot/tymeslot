@@ -57,16 +57,34 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   Schedules the pair of emails a held booking produces: the invitee's
   acknowledgement and the host's request to answer.
 
-  One job sends both, so an invitee cannot be told their request is with the
-  host while the host's copy fails independently.
+  Both legs run inside the same job. `skip_attendee_ack: true` re-sends only
+  the host's copy — `MeetingEmails` passes it when requeueing after the
+  invitee's leg already succeeded but the host's failed, so a whole-job Oban
+  retry cannot duplicate the acknowledgement the invitee already received.
+
+  Restricted to `:incomplete` unique states so a fast reschedule that calls
+  this again for the same meeting is not swallowed by the first pair's
+  already-completed job.
   """
-  @spec schedule_request_emails(term()) :: :ok | {:error, String.t()}
-  def schedule_request_emails(meeting_id) do
-    %{"action" => "send_booking_request_emails", "meeting_id" => meeting_id}
+  @spec schedule_request_emails(term(), keyword()) :: :ok | {:error, String.t()}
+  def schedule_request_emails(meeting_id, opts \\ []) do
+    args = %{"action" => "send_booking_request_emails", "meeting_id" => meeting_id}
+
+    args =
+      if Keyword.get(opts, :skip_attendee_ack, false),
+        do: Map.put(args, "skip_attendee_ack", true),
+        else: args
+
+    args
     |> EmailWorker.new(
       queue: :emails,
       priority: 0,
-      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+      unique: [
+        period: 300,
+        fields: [:args, :queue],
+        keys: [:action, :meeting_id],
+        states: :incomplete
+      ]
     )
     |> insert_job("Booking request emails", meeting_id)
   end
@@ -75,9 +93,13 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   Schedules the single reminder sent to a host who has not yet answered.
 
   Fires at `send_at`, halfway through the approval window. Uniqueness is keyed
-  on the meeting alone with a ten-year period, so a reschedule that re-enters
-  the gate cannot stack a second nudge on the first; the deletion in
-  `cancel_approval_emails/1` is what allows a genuinely new one.
+  on the meeting alone with a ten-year period and restricted to `:incomplete`
+  states, so a reschedule that re-enters the gate cannot stack a second nudge
+  on a still-pending one (the deletion in `cancel_approval_emails/1` is what
+  allows a genuinely new one to be inserted at all), while a nudge that has
+  already fired for an earlier request does not block a fresh one for a
+  re-entered one — Oban's default unique scope matches completed jobs too,
+  and this meeting may cycle through the approval gate more than once.
   """
   @spec schedule_approval_nudge(term(), DateTime.t()) :: :ok | {:error, String.t()}
   def schedule_approval_nudge(meeting_id, %DateTime{} = send_at) do
@@ -88,7 +110,12 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       queue: :emails,
       priority: 1,
       scheduled_at: send_at,
-      unique: [period: 315_360_000, fields: [:args, :queue], keys: [:action, :meeting_id]]
+      unique: [
+        period: 315_360_000,
+        fields: [:args, :queue],
+        keys: [:action, :meeting_id],
+        states: :incomplete
+      ]
     )
     |> insert_job("Approval nudge", meeting_id)
   end
@@ -136,19 +163,23 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   # Shared insert-and-report used by the approval jobs. A unique-conflict is
-  # success: the job we wanted already exists.
+  # success: the job we wanted already exists. Oban signals that by returning
+  # the existing job with `conflict?: true`, not a changeset error — a unique
+  # constraint never reaches the changeset because Oban resolves it with an
+  # upsert, so the `{:error, %Changeset{errors: [unique: _]}}` shape below is
+  # unreachable and was silently misreporting a dedup as a fresh schedule.
   defp insert_job(changeset, label, meeting_id) do
     case Oban.insert(changeset) do
-      {:ok, _job} ->
-        Logger.info("Approval email job scheduled", meeting_id: meeting_id, email_job: label)
-        :ok
-
-      {:error, %Changeset{errors: [unique: _details]}} ->
+      {:ok, %Oban.Job{conflict?: true}} ->
         Logger.info("Approval email job already exists, skipping duplicate",
           meeting_id: meeting_id,
           email_job: label
         )
 
+        :ok
+
+      {:ok, _job} ->
+        Logger.info("Approval email job scheduled", meeting_id: meeting_id, email_job: label)
         :ok
 
       {:error, reason} ->

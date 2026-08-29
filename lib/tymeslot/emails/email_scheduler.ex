@@ -5,7 +5,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   This module is the single point of entry for enqueueing email jobs. Each
   function delegates to a focused category sub-module:
 
-  - `MeetingScheduler` — confirmation, cancellation, reminder, and reschedule emails
+  - `MeetingScheduler` — confirmation, cancellation, reminder, reschedule, and
+    booking-approval emails
   - `AuthScheduler` — email verification and password reset
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
@@ -36,6 +37,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate cancel_reminder_emails(meeting_id), to: MeetingScheduler
 
   defdelegate schedule_reschedule_request(meeting_id), to: MeetingScheduler
+
+  defdelegate schedule_request_emails(meeting_id, opts \\ []), to: MeetingScheduler
+  defdelegate schedule_approval_nudge(meeting_id, send_at), to: MeetingScheduler
+  defdelegate schedule_request_outcome(meeting_id, variant), to: MeetingScheduler
+  defdelegate cancel_approval_emails(meeting_id), to: MeetingScheduler
 
   # Auth emails
 
