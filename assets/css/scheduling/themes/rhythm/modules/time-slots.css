@@ -125,13 +125,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-}
-
-.slot-hour-count {
-  font-size: 0.75em;
-  opacity: 0.7;
-  font-variant-numeric: tabular-nums;
+  gap: var(--space-3xs);
 }
 
 .time-slot--hour.expanded {
@@ -139,7 +133,7 @@
 }
 
 .time-period-slots--minutes {
-  margin-top: 0.5rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid var(--border-light);
+  margin-top: var(--space-xs);
+  padding-left: var(--space-xs);
+  border-left: var(--border-width-thin) solid var(--border-light);
 }

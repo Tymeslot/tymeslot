@@ -170,12 +170,6 @@
   gap: var(--space-2xs);
 }
 
-.slot-hour-count {
-  font-size: var(--theme-font-size-xs);
-  opacity: 0.7;
-  font-variant-numeric: tabular-nums;
-}
-
 .time-slot-button--expanded {
   background: var(--surface-medium-light);
   border-color: var(--border-strong);
