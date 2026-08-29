@@ -14,7 +14,7 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:schedule_id) => pos_integer(),
           optional(:max_advance_booking_days) => pos_integer(),
           optional(:duration_minutes) => pos_integer(),
-          optional(:slot_interval_minutes) => pos_integer(),
+          optional(:slot_interval_minutes) => pos_integer() | nil,
           optional(:buffer_minutes) => non_neg_integer(),
           optional(:weekly_schedule) => list(term()),
           optional(:overrides) => list(term()),

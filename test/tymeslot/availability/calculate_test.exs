@@ -478,6 +478,32 @@ defmodule Tymeslot.Availability.CalculateTest do
              "every start should be on the hour, got: #{inspect(slots)}"
     end
 
+    # The test above starts its window exactly at 9:00, so it passes even
+    # without alignment: the duration-locked grid already lands on the hour
+    # from an on-the-hour start. An off-hour window is the only way to tell
+    # "alignment happened" apart from "the window was already round".
+    test "offers only rounder starts when the interval is longer than the duration, from an off-hour window" do
+      date = interval_test_date()
+      profile = insert(:profile, timezone: "Europe/London")
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
+      insert(:weekly_availability,
+        schedule: schedule,
+        day_of_week: Date.day_of_week(date),
+        start_time: ~T[09:15:00],
+        end_time: ~T[11:15:00],
+        is_available: true
+      )
+
+      config = %{schedule_id: schedule.id, duration_minutes: 30, slot_interval_minutes: 60}
+
+      assert {:ok, slots} =
+               Calculate.available_slots(date, 30, "Europe/London", "Europe/London", [], config)
+
+      assert slots == ["10:00 AM"],
+             "expected alignment to round the 9:15 window forward to the hour, got: #{inspect(slots)}"
+    end
+
     test "a config without the key behaves exactly as before" do
       date = interval_test_date()
       with_key = interval_test_config(date, duration_minutes: 30, slot_interval_minutes: 30)

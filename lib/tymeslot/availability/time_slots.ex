@@ -27,6 +27,10 @@ defmodule Tymeslot.Availability.TimeSlots do
     - interval_minutes: Optional spacing between slot starts. Defaults to the
       meeting duration, which is the historical behaviour. A shorter interval
       offers overlapping starts; a longer one offers fewer, rounder starts.
+      When set explicitly, the grid also anchors to a wall-clock boundary
+      (e.g. 60 minutes lands on the hour) instead of wherever the window
+      happens to start; a nil interval keeps the unanchored, duration-locked
+      grid unchanged.
 
   Returns a list of formatted time strings like "9:00 AM", excluding slots that
   would overlap with break periods.
@@ -152,7 +156,12 @@ defmodule Tymeslot.Availability.TimeSlots do
   # Private functions
 
   defp generate_slots_for_single_day(start_dt, end_dt, duration_minutes, interval_minutes) do
-    total_minutes = DateTime.diff(end_dt, start_dt, :minute)
+    # Only an explicit interval anchors the grid to a wall-clock boundary
+    # (e.g. 60 minutes lands on the hour). A nil interval keeps the historical
+    # duration-locked anchor at `start_dt` exactly, so meeting types that have
+    # never set an interval see no change at all.
+    grid_start = align_to_interval(start_dt, interval_minutes)
+    total_minutes = DateTime.diff(end_dt, grid_start, :minute)
     # A slot's length is always the duration; the interval only moves its start.
     # Falling back to the duration makes this a strict generalisation of the
     # duration-locked grid this replaced.
@@ -173,10 +182,42 @@ defmodule Tymeslot.Availability.TimeSlots do
       # occurrence.
       0..(slot_count - 1)
       |> Enum.map(fn i ->
-        slot_datetime = DateTime.add(start_dt, i * interval, :minute)
+        slot_datetime = DateTime.add(grid_start, i * interval, :minute)
         format_datetime_slot(slot_datetime)
       end)
       |> Enum.uniq()
+    end
+  end
+
+  # Rounds `start_dt` forward to the next wall-clock boundary — never earlier
+  # than `start_dt`, so a slot is never offered before the window opens.
+  #
+  # An interval that divides the hour (5, 10, 15, 20, 30, 60) aligns to its
+  # own multiples since local midnight, e.g. 15 minutes lands on the
+  # quarter-hour. An interval that does NOT divide the hour (45, 90, 120, or
+  # anything else that isn't a divisor of 60) aligns to the next whole hour
+  # instead and steps by the interval from there: anchoring those to
+  # multiples-of-the-interval-since-midnight would silently reinterpret
+  # "every 2 hours" as "only on even hours" and discard availability the
+  # owner's window actually offers (a 09:00-17:00 window with a 120-minute
+  # interval must still offer 09:00, not just 10:00/12:00/...).
+  #
+  # Alignment reads the wall clock `start_dt` already carries, which is the
+  # booker's once business-hours windows have been shifted into their
+  # timezone, so the grid the booker sees lands on round numbers in the clock
+  # they're reading. A nil interval is the duration-locked default, not an
+  # explicit choice, so it is left completely alone.
+  defp align_to_interval(start_dt, nil), do: start_dt
+
+  defp align_to_interval(start_dt, interval_minutes) do
+    boundary = if rem(60, interval_minutes) == 0, do: interval_minutes, else: 60
+    minutes_since_midnight = start_dt.hour * 60 + start_dt.minute
+    remainder = rem(minutes_since_midnight, boundary)
+
+    if remainder == 0 do
+      start_dt
+    else
+      DateTime.add(start_dt, boundary - remainder, :minute)
     end
   end
 

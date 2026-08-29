@@ -38,6 +38,7 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
             days_ahead <- integer(5..60),
             duration <- member_of([15, 30, 45, 60, 90, 120]),
             buffer <- integer(0..60),
+            slot_interval_minutes <- member_of([nil, 5, 10, 15, 20, 30, 45, 60, 90, 120]),
             events <-
               list_of(
                 tuple({
@@ -50,7 +51,13 @@ defmodule Tymeslot.Availability.ConflictsPropertyTest do
               )
           ) do
       date = Date.add(Date.utc_today(), days_ahead)
-      config = %{buffer_minutes: buffer, min_advance_hours: 0, duration_minutes: duration}
+
+      config = %{
+        buffer_minutes: buffer,
+        min_advance_hours: 0,
+        duration_minutes: duration,
+        slot_interval_minutes: slot_interval_minutes
+      }
 
       calendar_events =
         Enum.map(events, fn {day_offset, hour, min, dur} ->

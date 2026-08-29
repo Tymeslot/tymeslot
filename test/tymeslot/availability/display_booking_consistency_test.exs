@@ -144,6 +144,89 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
     end
   end
 
+  # A slot_interval_minutes narrower than the meeting's duration puts starts on
+  # the offered grid that the duration-locked grid alone would never produce.
+  # The invariant above only ever exercised the duration-locked grid; this
+  # pins the same display↔booking agreement for the interval-only case.
+  describe "availability-display ↔ booking-validation invariant, with a slot interval" do
+    test "a start the interval makes legal is offered and can be booked, and an off-grid start is refused" do
+      timezone = "Etc/UTC"
+
+      # 09:00-10:15: a 60-minute meeting fits only one duration-locked start
+      # (9:00). A 15-minute interval additionally legalises 9:15, which is
+      # the case under test.
+      %{user: user, schedule_id: schedule_id} =
+        create_bookable_profile(
+          timezone: timezone,
+          hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[10:15:00]}
+        )
+
+      target_date = next_bookable_weekday()
+
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 60, slot_interval_minutes: 15)
+
+      TestMocks.stub_no_calendar_events()
+
+      {:ok, duration_locked_slots} =
+        Calculate.available_slots(target_date, 60, timezone, timezone, [], %{
+          schedule_id: schedule_id
+        })
+
+      {:ok, interval_slots} =
+        Calculate.available_slots(target_date, 60, timezone, timezone, [], %{
+          schedule_id: schedule_id,
+          slot_interval_minutes: 15
+        })
+
+      # The 9:15 start exists only because the interval was set — proving the
+      # test actually exercises the interval path rather than a start the
+      # duration-locked grid would have offered anyway.
+      refute "9:15 AM" in duration_locked_slots
+      assert "9:15 AM" in interval_slots
+
+      form_data = %{
+        "name" => "Interval Attendee",
+        "email" => "interval-attendee@example.com",
+        "message" => "Booking a time only the interval grid offers"
+      }
+
+      # 9:05 sits between two interval-grid starts (9:00 and 9:15) and is not
+      # itself offered on either grid. Attempted BEFORE any booking exists, so
+      # the refusal can only be grid-driven — after the 9:15 booking below it
+      # would also overlap, and the assertion could not tell the two apart.
+      refute "9:05 AM" in interval_slots
+
+      assert {:error, :slot_taken} =
+               Create.execute(
+                 %{
+                   date: target_date,
+                   time: "9:05 AM",
+                   duration: "60min",
+                   user_timezone: timezone,
+                   organizer_user_id: user.id,
+                   meeting_type_id: meeting_type.id
+                 },
+                 form_data
+               )
+
+      assert {:ok, meeting} =
+               Create.execute(
+                 %{
+                   date: target_date,
+                   time: "9:15 AM",
+                   duration: "60min",
+                   user_timezone: timezone,
+                   organizer_user_id: user.id,
+                   meeting_type_id: meeting_type.id
+                 },
+                 form_data
+               )
+
+      assert meeting.status == "confirmed"
+    end
+  end
+
   # The converse of the invariant above, and the reason it is enforced in the
   # domain rather than in the booking page's step machine: `/:username/:slug/book`
   # is directly enterable, so a booker can arrive at the submit path having
