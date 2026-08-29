@@ -112,6 +112,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   Takes the same raw, untranslated error as `categorize_error/1`, and for the
   same reason: this dispatches on the term, not on English text.
+
+  Consulted by both edges a raw reason reaches a user through:
+  `ErrorHandler.classify_and_format/3` for discovery, and
+  `ProviderCommon.test_caldav_provider_connection/2` for the connection test.
+  A reason added here is therefore specific on both, rather than only on the
+  path it happened to be written for.
   """
   @spec specific_message(any(), provider()) :: String.t() | nil
   def specific_message({:calendar_home_not_found, url}, _provider) do

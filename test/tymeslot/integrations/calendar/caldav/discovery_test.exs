@@ -2,6 +2,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
   use Tymeslot.CalDAVCase, async: false
   @moduletag :integrations
 
+  import Tymeslot.CalDAVTestHelpers
+
   alias Tymeslot.Integrations.Calendar.CalDAV.Discovery
 
   @caldav_client %{
@@ -337,36 +339,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
     conn
     |> Conn.put_resp_header("content-type", "application/xml")
     |> Conn.send_resp(207, body)
-  end
-
-  defp principal_xml(href) do
-    """
-    <D:multistatus xmlns:D="DAV:">
-      <D:response>
-        <D:propstat>
-          <D:prop>
-            <D:current-user-principal><D:href>#{href}</D:href></D:current-user-principal>
-          </D:prop>
-          <D:status>HTTP/1.1 200 OK</D:status>
-        </D:propstat>
-      </D:response>
-    </D:multistatus>
-    """
-  end
-
-  defp calendar_home_set_xml(href) do
-    """
-    <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
-      <D:response>
-        <D:propstat>
-          <D:prop>
-            <C:calendar-home-set><D:href>#{href}</D:href></C:calendar-home-set>
-          </D:prop>
-          <D:status>HTTP/1.1 200 OK</D:status>
-        </D:propstat>
-      </D:response>
-    </D:multistatus>
-    """
   end
 
   # The collection itself plus one calendar, as a real server answers a Depth: 1

@@ -10,8 +10,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   ## Discovery Strategy
 
   1. Attempts the provider-specific guessed path (e.g., `/calendars/{user}/`).
-  2. On `:not_found` or `:server_error`, follows the full RFC 4791 chain:
-     - PROPFIND `/` → `current-user-principal` href
+  2. On `:not_found`, `:forbidden` or `:server_error`, follows the full RFC 4791
+     chain:
+     - PROPFIND the supplied base URL, then the origin root, until one answers
+       with a `current-user-principal` href
      - PROPFIND principal URL → `calendar-home-set` href
      - PROPFIND calendar-home-set → calendar list
 
