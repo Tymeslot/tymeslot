@@ -1,4 +1,13 @@
 defmodule Tymeslot.AuthTest do
+  @moduledoc """
+  Tests for the `Tymeslot.Auth` context.
+
+  This module is `async: true`, so nothing in it may write Application env:
+  those flags are global and a test flipping one switches it for every module
+  running alongside. `Tymeslot.AuthRegistrationDisabledTest` is the `async:
+  false` home for the registration flag.
+  """
+
   use Tymeslot.DataCase, async: true
 
   @moduletag :auth
@@ -90,25 +99,6 @@ defmodule Tymeslot.AuthTest do
       }
 
       assert {:error, :auth, _reason} = Auth.register_user(params, %Plug.Conn{})
-    end
-  end
-
-  describe "register_user/3 — registration disabled" do
-    test "returns registration_disabled error when flag is off" do
-      original = Application.get_env(:tymeslot, :registration_enabled)
-      Application.put_env(:tymeslot, :registration_enabled, false)
-      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
-
-      params = %{
-        "email" => "new@example.com",
-        "password" => "ValidPassword123!",
-        "password_confirmation" => "ValidPassword123!",
-        "name" => "New User",
-        "terms_accepted" => "true"
-      }
-
-      assert {:error, :registration_disabled, "Registration is currently disabled."} =
-               Auth.register_user(params, %Plug.Conn{})
     end
   end
 
