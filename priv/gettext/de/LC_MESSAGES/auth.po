@@ -1085,3 +1085,8 @@ msgstr "Das Passwort muss mindestens einen Großbuchstaben enthalten"
 #, elixir-autogen, elixir-format
 msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
 msgstr "Ihr Konto wurde erstellt, aber die Verifizierungs-E-Mail konnte noch nicht gesendet werden. Bitte warten Sie einige Minuten und nutzen Sie dann den Link zum erneuten Senden."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If an account exists with this email address, password reset instructions have been sent."
+msgstr "Falls ein Konto mit dieser E-Mail-Adresse existiert, wurden Anweisungen zum Zurücksetzen des Passworts gesendet."

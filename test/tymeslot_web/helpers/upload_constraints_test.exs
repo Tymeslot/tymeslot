@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Helpers.UploadConstraintsTest do
 
   @moduletag :utils
 
+  alias Tymeslot.Profiles.Avatars
   alias TymeslotWeb.Helpers.UploadConstraints
 
   describe "allowed_extensions/1" do
@@ -37,6 +38,13 @@ defmodule TymeslotWeb.Helpers.UploadConstraintsTest do
 
       assert avatar < image
       assert image < video
+    end
+  end
+
+  describe "avatar upload path drift guard" do
+    test "Avatars mirrors UploadConstraints' avatar limits rather than a second copy" do
+      assert Avatars.accepted_extensions() == UploadConstraints.allowed_extensions(:avatar)
+      assert Avatars.max_file_size() == UploadConstraints.max_file_size(:avatar)
     end
   end
 end

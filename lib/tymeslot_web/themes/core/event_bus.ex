@@ -1,78 +1,47 @@
 defmodule TymeslotWeb.Themes.Core.EventBus do
   @moduledoc """
-  Event-driven communication system for themes.
+  Former event-driven communication system for themes.
 
-  This module provides a decoupled way for themes to communicate with
-  the rest of the system using Phoenix.PubSub.
+  `:theme_mounted` was the only event ever emitted, and `handle_event/2`
+  never acted on it. Actually wiring it up would have subscribed every
+  visitor of every theme to one global `PubSub` topic (`"theme:<id>"`, not
+  scoped per organiser) and broadcast onto it on every mount, which is O(N)
+  wakeups per page load for a message every listener discards. Rather than
+  pay that fan-out for a value nothing consumes, every function here is now
+  a no-op that keeps the call sites (which subscribe/emit on mount) and
+  their return-value contracts unchanged.
   """
-
-  alias Phoenix.PubSub
-
-  @pubsub_name Tymeslot.PubSub
 
   @type event :: atom()
   @type payload :: map()
   @type theme_id :: String.t()
 
-  @all_events ~w(theme_mounted)a
-
   @doc """
-  Emits a theme event to all subscribers.
+  No-op. See the moduledoc: this used to broadcast `:theme_mounted` to a
+  global per-theme PubSub topic that nothing consumed.
   """
   @spec emit(theme_id(), event(), payload()) :: :ok
-  def emit(theme_id, event, payload \\ %{}) when event in @all_events do
-    topic = theme_topic(theme_id)
-    message = build_message(theme_id, event, payload)
-
-    PubSub.broadcast(@pubsub_name, topic, message)
-
-    :ok
-  end
+  def emit(_theme_id, _event, _payload \\ %{}), do: :ok
 
   @doc """
-  Subscribes to events for a specific theme.
+  No-op. See the moduledoc: this used to subscribe to a global per-theme
+  PubSub topic that nothing consumed.
   """
-  @spec subscribe_to_theme(theme_id()) :: :ok | {:error, term()}
-  def subscribe_to_theme(theme_id) do
-    PubSub.subscribe(@pubsub_name, theme_topic(theme_id))
-  end
+  @spec subscribe_to_theme(theme_id()) :: :ok
+  def subscribe_to_theme(_theme_id), do: :ok
 
   @doc """
-  Handles an incoming theme event in a LiveView.
-
-  Use this in your handle_info callback:
-
-      def handle_info({:theme_event, event}, socket) do
-        socket = EventBus.handle_event(event, socket)
-        {:noreply, socket}
-      end
-
-  No event currently changes the socket. `:theme_mounted` is the only event
-  any code emits, and nothing acts on it, so this returns the socket
-  untouched. Give an event a clause here when something needs to react to it.
+  No-op. Kept only so a stray `{:theme_event, _}` message (from before this
+  module stopped subscribing) is still handled harmlessly rather than
+  crashing an already-connected LiveView.
   """
   @spec handle_event(map(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def handle_event(%{event: _event, payload: _payload}, socket), do: socket
 
   @doc """
-  Emits a standard lifecycle event when a theme is mounted.
+  No-op. See the moduledoc: this used to emit `:theme_mounted` to a global
+  per-theme PubSub topic that nothing consumed.
   """
   @spec emit_theme_mounted(theme_id(), map()) :: :ok
-  def emit_theme_mounted(theme_id, metadata \\ %{}) do
-    emit(theme_id, :theme_mounted, Map.put(metadata, :timestamp, DateTime.utc_now()))
-  end
-
-  # Private functions
-
-  defp theme_topic(theme_id), do: "theme:#{theme_id}"
-
-  defp build_message(theme_id, event, payload) do
-    {:theme_event,
-     %{
-       theme_id: theme_id,
-       event: event,
-       payload: payload,
-       timestamp: DateTime.utc_now()
-     }}
-  end
+  def emit_theme_mounted(_theme_id, _metadata \\ %{}), do: :ok
 end

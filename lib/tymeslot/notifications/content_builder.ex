@@ -155,20 +155,6 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   end
 
   @doc """
-  Builds video room notification details.
-  """
-  @spec build_video_room_details(%{atom() => term()}, atom()) :: %{atom() => term()}
-  def build_video_room_details(meeting, video_room_status) do
-    base_details = build_appointment_details(meeting)
-
-    Map.merge(base_details, %{
-      video_room_status: video_room_status,
-      video_room_created_at: meeting.video_room_created_at,
-      video_room_expires_at: meeting.video_room_expires_at
-    })
-  end
-
-  @doc """
   Builds reminder notification details.
   """
   @spec build_reminder_details(%{atom() => term()}) :: %{atom() => term()}

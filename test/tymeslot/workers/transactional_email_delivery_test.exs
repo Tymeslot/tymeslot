@@ -64,6 +64,28 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
     assert seconds >= CircuitBreakerSupervisor.email_breaker_recovery_seconds()
   end
 
+  # The bug this guards against: `{:snooze, n}` bumps `max_attempts` in step
+  # under the pinned Oban 2.23.1, so nothing ever stopped a job whose provider
+  # never recovers from snoozing forever — no dead-letter, no admin alert,
+  # invisible to every queue monitor. `SnoozePolicy` bounds it against the
+  # job's own `attempt`, independent of Oban's ever-receding `max_attempts`.
+  describe "handle_failure/3 — bounded circuit-open snoozing" do
+    test "keeps snoozing while under the bound" do
+      assert {:snooze, _seconds} =
+               TransactionalEmailDelivery.handle_failure(:circuit_open, "", attempt: 1)
+
+      assert {:snooze, _seconds} =
+               TransactionalEmailDelivery.handle_failure(:circuit_open, "", attempt: 11)
+    end
+
+    test "fails the job instead of snoozing once the bound is reached" do
+      assert {:error, reason} =
+               TransactionalEmailDelivery.handle_failure(:circuit_open, "", attempt: 12)
+
+      assert reason =~ "circuit breaker"
+    end
+  end
+
   test "discards an address the provider has permanently rejected" do
     setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
 

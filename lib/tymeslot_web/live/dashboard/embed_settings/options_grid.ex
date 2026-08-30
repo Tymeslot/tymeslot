@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               <div class="h-2 bg-tymeslot-200 rounded w-1/2"></div>
               <div class="mt-4 p-3 bg-linear-to-br from-turquoise-50 to-cyan-50 border-2 border-turquoise-200 rounded-token-lg">
                 <div class="flex items-center space-x-2">
-                  <.icon name="hero-briefcase" class="w-4 h-4 text-turquoise-600" />
+                  <.icon name="hero-calendar" class="w-4 h-4 text-turquoise-600" />
                   <div class="text-token-xs font-semibold text-turquoise-700">
                     {dgettext("dashboard_embed", "Your booking widget here")}
                   </div>
@@ -182,7 +182,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             <%!-- Floating button preview --%>
             <div class="absolute bottom-4 right-4">
               <div class="w-8 h-8 rounded-full shadow-lg flex items-center justify-center bg-turquoise-600">
-                <.icon name="hero-briefcase" class="w-4 h-4 text-white" />
+                <.icon name="hero-calendar" class="w-4 h-4 text-white" />
               </div>
             </div>
           </div>
@@ -242,9 +242,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         dgettext(
           "dashboard_embed",
           "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options.",
-          guide:
-            ~s(<a href="#{DocsUrl.article_url("embed")}" target="_blank" rel="noopener noreferrer" class="text-turquoise-600 hover:text-turquoise-700 font-medium underline">) <>
-              dgettext("dashboard_embed", "embedding guide") <> ~s(</a>)
+          guide: DocsUrl.article_link("embed", dgettext("dashboard_embed", "embedding guide"))
         )
       )}
     </p>

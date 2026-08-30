@@ -41,7 +41,7 @@ defmodule Tymeslot.Auth.Registration do
           {:ok, term(), String.t()} | {:error, atom(), String.t()} | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     with {:ok, validated_params} <- validate_input(params),
-         :ok <- check_rate_limit(params["email"], socket_or_conn, opts),
+         :ok <- check_rate_limit(validated_params["email"], socket_or_conn, opts),
          {:ok, user} <- create_and_verify_user(validated_params, socket_or_conn, opts) do
       {:ok, user,
        dgettext(

@@ -302,7 +302,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         Logger.debug("Dispute alert template not configured (Standalone mode)")
         :ok
 
-      is_nil(email) ->
+      email in [nil, ""] ->
         Logger.error(
           "Dispute alert template is configured but no admin alert address is set; " <>
             "set ADMIN_ALERT_EMAIL to receive dispute alerts",

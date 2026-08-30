@@ -6,6 +6,8 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   to improve debugging, monitoring, and audit trail capabilities.
   """
 
+  alias Tymeslot.Security.SecurityLogger
+
   require Logger
 
   @type logging_context :: %{optional(atom()) => term()}
@@ -33,7 +35,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:operation, operation},
-          {:identifier, identifier},
+          {:identifier, mask_identifier(identifier)},
           {:event, "#{operation}_success"}
         ],
         context
@@ -65,7 +67,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:operation, operation},
-          {:identifier, identifier},
+          {:identifier, mask_identifier(identifier)},
           {:reason, reason},
           {:event, "#{operation}_failure"}
         ],
@@ -98,7 +100,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:operation, operation},
-          {:identifier, identifier},
+          {:identifier, mask_identifier(identifier)},
           {:errors, inspect(errors)},
           {:event, "#{operation}_validation_failure"}
         ],
@@ -124,7 +126,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:user_id, user.id},
-          {:email, user.email},
+          {:email, mask_identifier(user.email)},
           {:event, "user_created"}
         ],
         context
@@ -150,7 +152,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:user_id, user.id},
-          {:email, user.email},
+          {:email, mask_identifier(user.email)},
           {:verification_type, verification_type},
           {:event, "user_#{verification_type}_verified"}
         ],
@@ -177,7 +179,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:user_id, user.id},
-          {:email, user.email},
+          {:email, mask_identifier(user.email)},
           {:stage, stage},
           {:event, "password_reset_#{stage}"}
         ],
@@ -186,36 +188,21 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
     )
   end
 
-  @doc """
-  Logs security events (suspicious activity, etc.).
-
-  ## Parameters
-  - `event_type`: Type of security event (e.g., "suspicious_login", "token_abuse")
-  - `identifier`: User identifier (email, user_id, etc.)
-  - `details`: Event details
-  - `context`: Additional context map (optional)
-
-  ## Examples
-      log_security_event("suspicious_login", "user@example.com", "Multiple failed attempts")
-  """
-  @spec log_security_event(String.t(), String.t() | integer(), String.t(), logging_context()) ::
-          :ok
-  def log_security_event(event_type, identifier, details, context \\ %{}) do
-    Logger.warning(
-      "Security event",
-      build_metadata(
-        [
-          {:event_type, event_type},
-          {:identifier, identifier},
-          {:details, details},
-          {:event, "security_#{event_type}"}
-        ],
-        context
-      )
-    )
-  end
-
   # Private helpers
+
+  # Masks a binary identifier the way `SecurityLogger` masks emails, so an
+  # email address never reaches Logger metadata verbatim. Anything that
+  # isn't a parseable email (e.g. a token, mistakenly passed as an
+  # identifier) is dropped entirely rather than logged unmasked. A user id
+  # (integer) is not PII in this sense and passes through as-is.
+  @spec mask_identifier(String.t() | integer() | term()) :: String.t() | integer() | nil
+  defp mask_identifier(identifier) when is_integer(identifier), do: identifier
+
+  defp mask_identifier(identifier) when is_binary(identifier),
+    do: SecurityLogger.mask_email(identifier)
+
+  defp mask_identifier(_other), do: nil
+
   defp build_metadata(base_kv, context) when is_list(base_kv) and is_map(context) do
     # Extract only atom-keyed entries from context for metadata; attach the rest under :context
     {atom_ctx, other_ctx} = Enum.split_with(context, fn {k, _v} -> is_atom(k) end)

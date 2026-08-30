@@ -80,12 +80,15 @@ defmodule Tymeslot.Workers.EmailWorker do
     TransactionalEmailDelivery.handle_failure(:rate_limited, "", attempt: attempt)
   end
 
-  defp handle_email_error(:circuit_open, _job) do
-    TransactionalEmailDelivery.handle_failure(:circuit_open, "", [])
+  defp handle_email_error(:circuit_open, %{attempt: attempt}) do
+    TransactionalEmailDelivery.handle_failure(:circuit_open, "", attempt: attempt)
   end
 
-  defp handle_email_error({:recipient_rejected, reason}, _job) do
-    TransactionalEmailDelivery.handle_failure({:recipient_rejected, reason}, "", [])
+  defp handle_email_error({:recipient_rejected, reason}, %{args: args}) do
+    TransactionalEmailDelivery.handle_failure({:recipient_rejected, reason}, "",
+      action: args["action"],
+      meeting_id: args["meeting_id"]
+    )
   end
 
   defp handle_email_error(:invalid_email, _job) do

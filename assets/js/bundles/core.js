@@ -17,6 +17,7 @@ import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPag
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { EmailLogoUpload } from "../hooks/email_logo_upload"
+import { AutoUpload } from "../hooks/auto_upload"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
@@ -67,7 +68,15 @@ const CoreHooks = {
   // /admin has no route bundle of its own, and pulling in the dashboard
   // bundle for one hook would cost far more than the hook does. It mounts
   // only on the element carrying phx-hook, so every other page ignores it.
-  EmailLogoUpload
+  EmailLogoUpload,
+
+  // Onboarding's profile step mounts this for the avatar picker, and
+  // onboarding runs its own live_session with no route bundle (see
+  // RouteBundleHook), so the dashboard bundle's lazy-loaded copy never
+  // reaches it. Registered here for the same reason as EmailLogoUpload
+  // above; the dashboard bundle still overrides this with its lazy-loaded
+  // version for dashboard pages.
+  AutoUpload
 }
 
 // Use /embed-live in cross-site iframes to avoid session cookie dependency

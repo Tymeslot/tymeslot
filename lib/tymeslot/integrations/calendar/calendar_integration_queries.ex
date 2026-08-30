@@ -9,6 +9,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
 
+  # Postgres advisory-lock class id for the first-integration primary-election
+  # race (see `acquire_primary_lock/1`). Advisory-lock class ids share a single
+  # namespace across the whole database connection; other allocations are
+  # `MeetingConflictQueries.@booking_limits_lock_class` (715_001) and the bare
+  # `2` in `ProviderCalendarEventQueries`.
+  @primary_lock_class 1
+
   @doc """
   Gets all active calendar integrations for a user.
   """
@@ -401,17 +408,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
 
   When reactivating, checks that no other active integration exists for the same
   `(user_id, provider, provider_account_id)` to prevent a unique-constraint violation.
-
-  The `:duplicate_account` refusal is returned bare, unlike a changeset failure —
-  deliberately, and unlike its `VideoIntegrationQueries` twin. This function's only
-  production caller, `CalendarManagement.toggle_with_primary_rebalance/1`, runs inside
-  a `Repo.transaction/1` and forwards whatever isn't `{:ok, _}` straight to
-  `Repo.rollback/1`, which itself wraps its argument in `{:error, reason}`. Returning
-  `{:error, :duplicate_account}` here would arrive at the LiveView as
-  `{:error, {:error, :duplicate_account}}`, past the clause it matches on.
   """
   @spec toggle_active(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()} | :duplicate_account
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :duplicate_account}
   def toggle_active(%CalendarIntegrationSchema{} = integration) do
     if integration.is_active do
       integration
@@ -424,8 +423,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
           |> CalendarIntegrationSchema.activation_changeset(true)
           |> Repo.update()
 
-        {:error, :duplicate_account} ->
-          :duplicate_account
+        {:error, :duplicate_account} = err ->
+          err
       end
     end
   end
@@ -437,21 +436,49 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   # `''` is not NULL. Waving both through returned `:ok` for exactly the rows
   # that contend, with no concurrency involved at all.
   defp check_reactivation_conflict(%{provider_account_id: nil} = integration) do
-    case get_active_null_account_for_user(integration.user_id, integration.provider) do
-      {:ok, _existing} -> {:error, :duplicate_account}
-      {:error, :not_found} -> :ok
+    if active_null_account_exists?(integration.user_id, integration.provider) do
+      {:error, :duplicate_account}
+    else
+      :ok
     end
   end
 
   defp check_reactivation_conflict(integration) do
-    case get_by_account_for_user(
-           integration.user_id,
-           integration.provider,
-           integration.provider_account_id
-         ) do
-      {:ok, _existing} -> {:error, :duplicate_account}
-      {:error, :not_found} -> :ok
+    if active_account_exists?(
+         integration.user_id,
+         integration.provider,
+         integration.provider_account_id
+       ) do
+      {:error, :duplicate_account}
+    else
+      :ok
     end
+  end
+
+  # Existence-only checks: the reactivation conflict check never needs the
+  # conflicting row's credentials, and decrypting them (as the equivalent
+  # `get_*` lookups do) can raise on a row whose ciphertext no longer decrypts
+  # under the current keyring — turning a refusal into a crash.
+  defp active_null_account_exists?(user_id, provider) do
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and c.provider == ^provider and
+        is_nil(c.provider_account_id) and c.is_active == true
+    )
+    |> Repo.exists?()
+  end
+
+  defp active_account_exists?(user_id, provider, provider_account_id) do
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and
+        c.provider == ^provider and
+        c.provider_account_id == ^provider_account_id and
+        c.is_active == true
+    )
+    |> Repo.exists?()
   end
 
   @doc """
@@ -490,7 +517,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   """
   @spec acquire_primary_lock(integer()) :: :ok
   def acquire_primary_lock(user_id) do
-    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [1, user_id])
+    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@primary_lock_class, user_id])
     :ok
   end
 

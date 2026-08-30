@@ -812,10 +812,11 @@ if config_env() != :test and
   config :tymeslot, :allow_private_ips_for_webhooks, true
 end
 
-# Base URL for docs hub links in the dashboard (TymeslotWeb.Live.Shared.DocsUrl).
+# Base URL for docs hub links across the dashboard and the feature-announcement
+# modal (TymeslotWeb.Live.Shared.DocsUrl, the single reader of this key).
 # Defaults to the hosted docs site; a self-hoster running their own docs points
 # this at it instead. A blank value is treated as unset for the same reason as
-# WEBHOOK_BASE_URL above.
+# WEBHOOK_BASE_URL above. A trailing slash is trimmed by the reader, not here.
 docs_article_base_url = System.get_env("DOCS_ARTICLE_BASE_URL")
 
 if docs_article_base_url && String.trim(docs_article_base_url) != "" do

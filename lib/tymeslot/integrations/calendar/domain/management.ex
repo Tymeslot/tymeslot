@@ -120,10 +120,19 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @doc """
   Toggle an integration and rebalance the user's primary calendar atomically.
   Ensures that primary rules are preserved even under concurrent updates.
+
+  Reactivating clears the health state row and enqueues an immediate probe so
+  the badge can't lie about an integration the user has just turned back on.
   """
   @spec toggle_with_primary_rebalance(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
   def toggle_with_primary_rebalance(%CalendarIntegrationSchema{} = integration) do
+    integration
+    |> transactional_toggle()
+    |> maybe_mark_recovered()
+  end
+
+  defp transactional_toggle(integration) do
     Repo.transaction(fn ->
       CalendarIntegrationWebhookQueries.lock_user_profile_and_integrations(integration.user_id)
 
@@ -134,11 +143,21 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           maybe_rebalance_primary(updated, current_primary_id)
           updated
 
-        error ->
-          Repo.rollback(error)
+        {:error, reason} ->
+          Repo.rollback(reason)
       end
     end)
   end
+
+  # Marking recovery is deliberately outside the transaction above: it enqueues
+  # an Oban probe, which must not be rolled back with the toggle if a later
+  # step in the same transaction were ever added and failed.
+  defp maybe_mark_recovered({:ok, %{is_active: true} = updated} = ok) do
+    HealthCheck.mark_user_recovered(:calendar, updated.id)
+    ok
+  end
+
+  defp maybe_mark_recovered(result), do: result
 
   @doc """
   Updates a calendar integration.
@@ -173,29 +192,6 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def delete_calendar_integration(integration) do
     CalendarPrimary.delete_with_primary_handling(integration)
-  end
-
-  @doc """
-  Toggles the active status of an integration.
-
-  Reactivating clears the health state row and enqueues an immediate probe so
-  the badge can't lie about an integration the user has just turned back on.
-  """
-  @spec toggle_calendar_integration(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()}
-          | {:error, Ecto.Changeset.t() | :duplicate_account}
-  def toggle_calendar_integration(integration) do
-    case CalendarIntegrationQueries.toggle_active(integration) do
-      {:ok, %{is_active: true} = updated} = ok ->
-        HealthCheck.mark_user_recovered(:calendar, updated.id)
-        ok
-
-      :duplicate_account ->
-        {:error, :duplicate_account}
-
-      result ->
-        result
-    end
   end
 
   @doc """

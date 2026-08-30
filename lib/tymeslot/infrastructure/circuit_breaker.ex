@@ -44,6 +44,16 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     half_open_requests: 3
   }
 
+  # Only applied when a caller opts in via `:idle_timeout` (see `start_link/1`).
+  # Statically supervised breakers (the per-provider and email/OAuth ones
+  # started by `CircuitBreakerSupervisor`) never pass this, so they default to
+  # `:infinity` and are never idle-stopped: with `restart: :transient`, a
+  # `:normal` idle stop is not restarted, so arming a finite timeout on a
+  # breaker with no dynamic-supervisor lifecycle would kill it for the life of
+  # the node the first time it goes quiet for this long. Dynamically started
+  # per-host breakers (`CalendarCircuitBreaker`/`VideoCircuitBreaker`
+  # `call_with_host/3`) opt in explicitly so a stale host row doesn't linger
+  # in the shared ETS table forever.
   @idle_timeout :timer.hours(24)
 
   # This call only reads and updates counters, so it can be short.
@@ -69,7 +79,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       :last_failure_time,
       :half_open_attempts,
       :half_open_successes,
-      :half_open_started_at
+      :half_open_started_at,
+      :idle_timeout
     ]
   end
 
@@ -77,14 +88,31 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   @doc """
   Starts a circuit breaker with the given name and configuration.
+
+  ## Options
+  - `:idle_timeout` - how long the breaker may go without a message before it
+    stops itself and drops its persisted snapshot. Defaults to `:infinity`
+    (never idle-stops), which is correct for a statically supervised, named
+    breaker. Pass `default_idle_timeout/0` (or another finite value) only for
+    a breaker started dynamically per host, where an idle stop is a
+    deliberate reap rather than a failure.
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     name = Keyword.fetch!(opts, :name)
     config = Keyword.get(opts, :config, %{})
+    idle_timeout = Keyword.get(opts, :idle_timeout, :infinity)
 
-    GenServer.start_link(__MODULE__, {name, config}, name: name)
+    GenServer.start_link(__MODULE__, {name, config, idle_timeout}, name: name)
   end
+
+  @doc """
+  The idle timeout dynamically started (per-host) breakers should opt into so
+  a host that goes quiet for this long is reaped rather than kept alive
+  forever. See `start_link/1`'s `:idle_timeout` option.
+  """
+  @spec default_idle_timeout() :: pos_integer()
+  def default_idle_timeout, do: @idle_timeout
 
   @doc """
   Executes a function through the circuit breaker.
@@ -143,17 +171,6 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   end
 
   @doc """
-  Reports an outcome directly, for callers that already have a result in hand
-  (already classified, or produced outside `call/3`) rather than a function
-  for the breaker to run and classify itself. An `:ignore` outcome leaves
-  breaker state untouched.
-  """
-  @spec record(GenServer.server(), BreakerOutcome.outcome()) :: :ok
-  def record(breaker_name, outcome) when outcome in [:success, :failure, :ignore] do
-    GenServer.cast(breaker_name, {:record_outcome, outcome})
-  end
-
-  @doc """
   Gets the current status of the circuit breaker.
   """
   @spec status(GenServer.server()) :: map()
@@ -177,7 +194,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   # Server Callbacks
 
   @impl GenServer
-  def init({name, user_config}) do
+  def init({name, user_config, idle_timeout}) do
     config = Map.merge(@default_config, user_config)
 
     base_state = %State{
@@ -190,18 +207,19 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       last_failure_time: nil,
       half_open_attempts: 0,
       half_open_successes: 0,
-      half_open_started_at: nil
+      half_open_started_at: nil,
+      idle_timeout: idle_timeout
     }
 
     state = restore_state(name, base_state)
-    {:ok, state, @idle_timeout}
+    {:ok, state, state.idle_timeout}
   end
 
   @impl GenServer
   def handle_call(:request_permission, _from, state) do
     {reply, new_state} = grant_permission(state)
     persist_state(new_state)
-    {:reply, reply, new_state, @idle_timeout}
+    {:reply, reply, new_state, new_state.idle_timeout}
   end
 
   @impl GenServer
@@ -213,14 +231,14 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       config: state.config
     }
 
-    {:reply, status_info, state, @idle_timeout}
+    {:reply, status_info, state, state.idle_timeout}
   end
 
   @impl GenServer
   def handle_cast({:record_outcome, outcome}, state) do
     new_state = record_outcome(outcome, state)
     persist_state(new_state)
-    {:noreply, new_state, @idle_timeout}
+    {:noreply, new_state, new_state.idle_timeout}
   end
 
   @impl GenServer
@@ -240,7 +258,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     }
 
     persist_state(new_state)
-    {:noreply, new_state, @idle_timeout}
+    {:noreply, new_state, new_state.idle_timeout}
   end
 
   # Private Functions
@@ -295,8 +313,15 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   # An outcome that says nothing about the provider's health (a local
   # validation error, a 4xx, a nested `:circuit_open`) must not trip the
-  # breaker and must not count towards closing it either — state is left
-  # completely untouched, in every status.
+  # breaker and must not count towards closing it either. In `:closed` and
+  # `:open` that means state is left completely untouched; in `:half_open` it
+  # additionally releases the grant it consumed, otherwise a single ignored
+  # probe permanently spends one of the round's slots and the round can never
+  # reach enough successes to close.
+  defp record_outcome(:ignore, %State{status: :half_open} = state) do
+    %{state | half_open_attempts: max(state.half_open_attempts - 1, 0)}
+  end
+
   defp record_outcome(:ignore, state), do: state
 
   defp record_outcome(:success, %State{status: :closed} = state) do
@@ -367,7 +392,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   defp execute_function(fun, classify_fun) do
     result = normalize_result(fun.())
-    {result, classify_fun.(result)}
+    {result, normalize_outcome(classify_fun.(result))}
   rescue
     error ->
       # An exception out of our own code is not evidence the provider is
@@ -377,8 +402,28 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       {{:error, error}, :ignore}
   end
 
+  # A caller-supplied `:classify` function is not guaranteed to return one of
+  # the three valid outcomes; an unrecognised value must not reach
+  # `record_outcome/2`, which would crash the breaker (shared by every caller
+  # of that provider) with a `FunctionClauseError`.
+  defp normalize_outcome(outcome) when outcome in [:success, :failure, :ignore], do: outcome
+
+  defp normalize_outcome(other) do
+    Logger.warning(
+      "Circuit breaker classifier returned an unrecognised outcome, treating as :ignore",
+      outcome: inspect(other)
+    )
+
+    :ignore
+  end
+
   defp normalize_result(:ok), do: :ok
   defp normalize_result({:ok, _result} = success), do: success
+  # The calendar clients report errors as a 3-element `{:error, reason,
+  # message}` tuple. Left unmatched here it would fall to the catch-all below
+  # and be wrapped as `{:ok, _}`, so every calendar transport failure and 5xx
+  # would be scored a `:success` and the breaker could never open.
+  defp normalize_result({:error, _reason, _message} = error), do: error
   defp normalize_result({:error, _reason} = error), do: error
   defp normalize_result({:provider_error, _reason} = error), do: error
   # Handle non-standard returns
@@ -450,10 +495,12 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   def handle_info(:timeout, state) do
     Logger.info("Circuit breaker stopping due to inactivity", name: state.name)
 
-    # `restart: :transient` (see `use GenServer` above) means this `:normal`
-    # stop is not immediately restarted, so the reap is real: drop the
-    # persisted snapshot too, otherwise a dynamic per-host breaker that goes
-    # idle leaves its row in the shared ETS table forever.
+    # Only reachable when this breaker was started with a finite
+    # `:idle_timeout` (the dynamically started per-host breakers). `restart:
+    # :transient` (see `use GenServer` above) means this `:normal` stop is not
+    # immediately restarted, so the reap is real: drop the persisted snapshot
+    # too, otherwise a dynamic per-host breaker that goes idle leaves its row
+    # in the shared ETS table forever.
     safe_ets_delete(@state_table, state.name)
 
     {:stop, :normal, state}
@@ -468,7 +515,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       message: inspect(msg)
     )
 
-    {:noreply, state, @idle_timeout}
+    {:noreply, state, state.idle_timeout}
   end
 
   @impl GenServer

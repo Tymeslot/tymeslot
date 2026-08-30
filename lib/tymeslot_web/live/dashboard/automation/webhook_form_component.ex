@@ -18,7 +18,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
      socket
      |> assign(:form_errors, %{})
      |> assign(:form_values, %{})
-     |> assign(:saving, false)
      |> assign(:available_events, Webhooks.available_events())}
   end
 
@@ -282,8 +281,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
           <CoreComponents.loading_button
             type="submit"
             variant={:primary}
-            loading={@saving}
-            loading_text={dgettext("dashboard_automation", "Saving...")}
             disabled={!@can_submit}
             class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
             title={if !@can_submit, do: get_disabled_reason(assigns), else: ""}

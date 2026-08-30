@@ -158,7 +158,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       updated = Repo.get(TelegramIntegrationSchema, integration.id)
       refute updated.is_active
       assert updated.disabled_at
-      assert updated.disabled_reason =~ "Unauthorized"
+      assert updated.disabled_reason == "invalid_token"
     end
 
     # A shared bot token is used by every user on the deployment, so a 401
@@ -190,6 +190,33 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       refute updated.disabled_reason
     end
 
+    # A job that burned attempt 1 on an unrelated transient failure and only
+    # reaches the shared-token 401 on attempt 2+ must not lose its alert: this
+    # path always discards, so nothing else raises it for this job.
+    test "alerts on a shared-mode 401 even when it is not the job's first attempt",
+         %{user: user, meeting: meeting} do
+      setup_config(:tymeslot, telegram_bot_token: "shared_token_123")
+      integration = insert(:telegram_integration, user: user, bot_mode: "shared")
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 401, body: ~s({"ok":false,"description":"Unauthorized"})}}
+      end)
+
+      assert {:discard, "Unauthorized"} =
+               perform_job(
+                 TelegramWorker,
+                 %{
+                   "integration_id" => integration.id,
+                   "event_type" => "meeting.created",
+                   "meeting_id" => meeting.id
+                 },
+                 attempt: 2
+               )
+
+      assert_receive {:send_alert, :integration_health_failure, payload}
+      assert payload.integration_id == integration.id
+    end
+
     # Telegram answers a blocked bot with 403, and derives the body's
     # `Forbidden:` prefix from that same code — the 400/`Forbidden:` pairing
     # this test used to assert is one the API cannot emit, so it passed while
@@ -215,7 +242,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
 
       updated = Repo.get(TelegramIntegrationSchema, integration.id)
       refute updated.is_active
-      assert updated.disabled_reason =~ "blocked"
+      assert updated.disabled_reason == "bot_blocked"
     end
 
     test "auto-disables when the bot is kicked from the group", %{user: user, meeting: meeting} do
@@ -238,7 +265,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
 
       updated = Repo.get(TelegramIntegrationSchema, integration.id)
       refute updated.is_active
-      assert updated.disabled_reason =~ "kicked"
+      assert updated.disabled_reason == "bot_kicked"
     end
 
     # Unlike a 401, a per-chat block/kick is specific to this integration's
@@ -266,7 +293,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
 
       updated = Repo.get(TelegramIntegrationSchema, integration.id)
       refute updated.is_active
-      assert updated.disabled_reason =~ "blocked"
+      assert updated.disabled_reason == "bot_blocked"
     end
 
     test "leaves the integration active on a 403 that is not a block or kick",
@@ -291,6 +318,54 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert Repo.get(TelegramIntegrationSchema, integration.id).is_active
     end
 
+    test "auto-disables on other permanent per-chat rejections", %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 400,
+           body: ~s({"ok":false,"description":"Bad Request: chat not found"})
+         }}
+      end)
+
+      assert {:discard, "Chat unreachable"} =
+               perform_job(TelegramWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      updated = Repo.get(TelegramIntegrationSchema, integration.id)
+      refute updated.is_active
+      assert updated.disabled_reason == "chat_unreachable"
+    end
+
+    test "rewrites the chat id after a supergroup upgrade and lets Oban retry",
+         %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user, chat_id: "-100111")
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 400,
+           body:
+             ~s({"ok":false,"description":"Bad Request: group chat was upgraded to a supergroup chat","parameters":{"migrate_to_chat_id":-100222}})
+         }}
+      end)
+
+      assert {:error, {:chat_migrated, -100_222}} =
+               perform_job(TelegramWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      updated = Repo.get(TelegramIntegrationSchema, integration.id)
+      assert updated.chat_id == "-100222"
+      assert updated.is_active
+    end
+
     test "snoozes on 429 rate limit with retry_after", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user)
 
@@ -311,6 +386,54 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
                })
     end
 
+    test "clamps an absurd retry_after into a sane range", %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 429,
+           body:
+             ~s({"ok":false,"description":"Too Many Requests","parameters":{"retry_after":999999}})
+         }}
+      end)
+
+      assert {:snooze, 300} =
+               perform_job(TelegramWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "discards instead of snoozing forever once the rate-limit budget is spent",
+         %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 429,
+           body:
+             ~s({"ok":false,"description":"Too Many Requests","parameters":{"retry_after":10}})
+         }}
+      end)
+
+      assert {:discard, "Rate limited too many times"} =
+               perform_job(
+                 TelegramWorker,
+                 %{
+                   "integration_id" => integration.id,
+                   "event_type" => "meeting.created",
+                   "meeting_id" => meeting.id
+                 },
+                 attempt: 20
+               )
+
+      updated = Repo.get(TelegramIntegrationSchema, integration.id)
+      assert updated.failure_count == 1
+    end
+
     test "auto-disables after 10 consecutive failures", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user, failure_count: 9)
 
@@ -329,7 +452,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert updated.failure_count == 10
       refute updated.is_active
       assert updated.disabled_at
-      assert updated.disabled_reason =~ "Too many consecutive failures"
+      assert updated.disabled_reason == "too_many_failures"
     end
 
     test "records failure on retry attempts (not just attempt 1)", %{user: user, meeting: meeting} do

@@ -102,6 +102,7 @@ config :tymeslot, Oban,
   repo: Tymeslot.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 604_800},
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(60)},
     {Oban.Plugins.Cron,
      crontab: [
        # Run every 30 minutes

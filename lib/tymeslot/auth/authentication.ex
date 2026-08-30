@@ -112,14 +112,20 @@ defmodule Tymeslot.Auth.Authentication do
   # `check_auth_rate_limit/2` runs *before* this, as a read-only pre-check
   # (`AccountLockout.check_lockout_status/1`) that returns an error without
   # recording anything once the failure count reaches the throttle threshold
-  # (10 in the last hour). Because that pre-check short-circuits
-  # `authenticate_with_password/3` before this function can record another
-  # failure, the count freezes at the throttle threshold under sequential
-  # brute force: the lock threshold (20) is never reached via this path, so
-  # only `:account_throttled` fires here in practice. The 1-hour sliding
-  # window in `AccountLockout.check_lockout_status/1` also means the audit
-  # entry recurs roughly hourly as old attempts age out and throttling
-  # re-triggers, rather than firing once.
+  # (10 in the last hour). Under strictly sequential brute force that
+  # short-circuits `authenticate_with_password/3` before this function can
+  # record another failure, so the count freezes at the throttle threshold
+  # and the lock threshold (20) is never reached, and this emits once per
+  # hour as the 1-hour sliding window ages old attempts out and throttling
+  # re-triggers.
+  #
+  # That is not the concurrent case: the pre-check is read-only and separate
+  # from the write below, so every request already past the pre-check when
+  # the threshold is crossed records its own failure here and emits its own
+  # `account_lockout` event. This function has no idempotency guard, so a
+  # burst of concurrent failed logins against one account produces one
+  # `account_lockout` audit entry per in-flight attempt, not one per
+  # lockout, and a large enough burst can reach `:account_locked` directly.
   defp record_auth_attempt(user, success, opts) do
     case RateLimiter.record_auth_attempt(user.email, success) do
       {:error, lockout_type, _message}

@@ -70,7 +70,10 @@ defmodule Tymeslot.Auth.PasswordReset do
       _other ->
         # Always return the same message for non-OAuth cases to prevent user enumeration
         {:ok, :reset_initiated,
-         "If an account exists with this email address, password reset instructions have been sent."}
+         dgettext(
+           "auth",
+           "If an account exists with this email address, password reset instructions have been sent."
+         )}
     end
   end
 
@@ -108,8 +111,11 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
+  # `:ip_address` is the canonical key (matches `PasswordUpdate.update_user_password/5`'s
+  # convention, and what the audit entry itself is keyed under); `:ip` is
+  # accepted too since `AuthActions` still passes it for this flow's callers.
   defp extract_ip_from_opts(opts) do
-    opts[:ip] ||
+    opts[:ip_address] || opts[:ip] ||
       case opts[:socket_or_conn] do
         nil -> nil
         soc -> ClientIP.get(soc)
@@ -265,7 +271,7 @@ defmodule Tymeslot.Auth.PasswordReset do
     - token: String.t() (password reset token)
     - new_password: String.t() (new password)
     - password_confirmation: String.t() (password confirmation)
-    - opts: Keyword list; `:ip` and `:user_agent` are recorded on the audit
+    - opts: Keyword list; `:ip_address` (or `:ip`) and `:user_agent` are recorded on the audit
       entry the completed reset emits
 
   ## Returns

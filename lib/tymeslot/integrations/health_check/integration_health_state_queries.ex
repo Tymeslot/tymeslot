@@ -97,8 +97,16 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   @doc """
   Updates specific fields on an existing health state record.
-  Only updates if a record already exists (no INSERT). Safe to call concurrently.
+  Only updates if a record already exists (no INSERT). Safe to call
+  concurrently — a genuinely atomic single statement, so a row deleted
+  between caller and call (orphan cleanup, a cascading user deletion) is a
+  clean no-op rather than a raise.
   Returns the number of records updated (0 if no record exists).
+
+  A `status` value outside `HealthStatus.values/0` is rejected by the
+  `status_must_be_known` database constraint. Every writer, including
+  `Monitor.put_state/3` (the sole path that writes a runtime-derived
+  status), goes through this one function.
   """
   @spec update_fields(String.t() | atom(), integer(), keyword()) :: {non_neg_integer(), nil}
   def update_fields(type, integration_id, field_updates) do
@@ -110,39 +118,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       ),
       set: field_updates ++ [updated_at: DateTime.utc_now()]
     )
-  end
-
-  @doc """
-  Updates an existing health state record through the schema's validated
-  changeset, so a status value outside `HealthStatus.values/0` is rejected
-  rather than silently written. Used by `Monitor.put_state/3`, the sole
-  path that writes a runtime-derived status; other field updates that never
-  touch `status` keep using the plain `update_fields/3`.
-
-  Unlike `update_fields/3`, this is a read-then-write, not a single atomic
-  statement: it fetches the row first. Raises on an invalid changeset,
-  since the caller's status values are closed by construction and a
-  rejection here means that invariant broke. Safe to call when no row
-  exists (no-op).
-  """
-  @spec update_validated(String.t() | atom(), integer(), map()) :: {non_neg_integer(), nil}
-  def update_validated(type, integration_id, field_updates) do
-    type_str = to_string(type)
-
-    case Repo.get_by(IntegrationHealthStateSchema,
-           integration_type: type_str,
-           integration_id: integration_id
-         ) do
-      nil ->
-        {0, nil}
-
-      record ->
-        record
-        |> IntegrationHealthStateSchema.changeset(field_updates)
-        |> Repo.update!()
-
-        {1, nil}
-    end
   end
 
   @doc """

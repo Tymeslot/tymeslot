@@ -124,16 +124,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
-  Gets a profile with preloaded user, raising if not found.
-  """
-  @spec get_with_user!(integer()) :: ProfileSchema.t()
-  def get_with_user!(profile_id) do
-    ProfileSchema
-    |> Repo.get!(profile_id)
-    |> Repo.preload(:user)
-  end
-
-  @doc """
   Updates a specific field in the profile.
   """
   @spec update_field(ProfileSchema.t(), atom(), term()) ::

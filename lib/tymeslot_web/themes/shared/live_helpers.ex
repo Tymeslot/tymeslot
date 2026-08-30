@@ -187,18 +187,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if socket.assigns[:username_context] && socket.assigns[:organizer_user_id] do
       case resolve_meeting_type(socket, duration_str) do
-        nil ->
-          socket
-
-        meeting_type ->
-          # Re-initialise the engine with a fresh snapshot whenever the meeting type
-          # changes so the `:questions` step always reflects the current custom fields.
-          defs = CustomFields.snapshot_for(meeting_type)
-
-          socket
-          |> assign(:meeting_type, meeting_type)
-          |> assign(:engine, QEngine.init(defs))
-          |> OrganizerHelpers.assign_booking_window()
+        nil -> socket
+        meeting_type -> assign_meeting_type(socket, meeting_type)
       end
     else
       socket
@@ -399,8 +389,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if has_selection || is_reschedule do
       case resolve_booking_meeting_type(socket, params, is_reschedule) do
-        {:unresolvable, socket} -> socket
-        {:ok, socket} -> do_handle_booking_entry(socket, params)
+        {:unresolvable, socket} ->
+          socket
+
+        {:ok, socket} ->
+          socket
+          |> route_past_unanswered_questions()
+          |> do_handle_booking_entry(params)
       end
     else
       username = socket.assigns[:username_context]
@@ -439,6 +434,29 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       meeting_type -> {:ok, assign_meeting_type(socket, meeting_type)}
     end
   end
+
+  # `/:username/:slug/book` can be entered directly (a reschedule deep-link,
+  # or a locale switch mid-flow, both of which redirect straight back to this
+  # URL). Neither passes through the `:questions` step, so a meeting type with
+  # required custom fields would otherwise seed the engine with definitions
+  # but no answers and render the booking step, which has no UI for them —
+  # every submit then fails validation with no way to correct it. Route to
+  # `:questions` instead whenever the freshly-resolved engine still has
+  # unanswered required fields; forward navigation from there already lands
+  # back on `:booking` once answered.
+  defp route_past_unanswered_questions(socket) do
+    if unanswered_required_questions?(socket.assigns[:engine]) do
+      assign(socket, :current_state, :questions)
+    else
+      socket
+    end
+  end
+
+  defp unanswered_required_questions?(%QEngine{} = engine) do
+    not QEngine.skipped?(engine) && match?({:error, _errors}, QEngine.validate_all(engine))
+  end
+
+  defp unanswered_required_questions?(_engine), do: false
 
   defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting

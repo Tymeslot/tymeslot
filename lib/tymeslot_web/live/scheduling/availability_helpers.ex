@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
                 max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
                 min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
                 buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-                duration_minutes: duration_minutes,
+                duration_minutes: duration_minutes || 30,
                 limit_checker:
                   build_limit_checker(user_id, organizer_profile, context, start_date, end_date)
               }

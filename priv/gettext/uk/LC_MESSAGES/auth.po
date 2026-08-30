@@ -1088,3 +1088,8 @@ msgstr "Пароль має містити щонайменше одну вел�
 #, elixir-autogen, elixir-format
 msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
 msgstr "Ваш обліковий запис створено, але лист для підтвердження ще не вдалося надіслати. Зачекайте кілька хвилин, а потім скористайтеся посиланням для повторного надсилання."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If an account exists with this email address, password reset instructions have been sent."
+msgstr "Якщо обліковий запис із цією електронною адресою існує, інструкції зі скидання пароля вже надіслано."

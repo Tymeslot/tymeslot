@@ -45,7 +45,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content),
-         result <- schedule_email_job(:confirmation, meeting.id) do
+         result <- schedule_confirmation_job(meeting.id) do
       case result do
         :ok -> :ok
         {:ok, _result} -> :ok
@@ -136,7 +136,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content) do
       # Send immediately via EmailService
-      send_immediate_notifications(:reschedule, content)
+      send_reschedule_emails(content)
     end
   end
 
@@ -234,46 +234,33 @@ defmodule Tymeslot.Notifications.Orchestrator do
   defp attendee_email(%{email: email}) when is_binary(email), do: email
   defp attendee_email(_attendee), do: nil
 
-  defp schedule_email_job(
-         notification_type,
-         meeting_id,
-         schedule_at \\ nil,
-         reminder_value \\ nil,
-         reminder_unit \\ nil
-       ) do
-    worker_module = get_email_worker_module()
-
-    case notification_type do
-      :confirmation ->
-        worker_module.schedule_confirmation_emails(meeting_id)
-
-      :reminder ->
-        worker_module.schedule_reminder_emails(
-          meeting_id,
-          reminder_value,
-          reminder_unit,
-          schedule_at
-        )
-    end
+  defp schedule_confirmation_job(meeting_id) do
+    get_email_worker_module().schedule_confirmation_emails(meeting_id)
   end
 
-  defp send_immediate_notifications(notification_type, content) do
+  defp schedule_reminder_job(meeting_id, schedule_at, reminder_value, reminder_unit) do
+    get_email_worker_module().schedule_reminder_emails(
+      meeting_id,
+      reminder_value,
+      reminder_unit,
+      schedule_at
+    )
+  end
+
+  defp send_reschedule_emails(content) do
     email_service = Config.email_service_module()
 
-    case notification_type do
-      :reschedule ->
-        case email_service.send_reschedule_emails(content) do
-          {{:ok, _organizer}, {:ok, _attendee}} ->
-            {:ok, :reschedules_sent}
+    case email_service.send_reschedule_emails(content) do
+      {{:ok, _organizer}, {:ok, _attendee}} ->
+        {:ok, :reschedules_sent}
 
-          {organizer_result, attendee_result} ->
-            Logger.warning("Some reschedule emails may have failed",
-              organizer_result: inspect(organizer_result),
-              attendee_result: inspect(attendee_result)
-            )
+      {organizer_result, attendee_result} ->
+        Logger.warning("Some reschedule emails may have failed",
+          organizer_result: inspect(organizer_result),
+          attendee_result: inspect(attendee_result)
+        )
 
-            {:ok, :reschedules_partially_sent}
-        end
+        {:ok, :reschedules_partially_sent}
     end
   end
 
@@ -292,7 +279,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
         if SchedulingRules.should_schedule_reminder?(meeting.start_time, value, unit) do
           schedule_at = SchedulingRules.calculate_reminder_time(meeting.start_time, value, unit)
 
-          case schedule_email_job(:reminder, meeting.id, schedule_at, value, unit) do
+          case schedule_reminder_job(meeting.id, schedule_at, value, unit) do
             :ok -> {:ok, true}
             {:ok, _result} -> {:ok, true}
             error -> {error, false}

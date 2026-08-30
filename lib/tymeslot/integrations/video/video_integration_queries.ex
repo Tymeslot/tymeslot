@@ -317,6 +317,30 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Deletes an integration by id, but only while it is still soft-deleted.
+
+  Used by `Tymeslot.Workers.VideoIntegrationDisconnectWorker` to purge a row
+  once its provider-side rooms have been cleaned up. The `deleted_at`
+  predicate lives in the `WHERE` clause rather than in an application-level
+  read-then-delete, so a reconnect (which nulls `deleted_at`) that commits
+  after the worker last read the row cannot race the delete: either the row
+  is still soft-deleted when this statement runs and it is removed, or it
+  isn't and this is a no-op.
+
+  Returns the number of rows deleted: `1` on a genuine purge, `0` when the
+  row was reconnected (or already gone) before this ran.
+  """
+  @spec delete_if_still_deleted(integer()) :: non_neg_integer()
+  def delete_if_still_deleted(id) do
+    {count, _rows} =
+      VideoIntegrationSchema
+      |> where([v], v.id == ^id and not is_nil(v.deleted_at))
+      |> Repo.delete_all()
+
+    count
+  end
+
+  @doc """
   Marks an integration as disconnected without removing it.
 
   The row has to outlive the user's click: deleting provider-side rooms needs the

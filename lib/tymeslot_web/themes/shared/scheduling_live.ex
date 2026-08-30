@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
   - `render/1` — wrapper component and step layout
   - `handle_theme_event/3` (optional) — for theme-specific events
   - `handle_theme_schedule_event/3` (optional) — for theme-specific schedule events
+  - `handle_theme_info/2` (optional) — for theme-specific `handle_info/2` messages
 
   ## Example
 
@@ -159,9 +160,16 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       # Must stay last: a public page cannot afford to raise on a message it
       # has no clause for. `handle_event/3` below already ends the same way.
+      #
+      # Delegates to `handle_theme_info/2` (an extension point, not the
+      # clauses above) rather than being itself overridable: `defoverridable`
+      # replaces a function's clauses wholesale, so making the whole
+      # `handle_info/2` overridable would let one theme-specific clause
+      # silently drop every clause above (slot loading, calendar refresh,
+      # `:paid`/`:expired`) with no compiler warning.
       @impl Phoenix.LiveView
       def handle_info(message, socket) do
-        InfoHandlers.handle_unexpected(socket, message)
+        handle_theme_info(message, socket)
       end
 
       @impl Phoenix.LiveView
@@ -491,7 +499,16 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # Override with multi-clause defp to handle custom schedule events.
       defp handle_theme_schedule_event(socket, _event, _data), do: {:noreply, socket}
 
-      defoverridable handle_theme_event: 3, handle_theme_schedule_event: 3, handle_info: 2
+      # Extension point for theme-specific handle_info clauses. Override with a
+      # multi-clause defp to react to a theme-specific message; unmatched
+      # messages still fall through to `InfoHandlers.handle_unexpected/2` via
+      # this default clause, so a theme override only augments the shared
+      # `handle_info/2` routing above instead of being able to replace it.
+      defp handle_theme_info(message, socket), do: InfoHandlers.handle_unexpected(socket, message)
+
+      defoverridable handle_theme_event: 3,
+                     handle_theme_schedule_event: 3,
+                     handle_theme_info: 2
     end
   end
 end

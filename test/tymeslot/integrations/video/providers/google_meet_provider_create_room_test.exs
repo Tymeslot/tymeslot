@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox
@@ -82,7 +82,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         {:ok, %Req.Response{status: 403, body: ~s({"error":{"status":"SERVICE_DISABLED"}})}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
+      assert {:error, {:http_error, 403, message}} =
+               GoogleMeetProvider.create_meeting_room(config)
+
       assert message =~ "HTTP 403"
     end
 
@@ -289,7 +291,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         {:ok, %Req.Response{status: 500, body: "boom"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
+      assert {:error, {:http_error, 500, message}} =
+               GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
+
       assert message =~ "HTTP 500"
     end
   end

@@ -276,14 +276,10 @@ defmodule Tymeslot.Telegram do
 
   @spec record_failure(TelegramIntegrationSchema.t(), String.t()) ::
           {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :not_found}
-  def record_failure(%TelegramIntegrationSchema{} = integration, reason) do
+  def record_failure(%TelegramIntegrationSchema{} = integration, _reason) do
     with {:ok, updated} <- TelegramQueries.increment_failure(integration) do
       if updated.failure_count >= TelegramIntegrationSchema.max_failure_count() do
-        TelegramQueries.update_integration(updated, %{
-          is_active: false,
-          disabled_at: DateTime.utc_now(),
-          disabled_reason: "Too many consecutive failures: #{reason}"
-        })
+        auto_disable(updated, "too_many_failures")
       else
         {:ok, updated}
       end
@@ -298,6 +294,20 @@ defmodule Tymeslot.Telegram do
       disabled_at: DateTime.utc_now(),
       disabled_reason: reason
     })
+  end
+
+  @doc """
+  Rewrites the chat id after Telegram reports a group's supergroup upgrade.
+
+  Telegram issues a fresh chat id when a group upgrades to a supergroup; the
+  old id is permanently dead. This does not go through `update_integration/2`
+  because it is a delivery-time correction, not a user-initiated edit, and
+  must not be gated behind a feature-access check.
+  """
+  @spec migrate_chat_id(TelegramIntegrationSchema.t(), String.t()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def migrate_chat_id(%TelegramIntegrationSchema{} = integration, new_chat_id) do
+    TelegramQueries.update_integration(integration, %{chat_id: new_chat_id})
   end
 
   # ============================================================================
