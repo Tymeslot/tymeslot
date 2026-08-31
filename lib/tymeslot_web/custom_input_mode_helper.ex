@@ -19,24 +19,57 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   """
 
   alias Phoenix.Component
-  alias TymeslotWeb.OnboardingLive.StepConfig
 
-  @default_custom_mode %{
-    buffer_minutes: false,
-    advance_booking_days: false,
-    min_advance_hours: false
+  @typedoc "A scheduling preference field that supports preset tags and custom input."
+  @type field :: :buffer_minutes | :advance_booking_days | :min_advance_hours
+
+  # The quick-pick values offered for each scheduling preference field, and the
+  # only table of them. Every surface that renders preset tags — the onboarding
+  # wizard's preference steps and the dashboard availability policy card —
+  # builds its tags from this, and `preset_value?/2` validates a `_preset` click
+  # against the same list. Rendering from a separate literal is what let the card
+  # offer values the validator rejected, leaving it stuck in custom-input mode
+  # after a legitimate preset click.
+  #
+  # Labels stay with each surface: onboarding and the dashboard word the same
+  # value differently ("24 hours" vs "1 day") and translate in different gettext
+  # domains. Only the values are shared.
+  #
+  # The lists are the union of what the two surfaces offered while they each
+  # kept their own: neither was a superset of the other, and neither could be
+  # taken as authoritative — the card's minimum-notice list did not even contain
+  # 3, the schema's own default, so a new user's card opened in custom-input
+  # mode. Unifying by union means no value stopped being offered anywhere.
+  @presets %{
+    buffer_minutes: [0, 5, 10, 15, 30, 45, 60],
+    advance_booking_days: [7, 14, 30, 60, 90, 180, 365],
+    min_advance_hours: [0, 1, 3, 4, 6, 12, 24, 48, 168]
   }
+
+  @default_custom_mode Map.new(Map.keys(@presets), &{&1, false})
+
+  @doc """
+  Returns the fields that support custom input mode.
+  """
+  @spec fields() :: [field()]
+  def fields, do: Map.keys(@presets)
+
+  @doc """
+  Returns the preset values offered for `field`.
+
+  Raises for an unknown field rather than reporting it as having no presets: a
+  field that reaches here is always one of this module's own, and a silent empty
+  list would make every value look like client tampering.
+  """
+  @spec presets(field()) :: [non_neg_integer()]
+  def presets(field), do: Map.fetch!(@presets, field)
 
   @doc """
   Returns the default custom input mode state.
 
   All fields default to `false`, meaning preset mode is active.
   """
-  @spec default_custom_mode() :: %{
-          buffer_minutes: boolean(),
-          advance_booking_days: boolean(),
-          min_advance_hours: boolean()
-        }
+  @spec default_custom_mode() :: %{field() => boolean()}
   def default_custom_mode, do: @default_custom_mode
 
   @doc """
@@ -69,7 +102,7 @@ defmodule TymeslotWeb.CustomInputModeHelper do
       # Custom input changed - keep custom mode active
       socket = toggle_custom_mode(socket, :buffer_minutes, %{"buffer_minutes" => "20"}, 20)
   """
-  @spec toggle_custom_mode(Phoenix.LiveView.Socket.t(), atom(), map(), integer() | nil) ::
+  @spec toggle_custom_mode(Phoenix.LiveView.Socket.t(), field(), map(), integer() | nil) ::
           Phoenix.LiveView.Socket.t()
   def toggle_custom_mode(socket, field, params, value) do
     current_custom_mode = Map.get(socket.assigns, :custom_input_mode, @default_custom_mode)
@@ -110,7 +143,7 @@ defmodule TymeslotWeb.CustomInputModeHelper do
 
       socket = enable_custom_mode(socket, :buffer_minutes)
   """
-  @spec enable_custom_mode(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  @spec enable_custom_mode(Phoenix.LiveView.Socket.t(), field()) :: Phoenix.LiveView.Socket.t()
   def enable_custom_mode(socket, field) do
     current_custom_mode = Map.get(socket.assigns, :custom_input_mode, @default_custom_mode)
     custom_input_mode = Map.put(current_custom_mode, field, true)
@@ -137,18 +170,8 @@ defmodule TymeslotWeb.CustomInputModeHelper do
       iex> preset_value?(:buffer_minutes, 20)
       false
   """
-  @spec preset_value?(atom(), integer() | nil) :: boolean()
-  def preset_value?(field, value) when is_integer(value) do
-    preset_values =
-      case field do
-        :buffer_minutes -> StepConfig.buffer_time_values()
-        :advance_booking_days -> StepConfig.advance_booking_values()
-        :min_advance_hours -> StepConfig.min_advance_values()
-        _other -> []
-      end
-
-    value in preset_values
-  end
+  @spec preset_value?(field(), integer() | nil) :: boolean()
+  def preset_value?(field, value) when is_integer(value), do: value in presets(field)
 
   def preset_value?(_field, _value), do: false
 end
