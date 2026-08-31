@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   alias TymeslotWeb.Themes.Core.{
     ErrorBoundary,
-    EventBus,
     MeetingManagement,
     MountHelpers,
     PollVoting,
@@ -105,12 +104,6 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   end
 
   @impl Phoenix.LiveView
-  def handle_info({:theme_event, _event} = msg, socket) do
-    # Handle theme events
-    socket = EventBus.handle_event(elem(msg, 1), socket)
-    {:noreply, socket}
-  end
-
   def handle_info({:poll_updated, _poll_id} = msg, socket),
     do: PollVoting.handle_poll_info(msg, socket)
 
