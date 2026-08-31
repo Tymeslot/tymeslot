@@ -10,6 +10,15 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
   alias Tymeslot.Infrastructure.CircuitBreaker
   require Logger
 
+  @typedoc """
+  What a wrapped call resolves to.
+
+  The same shape as `t:Tymeslot.Infrastructure.CircuitBreaker.result/0` minus
+  `{:provider_error, reason}`, which these wrappers translate to
+  `{:error, reason}` before returning.
+  """
+  @type result :: :ok | {:ok, any()} | {:error, any()} | {:error, any(), any()}
+
   @doc """
   Executes a function through a circuit breaker with logging and error handling.
 
@@ -26,13 +35,15 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
     * `{:error, :breaker_not_found}` - Circuit breaker process not found
     * `{:error, :circuit_breaker_error}` - Unexpected error during execution
     * `{:error, reason}` - Function failed with reason
+    * `{:error, reason, message}` - Function failed with a calendar client's
+      three-element error
   """
   @spec call_with_breaker(
           GenServer.server(),
           atom(),
           String.t(),
           (-> any())
-        ) :: :ok | {:ok, any()} | {:error, atom()}
+        ) :: result()
   def call_with_breaker(breaker_name, provider, service_type, fun)
       when is_function(fun, 0) do
     if breaker_exists?(breaker_name) do
@@ -121,7 +132,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           String.t(),
           map(),
           (-> any())
-        ) :: :ok | {:ok, any()} | {:error, atom()}
+        ) :: result()
   def call_with_host_breaker(prefix, provider, host, service_type, config, fun)
       when is_binary(prefix) and is_atom(provider) and is_binary(host) and is_function(fun, 0) do
     breaker_name = host_breaker_name(prefix, provider, host)

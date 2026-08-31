@@ -63,7 +63,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
       ...> end)
       {:error, :circuit_open}
   """
-  @spec call(atom(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
+  @spec call(atom(), (-> any())) :: CircuitBreakerHelpers.result()
   def call(provider, fun) when provider in @video_providers and is_function(fun, 0) do
     breaker_name = breaker_name(provider)
     CircuitBreakerHelpers.call_with_breaker(breaker_name, provider, "Video", fun)
@@ -81,7 +81,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
   the breaker for every other tenant on that provider. Mirrors
   `CalendarCircuitBreaker.call_with_host/3`.
   """
-  @spec call_with_host(atom(), String.t(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
+  @spec call_with_host(atom(), String.t(), (-> any())) :: CircuitBreakerHelpers.result()
   def call_with_host(provider, host, fun)
       when is_atom(provider) and is_binary(host) and is_function(fun, 0) do
     CircuitBreakerHelpers.call_with_host_breaker(

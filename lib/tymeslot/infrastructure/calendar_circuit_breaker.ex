@@ -84,7 +84,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
       ...> end)
       {:error, :circuit_open}
   """
-  @spec call(atom(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
+  @spec call(atom(), (-> any())) :: CircuitBreakerHelpers.result()
   def call(provider, fun) when provider in @calendar_providers and is_function(fun, 0) do
     breaker_name = breaker_name(provider)
     CircuitBreakerHelpers.call_with_breaker(breaker_name, provider, "Calendar", fun)
@@ -98,7 +98,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   Executes a calendar operation through a host-specific circuit breaker.
   Useful for CalDAV providers where individual servers may be slow or down.
   """
-  @spec call_with_host(atom(), String.t(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
+  @spec call_with_host(atom(), String.t(), (-> any())) :: CircuitBreakerHelpers.result()
   def call_with_host(provider, host, fun)
       when is_atom(provider) and is_binary(host) and is_function(fun, 0) do
     CircuitBreakerHelpers.call_with_host_breaker(

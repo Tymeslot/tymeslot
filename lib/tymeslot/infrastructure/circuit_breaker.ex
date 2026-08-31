@@ -37,6 +37,21 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Metrics
 
+  @typedoc """
+  What a protected call resolves to.
+
+  `normalize_result/1` passes the calendar clients' three-element
+  `{:error, reason, message}` through deliberately, so it belongs in the
+  contract; leaving it out told Dialyzer that every caller matching on it was
+  writing dead code.
+  """
+  @type result ::
+          :ok
+          | {:ok, any()}
+          | {:error, any()}
+          | {:error, any(), any()}
+          | {:provider_error, any()}
+
   @default_config %{
     failure_threshold: 5,
     time_window: :timer.minutes(1),
@@ -137,8 +152,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   `exit` or `throw` is recorded the same way and then re-raised, so the
   breaker is never left blind by a termination path that skips reporting.
   """
-  @spec call(GenServer.server(), (-> any()), keyword()) ::
-          :ok | {:ok, any()} | {:error, any()} | {:provider_error, any()}
+  @spec call(GenServer.server(), (-> any()), keyword()) :: result()
   def call(breaker_name, fun, opts \\ []) when is_function(fun, 0) do
     classify_fun = Keyword.get(opts, :classify, &BreakerOutcome.classify/1)
 
