@@ -240,4 +240,74 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
       assert Enum.uniq(gaps) == gaps
     end
   end
+
+  describe "perform/1 when Microsoft Graph is transiently unwell" do
+    setup do
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=current"
+        )
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      %{integration: integration}
+    end
+
+    test "fails, so Oban retries, while attempts remain", %{integration: integration} do
+      assert {:error, :delta_sync_failed} =
+               perform_job(
+                 RefreshOutlookCalendarWorker,
+                 %{"calendar_integration_id" => integration.id},
+                 attempt: 1,
+                 max_attempts: 5
+               )
+    end
+
+    test "discards once the retry ladder is spent, rather than alerting an operator",
+         %{integration: integration} do
+      # A discard reaches Oban as `job:stop`, which ObanFailureAlerter never
+      # sees; only an unhandled `{:error, _}` on the last attempt raises the
+      # permanent-failure admin alert. FallbackSyncSweepWorker re-enqueues this
+      # integration within 15 minutes, and a remote that never recovers is the
+      # health check's job to report.
+      assert {:discard, message} =
+               perform_job(
+                 RefreshOutlookCalendarWorker,
+                 %{"calendar_integration_id" => integration.id},
+                 attempt: 5,
+                 max_attempts: 5
+               )
+
+      assert message =~ "next scheduled sweep"
+    end
+  end
+
+  describe "perform/1 when the failure is not the remote's fault" do
+    test "still fails on the last attempt, so a bad credential keeps alerting" do
+      # A token refresh that fails is the credential path — exactly what an
+      # operator needs to hear about — so it must not take the transient
+      # discard shortcut, even with every attempt spent.
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=current",
+          token_expires_at: nil
+        )
+
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, "Token refresh failed"}
+      end)
+
+      assert {:error, :delta_sync_failed} =
+               perform_job(
+                 RefreshOutlookCalendarWorker,
+                 %{"calendar_integration_id" => integration.id},
+                 attempt: 5,
+                 max_attempts: 5
+               )
+    end
+  end
 end
