@@ -62,6 +62,13 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   @doc """
   Fetches raw events from the provider and normalises them into `CalendarEvent` structs.
 
+  Only providers whose `list_events_representation/0` is `:raw` can be probed
+  this way: the pairing of `list_events/2` with `normalise_events/2` assumes
+  the first hands back the wire format the second parses. A cache-backed
+  provider returns `{:error, {:no_raw_representation, provider}}` rather than
+  crashing inside a parser; use `fetch_fresh_events/3`, which consumes exactly
+  the shape those providers return.
+
   Returns `{:ok, [CalendarEvent.t()]}` or `{:error, reason}`.
   """
   @spec fetch_and_normalise_provider_events(integration(), DateTime.t(), DateTime.t()) ::
@@ -72,18 +79,10 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
         range_end
       ) do
     with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
-      context = %{
-        calendar_integration_id: integration.id,
-        provider_calendar_id: integration.default_booking_calendar_id || "",
-        synced_at: DateTime.utc_now(:microsecond)
-      }
-
+      representation = adapter_client.provider_module.list_events_representation()
       opts = [start_time: range_start, end_time: range_end]
 
-      with {:ok, raw_events} <-
-             adapter_client.provider_module.list_events(adapter_client.client, opts) do
-        adapter_client.provider_module.normalise_events(raw_events, context)
-      end
+      fetch_and_normalise(adapter_client, integration, representation, opts)
     end
   end
 
@@ -210,6 +209,23 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
       is_active: true,
       needs_reauth: false
     }
+  end
+
+  defp fetch_and_normalise(adapter_client, integration, :raw, opts) do
+    context = %{
+      calendar_integration_id: integration.id,
+      provider_calendar_id: integration.default_booking_calendar_id || "",
+      synced_at: DateTime.utc_now(:microsecond)
+    }
+
+    with {:ok, raw_events} <-
+           adapter_client.provider_module.list_events(adapter_client.client, opts) do
+      adapter_client.provider_module.normalise_events(raw_events, context)
+    end
+  end
+
+  defp fetch_and_normalise(_adapter_client, integration, :normalised, _opts) do
+    {:error, {:no_raw_representation, integration.provider}}
   end
 
   # Normalizes outbound event attrs for provider dispatch. Currently handles

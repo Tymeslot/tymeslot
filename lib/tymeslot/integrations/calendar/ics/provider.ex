@@ -215,6 +215,12 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
     end
   end
 
+  # The cache holds events that were normalised on the way in, so `list_events/2`
+  # hands back finished maps rather than feed text. `normalise_events/2` below
+  # still parses raw iCalendar, because the sync worker feeds it the feed itself.
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events_representation, do: :normalised
+
   @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context) do
     ICalNormaliser.normalise_events(raw_events, context, :ics_url)
