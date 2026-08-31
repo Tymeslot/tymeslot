@@ -1,4 +1,10 @@
 
+[1.13.1]
+* Link the cancellation email to the host's booking page
+* webhooks: Include the meeting's guests in the payload
+* Open the schedule step on the next available day
+
+
 [1.13.0]
 * Let a password reset request use its full hourly allowance
 * Count only admins who can actually sign in with a password
