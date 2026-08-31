@@ -37,35 +37,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   end
 
   defp mount_dashboard_data(user, socket) do
-    # Load profile and integration status concurrently — they are independent
-    profile_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
-      end)
-
-    integration_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        DashboardContext.get_integration_status(user.id)
-      end)
-
-    results = Task.yield_many([profile_task, integration_task], :timer.seconds(5))
-
-    Enum.each(results, fn
-      {task, nil} -> Task.shutdown(task, :brutal_kill)
-      _result -> :ok
-    end)
-
-    profile =
-      case Enum.at(results, 0) do
-        {_task, {:ok, value}} -> value
-        _timeout_or_error -> %ProfileSchema{user_id: user.id}
-      end
-
-    integration_status =
-      case Enum.at(results, 1) do
-        {_task, {:ok, value}} -> value
-        _timeout_or_error -> DashboardContext.default_integration_status()
-      end
+    {profile, integration_status} = load_profile_and_integration_status(user, socket)
 
     # Read extension/feature config once at mount so components receive stable assigns
     # rather than calling Application.get_env on every render.
@@ -106,14 +78,58 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     {:cont, socket}
   end
 
-  # Whether the host can reach the payments dashboard. Mirrors the gate in
-  # `PaymentsHandlers`: both `:ok` and `{:error, :stripe_required}` mean the
-  # feature is on (Stripe just isn't connected yet), so the sidebar link shows.
-  defp payments_allowed?(user_id) do
-    case Features.check_access(user_id, :meeting_payments) do
-      :ok -> true
-      {:error, :stripe_required} -> true
-      _other -> false
+  # The static render is thrown away the moment the socket connects, but
+  # several dashboard surfaces (onboarding checklist, theme lock overlay,
+  # calendar-connect banner) branch on `integration_status` in that first
+  # paint too, so it must be the real value there, not the all-false
+  # default — otherwise a fully set-up host sees a false "setup incomplete"
+  # flash before the socket connects. `DashboardContext.get_integration_status/1`
+  # is cache-backed (5 minutes), so fetching it synchronously here is cheap.
+  defp load_profile_and_integration_status(user, socket) do
+    if connected?(socket) do
+      fetch_profile_and_integration_status(user)
+    else
+      {profile_or_placeholder(user), DashboardContext.get_integration_status(user.id)}
     end
   end
+
+  defp fetch_profile_and_integration_status(user) do
+    # Load profile and integration status concurrently — they are independent
+    profile_task =
+      Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn ->
+        profile_or_placeholder(user)
+      end)
+
+    integration_task =
+      Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn ->
+        DashboardContext.get_integration_status(user.id)
+      end)
+
+    results = Task.yield_many([profile_task, integration_task], :timer.seconds(5))
+
+    Enum.each(results, fn
+      {task, nil} -> Task.shutdown(task, :brutal_kill)
+      _result -> :ok
+    end)
+
+    profile =
+      case Enum.at(results, 0) do
+        {_task, {:ok, value}} -> value
+        _timeout_or_error -> %ProfileSchema{user_id: user.id}
+      end
+
+    integration_status =
+      case Enum.at(results, 1) do
+        {_task, {:ok, value}} -> value
+        _timeout_or_error -> DashboardContext.default_integration_status()
+      end
+
+    {profile, integration_status}
+  end
+
+  defp profile_or_placeholder(user) do
+    Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
+  end
+
+  defp payments_allowed?(user_id), do: Features.meeting_payments_allowed?(user_id)
 end

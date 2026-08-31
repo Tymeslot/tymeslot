@@ -39,7 +39,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
   describe "availability-display ↔ booking-validation invariant" do
     test "a slot shown as available can be booked successfully" do
       timezone = "Etc/UTC"
-      %{user: user, profile_id: profile_id} = create_bookable_profile(timezone: timezone)
+      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: timezone)
       target_date = next_bookable_weekday()
 
       TestMocks.stub_no_calendar_events()
@@ -47,7 +47,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # Display path
       {:ok, slots} =
         Calculate.available_slots(target_date, 30, timezone, timezone, [], %{
-          profile_id: profile_id
+          schedule_id: schedule_id
         })
 
       # Sanity check: with no conflicts the weekday schedule should surface slots.
@@ -77,7 +77,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
 
     test "a slot hidden by a blocking event is rejected by the booking API" do
       timezone = "Etc/UTC"
-      %{user: user, profile_id: profile_id} = create_bookable_profile(timezone: timezone)
+      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: timezone)
       target_date = next_bookable_weekday()
 
       # The plain-map shape used by provider runtime adapters (Google, Outlook, CalDAV) —
@@ -99,7 +99,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # Display path without the blocking event — establishes the baseline set.
       {:ok, slots_without_block} =
         Calculate.available_slots(target_date, 30, timezone, timezone, [], %{
-          profile_id: profile_id
+          schedule_id: schedule_id
         })
 
       assert slots_without_block != [],
@@ -108,7 +108,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # Display path with the blocking event — every slot must disappear.
       {:ok, slots_with_block} =
         Calculate.available_slots(target_date, 30, timezone, timezone, [blocking_event], %{
-          profile_id: profile_id
+          schedule_id: schedule_id
         })
 
       assert slots_with_block == [],
@@ -141,6 +141,95 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
         # display text.
         assert {:error, :slot_taken} = Create.execute(meeting_params, form_data)
       end)
+    end
+  end
+
+  # The converse of the invariant above, and the reason it is enforced in the
+  # domain rather than in the booking page's step machine: `/:username/:slug/book`
+  # is directly enterable, so a booker can arrive at the submit path having
+  # passed through none of the page's own guards. Only a check on the create
+  # path itself can hold for those.
+  describe "times the display never offered are refused by the booking API" do
+    setup do
+      TestMocks.stub_no_calendar_events()
+      :ok
+    end
+
+    test "a time outside the host's working hours is refused" do
+      timezone = "Etc/UTC"
+      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: timezone)
+      target_date = next_bookable_weekday()
+
+      {:ok, slots} =
+        Calculate.available_slots(target_date, 30, timezone, timezone, [], %{
+          schedule_id: schedule_id
+        })
+
+      # The helper's window is 11:00–17:00, so 08:00 is a real time on a real
+      # working day that the display simply never offers.
+      refute "8:00 AM" in slots
+
+      assert {:error, :slot_taken} =
+               Create.execute(
+                 booking_at(user, target_date, "08:00", "30min", timezone),
+                 attendee()
+               )
+    end
+
+    test "a day the host is not available at all is refused" do
+      timezone = "Etc/UTC"
+
+      %{user: user} = create_bookable_profile(timezone: timezone, days: [1, 2, 3])
+
+      # A Thursday: inside the advance window, outside the host's Mon–Wed week.
+      target_date = next_weekday_of(4)
+
+      assert {:error, :slot_taken} =
+               Create.execute(
+                 booking_at(user, target_date, "12:00", "30min", timezone),
+                 attendee()
+               )
+    end
+
+    test "a duration that overruns the host's window is refused" do
+      timezone = "Etc/UTC"
+      %{user: user} = create_bookable_profile(timezone: timezone)
+      target_date = next_bookable_weekday()
+
+      # 11:00 starts inside the 11:00–17:00 window; nine hours does not fit in
+      # it. Nothing else on the create path bounds a submitted duration.
+      assert {:error, :slot_taken} =
+               Create.execute(
+                 booking_at(user, target_date, "11:00", "540min", timezone),
+                 attendee()
+               )
+    end
+
+    defp booking_at(user, date, time, duration, timezone) do
+      %{
+        date: date,
+        time: time,
+        duration: duration,
+        user_timezone: timezone,
+        organizer_user_id: user.id
+      }
+    end
+
+    defp attendee do
+      %{
+        "name" => "Invariant Attendee",
+        "email" => "invariant-attendee@example.com",
+        "message" => "Attempting a time the schedule never offered"
+      }
+    end
+
+    # The next date whose ISO weekday is `day_of_week`, at least ten days out so
+    # the advance window never clips it.
+    defp next_weekday_of(day_of_week) do
+      Date.utc_today()
+      |> Date.add(10)
+      |> Stream.iterate(&Date.add(&1, 1))
+      |> Enum.find(&(Date.day_of_week(&1) == day_of_week))
     end
   end
 end

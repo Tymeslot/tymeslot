@@ -6,17 +6,23 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
+  alias Tymeslot.Utils.DateTimeUtils.Duration, as: UrlDuration
   alias Tymeslot.Workers.VideoSyncWorker
 
-  @typedoc "Parameters for rescheduling a meeting to a new time slot."
+  @typedoc """
+  Parameters for rescheduling a meeting to a new time slot.
+
+  `duration` is accepted for shape-compatibility with the booking form but is
+  never used: the rescheduled meeting keeps the original meeting's persisted
+  duration (see `prepare_new_times/2`), never the request's.
+  """
   @type reschedule_params :: %{
           required(:date) => String.t(),
           required(:time) => String.t(),
@@ -39,9 +45,10 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   Returns `{:ok, meeting}` or `{:error, reason}`, where `reason` is either a
   semantic atom (`Tymeslot.Bookings.Errors.classified_error/0` — currently
-  `:meeting_not_found` when the lookup fails, `:slot_taken` when a
-  concurrent booking claims the new time first, or `:failed_to_update_meeting`
-  when persisting the new time fails for any other reason) or an arbitrary
+  `:meeting_not_found` when the lookup fails, `:slot_taken` when a concurrent
+  booking claims the new time first or the requested time is one the
+  organiser's schedule never offers, or `:failed_to_update_meeting` when
+  persisting the new time fails for any other reason) or an arbitrary
   policy/validation string from `Tymeslot.Bookings.Policy` or
   `Tymeslot.Bookings.Validation`.
   """
@@ -110,37 +117,92 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   # The rescheduled meeting keeps its meeting type, so the notice and window
   # rules re-checked here come from the same schedule the original booking used.
+  #
+  # The duration comes from the ORIGINAL meeting, never from `params`: a
+  # reschedule moves a meeting in time, it is not an opportunity to change its
+  # length, and `params.duration` is an attendee-supplied URL slug with no
+  # binding to what the meeting actually is (this stays true even when the
+  # meeting type has since been deleted and `fetch_meeting_type/3` falls back
+  # to `nil`).
+  #
+  # `ScheduleCheck`, however, is given the CURRENT meeting type's duration
+  # (`schedule_check_duration_minutes/2`) rather than the persisted one: the
+  # reschedule page's grid is stepped by the current meeting type's duration
+  # (`AvailabilityHelpers.duration_minutes/1`), so re-deriving the grid with a
+  # stale duration after a host edits the type would refuse slots the page
+  # just offered. Only the check's step size changes; the meeting's own
+  # duration, computed below via `duration_minutes`, never does.
   defp prepare_new_times(params, meeting) do
     organizer_user_id = meeting.organizer_user_id
-    meeting_type = fetch_meeting_type(meeting.meeting_type_id, organizer_user_id)
+
+    meeting_type =
+      fetch_meeting_type(meeting.meeting_type_id, organizer_user_id, meeting.duration)
+
+    duration_minutes = meeting.duration
+
+    schedule_check_duration_minutes =
+      schedule_check_duration_minutes(meeting_type, duration_minutes)
+
+    config = Policy.scheduling_config(organizer_user_id, meeting_type)
 
     with {:ok, {start_datetime, end_datetime}} <-
            Validation.parse_meeting_times(
              params.date,
              params.time,
-             params.duration,
+             duration_minutes,
              params.user_timezone
            ),
+         {:ok, date} <- Date.from_iso8601(params.date),
+         :ok <- Validation.validate_booking_time(start_datetime, params.user_timezone, config),
          :ok <-
-           Validation.validate_booking_time(
+           ScheduleCheck.validate_slot_on_schedule(
+             date,
              start_datetime,
+             schedule_check_duration_minutes,
              params.user_timezone,
-             Policy.scheduling_config(organizer_user_id, meeting_type)
+             config,
+             organizer_user_id
            ) do
       {:ok,
        %{
          start_time: start_datetime,
          end_time: end_datetime,
-         duration_minutes: TimeSlots.parse_duration(params.duration)
+         duration_minutes: duration_minutes
        }}
+    else
+      {:error, reason} when is_atom(reason) ->
+        {:error, Errors.classify_schedule_check_reason(reason) || reason}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
-  # Ad-hoc meetings carry no meeting type; a nil resolves the organiser's
-  # default schedule, which is the right rule set for them.
-  defp fetch_meeting_type(nil, _organizer_user_id), do: nil
+  # Mirrors `TymeslotWeb.Live.Scheduling.AvailabilityHelpers.duration_minutes/1`:
+  # the resolved meeting type's current duration is authoritative for grid
+  # generation, and only an unresolved type falls back to the persisted
+  # duration.
+  defp schedule_check_duration_minutes(%{duration_minutes: minutes}, _persisted_duration_minutes)
+       when is_integer(minutes),
+       do: minutes
 
-  defp fetch_meeting_type(meeting_type_id, organizer_user_id),
+  defp schedule_check_duration_minutes(_meeting_type, persisted_duration_minutes),
+    do: persisted_duration_minutes
+
+  # Ad-hoc meetings (no `meeting_type_id`) mirror the reschedule page's own
+  # fallback (`ThemeFlow.resolve_meeting_type_for_duration/2`): resolve by a
+  # duration match rather than jumping straight to the organiser's default
+  # schedule, so the enforcement side checks the same schedule the displayed
+  # grid was drawn from. Only when no type matches that duration does this
+  # resolve to `nil`, which in turn falls back to the default schedule.
+  defp fetch_meeting_type(nil, organizer_user_id, duration_minutes) do
+    duration_minutes
+    |> UrlDuration.format_for_url()
+    |> MeetingTypes.normalize_duration_slug()
+    |> then(&MeetingTypes.find_by_duration_string(organizer_user_id, &1))
+  end
+
+  defp fetch_meeting_type(meeting_type_id, organizer_user_id, _duration_minutes),
     do: MeetingTypes.get_meeting_type(meeting_type_id, organizer_user_id)
 
   defp update_meeting(meeting, attrs) do

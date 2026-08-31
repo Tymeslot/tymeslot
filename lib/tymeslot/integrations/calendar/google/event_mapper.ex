@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias Tymeslot.Utils.UrlBuilder
 
   @doc """
   Formats internal event data into a Google Calendar API event body.
@@ -49,8 +50,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   """
   @spec add_tymeslot_fingerprint(map()) :: map()
   def add_tymeslot_fingerprint(body) do
+    # The instance that created the event, not the hosted service: a
+    # self-hoster's Google events used to point their attendees at a site
+    # they have nothing to do with.
     Map.merge(body, %{
-      "source" => %{"title" => "Tymeslot", "url" => "https://tymeslot.app"},
+      "source" => %{"title" => "Tymeslot", "url" => UrlBuilder.base_url()},
       "extendedProperties" => %{"private" => %{"createdBy" => "tymeslot"}}
     })
   end

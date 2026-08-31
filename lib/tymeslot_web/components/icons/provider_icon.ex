@@ -153,21 +153,4 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   defp icon_pixels("medium"), do: 28
   defp icon_pixels("compact"), do: 24
   defp icon_pixels("mini"), do: 16
-
-  @doc """
-  Legacy video provider logo function for backwards compatibility.
-  Redirects to the unified provider_icon component.
-  """
-  attr :provider, :string, required: true
-  attr :size, :string, default: "large", values: ["compact", "large"]
-  attr :class, :string, default: ""
-
-  @spec video_provider_logo(map()) :: Phoenix.LiveView.Rendered.t()
-  def video_provider_logo(assigns) do
-    assigns = assign(assigns, :type, "video")
-
-    ~H"""
-    <.provider_icon provider={@provider} size={@size} class={@class} />
-    """
-  end
 end

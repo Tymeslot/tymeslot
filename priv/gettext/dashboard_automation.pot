@@ -113,7 +113,6 @@ msgstr ""
 msgid "Copy"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
@@ -166,7 +165,6 @@ msgstr ""
 msgid "Disabled"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -189,11 +187,7 @@ msgid "Event Subscriptions"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Events to Subscribe *"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr ""
@@ -287,12 +281,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Request timestamp"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Saving..."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
@@ -410,16 +398,19 @@ msgstr ""
 msgid "Total"
 msgstr ""
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr ""
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr ""
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -435,7 +426,6 @@ msgstr ""
 msgid "Unable to verify subscription status. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update Webhook"
@@ -471,13 +461,11 @@ msgstr ""
 msgid "Webhook Integration Guide"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Name"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
@@ -543,7 +531,6 @@ msgstr ""
 msgid "Your Webhooks"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "My n8n Automation"
@@ -569,4 +556,79 @@ msgstr[1] ""
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please slow down."
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Created"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Connection failed"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled: %{reason}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Failed: %{reason}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Still checking — please try again in a moment."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Succeeded"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The connection test took too long to respond"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected to a private or restricted address"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected too many times"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected without a destination address"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "URL resolves to a private or restricted address"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook returned status %{status}"
 msgstr ""

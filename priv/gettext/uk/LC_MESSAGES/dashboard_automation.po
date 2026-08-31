@@ -113,7 +113,6 @@ msgstr "Підключіть обліковий запис Stripe, щоб вик
 msgid "Copy"
 msgstr "Копіювати"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
@@ -166,7 +165,6 @@ msgstr "Видалити вебхук?"
 msgid "Disabled"
 msgstr "Вимкнено"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -189,11 +187,7 @@ msgid "Event Subscriptions"
 msgstr "Підписки на події"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Events to Subscribe *"
-msgstr "Події для підписки *"
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr "Помилка"
@@ -288,12 +282,6 @@ msgstr "Згенерувати новий токен?"
 #, elixir-autogen, elixir-format
 msgid "Request timestamp"
 msgstr "Час запиту"
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Saving..."
-msgstr "Збереження..."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -410,16 +398,19 @@ msgstr "Ця функція автоматизації доступна в та�
 msgid "Total"
 msgstr "Усього"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Спрацьовує, коли змінюється час бронювання"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Спрацьовує після успішного створення нового бронювання"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -435,7 +426,6 @@ msgstr "Не вдалося виконати цю дію. Спробуйте щ�
 msgid "Unable to verify subscription status. Please try again."
 msgstr "Не вдалося перевірити статус підписки. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update Webhook"
@@ -471,13 +461,11 @@ msgstr "Деталі вебхука"
 msgid "Webhook Integration Guide"
 msgstr "Посібник з інтеграції вебхуків"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Name"
 msgstr "Назва вебхука"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
@@ -543,7 +531,6 @@ msgstr "Що таке вебхуки?"
 msgid "Your Webhooks"
 msgstr "Ваші вебхуки"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "My n8n Automation"
@@ -571,3 +558,78 @@ msgstr[2] "Останні %{days} днів"
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Історія відправлень - %{name}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please slow down."
+msgstr "Забагато запитів. Будь ласка, зачекайте."
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled"
+msgstr "Зустріч скасовано"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Created"
+msgstr "Зустріч створено"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled"
+msgstr "Зустріч перенесено"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Connection failed"
+msgstr "Не вдалося підключитися"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled: %{reason}"
+msgstr "Вимкнено: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Failed: %{reason}"
+msgstr "Помилка: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Still checking — please try again in a moment."
+msgstr "Перевірка ще триває — спробуйте ще раз за хвилину."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Succeeded"
+msgstr "Успішно"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The connection test took too long to respond"
+msgstr "Тест з'єднання занадто довго не відповідав"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected to a private or restricted address"
+msgstr "Вебхук було перенаправлено на приватну або обмежену адресу"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected too many times"
+msgstr "Вебхук перенаправлявся занадто багато разів"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected without a destination address"
+msgstr "Вебхук було перенаправлено без цільової адреси"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "URL resolves to a private or restricted address"
+msgstr "URL-адреса вказує на приватну або обмежену адресу"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook returned status %{status}"
+msgstr "Вебхук повернув статус %{status}"

@@ -85,18 +85,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Lists all active user IDs in the system.
-  More efficient than loading full user records when only IDs are needed.
-  Returns a list of user IDs.
-  """
-  @spec list_all_user_ids() :: [integer()]
-  def list_all_user_ids do
-    UserSchema
-    |> select([u], u.id)
-    |> Repo.all()
-  end
-
-  @doc """
   Gets a user by provider and provider uid.
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
 
@@ -227,20 +215,86 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Returns `true` if at least one admin has a `password_hash` set — i.e. is
-  capable of signing in via email + password. Used by the lockout-protection
-  check in `Tymeslot.AppSettings` to refuse disabling password authentication
-  while any admin still depends on it.
+  Returns `true` if at least one admin can actually sign in with email +
+  password today.
+
+  Mirrors the gate `Tymeslot.Auth.Authentication.verify_user_password/2`
+  applies at login: a `password_hash` alone is not enough — the account must
+  also not be OAuth-only (`provider` is `nil`/`"email"`) and must be verified
+  (`verified_at` set), or the login attempt is rejected before the password
+  is even checked. Counting an admin who cannot pass that gate would let the
+  lockout guard in `Tymeslot.AppSettings.LockoutPolicy` permit disabling the
+  last working sign-in path. If `verify_user_password/2`'s conditions change,
+  this query must change with them.
   """
   @spec any_admin_uses_password_auth?(module()) :: boolean()
   def any_admin_uses_password_auth?(repo \\ Repo) do
     repo.exists?(
       from(u in UserSchema,
-        where: u.is_admin and not is_nil(u.password_hash),
+        where:
+          u.is_admin and
+            not is_nil(u.password_hash) and
+            not is_nil(u.verified_at) and
+            (is_nil(u.provider) or u.provider == "email"),
         select: 1,
         limit: 1
       )
     )
+  end
+
+  @doc """
+  Counts admins, other than `excluded_user_id`, who can actually sign in
+  today: password-capable per `any_admin_uses_password_auth?/1`'s criteria,
+  or authenticated via one of `usable_sso_providers` (`:google`, `:github`,
+  `:oauth`).
+
+  `usable_sso_providers` is data, not a config lookup: callers (see
+  `Tymeslot.Release.check_last_admin/2`) pass only the providers already
+  confirmed enabled *and* credential-configured system-wide, mirroring
+  `Tymeslot.AppSettings.LockoutPolicy`'s "usable auth path" definition. This
+  keeps the query module free of `AppSettings` reads while still refusing to
+  count an SSO identity nobody can currently use to log in.
+
+  Used to guard demoting the last admin: counting bare `is_admin` rows (as
+  `count_admins/1` does) would let an operator demote the only admin who can
+  actually authenticate, as long as some other `is_admin` row happens to
+  exist without a usable sign-in path.
+  """
+  @spec count_signin_capable_admins_excluding(integer(), [atom()], module()) :: non_neg_integer()
+  def count_signin_capable_admins_excluding(
+        excluded_user_id,
+        usable_sso_providers \\ [],
+        repo \\ Repo
+      ) do
+    password_capable =
+      dynamic(
+        [u],
+        not is_nil(u.password_hash) and not is_nil(u.verified_at) and
+          (is_nil(u.provider) or u.provider == "email")
+      )
+
+    sso_capable = sso_capable_condition(usable_sso_providers)
+
+    condition =
+      dynamic(
+        [u],
+        u.is_admin and u.id != ^excluded_user_id and (^password_capable or ^sso_capable)
+      )
+
+    repo.aggregate(
+      from(u in UserSchema, where: ^condition),
+      :count,
+      :id
+    )
+  end
+
+  defp sso_capable_condition(usable_sso_providers) do
+    Enum.reduce(usable_sso_providers, dynamic(false), fn
+      :google, acc -> dynamic([u], ^acc or not is_nil(u.google_user_id))
+      :github, acc -> dynamic([u], ^acc or not is_nil(u.github_user_id))
+      :oauth, acc -> dynamic([u], ^acc or (u.provider == "oauth" and not is_nil(u.provider_uid)))
+      _other, acc -> acc
+    end)
   end
 
   @doc """
@@ -362,17 +416,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Updates a user's email.
-  """
-  @spec update_user_email(UserSchema.t(), String.t()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_user_email(%UserSchema{} = user, new_email) do
-    user
-    |> UserSchema.changeset(%{email: new_email})
-    |> Repo.update()
-  end
-
-  @doc """
   Updates a user's password with confirmation.
   """
   @spec update_user_password(UserSchema.t(), String.t(), String.t()) ::
@@ -451,24 +494,6 @@ defmodule Tymeslot.Auth.UserQueries do
     query = from(u in UserSchema, where: u.id == ^user_id)
     Repo.update_all(query, set: [last_active_at: DateTime.utc_now(:second)])
     :ok
-  end
-
-  @doc """
-  Gets a user by ID with profile preloaded.
-  """
-  @spec get_user_with_profile!(integer()) :: UserSchema.t()
-  def get_user_with_profile!(id) do
-    UserSchema
-    |> Repo.get!(id)
-    |> Repo.preload(:profile)
-  end
-
-  @doc """
-  Preloads profile for a user.
-  """
-  @spec preload_profile(UserSchema.t()) :: UserSchema.t()
-  def preload_profile(%UserSchema{} = user) do
-    Repo.preload(user, :profile)
   end
 
   @doc """

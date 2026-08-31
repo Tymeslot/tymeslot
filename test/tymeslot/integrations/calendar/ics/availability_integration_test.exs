@@ -5,7 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
   a client built by `Ics.Provider.new/1` (the config `build_client_configs/1`
   produces never reaches `list_events/2` directly — `ProviderRegistry`
   round-trips it through `new/1` first), and the cached event coming back out
-  through the real fan-out (`Runtime.EventQueries`) rather than a unit test
+  through the real fan-out (`Runtime.EventFetcher`) rather than a unit test
   calling `Provider.list_events/2` with a hand-built client.
 
   A regression that stops `new/1` threading `calendar_integration_id` through
@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
 
   alias Tymeslot.Integrations.Calendar.Ics.Provider, as: IcsProvider
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
-  alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Security.Encryption
 
   @feed_url "https://feeds.example.com/secret-address/team.ics"
@@ -76,7 +76,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
   describe "the subscribed feed's cached events block availability" do
     test "the cached event reaches the real read path end-to-end", %{user: user} do
       assert {:ok, events} =
-               EventQueries.get_events_for_range_fresh(user.id, ~D[2026-08-01], ~D[2026-08-20])
+               EventFetcher.get_events_for_range_fresh(user.id, ~D[2026-08-01], ~D[2026-08-20])
 
       assert Enum.any?(events, &(&1.uid == "blocked-slot@example.com"))
     end
@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.AvailabilityIntegrationTest do
       user: user
     } do
       assert {:ok, events} =
-               EventQueries.get_events_for_range_fresh(user.id, ~D[2026-09-01], ~D[2026-09-30])
+               EventFetcher.get_events_for_range_fresh(user.id, ~D[2026-09-01], ~D[2026-09-30])
 
       refute Enum.any?(events, &(&1.uid == "blocked-slot@example.com"))
     end

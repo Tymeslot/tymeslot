@@ -10,14 +10,14 @@ defmodule Tymeslot.Auth.Registration do
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter, SecurityLogger}
   alias TymeslotWeb.Helpers.ClientIP
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
 
   # Use function instead of compile-time module attribute to allow test-time mocking
   defp verification_module,
-    do: Application.get_env(:auth, :verification_module, Tymeslot.Auth.Verification)
+    do: Application.get_env(:tymeslot, :verification_module, Tymeslot.Auth.Verification)
 
   @doc """
   Registers a new user with the provided parameters.
@@ -41,7 +41,7 @@ defmodule Tymeslot.Auth.Registration do
           {:ok, term(), String.t()} | {:error, atom(), String.t()} | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     with {:ok, validated_params} <- validate_input(params),
-         :ok <- check_rate_limit(params["email"], socket_or_conn, opts),
+         :ok <- check_rate_limit(validated_params["email"], socket_or_conn, opts),
          {:ok, user} <- create_and_verify_user(validated_params, socket_or_conn, opts) do
       {:ok, user,
        dgettext(
@@ -98,7 +98,15 @@ defmodule Tymeslot.Auth.Registration do
       :ok
     else
       ip = ClientIP.get(socket_or_conn)
-      RateLimiter.check_signup_rate_limit(email, ip)
+
+      case RateLimiter.check_signup_rate_limit(email, ip) do
+        :ok ->
+          :ok
+
+        {:error, :rate_limited, message} ->
+          SecurityLogger.log_rate_limit_violation(email, "signup", %{ip_address: ip})
+          {:error, :rate_limited, message}
+      end
     end
   end
 

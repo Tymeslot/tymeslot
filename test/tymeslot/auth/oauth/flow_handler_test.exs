@@ -21,6 +21,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   alias Plug.Test, as: PlugTest
   alias Tymeslot.Auth.OAuth.{Client, FlowHandler, State, URLs, UserProcessor, UserRegistration}
   alias Tymeslot.Auth.Session
+  alias Tymeslot.Test.LogCapture
 
   setup do
     modules = [Client, State, URLs, UserProcessor, UserRegistration, Session]
@@ -200,6 +201,127 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     end)
 
     assert {:error, :general_error, :github, _conn} = invoke_github_callback()
+  end
+
+  # SecurityLogger emits at :info while config/test.exs pins the primary level
+  # to :warning, so it has to come down for the duration. Safe: async: false.
+  defp capture_at_info(fun) do
+    LogCapture.with_capture([logger_level: :info], fun)
+  end
+
+  defp social_auth_events do
+    LogCapture.drain()
+    |> Enum.map(&LogCapture.user_metadata/1)
+    |> Enum.filter(&(&1[:event_type] in ["social_auth_success", "social_auth_failure"]))
+  end
+
+  describe "social auth auditing" do
+    test "logs a success naming the provider and the masked account" do
+      setup_existing_user_flow_mocks()
+
+      :meck.expect(UserRegistration, :find_existing_user, fn :github, _user ->
+        {:ok, %{id: 987, email: "user@example.com"}}
+      end)
+
+      :meck.expect(Session, :create_session, fn conn, %{id: 987} -> {:ok, conn, "token"} end)
+
+      capture_at_info(fn -> assert {:ok, _conn, :github} = invoke_github_callback() end)
+
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_success"
+      assert event.provider == "github"
+      assert event.email_masked == "u***@example.com"
+      assert event.ip_address == "127.0.0.1"
+      refute inspect(event) =~ "user@example.com"
+    end
+
+    test "logs a failure when the CSRF state is invalid or missing" do
+      :meck.expect(State, :validate_state, fn _conn, "state" -> {:error, :invalid_state} end)
+
+      capture_at_info(fn ->
+        assert {:error, :invalid_state, _conn} = invoke_github_callback()
+      end)
+
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_failure"
+      assert event.provider == "github"
+      assert event.email_masked == nil
+    end
+
+    test "logs a failure when the token exchange fails, without the OAuth code" do
+      setup_pre_exchange_mocks()
+
+      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
+        {:error, :timeout}
+      end)
+
+      capture_at_info(fn ->
+        assert {:error, :general_error, :github, _conn} = invoke_github_callback()
+      end)
+
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_failure"
+      assert event.provider == "github"
+    end
+
+    test "logs a failure when session creation fails after a successful OAuth" do
+      setup_existing_user_flow_mocks()
+
+      :meck.expect(UserRegistration, :find_existing_user, fn :github, _user ->
+        {:ok, %{id: 987, email: "user@example.com"}}
+      end)
+
+      :meck.expect(Session, :create_session, fn _conn, %{id: 987} ->
+        {:error, :db_error, "failed"}
+      end)
+
+      capture_at_info(fn ->
+        assert {:error, :session_failed, :github, _conn} = invoke_github_callback()
+      end)
+
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_failure"
+      assert event.provider == "github"
+      assert event.email_masked == "u***@example.com"
+    end
+
+    test "does not log a failure when a new user is routed to registration" do
+      user_info = %{"id" => 123}
+      processed_user = %{email: nil, github_user_id: 123, name: "New User", is_verified: false}
+      enhanced_user = Map.put(processed_user, :email_from_provider, false)
+
+      setup_pre_exchange_mocks()
+
+      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
+        {:ok, :authed_client}
+      end)
+
+      :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
+
+      :meck.expect(UserProcessor, :process_user, fn :github, ^user_info ->
+        {:ok, processed_user}
+      end)
+
+      :meck.expect(UserProcessor, :enhance_user_data, fn :github,
+                                                         ^processed_user,
+                                                         :authed_client ->
+        enhanced_user
+      end)
+
+      :meck.expect(UserRegistration, :find_existing_user, fn :github, ^enhanced_user ->
+        {:error, :not_found}
+      end)
+
+      :meck.expect(UserRegistration, :check_oauth_requirements, fn :github, ^enhanced_user ->
+        {:missing, [:email]}
+      end)
+
+      capture_at_info(fn ->
+        assert {:registration_required, _conn, :github, _data} = invoke_github_callback()
+      end)
+
+      assert social_auth_events() == []
+    end
   end
 
   describe "generic OAuth (:oauth) provider flow" do

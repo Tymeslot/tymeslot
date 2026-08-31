@@ -96,9 +96,6 @@ defmodule Tymeslot.Validation.Constraints do
 
   # Field lengths
 
-  @spec email_max_length() :: pos_integer()
-  def email_max_length, do: 254
-
   @spec name_length_range() :: Range.t()
   def name_length_range, do: 1..100
 

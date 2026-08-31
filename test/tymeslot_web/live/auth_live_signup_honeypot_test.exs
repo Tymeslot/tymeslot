@@ -5,6 +5,7 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
 
   @moduledoc """
   Tests for honeypot-based bot detection in signup flow.
@@ -85,8 +86,14 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
       for _tick <- 1..60, do: send(view.pid, :resend_cooldown_tick)
     end)
 
-    html = render_hook(view, "resend_verification", %{})
+    html =
+      LogCapture.with_capture([logger_level: :info], fn ->
+        render_hook(view, "resend_verification", %{})
+      end)
 
     assert html =~ "Too many email verification attempts. Please try again later."
+
+    assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+    assert meta.limit_type == "email_verification_honeypot"
   end
 end

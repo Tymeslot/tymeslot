@@ -7,7 +7,7 @@ defmodule Tymeslot.Bookings.Create do
   require Logger
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -71,7 +71,6 @@ defmodule Tymeslot.Bookings.Create do
   def execute(meeting_params, form_data, opts \\ []) do
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          :ok <- validate_custom_field_answers(booking_data),
-         booking_data = put_meeting_type_record(booking_data),
          {:ok, :validated} <- validate_booking(booking_data, opts) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
     else
@@ -91,10 +90,11 @@ defmodule Tymeslot.Bookings.Create do
 
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          :ok <- validate_custom_field_answers(booking_data) do
-      booking_data = put_meeting_type_record(booking_data)
+      booking_data = put_scheduling_config(booking_data)
+      config = scheduling_config(booking_data)
 
       # Try calendar pre-check for better UX
-      case fresh_calendar_check(booking_data) do
+      case fresh_calendar_check(booking_data, config) do
         :ok ->
           # Calendar shows available, proceed normally
           execute_internal(booking_data, form_data, opts)
@@ -125,24 +125,33 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp prepare_booking_data(meeting_params, form_data) do
+    # The duration used to compute the slot and to gate ScheduleCheck's
+    # granularity comes from the resolved meeting type, never the request,
+    # whenever a type is known — mirroring Reschedule, which pins duration to
+    # the persisted meeting rather than trusting `params.duration`. Only an
+    # unresolvable type (ad-hoc booking, or one that fails
+    # `validate_meeting_type_active/1` a few steps later) falls back to the
+    # client-supplied value.
+    meeting_type = resolve_meeting_type_for_duration(meeting_params)
+    duration_minutes = effective_duration_minutes(meeting_params, meeting_type)
+
     with {:ok, date_string} <- normalize_date_input(meeting_params.date),
          {:ok, {start_datetime, end_datetime}} <-
            Validation.parse_meeting_times(
              date_string,
              meeting_params.time,
-             meeting_params.duration,
+             duration_minutes,
              meeting_params.user_timezone
            ),
          {:ok, date} <- Date.from_iso8601(date_string) do
       meeting_uid = UUID.uuid4()
-
-      duration_minutes = TimeSlots.parse_duration(meeting_params.duration)
 
       booking_data = %{
         meeting_uid: meeting_uid,
         start_datetime: start_datetime,
         end_datetime: end_datetime,
         duration_minutes: duration_minutes,
+        meeting_type: meeting_type,
         user_timezone: meeting_params.user_timezone,
         form_data: form_data,
         date: date,
@@ -173,6 +182,22 @@ defmodule Tymeslot.Bookings.Create do
 
   defp default_locale, do: Locales.default_locale()
 
+  defp resolve_meeting_type_for_duration(meeting_params) do
+    type_id = Map.get(meeting_params, :meeting_type_id)
+    user_id = Map.get(meeting_params, :organizer_user_id)
+
+    if is_integer(type_id) and is_integer(user_id) do
+      MeetingTypes.get_meeting_type(type_id, user_id)
+    end
+  end
+
+  defp effective_duration_minutes(_meeting_params, %{duration_minutes: minutes})
+       when is_integer(minutes),
+       do: minutes
+
+  defp effective_duration_minutes(meeting_params, _unresolved_type),
+    do: TimeSlots.parse_duration(meeting_params.duration)
+
   defp normalize_date_input(%Date{} = date), do: {:ok, Date.to_iso8601(date)}
   defp normalize_date_input(date) when is_binary(date), do: {:ok, date}
   defp normalize_date_input(_arg), do: {:error, :invalid_date_input}
@@ -188,7 +213,7 @@ defmodule Tymeslot.Bookings.Create do
       user_id ->
         # Meeting type active check
         with :ok <- validate_meeting_type_active(booking_data) do
-          config = Policy.scheduling_config(user_id, booking_data.meeting_type)
+          config = scheduling_config(booking_data)
 
           # Time window validation
           with :ok <-
@@ -197,6 +222,7 @@ defmodule Tymeslot.Bookings.Create do
                    booking_data.user_timezone,
                    config
                  ),
+               :ok <- validate_slot_on_schedule(booking_data, config),
                :ok <- validate_booking_limits(booking_data, user_id) do
             # Optional fresh calendar validation
             if Keyword.get(opts, :skip_calendar_check, false) do
@@ -209,9 +235,9 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  # Reads the record resolved by put_meeting_type_record/1 — a nil record
-  # with a meeting_type_id set means the type doesn't exist (or belongs to
-  # another host).
+  # Reads the record resolved by resolve_meeting_type_for_duration/1 (called
+  # from prepare_booking_data/2) — a nil record with a meeting_type_id set
+  # means the type doesn't exist (or belongs to another host).
   defp validate_meeting_type_active(%{meeting_type_id: nil}), do: :ok
   defp validate_meeting_type_active(%{meeting_type: %{is_active: true}}), do: :ok
 
@@ -219,6 +245,22 @@ defmodule Tymeslot.Bookings.Create do
     do: {:error, :meeting_type_inactive}
 
   defp validate_meeting_type_active(%{meeting_type: nil}), do: {:error, :meeting_type_not_found}
+
+  # A direct load of `/:username/:slug/book` performs no step transition, so
+  # none of the booking page's own guards on the offered slots ever run for
+  # it. The schedule's windows and breaks are therefore re-derived here rather
+  # than trusted from the submitted date and time. Conflicts are not this
+  # check's business: `validate_calendar_availability/2` owns those.
+  defp validate_slot_on_schedule(booking_data, config) do
+    ScheduleCheck.validate_slot_on_schedule(
+      booking_data.date,
+      booking_data.start_datetime,
+      booking_data.duration_minutes,
+      booking_data.user_timezone,
+      config,
+      booking_data.organizer_user_id
+    )
+  end
 
   # Fast pre-check with a friendly error before any side-effect setup. The
   # race-safe check runs again inside the booking transaction
@@ -233,8 +275,8 @@ defmodule Tymeslot.Bookings.Create do
     )
   end
 
-  defp validate_calendar_availability(booking_data, _config) do
-    case fresh_calendar_check(booking_data) do
+  defp validate_calendar_availability(booking_data, config) do
+    case fresh_calendar_check(booking_data, config) do
       :ok ->
         {:ok, :validated}
 
@@ -272,7 +314,7 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp fresh_calendar_check(booking_data) do
+  defp fresh_calendar_check(booking_data, config) do
     %{start_datetime: start_datetime, end_datetime: end_datetime, date: date} = booking_data
 
     case Map.get(booking_data, :organizer_user_id) do
@@ -294,7 +336,7 @@ defmodule Tymeslot.Bookings.Create do
               start_datetime,
               end_datetime,
               events,
-              Policy.scheduling_config(organizer_user_id, Map.get(booking_data, :meeting_type))
+              config
             )
 
           {:ok, {:error, reason}} ->
@@ -323,7 +365,6 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
-    booking_data = put_meeting_type_record(booking_data)
     meeting_attrs = Policy.build_meeting_attributes(BuildParams.new(booking_data))
 
     if paid_meeting_type?(booking_data) do
@@ -340,25 +381,32 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  # Resolves the meeting-type record once up front and stashes it on
-  # `booking_data`, so the active/limits validations and the paid? and
-  # guests-allowed? predicates (the latter running inside the booking
-  # transaction) read it from memory instead of each issuing its own
-  # identical query.
-  defp put_meeting_type_record(%{meeting_type: _record} = booking_data), do: booking_data
-
-  defp put_meeting_type_record(%{meeting_type_id: nil} = booking_data) do
-    Map.put(booking_data, :meeting_type, nil)
+  # The scheduling policy is derived from a profile lookup and a schedule
+  # lookup, and three separate checks need it: the booking window, the
+  # schedule's own slots, and the calendar conflict check. `execute_with_video_room/3`
+  # needs it ahead of `validate_booking/2` for its calendar pre-check, so it
+  # resolves eagerly here; `execute/3` has no such early need and instead lets
+  # `validate_booking/2` resolve it lazily via `scheduling_config/1`, once the
+  # meeting-type-active guard has passed, so an invalid meeting type never
+  # pays for a profile/schedule lookup it can't use.
+  defp put_scheduling_config(booking_data) do
+    Map.put_new_lazy(booking_data, :scheduling_config, fn ->
+      derive_scheduling_config(booking_data)
+    end)
   end
 
-  defp put_meeting_type_record(
-         %{meeting_type_id: type_id, organizer_user_id: user_id} = booking_data
-       )
-       when is_integer(user_id) do
-    Map.put(booking_data, :meeting_type, MeetingTypes.get_meeting_type(type_id, user_id))
+  defp scheduling_config(booking_data) do
+    Map.get_lazy(booking_data, :scheduling_config, fn ->
+      derive_scheduling_config(booking_data)
+    end)
   end
 
-  defp put_meeting_type_record(booking_data), do: Map.put(booking_data, :meeting_type, nil)
+  defp derive_scheduling_config(booking_data) do
+    Policy.scheduling_config(
+      Map.get(booking_data, :organizer_user_id),
+      Map.get(booking_data, :meeting_type)
+    )
+  end
 
   defp paid_meeting_type?(%{meeting_type: %{payment_required: true}}), do: true
   defp paid_meeting_type?(_other), do: false
@@ -435,7 +483,10 @@ defmodule Tymeslot.Bookings.Create do
   # collapses to `:slot_taken` because we could not read the organiser's full busy
   # set and so cannot prove the slot is free — the booker gets the same "pick
   # another slot" outcome as a genuine clash, and the distinction survives in the
-  # logs rather than the copy.
+  # logs rather than the copy. `ScheduleCheck`'s own reasons
+  # (`:slot_not_offered`, `:slot_availability_unverifiable`) are deliberately
+  # absent here: they are classified once, in `Errors.classify_schedule_check_reason/1`,
+  # shared with `Reschedule`, rather than duplicated in this table.
   @error_classifications %{
     meeting_type_inactive: :meeting_type_inactive,
     meeting_type_not_found: :meeting_type_not_found,
@@ -456,6 +507,11 @@ defmodule Tymeslot.Bookings.Create do
 
   defp classify_error({:custom_field_errors, _errors}), do: :custom_field_errors
   defp classify_error({:checkout_failed, _reason}), do: :checkout_failed
+
+  defp classify_error(reason) when is_atom(reason) do
+    Errors.classify_schedule_check_reason(reason) || :booking_failed
+  end
+
   defp classify_error(reason) when is_binary(reason), do: reason
   defp classify_error(_other), do: :booking_failed
 

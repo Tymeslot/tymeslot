@@ -18,7 +18,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -41,10 +41,21 @@ defmodule Tymeslot.Auth.PasswordReset do
     ip = extract_ip_from_opts(opts)
 
     with {:ok, validated_email} <- validate_email_format(email),
-         :ok <- RateLimiter.check_password_reset_rate_limit(validated_email, ip) do
+         :ok <- check_reset_rate_limit(validated_email, ip) do
       process_password_reset_secure(validated_email, user_queries)
     else
       {:error, reason, message} -> {:error, reason, message}
+    end
+  end
+
+  defp check_reset_rate_limit(email, ip) do
+    case RateLimiter.check_password_reset_rate_limit(email, ip) do
+      :ok ->
+        :ok
+
+      {:error, :rate_limited, message} ->
+        SecurityLogger.log_rate_limit_violation(email, "password_reset", %{ip_address: ip})
+        {:error, :rate_limited, message}
     end
   end
 
@@ -59,7 +70,10 @@ defmodule Tymeslot.Auth.PasswordReset do
       _other ->
         # Always return the same message for non-OAuth cases to prevent user enumeration
         {:ok, :reset_initiated,
-         "If an account exists with this email address, password reset instructions have been sent."}
+         dgettext(
+           "auth",
+           "If an account exists with this email address, password reset instructions have been sent."
+         )}
     end
   end
 
@@ -97,8 +111,11 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
+  # `:ip_address` is the canonical key (matches `PasswordUpdate.update_user_password/5`'s
+  # convention, and what the audit entry itself is keyed under); `:ip` is
+  # accepted too since `AuthActions` still passes it for this flow's callers.
   defp extract_ip_from_opts(opts) do
-    opts[:ip] ||
+    opts[:ip_address] || opts[:ip] ||
       case opts[:socket_or_conn] do
         nil -> nil
         soc -> ClientIP.get(soc)
@@ -254,7 +271,8 @@ defmodule Tymeslot.Auth.PasswordReset do
     - token: String.t() (password reset token)
     - new_password: String.t() (new password)
     - password_confirmation: String.t() (password confirmation)
-    - opts: Keyword list
+    - opts: Keyword list; `:ip_address` (or `:ip`) and `:user_agent` are recorded on the audit
+      entry the completed reset emits
 
   ## Returns
     - {:ok, user, message} on success
@@ -263,11 +281,17 @@ defmodule Tymeslot.Auth.PasswordReset do
   @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, map(), String.t()}
           | {:error, atom(), String.t()}
-  def reset_password(token, new_password, password_confirmation, _opts \\ []) do
+  def reset_password(token, new_password, password_confirmation, opts \\ []) do
     case consume_and_update(token, new_password, password_confirmation) do
       {:ok, updated_user} ->
         AccountLogging.log_password_reset(updated_user, "completed")
         :ok = invalidate_all_sessions(updated_user)
+
+        SecurityLogger.log_password_change(updated_user.id, %{
+          ip_address: extract_ip_from_opts(opts),
+          user_agent: opts[:user_agent],
+          sessions_invalidated: true
+        })
 
         {:ok, Map.from_struct(updated_user),
          dgettext("auth", "Your password has been reset successfully")}

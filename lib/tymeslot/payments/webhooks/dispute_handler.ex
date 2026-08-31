@@ -85,7 +85,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
             dispute: dispute
           })
 
-          Logger.info("DISPUTE FORWARDED - Subscription dispute sent to SaaS",
+          Logger.info("DISPUTE FORWARDED - Subscription dispute broadcast to subscribers",
             dispute_id: dispute_id,
             charge_id: charge_id
           )
@@ -297,32 +297,50 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     email = get_admin_email()
     template = Application.get_env(:tymeslot, :dispute_alert_template)
 
-    if template && Code.ensure_loaded?(template) do
-      email_struct = apply(template, template_fun, [email, data])
+    cond do
+      is_nil(template) or not Code.ensure_loaded?(template) ->
+        Logger.debug("Dispute alert template not configured (Standalone mode)")
+        :ok
 
-      case Mailer.deliver(email_struct) do
-        {:ok, _result} ->
-          Logger.info("Dispute email sent", template: template_fun, email: email)
-          :ok
+      email in [nil, ""] ->
+        Logger.error(
+          "Dispute alert template is configured but no admin alert address is set; " <>
+            "set ADMIN_ALERT_EMAIL to receive dispute alerts",
+          template: template_fun
+        )
 
-        {:error, reason} ->
-          Logger.error("Failed to send dispute email",
-            template: template_fun,
-            reason: inspect(reason)
-          )
+        :ok
 
-          :ok
-      end
-    else
-      Logger.debug("Dispute alert template not configured (Standalone mode)")
-      :ok
+      true ->
+        do_deliver_dispute_email(template, template_fun, email, data)
     end
   end
 
+  defp do_deliver_dispute_email(template, template_fun, email, data) do
+    email_struct = apply(template, template_fun, [email, data])
+
+    case Mailer.deliver(email_struct) do
+      {:ok, _result} ->
+        Logger.info("Dispute email sent", template: template_fun, email: email)
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to send dispute email",
+          template: template_fun,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  # `:admin_email` was declared in no config file, so the fallback was always
+  # what shipped — a hosted-service address baked into the open-source core.
+  # `:admin_alert_email` is the key this codebase actually declares and
+  # documents for operator alerts (`config.exs`, `runtime.exs`), and an overlay
+  # that wants a different address sets that one.
   defp get_admin_email do
-    # Get admin email from configuration
-    # Default to support@tymeslot.app if not configured
-    Application.get_env(:tymeslot, :admin_email) || "support@tymeslot.app"
+    Application.get_env(:tymeslot, :admin_alert_email)
   end
 
   defp stripe_provider do

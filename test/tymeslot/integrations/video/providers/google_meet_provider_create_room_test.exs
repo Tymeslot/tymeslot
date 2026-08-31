@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox
@@ -82,7 +82,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         {:ok, %Req.Response{status: 403, body: ~s({"error":{"status":"SERVICE_DISABLED"}})}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
+      assert {:error, {:http_error, 403, message}} =
+               GoogleMeetProvider.create_meeting_room(config)
+
       assert message =~ "HTTP 403"
     end
 
@@ -185,6 +187,65 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
     end
   end
 
+  # Pins the circuit-breaker split from `ProviderAdapter`: a per-tenant
+  # credential failure during token refresh must never reach
+  # `finish_create_meeting_room/2` (and so never count against the shared
+  # Google Meet breaker), while a provider-host failure during refresh still
+  # needs to reach it.
+  describe "precheck_create_meeting_room/1" do
+    test "bypasses the breaker on a rejected/expired grant" do
+      config = %{
+        access_token: "expired",
+        refresh_token: "refresh_token",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
+      }
+
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil ->
+        {:error, "Token refresh failed: invalid_grant"}
+      end)
+
+      assert {:error, "Failed to refresh token: Token refresh failed: invalid_grant"} =
+               GoogleMeetProvider.precheck_create_meeting_room(config)
+    end
+
+    test "lets the breaker witness a network/5xx failure from the OAuth host" do
+      config = %{
+        access_token: "expired",
+        refresh_token: "refresh_token",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
+      }
+
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil ->
+        {:error, "Network error during token refresh: timeout"}
+      end)
+
+      assert {:provider_error,
+              "Failed to refresh token: Network error during token refresh: timeout"} =
+               GoogleMeetProvider.precheck_create_meeting_room(config)
+    end
+
+    test "returns {:ok, config} for a still-valid token, doing no refresh" do
+      config = valid_token_config()
+
+      assert {:ok, ^config} = GoogleMeetProvider.precheck_create_meeting_room(config)
+    end
+  end
+
+  describe "finish_create_meeting_room/2" do
+    test "makes the outbound Meet API call with the already-resolved config" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :post, url, _body, headers, _opts ->
+        assert url == "https://meet.googleapis.com/v2/spaces"
+        assert {"Authorization", "Bearer valid_token"} in headers
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(space_response())}}
+      end)
+
+      assert {:ok, room_data} = GoogleMeetProvider.finish_create_meeting_room(config, config)
+      assert room_data.room_id == "NgPxrxVDQF8B"
+    end
+  end
+
   describe "delete_meeting_room/2" do
     test "ends the active conference for the given space id" do
       config = valid_token_config()
@@ -230,7 +291,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         {:ok, %Req.Response{status: 500, body: "boom"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
+      assert {:error, {:http_error, 500, message}} =
+               GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
+
       assert message =~ "HTTP 500"
     end
   end

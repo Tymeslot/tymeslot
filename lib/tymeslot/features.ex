@@ -81,4 +81,27 @@ defmodule Tymeslot.Features do
 
     {:error, :feature_access_checker_failed}
   end
+
+  @doc """
+  Whether the host may see and configure meeting payments.
+
+  `{:error, :stripe_required}` counts as allowed: the plan includes the feature
+  and the host simply has not connected a charges-enabled Stripe account yet,
+  so the settings must stay reachable for them to connect one. Whether a price
+  may actually be *persisted* without a live account is a separate question,
+  answered by the meeting-type changeset.
+
+  Four call sites — the dashboard init hook, the integrations hub, the payments
+  controller and the meeting-type form — each carried their own copy of this
+  decision and cited three different, mutually inconsistent authorities for it,
+  one of which holds no gate at all. This is the authority.
+  """
+  @spec meeting_payments_allowed?(integer()) :: boolean()
+  def meeting_payments_allowed?(user_id) do
+    case check_access(user_id, :meeting_payments) do
+      :ok -> true
+      {:error, :stripe_required} -> true
+      _denied -> false
+    end
+  end
 end

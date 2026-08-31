@@ -9,15 +9,9 @@ defmodule Tymeslot.Emails.Shared.Cards do
   """
 
   alias Tymeslot.Emails.Shared.{Sanitise, Styles}
-  alias Tymeslot.Security.{UniversalSanitizer, UrlValidation}
+  alias Tymeslot.Security.UniversalSanitizer
 
   @type info_item :: %{required(:label) => String.t(), required(:value) => String.t()}
-
-  @type action_item :: %{
-          required(:text) => String.t(),
-          required(:url) => String.t(),
-          optional(:color) => atom()
-        }
 
   @type contact_row :: %{
           required(:label) => String.t(),
@@ -177,51 +171,6 @@ defmodule Tymeslot.Emails.Shared.Cards do
   end
 
   def quick_info_grid(_items), do: ""
-
-  @doc """
-  A row of footer actions — text links separated by a middle dot, centred,
-  with muted colour.
-  """
-  @spec footer_actions(list(action_item())) :: String.t()
-  def footer_actions([_head | _tail] = actions) do
-    separator = ~s(<span style="color: #{Styles.ink_whisper()}; padding: 0 8px;">·</span>)
-
-    action_links =
-      Enum.map_join(actions, separator, fn action ->
-        color =
-          case Map.get(action, :color, :secondary) do
-            :danger -> Styles.intent_accent_deep(:cancelled)
-            _other -> Styles.ink_muted()
-          end
-
-        safe_text = Sanitise.sanitize_for_email(action.text)
-
-        safe_url =
-          case UrlValidation.validate_http_url(action.url) do
-            :ok -> Sanitise.sanitize_for_email(action.url)
-            _error -> "#"
-          end
-
-        ~s(<a href="#{safe_url}" style="color: #{color}; text-decoration: none; font-weight: 600;">#{safe_text}</a>)
-      end)
-
-    """
-    <mj-section padding="14px 0 4px 0">
-      <mj-column>
-        <mj-text
-          align="center"
-          font-size="13px"
-          color="#{Styles.ink_muted()}"
-          letter-spacing="0.02em"
-        >
-          #{action_links}
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    """
-  end
-
-  def footer_actions(_actions), do: ""
 
   defp resolve_row_value(%{value: {:safe, html}}), do: html
   defp resolve_row_value(%{value: value, safe_html: true}), do: value

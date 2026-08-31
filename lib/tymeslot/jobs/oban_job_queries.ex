@@ -31,8 +31,10 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   duplicate-prevention check in agreement with Oban's `unique: [states: ...]`
   guards on the workers.
   """
-  @spec count_active_maintenance_jobs(String.t()) :: non_neg_integer()
-  def count_active_maintenance_jobs(worker_name) do
+  @spec count_active_maintenance_jobs(module() | String.t()) :: non_neg_integer()
+  def count_active_maintenance_jobs(worker) do
+    worker_name = normalize_worker_name(worker)
+
     query =
       from(j in Job,
         where: j.worker == ^worker_name,
@@ -55,8 +57,12 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   Useful for workers that must avoid enqueueing additional actions for a user
   while any related action is still pending.
   """
-  @spec user_ids_with_pending_jobs_for_actions(String.t(), [String.t()]) :: [integer()]
-  def user_ids_with_pending_jobs_for_actions(worker_name, actions) do
+  @spec user_ids_with_pending_jobs_for_actions(module() | String.t(), [String.t()]) :: [
+          integer()
+        ]
+  def user_ids_with_pending_jobs_for_actions(worker, actions) do
+    worker_name = normalize_worker_name(worker)
+
     Repo.all(
       from(j in Job,
         where: j.worker == ^worker_name,
@@ -101,45 +107,13 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
-  Deletes old jobs in terminal states (completed, discarded, cancelled).
-  Returns {deleted_count, nil}.
-  """
-  @spec delete_old_terminal_jobs(DateTime.t()) :: {non_neg_integer(), nil}
-  def delete_old_terminal_jobs(cutoff_date) do
-    Repo.delete_all(
-      from(j in Job,
-        where: j.state in ["completed", "discarded", "cancelled"],
-        where: j.inserted_at < ^cutoff_date
-      )
-    )
-  end
-
-  @doc """
-  Acknowledges pending reminder jobs for a meeting.
-  Reminder emails re-fetch meeting data at send time, so no job updates are required.
-  """
-  @spec update_pending_reminder_jobs(map()) :: {:ok, integer()}
-  def update_pending_reminder_jobs(_meeting) do
-    # Since EmailWorker.perform (via EmailWorkerHandlers) re-fetches the meeting
-    # from the database before sending any email, we don't actually need to
-    # update the job arguments. The worker will automatically pick up the
-    # newly added video_room_id/meeting_url from the database.
-
-    # We just return success here to satisfy the Orchestrator.
-    {:ok, 0}
-  end
-
-  @doc """
   Deletes existing reminder email jobs for a meeting to avoid duplicates
   when rescheduling.
   """
   @spec delete_reminder_jobs_for_meeting(term(), module(), map()) ::
           {non_neg_integer(), nil}
   def delete_reminder_jobs_for_meeting(meeting_id, worker_module, reminder_params) do
-    # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
-    # normalises the module into that form so the match can't silently miss
-    # every job.
-    worker_name = Worker.to_string(worker_module)
+    worker_name = normalize_worker_name(worker_module)
 
     args_match =
       Map.merge(
@@ -166,9 +140,7 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   """
   @spec delete_poll_jobs(term(), module()) :: {non_neg_integer(), nil}
   def delete_poll_jobs(poll_id, worker_module) do
-    # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
-    # normalises the module into that form so the match can't silently miss.
-    worker_name = Worker.to_string(worker_module)
+    worker_name = normalize_worker_name(worker_module)
     args_match = %{"poll_id" => poll_id}
 
     Repo.delete_all(
@@ -233,4 +205,11 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
       )
     )
   end
+
+  # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
+  # normalises a module into that form so a match against `j.worker` can't
+  # silently miss every job. Callers that already hold the stored name (e.g. a
+  # worker's own `to_string(__MODULE__)`-shaped literal) pass it straight through.
+  defp normalize_worker_name(worker) when is_atom(worker), do: Worker.to_string(worker)
+  defp normalize_worker_name(worker) when is_binary(worker), do: worker
 end

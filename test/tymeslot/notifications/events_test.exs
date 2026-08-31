@@ -45,10 +45,6 @@ defmodule Tymeslot.Notifications.EventsTest do
       assert Events.should_trigger_notifications?(:meeting_cancelled, %{status: "cancelled"})
     end
 
-    test "returns true for video_room_created when enabled" do
-      assert Events.should_trigger_notifications?(:video_room_created, %{video_room_enabled: true})
-    end
-
     test "returns true for reminder_triggered when confirmed and not sent" do
       assert Events.should_trigger_notifications?(:reminder_triggered, %{
                status: "confirmed",

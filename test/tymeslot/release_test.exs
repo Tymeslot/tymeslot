@@ -37,9 +37,10 @@ defmodule Tymeslot.ReleaseTest do
     end
   end
 
-  describe "demote_admin/1" do
-    test "demotes an existing admin" do
+  describe "demote_admin/2" do
+    test "demotes an existing admin when another admin remains" do
       admin = insert(:user, is_admin: true)
+      _other_admin = insert(:user, is_admin: true)
 
       assert {:ok, updated} = Release.demote_admin(admin.email)
       refute updated.is_admin
@@ -58,6 +59,20 @@ defmodule Tymeslot.ReleaseTest do
 
       assert {:error, :admin_ui_disabled} = Release.demote_admin(admin.email)
       assert Repo.reload!(admin).is_admin
+    end
+
+    test "refuses to demote the only remaining admin without force" do
+      admin = insert(:user, is_admin: true)
+
+      assert {:error, :last_admin} = Release.demote_admin(admin.email)
+      assert Repo.reload!(admin).is_admin
+    end
+
+    test "demotes the only remaining admin when forced" do
+      admin = insert(:user, is_admin: true)
+
+      assert {:ok, updated} = Release.demote_admin(admin.email, true)
+      refute updated.is_admin
     end
   end
 

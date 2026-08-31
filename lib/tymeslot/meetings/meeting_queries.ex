@@ -192,55 +192,129 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Appends a reminder to reminders_sent and marks reminders as sent.
+  Records per-recipient reminder delivery for one `(value, unit)` reminder
+  config, upserting rather than appending: an existing entry for that config
+  has its `organizer_sent`/`attendee_sent` flags OR-merged with the new
+  result, so a later send to the still-unsent recipient doesn't clobber an
+  earlier success. A config with no existing entry gets one appended.
 
-  Accepts a map with `value` (integer) and `unit` (string) keys representing
-  an already-normalised reminder. Callers are responsible for validation.
+  Entries written before per-recipient tracking existed carry only `value`
+  and `unit`. They are treated as already fully sent (both flags default to
+  `true`) so old data can never trigger a fresh send.
+
+  Locks the row for the read-merge-write to stay correct under concurrent
+  workers for the same meeting.
   """
-  @spec append_reminder_sent(Meeting.t(), %{value: integer(), unit: String.t()}) ::
-          {:ok, Meeting.t()} | {:error, :not_found}
-  def append_reminder_sent(%Meeting{} = meeting, %{value: val, unit: unit}) do
-    new_reminder = %{"value" => val, "unit" => unit}
-    new_reminder_list = [new_reminder]
+  @spec upsert_reminder_sent(Meeting.t(), %{
+          :value => integer(),
+          :unit => String.t(),
+          optional(:organizer_sent) => boolean(),
+          optional(:attendee_sent) => boolean()
+        }) :: {:ok, Meeting.t()} | {:error, :not_found | Changeset.t()}
+  def upsert_reminder_sent(%Meeting{} = meeting, %{value: val, unit: unit} = attrs) do
+    organizer_sent = Map.get(attrs, :organizer_sent, false)
+    attendee_sent = Map.get(attrs, :attendee_sent, false)
 
-    {count, _value} =
-      Repo.update_all(
-        from(m in Meeting,
-          where: m.id == ^meeting.id,
-          update: [
-            set: [
-              reminder_email_sent: true,
-              reminders_sent:
-                fragment(
-                  "CASE WHEN COALESCE(reminders_sent, ARRAY[]::jsonb[]) @> ?::jsonb[] THEN COALESCE(reminders_sent, ARRAY[]::jsonb[]) ELSE array_append(COALESCE(reminders_sent, ARRAY[]::jsonb[]), ?::jsonb) END",
-                  ^new_reminder_list,
-                  ^new_reminder
-                )
-            ]
-          ]
-        ),
-        []
-      )
+    Repo.transaction(fn ->
+      case get_meeting_for_update(meeting.id) do
+        {:ok, locked_meeting} ->
+          updated_list =
+            merge_reminder_sent(
+              locked_meeting.reminders_sent,
+              val,
+              unit,
+              organizer_sent,
+              attendee_sent
+            )
 
-    if count == 1 do
-      get_meeting(meeting.id)
+          case update_meeting(locked_meeting, %{
+                 reminder_email_sent: true,
+                 reminders_sent: updated_list
+               }) do
+            {:ok, updated_meeting} -> updated_meeting
+            {:error, changeset} -> Repo.rollback(changeset)
+          end
+
+        {:error, :not_found} ->
+          Repo.rollback(:not_found)
+      end
+    end)
+  end
+
+  defp merge_reminder_sent(existing, val, unit, organizer_sent, attendee_sent) do
+    entries = List.wrap(existing)
+
+    {updated_entries, found?} =
+      Enum.map_reduce(entries, false, fn entry, found? ->
+        if reminder_entry_match?(entry, val, unit) do
+          {merge_reminder_entry(entry, val, unit, organizer_sent, attendee_sent), true}
+        else
+          {entry, found?}
+        end
+      end)
+
+    if found? do
+      updated_entries
     else
-      {:error, :not_found}
+      updated_entries ++
+        [
+          %{
+            "value" => val,
+            "unit" => unit,
+            "organizer_sent" => organizer_sent,
+            "attendee_sent" => attendee_sent
+          }
+        ]
     end
   end
 
   @doc """
-  Returns the count of meetings with a specific status.
+  Whether a `reminders_sent` entry matches the given `(value, unit)` reminder
+  config.
 
-  ## Examples
-
-      iex> count_meetings_by_status("confirmed")
-      5
-
+  Public because it is the single authority on entry-matching, shared with
+  `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, which reads
+  `reminders_sent` to decide whether a reminder still needs sending: writer
+  and reader must never disagree about which entry a `(value, unit)` config
+  identifies.
   """
-  @spec count_meetings_by_status(String.t()) :: non_neg_integer()
-  def count_meetings_by_status(status) do
-    Repo.aggregate(from(m in Meeting, where: m.status == ^status), :count, :id)
+  @spec reminder_entry_match?(map(), integer(), String.t()) :: boolean()
+  def reminder_entry_match?(entry, val, unit) do
+    case entry do
+      %{"value" => v, "unit" => u} -> v == val and u == unit
+      %{value: v, unit: u} -> v == val and u == unit
+      _other -> false
+    end
+  end
+
+  defp merge_reminder_entry(entry, val, unit, organizer_sent, attendee_sent) do
+    %{
+      "value" => val,
+      "unit" => unit,
+      "organizer_sent" =>
+        reminder_entry_flag(entry, "organizer_sent", :organizer_sent) or organizer_sent,
+      "attendee_sent" =>
+        reminder_entry_flag(entry, "attendee_sent", :attendee_sent) or attendee_sent
+    }
+  end
+
+  @doc """
+  Whether a `reminders_sent` entry records the recipient identified by
+  `string_key`/`atom_key` as sent.
+
+  Missing keys mean a pre-upsert entry; treated as already sent rather than
+  guessing, so old rows never trigger a fresh send. Public and shared with
+  `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, the reader of this
+  field: this is the single authority on legacy-entry semantics, so the
+  default here cannot silently diverge from what the reader assumes.
+  """
+  @spec reminder_entry_flag(map(), String.t(), atom()) :: boolean()
+  def reminder_entry_flag(entry, string_key, atom_key) do
+    case entry do
+      %{^string_key => sent} when is_boolean(sent) -> sent
+      %{^atom_key => sent} when is_boolean(sent) -> sent
+      _other -> true
+    end
   end
 
   @doc """
@@ -362,34 +436,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
       converting_visitors: count(m.visitor_hash, :distinct)
     })
     |> Repo.all()
-  end
-
-  @doc """
-  Returns the count of meetings for a specific attendee.
-
-  ## Examples
-
-      iex> count_meetings_by_attendee_email("attendee@example.com")
-      3
-
-  """
-  @spec count_meetings_by_attendee_email(String.t()) :: non_neg_integer()
-  def count_meetings_by_attendee_email(email) do
-    Repo.aggregate(from(m in Meeting, where: m.attendee_email == ^email), :count, :id)
-  end
-
-  @doc """
-  Returns the count of meetings for a specific organizer.
-
-  ## Examples
-
-      iex> count_meetings_by_organizer_email("organizer@example.com")
-      10
-
-  """
-  @spec count_meetings_by_organizer_email(String.t()) :: non_neg_integer()
-  def count_meetings_by_organizer_email(email) do
-    Repo.aggregate(from(m in Meeting, where: m.organizer_email == ^email), :count, :id)
   end
 
   @doc """

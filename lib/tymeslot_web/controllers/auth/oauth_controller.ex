@@ -9,11 +9,11 @@ defmodule TymeslotWeb.OAuthController do
   require Logger
 
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
-  alias Tymeslot.Auth.OAuth.{GenericOAuth, GitHub, Google}
+  alias Tymeslot.Auth.OAuth.{FlowHandler, GenericOAuth, GitHub, Google}
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.OAuth.{URLs, UserRegistration}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.{RateLimiter, SecurityLogger}
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
 
@@ -75,6 +75,11 @@ defmodule TymeslotWeb.OAuthController do
         redirect(updated_conn, external: authorize_url)
 
       {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_initiation", %{
+          ip_address: ClientIP.get(conn),
+          user_agent: ClientIP.get_user_agent(conn)
+        })
+
         AuthControllerHelpers.handle_rate_limited(
           conn,
           dgettext("auth", "Too many OAuth attempts. Please try again later."),
@@ -161,6 +166,11 @@ defmodule TymeslotWeb.OAuthController do
         process_oauth_completion(conn, params)
 
       {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_completion", %{
+          ip_address: ClientIP.get(conn),
+          user_agent: ClientIP.get_user_agent(conn)
+        })
+
         AuthControllerHelpers.handle_rate_limited(
           conn,
           dgettext("auth", "Too many registration attempts. Please try again later."),
@@ -186,6 +196,11 @@ defmodule TymeslotWeb.OAuthController do
         |> respond_to_oauth_result(paths)
 
       {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_callback", %{
+          ip_address: ClientIP.get(conn),
+          user_agent: ClientIP.get_user_agent(conn)
+        })
+
         AuthControllerHelpers.handle_rate_limited(
           conn,
           dgettext("auth", "Too many authentication attempts. Please try again later."),
@@ -207,6 +222,10 @@ defmodule TymeslotWeb.OAuthController do
   defp do_process_oauth_completion(conn, params) do
     case get_session(conn, :pending_oauth_registration) do
       nil ->
+        FlowHandler.log_social_auth("unknown", false, conn, %{
+          error_reason: "missing_pending_registration"
+        })
+
         conn
         |> put_flash(
           :error,
@@ -240,14 +259,29 @@ defmodule TymeslotWeb.OAuthController do
                 handle_oauth_user_creation(conn, user, oauth_data)
 
               {:error, reason} ->
+                FlowHandler.log_social_auth(provider, false, conn, %{
+                  email: oauth_data.email,
+                  error_reason: "creation_failed"
+                })
+
                 handle_oauth_creation_error(conn, reason, params)
             end
 
           {:error, validation_error} ->
+            FlowHandler.log_social_auth(provider, false, conn, %{
+              email: oauth_data.email,
+              error_reason: "validation_failed"
+            })
+
             handle_oauth_validation_error(conn, validation_error, params)
         end
 
       {:error, :unsupported_oauth_provider} ->
+        FlowHandler.log_social_auth(oauth_data.provider, false, conn, %{
+          email: oauth_data.email,
+          error_reason: "unsupported_provider"
+        })
+
         conn
         |> delete_session(:pending_oauth_registration)
         |> put_flash(:error, dgettext("auth", "Unsupported OAuth provider."))
@@ -294,7 +328,12 @@ defmodule TymeslotWeb.OAuthController do
     if Map.get(user, :needs_email_verification, false) do
       handle_email_verification_flow(conn, user, oauth_data)
     else
-      create_session_and_redirect(conn, user, get_welcome_message(oauth_data.provider))
+      create_session_and_redirect(
+        conn,
+        user,
+        oauth_data.provider,
+        get_welcome_message(oauth_data.provider)
+      )
     end
   end
 
@@ -309,9 +348,14 @@ defmodule TymeslotWeb.OAuthController do
             provider: String.capitalize(oauth_data.provider)
           )
 
-        create_session_and_redirect(conn, user, message)
+        create_session_and_redirect(conn, user, oauth_data.provider, message)
 
       {:error, :rate_limited, _rate_limit_message} ->
+        FlowHandler.log_social_auth(oauth_data.provider, false, conn, %{
+          email: Map.get(user, :email),
+          error_reason: "verification_rate_limited"
+        })
+
         handle_rate_limited_error(conn)
 
       {:error, _error_reason} ->
@@ -322,19 +366,35 @@ defmodule TymeslotWeb.OAuthController do
             provider: String.capitalize(oauth_data.provider)
           )
 
-        create_session_and_redirect(conn, user, message)
+        create_session_and_redirect(conn, user, oauth_data.provider, message)
     end
   end
 
-  @spec create_session_and_redirect(Plug.Conn.t(), map(), String.t()) :: Plug.Conn.t()
-  defp create_session_and_redirect(conn, user, success_message) do
+  @spec create_session_and_redirect(Plug.Conn.t(), map(), String.t(), String.t()) ::
+          Plug.Conn.t()
+  defp create_session_and_redirect(conn, user, provider, success_message) do
     case Session.create_session(conn, user) do
       {:ok, updated_conn, _session_token} ->
+        # Account creation itself is audited by the caller; this closes the
+        # loop with the social-auth success entry FlowHandler.create_user_session/3
+        # already emits for returning-user OAuth logins.
+        FlowHandler.log_social_auth(provider, true, updated_conn, %{
+          email: Map.get(user, :email),
+          oauth_state_valid: true
+        })
+
         updated_conn
         |> put_flash(:info, success_message)
         |> redirect(to: ~p"/dashboard")
 
       {:error, _error_reason, _error_details} ->
+        # Mirrors the failure entry FlowHandler.create_user_session/3 emits
+        # for the returning-user login path.
+        FlowHandler.log_social_auth(provider, false, conn, %{
+          email: Map.get(user, :email),
+          error_reason: "session_failed"
+        })
+
         conn
         |> put_flash(:error, dgettext("auth", "Failed to create session. Please try again."))
         |> redirect(to: ~p"/auth/login")
@@ -459,7 +519,7 @@ defmodule TymeslotWeb.OAuthController do
 
   @spec get_redirect_paths(Plug.Conn.t()) :: keyword()
   defp get_redirect_paths(conn) do
-    configured_success_path = Application.get_env(:tymeslot, :auth)[:success_redirect_path]
+    configured_success_path = Config.success_redirect_path()
 
     success_path =
       RedirectSanitizer.sanitize(conn.params["success_path"], configured_success_path)

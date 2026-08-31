@@ -352,45 +352,5 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   @spec valid_statuses() :: [String.t()]
   def valid_statuses, do: @valid_statuses
 
-  @doc """
-  Checks if a meeting is in the future
-  """
-  @spec future?(t()) :: boolean
-  def future?(%__MODULE__{start_time: start_time}) do
-    DateTime.compare(start_time, DateTime.utc_now()) == :gt
-  end
-
-  @doc """
-  Checks if a meeting is in the past
-  """
-  @spec past?(t()) :: boolean
-  def past?(%__MODULE__{end_time: end_time}) do
-    DateTime.compare(end_time, DateTime.utc_now()) == :lt
-  end
-
-  @doc """
-  Checks if a meeting is currently happening
-  """
-  @spec current?(t()) :: boolean
-  def current?(%__MODULE__{start_time: start_time, end_time: end_time}) do
-    now = DateTime.utc_now()
-    DateTime.compare(start_time, now) != :gt && DateTime.compare(end_time, now) == :gt
-  end
-
-  @doc """
-  Returns the duration in human-readable format
-  """
-  @spec duration_text(t() | any) :: String.t()
-  def duration_text(%__MODULE__{duration: duration}) when is_integer(duration) do
-    cond do
-      duration < 60 -> "#{duration} minutes"
-      duration == 60 -> "1 hour"
-      duration > 60 -> "#{Float.round(duration / 60, 1)} hours"
-      true -> "Unknown duration"
-    end
-  end
-
-  def duration_text(_meeting), do: "Unknown duration"
-
   defp supported_locale_codes, do: Locales.supported_codes()
 end

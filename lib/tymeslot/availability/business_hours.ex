@@ -109,6 +109,12 @@ defmodule Tymeslot.Availability.BusinessHours do
   Returns the business-hours windows that can produce slots on `target_date`
   in the user's timezone. Adjacent days are considered because business hours
   in the owner's timezone may bleed across midnight in the user's timezone.
+
+  A day whose business hours could not be read (see
+  `windows_for_target_date_or_error/5`) is silently dropped here, same as a
+  day with no offered hours. Callers that need to tell those two cases apart
+  — a genuine "not offered" from a schedule that could not be read — must use
+  `windows_for_target_date_or_error/5` instead.
   """
   @spec windows_for_target_date(
           Date.t(),
@@ -118,20 +124,64 @@ defmodule Tymeslot.Availability.BusinessHours do
           Calculate.availability_config()
         ) :: [slot_window()]
   def windows_for_target_date(target_date, schedule_id, owner_timezone, user_timezone, config) do
-    Enum.flat_map([Date.add(target_date, -1), target_date, Date.add(target_date, 1)], fn d ->
-      case get_business_hours_in_timezone(d, schedule_id, owner_timezone, user_timezone, config) do
-        {:ok, %{start_datetime: %DateTime{} = start_dt, end_datetime: %DateTime{} = end_dt}} ->
-          if DateTime.to_date(start_dt) == target_date or
-               DateTime.to_date(end_dt) == target_date do
-            [%{start_dt: start_dt, end_dt: end_dt, date: d}]
-          else
-            []
-          end
+    case windows_for_target_date_or_error(
+           target_date,
+           schedule_id,
+           owner_timezone,
+           user_timezone,
+           config
+         ) do
+      {:ok, windows} -> windows
+      {:error, _reason} -> []
+    end
+  end
 
-        _other ->
-          []
-      end
-    end)
+  @doc """
+  Same windows as `windows_for_target_date/5`, but returns `{:error, reason}`
+  instead of an empty list when a day's business hours could not be
+  converted to the user's timezone, so a schedule-read failure (an unknown
+  or renamed timezone, for example) is distinguishable from a day that
+  genuinely offers no hours.
+  """
+  @spec windows_for_target_date_or_error(
+          Date.t(),
+          integer() | nil,
+          String.t(),
+          String.t(),
+          Calculate.availability_config()
+        ) :: {:ok, [slot_window()]} | {:error, term()}
+  def windows_for_target_date_or_error(
+        target_date,
+        schedule_id,
+        owner_timezone,
+        user_timezone,
+        config
+      ) do
+    dates = [Date.add(target_date, -1), target_date, Date.add(target_date, 1)]
+
+    reduced =
+      Enum.reduce_while(dates, {:ok, []}, fn d, {:ok, acc} ->
+        case get_business_hours_in_timezone(d, schedule_id, owner_timezone, user_timezone, config) do
+          {:ok, %{start_datetime: %DateTime{} = start_dt, end_datetime: %DateTime{} = end_dt}} ->
+            if DateTime.to_date(start_dt) == target_date or
+                 DateTime.to_date(end_dt) == target_date do
+              {:cont, {:ok, [%{start_dt: start_dt, end_dt: end_dt, date: d} | acc]}}
+            else
+              {:cont, {:ok, acc}}
+            end
+
+          {:ok, %{start_datetime: nil, end_datetime: nil}} ->
+            {:cont, {:ok, acc}}
+
+          {:error, reason} ->
+            {:halt, {:error, reason}}
+        end
+      end)
+
+    case reduced do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      {:error, _reason} = error -> error
+    end
   end
 
   @doc """
@@ -201,65 +251,6 @@ defmodule Tymeslot.Availability.BusinessHours do
         day_availability = lookup_day_availability(day_of_week, schedule_id, config)
 
         match?(%{is_available: true}, day_availability)
-    end
-  end
-
-  @doc """
-  Returns the business hours range for a specific day of week.
-
-  Accepts preloaded data via `config` to avoid per-date DB queries.
-  """
-  @spec business_hours_range(integer() | nil, integer(), Calculate.availability_config()) ::
-          {Time.t() | nil, Time.t() | nil}
-  def business_hours_range(schedule_id, day_of_week, config \\ %{})
-
-  def business_hours_range(nil, _day_of_week, _config) do
-    {@fallback_start_time, @fallback_end_time}
-  end
-
-  def business_hours_range(schedule_id, day_of_week, config) do
-    day_availability = lookup_day_availability(day_of_week, schedule_id, config)
-
-    case day_availability do
-      %{is_available: true, start_time: start_time, end_time: end_time} ->
-        {start_time, end_time}
-
-      _other ->
-        {nil, nil}
-    end
-  end
-
-  @doc """
-  Returns the fallback business hours used when no schedule is resolvable.
-  """
-  @spec fallback_business_hours_range() :: {Time.t(), Time.t()}
-  def fallback_business_hours_range do
-    {@fallback_start_time, @fallback_end_time}
-  end
-
-  @doc """
-  Determines if month navigation should be disabled.
-  """
-  @spec month_navigation_disabled?(
-          atom(),
-          integer(),
-          integer(),
-          String.t(),
-          Calculate.availability_config()
-        ) :: boolean()
-  def month_navigation_disabled?(type, year, month, timezone, config \\ %{}) do
-    current_date = timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
-    max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
-
-    case type do
-      :prev ->
-        target_date = Date.new!(year, month, 1)
-        Date.compare(target_date, current_date) != :gt
-
-      :next ->
-        last_day = year |> Date.new!(month, 1) |> Date.end_of_month()
-        max_booking_date = Date.add(current_date, max_advance_booking_days)
-        Date.compare(last_day, max_booking_date) != :lt
     end
   end
 

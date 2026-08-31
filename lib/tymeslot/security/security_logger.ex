@@ -105,43 +105,54 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   If `details[:email]` is present it is masked before logging so no raw
   email (PII) reaches Logger sinks or the monitoring webhook.
+
+  Both sinks are derived from the same canonical detail map, so a key
+  visible in the Logger line (`user_id`, `email_masked`, `ip_address`,
+  `user_agent`, `session_id`, `provider`, `lockout_type`, `limit_type`) is
+  never silently missing from the webhook payload. Raw identifiers are
+  deliberately not among them — an event that needs to name an account puts
+  it under `:email` so it is masked first. Anything an event builder
+  assembles beyond the canonical set is carried to the webhook only, under
+  `:additional_data`.
   """
   @spec log_security_event(String.t(), event_metadata()) :: :ok
   def log_security_event(event_type, details \\ %{}) do
-    masked_email = mask_email(details[:email])
-
-    Logger.info("Security event",
-      event_type: event_type,
+    canonical = %{
       user_id: details[:user_id],
-      email_masked: masked_email,
+      email_masked: mask_email(details[:email]),
       ip_address: details[:ip_address],
       user_agent: details[:user_agent],
-      session_id: details[:session_id]
-    )
+      session_id: details[:session_id],
+      provider: sanitize_provider(details[:provider]),
+      lockout_type: details[:lockout_type],
+      limit_type: details[:limit_type]
+    }
+
+    Logger.info("Security event", [event_type: event_type] ++ Map.to_list(canonical))
 
     # Also send to external monitoring if configured
     if Application.get_env(:tymeslot, :security_monitoring_enabled, false) do
-      send_to_monitoring_service(%{
-        event_type: event_type,
-        user_id: details[:user_id],
-        email_masked: masked_email,
-        ip_address: details[:ip_address],
-        user_agent: details[:user_agent],
-        session_id: details[:session_id],
-        additional_data: details[:additional_data] || %{}
-      })
+      send_to_monitoring_service(
+        Map.merge(canonical, %{
+          event_type: event_type,
+          additional_data: details[:additional_data] || %{}
+        })
+      )
     end
 
     :ok
   end
 
-  # Mask an email so it is useful for correlating events without leaking
-  # the full address. "john.doe@example.com" -> "j***@example.com".
-  # Anything that isn't a parseable email is dropped entirely.
+  @doc """
+  Masks an email so it is useful for correlating events without leaking
+  the full address. `"john.doe@example.com"` becomes `"j***@example.com"`.
+  Anything that isn't a parseable email is dropped entirely (`nil`), so a
+  caller cannot pass a secret or a non-email identifier through unmasked.
+  """
   @spec mask_email(term()) :: String.t() | nil
-  defp mask_email(nil), do: nil
+  def mask_email(nil), do: nil
 
-  defp mask_email(email) when is_binary(email) do
+  def mask_email(email) when is_binary(email) do
     case email |> String.trim() |> String.downcase() |> String.split("@", parts: 2) do
       [local, domain] when local != "" and domain != "" ->
         "#{String.first(local)}***@#{domain}"
@@ -151,7 +162,23 @@ defmodule Tymeslot.Security.SecurityLogger do
     end
   end
 
-  defp mask_email(_other), do: nil
+  def mask_email(_other), do: nil
+
+  # `details[:provider]` sometimes carries raw, unvalidated user input (e.g.
+  # a form's `params["provider"]`), not just the fixed OAuth provider atoms
+  # this module's own callers use. Restrict it to a short identifier-shaped
+  # value so an arbitrary attacker-controlled string can't ride into the log
+  # line under this key; anything else is dropped rather than emitted.
+  @spec sanitize_provider(term()) :: String.t() | nil
+  defp sanitize_provider(nil), do: nil
+
+  defp sanitize_provider(provider) when is_atom(provider), do: to_string(provider)
+
+  defp sanitize_provider(provider) when is_binary(provider) do
+    if Regex.match?(~r/^[a-zA-Z0-9_-]{1,32}$/, provider), do: provider, else: nil
+  end
+
+  defp sanitize_provider(_other), do: nil
 
   @doc """
   Logs authentication attempts with success/failure details.
@@ -206,11 +233,14 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   @doc """
   Logs rate limiting violations.
+
+  The identifier names the rejected attempt: an email address is carried
+  under `:email` and masked before it reaches Logger, a user id under
+  `:user_id` as-is.
   """
-  @spec log_rate_limit_violation(String.t(), String.t(), event_metadata()) :: :ok
+  @spec log_rate_limit_violation(String.t() | integer(), String.t(), event_metadata()) :: :ok
   def log_rate_limit_violation(identifier, limit_type, metadata \\ %{}) do
-    event_details = %{
-      identifier: identifier,
+    base_details = %{
       limit_type: limit_type,
       ip_address: metadata[:ip_address],
       user_agent: metadata[:user_agent],
@@ -221,17 +251,34 @@ defmodule Tymeslot.Security.SecurityLogger do
       }
     }
 
+    event_details = Map.merge(base_details, rate_limit_identifier_details(identifier))
+
     log_security_event("rate_limit_violation", event_details)
   end
 
+  # An email identifies the rejected attempt by account; a user id (e.g. the
+  # email-verification path, which already has the user loaded) is not PII
+  # and needs no masking.
+  defp rate_limit_identifier_details(identifier) when is_integer(identifier),
+    do: %{user_id: identifier}
+
+  defp rate_limit_identifier_details(identifier) when is_binary(identifier),
+    do: %{email: identifier}
+
+  defp rate_limit_identifier_details(_identifier), do: %{}
+
   @doc """
   Logs account lockout events.
+
+  The identifier is an email address, so it is carried under `:email` and
+  masked before it reaches Logger.
   """
   @spec log_account_lockout(String.t(), String.t(), event_metadata()) :: :ok
   def log_account_lockout(identifier, lockout_type, metadata \\ %{}) do
     event_details = %{
-      identifier: identifier,
+      email: identifier,
       lockout_type: lockout_type,
+      user_id: metadata[:user_id],
       ip_address: metadata[:ip_address],
       user_agent: metadata[:user_agent],
       additional_data: %{
@@ -303,16 +350,55 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   # Private helper functions for external monitoring
 
-  defp send_to_monitoring_service(metadata) do
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      case Application.get_env(:tymeslot, :security_monitoring_webhook) do
-        nil ->
-          Logger.debug("Security monitoring webhook not configured")
+  # Security events fire hardest exactly when the system is under attack (a
+  # credential-stuffing run produces one of these per request), so spawning
+  # one task per event without a bound turns an auth flood into an unbounded
+  # fan-out of outbound HTTP requests. This counter tracks only this module's
+  # in-flight webhook deliveries, isolated from whatever else runs under the
+  # shared `Tymeslot.TaskSupervisor`, and caps them.
+  @max_concurrent_webhook_tasks 20
+  @webhook_task_counter_key {__MODULE__, :webhook_task_counter}
 
-        webhook_url ->
-          send_webhook(webhook_url, metadata)
-      end
-    end)
+  defp send_to_monitoring_service(metadata) do
+    counter = webhook_task_counter()
+
+    if :counters.get(counter, 1) >= @max_concurrent_webhook_tasks do
+      Logger.warning("Security monitoring webhook fan-out at capacity, dropping event",
+        event_type: metadata[:event_type]
+      )
+
+      :ok
+    else
+      :counters.add(counter, 1, 1)
+
+      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+        try do
+          case Application.get_env(:tymeslot, :security_monitoring_webhook) do
+            nil ->
+              Logger.debug("Security monitoring webhook not configured")
+
+            webhook_url ->
+              send_webhook(webhook_url, metadata)
+          end
+        after
+          :counters.sub(counter, 1, 1)
+        end
+      end)
+
+      :ok
+    end
+  end
+
+  defp webhook_task_counter do
+    case :persistent_term.get(@webhook_task_counter_key, nil) do
+      nil ->
+        counter = :counters.new(1, [])
+        :persistent_term.put(@webhook_task_counter_key, counter)
+        counter
+
+      counter ->
+        counter
+    end
   end
 
   defp send_webhook(webhook_url, metadata) do

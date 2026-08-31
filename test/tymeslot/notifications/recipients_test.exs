@@ -26,20 +26,10 @@ defmodule Tymeslot.Notifications.RecipientsTest do
   end
 
   describe "determine_recipients/2" do
-    test "video_room_failed routes to organiser only" do
+    test "confirmation, reminder, cancellation, and reschedule go to both" do
       meeting = meeting_with_organizer()
 
-      assert {:organizer_only, %{organizer: organizer, attendee: attendee}} =
-               Recipients.determine_recipients(meeting, :video_room_failed)
-
-      assert organizer.email == "alice@example.com"
-      assert attendee.email == "bob@example.com"
-    end
-
-    test "confirmation, reminder, cancellation, reschedule, and video_room_created go to both" do
-      meeting = meeting_with_organizer()
-
-      for type <- [:confirmation, :reminder, :cancellation, :reschedule, :video_room_created] do
+      for type <- [:confirmation, :reminder, :cancellation, :reschedule] do
         assert {:both, %{organizer: organizer, attendee: attendee}} =
                  Recipients.determine_recipients(meeting, type)
 
@@ -73,37 +63,6 @@ defmodule Tymeslot.Notifications.RecipientsTest do
 
       assert {:both, %{attendee: %{timezone: "Europe/London"}}} =
                Recipients.determine_recipients(meeting, :confirmation)
-    end
-  end
-
-  describe "should_receive_notification?/3" do
-    test "attendee does NOT receive video_room_failed" do
-      meeting = meeting_with_organizer()
-
-      refute Recipients.should_receive_notification?(:attendee, :video_room_failed, meeting)
-    end
-
-    test "organiser receives every notification type" do
-      meeting = meeting_with_organizer()
-
-      for type <- [
-            :confirmation,
-            :reminder,
-            :cancellation,
-            :reschedule,
-            :video_room_created,
-            :video_room_failed
-          ] do
-        assert Recipients.should_receive_notification?(:organizer, type, meeting)
-      end
-    end
-
-    test "attendee receives every notification type except video_room_failed" do
-      meeting = meeting_with_organizer()
-
-      for type <- [:confirmation, :reminder, :cancellation, :reschedule, :video_room_created] do
-        assert Recipients.should_receive_notification?(:attendee, type, meeting)
-      end
     end
   end
 
@@ -197,13 +156,6 @@ defmodule Tymeslot.Notifications.RecipientsTest do
     test "rejects an unknown recipient structure" do
       assert {:error, "Invalid recipient structure"} =
                Recipients.validate_recipients(:not_a_tuple)
-    end
-
-    test "validates :organizer_only structure" do
-      meeting = meeting_with_organizer()
-      recipients = Recipients.determine_recipients(meeting, :video_room_failed)
-
-      assert Recipients.validate_recipients(recipients) == :ok
     end
   end
 end

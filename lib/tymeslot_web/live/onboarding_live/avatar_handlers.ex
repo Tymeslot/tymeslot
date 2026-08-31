@@ -74,7 +74,9 @@ defmodule TymeslotWeb.OnboardingLive.AvatarHandlers do
 
     case results do
       [%ProfileSchema{} = updated] ->
-        Component.assign(socket, :profile, updated)
+        socket
+        |> LiveView.push_event("upload-complete", %{})
+        |> Component.assign(:profile, updated)
 
       [{:error, _reason}] ->
         LiveView.put_flash(

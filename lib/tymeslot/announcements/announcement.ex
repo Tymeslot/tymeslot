@@ -17,9 +17,9 @@ defmodule Tymeslot.Announcements.Announcement do
 
   The CTA, when present, links to a documentation article. `cta_docs_slug`
   holds just the slug; the full URL is composed from the configurable
-  `:docs_base_url` (see `Tymeslot.Announcements.docs_url/1`). Docs live outside
-  Core (there is no `/docs` route in a standalone deployment), so CTAs always
-  point at the canonical public docs rather than an internal path.
+  `:docs_article_base_url` (see `Tymeslot.Announcements.docs_url/1`). Docs live
+  outside Core (there is no `/docs` route in a standalone deployment), so CTAs
+  always point at the canonical public docs rather than an internal path.
   """
 
   @type t :: %__MODULE__{

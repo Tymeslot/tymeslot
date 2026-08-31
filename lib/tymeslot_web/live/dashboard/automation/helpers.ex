@@ -48,10 +48,29 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
     if field in allowed_fields do
       updated_values = Map.put(form_values, field, value)
 
-      case WebhookInputValidation.validate_webhook_form(updated_values, metadata: metadata) do
+      # Interactive validation gets its own, looser bucket (see the comment
+      # above `WebhookInputValidation.validate_webhook_form/2`) so rapid
+      # blurs/toggles cannot spend the budget the save itself needs.
+      validate_opts = [metadata: metadata, bucket: "webhook_form_validate", limit: 180]
+
+      case WebhookInputValidation.validate_webhook_form(updated_values, validate_opts) do
         {:ok, _sanitized} ->
           field_atom = String.to_existing_atom(field)
           Map.delete(current_errors, field_atom)
+
+        # A throttled blur says nothing about the field, so leave whatever the
+        # last real validation concluded standing. Clearing it here rendered a
+        # genuinely invalid field clean. Still tell the user the check was
+        # deferred, rather than leaving a stale error unexplained.
+        {:error, :rate_limited} ->
+          Flash.warning(
+            dgettext(
+              "dashboard_automation",
+              "Still checking — please try again in a moment."
+            )
+          )
+
+          current_errors
 
         {:error, errors} ->
           field_atom = String.to_existing_atom(field)

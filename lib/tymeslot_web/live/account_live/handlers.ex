@@ -162,7 +162,9 @@ defmodule TymeslotWeb.AccountLive.Handlers do
              user,
              sanitized_params["current_password"],
              sanitized_params["new_password"],
-             sanitized_params["new_password_confirmation"]
+             sanitized_params["new_password_confirmation"],
+             ip_address: metadata[:ip],
+             user_agent: metadata[:user_agent]
            ) do
       {:noreply,
        socket

@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   """
   import Ecto.Query, warn: false
   alias Tymeslot.Availability.{AvailabilityBreakSchema, WeeklyAvailabilitySchema}
+  alias Tymeslot.Clock
   alias Tymeslot.Repo
 
   @default_start_time ~T[11:00:00]
@@ -32,39 +33,6 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   def get_weekly_availability(id), do: Repo.get(WeeklyAvailabilitySchema, id)
 
   @doc """
-  Tagged-tuple variant: returns {:ok, weekly_availability} | {:error, :not_found}.
-  """
-  @spec get_weekly_availability_t(integer()) ::
-          {:ok, WeeklyAvailabilitySchema.t()} | {:error, :not_found}
-  def get_weekly_availability_t(id) do
-    case get_weekly_availability(id) do
-      nil -> {:error, :not_found}
-      wa -> {:ok, wa}
-    end
-  end
-
-  @doc """
-  Gets weekly availability by schedule and day of week.
-  """
-  @spec get_weekly_availability_by_schedule_and_day(integer(), integer()) ::
-          WeeklyAvailabilitySchema.t() | nil
-  def get_weekly_availability_by_schedule_and_day(schedule_id, day_of_week) do
-    Repo.get_by(WeeklyAvailabilitySchema, schedule_id: schedule_id, day_of_week: day_of_week)
-  end
-
-  @doc """
-  Tagged-tuple variant: returns {:ok, weekly_availability} | {:error, :not_found}.
-  """
-  @spec get_weekly_availability_by_schedule_and_day_t(integer(), integer()) ::
-          {:ok, WeeklyAvailabilitySchema.t()} | {:error, :not_found}
-  def get_weekly_availability_by_schedule_and_day_t(schedule_id, day_of_week) do
-    case get_weekly_availability_by_schedule_and_day(schedule_id, day_of_week) do
-      nil -> {:error, :not_found}
-      wa -> {:ok, wa}
-    end
-  end
-
-  @doc """
   Creates a weekly availability.
   """
   @spec create_weekly_availability(map()) ::
@@ -85,15 +53,6 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
     weekly_availability
     |> WeeklyAvailabilitySchema.changeset(attrs)
     |> Repo.update()
-  end
-
-  @doc """
-  Deletes a weekly availability.
-  """
-  @spec delete_weekly_availability(WeeklyAvailabilitySchema.t()) ::
-          {:ok, WeeklyAvailabilitySchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_weekly_availability(%WeeklyAvailabilitySchema{} = weekly_availability) do
-    Repo.delete(weekly_availability)
   end
 
   @doc """
@@ -134,7 +93,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   @spec create_default_weekly_days(integer(), Ecto.Repo.t()) ::
           {:ok, non_neg_integer()} | {:error, :failed_to_create_schedule}
   def create_default_weekly_days(schedule_id, repo \\ Repo) do
-    now = DateTime.utc_now(:second)
+    now = DateTime.truncate(Clock.utc_now(), :second)
 
     # Build all entries at once
     # Monday to Friday (1-5)
@@ -197,7 +156,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
 
     # Bulk insert new breaks
     unless Enum.empty?(breaks) do
-      now = DateTime.utc_now(:second)
+      now = DateTime.truncate(Clock.utc_now(), :second)
 
       entries =
         Enum.map(breaks, fn break ->

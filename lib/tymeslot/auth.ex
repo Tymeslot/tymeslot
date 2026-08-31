@@ -78,14 +78,21 @@ defmodule Tymeslot.Auth do
   Updates a user's password after verifying their current password.
   Pure domain logic without HTTP concerns.
   """
-  @spec update_user_password(term(), String.t(), String.t(), String.t()) ::
+  @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, String.t()}
-  def update_user_password(user, current_password, new_password, new_password_confirmation) do
+  def update_user_password(
+        user,
+        current_password,
+        new_password,
+        new_password_confirmation,
+        opts \\ []
+      ) do
     PasswordUpdate.update_user_password(
       user,
       current_password,
       new_password,
-      new_password_confirmation
+      new_password_confirmation,
+      opts
     )
   end
 
@@ -206,15 +213,6 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Resends verification email to a user.
-  """
-  @spec resend_verification_email(Plug.Conn.t() | Phoenix.LiveView.Socket.t(), Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom(), String.t()}
-  def resend_verification_email(socket_or_conn, user) do
-    Verification.resend_verification_email(socket_or_conn, user)
-  end
-
-  @doc """
   Generates a fresh verification token for a user and persists it without sending an email.
 
   Intended for background workers that need to produce a valid verification URL before
@@ -324,6 +322,15 @@ defmodule Tymeslot.Auth do
   Returns `true` if at least one admin can sign in via email + password.
   """
   defdelegate any_admin_uses_password_auth?(), to: UserQueries
+
+  @doc """
+  Counts admins, other than `user_id`, who can actually sign in today.
+  See `Tymeslot.Auth.UserQueries.count_signin_capable_admins_excluding/3`.
+  """
+  @spec count_signin_capable_admins_excluding(integer(), [atom()]) :: non_neg_integer()
+  def count_signin_capable_admins_excluding(user_id, usable_sso_providers \\ []) do
+    UserQueries.count_signin_capable_admins_excluding(user_id, usable_sso_providers)
+  end
 
   @doc """
   Returns `true` if at least one admin account exists.

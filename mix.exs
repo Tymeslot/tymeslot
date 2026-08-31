@@ -117,7 +117,6 @@ defmodule Tymeslot.MixProject do
       {:dns_cluster, "~> 0.3"},
       {:dotenvy, "~> 1.1"},
       {:bandit, "~> 1.8"},
-      {:caldav_client, "~> 2.0"},
       {:tz, "~> 0.28"},
       {:uuid, "~> 1.1"},
       {:bcrypt_elixir, "~> 3.2"},
@@ -126,20 +125,24 @@ defmodule Tymeslot.MixProject do
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
       {:stripity_stripe, "~> 3.3"},
-      # stripity_stripe requires hackney 4.x, while caldav_client (optional
-      # dependency) and httpoison (pulled in by Wallaby, test-only) still
-      # declare 1.x requirements, so an override is needed to resolve.
+      # Pinned to 4.x, which every remaining requirement accepts: Swoosh
+      # and Tesla declare it optional, Wallaby's httpoison and
+      # web_driver_client are test-only, and stripity_stripe uses hackney
+      # as its non-optional HTTP client for every Stripe API call.
       # hackney 4.x has two real runtime consumers: Swoosh's Postmark
       # adapter (config :swoosh, :api_client, Swoosh.ApiClient.Hackney,
-      # prod-only) and stripity_stripe itself, which uses hackney as its
-      # non-optional HTTP client for every Stripe API call. CalDAV sync
-      # goes through Req, not hackney, so caldav_client is unaffected.
-      # Neither the email nor the Stripe path is exercised in CI (test
-      # config uses Swoosh.Adapters.Test and Stripe is mocked), so these
-      # need verification in staging after this upgrade.
+      # prod-only) and stripity_stripe. Neither path is exercised in CI
+      # (test config uses Swoosh.Adapters.Test and Stripe is mocked), so
+      # both need verification in staging after any hackney upgrade.
       # The same override must be repeated in any project that depends on
       # this one as a path dependency, because overrides declared by a
       # dependency do not apply to the parent project's resolution.
+      # Verified via `mix deps.tree`/mix.lock: no current dependency
+      # requires hackney below 4.0 (stripity_stripe's own requirement is
+      # already the non-optional `~> 4.0` that would be picked without this
+      # override), so nothing is being resolved here today. Retained
+      # deliberately as a guard against a future dependency reintroducing a
+      # lower requirement and silently downgrading hackney underneath it.
       {:hackney, "~> 4.0", override: true},
       {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},

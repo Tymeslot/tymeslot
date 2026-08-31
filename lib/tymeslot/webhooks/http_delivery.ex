@@ -25,12 +25,20 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
   #{@max_redirects} redirects. The initial URL and each redirect hop are
   SSRF-validated. 301/302/303 redirects switch to GET (RFC 9110 §15.4);
   307/308 preserve the original method and body.
+
+  Pass `skip_initial_check: true` when the caller has already validated `url`
+  with `SsrfValidator` immediately before this call, to avoid resolving DNS
+  for the same host twice. Redirect hops are always re-validated regardless.
   """
-  @spec post(String.t(), binary(), list() | map()) :: response()
-  def post(url, body, headers) do
-    case SsrfValidator.check(url) do
-      :ok -> deliver_with_redirects(url, :post, body, headers, @max_redirects)
-      {:error, _reason} -> {:error, :blocked_by_ssrf}
+  @spec post(String.t(), binary(), list() | map(), keyword()) :: response()
+  def post(url, body, headers, opts \\ []) do
+    if Keyword.get(opts, :skip_initial_check, false) do
+      deliver_with_redirects(url, :post, body, headers, @max_redirects)
+    else
+      case SsrfValidator.check(url) do
+        :ok -> deliver_with_redirects(url, :post, body, headers, @max_redirects)
+        {:error, _reason} -> {:error, :blocked_by_ssrf}
+      end
     end
   end
 

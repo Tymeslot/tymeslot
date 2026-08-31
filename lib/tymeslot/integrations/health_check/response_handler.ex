@@ -34,6 +34,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
@@ -43,23 +44,6 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   @notification_threshold_hours 48
   @notification_cooldown_days 30
-
-  # OAuth error markers that mean the user must reconnect — retrying the call
-  # will never recover.
-  #
-  # String markers are matched against whole word tokens extracted from the
-  # lowercased error reason (split on non-alphanumeric/underscore boundaries).
-  # This prevents `"invalid_grant"` from matching extended forms such as
-  # `"invalid_grant_period_started"`, and prevents `"unauthorized"` false
-  # positives from strings like `"unauthorized origin"` or `"unauthorized
-  # network host"` produced by CalDAV servers and Google JS-API errors.
-  #
-  # Note: `:unauthorized` atoms are already covered by
-  # `@permanent_auth_error_atoms`; the string list intentionally omits the
-  # `"unauthorized"` word to avoid the false-positive substring matches
-  # described above.
-  @permanent_auth_error_strings ~w(invalid_grant invalid_client access_denied)
-  @permanent_auth_error_atoms [:unauthorized, :invalid_credentials, :token_expired]
 
   @doc """
   Handles a health status transition by taking appropriate action.
@@ -167,7 +151,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   def handle_permanent_auth_failure(type, integration, check_result)
 
   def handle_permanent_auth_failure(type, integration, {:error, reason}) do
-    if permanent_auth_error?(reason) do
+    if BreakerOutcome.permanent_credential_error?(reason) do
       Logger.warning("Permanent auth failure detected — flagging for reauth",
         type: type,
         integration_id: integration.id,
@@ -196,35 +180,14 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   # Private Functions
 
-  defp permanent_auth_error?(reason) when is_atom(reason),
-    do: reason in @permanent_auth_error_atoms
-
-  defp permanent_auth_error?(reason) when is_binary(reason),
-    do: Enum.any?(@permanent_auth_error_strings, &(&1 in error_tokens(reason)))
-
-  defp permanent_auth_error?({:exception, message}) when is_binary(message),
-    do: permanent_auth_error?(message)
-
-  defp permanent_auth_error?(_other), do: false
-
   # Splits the reason into whole-word tokens for matching. Non-UTF-8 reasons
-  # (some providers hand back raw bytes) tokenise to nothing rather than
-  # blowing up `String.downcase/1`.
-  defp error_tokens(reason) do
-    if String.valid?(reason) do
-      reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
-    else
-      []
-    end
-  end
-
   # `invalid_grant` and `:token_expired` mean the grant itself is gone —
   # expired, or revoked by the user in their provider account. Everything else
   # on the permanent list is the provider refusing the credentials for some
   # other reason. The two get different messages because they send the user to
   # different places, and neither is a decryption problem.
   defp reauth_cause(reason) when is_binary(reason) do
-    if "invalid_grant" in error_tokens(reason),
+    if "invalid_grant" in BreakerOutcome.error_tokens(reason),
       do: :expired_grant,
       else: :rejected_credentials
   end

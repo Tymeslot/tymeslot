@@ -84,7 +84,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
       presets = StepConfig.buffer_time_values()
 
       # Anchor: an empty preset list would make the rejection below vacuous.
-      assert presets != []
+      refute Enum.empty?(presets)
       assert Enum.reject(presets, &(&1 in range)) == []
       assert StepConfig.buffer_minutes_constraints().default_custom in range
     end
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
       range = Constraints.advance_booking_days_range()
       presets = StepConfig.advance_booking_values()
 
-      assert presets != []
+      refute Enum.empty?(presets)
       assert Enum.reject(presets, &(&1 in range)) == []
       assert StepConfig.advance_booking_constraints().default_custom in range
     end
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
       range = Constraints.min_advance_hours_range()
       presets = StepConfig.min_advance_values()
 
-      assert presets != []
+      refute Enum.empty?(presets)
       assert Enum.reject(presets, &(&1 in range)) == []
       assert StepConfig.min_advance_constraints().default_custom in range
     end

@@ -59,31 +59,6 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
     """
   end
 
-  @spec auth_card(map()) :: Phoenix.LiveView.Rendered.t()
-  def auth_card(assigns) do
-    ~H"""
-    <div class="brand-card rounded-2xl sm:rounded-3xl shadow-xl p-5 sm:p-6 md:p-8 w-full mx-auto max-w-[36rem] sm:max-w-[40rem] overflow-hidden">
-      {render_slot(@inner_block)}
-    </div>
-    """
-  end
-
-  @spec auth_container(map()) :: Phoenix.LiveView.Rendered.t()
-  def auth_container(assigns) do
-    ~H"""
-    <div class="min-h-screen bg-tymeslot-50 flex flex-col">
-      <div class="relative z-10 flex flex-col h-screen overflow-hidden">
-        <.auth_back_link />
-        <div class="w-full flex flex-col items-center justify-center grow py-6 sm:py-8 px-3 sm:px-6 md:px-8 overflow-y-auto min-h-screen max-w-full">
-          <div class="mx-auto w-full max-w-[95%] sm:max-w-[36rem] md:max-w-[40rem] lg:max-w-[44rem]">
-            {render_slot(@inner_block)}
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
   @spec auth_card_layout(map()) :: Phoenix.LiveView.Rendered.t()
   def auth_card_layout(assigns) do
     assigns = assign_new(assigns, :subtitle, fn -> nil end)

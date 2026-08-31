@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
                 max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
                 min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
                 buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-                duration_minutes: duration_minutes,
+                duration_minutes: duration_minutes || 30,
                 limit_checker:
                   build_limit_checker(user_id, organizer_profile, context, start_date, end_date)
               }
@@ -288,7 +288,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   @spec perform_sync_availability_fetch(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   def perform_sync_availability_fetch(socket, context) do
-    duration_minutes = get_duration_minutes(socket)
+    duration_minutes = duration_minutes(socket)
 
     {start_date, end_date} =
       Calculate.display_range(socket.assigns.current_year, socket.assigns.current_month)
@@ -333,7 +333,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     user_timezone = socket.assigns.user_timezone
     organizer_profile = socket.assigns.organizer_profile
 
-    duration_minutes = get_duration_minutes(socket)
+    duration_minutes = duration_minutes(socket)
     {start_date, end_date} = Calculate.display_range(current_year, current_month)
 
     task =
@@ -381,12 +381,23 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     )
   end
 
-  defp get_duration_minutes(socket) do
-    cond do
-      mt = socket.assigns[:meeting_type] -> mt.duration_minutes
-      is_integer(socket.assigns[:duration]) -> socket.assigns[:duration]
-      is_binary(socket.assigns[:duration]) -> parse_duration_minutes(socket.assigns[:duration])
-      true -> 30
+  @doc """
+  The meeting length the flow is operating on, in minutes.
+
+  The resolved meeting type is authoritative; only when there is none does the
+  slug fall back to a parse, and that parse is bounded — the slug is visitor
+  input, so an unbounded one would let `/:username/99999/book` hold a
+  multi-day slot. The single resolver exists so the display path and the
+  submit path cannot disagree about the bound.
+  """
+  @spec duration_minutes(Phoenix.LiveView.Socket.t()) :: pos_integer()
+  def duration_minutes(socket) do
+    case socket.assigns[:meeting_type] do
+      %{duration_minutes: mins} when is_integer(mins) ->
+        mins
+
+      _unresolved ->
+        parse_duration_minutes(socket.assigns[:duration] || socket.assigns[:selected_duration])
     end
   end
 end

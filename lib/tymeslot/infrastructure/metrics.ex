@@ -213,11 +213,16 @@ defmodule Tymeslot.Infrastructure.Metrics do
   # Private functions
 
   defp sanitize_url(url) when is_binary(url) do
-    # Remove sensitive information from URLs
-    url
-    |> URI.parse()
-    |> Map.put(:userinfo, nil)
-    |> URI.to_string()
+    # Remove sensitive information from URLs. Beyond stripping userinfo, the
+    # path goes through the same `redact_path/1` treatment `request_target/1`
+    # applies before logging, so a credential carried in the path itself
+    # (Telegram's `bot<id>:<secret>`, a CalDAV/feed token) never reaches
+    # telemetry metadata in the first place — logging is not the only
+    # consumer of this event. The query string is dropped outright rather
+    # than redacted piecemeal.
+    uri = URI.parse(url)
+
+    URI.to_string(%{uri | userinfo: nil, path: redact_path(uri.path), query: nil})
   end
 
   defp sanitize_url(url), do: inspect(url)
@@ -284,7 +289,13 @@ defmodule Tymeslot.Infrastructure.Metrics do
   #      email address / calendar identifier.
   #   3. Any segment starting with `private-` is a Google ical feed secret.
   #   4. Any long, mixed alphanumeric segment (>20 chars) is a token/GUID.
-  @token_pattern ~r/^[A-Za-z0-9_-]{21,}$/
+  #   5. Any long segment carrying a `:` separator is a credential pair —
+  #      Telegram's Bot API puts `bot<id>:<secret>` in the path. `:` and `.`
+  #      are inside the character class so that credentials built from them
+  #      (Telegram tokens, JWT-shaped segments) cannot slip past rule 4 for
+  #      want of a permitted character. Over-redacting a path segment costs
+  #      log detail; under-redacting one writes a live credential to disk.
+  @token_pattern ~r/^[A-Za-z0-9_.:-]{21,}$/
 
   defp redact_path(nil), do: nil
 
@@ -314,8 +325,8 @@ defmodule Tymeslot.Infrastructure.Metrics do
   defp token_like?(segment) do
     String.length(segment) > 20 and
       Regex.match?(@token_pattern, segment) and
-      Regex.match?(~r/[0-9]/, segment) and
-      Regex.match?(~r/[A-Za-z]/, segment)
+      Regex.match?(~r/[A-Za-z]/, segment) and
+      (Regex.match?(~r/[0-9]/, segment) or String.contains?(segment, ":"))
   end
 
   @spec handle_circuit_breaker_event(

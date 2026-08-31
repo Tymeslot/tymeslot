@@ -35,43 +35,6 @@ defmodule TymeslotWeb.Themes.Core.Loader do
   end
 
   @doc """
-  Loads a theme module by its key.
-  """
-  @spec load_theme_by_key(atom()) :: load_result()
-  def load_theme_by_key(theme_key) do
-    with {:ok, theme} <- Registry.get_theme_by_key(theme_key) do
-      load_theme(theme.id)
-    end
-  end
-
-  @doc """
-  Preloads all active themes to ensure they're available.
-
-  This is useful during application startup.
-  """
-  @spec preload_all_themes() :: {:ok, [module()]} | {:error, term()}
-  def preload_all_themes do
-    results =
-      Registry.active_themes()
-      |> Map.values()
-      |> Enum.map(fn theme ->
-        case load_theme(theme.id) do
-          {:ok, module} -> {:ok, {theme.id, module}}
-          error -> {:error, {theme.id, error}}
-        end
-      end)
-
-    errors = Enum.filter(results, &match?({:error, _reason}, &1))
-
-    if Enum.empty?(errors) do
-      modules = Enum.map(results, fn {:ok, {_id, module}} -> module end)
-      {:ok, modules}
-    else
-      {:error, errors}
-    end
-  end
-
-  @doc """
   Validates that a theme module implements all required callbacks.
   """
   @spec validate_theme_module(module()) :: :ok | {:error, term()}
@@ -122,44 +85,6 @@ defmodule TymeslotWeb.Themes.Core.Loader do
 
       {:error, _reason} ->
         nil
-    end
-  end
-
-  @doc """
-  Reloads a theme module in development.
-
-  This is useful for hot-reloading during development.
-  """
-  @spec reload_theme(String.t()) :: load_result()
-  def reload_theme(theme_id) do
-    if Application.get_env(:tymeslot, :environment) == :dev do
-      with {:ok, theme} <- Registry.get_theme_by_id(theme_id) do
-        # Purge the module first
-        :code.purge(theme.module)
-        :code.delete(theme.module)
-
-        # Reload it
-        load_theme(theme_id)
-      end
-    else
-      {:error, :not_in_dev_mode}
-    end
-  end
-
-  @doc """
-  Checks if a theme is currently loaded.
-  """
-  @spec theme_loaded?(String.t()) :: boolean()
-  def theme_loaded?(theme_id) do
-    case Registry.get_theme_by_id(theme_id) do
-      {:ok, theme} ->
-        case ensure_loaded(theme.module) do
-          {:ok, _result} -> true
-          _other -> false
-        end
-
-      _other ->
-        false
     end
   end
 

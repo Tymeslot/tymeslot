@@ -151,26 +151,4 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   end
 
   def preset_value?(_field, _value), do: false
-
-  @doc """
-  Gets the custom input mode state for a specific field, with fallback to default.
-
-  ## Parameters
-
-  - `socket` - The LiveView socket
-  - `field` - The field atom
-
-  ## Returns
-
-  Boolean indicating whether custom mode is enabled for this field.
-
-  ## Examples
-
-      custom_mode = get_custom_mode(socket, :buffer_minutes)
-  """
-  @spec get_custom_mode(Phoenix.LiveView.Socket.t(), atom()) :: boolean()
-  def get_custom_mode(socket, field) do
-    custom_input_mode = Map.get(socket.assigns, :custom_input_mode, @default_custom_mode)
-    Map.get(custom_input_mode, field, false)
-  end
 end

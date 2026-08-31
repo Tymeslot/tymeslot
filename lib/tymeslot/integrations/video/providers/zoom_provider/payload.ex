@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload do
   `Tymeslot.Integrations.Video.Providers.ZoomProvider`.
   """
 
+  alias Tymeslot.Infrastructure.Logging.Redactor
+
   @doc """
   Resolves the `{start_time, end_time}` pair for the meeting from `config`.
 
@@ -58,17 +60,31 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload do
   end
 
   @doc """
-  Formats a Zoom API error response into an `{:error, message}` tuple.
+  Formats a Zoom API error response into an `{:error, {:http_error, status,
+  message}}` tuple. Tagged with `status` (rather than flattened to prose) so
+  `BreakerOutcome` can tell a genuine outage (5xx/429/408) from a request
+  problem and let the breaker witness it.
   """
-  @spec decode_and_format_error(integer(), binary()) :: {:error, String.t()}
+  @spec decode_and_format_error(integer(), binary()) ::
+          {:error, {:http_error, integer(), String.t()}}
   def decode_and_format_error(status, body) do
-    case Jason.decode(body) do
-      {:ok, %{"message" => message, "code" => code}} ->
-        {:error, "Zoom API error (#{status}): code #{code} - #{message}"}
+    detail =
+      case Jason.decode(body) do
+        {:ok, %{"message" => message, "code" => code}} ->
+          # Zoom's own message/code are provider-supplied and can echo request
+          # fragments (or token prefixes for auth errors), so they are
+          # redacted and bounded the same as the undecodable branch below,
+          # just to a tighter cap since this is prose, not a raw body.
+          Redactor.redact_and_truncate("code #{code} - #{message}", 512)
 
-      _other ->
-        {:error, "Zoom API error (#{status}): #{body}"}
-    end
+        _other ->
+          # Undecodable body: still bounded and scrubbed before it reaches a log
+          # line, so a provider that answers with something unexpected cannot
+          # write an unbounded blob (or whatever it happens to contain) to disk.
+          Redactor.redact_and_truncate(body)
+      end
+
+    {:error, {:http_error, status, "Zoom API error (#{status}): #{detail}"}}
   end
 
   defp config_start_time(config) do

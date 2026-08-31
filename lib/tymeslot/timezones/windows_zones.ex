@@ -168,14 +168,4 @@ defmodule Tymeslot.Timezones.WindowsZones do
   end
 
   def to_iana(_other), do: nil
-
-  @doc """
-  Returns `true` when the given string is a known Windows zone name.
-  """
-  @spec windows_zone?(term()) :: boolean()
-  def windows_zone?(windows_name) when is_binary(windows_name) do
-    Map.has_key?(@windows_to_iana, windows_name)
-  end
-
-  def windows_zone?(_other), do: false
 end

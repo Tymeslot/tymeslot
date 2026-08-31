@@ -311,6 +311,45 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
       refute meta.path =~ "user@gmail.com"
     end
 
+    test "redacts a Telegram bot token carried in the request path" do
+      LogCapture.attach()
+
+      Metrics.handle_http_event(
+        [:tymeslot, :http, :request],
+        %{duration: 100},
+        %{
+          method: "POST",
+          url:
+            "https://api.telegram.org/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage",
+          status_code: 403
+        },
+        nil
+      )
+
+      assert_receive {:captured_log, %{meta: %{status_code: 403} = meta}}
+      assert meta.path == "/:id/sendMessage"
+      refute meta.path =~ "AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"
+    end
+
+    test "redacts a Telegram bot token on a request slow enough to log" do
+      LogCapture.attach()
+
+      Metrics.handle_http_event(
+        [:tymeslot, :http, :request],
+        %{duration: 10_001},
+        %{
+          method: "POST",
+          url:
+            "https://api.telegram.org/bot987654321:BBGxrUdwDI2wHXKygTfpgTBt1L6QBMEtbx/setWebhook",
+          status_code: 0
+        },
+        nil
+      )
+
+      assert_receive {:captured_log, %{meta: meta}}
+      refute meta.path =~ "BBGxrUdwDI2wHXKygTfpgTBt1L6QBMEtbx"
+    end
+
     test "leaves an ordinary API path unredacted on a slow response" do
       LogCapture.attach()
 
@@ -377,6 +416,34 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
       assert_receive {:telemetry, ^ref, %{url: url}}
       refute url =~ "user:pass"
       assert url =~ "api.example.com"
+    end
+
+    test "redacts a Telegram bot token carried in the URL path", %{handler_id: handler_id} do
+      ref = make_ref()
+      parent = self()
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :http, :request],
+        fn _event, _measurements, metadata, _config ->
+          send(parent, {:telemetry, ref, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      Metrics.track_http_request(
+        "POST",
+        "https://api.telegram.org/bot123456789:AAHslQCoMkPBiQdOLLGhTGh-Yr8lS7Kk_i0/sendMessage",
+        200,
+        100
+      )
+
+      assert_receive {:telemetry, ^ref, %{url: url}}
+      refute url =~ "AAHslQCoMkPBiQdOLLGhTGh-Yr8lS7Kk_i0"
+      refute url =~ "123456789:"
+      assert url =~ "api.telegram.org"
     end
   end
 end

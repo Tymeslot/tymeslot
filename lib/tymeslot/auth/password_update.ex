@@ -12,21 +12,38 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   alias Ecto.Changeset
 
   alias Tymeslot.Auth.{Session, UserQueries}
-  alias Tymeslot.Security.Password
+  alias Tymeslot.Security.{Password, SecurityLogger}
   alias Tymeslot.Utils.ChangesetUtils
 
   @doc """
   Updates a user's password after verifying their current password.
   Pure domain logic without HTTP concerns.
+
+  `opts` carries the request context for the audit entry the change emits:
+  `:ip_address` and `:user_agent`. Both are optional, but an audit entry for a
+  password change that names no origin is materially weaker, so callers that
+  have them should pass them.
   """
-  @spec update_user_password(term(), String.t(), String.t(), String.t()) ::
+  @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, String.t()}
-  def update_user_password(user, current_password, new_password, new_password_confirmation) do
+  def update_user_password(
+        user,
+        current_password,
+        new_password,
+        new_password_confirmation,
+        opts \\ []
+      ) do
     with :ok <- verify_current_password(user, current_password),
          :ok <- ensure_not_same_as_old(user, new_password),
          :ok <- validate_new_password(new_password, new_password_confirmation),
          {:ok, updated_user} <- do_update_password(user, new_password, new_password_confirmation),
          :ok <- Session.revoke_all_sessions(user.id) do
+      SecurityLogger.log_password_change(user.id, %{
+        ip_address: opts[:ip_address],
+        user_agent: opts[:user_agent],
+        sessions_invalidated: true
+      })
+
       {:ok, updated_user}
     else
       {:error, :invalid_password} ->

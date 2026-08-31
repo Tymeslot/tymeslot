@@ -101,43 +101,14 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   @spec call_with_host(atom(), String.t(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
   def call_with_host(provider, host, fun)
       when is_atom(provider) and is_binary(host) and is_function(fun, 0) do
-    # Clean host name to use as part of the registry key
-    safe_host = String.replace(host, ~r/[^a-zA-Z0-9]/, "_")
-    breaker_id = "calendar_breaker_#{provider}_#{safe_host}"
-    breaker_name = {:via, Registry, {Tymeslot.Infrastructure.CircuitBreakerRegistry, breaker_id}}
-
-    # Ensure breaker exists
-    ensure_breaker_exists(breaker_name, provider)
-
-    case CircuitBreaker.call(breaker_name, fun) do
-      :ok ->
-        :ok
-
-      {:ok, result} ->
-        {:ok, result}
-
-      {:error, :circuit_open} = error ->
-        Logger.warning("Calendar host circuit breaker open", provider: provider, host: host)
-        error
-
-      {:error, reason} = error ->
-        Logger.error("Calendar host operation failed",
-          provider: provider,
-          host: host,
-          error: inspect(reason)
-        )
-
-        error
-    end
-  rescue
-    error ->
-      Logger.error("Calendar host circuit breaker error",
-        provider: provider,
-        host: host,
-        error: inspect(error)
-      )
-
-      {:error, :circuit_breaker_error}
+    CircuitBreakerHelpers.call_with_host_breaker(
+      "calendar_breaker",
+      provider,
+      host,
+      "Calendar",
+      get_config(provider),
+      fun
+    )
   end
 
   @doc """
@@ -249,11 +220,25 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
     Tymeslot.Infrastructure.DynamicCircuitBreakerSupervisor
     |> DynamicSupervisor.which_children()
     |> Enum.each(fn
-      {_id, pid, :worker, _modules} when is_pid(pid) -> CircuitBreaker.reset(pid)
+      {_id, pid, :worker, _modules} when is_pid(pid) -> reset_by_pid(pid)
       _other -> :ok
     end)
 
     :ok
+  end
+
+  # `CircuitBreaker.reset/1`'s ETS clear is keyed by the breaker's registered
+  # name (its via-tuple), never a pid — resolve the pid back to the key(s) it
+  # is registered under before resetting, otherwise the ETS delete targets a
+  # key that was never inserted and a stale `:open` snapshot survives.
+  defp reset_by_pid(pid) do
+    Tymeslot.Infrastructure.CircuitBreakerRegistry
+    |> Registry.keys(pid)
+    |> Enum.each(fn key ->
+      CircuitBreaker.reset(
+        {:via, Registry, {Tymeslot.Infrastructure.CircuitBreakerRegistry, key}}
+      )
+    end)
   end
 
   @doc """
@@ -269,19 +254,6 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
 
   defp breaker_name(provider) do
     Map.fetch!(@calendar_breaker_names, provider)
-  end
-
-  defp ensure_breaker_exists(name, provider) do
-    if !breaker_exists?(name) do
-      config = get_config(provider)
-      child_spec = {CircuitBreaker, name: name, config: config}
-
-      # Use dynamic supervisor to start the breaker
-      DynamicSupervisor.start_child(
-        Tymeslot.Infrastructure.DynamicCircuitBreakerSupervisor,
-        child_spec
-      )
-    end
   end
 
   defp breaker_exists?(name), do: CircuitBreakerHelpers.breaker_exists?(name)

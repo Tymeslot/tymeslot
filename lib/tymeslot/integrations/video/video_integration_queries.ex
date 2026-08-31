@@ -195,6 +195,34 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Finds an active video integration for a user and provider whose
+  `provider_account_id` is NULL.
+
+  This is the set the `unique_active_video_null_account_per_user` index covers,
+  so it is what a reactivation of a legacy row has to be checked against.
+  """
+  @spec get_active_null_account_for_user(integer(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def get_active_null_account_for_user(user_id, provider)
+      when is_integer(user_id) and is_binary(provider) do
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where(
+      [v],
+      v.user_id == ^user_id and v.provider == ^provider and
+        is_nil(v.provider_account_id) and v.is_active == true
+    )
+    |> limit(1)
+    |> Repo.one()
+    |> null_account_result()
+  end
+
+  defp null_account_result(nil), do: {:error, :not_found}
+
+  defp null_account_result(integration),
+    do: {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+
+  @doc """
   Finds any video integration (active or inactive) by provider and account ID for a user.
   Used to detect inactive duplicates before creating a new row.
   """
@@ -289,6 +317,30 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Deletes an integration by id, but only while it is still soft-deleted.
+
+  Used by `Tymeslot.Workers.VideoIntegrationDisconnectWorker` to purge a row
+  once its provider-side rooms have been cleaned up. The `deleted_at`
+  predicate lives in the `WHERE` clause rather than in an application-level
+  read-then-delete, so a reconnect (which nulls `deleted_at`) that commits
+  after the worker last read the row cannot race the delete: either the row
+  is still soft-deleted when this statement runs and it is removed, or it
+  isn't and this is a no-op.
+
+  Returns the number of rows deleted: `1` on a genuine purge, `0` when the
+  row was reconnected (or already gone) before this ran.
+  """
+  @spec delete_if_still_deleted(integer()) :: non_neg_integer()
+  def delete_if_still_deleted(id) do
+    {count, _rows} =
+      VideoIntegrationSchema
+      |> where([v], v.id == ^id and not is_nil(v.deleted_at))
+      |> Repo.delete_all()
+
+    count
+  end
+
+  @doc """
   Marks an integration as disconnected without removing it.
 
   The row has to outlive the user's click: deleting provider-side rooms needs the
@@ -349,13 +401,13 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   def toggle_active(%VideoIntegrationSchema{} = integration) do
     if integration.is_active do
       integration
-      |> Changeset.change(%{is_active: false})
+      |> VideoIntegrationSchema.activation_changeset(false)
       |> Repo.update()
     else
       case check_reactivation_conflict(integration) do
         :ok ->
           integration
-          |> Changeset.change(%{is_active: true})
+          |> VideoIntegrationSchema.activation_changeset(true)
           |> Repo.update()
 
         {:error, :duplicate_account} = err ->
@@ -364,9 +416,18 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     end
   end
 
-  defp check_reactivation_conflict(%{provider_account_id: nil}), do: :ok
-
-  defp check_reactivation_conflict(%{provider_account_id: ""}), do: :ok
+  # Every uniqueness index here is predicated on `is_active = true`, so
+  # reactivating a row moves it *into* the index. A row whose account id is
+  # NULL falls under the legacy-row index on `(user_id, provider)`, and one
+  # whose account id is the empty string falls under the account index, because
+  # `''` is not NULL. Waving both through returned `:ok` for exactly the rows
+  # that contend, with no concurrency involved at all.
+  defp check_reactivation_conflict(%{provider_account_id: nil} = integration) do
+    case get_active_null_account_for_user(integration.user_id, integration.provider) do
+      {:ok, _existing} -> {:error, :duplicate_account}
+      {:error, :not_found} -> :ok
+    end
+  end
 
   defp check_reactivation_conflict(integration) do
     case get_by_account_for_user(

@@ -359,76 +359,140 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     end
   end
 
+  # The host is user-supplied, so every hop is classified in its own right.
   # `ssrf_protect: true` hands the private-address decision to `SsrfGuard`,
-  # which resolves every A and AAAA record and is gated to `:prod` — so a local
-  # video container stays reachable in development, and an operator running one
-  # on an internal network opts in with ALLOW_PRIVATE_IPS_FOR_VIDEO. The guard
-  # also pins `redirect: false`, which is why no redirect options are passed:
-  # following a 3xx would let a public host bounce the probe onto an internal
-  # address. A redirecting URL is reported by its 3xx status instead.
-  defp check_reachable(url) do
-    opts = [
-      receive_timeout: 3_000,
-      connect_options: [timeout: 3_000],
+  # which resolves every A and AAAA record, is gated to `:prod` so a local video
+  # container stays reachable in development, and honours the operator's
+  # ALLOW_PRIVATE_IPS_FOR_VIDEO opt-out. It also forcibly sets `redirect: false`
+  # and validates only the URL it is handed, so letting the client follow
+  # redirects itself would leave every hop after the first unchecked: a host
+  # that resolves publicly can 302 straight to 127.0.0.1 or the cloud metadata
+  # endpoint. Following them here reports status, timeout and
+  # connection-refused apart. Same shape as the ICS feed fetcher, which has the
+  # identical problem.
+  @max_redirects 3
+
+  # Each request was previously bounded per-hop only (3s connect + 3s receive),
+  # so the worst case grew with every added hop: up to `@max_redirects + 1`
+  # hops, two requests each (HEAD then a GET fallback), was ~48s with no
+  # overall bound. This caps the whole probe — HEAD, GET fallback and every
+  # redirect hop together — at the original single-hop worst case, shrinking
+  # each subsequent request's own timeout to whatever budget remains rather
+  # than handing out a fresh 3s per hop.
+  @overall_budget_ms 12_000
+
+  defp probe_deadline, do: System.monotonic_time(:millisecond) + @overall_budget_ms
+
+  # Built per call rather than as a module attribute: the opt-out is read from
+  # application config at runtime, and an attribute would freeze it at compile
+  # time. `budget_ms` shrinks the per-request timeout to whatever remains of
+  # the overall probe deadline, capped at the original 3s.
+  defp probe_opts(budget_ms) do
+    per_request_timeout = min(3_000, budget_ms)
+
+    [
+      receive_timeout: per_request_timeout,
+      connect_options: [timeout: per_request_timeout],
       ssrf_protect: true,
       ssrf_allow_private: SsrfGuard.allow_private_for_video?()
     ]
+  end
 
-    case Config.http_client_module().head(url, [], opts) do
-      {:ok, %{status: status}} when status in 200..399 ->
-        {:ok, status}
+  defp check_reachable(url), do: check_reachable(url, @max_redirects, probe_deadline())
 
-      {:ok, %{status: 405}} ->
-        do_get(url, opts)
+  defp check_reachable(_url, hops_left, _deadline) when hops_left < 0 do
+    {:error, dgettext("dashboard_integrations", "URL redirects too many times")}
+  end
 
-      {:ok, %{status: status}} ->
-        {:error, http_status_message(status)}
+  defp check_reachable(url, hops_left, deadline) do
+    with {:ok, budget_ms} <- remaining_budget(deadline) do
+      case Config.http_client_module().head(url, [], probe_opts(budget_ms)) do
+        {:ok, %{status: 405}} ->
+          do_get(url, hops_left, deadline)
 
-      {:error, %SsrfBlockedError{}} ->
-        {:error, private_address_message()}
+        {:ok, response} ->
+          classify_probe(response, url, hops_left, deadline)
 
-      {:error, _reason} ->
-        do_get(url, opts)
+        {:error, %SsrfBlockedError{}} ->
+          {:error, blocked_url_message()}
+
+        {:error, _reason} ->
+          do_get(url, hops_left, deadline)
+      end
     end
   end
 
-  defp do_get(url, opts) do
-    case Config.http_client_module().get(url, [], opts) do
-      {:ok, %{status: status}} when status in 200..399 ->
-        {:ok, status}
+  defp do_get(url, hops_left, deadline) do
+    with {:ok, budget_ms} <- remaining_budget(deadline) do
+      case Config.http_client_module().get(url, [], probe_opts(budget_ms)) do
+        {:ok, response} ->
+          classify_probe(response, url, hops_left, deadline)
 
-      {:ok, %{status: status}} ->
-        {:error, http_status_message(status)}
+        {:error, %SsrfBlockedError{}} ->
+          {:error, blocked_url_message()}
 
-      {:error, %SsrfBlockedError{}} ->
-        {:error, private_address_message()}
+        {:error, exception} when is_exception(exception) ->
+          case exception do
+            %Mint.TransportError{reason: :timeout} ->
+              {:error, url_timeout_message()}
 
-      {:error, exception} when is_exception(exception) ->
-        case exception do
-          %Mint.TransportError{reason: :timeout} ->
-            {:error, url_timeout_message()}
+            %Req.TransportError{reason: :timeout} ->
+              {:error, url_timeout_message()}
 
-          %Req.TransportError{reason: :timeout} ->
-            {:error, url_timeout_message()}
+            _network_exception ->
+              {:error, unreachable_url_message(Exception.message(exception))}
+          end
 
-          _network_exception ->
-            {:error, unreachable_url_message(Exception.message(exception))}
-        end
-
-      {:error, reason} ->
-        {:error, unreachable_url_message(inspect(reason))}
+        {:error, reason} ->
+          {:error, unreachable_url_message(inspect(reason))}
+      end
     end
   end
 
-  defp http_status_message(status),
-    do: dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)
+  defp remaining_budget(deadline) do
+    case deadline - System.monotonic_time(:millisecond) do
+      remaining when remaining > 0 -> {:ok, remaining}
+      _expired -> {:error, url_timeout_message()}
+    end
+  end
 
-  defp private_address_message,
-    do:
-      dgettext(
-        "dashboard_integrations",
-        "URL resolves to a private or loopback address"
-      )
+  defp classify_probe(%{status: status} = response, url, hops_left, deadline)
+       when status in 300..399 do
+    case redirect_target(response, url) do
+      {:ok, target} -> check_reachable(target, hops_left - 1, deadline)
+      :error -> {:ok, status}
+    end
+  end
+
+  defp classify_probe(%{status: status}, _url, _hops_left, _deadline) when status in 200..299 do
+    {:ok, status}
+  end
+
+  defp classify_probe(%{status: status}, _url, _hops_left, _deadline) do
+    {:error,
+     dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+  end
+
+  defp redirect_target(response, current_url) do
+    location =
+      case response do
+        %{headers: %{"location" => [value | _rest]}} -> value
+        %{headers: %{"location" => value}} when is_binary(value) -> value
+        _no_location -> nil
+      end
+
+    case location && URI.merge(URI.parse(current_url), location) do
+      %URI{scheme: scheme, host: host} = uri
+      when scheme in ["http", "https"] and is_binary(host) ->
+        {:ok, URI.to_string(uri)}
+
+      _other ->
+        :error
+    end
+  end
+
+  defp blocked_url_message,
+    do: dgettext("dashboard_integrations", "URL resolves to a private or loopback address")
 
   defp url_timeout_message,
     do: dgettext("dashboard_integrations", "Connection timeout while reaching the URL")

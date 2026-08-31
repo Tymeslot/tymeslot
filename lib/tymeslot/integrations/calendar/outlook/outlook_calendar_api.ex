@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
+  alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
@@ -18,7 +19,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
 
   @base_url "https://graph.microsoft.com/v1.0"
-  @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
   @silent_event_headers [
     {"Content-Type", "application/json"},
     {"Prefer", "outlook.calendar-update.disableNotifications"}
@@ -295,10 +295,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     GraphSubscription.bootstrap_sync(integration)
   end
 
-  @doc false
-  @spec tymeslot_property_id() :: String.t()
-  def tymeslot_property_id, do: @outlook_tymeslot_property_id
-
   @doc """
   Fetches a single raw Graph event by its provider event ID.
 
@@ -312,7 +308,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     params = %{
       "$select" => @event_sync_select_fields,
       "$expand" =>
-        "singleValueExtendedProperties($filter=id eq '#{@outlook_tymeslot_property_id}')"
+        "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
     }
 
     make_request(:get, "/me/events/#{event_id}", token, params)
@@ -476,7 +472,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "$select" =>
         "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,originalStartTimeZone,originalEndTimeZone",
       "$expand" =>
-        "singleValueExtendedProperties($filter=id eq '#{@outlook_tymeslot_property_id}')"
+        "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
     }
   end
 

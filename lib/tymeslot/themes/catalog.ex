@@ -97,17 +97,6 @@ defmodule Tymeslot.Themes.Catalog do
   end
 
   @doc """
-  Gets theme facts by key.
-  """
-  @spec get_by_key(theme_key()) :: {:ok, theme_facts()} | {:error, :theme_not_found}
-  def get_by_key(key) when is_atom(key) do
-    case Map.get(@themes, key) do
-      nil -> {:error, :theme_not_found}
-      facts -> {:ok, facts}
-    end
-  end
-
-  @doc """
   Converts a theme ID to its key.
   """
   @spec id_to_key(theme_id()) :: {:ok, theme_key()} | {:error, :invalid_theme_id}
@@ -189,15 +178,5 @@ defmodule Tymeslot.Themes.Catalog do
       {:ok, %{features: features}} -> {:ok, features}
       error -> error
     end
-  end
-
-  @doc """
-  Returns the facts for every theme whose features map enables `feature`.
-  """
-  @spec themes_with_feature(atom()) :: [theme_facts()]
-  def themes_with_feature(feature) when is_atom(feature) do
-    @themes
-    |> Map.values()
-    |> Enum.filter(fn theme -> Map.get(theme.features, feature, false) == true end)
   end
 end

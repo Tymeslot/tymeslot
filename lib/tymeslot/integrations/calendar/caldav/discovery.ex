@@ -281,6 +281,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
     provider = Map.get(client, :provider, :caldav)
     host = Base.extract_host_from_url(client.base_url)
     opts = Keyword.put(opts, :host, host)
-    CalendarCircuitBreaker.with_breaker(provider, opts, fun)
+
+    case CalendarCircuitBreaker.with_breaker(provider, opts, fun) do
+      {:error, :circuit_breaker_error} = error ->
+        # The breaker now catches a non-local exit from the discovery call
+        # (the breaker process itself dying between calls, or the discovery
+        # task exiting) and folds it into this sentinel rather than letting it
+        # crash the caller. Discovery has always surfaced that as a genuine
+        # crash to callers running it inside an async task (onboarding's
+        # CalDAV step relies on the crash-recovery path), so re-raise it here
+        # rather than let it flatten into an ordinary discovery error.
+        exit(error)
+
+      other ->
+        other
+    end
   end
 end

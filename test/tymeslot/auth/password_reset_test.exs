@@ -9,6 +9,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
 
@@ -134,6 +135,31 @@ defmodule Tymeslot.Auth.PasswordResetTest do
                PasswordReset.reset_password(token, "AnotherPass123!", "AnotherPass123!")
     end
 
+    test "records a password_change audit entry carrying the request context" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
+
+      # SecurityLogger emits at :info; config/test.exs pins the primary level to
+      # :warning, so it has to come down for the duration. Safe here: the module
+      # is async: false.
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:ok, _user_map, _message} =
+                 PasswordReset.reset_password(
+                   token,
+                   "NewSecurePassword123!",
+                   "NewSecurePassword123!",
+                   ip: "203.0.113.11",
+                   user_agent: "curl/8.0"
+                 )
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "password_change"} = meta}}
+      assert meta.user_id == user.id
+      assert meta.ip_address == "203.0.113.11"
+      assert meta.user_agent == "curl/8.0"
+    end
+
     test "invalidates all existing sessions and disconnects their live sockets" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
       sessions = insert_list(3, :user_session, user: user)
@@ -186,6 +212,28 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
       rate_limited = Enum.filter(results, &match?({:error, :rate_limited, _msg}, &1))
       assert length(rate_limited) >= 15
+    end
+
+    test "records a rate-limit audit entry naming the account and origin" do
+      insert(:user, email: "ratelimit-audit@example.com")
+
+      for _i <- 1..5 do
+        PasswordReset.initiate_reset("ratelimit-audit@example.com", ip: "192.168.1.101")
+      end
+
+      # SecurityLogger emits at :info; config/test.exs pins the primary level
+      # to :warning, so lower it for the duration of the call.
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:error, :rate_limited, _message} =
+                 PasswordReset.initiate_reset("ratelimit-audit@example.com", ip: "192.168.1.101")
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+
+      assert meta.limit_type == "password_reset"
+      assert meta.email_masked == "r***@example.com"
+      assert meta.ip_address == "192.168.1.101"
+      refute inspect(meta) =~ "ratelimit-audit@example.com"
     end
   end
 

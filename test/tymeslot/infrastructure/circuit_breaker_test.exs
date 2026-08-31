@@ -3,6 +3,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
   @moduletag :infrastructure
 
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Infrastructure.CircuitBreaker
 
   @registry Tymeslot.Infrastructure.CircuitBreakerRegistry
@@ -45,10 +47,19 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "failed calls increment failure_count" do
       name = start_breaker(config: %{failure_threshold: 10})
 
-      CircuitBreaker.call(name, fn -> {:error, :boom} end)
-      CircuitBreaker.call(name, fn -> {:error, :boom} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :boom} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :boom} end)
 
       assert %{failure_count: 2, status: :closed} = CircuitBreaker.status(name)
+    end
+
+    test "a local, non-provider error leaves the breaker closed and untouched" do
+      name = start_breaker(config: %{failure_threshold: 1})
+
+      assert {:error, :insufficient_scope} =
+               CircuitBreaker.call(name, fn -> {:error, :insufficient_scope} end)
+
+      assert %{status: :closed, failure_count: 0} = CircuitBreaker.status(name)
     end
 
     test "non-tagged-tuple returns are wrapped in {:ok, result}" do
@@ -67,13 +78,39 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
                CircuitBreaker.status(name)
     end
 
-    test "exceptions are caught and counted as failures" do
+    test "exceptions are caught and ignored, not counted as provider failures" do
       name = start_breaker(config: %{failure_threshold: 10})
 
       assert {:error, %RuntimeError{}} =
                CircuitBreaker.call(name, fn -> raise "boom" end)
 
-      assert %{failure_count: 1} = CircuitBreaker.status(name)
+      assert %{failure_count: 0} = CircuitBreaker.status(name)
+    end
+
+    test "a 3-element {:error, reason, message} return counts as a failure, not a success" do
+      name = start_breaker(config: %{failure_threshold: 1})
+
+      assert {:error, :network_error, "boom"} =
+               CircuitBreaker.call(name, fn -> {:error, :network_error, "boom"} end)
+
+      assert %{status: :open} = CircuitBreaker.status(name)
+    end
+
+    test "an unrecognised outcome from a custom :classify function is treated as :ignore rather than crashing the breaker" do
+      name = start_breaker()
+
+      log =
+        capture_log(fn ->
+          assert {:ok, :whatever} =
+                   CircuitBreaker.call(name, fn -> {:ok, :whatever} end,
+                     classify: fn _result -> :bogus end
+                   )
+        end)
+
+      assert log =~ "unrecognised outcome"
+
+      # The breaker survived and treated the bogus outcome as :ignore (untouched state).
+      assert %{status: :closed, success_count: 0, failure_count: 0} = CircuitBreaker.status(name)
     end
   end
 
@@ -81,12 +118,12 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "opens after failure_threshold failures within time window" do
       name = start_breaker(config: %{failure_threshold: 3, time_window: 60_000})
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
       assert %{status: :closed} = CircuitBreaker.status(name)
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
       assert %{status: :open} = CircuitBreaker.status(name)
     end
@@ -95,13 +132,13 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       name =
         start_breaker(config: %{failure_threshold: 3, time_window: @time_window_ms})
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
       # Wait well past the window before the third failure
       Process.sleep(@sleep_ms)
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
       # Should still be closed because window reset cleared earlier failures
       assert %{status: :closed} = CircuitBreaker.status(name)
@@ -112,7 +149,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "calls immediately return {:error, :circuit_open}" do
       name = start_breaker(config: %{failure_threshold: 1, recovery_timeout: 60_000})
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
 
       assert %{status: :open} = CircuitBreaker.status(name)
       assert {:error, :circuit_open} = CircuitBreaker.call(name, fn -> {:ok, :ignored} end)
@@ -130,7 +167,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
           }
         )
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
       # Wait well past the recovery timeout
@@ -154,7 +191,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
         )
 
       # Open the breaker
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
       Process.sleep(@sleep_ms)
@@ -164,6 +201,33 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
       # Second half-open success should close
       assert {:ok, :ok2} = CircuitBreaker.call(name, fn -> {:ok, :ok2} end)
+      assert %{status: :closed} = CircuitBreaker.status(name)
+    end
+
+    test "an :ignore outcome releases the grant instead of permanently spending it" do
+      name =
+        start_breaker(
+          config: %{
+            failure_threshold: 1,
+            recovery_timeout: @time_window_ms,
+            half_open_requests: 2
+          }
+        )
+
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+      assert %{status: :open} = CircuitBreaker.status(name)
+
+      Process.sleep(@sleep_ms)
+
+      # A local, non-provider error must not permanently burn one of the
+      # round's two grants — otherwise only one success is ever reachable
+      # and the circuit can never close.
+      assert {:error, :insufficient_scope} =
+               CircuitBreaker.call(name, fn -> {:error, :insufficient_scope} end)
+
+      assert {:ok, :ok1} = CircuitBreaker.call(name, fn -> {:ok, :ok1} end)
+      assert {:ok, :ok2} = CircuitBreaker.call(name, fn -> {:ok, :ok2} end)
+
       assert %{status: :closed} = CircuitBreaker.status(name)
     end
 
@@ -177,14 +241,14 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
           }
         )
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
       Process.sleep(@sleep_ms)
 
       # Fail in half-open
-      assert {:error, :fail_again} =
-               CircuitBreaker.call(name, fn -> {:error, :fail_again} end)
+      assert {:provider_error, :fail_again} =
+               CircuitBreaker.call(name, fn -> {:provider_error, :fail_again} end)
 
       assert %{status: :open} = CircuitBreaker.status(name)
     end
@@ -194,7 +258,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "resets circuit to closed state" do
       name = start_breaker(config: %{failure_threshold: 1, recovery_timeout: 60_000})
 
-      CircuitBreaker.call(name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(name)
 
       CircuitBreaker.reset(name)
@@ -232,6 +296,23 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       # Defaults should still be present
       assert config.recovery_timeout == :timer.minutes(5)
       assert config.half_open_requests == 3
+    end
+  end
+
+  describe "idle timeout" do
+    test "defaults to :infinity so a statically supervised breaker is never idle-stopped" do
+      name = start_breaker()
+
+      assert %{idle_timeout: :infinity} = :sys.get_state(name)
+    end
+
+    test "an explicit :idle_timeout is armed and self-stops the breaker after that many ms" do
+      name = via_name()
+      start_supervised!({CircuitBreaker, name: name, config: %{}, idle_timeout: 50})
+      pid = GenServer.whereis(name)
+
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 1_000
     end
   end
 
@@ -304,7 +385,9 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
         recovery_timeout: 60_000
       })
 
-      assert {:error, :fail} = CircuitBreaker.call(breaker_name, fn -> {:error, :fail} end)
+      assert {:provider_error, :fail} =
+               CircuitBreaker.call(breaker_name, fn -> {:provider_error, :fail} end)
+
       assert %{status: :open} = CircuitBreaker.status(breaker_name)
 
       restarted_pid = kill_breaker_and_wait(breaker_name)
@@ -328,7 +411,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       })
 
       # Trip to open.
-      CircuitBreaker.call(breaker_name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(breaker_name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(breaker_name)
 
       # Backdate last_failure_time past the recovery timeout so the next call
@@ -358,7 +441,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       })
 
       # Trip to :open.
-      CircuitBreaker.call(breaker_name, fn -> {:error, :fail} end)
+      CircuitBreaker.call(breaker_name, fn -> {:provider_error, :fail} end)
       assert %{status: :open} = CircuitBreaker.status(breaker_name)
 
       # Reset to :closed — this must also update the ETS snapshot.
@@ -372,6 +455,65 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
       # The persisted snapshot must reflect the reset, not the earlier :open state.
       assert %{status: :closed, failure_count: 0} = CircuitBreaker.status(breaker_name)
+    end
+  end
+
+  # The reason the breaker grants permission rather than executing the work:
+  # a breaker that runs the function inside its own GenServer caps concurrency
+  # on the dependency it protects at one caller.
+  describe "concurrency" do
+    test "callers run concurrently instead of queueing behind the breaker" do
+      name = start_breaker(config: %{failure_threshold: 10})
+      parent = self()
+      concurrency = 5
+
+      tasks =
+        for i <- 1..concurrency do
+          Task.async(fn ->
+            CircuitBreaker.call(name, fn ->
+              send(parent, {:inside, i, self()})
+
+              # Every caller holds here until all of them have arrived. Under a
+              # breaker that executed the work itself, the second caller would
+              # still be waiting in the mailbox and this would never resolve.
+              receive do
+                :release -> {:ok, i}
+              after
+                2_000 -> {:error, :never_released}
+              end
+            end)
+          end)
+        end
+
+      arrivals =
+        for _arrival <- 1..concurrency do
+          assert_receive {:inside, i, pid}, 1_000
+          {i, pid}
+        end
+
+      assert arrivals |> Enum.map(&elem(&1, 0)) |> Enum.sort() == Enum.to_list(1..concurrency)
+
+      Enum.each(arrivals, fn {_i, pid} -> send(pid, :release) end)
+
+      results = Task.await_many(tasks, 5_000)
+
+      assert Enum.sort(results) == Enum.map(1..concurrency, &{:ok, &1})
+    end
+
+    test "an open circuit still refuses without running the function" do
+      name = start_breaker(config: %{failure_threshold: 1, recovery_timeout: 60_000})
+      parent = self()
+
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+      assert %{status: :open} = CircuitBreaker.status(name)
+
+      assert {:error, :circuit_open} =
+               CircuitBreaker.call(name, fn ->
+                 send(parent, :should_not_run)
+                 {:ok, :ran}
+               end)
+
+      refute_received :should_not_run
     end
   end
 end

@@ -180,6 +180,36 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
       refute inspect(meta) =~ "Alice@Example.COM"
       refute inspect(meta) =~ "alice@example.com"
     end
+
+    test "forwards an identifier-shaped provider unchanged" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{provider: "nextcloud"})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "test_event"} = meta}}
+      assert meta.provider == "nextcloud"
+    end
+
+    test "drops a provider carrying unvalidated user input rather than logging it verbatim" do
+      malicious = "<script>alert(1)</script>\nX-Injected: true"
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{provider: malicious})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "test_event"} = meta}}
+      assert meta.provider == nil
+      refute inspect(meta) =~ malicious
+    end
+
+    test "drops an over-long provider value" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_security_event("test_event", %{provider: String.duplicate("a", 33)})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "test_event"} = meta}}
+      assert meta.provider == nil
+    end
   end
 
   describe "log_blocked_input/3" do
@@ -252,6 +282,165 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
 
       assert_receive {:captured_log, %{meta: %{event_type: "session_destroyed"} = meta}}
       assert meta.session_id == nil
+    end
+  end
+
+  describe "log_account_lockout/3" do
+    test "names the locked-out account as a masked email and records its kind" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_account_lockout("alice@example.com", "locked", %{
+          user_id: 7,
+          ip_address: "203.0.113.9",
+          user_agent: "curl/8.0"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "account_lockout"} = meta}}
+      assert meta.email_masked == "a***@example.com"
+      assert meta.lockout_type == "locked"
+      assert meta.user_id == 7
+      assert meta.ip_address == "203.0.113.9"
+      assert meta.user_agent == "curl/8.0"
+      refute inspect(meta) =~ "alice@example.com"
+    end
+
+    test "distinguishes a throttle from a lock" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_account_lockout("bob@example.com", "throttled", %{})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "account_lockout"} = meta}}
+      assert meta.lockout_type == "throttled"
+      assert meta.user_id == nil
+    end
+  end
+
+  describe "log_rate_limit_violation/3" do
+    test "names an email identifier as a masked email, never raw" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_rate_limit_violation("dave@example.com", "signup", %{
+          ip_address: "203.0.113.9",
+          user_agent: "curl/8.0"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+      assert meta.email_masked == "d***@example.com"
+      assert meta.user_id == nil
+      assert meta.limit_type == "signup"
+      assert meta.ip_address == "203.0.113.9"
+      assert meta.user_agent == "curl/8.0"
+      refute inspect(meta) =~ "dave@example.com"
+    end
+
+    test "names an integer identifier as a user id, not an email" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_rate_limit_violation(42, "email_verification", %{
+          ip_address: "203.0.113.9"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+      assert meta.user_id == 42
+      assert meta.email_masked == nil
+      assert meta.limit_type == "email_verification"
+    end
+  end
+
+  describe "log_social_auth_event/3" do
+    test "records which provider the attempt was against" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_social_auth_event("google", true, %{
+          email: "carol@example.com",
+          ip_address: "203.0.113.4"
+        })
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "social_auth_success"} = meta}}
+      assert meta.provider == "google"
+      assert meta.email_masked == "c***@example.com"
+      assert meta.ip_address == "203.0.113.4"
+    end
+
+    test "records the provider on a failure with no email available" do
+      capture_security_logs(fn ->
+        SecurityLogger.log_social_auth_event("github", false, %{ip_address: "203.0.113.5"})
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event_type: "social_auth_failure"} = meta}}
+      assert meta.provider == "github"
+      assert meta.email_masked == nil
+    end
+  end
+
+  describe "monitoring webhook payload" do
+    setup do
+      Mox.set_mox_global()
+
+      original_enabled = Application.get_env(:tymeslot, :security_monitoring_enabled)
+      original_webhook = Application.get_env(:tymeslot, :security_monitoring_webhook)
+
+      Application.put_env(:tymeslot, :security_monitoring_enabled, true)
+      Application.put_env(:tymeslot, :security_monitoring_webhook, "https://example.com/webhook")
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :security_monitoring_enabled, original_enabled)
+        Application.put_env(:tymeslot, :security_monitoring_webhook, original_webhook)
+      end)
+
+      :ok
+    end
+
+    test "carries lockout_type to the webhook, not just the Logger line" do
+      test_pid = self()
+
+      Mox.expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        send(test_pid, {:webhook_body, Jason.decode!(body)})
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_account_lockout("alice@example.com", "account_throttled", %{
+          user_id: 7
+        })
+      end)
+
+      assert_receive {:webhook_body, payload}, 1000
+      assert payload["lockout_type"] == "account_throttled"
+      assert payload["email_masked"] == "a***@example.com"
+      refute Jason.encode!(payload) =~ "alice@example.com"
+    end
+
+    test "carries limit_type to the webhook" do
+      test_pid = self()
+
+      Mox.expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        send(test_pid, {:webhook_body, Jason.decode!(body)})
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_rate_limit_violation("dave@example.com", "signup", %{})
+      end)
+
+      assert_receive {:webhook_body, payload}, 1000
+      assert payload["limit_type"] == "signup"
+    end
+
+    test "carries provider to the webhook" do
+      test_pid = self()
+
+      Mox.expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        send(test_pid, {:webhook_body, Jason.decode!(body)})
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_social_auth_event("github", false, %{ip_address: "203.0.113.5"})
+      end)
+
+      assert_receive {:webhook_body, payload}, 1000
+      assert payload["provider"] == "github"
     end
   end
 end

@@ -21,7 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
-  alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
+  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
   alias Tymeslot.Meetings.MeetingSchema
@@ -218,7 +218,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   def get_event(uid, user_id \\ nil) do
     Logger.debug("Getting calendar event", uid: uid, user_id: user_id)
 
-    case EventQueries.list_events(user_id) do
+    case EventFetcher.list_events(user_id) do
       {:ok, events} ->
         event = Enum.find(events, &(&1.uid == uid))
 

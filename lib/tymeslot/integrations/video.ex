@@ -73,30 +73,6 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   @doc """
-  Fetches a video integration by ID, collapsing the
-  `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
-  after silently flagging the integration for reauthentication.
-
-  Use this in non-Oban callers that only care about the two-outcome
-  `{:ok, _} | {:error, :not_found}` shape.
-  """
-  @spec fetch_integration(integer()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
-  def fetch_integration(id) do
-    case VideoIntegrationQueries.get(id) do
-      {:ok, integration} ->
-        {:ok, integration}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-
-      {:error, :requires_reencryption, stale} ->
-        flag_for_reauth(stale)
-        {:error, :not_found}
-    end
-  end
-
-  @doc """
   Fetches a video integration by ID for a specific user, collapsing the
   `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
   after silently flagging the integration for reauthentication.

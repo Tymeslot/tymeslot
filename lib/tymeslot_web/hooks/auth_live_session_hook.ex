@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   import Phoenix.Component
 
   alias Tymeslot.Auth.Authentication
+  alias Tymeslot.Infrastructure.Config
 
   @doc """
   Handle the on_mount callback for the given hook.
@@ -44,7 +45,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   def on_mount(:ensure_authenticated, _params, session, socket) do
     case session["user_token"] do
       nil ->
-        redirect_path = Application.get_env(:auth, :login_path, "/auth/login")
+        redirect_path = login_path()
 
         socket =
           socket
@@ -67,7 +68,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
 
           {:cont, socket}
         else
-          redirect_path = Application.get_env(:auth, :login_path, "/auth/login")
+          redirect_path = login_path()
 
           socket =
             socket
@@ -110,7 +111,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
         user = Authentication.get_user_by_session_token(token)
 
         if user do
-          redirect_path = Application.get_env(:tymeslot, :auth)[:success_redirect_path]
+          redirect_path = Config.success_redirect_path()
 
           socket =
             socket
@@ -121,6 +122,19 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
         else
           {:cont, assign(socket, :current_user, nil)}
         end
+    end
+  end
+
+  # The login path lived under OTP app `:auth`, which neither repo configures,
+  # so the inline default always won. It belongs in the same `:tymeslot, :auth`
+  # keyword list the post-login redirect already reads. Config exposes no
+  # public reader for this key (only `success_redirect_path/0`), so the
+  # lookup stays here, guarded the same way `Config.success_redirect_path/0`
+  # guards its own read.
+  defp login_path do
+    case Application.get_env(:tymeslot, :auth) do
+      config when is_list(config) -> Keyword.get(config, :login_path, "/auth/login")
+      _other -> "/auth/login"
     end
   end
 end

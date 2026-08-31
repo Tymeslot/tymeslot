@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.ZoomConfig
+  alias Tymeslot.Integrations.Video.OAuthTokenManager
 
   require Logger
 
@@ -138,10 +139,10 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
         {:error, "No token expiration information"}
 
       expires_at ->
-        # Consider token expired if it expires within 5 minutes
-        buffer_time = DateTime.add(DateTime.utc_now(), 300, :second)
-
-        if DateTime.compare(expires_at, buffer_time) == :gt do
+        # The expiry buffer is a shared decision, not a per-provider one, and
+        # `OAuthTokenManager`'s moduledoc claims ownership of it. Google Meet
+        # already asks it; this used to carry its own copy of the number.
+        if OAuthTokenManager.token_still_valid?(expires_at) do
           {:ok, :valid}
         else
           {:ok, :needs_refresh}

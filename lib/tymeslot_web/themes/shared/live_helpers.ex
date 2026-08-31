@@ -74,8 +74,16 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
 
-    # Finally setup initial state
-    socket = setup_initial_state_fun.(socket, initial_state, params)
+    # Finally setup initial state. Only on the connected mount — handle_params
+    # (which always runs immediately after mount, on both the static and
+    # connected passes) calls the same entry handler, so doing it here too on
+    # the static pass would throw the result away and query twice for nothing.
+    socket =
+      if connected?(socket) do
+        setup_initial_state_fun.(socket, initial_state, params)
+      else
+        socket
+      end
 
     # Pre-fetch month availability so it's ready for the schedule step. Only on
     # the connected mount — the static render would throw the result away, and
@@ -179,18 +187,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if socket.assigns[:username_context] && socket.assigns[:organizer_user_id] do
       case resolve_meeting_type(socket, duration_str) do
-        nil ->
-          socket
-
-        meeting_type ->
-          # Re-initialise the engine with a fresh snapshot whenever the meeting type
-          # changes so the `:questions` step always reflects the current custom fields.
-          defs = CustomFields.snapshot_for(meeting_type)
-
-          socket
-          |> assign(:meeting_type, meeting_type)
-          |> assign(:engine, QEngine.init(defs))
-          |> OrganizerHelpers.assign_booking_window()
+        nil -> socket
+        meeting_type -> assign_meeting_type(socket, meeting_type)
       end
     else
       socket
@@ -276,30 +274,72 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec handle_schedule_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_schedule_entry(socket, params) do
-    # Validate slug against meeting types if username context
-    slug = normalize_duration_param(params)
+    case resolve_slug_meeting_type(socket, normalize_duration_param(params)) do
+      {:unresolvable, socket} -> socket
+      {:ok, socket} -> do_handle_schedule_entry(socket, params)
+    end
+  end
 
-    with {:username_context, true} <-
-           {:username_context, is_binary(socket.assigns[:username_context])},
-         {:slug, slug} when is_binary(slug) <- {:slug, slug},
-         {:meeting_type, nil} <-
-           {:meeting_type,
-            ThemeFlow.resolve_meeting_type_for_slug(socket.assigns[:organizer_user_id], slug)} do
-      socket
-      |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
-      |> redirect(to: ~p"/#{socket.assigns[:username_context]}")
+  # Resolves the slug in the URL into `:meeting_type`, the record whose rules
+  # the submission is validated against. Every entry point into the flow has to
+  # do this: a booking that reaches the submit without it persists with
+  # `meeting_type_id: nil`, which the domain waves through, dropping the type's
+  # custom-field snapshot, schedule, buffers and booking limits, and leaving
+  # the duration to an unbounded parse of the slug itself.
+  #
+  # Returns `{:unresolvable, socket}` — already flashed and redirected — when
+  # the organiser has no type for this slug.
+  defp resolve_slug_meeting_type(socket, slug) do
+    if is_binary(socket.assigns[:username_context]) and is_binary(slug) do
+      socket.assigns[:organizer_user_id]
+      |> ThemeFlow.resolve_meeting_type_for_slug(slug)
+      |> assign_resolved_meeting_type(socket)
     else
-      {:meeting_type, meeting_type} ->
-        defs = CustomFields.snapshot_for(meeting_type)
+      {:ok, socket}
+    end
+  end
 
-        socket
-        |> assign(:meeting_type, meeting_type)
-        |> assign(:engine, QEngine.init(defs))
-        |> OrganizerHelpers.assign_booking_window()
-        |> do_handle_schedule_entry(params)
+  defp assign_resolved_meeting_type(nil, socket) do
+    {:unresolvable,
+     socket
+     |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
+     |> redirect(to: invalid_meeting_type_redirect_path(socket))}
+  end
+
+  defp assign_resolved_meeting_type(meeting_type, socket) do
+    {:ok, assign_meeting_type(socket, meeting_type)}
+  end
+
+  # Carries the reschedule context across the redirect so a bad slug doesn't
+  # silently turn a reschedule into a new, duplicate booking.
+  defp invalid_meeting_type_redirect_path(socket) do
+    base = ~p"/#{socket.assigns[:username_context]}"
+
+    case socket.assigns[:reschedule_meeting_uid] do
+      uid when is_binary(uid) and uid != "" ->
+        "#{base}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
 
       _other ->
-        do_handle_schedule_entry(socket, params)
+        base
+    end
+  end
+
+  defp assign_meeting_type(socket, meeting_type) do
+    socket
+    |> assign(:meeting_type, meeting_type)
+    |> assign(:engine, refreshed_engine(socket, meeting_type))
+    |> OrganizerHelpers.assign_booking_window()
+  end
+
+  # Re-initialise only when the definitions actually changed, so re-entering a
+  # step (or landing on `/book` directly, which resolves the same type again)
+  # preserves answers already given. Mirrors the `:questions` entry handler.
+  defp refreshed_engine(socket, meeting_type) do
+    defs = CustomFields.snapshot_for(meeting_type)
+
+    case socket.assigns[:engine] do
+      %QEngine{definitions: ^defs} = engine -> engine
+      _changed -> QEngine.init(defs)
     end
   end
 
@@ -348,7 +388,15 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         is_binary(params["reschedule_meeting_uid"])
 
     if has_selection || is_reschedule do
-      do_handle_booking_entry(socket, params)
+      case resolve_booking_meeting_type(socket, params, is_reschedule) do
+        {:unresolvable, socket} ->
+          socket
+
+        {:ok, socket} ->
+          socket
+          |> route_past_unanswered_questions()
+          |> do_handle_booking_entry(params)
+      end
     else
       username = socket.assigns[:username_context]
       slug = socket.assigns[:selected_duration] || params["slug"]
@@ -360,6 +408,55 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       end
     end
   end
+
+  # `/:username/:slug/book` is directly enterable, so the booking step cannot
+  # assume an earlier step already resolved the type.
+  #
+  # A reschedule is committed to the original meeting's type (see
+  # `ThemeFlow.resolve_meeting_type_for_reschedule/2`), which is preferred over
+  # the slug even when the slug still names a live type, because two types can
+  # share a duration. Only when that resolution itself comes back nil — not a
+  # reschedule, meeting not the organiser's, or it predates meeting types —
+  # does it fall back to the same slug match a fresh booking would use, so the
+  # flow never lands on `meeting_type_id: nil`.
+  defp resolve_booking_meeting_type(socket, params, false = _is_reschedule) do
+    resolve_slug_meeting_type(socket, normalize_duration_param(params))
+  end
+
+  defp resolve_booking_meeting_type(socket, params, true = _is_reschedule) do
+    reschedule_uid = socket.assigns[:reschedule_meeting_uid] || params["reschedule_meeting_uid"]
+
+    case ThemeFlow.resolve_meeting_type_for_reschedule(
+           reschedule_uid,
+           socket.assigns[:organizer_user_id]
+         ) do
+      nil -> resolve_slug_meeting_type(socket, normalize_duration_param(params))
+      meeting_type -> {:ok, assign_meeting_type(socket, meeting_type)}
+    end
+  end
+
+  # `/:username/:slug/book` can be entered directly (a reschedule deep-link,
+  # or a locale switch mid-flow, both of which redirect straight back to this
+  # URL). Neither passes through the `:questions` step, so a meeting type with
+  # required custom fields would otherwise seed the engine with definitions
+  # but no answers and render the booking step, which has no UI for them —
+  # every submit then fails validation with no way to correct it. Route to
+  # `:questions` instead whenever the freshly-resolved engine still has
+  # unanswered required fields; forward navigation from there already lands
+  # back on `:booking` once answered.
+  defp route_past_unanswered_questions(socket) do
+    if unanswered_required_questions?(socket.assigns[:engine]) do
+      assign(socket, :current_state, :questions)
+    else
+      socket
+    end
+  end
+
+  defp unanswered_required_questions?(%QEngine{} = engine) do
+    not QEngine.skipped?(engine) && match?({:error, _errors}, QEngine.validate_all(engine))
+  end
+
+  defp unanswered_required_questions?(_engine), do: false
 
   defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting
