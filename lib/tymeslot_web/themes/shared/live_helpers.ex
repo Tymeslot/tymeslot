@@ -218,10 +218,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     socket
     |> maybe_assign_from_params(:duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_duration, normalize_duration_param(params))
-    |> maybe_assign_from_params(:selected_date, params["date"])
+    |> maybe_assign_from_params(:selected_date, date_param(params))
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
-    |> assign(:is_rescheduling, params["reschedule_meeting_uid"] != nil)
+    |> assign(:is_rescheduling, is_binary(params["reschedule_meeting_uid"]))
     |> handle_confirmation_params(params)
   end
 
@@ -243,8 +243,31 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     end
   end
 
-  defp maybe_assign_from_params(socket, _key, nil), do: socket
-  defp maybe_assign_from_params(socket, key, value), do: assign(socket, key, value)
+  # Query parameters are whatever the URL says they are: Phoenix decodes
+  # `?date[]=x` to a list and `?date[a]=b` to a map, and every consumer
+  # downstream (`Date.from_iso8601/1` among them) is written for strings only.
+  # A param of any other shape is treated as absent rather than assigned on and
+  # left to fail deep in the flow.
+  defp maybe_assign_from_params(socket, key, value) when is_binary(value),
+    do: assign(socket, key, value)
+
+  defp maybe_assign_from_params(socket, _key, _value), do: socket
+
+  # A date that does not parse is no more usable than one that was never named,
+  # and dropping it here is what lets `NextAvailable` land the booker on a real
+  # day: it stands down for any non-empty `:selected_date`, so a malformed one
+  # left on the socket would strand the schedule step with no day selected and
+  # a calendar-parsing error where the times belong.
+  defp date_param(params), do: parsed_date(params["date"])
+
+  defp parsed_date(value) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, _date} -> value
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp parsed_date(_value), do: nil
 
   defp normalize_duration_param(params) do
     duration = params["slug"] || params["duration"]
@@ -371,7 +394,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       # seeded it anyway; under the test harness the fetch resolves inline
       # here, ahead of `handle_params`. Seeding it at both points is what keeps
       # the two orderings agreeing on whether the booker made a choice.
-      |> maybe_assign_from_params(:selected_date, params["date"])
+      |> maybe_assign_from_params(:selected_date, date_param(params))
 
     # Trigger month availability fetch in background if not already loading or loaded for this month
     if AvailabilityHelpers.can_fetch_availability?(socket) do

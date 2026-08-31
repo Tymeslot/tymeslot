@@ -8,6 +8,15 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
   Without that resolution the submission carries `meeting_type_id: nil`, which
   the domain waves through, and the duration falls back to parsing the slug —
   with no upper bound, so `/host/99999/book` would hold a multi-day slot.
+
+  The second half of the file covers the other thing a pasted URL can do:
+  supply a parameter of a shape the flow never anticipated. Phoenix decodes
+  `?date[]=x` to a list and `?date[a]=b` to a map, and every consumer below is
+  written for strings, so an unguarded assign raises in `Date.from_iso8601/1`
+  or `normalize_duration_slug/1`. `Themes.Core.ErrorBoundary` rescues the
+  raise, which is why the assertions here are not about the process staying
+  alive: what it leaves behind is the theme's error page in place of the
+  booking flow, for anyone with the link, on a public page.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -119,5 +128,88 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
     assigns = :sys.get_state(view.pid).socket.assigns
 
     assert assigns.meeting_type.id == meeting_type.id
+  end
+
+  describe "query parameters of an unexpected shape" do
+    @tag :capture_log
+    test "a list-shaped date is dropped and the day is picked for the booker instead",
+         %{conn: conn, profile: profile, date: date} do
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}/deep-dive?date%5B%5D=#{date}")
+
+      assert_landed_on_a_real_day(view)
+    end
+
+    @tag :capture_log
+    test "a map-shaped date is dropped and the day is picked for the booker instead",
+         %{conn: conn, profile: profile, date: date} do
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}/deep-dive?date%5Bon%5D=#{date}")
+
+      assert_landed_on_a_real_day(view)
+    end
+
+    @tag :capture_log
+    test "a date string that does not parse is dropped rather than stranding the step",
+         %{conn: conn, profile: profile} do
+      # `NextAvailable` stands down for any non-empty `:selected_date`, so a
+      # value left on the socket here would park the booker on a schedule step
+      # with no day selected and a calendar-parsing error where the times go.
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}/deep-dive?date=2026-02-31")
+
+      assert_landed_on_a_real_day(view)
+    end
+
+    @tag :capture_log
+    test "a list-shaped duration leaves the overview page rendering its durations",
+         %{conn: conn, profile: profile} do
+      # `/:username` has no `slug` path segment, so `?duration=` is what the
+      # duration normaliser is handed. It raises earlier than the date does —
+      # inside `handle_param_updates/2` itself, so on the very first render.
+      {:ok, view, _html} = live(conn, "/#{profile.username}?duration%5B%5D=45min")
+
+      # The real overview, not the error boundary's page standing in for it.
+      assert has_element?(view, "button[data-testid='duration-option']")
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert assigns[:theme_error] == nil
+      assert assigns.duration == nil
+      assert assigns.selected_duration == nil
+    end
+
+    @tag :capture_log
+    test "list-shaped time and reschedule parameters are treated as absent",
+         %{conn: conn, profile: profile, date: date} do
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}/deep-dive?date=#{date}" <>
+            "&time%5B%5D=10:00%20AM&reschedule_meeting_uid%5B%5D=abc"
+        )
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert assigns.selected_date == date
+      assert assigns.selected_time == nil
+      assert assigns.reschedule_meeting_uid == nil
+
+      # A uid that never landed must not leave the flow believing it is
+      # rescheduling: the submit path branches on this assign alone.
+      refute assigns.is_rescheduling
+    end
+  end
+
+  # The booker is on a day the organiser actually offers — which is only
+  # possible because the malformed parameter was dropped early enough for the
+  # next-available search to run.
+  defp assert_landed_on_a_real_day(view) do
+    wait_until(fn -> :sys.get_state(view.pid).socket.assigns[:selected_date] != nil end)
+
+    selected_date = :sys.get_state(view.pid).socket.assigns.selected_date
+
+    assert {:ok, %Date{}} = Date.from_iso8601(selected_date)
+    assert render(view) =~ selected_date
   end
 end
