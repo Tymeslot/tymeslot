@@ -129,6 +129,28 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert render(view) =~ "Check Your Email"
     end
 
+    test "OAuth-only user is told to use their provider instead of crashing", %{conn: conn} do
+      oauth_user =
+        insert(:user,
+          provider: "google",
+          password_hash: nil,
+          email: "oauth-reset-#{System.unique_integer([:positive])}@example.com"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      result =
+        view
+        |> form("#reset-password-form", %{"email" => oauth_user.email})
+        |> render_submit()
+
+      # The OAuth branch is the one deliberate exception to the identical
+      # "if an account exists" confirmation, so the specific message must
+      # survive the trip through AuthActions rather than being discarded.
+      assert result =~ "managed by an external authentication provider"
+      refute result =~ "Check Your Email"
+    end
+
     test "empty email shows an error rather than the success confirmation", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
 
