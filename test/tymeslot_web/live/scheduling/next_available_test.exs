@@ -292,7 +292,71 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       assert Floki.find(document, "button[data-testid='time-slot']") != [],
              "the times disappeared after clicking the selected day"
     end
+
+    @tag :capture_log
+    test "Rhythm's week arrow keeps moving forward across a month boundary",
+         %{conn: conn, profile: profile} do
+      # Rhythm navigates by week, and crossing a month boundary refetches
+      # availability (CalendarHelpers.handle_week_navigation/2). Every refetch
+      # is a chance for the auto-selection to re-enter against the new month's
+      # map, whose display range leads with the month just left — aligning onto
+      # a day from that leading row walks the week strip backwards while the
+      # booker is pressing "next".
+      {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
+
+      view |> element("button[data-testid='duration-option']") |> render_click()
+      view |> element("button[data-testid='next-step']") |> render_click()
+
+      wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
+
+      # Six presses clears a month boundary from any starting week.
+      Enum.reduce(1..6, week_start(view), fn press, previous ->
+        view |> element("button[phx-click='next_week']") |> render_click()
+        current = week_start(view)
+
+        assert Date.compare(current, previous) == :gt,
+               "press #{press} moved the week strip from #{previous} to #{current}"
+
+        current
+      end)
+    end
+
+    @tag :capture_log
+    test "pressing next month moves the calendar forward and leaves it there",
+         %{conn: conn, profile: profile} do
+      # Month navigation clears `selected_date` and refetches, which puts the
+      # auto-selection back in play against the new month's map. That map spans
+      # a display range whose first row is the previous month's tail, so the
+      # earliest free day in it is routinely a day of the month just left —
+      # and aligning the window to that day drags the calendar straight back.
+      # The booker presses "next month" and nothing moves.
+      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
+
+      view |> element("button[data-testid='duration-option']") |> render_click()
+      view |> element("button[data-testid='next-step']") |> render_click()
+
+      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+
+      before = :sys.get_state(view.pid).socket.assigns
+      expected = next_month(before.current_year, before.current_month)
+
+      view |> element("button[phx-click='next_month']") |> render_click()
+
+      after_click = :sys.get_state(view.pid).socket.assigns
+
+      assert {after_click.current_year, after_click.current_month} == expected,
+             "the calendar snapped back to " <>
+               "#{after_click.current_year}-#{after_click.current_month} " <>
+               "after navigating forward"
+    end
   end
+
+  defp next_month(year, 12), do: {year + 1, 1}
+  defp next_month(year, month), do: {year, month + 1}
+
+  defp week_start(view), do: :sys.get_state(view.pid).socket.assigns.current_week_start
 
   describe "first_available_date/1 boundaries" do
     test "ignores days the map marks available but the grid draws as past" do
@@ -389,6 +453,85 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
     end
   end
 
+  describe "spending the landing attempt" do
+    # Every terminal outcome has to spend it. An outcome that leaves it armed
+    # leaves the auto-selection live for the rest of the session, and the next
+    # fetch to succeed — a month arrow, a week arrow, a calendar-sync
+    # broadcast — re-selects and re-aligns the window, moving the calendar
+    # backwards under a booker who asked to go forwards.
+
+    test "a search that spends its hop budget settles" do
+      socket = socket_with(%{}, auto_select_months_searched: 3)
+
+      assert {settled, :done} = NextAvailable.apply(socket)
+      assert settled.assigns.auto_select_settled == true
+    end
+
+    test "a search stopped by the booking window settles" do
+      today = Date.utc_today()
+      days_left_in_month = Date.days_in_month(today) - today.day
+      socket = socket_with(%{}, advance_booking_days: days_left_in_month)
+
+      assert {settled, :done} = NextAvailable.apply(socket)
+      assert settled.assigns.auto_select_settled == true
+    end
+
+    test "a successful landing settles" do
+      today = Date.utc_today()
+      tomorrow = today |> Date.add(1) |> Date.to_string()
+
+      assert {settled, :done} = NextAvailable.apply(socket_with(%{tomorrow => true}))
+      assert settled.assigns.selected_date == tomorrow
+      assert settled.assigns.auto_select_settled == true
+    end
+
+    test "a refetch hop does not settle, so the search can continue" do
+      today = Date.utc_today()
+      socket = socket_with(%{(today |> Date.add(1) |> Date.to_string()) => false})
+
+      assert {moved, :refetch} = NextAvailable.apply(socket)
+      assert moved.assigns.auto_select_settled == false
+    end
+
+    test "a settled socket is left entirely alone" do
+      today = Date.utc_today()
+      tomorrow = today |> Date.add(1) |> Date.to_string()
+      socket = socket_with(%{tomorrow => true}, auto_select_settled: true)
+
+      assert {returned, :done} = NextAvailable.apply(socket)
+      assert returned.assigns.selected_date == nil
+      assert returned.assigns.current_month == socket.assigns.current_month
+    end
+
+    test "settle/1 spends the attempt for a fetch that never produced a map" do
+      # The :error and :timeout branches never reach apply/1 — there is no map
+      # to search — but the booker is on the step and the chance is gone.
+      settled = NextAvailable.settle(socket_with(nil))
+
+      assert settled.assigns.auto_select_settled == true
+    end
+
+    test "settle/1 leaves the attempt intact before the schedule step" do
+      # Availability also loads on the overview. A fetch failing there must not
+      # cost the booker the landing on a step they have not reached.
+      untouched = NextAvailable.settle(socket_with(nil, current_state: :overview))
+
+      assert untouched.assigns.auto_select_settled == false
+    end
+
+    test "reset/1 re-arms the landing and returns the hop budget" do
+      # Re-entering the schedule step is a fresh arrival: a budget spent on a
+      # duration that was booked out must not disable the search for the next.
+      rearmed =
+        NextAvailable.reset(
+          socket_with(%{}, auto_select_settled: true, auto_select_months_searched: 3)
+        )
+
+      assert rearmed.assigns.auto_select_settled == false
+      assert rearmed.assigns.auto_select_months_searched == 0
+    end
+  end
+
   defp next_step_disabled?(view) do
     view
     |> render()
@@ -403,7 +546,8 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
     assigns =
       %{
         __changed__: %{},
-        current_state: :schedule,
+        current_state: Keyword.get(overrides, :current_state, :schedule),
+        auto_select_settled: Keyword.get(overrides, :auto_select_settled, false),
         selected_date: Keyword.get(overrides, :selected_date, nil),
         selected_time: nil,
         is_rescheduling: Keyword.get(overrides, :is_rescheduling, false),

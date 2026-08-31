@@ -229,8 +229,9 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
       # A polite live region announces the slot-loading state. The schedule
       # step now opens on the first bookable day, so the region carries slot
-      # state rather than the "pick a date" prompt — that prompt is only
-      # reachable once the booker clears the selection.
+      # state rather than the "pick a date" prompt. The prompt is not dead: no
+      # click reaches it any more, but a fetch that fails or a search that
+      # finds nothing still leaves the step with no day selected.
       assert html =~ ~s(role="status")
       assert html =~ ~s(aria-live="polite")
       refute html =~ "Please select a date to see available times"

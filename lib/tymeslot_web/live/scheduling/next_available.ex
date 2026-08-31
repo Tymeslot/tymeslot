@@ -30,9 +30,17 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
       forward arrow, so this never lands on a month the booker could not
       have reached by hand.
 
-  A date carried in on the URL — a reschedule link, a shared link — is a
-  deliberate choice and is left untouched; `apply/1` only fills a blank
-  selection.
+  A date carried in on the URL — a shared link, a link back into a half-made
+  booking — is a deliberate choice and is left untouched; `apply/1` only fills
+  a blank selection. A reschedule is left alone too, though for a different
+  reason: those links carry no date at all, so there is nothing to preserve,
+  but choosing a day on behalf of someone moving one specific meeting is not
+  this module's call to make.
+
+  The landing is attempted once per arrival at the step, and every terminal
+  outcome spends the attempt — including the ones that select nothing. Leaving
+  it armed is what turns a later refetch into a calendar that walks backwards;
+  `settle/1` documents that failure in full.
   """
 
   import Phoenix.Component, only: [assign: 3]
@@ -62,24 +70,83 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   """
   @spec apply(Phoenix.LiveView.Socket.t()) :: {Phoenix.LiveView.Socket.t(), :done | :refetch}
   def apply(socket) do
-    if skip?(socket) do
-      {socket, :done}
-    else
-      case first_available_date(socket) do
-        nil -> search_forward(socket)
-        date -> {select(socket, date), :done}
-      end
+    cond do
+      # Availability also loads before the booker reaches the schedule step.
+      # That is not the landing attempt, so it must not spend it.
+      socket.assigns[:current_state] != :schedule -> {socket, :done}
+      settled?(socket) -> {socket, :done}
+      explicitly_chosen?(socket) -> {settle(socket), :done}
+      true -> land(socket)
     end
   end
 
-  # An explicit selection always wins over a computed one. A date named in the
-  # URL is seeded onto the socket by `do_handle_schedule_entry/2` before the
-  # fetch that triggers this runs, so a reschedule or shared link keeps the day
-  # it names rather than having it replaced by the earliest free one.
-  defp skip?(socket) do
+  defp land(socket) do
+    case first_available_date(socket) do
+      nil -> search_forward(socket)
+      date -> {socket |> select(date) |> settle(), :done}
+    end
+  end
+
+  @doc """
+  Spends the landing attempt without selecting anything.
+
+  Callers use this for the outcomes that never reach `apply/1`: a fetch that
+  errored or timed out produces no map to search, but it was still the one
+  chance to land, and treating it as a deferral is what leaves the calendar
+  moving under the booker later.
+
+  Every navigation control clears or bypasses `selected_date` and refetches —
+  Quill's month arrows blank it outright, Rhythm's week arrows cross a month
+  boundary, and a calendar-sync broadcast refetches with no input at all. Any
+  of those, with the attempt still unspent, re-enters `apply/1` against the new
+  month's map. That map spans a *display* range whose leading row belongs to
+  the month just left, so the earliest free day in it is routinely a day
+  behind the booker, and `align_to/2` then drags the visible window back onto
+  it: press "next", travel backwards.
+
+  A no-op before the schedule step, so a fetch that fails on the overview
+  leaves the landing intact for the step that has not been reached yet.
+  """
+  @spec settle(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def settle(socket) do
+    if socket.assigns[:current_state] == :schedule do
+      assign(socket, :auto_select_settled, true)
+    else
+      socket
+    end
+  end
+
+  @doc """
+  Re-arms the landing for a fresh entry into the schedule step.
+
+  The attempt is spent per *entry*, not per LiveView. `do_handle_schedule_entry/2`
+  resets the calendar to today's month every time the booker arrives, so a
+  second arrival — back to the overview, a different duration, forward again —
+  is a new landing and gets its own hop budget. Without the reset a search that
+  spent its budget on a booked-out duration would silently disable itself for
+  every duration chosen afterwards.
+  """
+  @spec reset(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def reset(socket) do
+    socket
+    |> assign(:auto_select_settled, false)
+    |> assign(:auto_select_months_searched, 0)
+  end
+
+  defp settled?(socket), do: socket.assigns[:auto_select_settled] == true
+
+  # An explicit selection always wins over a computed one, so a shared link
+  # keeps the day it names rather than having it replaced by the earliest free
+  # one. `handle_param_updates/2` seeds the URL date, and
+  # `do_handle_schedule_entry/2` seeds it again for the test harness, whose
+  # fetch resolves before `handle_params` rather than after.
+  #
+  # A reschedule is treated as chosen even though its link carries no date: the
+  # booker is moving one specific meeting, and picking a day for them is a
+  # decision this module should not make on their behalf.
+  defp explicitly_chosen?(socket) do
     socket.assigns[:selected_date] not in [nil, ""] or
-      socket.assigns[:is_rescheduling] == true or
-      socket.assigns[:current_state] != :schedule
+      socket.assigns[:is_rescheduling] == true
   end
 
   @doc """
@@ -160,10 +227,10 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
           months_searched: months_searched
         )
 
-        {socket, :done}
+        {settle(socket), :done}
 
       beyond_booking_window?(socket, year, month) ->
-        {socket, :done}
+        {settle(socket), :done}
 
       true ->
         socket =

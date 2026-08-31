@@ -319,6 +319,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         |> assign(:availability_status, :error)
         |> assign(:availability_task, nil)
         |> assign(:availability_task_ref, nil)
+        # Matches the async path: a failed fetch spends the landing attempt
+        # rather than leaving it armed for whichever fetch succeeds next.
+        |> NextAvailable.settle()
     end
   end
 

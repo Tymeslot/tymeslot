@@ -111,7 +111,12 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     end
   end
 
-  defp apply_auto_selection(socket, _failed), do: socket
+  # A failed fetch still spends the attempt. The booker is on the schedule step
+  # looking at the error banner; leaving the landing armed means the next fetch
+  # to succeed — a month arrow, a week arrow, a calendar-sync broadcast — picks
+  # a day and re-aligns the window onto it, moving the calendar backwards under
+  # a booker who asked to go forwards.
+  defp apply_auto_selection(socket, _failed), do: NextAvailable.settle(socket)
 
   @doc """
   Handles common dropdown closing logic.
