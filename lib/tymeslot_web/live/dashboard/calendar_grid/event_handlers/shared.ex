@@ -119,8 +119,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   @doc """
   Returns the allowed reminder lead times (minutes before the event start).
   This is the single source of truth for the preset whitelist: `parse_reminder/1`
-  rejects anything outside it, and the editor UI should build its options from
-  this list rather than duplicating the values.
+  rejects anything outside it, and `RemindersEditor` builds the editor's options
+  from this list rather than duplicating the values.
   """
   @spec reminder_minutes_presets() :: [pos_integer()]
   def reminder_minutes_presets, do: @reminder_minutes_presets
