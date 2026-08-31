@@ -6,11 +6,11 @@ defmodule Tymeslot.Workers.SnoozePolicy do
 
   A snooze loop cannot be bounded by Oban's own `max_attempts`, and the reason
   differs by version. Up to Oban 2.23 `{:snooze, n}` incremented `max_attempts`
-  and left `attempt` alone, so a job's `attempt >= max_attempts` safety valve
-  never fired: `max_attempts` grew to match. From 2.24 it is the other way
-  round — `attempt` is rolled back and `max_attempts` preserved — so `attempt`
-  never climbs to meet it either. Either way the job snoozes forever unless the
-  worker keeps the count itself.
+  while `attempt` kept its ordinary once-per-execution increment, so a job's
+  `attempt >= max_attempts` safety valve never fired: `max_attempts` grew to
+  match. From 2.24 it is the other way round — `attempt` is rolled back and
+  `max_attempts` preserved — so `attempt` never climbs to meet it either.
+  Either way the job snoozes forever unless the worker keeps the count itself.
 
   `executions/1` is that count, and it is what every snooze bound here is
   measured against.
