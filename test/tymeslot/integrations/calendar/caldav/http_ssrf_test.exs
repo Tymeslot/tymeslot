@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpSsrfTest do
   head_event (write/HEAD path).
   """
 
-  use Tymeslot.CalDAVCase, async: false
+  use Tymeslot.HttpTransportCase, async: false
 
   @moduletag :integrations
   @moduletag :security

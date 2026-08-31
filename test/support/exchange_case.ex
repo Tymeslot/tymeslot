@@ -2,18 +2,17 @@ defmodule Tymeslot.ExchangeCase do
   @moduledoc """
   Shared ExUnit case template for Exchange (EWS) tests.
 
-  Sets up the real HTTPClient so tests exercise the full Req → Req.Test path,
-  and carries the scaffolding an EWS test otherwise rebuilds: a provider
-  config, a one-shot response stub, and the envelopes a server answers with.
+  Carries the scaffolding an EWS test otherwise rebuilds: a provider config, a
+  one-shot response stub, and the envelopes a server answers with.
 
-  It exists rather than reusing `Tymeslot.CalDAVCase`, whose transport setup is
-  the same, because that template aliases `CalDAV.Base`. Every Base64 call in a
-  test using it then has to spell `Elixir.Base` and explain why, and Basic
-  authentication puts one in most EWS tests.
+  The transport setup is not its own: it comes from
+  `Tymeslot.HttpTransportCase`, which installs the real HTTPClient so tests
+  exercise the full Req → Req.Test path. What is specific to Exchange, and so
+  what justifies a separate template, is the SOAP fixtures below.
 
-  `Tymeslot.MockCase` is not the alternative either: it stubs `HTTPClientMock`,
-  so nothing below `Config.http_client_module/0` runs and the SSRF, redirect
-  and response-cap behaviour the real client provides cannot be observed.
+  `Tymeslot.MockCase` is not an alternative: it stubs `HTTPClientMock`, so
+  nothing below `Config.http_client_module/0` runs and the SSRF, redirect and
+  response-cap behaviour the real client provides cannot be observed.
 
   ## Usage
 
@@ -52,18 +51,11 @@ defmodule Tymeslot.ExchangeCase do
     async = Keyword.get(opts, :async, false)
 
     quote do
-      use ExUnit.Case, async: unquote(async)
+      # Threading async: through explicitly matters: dropping it would silently
+      # downgrade every `use Tymeslot.ExchangeCase, async: true` to async: false.
+      use Tymeslot.HttpTransportCase, async: unquote(async)
 
-      import Tymeslot.ConfigTestHelpers
       import Tymeslot.ExchangeCase
-
-      alias Plug.Conn
-      alias Req.Test, as: ReqTest
-
-      setup do
-        with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
-        :ok
-      end
     end
   end
 

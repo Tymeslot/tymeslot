@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
-  use Tymeslot.CalDAVCase, async: false
+  use Tymeslot.HttpTransportCase, async: false
   @moduletag :integrations
 
   import ExUnit.CaptureLog
@@ -9,7 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
   # These tests exercise the real HTTPClient → Req → Req.Test path so that
   # transport-level bugs (method normalisation, header building, option assembly)
   # are caught automatically. The global test config points :http_client_module
-  # at HTTPClientMock; CalDAVCase overrides it to use the real HTTPClient.
+  # at HTTPClientMock; HttpTransportCase overrides it to use the real HTTPClient.
 
   describe "propfind/4" do
     test "routes PROPFIND through HTTPClient with Basic auth header" do
