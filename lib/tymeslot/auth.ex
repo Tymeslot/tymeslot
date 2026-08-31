@@ -26,6 +26,7 @@ defmodule Tymeslot.Auth do
   }
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.PubSub
   alias Tymeslot.Security.Token
 
   @doc """
@@ -213,6 +214,28 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Subscribes the calling process to user-registration events.
+
+  Every account that completes registration is delivered to the caller's
+  mailbox as `{:user_registered, %{user: user, metadata: metadata}}`. The
+  context owns the topic, so a subscriber never spells one itself. Returns
+  `{:error, reason}` rather than raising when no PubSub server is running,
+  leaving the caller to decide whether a missing subscription is fatal.
+  """
+  @spec subscribe_to_user_registrations() :: :ok | {:error, term()}
+  defdelegate subscribe_to_user_registrations, to: PubSub
+
+  @doc """
+  Publishes a user-registration event to every subscriber.
+
+  The counterpart to `subscribe_to_user_registrations/0`: both name the event
+  rather than the transport, so the topic stays an implementation detail of
+  this context.
+  """
+  @spec broadcast_user_registered(struct(), map()) :: :ok
+  defdelegate broadcast_user_registered(user, metadata \\ %{}), to: PubSub
+
+  @doc """
   Generates a fresh verification token for a user and persists it without sending an email.
 
   Intended for background workers that need to produce a valid verification URL before
@@ -352,6 +375,6 @@ defmodule Tymeslot.Auth do
   defdelegate demote_admin(actor, user_id), to: AdminRoles, as: :demote
 
   defp user_broadcaster do
-    Application.get_env(:tymeslot, :user_broadcaster, Tymeslot.Infrastructure.PubSub)
+    Application.get_env(:tymeslot, :user_broadcaster, PubSub)
   end
 end

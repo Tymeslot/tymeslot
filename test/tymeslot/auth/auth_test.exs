@@ -16,6 +16,7 @@ defmodule Tymeslot.AuthTest do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Auth.UserTokenQueries
+  alias Tymeslot.Infrastructure.PubSub
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
 
@@ -115,7 +116,7 @@ defmodule Tymeslot.AuthTest do
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
       {:ok, _updated} = UserTokenQueries.set_verification_token(user, token)
 
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "auth:user_registered")
+      assert :ok = Auth.subscribe_to_user_registrations()
 
       assert {:ok, verified_user} = Auth.verify_user_email(token)
       assert verified_user.id == user.id
@@ -124,6 +125,31 @@ defmodule Tymeslot.AuthTest do
       # The broadcast runs in a supervised task, so there is no synchronisation
       # point to wait on; the window is generous rather than tight.
       assert_receive {:user_registered, %{user: %{id: ^user_id}}}, 5_000
+    end
+  end
+
+  describe "subscribe_to_user_registrations/0" do
+    test "delivers a real registration broadcast to the caller" do
+      assert :ok = Auth.subscribe_to_user_registrations()
+
+      user = insert(:user)
+      user_id = user.id
+      metadata = %{terms_accepted: true, ip: "203.0.113.7"}
+
+      assert :ok = Auth.broadcast_user_registered(user, metadata)
+
+      assert_receive {:user_registered, %{user: %{id: ^user_id}, metadata: ^metadata}}
+    end
+
+    # Subscribers outside this context must not be able to spell the topic or
+    # resolve the transport: that is precisely what let a rename here orphan
+    # them without a compile error.
+    test "neither the context nor its PubSub module exposes a topic or server accessor" do
+      context_functions = Keyword.keys(Auth.__info__(:functions))
+      pubsub_functions = Keyword.keys(PubSub.__info__(:functions))
+
+      refute :get_pubsub_server in context_functions
+      refute :user_registered_topic in pubsub_functions
     end
   end
 

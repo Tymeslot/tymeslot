@@ -27,6 +27,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
   @moduletag :auth
   @moduletag :integration
 
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.Registration
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.Schedules
@@ -37,7 +38,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
   alias Tymeslot.Workers.EmailWorker
 
   setup do
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, "auth:user_registered")
+    :ok = Auth.subscribe_to_user_registrations()
 
     RateLimiter.clear_all()
 
