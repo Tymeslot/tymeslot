@@ -13,6 +13,7 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.RedirectLocation
   alias Tymeslot.Webhooks.SsrfValidator
 
   @delivery_timeout_ms 10_000
@@ -42,7 +43,13 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
     end
   end
 
-  defp deliver_with_redirects(_url, _method, _body, _headers, 0) do
+  # `redirects_remaining` is a budget of redirects still followable, so it is
+  # exhausted at -1, not at 0: the hop entered with 0 left is the last one this
+  # module is allowed to make. See the hop-accounting note in
+  # `Tymeslot.Infrastructure.RedirectLocation`, which the ICS feed fetcher and
+  # the video reachability probe follow too.
+  defp deliver_with_redirects(_url, _method, _body, _headers, redirects_remaining)
+       when redirects_remaining < 0 do
     Logger.warning("Webhook delivery exceeded max redirects")
     {:error, :too_many_redirects}
   end
@@ -60,26 +67,21 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
     end
   end
 
-  # 301/302/303: switch to GET and drop the body (browser-compatible redirect behaviour).
-  defp follow_redirect(
-         from_url,
-         _method,
-         _body,
-         headers,
-         response_headers,
-         redirects_remaining,
-         status
-       )
-       when status in [301, 302, 303] do
-    with {:ok, next_url} <- extract_location(response_headers, from_url),
+  # 301/302/303 switch to GET and drop the body (RFC 9110 §15.4, matching what
+  # browsers do); 307/308 preserve the original method and body.
+  defp follow_redirect(from_url, method, body, headers, response_headers, hops_left, status) do
+    with {:ok, next_url} <- RedirectLocation.next_url(response_headers, from_url),
          :ok <- SsrfValidator.check(next_url) do
+      {next_method, next_body} = redirect_method(method, body, status)
       safe_headers = sanitise_headers_for_redirect(headers, from_url, next_url)
-      deliver_with_redirects(next_url, :get, nil, safe_headers, redirects_remaining - 1)
+      deliver_with_redirects(next_url, next_method, next_body, safe_headers, hops_left - 1)
     else
-      :error ->
+      {:error, :missing_location} ->
         Logger.warning("Webhook redirect missing Location header", from_url: from_url)
         {:error, :redirect_missing_location}
 
+      # Either an unfollowable Location (a non-HTTP scheme) or a hop the SSRF
+      # re-check refused. Both are a redirect we will not chase.
       {:error, reason} ->
         Logger.warning("Webhook redirect blocked by SSRF protection",
           from_url: from_url,
@@ -90,34 +92,8 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
     end
   end
 
-  # 307/308: preserve method and body as required by RFC 9110.
-  defp follow_redirect(
-         from_url,
-         method,
-         body,
-         headers,
-         response_headers,
-         redirects_remaining,
-         _status
-       ) do
-    with {:ok, next_url} <- extract_location(response_headers, from_url),
-         :ok <- SsrfValidator.check(next_url) do
-      safe_headers = sanitise_headers_for_redirect(headers, from_url, next_url)
-      deliver_with_redirects(next_url, method, body, safe_headers, redirects_remaining - 1)
-    else
-      :error ->
-        Logger.warning("Webhook redirect missing Location header", from_url: from_url)
-        {:error, :redirect_missing_location}
-
-      {:error, reason} ->
-        Logger.warning("Webhook redirect blocked by SSRF protection",
-          from_url: from_url,
-          reason: reason
-        )
-
-        {:error, :blocked_redirect}
-    end
-  end
+  defp redirect_method(_method, _body, status) when status in [301, 302, 303], do: {:get, nil}
+  defp redirect_method(method, body, _status), do: {method, body}
 
   defp sanitise_headers_for_redirect(headers, from_url, next_url) do
     if same_origin?(from_url, next_url) do
@@ -143,52 +119,6 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
   defp normalise_port("https", nil), do: 443
   defp normalise_port("http", nil), do: 80
   defp normalise_port(_scheme, port), do: port
-
-  defp extract_location(response_headers, from_url) do
-    case location_value(response_headers) do
-      nil ->
-        :error
-
-      raw_location ->
-        {:ok, resolve_location(raw_location, from_url)}
-    end
-  end
-
-  defp resolve_location(raw_location, from_url) do
-    case URI.parse(raw_location) do
-      %URI{scheme: scheme, host: host} = uri
-      when is_binary(scheme) and is_binary(host) and host != "" ->
-        URI.to_string(uri)
-
-      %URI{scheme: nil, host: host} = uri
-      when is_binary(host) and host != "" ->
-        base_scheme = URI.parse(from_url).scheme || "https"
-        URI.to_string(%{uri | scheme: base_scheme})
-
-      _relative ->
-        from_url |> URI.merge(raw_location) |> URI.to_string()
-    end
-  end
-
-  defp location_value(headers) when is_map(headers) do
-    case Map.get(headers, "location") do
-      [value | _rest] when is_binary(value) -> value
-      value when is_binary(value) -> value
-      _other -> nil
-    end
-  end
-
-  defp location_value(headers) when is_list(headers) do
-    Enum.find_value(headers, fn
-      {key, value} when is_binary(key) or is_atom(key) ->
-        if String.downcase(to_string(key)) == "location", do: to_string(value)
-
-      _other ->
-        nil
-    end)
-  end
-
-  defp location_value(_headers), do: nil
 
   defp perform_http_request(url, :post, body, headers) do
     result =
