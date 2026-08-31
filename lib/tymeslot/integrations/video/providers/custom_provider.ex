@@ -51,6 +51,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.RedirectLocation
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
@@ -368,8 +369,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   # redirects itself would leave every hop after the first unchecked: a host
   # that resolves publicly can 302 straight to 127.0.0.1 or the cloud metadata
   # endpoint. Following them here reports status, timeout and
-  # connection-refused apart. Same shape as the ICS feed fetcher, which has the
-  # identical problem.
+  # connection-refused apart. The ICS feed fetcher has the identical problem
+  # and the same shape; `Tymeslot.Infrastructure.RedirectLocation` is the one
+  # place both resolve a hop's target, and documents the budget convention
+  # this counter follows (`hops_left < 0` refuses, so 3 means three follows).
   @max_redirects 3
 
   # Each request was previously bounded per-hop only (3s connect + 3s receive),
@@ -458,9 +461,11 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
   defp classify_probe(%{status: status} = response, url, hops_left, deadline)
        when status in 300..399 do
-    case redirect_target(response, url) do
+    case RedirectLocation.next_url(Map.get(response, :headers, %{}), url) do
+      # A 3xx we cannot follow is still a host that answered, so the probe
+      # reports the status rather than calling the URL unreachable.
+      {:error, _unfollowable} -> {:ok, status}
       {:ok, target} -> check_reachable(target, hops_left - 1, deadline)
-      :error -> {:ok, status}
     end
   end
 
@@ -471,24 +476,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   defp classify_probe(%{status: status}, _url, _hops_left, _deadline) do
     {:error,
      dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
-  end
-
-  defp redirect_target(response, current_url) do
-    location =
-      case response do
-        %{headers: %{"location" => [value | _rest]}} -> value
-        %{headers: %{"location" => value}} when is_binary(value) -> value
-        _no_location -> nil
-      end
-
-    case location && URI.merge(URI.parse(current_url), location) do
-      %URI{scheme: scheme, host: host} = uri
-      when scheme in ["http", "https"] and is_binary(host) ->
-        {:ok, URI.to_string(uri)}
-
-      _other ->
-        :error
-    end
   end
 
   defp blocked_url_message,
