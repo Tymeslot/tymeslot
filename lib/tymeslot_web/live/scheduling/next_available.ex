@@ -32,10 +32,11 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
 
   A date carried in on the URL — a shared link, a link back into a half-made
   booking — is a deliberate choice and is left untouched; `apply/1` only fills
-  a blank selection. A reschedule is left alone too, though for a different
-  reason: those links carry no date at all, so there is nothing to preserve,
-  but choosing a day on behalf of someone moving one specific meeting is not
-  this module's call to make.
+  a blank selection.
+
+  A reschedule gets the same landing as any other booking. It is the case that
+  needs it most: a slot is being moved because the host's calendar was busy
+  enough to require it, so the rescheduler faces the emptiest grid of anyone.
 
   The landing is attempted once per arrival at the step, and every terminal
   outcome spends the attempt — including the ones that select nothing. Leaving
@@ -141,12 +142,13 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   # `do_handle_schedule_entry/2` seeds it again for the test harness, whose
   # fetch resolves before `handle_params` rather than after.
   #
-  # A reschedule is treated as chosen even though its link carries no date: the
-  # booker is moving one specific meeting, and picking a day for them is a
-  # decision this module should not make on their behalf.
+  # A date is the only thing that counts as chosen. A reschedule used to be
+  # treated as one too, on the belief that its link carried a date; it does
+  # not — `PathHandlers.organizer_scheduling_path/1` builds
+  # `/:username?reschedule_meeting_uid=…` and nothing else — so the check only
+  # ever switched the landing off for the people most in need of it.
   defp explicitly_chosen?(socket) do
-    socket.assigns[:selected_date] not in [nil, ""] or
-      socket.assigns[:is_rescheduling] == true
+    socket.assigns[:selected_date] not in [nil, ""]
   end
 
   @doc """

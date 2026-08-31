@@ -406,11 +406,17 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       assert returned.assigns.selected_date == "2099-01-01"
     end
 
-    test "does not touch a reschedule in progress" do
-      socket = socket_with(%{}, is_rescheduling: true)
+    test "lands a reschedule on a day like any other booking" do
+      # A reschedule link carries no date, so there is nothing to preserve and
+      # nothing to defer to. Standing down here left the emptiest grid to the
+      # people facing the busiest calendar — the slot is being moved precisely
+      # because that calendar was full.
+      today = Date.utc_today()
+      tomorrow = today |> Date.add(1) |> Date.to_string()
+      socket = socket_with(%{tomorrow => true}, is_rescheduling: true)
 
-      assert {returned, :done} = NextAvailable.apply(socket)
-      assert returned.assigns.selected_date == nil
+      assert {landed, :done} = NextAvailable.apply(socket)
+      assert landed.assigns.selected_date == tomorrow
     end
 
     test "stops searching once the hop budget is spent" do
