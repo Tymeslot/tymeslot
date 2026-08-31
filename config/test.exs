@@ -163,6 +163,12 @@ config :tymeslot, :analytics_salt_secret, "test_analytics_salt_secret_fixed_for_
 # per-test with `Application.put_env/3`.
 config :tymeslot, :booking_analytics_enabled, true
 
+# Write page views inline rather than in a fire-and-forget Task, so the write is
+# owned by the test process. A supervised Task outlives the test that mounted the
+# LiveView, and hits a torn-down sandbox connection with a
+# `DBConnection.OwnershipError` that ExUnit reports but does not fail on.
+config :tymeslot, :async_page_view_logging, false
+
 # Enable all providers for testing
 config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],
