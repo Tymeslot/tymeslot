@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Live.Scheduling.NextAvailable
 
   @doc """
   Handles calendar events updated via PubSub.
@@ -83,12 +84,39 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
         |> assign(:availability_status, status)
         |> assign(:availability_task, nil)
         |> assign(:availability_task_ref, nil)
+        |> apply_auto_selection(status)
 
       {:noreply, socket}
     else
       {:noreply, socket}
     end
   end
+
+  # Landing the booker on the first bookable day. This runs on the task result
+  # rather than on schedule-step entry because the availability map does not
+  # exist yet at entry — it is precisely this message that carries it.
+  #
+  # A `:refetch` means the whole loaded range was dead, so the window has moved
+  # forward and needs its own fetch; the hop counter inside NextAvailable stops
+  # that walking forever.
+  #
+  # Only a loaded map is searched. On :error or :timeout the map is nil, which
+  # is indistinguishable from "no day is free" — advancing the month on a
+  # failed fetch would march the booker through months nobody has successfully
+  # looked at.
+  defp apply_auto_selection(socket, :loaded) do
+    case NextAvailable.apply(socket) do
+      {socket, :done} -> socket
+      {socket, :refetch} -> AvailabilityHelpers.fetch_month_availability_async(socket)
+    end
+  end
+
+  # A failed fetch still spends the attempt. The booker is on the schedule step
+  # looking at the error banner; leaving the landing armed means the next fetch
+  # to succeed — a month arrow, a week arrow, a calendar-sync broadcast — picks
+  # a day and re-aligns the window onto it, moving the calendar backwards under
+  # a booker who asked to go forwards.
+  defp apply_auto_selection(socket, _failed), do: NextAvailable.settle(socket)
 
   @doc """
   Handles common dropdown closing logic.

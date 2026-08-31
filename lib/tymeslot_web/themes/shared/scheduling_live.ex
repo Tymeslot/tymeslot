@@ -451,7 +451,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         StateMachine.validate_state_transition(socket, current_state, next_state)
       end
 
-      # Guards against sending {:load_slots, nil} on date deselection
+      # Defensive on the nil date: neither theme's day button deselects any
+      # more, so nothing reaches here with nil today. The guard stays because
+      # sending {:load_slots, nil} would fetch slots for no day at all.
       defp handle_schedule_date_selection(socket, date) do
         socket =
           assign(socket,

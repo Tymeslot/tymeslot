@@ -227,12 +227,14 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
              |> Floki.find("button.calendar-day[aria-current='date']")
              |> Enum.any?()
 
-      # A polite live region announces the slot-loading state — no date is
-      # selected yet, so it must announce the "pick a date" prompt, not just
-      # be present with the right attributes.
+      # A polite live region announces the slot-loading state. The schedule
+      # step now opens on the first bookable day, so the region carries slot
+      # state rather than the "pick a date" prompt. The prompt is not dead: no
+      # click reaches it any more, but a fetch that fails or a search that
+      # finds nothing still leaves the step with no day selected.
       assert html =~ ~s(role="status")
       assert html =~ ~s(aria-live="polite")
-      assert html =~ "Please select a date to see available times"
+      refute html =~ "Please select a date to see available times"
     end
 
     @tag :capture_log
@@ -261,7 +263,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
       assert html =~ ~s(role="status")
       assert html =~ ~s(aria-live="polite")
-      assert html =~ "Please select a date to see available times"
+      refute html =~ "Please select a date to see available times"
     end
   end
 

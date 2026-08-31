@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
+    NextAvailable,
     OrganizerHelpers,
     PreviewToken,
     ThemeUtils
@@ -361,6 +362,16 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> assign(:current_year, current_year)
       |> assign(:current_month, current_month)
       |> assign(:duration, normalized_duration)
+      # Arriving at the step is a fresh landing: it gets its own hop budget,
+      # even if an earlier visit spent one on a duration that was booked out.
+      |> NextAvailable.reset()
+      # `mount` reaches this entry before `handle_params` runs, so a date named
+      # in the URL is not yet on the socket. In production the auto-selection
+      # runs later still, off a task result, by which point `handle_params` has
+      # seeded it anyway; under the test harness the fetch resolves inline
+      # here, ahead of `handle_params`. Seeding it at both points is what keeps
+      # the two orderings agreeing on whether the booker made a choice.
+      |> maybe_assign_from_params(:selected_date, params["date"])
 
     # Trigger month availability fetch in background if not already loading or loaded for this month
     if AvailabilityHelpers.can_fetch_availability?(socket) do
