@@ -97,7 +97,11 @@ defmodule Tymeslot.Workers.TelegramWorker do
         priority: 2,
         unique: [
           period: 300,
-          fields: [:args],
+          # `:worker` has to stay in the comparison. Slack and Telegram
+          # integration ids come from separate sequences and routinely
+          # coincide, so on args alone the two channels share one uniqueness
+          # namespace and whichever inserts second is silently deduped away.
+          fields: [:args, :worker],
           keys: [:integration_id, :event_type, :meeting_id]
         ]
       )
