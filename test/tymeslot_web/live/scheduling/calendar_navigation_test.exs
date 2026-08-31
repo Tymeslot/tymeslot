@@ -16,14 +16,31 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigationTest do
              )
     end
 
-    test "disables navigation beyond advance booking window" do
+    # Both sides of the boundary, derived from today rather than assumed, so
+    # these hold on the last day of a month as well as the middle of one. The
+    # old version passed 1 day and asserted "disabled", which is only true when
+    # tomorrow is still in this month.
+    test "allows navigation when the next month's first day is the last bookable day" do
       today = Date.utc_today()
-      # With only 1 day advance booking, next month should be disabled
+      reaches_first = today |> Date.end_of_month() |> Date.add(1) |> Date.diff(today)
+
+      refute CalendarNavigation.next_month_disabled?(
+               today.year,
+               today.month,
+               "Etc/UTC",
+               reaches_first
+             )
+    end
+
+    test "disables navigation when the window stops one day short of the next month" do
+      today = Date.utc_today()
+      stops_short = (today |> Date.end_of_month() |> Date.add(1) |> Date.diff(today)) - 1
+
       assert CalendarNavigation.next_month_disabled?(
                today.year,
                today.month,
                "Etc/UTC",
-               1
+               stops_short
              )
     end
 
@@ -47,24 +64,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigationTest do
                12,
                "Etc/UTC",
                365
-             )
-    end
-
-    test "disables navigation when max booking date equals first of next month" do
-      today = Date.utc_today()
-      # Calculate days until the first of next month
-      next_month_first =
-        if today.month == 12,
-          do: Date.new!(today.year + 1, 1, 1),
-          else: Date.new!(today.year, today.month + 1, 1)
-
-      days_until = Date.diff(next_month_first, today)
-
-      assert CalendarNavigation.next_month_disabled?(
-               today.year,
-               today.month,
-               "Etc/UTC",
-               days_until
              )
     end
   end
