@@ -292,38 +292,37 @@ if config_env() == :prod do
     repo: Tymeslot.Repo,
     # Allow in-flight jobs 15 seconds to finish on shutdown before being rescheduled
     shutdown_grace_period: :timer.seconds(15),
-    plugins: [
-      {Oban.Plugins.Pruner, max_age: 604_800},
-      {Oban.Plugins.Cron,
-       crontab: [
-         # Run every 30 minutes for Oban maintenance
-         {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
-         # Run every hour for queue health monitoring
-         {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
-         # Run daily at 02:45 UTC for video room recovery scan
-         {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
-         # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
-         # meetings whose video room was never cleaned up
-         {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
-         # Run daily at 03:15 UTC
-         {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
-         # Run daily at 02:00 UTC to renew expiring webhook channels
-         {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
-         # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
-         {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
-         # Run daily at 04:00 UTC for cross-domain data retention pruning
-         {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
-         # Run every 6 hours to detect silent/dead webhook channels
-         {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
-         # Run daily at 03:30 UTC to prune old/inactive calendar event cache
-         {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
-         # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
-         {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
-         # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
-         {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
-         # Run daily at 04:30 UTC to cross-check booking analytics against bookings
-         {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker}
-       ]}
+    pruner: [max_age: {7, :days}],
+    cron: [
+      crontab: [
+        # Run every 30 minutes for Oban maintenance
+        {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
+        # Run every hour for queue health monitoring
+        {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
+        # Run daily at 02:45 UTC for video room recovery scan
+        {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
+        # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
+        # meetings whose video room was never cleaned up
+        {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
+        # Run daily at 03:15 UTC
+        {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
+        # Run daily at 02:00 UTC to renew expiring webhook channels
+        {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
+        # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
+        {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
+        # Run daily at 04:00 UTC for cross-domain data retention pruning
+        {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
+        # Run every 6 hours to detect silent/dead webhook channels
+        {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
+        # Run daily at 03:30 UTC to prune old/inactive calendar event cache
+        {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
+        # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
+        {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
+        # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
+        {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
+        # Run daily at 04:30 UTC to cross-check booking analytics against bookings
+        {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker}
+      ]
     ]
 
   # Configure mailer based on EMAIL_ADAPTER setting. `Tymeslot.Mailer.Providers`

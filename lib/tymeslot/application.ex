@@ -14,6 +14,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Infrastructure.{
     CrashReporter,
     Metrics,
+    ObanCron,
     ObanFailureAlerter,
     ObanLogger,
     ObanQueues
@@ -229,9 +230,11 @@ defmodule Tymeslot.Application do
     # Log HTTP proxy configuration if enabled
     log_proxy_config()
 
-    # Validate Oban Cron plugin configuration for critical workers (skip in test)
+    # Validate the Oban cron service carries the critical workers (skip in test)
     if Application.get_env(:tymeslot, :environment) != :test do
-      validate_oban_cron_config!()
+      :tymeslot
+      |> Application.get_env(Oban, [])
+      |> ObanCron.warn_on_missing_workers()
     end
 
     # Validate database connection pool configuration
@@ -324,57 +327,6 @@ defmodule Tymeslot.Application do
 
         :ok
     end
-  end
-
-  # Validates that Oban Cron plugin is configured with critical maintenance workers
-  defp validate_oban_cron_config! do
-    oban_config = Application.get_env(:tymeslot, Oban, [])
-    plugins = Keyword.get(oban_config, :plugins, [])
-
-    # Find the Cron plugin configuration
-    cron_plugin =
-      Enum.find(plugins, fn
-        {Oban.Plugins.Cron, _opts} -> true
-        _other -> false
-      end)
-
-    case cron_plugin do
-      nil ->
-        Logger.warning("""
-        OBAN CRON PLUGIN NOT CONFIGURED:
-        Oban.Plugins.Cron is not configured in Oban plugins.
-        Critical maintenance workers (ObanMaintenanceWorker, ObanQueueMonitorWorker) will not run.
-        This can lead to job accumulation and system degradation.
-        Add Oban.Plugins.Cron to your Oban config with required cron jobs.
-        """)
-
-      {Oban.Plugins.Cron, opts} ->
-        crontab = Keyword.get(opts, :crontab, [])
-
-        # Check for critical workers in crontab
-        critical_workers = [
-          Tymeslot.Workers.ObanMaintenanceWorker,
-          Tymeslot.Workers.ObanQueueMonitorWorker
-        ]
-
-        Enum.each(critical_workers, fn worker ->
-          worker_configured? =
-            Enum.any?(crontab, fn
-              {_schedule, ^worker} -> true
-              {_schedule, ^worker, _opts} -> true
-              _other -> false
-            end)
-
-          unless worker_configured? do
-            Logger.warning(
-              "Critical Oban worker not scheduled in Cron plugin: #{inspect(worker)}. " <>
-                "This worker should run periodically for system health."
-            )
-          end
-        end)
-    end
-
-    :ok
   end
 
   # Validates database connection pool size against database max_connections

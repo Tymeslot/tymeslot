@@ -84,7 +84,7 @@ config :tymeslot, Tymeslot.Repo,
 # Queues are loaded at runtime in application.ex from :oban_queues config
 config :tymeslot, Oban,
   repo: Tymeslot.Repo,
-  plugins: [{Oban.Plugins.Pruner, max_age: 3_600}],
+  pruner: [max_age: {1, :hour}],
   testing: :manual
 
 # In test we don't send emails
