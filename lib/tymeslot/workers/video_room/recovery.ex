@@ -26,6 +26,16 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   the time still available. A meeting an hour away is retried on a much tighter
   cadence than one three days out, and neither burns through its attempts early
   nor waits past its own deadline.
+
+  ## The counter is executions, not `job.attempt`
+
+  Recovery advances purely by snoozing, and from Oban 2.24 a snooze no longer
+  advances `attempt`. The caller therefore passes
+  `Tymeslot.Workers.SnoozePolicy.executions/1` — attempts and snoozes together
+  — which is the number `attempt` used to carry. Bound against `attempt` alone
+  this loop would never reach `@max_attempts`, leaving only the deadline to
+  stop it and retrying a meeting booked far in advance far more than five
+  times.
   """
 
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
@@ -52,12 +62,14 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   @doc """
   Whether this attempt has exhausted ordinary retries and entered recovery.
 
+  `execution` counts attempts and snoozes alike; see the moduledoc.
+
   Recovery only applies to jobs that still owe the booking its announcement. A
   job created without `announce` has no deadline to race, so it simply retries
   and gives up on Oban's own schedule.
   """
   @spec recovering?(pos_integer(), boolean()) :: boolean()
-  def recovering?(attempt, announce), do: announce and attempt >= @fallback_attempt
+  def recovering?(execution, announce), do: announce and execution >= @fallback_attempt
 
   @doc """
   Enters recovery for a meeting and returns the resulting Oban decision.
@@ -67,8 +79,8 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   `cause` is logged to distinguish a failing provider from a hanging one.
   """
   @spec enter(String.t(), pos_integer(), String.t()) :: decision()
-  def enter(meeting_id, attempt, cause) do
-    if attempt == @fallback_attempt do
+  def enter(meeting_id, execution, cause) do
+    if execution == @fallback_attempt do
       Logger.warning("Video room creation entering recovery, announcing without a room",
         meeting_id: meeting_id,
         attempts: @fallback_attempt,
@@ -78,7 +90,7 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
       send_fallback_notifications(meeting_id)
     end
 
-    decide(meeting_id, attempt - @fallback_attempt + 1)
+    decide(meeting_id, execution - @fallback_attempt + 1)
   end
 
   @doc """

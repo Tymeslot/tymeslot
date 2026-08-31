@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.RetryHelpers
+  alias Tymeslot.Workers.SnoozePolicy
   require Logger
 
   # Configuration
@@ -202,8 +203,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       if is_integer(retry_after) do
         min(600, max(10, retry_after))
       else
-        # fallback heuristic
-        min(300, 60 * job.attempt)
+        # Fallback heuristic. Paced by executions rather than `job.attempt`, so
+        # a provider that keeps rate limiting is backed off further each time
+        # rather than being retried every minute forever: from Oban 2.24 a
+        # snooze no longer advances `attempt`.
+        min(300, 60 * SnoozePolicy.executions(job))
       end
 
     Logger.warning("Calendar service rate limited, snoozing",
@@ -307,7 +311,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     snooze_seconds =
       if is_integer(retry_after),
         do: min(600, max(10, retry_after)),
-        else: min(300, 60 * job.attempt)
+        else: min(300, 60 * SnoozePolicy.executions(job))
 
     Logger.warning("Calendar service rate limited, snoozing", snooze_seconds: snooze_seconds)
     {:snooze, snooze_seconds}

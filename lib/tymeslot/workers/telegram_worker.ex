@@ -13,13 +13,12 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
   require Logger
 
-  # `SnoozePolicy` bounds the 429 snooze loop by `attempt`, which — unlike
-  # Oban 2.23's (pinned) ever-growing `max_attempts` on snooze — advances by
-  # one on every execution regardless of outcome, so it is a reliable budget
-  # to snooze against. See
-  # deferred/2026-08-29-oban-2-24-snooze-rollback-breaks-attempt-counters.md
-  # for how this and the `attempt == 1` "first execution" checks below would
-  # need revisiting under Oban 2.24, which is not this deployment's pin.
+  # The 429 snooze loop and the "first execution" checks below are both
+  # measured with `SnoozePolicy.executions/1` rather than `job.attempt`.
+  # Neither `attempt` nor `max_attempts` moves far enough on a snooze to bound
+  # the loop, and from Oban 2.24 a snooze rolls `attempt` back — which would
+  # both let it snooze forever and make `attempt == 1` true again on every
+  # execution that followed one.
   @max_rate_limit_snoozes 20
   @min_retry_after_seconds 1
   @max_retry_after_seconds 300
@@ -171,7 +170,9 @@ defmodule Tymeslot.Workers.TelegramWorker do
     end
   end
 
-  defp handle_api_result(integration, %Oban.Job{attempt: attempt} = job, result) do
+  defp handle_api_result(integration, %Oban.Job{} = job, result) do
+    executions = SnoozePolicy.executions(job)
+
     case result do
       {:ok, status, _body} when status >= 200 and status < 300 ->
         Telegram.record_success(integration)
@@ -185,17 +186,17 @@ defmodule Tymeslot.Workers.TelegramWorker do
       # 400 stays matched too: the description is the reliable signal, and an
       # intermediary can rewrite the transport status.
       {:ok, status, body} when status in [400, 403] ->
-        handle_rejection(integration, body, attempt)
+        handle_rejection(integration, body, executions)
 
       {:ok, 429, body} ->
         handle_rate_limit(integration, job, body)
 
       {:ok, status, _body} ->
-        if attempt == 1, do: Telegram.record_failure(integration, "HTTP #{status}")
+        if executions == 1, do: Telegram.record_failure(integration, "HTTP #{status}")
         {:error, {:http_error, status}}
 
       {:error, reason} ->
-        if attempt == 1, do: Telegram.record_failure(integration, to_string(reason))
+        if executions == 1, do: Telegram.record_failure(integration, to_string(reason))
         {:error, reason}
     end
   end
@@ -244,7 +245,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
     end
   end
 
-  defp handle_rejection(integration, body, attempt) do
+  defp handle_rejection(integration, body, executions) do
     description = extract_error_description(body)
 
     cond do
@@ -264,7 +265,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         {:discard, "Chat unreachable"}
 
       true ->
-        if attempt == 1,
+        if executions == 1,
           do: Telegram.record_failure(integration, "Bad Request: #{description}")
 
         {:error, {:bad_request, description}}
@@ -300,10 +301,10 @@ defmodule Tymeslot.Workers.TelegramWorker do
     {:error, {:chat_migrated, new_chat_id}}
   end
 
-  defp handle_rate_limit(integration, %Oban.Job{attempt: attempt}, body) do
+  defp handle_rate_limit(integration, %Oban.Job{} = job, body) do
     retry_after = body |> extract_retry_after() |> clamp_retry_after()
 
-    case SnoozePolicy.snooze_or_exhaust(attempt,
+    case SnoozePolicy.snooze_or_exhaust(SnoozePolicy.executions(job),
            max_snoozes: @max_rate_limit_snoozes,
            base_seconds: retry_after
          ) do

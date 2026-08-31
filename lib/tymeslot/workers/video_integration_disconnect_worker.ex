@@ -28,6 +28,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
 
   require Logger
@@ -77,6 +78,13 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   def perform(%Oban.Job{args: %{"integration_id" => integration_id}, attempt: attempt} = job) do
     Logger.metadata(job_id: job.id, attempt: attempt)
 
+    # The circuit-open branch below advances this job by snoozing, so its
+    # budget has to count snoozes too: from Oban 2.24 `attempt` alone stops
+    # moving, and an indefinitely-open breaker would snooze forever rather
+    # than falling through to the purge that stops the credentials being
+    # stranded.
+    executions = SnoozePolicy.executions(job)
+
     case VideoIntegrationQueries.get(integration_id) do
       {:ok, %{deleted_at: nil} = integration} ->
         # Reconnected since this job was enqueued (or since a previous
@@ -90,7 +98,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         :ok
 
       {:ok, integration} ->
-        drain(integration, attempt)
+        drain(integration, executions)
 
       {:error, :not_found} ->
         {:discard, "Integration already removed"}
@@ -115,7 +123,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     end
   end
 
-  defp drain(integration, attempt) do
+  defp drain(integration, executions) do
     limit = drain_page_limit()
 
     meetings =
@@ -129,14 +137,14 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     failures = Enum.count(results, &(&1 in [:error, :circuit_open]))
 
     cond do
-      :circuit_open in results and attempt < @max_attempts ->
+      :circuit_open in results and executions < @max_attempts ->
         # The provider's breaker is open: every remaining call in this batch
         # would fail instantly too. Snooze past the recovery window rather than
         # burning one of this job's attempts on calls known to be refused.
         # Past the last attempt this falls through instead, so an
         # indefinitely-open breaker cannot strand the row's OAuth credentials
         # forever the way an unconditional snooze would.
-        ErrorPolicy.to_result(:circuit_open, attempt, integration.provider)
+        ErrorPolicy.to_result(:circuit_open, executions, integration.provider)
 
       length(meetings) == limit ->
         # A full page: more upcoming meetings on this integration than one
@@ -151,7 +159,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         {:error, :more_rooms_to_drain}
 
       true ->
-        finish(integration, attempt, length(meetings), failures)
+        finish(integration, executions, length(meetings), failures)
     end
   end
 
@@ -163,9 +171,9 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         @default_drain_page_limit
       )
 
-  defp finish(integration, _attempt, total, 0), do: purge(integration, total, 0)
+  defp finish(integration, _executions, total, 0), do: purge(integration, total, 0)
 
-  defp finish(integration, attempt, total, failures) when attempt >= @max_attempts do
+  defp finish(integration, executions, total, failures) when executions >= @max_attempts do
     # Last attempt. Keeping the row would strand the user's OAuth credentials
     # indefinitely for the sake of rooms the provider is refusing to delete, so
     # the row goes and the orphans are recorded loudly instead.
@@ -178,7 +186,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     purge(integration, total, failures)
   end
 
-  defp finish(integration, _attempt, _total, failures) do
+  defp finish(integration, _executions, _total, failures) do
     Logger.warning("Provider room cleanup incomplete, will retry",
       integration_id: integration.id,
       failed: failures

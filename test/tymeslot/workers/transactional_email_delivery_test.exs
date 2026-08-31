@@ -64,23 +64,23 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
     assert seconds >= CircuitBreakerSupervisor.email_breaker_recovery_seconds()
   end
 
-  # The bug this guards against: `{:snooze, n}` bumps `max_attempts` in step
-  # under the pinned Oban 2.23.1, so nothing ever stopped a job whose provider
-  # never recovers from snoozing forever — no dead-letter, no admin alert,
-  # invisible to every queue monitor. `SnoozePolicy` bounds it against the
-  # job's own `attempt`, independent of Oban's ever-receding `max_attempts`.
+  # The bug this guards against: a snoozing job never closes the gap between
+  # `attempt` and `max_attempts`, whichever of the two Oban moves, so nothing
+  # ever stopped a job whose provider never recovers from snoozing forever — no
+  # dead-letter, no admin alert, invisible to every queue monitor. `SnoozePolicy`
+  # bounds it against the job's own execution count instead.
   describe "handle_failure/3 — bounded circuit-open snoozing" do
     test "keeps snoozing while under the bound" do
       assert {:snooze, _seconds} =
-               TransactionalEmailDelivery.handle_failure(:circuit_open, "", attempt: 1)
+               TransactionalEmailDelivery.handle_failure(:circuit_open, "", executions: 1)
 
       assert {:snooze, _seconds} =
-               TransactionalEmailDelivery.handle_failure(:circuit_open, "", attempt: 11)
+               TransactionalEmailDelivery.handle_failure(:circuit_open, "", executions: 11)
     end
 
     test "fails the job instead of snoozing once the bound is reached" do
       assert {:error, reason} =
-               TransactionalEmailDelivery.handle_failure(:circuit_open, "", attempt: 12)
+               TransactionalEmailDelivery.handle_failure(:circuit_open, "", executions: 12)
 
       assert reason =~ "circuit breaker"
     end
@@ -124,7 +124,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
   # `handle_failure/3` is also what `EmailWorker` calls for these three
   # reasons, so a rate limit means the same thing — a snooze, not a burned
   # attempt — everywhere in the email pipeline rather than only where the
-  # job happens to carry an attempt number.
+  # job happens to carry an execution count.
   describe "handle_failure/3 for :rate_limited" do
     test "snoozes rather than retrying with an ordinary backoff" do
       assert {:snooze, seconds} = TransactionalEmailDelivery.handle_failure(:rate_limited, "", [])
@@ -132,12 +132,12 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
       assert seconds > 0
     end
 
-    test "scales the snooze with :attempt when the caller supplies one" do
+    test "scales the snooze with :executions when the caller supplies one" do
       assert {:snooze, 60} =
-               TransactionalEmailDelivery.handle_failure(:rate_limited, "", attempt: 1)
+               TransactionalEmailDelivery.handle_failure(:rate_limited, "", executions: 1)
 
       assert {:snooze, 300} =
-               TransactionalEmailDelivery.handle_failure(:rate_limited, "", attempt: 5)
+               TransactionalEmailDelivery.handle_failure(:rate_limited, "", executions: 5)
     end
   end
 end

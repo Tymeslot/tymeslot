@@ -100,6 +100,38 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerCircuitBreakerTest do
       assert Repo.reload!(meeting_a).video_room_id == "circuit-open-a"
       assert Repo.reload!(meeting_b).video_room_id == "circuit-open-b"
     end
+
+    test "purges once the budget is spent in snoozes rather than attempts" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      insert_meeting_for_user(user, %{
+        start_offset: 86_400,
+        video_integration_id: integration.id,
+        video_provider: "zoom",
+        video_room_id: "circuit-open-snoozed"
+      })
+
+      {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+      trip_zoom_breaker()
+
+      # This is the shape a job that spent its budget actually has: it got
+      # here by snoozing past the breaker, and from Oban 2.24 a snooze rolls
+      # `attempt` back and counts itself in `meta["snoozed"]` instead. Measured
+      # on `attempt` alone the safety valve never fires and the row's OAuth
+      # credentials are stranded for as long as the breaker stays open.
+      assert :ok =
+               perform_job(
+                 VideoIntegrationDisconnectWorker,
+                 %{"integration_id" => integration.id},
+                 attempt: 1,
+                 meta: %{"snoozed" => 4}
+               )
+
+      assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+    end
   end
 
   describe "draining more meetings than one page covers" do

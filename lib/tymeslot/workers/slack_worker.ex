@@ -14,8 +14,8 @@ defmodule Tymeslot.Workers.SlackWorker do
     * Anything else → `{:error, reason}` and Oban retries with backoff
 
   Failures are recorded against the integration only on the genuinely final
-  attempt. Because `{:snooze, n}` bumps `max_attempts`, the final attempt is
-  `max_attempts`, not the static `5`.
+  attempt, which is `max_attempts`: a snooze costs the job no attempt, so it
+  always gets its full budget of real ones.
   """
 
   use Oban.Worker,
@@ -234,10 +234,9 @@ defmodule Tymeslot.Workers.SlackWorker do
     {:error, reason}
   end
 
-  # Oban's `{:snooze, n}` increments `max_attempts` while keeping the attempt
-  # number, so a snoozed-then-retried job's genuine final attempt is
-  # `max_attempts`, not the original `5`. Comparing against the live
-  # `max_attempts` records the failure exactly once, on the real last attempt.
+  # A snoozed job comes back without having spent an attempt, so the number to
+  # compare against is the job's own `max_attempts` rather than a copy of the
+  # `5` above. That records the failure exactly once, on the real last attempt.
   defp final_attempt?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}),
     do: attempt >= max_attempts
 

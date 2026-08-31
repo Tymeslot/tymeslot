@@ -434,6 +434,35 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert updated.failure_count == 1
     end
 
+    test "records the failure once, not again on an execution that follows a snooze", %{
+      user: user,
+      meeting: meeting
+    } do
+      integration = insert(:telegram_integration, user: user, failure_count: 0)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 500, body: "Error"}}
+      end)
+
+      # A job that snoozed past a 429 comes back with `attempt` rolled back
+      # from Oban 2.24 on, so `attempt == 1` is true again on the execution
+      # after it. The failure budget feeding auto-disable is meant to count
+      # this job once, so the second execution must not record a second one.
+      assert {:error, {:http_error, 500}} =
+               perform_job(
+                 TelegramWorker,
+                 %{
+                   "integration_id" => integration.id,
+                   "event_type" => "meeting.created",
+                   "meeting_id" => meeting.id
+                 },
+                 attempt: 1,
+                 meta: %{"snoozed" => 1}
+               )
+
+      assert Repo.get(TelegramIntegrationSchema, integration.id).failure_count == 0
+    end
+
     test "auto-disables after 10 consecutive failures", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user, failure_count: 9)
 
