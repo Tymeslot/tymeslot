@@ -28,6 +28,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Payments.CustomerLookup
+  alias Tymeslot.Payments.PubSub
   alias Tymeslot.Payments.Webhooks.WebhookUtils
   alias Tymeslot.Utils.MapKeys
 
@@ -83,7 +84,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     )
 
     # Broadcast event for SaaS to handle subscription revocation
-    Tymeslot.Payments.PubSub.broadcast_payment_event(:charge_refunded, %{
+    PubSub.broadcast_payment_event(:charge_refunded, %{
       event_id: event["id"],
       charge_id: charge_id,
       customer_id: customer_id,
@@ -279,9 +280,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   end
 
   defp broadcast_refund_event(user_id, event_id, access_revoked) do
-    Phoenix.PubSub.broadcast(
-      Tymeslot.PubSub,
-      "user:#{user_id}",
+    PubSub.broadcast_to_user(
+      user_id,
       {:refund_processed, %{event_id: event_id, access_revoked: access_revoked}}
     )
   end

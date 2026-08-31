@@ -17,7 +17,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Mailer
-  alias Tymeslot.Payments.{Config, PaymentQueries}
+  alias Tymeslot.Payments.{Config, PaymentQueries, PubSub}
   alias Tymeslot.Security.SecurityLogger
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
@@ -80,7 +80,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         customer_id = get_charge_customer_id(charge)
 
         if subscription_charge?(charge) do
-          Tymeslot.Payments.PubSub.broadcast_payment_event(:dispute_created, %{
+          PubSub.broadcast_payment_event(:dispute_created, %{
             event_id: event["id"],
             stripe_customer_id: customer_id,
             dispute: dispute
@@ -141,7 +141,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
       {:ok, charge} ->
         if subscription_charge?(charge) do
           # Broadcast event for SaaS to update dispute status
-          Tymeslot.Payments.PubSub.broadcast_payment_event(:dispute_updated, %{
+          PubSub.broadcast_payment_event(:dispute_updated, %{
             event_id: event["id"],
             stripe_dispute_id: dispute_id,
             status: status
@@ -171,7 +171,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
       {:ok, charge} ->
         if subscription_charge?(charge) do
           # Broadcast event for SaaS to update dispute status and handle outcome
-          Tymeslot.Payments.PubSub.broadcast_payment_event(:dispute_closed, %{
+          PubSub.broadcast_payment_event(:dispute_closed, %{
             event_id: event["id"],
             stripe_dispute_id: dispute_id,
             status: status,
@@ -275,11 +275,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   end
 
   defp broadcast_dispute_event(user_id, event_type, dispute_id) do
-    Phoenix.PubSub.broadcast(
-      Tymeslot.PubSub,
-      "user:#{user_id}",
-      {event_type, %{dispute_id: dispute_id}}
-    )
+    PubSub.broadcast_to_user(user_id, {event_type, %{dispute_id: dispute_id}})
   end
 
   defp send_dispute_created_alert(dispute_data) do

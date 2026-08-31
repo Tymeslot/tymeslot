@@ -6,6 +6,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Payments
   alias Tymeslot.Payments.Webhooks.DisputeHandler
 
   setup :set_mox_from_context
@@ -36,7 +37,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       restore(:subscription_manager, original_manager)
     end)
 
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment_events:tymeslot")
+    :ok = Payments.subscribe_to_payment_events()
     :ok
   end
 

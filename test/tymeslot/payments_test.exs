@@ -1,10 +1,12 @@
 defmodule Tymeslot.PaymentsTest do
   use Tymeslot.DataCase, async: false
   @moduletag :utils
+  @moduletag :payments
 
   alias Tymeslot.Factory
   alias Tymeslot.Payments
   alias Tymeslot.Payments.PaymentTransactionSchema
+  alias Tymeslot.Payments.PubSub
   alias Tymeslot.Repo
 
   describe "initiate_subscription/7" do
@@ -128,6 +130,39 @@ defmodule Tymeslot.PaymentsTest do
                  user_id: user.id,
                  status: "pending"
                )
+    end
+  end
+
+  describe "payment event subscriptions" do
+    test "subscribe_to_payment_events/0 delivers lifecycle events to the caller" do
+      assert :ok = Payments.subscribe_to_payment_events()
+
+      event = %{event: :subscription_created, user_id: 7}
+      assert :ok = Payments.broadcast_subscription_event(event)
+
+      assert_receive ^event
+    end
+
+    test "subscribe_to_user_events/1 delivers only that user's events" do
+      assert :ok = Payments.subscribe_to_user_events(11)
+
+      assert :ok = Payments.broadcast_to_user(11, {:dispute_created, %{dispute_id: "dp_mine"}})
+      assert :ok = Payments.broadcast_to_user(12, {:dispute_created, %{dispute_id: "dp_other"}})
+
+      assert_receive {:dispute_created, %{dispute_id: "dp_mine"}}
+      refute_receive {:dispute_created, %{dispute_id: "dp_other"}}
+    end
+
+    # The context publishes events, never the transport: callers outside Core
+    # must not be able to resolve the PubSub server or build a topic string,
+    # because that is what put topic names beyond the reach of a rename here.
+    test "neither the context nor its PubSub module exposes a server or topic accessor" do
+      context_functions = Keyword.keys(Payments.__info__(:functions))
+      pubsub_functions = Keyword.keys(PubSub.__info__(:functions))
+
+      refute :get_pubsub_server in context_functions
+      refute :payment_events_topic in pubsub_functions
+      refute :user_topic in pubsub_functions
     end
   end
 

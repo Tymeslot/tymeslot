@@ -6,6 +6,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
   import Tymeslot.Factory
 
   alias Swoosh.Email
+  alias Tymeslot.Payments
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Payments.Webhooks.RefundHandler
 
@@ -60,7 +61,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       restore(:repo, original_repo)
     end)
 
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment_events:tymeslot")
+    :ok = Payments.subscribe_to_payment_events()
     :ok
   end
 
@@ -99,7 +100,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "full refund revokes subscription access and notifies the user" do
       Application.put_env(:tymeslot, :subscription_manager, RevocationManager)
       {user, customer_id} = linked_subscription()
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "user:#{user.id}")
+      :ok = Payments.subscribe_to_user_events(user.id)
 
       charge = refunded_charge(customer_id, 10_000, 10_000)
       event = refunded_event()
@@ -133,7 +134,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "partial refund below threshold does NOT revoke access but still notifies" do
       Application.put_env(:tymeslot, :subscription_manager, RevocationManager)
       {user, customer_id} = linked_subscription()
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "user:#{user.id}")
+      :ok = Payments.subscribe_to_user_events(user.id)
 
       # 50% refund — below the default 90% threshold
       charge = refunded_charge(customer_id, 5_000, 10_000)
@@ -177,7 +178,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       # Test env configures a Mox mock by default — unset it to simulate Standalone.
       Application.delete_env(:tymeslot, :subscription_manager)
       {user, customer_id} = linked_subscription()
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "user:#{user.id}")
+      :ok = Payments.subscribe_to_user_events(user.id)
 
       charge = refunded_charge(customer_id, 10_000, 10_000)
       event = refunded_event()
@@ -192,7 +193,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "manager error returns retry_later and skips broadcast" do
       Application.put_env(:tymeslot, :subscription_manager, FailingManager)
       {user, customer_id} = linked_subscription()
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "user:#{user.id}")
+      :ok = Payments.subscribe_to_user_events(user.id)
 
       charge = refunded_charge(customer_id, 10_000, 10_000)
       event = refunded_event()
