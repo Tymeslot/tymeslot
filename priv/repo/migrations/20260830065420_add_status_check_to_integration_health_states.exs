@@ -11,12 +11,15 @@ defmodule Tymeslot.Repo.Migrations.AddStatusCheckToIntegrationHealthStates do
   row's next probe — before adding the constraint.
   """
 
-  # excellent_migrations:safety-assured-for-next-line check_constraint_added
+  # excellent_migrations:safety-assured-for-this-file check_constraint_added
+  # excellent_migrations:safety-assured-for-this-file raw_sql_executed
   #
   # Migrations run offline: `start.sh` executes them in a one-shot VM and only
-  # starts Phoenix once they finish, so the ACCESS EXCLUSIVE lock this takes to
-  # validate existing rows blocks no live traffic. Revisit this if a deployment
-  # target ever migrates against a running instance.
+  # starts Phoenix once they finish, so the ACCESS EXCLUSIVE lock the constraint
+  # takes to validate existing rows blocks no live traffic. Revisit this if a
+  # deployment target ever migrates against a running instance. The raw UPDATE
+  # is the backfill that constraint needs: it has no changeset to run through,
+  # and it must repair the rows before the constraint can accept them.
   def up do
     execute("""
     UPDATE integration_health_states
