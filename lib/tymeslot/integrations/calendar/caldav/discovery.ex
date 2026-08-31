@@ -10,8 +10,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   ## Discovery Strategy
 
   1. Attempts the provider-specific guessed path (e.g., `/calendars/{user}/`).
-  2. On `:not_found`, `:forbidden` or `:server_error`, follows the full RFC 4791
-     chain:
+  2. On `:not_found`, `:forbidden`, `:method_not_allowed` or `:server_error`,
+     follows the full RFC 4791 chain:
      - PROPFIND the supplied base URL, then the origin root, until one answers
        with a `current-user-principal` href
      - PROPFIND principal URL → `calendar-home-set` href
@@ -31,15 +31,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
 
   require Logger
 
-  # Errors that mean "this URL was not the right place to ask", so the next
-  # probe candidate is worth trying. Deliberately the same trio the callers
-  # above already treat as "the guessed path was wrong, fall back".
+  # Errors that mean "this URL was not the right place to ask": the guessed
+  # discovery path was wrong and the RFC 4791 chain is worth running, and
+  # within that chain the next probe candidate is worth trying. One list rather
+  # than three copies, because the three sites are answering the same question.
+  #
+  # `:method_not_allowed` belongs here for the same reason `:not_found` does:
+  # a 405 is what a PROPFIND draws at a URL that exists but is not DAV-mounted
+  # (a service root, or a reverse proxy answering unknown methods itself), so
+  # the address was wrong rather than the credentials.
   #
   # Everything else ends the walk where it stands. `:unauthorized` in
   # particular must not advance: the credentials are wrong, no URL can fix
   # that, and re-presenting a rejected login to a server that locks accounts
   # out makes the user's situation worse rather than better.
-  @probe_next_candidate_errors [:not_found, :forbidden, :server_error]
+  @wrong_url_errors [:not_found, :forbidden, :method_not_allowed, :server_error]
 
   # SSRF guard for outbound discovery/test-connection PROPFINDs.
   #
@@ -70,10 +76,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   @doc """
   Tests connectivity to a CalDAV server.
 
-  Attempts to reach the provider-specific discovery path. If it returns
-  `:not_found` or `:server_error`, falls back to an RFC 4791
-  `current-user-principal` probe which verifies credentials are valid even
-  when the guessed path is wrong (e.g., Zimbra).
+  Attempts to reach the provider-specific discovery path. If the answer says
+  the path was wrong rather than the credentials (`:not_found`, `:forbidden`,
+  `:method_not_allowed`, `:server_error`), falls back to the full RFC 4791
+  chain, which verifies credentials are valid even when the guessed path is
+  wrong (e.g., Zimbra).
 
   Pure I/O: rate limiting the connection test is the caller's job
   (`Tymeslot.Integrations.Calendar.Connection.test_connection/2`), not this
@@ -93,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
           {:ok, %Req.Response{}} ->
             :ok
 
-          {:error, reason} when reason in [:not_found, :forbidden, :server_error] ->
+          {:error, reason} when reason in @wrong_url_errors ->
             Logger.debug(
               "CalDAV discovery path unavailable; verifying via full RFC 4791 discovery",
               reason: reason,
@@ -152,7 +159,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
           {:ok, %Req.Response{body: body}} ->
             parse_calendar_discovery(body, client)
 
-          {:error, reason} when reason in [:not_found, :forbidden, :server_error] ->
+          {:error, reason} when reason in @wrong_url_errors ->
             Logger.debug(
               "CalDAV discovery path not found; falling back to RFC 4791 principal discovery",
               reason: reason,
@@ -223,7 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
             probe_principal_candidates(rest, client, first_error || reason)
         end
 
-      {:error, reason} when reason in @probe_next_candidate_errors ->
+      {:error, reason} when reason in @wrong_url_errors ->
         Logger.debug("CalDAV principal probe found nothing; trying the next candidate",
           reason: reason,
           probe_url: display_url(url)
