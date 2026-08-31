@@ -7,8 +7,6 @@ defmodule Tymeslot.Auth do
   It encapsulates the business logic and provides a clean interface for the web layer.
   """
 
-  require Logger
-
   alias Tymeslot.Auth.{
     AccountDeletion,
     AdminRoles,
@@ -193,24 +191,14 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Verifies a user's email address.
+
+  Deliberately broadcasts nothing: `user_registered` is published once, at
+  registration, and a second broadcast here made every subscriber keeping
+  per-event tallies count a verified password signup twice.
   """
   @spec verify_user_email(String.t()) :: {:ok, Ecto.Schema.t()} | {:error, any()}
   def verify_user_email(token) do
-    with {:ok, user} <- Verification.verify_user(token) do
-      # Broadcast verification event asynchronously under a supervisor so that
-      # a broadcast failure cannot take down the caller.
-      case Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-             user_broadcaster().broadcast_user_registered(user)
-           end) do
-        {:ok, _pid} ->
-          :ok
-
-        {:error, reason} ->
-          Logger.error("Failed to start user-registered broadcast task", reason: inspect(reason))
-      end
-
-      {:ok, user}
-    end
+    Verification.verify_user(token)
   end
 
   @doc """
@@ -373,8 +361,4 @@ defmodule Tymeslot.Auth do
   See `Tymeslot.Auth.AdminRoles.demote/2` for the full contract.
   """
   defdelegate demote_admin(actor, user_id), to: AdminRoles, as: :demote
-
-  defp user_broadcaster do
-    Application.get_env(:tymeslot, :user_broadcaster, PubSub)
-  end
 end

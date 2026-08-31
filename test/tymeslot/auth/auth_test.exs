@@ -111,7 +111,7 @@ defmodule Tymeslot.AuthTest do
   end
 
   describe "verify_user_email/1" do
-    test "verifies email, returns the user, and broadcasts :user_registered" do
+    test "verifies the email without re-broadcasting :user_registered" do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
       {:ok, _updated} = UserTokenQueries.set_verification_token(user, token)
@@ -122,9 +122,12 @@ defmodule Tymeslot.AuthTest do
       assert verified_user.id == user.id
 
       user_id = user.id
-      # The broadcast runs in a supervised task, so there is no synchronisation
-      # point to wait on; the window is generous rather than tight.
-      assert_receive {:user_registered, %{user: %{id: ^user_id}}}, 5_000
+      # Registration already broadcast this event for this user at signup;
+      # a second broadcast at verification made every subscriber keeping
+      # per-event tallies count a verified password signup twice. The refute
+      # matches this test's user id only, so a registration broadcast from a
+      # concurrently running async test cannot trip it.
+      refute_receive {:user_registered, %{user: %{id: ^user_id}}}, 200
     end
   end
 
