@@ -1,6 +1,42 @@
 defmodule Tymeslot.Security.SecurityLogger do
   @moduledoc """
   Security event logging for suspicious input patterns that were sanitised in place.
+
+  ## Two sinks, and why `additional_data` looks unread
+
+  Every event assembled here goes to two places, and they carry deliberately
+  different amounts of detail.
+
+  1. **Logger**, always. `log_security_event/2` forwards a fixed, canonical
+     allowlist of flat keys and nothing else: `event_type`, `user_id`,
+     `email_masked`, `ip_address`, `user_agent`, `session_id`, `provider`,
+     `lockout_type`, `limit_type`. This is the log line an operator reads, and
+     the allowlist is what keeps an event builder from widening it by accident.
+  2. **An external monitoring webhook**, only when the operator opts in by
+     setting `config :tymeslot, :security_monitoring_enabled, true` *and*
+     `:security_monitoring_webhook`. It receives the same canonical keys plus
+     `additional_data`.
+
+  No shipped configuration sets `:security_monitoring_enabled`, so out of the
+  box it is `false`, the webhook never fires, and the `additional_data` map the
+  builders below assemble (`error_reason`, `oauth_state_valid`,
+  `sessions_invalidated`, `failed_attempts`, `login_method`, …) reaches nothing.
+  **That is the intended default, not an oversight.** Those fields are the
+  richer detail an operator unlocks by pointing this at their own monitoring
+  system; until they do, the canonical allowlist is the whole story, and the
+  events carry masked emails and IP addresses, so turning the webhook on is a
+  data-egress decision that belongs to the operator rather than to this module.
+
+  Two consequences worth knowing before changing anything here:
+
+  - **A field added to `additional_data` will not appear in the logs.** If it
+    belongs on the log line, promote it into the canonical map instead.
+  - **Promoting a key affects every event type, not just the one you had in
+    mind**, because both sinks are built from one canonical map. `provider` is
+    the cautionary tale: promoting it meant two input validators that happened
+    to carry `params["provider"]` in their details map began writing raw user
+    input to the log sink, which is why `sanitize_provider/1` exists. Grep
+    every caller of `log_security_event/2` for the key first.
   """
 
   alias Tymeslot.Infrastructure.Config
@@ -130,7 +166,10 @@ defmodule Tymeslot.Security.SecurityLogger do
 
     Logger.info("Security event", [event_type: event_type] ++ Map.to_list(canonical))
 
-    # Also send to external monitoring if configured
+    # Operator opt-in, off in every shipped configuration: no config file sets
+    # this key. While it is false, `additional_data` has no sink at all — by
+    # design, see the moduledoc. Do not "fix" that by widening the Logger
+    # allowlist above without reading the caveats there first.
     if Application.get_env(:tymeslot, :security_monitoring_enabled, false) do
       send_to_monitoring_service(
         Map.merge(canonical, %{
