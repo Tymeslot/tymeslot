@@ -90,6 +90,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:calendar_paths, {:array, :string}, default: [])
     field(:calendar_list, {:array, CalendarEntry}, default: [])
     field(:default_booking_calendar_id, :string)
+    # Stored and threaded through the provider config maps, but no transport
+    # reads it yet: no CalDAV request builds a TLS option from it, so
+    # certificates are always verified whatever this says. That direction fails
+    # closed, and no UI writes the column. It is reserved for the Exchange (EWS)
+    # provider, whose client turns `false` into `verify: :verify_none` for the
+    # self-signed certificates on-premises deployments carry. Not dead: do not
+    # drop the column on the apparent grounds that nothing reads it.
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
     field(:needs_reauth, :boolean, default: false)
