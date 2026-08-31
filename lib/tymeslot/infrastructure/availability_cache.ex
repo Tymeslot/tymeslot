@@ -52,6 +52,21 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   end
 
   @doc """
+  Cache key for the host's whole booking window of calendar events.
+
+  `Tymeslot.Integrations.Calendar.Events.get_calendar_events/3` ignores
+  the date it is handed and always fetches `today .. today +
+  advance_booking_days`, so the user id is the fetch's entire input and
+  the entire key. Deliberately *not* keyed on a display range: that is
+  what makes one cached fetch serve every month a booking page can walk
+  to, rather than one identical provider round trip per rendered month.
+  """
+  @spec booking_window_events_key(integer()) :: {atom(), integer()}
+  def booking_window_events_key(user_id) do
+    {:booking_window_events, user_id}
+  end
+
+  @doc """
   Invalidates all cached availability data for a user.
   Call after any mutation to the user's availability schedule or bookings.
   A `nil` user id is a no-op, so callers can pass `meeting.organizer_user_id`
@@ -63,6 +78,7 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   def invalidate_for_user(user_id) do
     invalidate_pattern({:month_availability, user_id, :_, :_, :_, :_})
     invalidate_pattern({:range_availability, user_id, :_, :_, :_, :_, :_})
+    invalidate(booking_window_events_key(user_id))
     :ok
   end
 end

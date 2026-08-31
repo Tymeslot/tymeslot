@@ -63,11 +63,10 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   and `{socket, :refetch}` when the window has been moved forward and the
   caller must fetch availability for the new month.
 
-  The refetch is handed back rather than performed here because the two
-  fetch paths differ: tests resolve availability synchronously, production
-  spawns a task whose result arrives as a message. Returning the
-  instruction lets each caller re-enter its own path, and keeps this
-  module free of a dependency on the fetcher that calls it.
+  The refetch is handed back rather than performed here so this module
+  keeps no dependency on the fetcher that calls it: `AvailabilityHelpers`
+  already reaches `NextAvailable` through `InfoHandlers`, and calling
+  back into it from here would close that loop into a cycle.
   """
   @spec apply(Phoenix.LiveView.Socket.t()) :: {Phoenix.LiveView.Socket.t(), :done | :refetch}
   def apply(socket) do
@@ -92,9 +91,9 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   Spends the landing attempt without selecting anything.
 
   Callers use this for the outcomes that never reach `apply/1`: a fetch that
-  errored or timed out produces no map to search, but it was still the one
-  chance to land, and treating it as a deferral is what leaves the calendar
-  moving under the booker later.
+  errored produces no map to search, but it was still the one chance to land,
+  and treating it as a deferral is what leaves the calendar moving under the
+  booker later.
 
   Every navigation control clears or bypasses `selected_date` and refetches —
   Quill's month arrows blank it outright, Rhythm's week arrows cross a month
@@ -139,8 +138,8 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   # An explicit selection always wins over a computed one, so a shared link
   # keeps the day it names rather than having it replaced by the earliest free
   # one. `handle_param_updates/2` seeds the URL date, and
-  # `do_handle_schedule_entry/2` seeds it again for the test harness, whose
-  # fetch resolves before `handle_params` rather than after.
+  # `do_handle_schedule_entry/2` seeds it again for a step transition, whose
+  # params never reach `handle_params/3`.
   #
   # A date is the only thing that counts as chosen. A reschedule used to be
   # treated as one too, on the belief that its link carried a date; it does

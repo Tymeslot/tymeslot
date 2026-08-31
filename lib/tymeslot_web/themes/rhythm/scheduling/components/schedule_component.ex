@@ -209,7 +209,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     {LocalizationHelpers.get_week_display(@current_week_start)}
                   </h3>
                   <div class="cluster cluster-xs">
-                    <%= if @availability_status in [:error, :timeout] do %>
+                    <%= if @availability_status == :error do %>
                       <div class="calendar-error-inline">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path

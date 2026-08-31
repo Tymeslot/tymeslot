@@ -389,11 +389,11 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       # even if an earlier visit spent one on a duration that was booked out.
       |> NextAvailable.reset()
       # `mount` reaches this entry before `handle_params` runs, so a date named
-      # in the URL is not yet on the socket. In production the auto-selection
-      # runs later still, off a task result, by which point `handle_params` has
-      # seeded it anyway; under the test harness the fetch resolves inline
-      # here, ahead of `handle_params`. Seeding it at both points is what keeps
-      # the two orderings agreeing on whether the booker made a choice.
+      # in the URL is not yet on the socket. The auto-selection runs later, off
+      # the fetch result, by which point `handle_params` has seeded it anyway —
+      # but this entry is also reached on an in-page step transition, whose
+      # params arrive with the event rather than through `handle_params`.
+      # Seeding here covers that arrival.
       |> maybe_assign_from_params(:selected_date, date_param(params))
 
     # Trigger month availability fetch in background if not already loading or loaded for this month

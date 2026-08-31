@@ -169,6 +169,15 @@ config :tymeslot, :booking_analytics_enabled, true
 # `DBConnection.OwnershipError` that ExUnit reports but does not fail on.
 config :tymeslot, :async_page_view_logging, false
 
+# Resolve month availability inline rather than in a linked Task, so the result
+# is owned by the test process. Both modes deliver the same `{ref, result}`
+# message to the same handler at the same point in the LiveView lifecycle; what
+# the inline mode removes is a task still in flight when a test ends, which is
+# killed mid-query and takes the checked-out sandbox connection with it.
+# `TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest` flips this back on to
+# cover the task path itself.
+config :tymeslot, :async_availability_fetch, false
+
 # Enable all providers for testing
 config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],

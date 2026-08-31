@@ -141,9 +141,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         InfoHandlers.handle_availability_error(socket, ref, reason)
       end
 
+      # A monitor this LiveView never asked for — LiveView's own channel
+      # intercepts the ones it owns before delegating here. The availability
+      # fetch cannot produce one (its task is linked, so a crash kills this
+      # process instead), so there is nothing to finalise: ignore it rather
+      # than let it reach `handle_unexpected/2` and log a warning per stray
+      # monitor on a public page.
       @impl Phoenix.LiveView
-      def handle_info({:DOWN, ref, :process, _pid, reason}, socket) do
-        InfoHandlers.handle_availability_down(socket, ref, reason)
+      def handle_info({:DOWN, _ref, :process, _pid, _reason}, socket) do
+        {:noreply, socket}
       end
 
       # PubSub broadcasts for embedded paid bookings — see

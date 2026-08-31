@@ -48,6 +48,11 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
   @doc """
   Handles month availability fetch completion (error).
+
+  There is no crash counterpart: the fetch runs in a *linked* task, so a
+  task that raises takes the LiveView with it and never delivers a
+  `:DOWN` anyone could act on. A handler for one would be unreachable
+  code pretending the page degrades gracefully.
   """
   @spec handle_availability_error(Phoenix.LiveView.Socket.t(), reference(), any()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -59,21 +64,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     end)
   end
 
-  @doc """
-  Handle task crash or timeout.
-  """
-  @spec handle_availability_down(Phoenix.LiveView.Socket.t(), reference(), any()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_availability_down(socket, ref, reason) do
-    finalize_availability_task(socket, ref, :timeout, nil, fn ->
-      Logger.warning("Month availability task failed", reason: inspect(reason))
-    end)
-  end
-
   # Applies the terminal availability-task state, but only for the *current*
   # task ref — a stale ref (the user moved on before the fetch finished) is a
-  # no-op. `on_active` runs only when the ref matches, so error/timeout warnings
-  # are never emitted for superseded tasks.
+  # no-op. `on_active` runs only when the ref matches, so an error warning is
+  # never emitted for a superseded fetch.
   defp finalize_availability_task(socket, ref, status, map, on_active \\ fn -> :ok end) do
     if ref == socket.assigns[:availability_task_ref] do
       on_active.()
@@ -100,7 +94,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   # forward and needs its own fetch; the hop counter inside NextAvailable stops
   # that walking forever.
   #
-  # Only a loaded map is searched. On :error or :timeout the map is nil, which
+  # Only a loaded map is searched. On an :error the map is nil, which
   # is indistinguishable from "no day is free" — advancing the month on a
   # failed fetch would march the booker through months nobody has successfully
   # looked at.
