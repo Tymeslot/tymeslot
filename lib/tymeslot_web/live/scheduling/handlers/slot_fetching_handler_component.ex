@@ -102,9 +102,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
           socket
           |> assign(:available_slots, [])
           |> assign(:loading_slots, false)
+          # Deliberately says nothing about *why*. This is the most
+          # conversion-critical screen in the product, and a booker who has
+          # never heard of a calendar provider can act on "try again" but
+          # not on a parser. The reason is in the log line above, where the
+          # person who can act on it will look.
           |> assign(
             :calendar_error,
-            dgettext("booking", "No timeslots available due to calendar parsing error")
+            dgettext("booking", "No time slots could be loaded. Please try again.")
           )
 
         {:error, socket}

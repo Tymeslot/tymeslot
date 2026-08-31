@@ -147,6 +147,56 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       refute html =~ "90 days in advance"
     end
 
+    # The slot fetch's `{:error, _}` branch had no test at all, so the message
+    # it puts on the most conversion-critical screen in the product was free to
+    # regress — including back into the internal wording it used to carry
+    # ("calendar parsing error"), which tells a booker nothing they can act on.
+    @tag :capture_log
+    test "a calendar the host's provider cannot serve shows the booker an actionable message",
+         %{conn: conn, profile: profile} do
+      stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:error, :all_calendars_unavailable}
+      end)
+
+      timezone = profile.timezone
+      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{timezone}")
+
+      view |> element("button[data-testid='duration-option']") |> render_click()
+      view |> element("button[data-testid='next-step']") |> render_click()
+
+      today = timezone |> DateTime.now!() |> DateTime.to_date()
+      target = Date.add(today, 1)
+
+      if target.month != today.month do
+        view |> element("button[phx-click='next_month']") |> render_click()
+      end
+
+      date_str = Date.to_string(target)
+
+      wait_until(fn ->
+        has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")
+      end)
+
+      view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
+
+      wait_until(fn -> :sys.get_state(view.pid).socket.assigns[:calendar_error] != nil end)
+
+      html = render(view)
+
+      # Asserted on the rendered page, not the assign: the assign was always
+      # set, and what makes this a user-facing bug is the sentence the booker
+      # reads while the funnel is failing.
+      assert html =~ "No time slots could be loaded. Please try again."
+      refute html =~ "calendar parsing error"
+
+      state = :sys.get_state(view.pid).socket.assigns
+
+      # The spinner is cleared and the list emptied, so the page settles on
+      # the message rather than on a load that never finishes.
+      assert state.available_slots == []
+      refute state.loading_slots
+    end
+
     @tag :capture_log
     test "re-selecting the date clears the picked time and disables next-step",
          %{conn: conn, profile: profile} do

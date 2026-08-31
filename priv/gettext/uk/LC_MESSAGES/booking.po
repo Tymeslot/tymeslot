@@ -1484,11 +1484,6 @@ msgstr "Зустріч, яка вже почалася, не можна пере
 msgid "Meeting is already cancelled"
 msgstr "Зустріч вже скасовано"
 
-#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "No timeslots available due to calendar parsing error"
-msgstr "Немає доступних часових слотів через помилку обробки календаря"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
@@ -1538,3 +1533,8 @@ msgstr "Потрібно вказати назву"
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Ви не можете забронювати більш ніж за %{days} днів наперед"
+
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#, elixir-autogen, elixir-format
+msgid "No time slots could be loaded. Please try again."
+msgstr "Не вдалося завантажити часові слоти. Спробуйте ще раз."

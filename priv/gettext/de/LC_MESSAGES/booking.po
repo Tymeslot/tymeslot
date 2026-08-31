@@ -1485,11 +1485,6 @@ msgstr "Ein bereits begonnener Termin kann nicht verschoben werden"
 msgid "Meeting is already cancelled"
 msgstr "Der Termin wurde bereits abgesagt"
 
-#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "No timeslots available due to calendar parsing error"
-msgstr "Aufgrund eines Kalenderfehlers sind keine Zeitfenster verfügbar"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
@@ -1539,3 +1534,8 @@ msgstr "Titel ist erforderlich"
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Sie können nicht mehr als %{days} Tage im Voraus buchen"
+
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#, elixir-autogen, elixir-format
+msgid "No time slots could be loaded. Please try again."
+msgstr "Zeitfenster konnten nicht geladen werden. Bitte versuchen Sie es erneut."

@@ -1485,11 +1485,6 @@ msgstr "Impossibile riprogrammare una riunione già iniziata"
 msgid "Meeting is already cancelled"
 msgstr "La riunione è già stata annullata"
 
-#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "No timeslots available due to calendar parsing error"
-msgstr "Nessuna fascia oraria disponibile a causa di un errore di analisi del calendario"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
@@ -1539,3 +1534,8 @@ msgstr "Il titolo è obbligatorio"
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Non puoi prenotare con più di %{days} giorni di anticipo"
+
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#, elixir-autogen, elixir-format
+msgid "No time slots could be loaded. Please try again."
+msgstr "Impossibile caricare le fasce orarie. Riprova."

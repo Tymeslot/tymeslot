@@ -1485,11 +1485,6 @@ msgstr "Impossible de reporter une réunion déjà commencée"
 msgid "Meeting is already cancelled"
 msgstr "La réunion est déjà annulée"
 
-#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "No timeslots available due to calendar parsing error"
-msgstr "Aucun créneau disponible en raison d’une erreur d’analyse du calendrier"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
@@ -1539,3 +1534,8 @@ msgstr "Le titre est obligatoire"
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Vous ne pouvez pas réserver plus de %{days} jours à l’avance"
+
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#, elixir-autogen, elixir-format
+msgid "No time slots could be loaded. Please try again."
+msgstr "Impossible de charger les créneaux. Veuillez réessayer."
