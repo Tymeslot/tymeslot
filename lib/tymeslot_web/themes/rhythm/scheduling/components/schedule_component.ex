@@ -21,15 +21,23 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   end
 
   @impl Phoenix.LiveComponent
+  # Selecting is not a toggle: clicking the day already selected re-selects it
+  # rather than clearing it, which is how Quill has always behaved.
+  #
+  # It used to clear it, and that was survivable only while the step opened
+  # with nothing selected — the booker could reach a selected day only by
+  # having just clicked it. The schedule step now opens on the first bookable
+  # day, so the highlighted day is the one most likely to be clicked first, and
+  # the toggle turned that click into an empty time list with the day
+  # unhighlighted. Nothing on screen distinguishes that from a day with no
+  # availability, and no affordance ever advertised deselection.
   def handle_event("select_date", %{"date" => date}, socket) do
-    new_date = if socket.assigns[:selected_date] == date, do: nil, else: date
-
     socket =
       socket
-      |> assign(:selected_date, new_date)
+      |> assign(:selected_date, date)
       |> assign(:selected_time, nil)
 
-    send(self(), {:step_event, :schedule, :select_date, new_date})
+    send(self(), {:step_event, :schedule, :select_date, date})
     {:noreply, socket}
   end
 
