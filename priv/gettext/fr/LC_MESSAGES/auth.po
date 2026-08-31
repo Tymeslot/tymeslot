@@ -734,11 +734,6 @@ msgstr "Compte créé, mais la vérification de l’e-mail a échoué. Veuillez 
 msgid "Account created but profile setup failed. Please contact support."
 msgstr "Compte créé, mais la configuration du profil a échoué. Veuillez contacter le support."
 
-#: lib/tymeslot/security/account_lockout.ex
-#, elixir-autogen, elixir-format
-msgid "Account locked for %{duration} minutes due to repeated failed attempts"
-msgstr "Compte verrouillé pendant %{duration} minutes en raison de tentatives répétées"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please try again."
@@ -981,11 +976,6 @@ msgstr "Le lien de vérification a expiré"
 #, elixir-autogen, elixir-format
 msgid "You cannot reset your password because your account is managed by an external authentication provider."
 msgstr "Vous ne pouvez pas réinitialiser votre mot de passe, car votre compte est géré par un fournisseur d’authentification externe."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Your account has been locked due to too many failed attempts. Please try again later."
-msgstr "Votre compte a été verrouillé en raison d’un trop grand nombre de tentatives échouées. Veuillez réessayer plus tard."
 
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format

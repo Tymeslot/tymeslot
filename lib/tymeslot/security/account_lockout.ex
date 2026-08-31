@@ -2,25 +2,55 @@ defmodule Tymeslot.Security.AccountLockout do
   @moduledoc """
   Account lockout mechanism to prevent brute force attacks.
 
-  Implements progressive lockout with increasing delays for repeated failed attempts.
   Uses ETS for fast, in-memory tracking of failed attempts. The ETS table is owned
   by `Tymeslot.Security.AccountLockout.TableOwner` and survives this module's
   caller crashing — but does NOT survive a BEAM restart, node shutdown, or deploy.
+
+  ## One tier, deliberately
+
+  There is a single defence here: once an identifier accumulates ten failures
+  inside the last hour, further attempts are throttled until old failures age
+  out of that window. There is no second, harder tier, and adding one would be
+  a mistake for two reasons:
+
+  - `RateLimiter.Auth.check_auth/2` consults `check_lockout_status/1` *before*
+    password verification, and that check is read-only. Once the throttle
+    threshold is reached the login path short-circuits and stops recording
+    failures, so the counter freezes at the threshold and a higher one is
+    unreachable by sequential brute force.
+  - Making it reachable would mean recording attempts the pre-check already
+    rejected. The counter is keyed on the email address alone, in a node-local
+    table, so that hands anyone who knows a victim's address a way to lock
+    that account out at will. A throttle that re-opens hourly degrades an
+    attacker; a hard lock triggered the same way degrades the account owner.
+
+  A previous revision defined a 20-failure tier returning `:account_locked`
+  with a flat four-hour duration. It was removed rather than repaired: it never
+  fired under sequential brute force, and the only ways to make it fire are the
+  denial-of-service above.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Security.AccountLockout.TableOwner
+  alias Tymeslot.Security.SecurityLogger
 
   require Logger
 
   @lockout_table :account_lockout_table
 
+  # Failures inside @recent_window_seconds needed to throttle an identifier.
+  @throttle_threshold 10
+  @recent_window_seconds 3600
+
   @doc """
-  Checks and records authentication attempt.
-  Returns :ok if allowed, {:error, reason, message} if locked/throttled.
+  Checks and records an authentication attempt.
+
+  Returns `:ok` if allowed, `{:error, :account_throttled, message}` once the
+  identifier has crossed the throttle threshold.
   """
-  @spec check_and_record_attempt(String.t(), boolean()) :: :ok | {:error, atom(), String.t()}
+  @spec check_and_record_attempt(String.t(), boolean()) ::
+          :ok | {:error, :account_throttled, String.t()}
   def check_and_record_attempt(identifier, true) do
     clear_failed_attempts(identifier)
     :ok
@@ -33,39 +63,20 @@ defmodule Tymeslot.Security.AccountLockout do
   end
 
   @doc """
-  Checks if an account is currently locked without recording an attempt.
+  Checks whether an account is currently throttled, without recording an
+  attempt.
   """
-  @spec check_lockout_status(String.t()) :: :ok | {:error, atom(), String.t()}
+  @spec check_lockout_status(String.t()) :: :ok | {:error, :account_throttled, String.t()}
   def check_lockout_status(identifier) do
     key = normalize(identifier)
 
     case :ets.lookup(@lockout_table, key) do
       [{^key, attempts}] ->
-        now = System.system_time(:second)
-
-        # Filter attempts from last hour for lockout calculation
-        recent_attempts =
-          Enum.filter(attempts, fn timestamp ->
-            now - timestamp < 3600
-          end)
-
-        case length(recent_attempts) do
-          count when count >= 20 ->
-            duration = calculate_lockout_duration(count)
-
-            {:error, :account_locked,
-             dgettext(
-               "auth",
-               "Account locked for %{duration} minutes due to repeated failed attempts",
-               duration: duration
-             )}
-
-          count when count >= 10 ->
-            {:error, :account_throttled,
-             dgettext("auth", "Too many failed attempts. Please wait before trying again")}
-
-          _other ->
-            :ok
+        if recent_attempt_count(attempts) >= @throttle_threshold do
+          {:error, :account_throttled,
+           dgettext("auth", "Too many failed attempts. Please wait before trying again")}
+        else
+          :ok
         end
 
       [] ->
@@ -121,6 +132,11 @@ defmodule Tymeslot.Security.AccountLockout do
 
   # Private functions
 
+  defp recent_attempt_count(attempts) do
+    now = System.system_time(:second)
+    Enum.count(attempts, fn timestamp -> now - timestamp < @recent_window_seconds end)
+  end
+
   # Lockout keys are normalised so attackers cannot reset the counter by
   # varying the case (user@x.com vs USER@x.com) or padding with whitespace.
   defp normalize(identifier) when is_binary(identifier),
@@ -130,20 +146,21 @@ defmodule Tymeslot.Security.AccountLockout do
   # cycle — a `:public` ETS table alone cannot prevent two concurrent callers
   # from both reading the same attempt list and clobbering each other's insert.
   defp do_record_failed_attempt(identifier) do
+    # This fires on *every* failed attempt, so it is the highest-volume line in
+    # the auth path under a credential-stuffing run. The identifier is the
+    # normalised email address; it is masked here rather than left to the
+    # global metadata filter.
+    masked = SecurityLogger.mask_email(identifier)
+
     case TableOwner.record_attempt(identifier) do
       1 ->
-        Logger.info("First failed attempt recorded", identifier: identifier)
+        Logger.info("First failed attempt recorded", identifier_masked: masked)
 
       total ->
         Logger.info("Failed attempt recorded",
-          identifier: identifier,
+          identifier_masked: masked,
           total_attempts: total
         )
     end
-  end
-
-  defp calculate_lockout_duration(_attempt_count) do
-    # Flat 4-hour lockout for accounts reaching 20+ failed attempts
-    30 * 8
   end
 end

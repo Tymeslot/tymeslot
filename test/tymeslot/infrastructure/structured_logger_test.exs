@@ -28,10 +28,6 @@ defmodule Tymeslot.Infrastructure.StructuredLoggerTest do
              end) =~ "User logged out"
 
       assert capture_log(fn ->
-               StructuredLogger.log_auth_event(:account_locked, 123)
-             end) =~ "Account locked"
-
-      assert capture_log(fn ->
                StructuredLogger.log_auth_event(:custom_event, 123)
              end) =~ "Authentication event"
     end
