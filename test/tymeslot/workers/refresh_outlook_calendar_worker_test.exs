@@ -209,4 +209,35 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
                })
     end
   end
+
+  describe "backoff/1" do
+    # A transient Microsoft Graph outage (HTTP 500s, connection timeouts) must
+    # not exhaust the job. Oban's default schedule burns every attempt inside
+    # ~70 seconds, which turns a one-minute upstream blip into a permanently
+    # discarded sync and an operator alert.
+    test "spreads retries over minutes, finishing before the next fallback sweep" do
+      max_attempts = RefreshOutlookCalendarWorker.new(%{}).changes.max_attempts
+
+      elapsed_at_each_retry =
+        Enum.scan(1..(max_attempts - 1), 0, fn attempt, elapsed ->
+          elapsed + RefreshOutlookCalendarWorker.backoff(%Oban.Job{attempt: attempt})
+        end)
+
+      last_retry_at = List.last(elapsed_at_each_retry)
+
+      # Long enough to ride out an outage lasting several minutes...
+      assert last_retry_at >= 600
+
+      # ...but spent before FallbackSyncSweepWorker (`*/15 * * * *`) enqueues
+      # the next refresh for the same integration.
+      assert last_retry_at < 900
+    end
+
+    test "waits longer after each successive failure" do
+      gaps = Enum.map(1..4, &RefreshOutlookCalendarWorker.backoff(%Oban.Job{attempt: &1}))
+
+      assert gaps == Enum.sort(gaps)
+      assert Enum.uniq(gaps) == gaps
+    end
+  end
 end

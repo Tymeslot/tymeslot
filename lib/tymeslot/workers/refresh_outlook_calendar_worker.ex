@@ -20,7 +20,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
 
   use Oban.Worker,
     queue: :calendar_integrations,
-    max_attempts: 3,
+    max_attempts: 5,
     unique: [
       period: 60,
       keys: [:calendar_integration_id],
@@ -34,6 +34,22 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync, as: OutlookDeltaSync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+
+  @impl Oban.Worker
+  def backoff(%Oban.Job{attempt: attempt}) do
+    # Progressive backoff: 30s, 90s, 240s, 480s. Graph returns transient 500s
+    # and connection timeouts that outlast the default schedule, which retries
+    # a job to exhaustion inside ~70 seconds and then alerts an operator about
+    # what was a one-minute upstream blip. The four gaps total 14 minutes, so
+    # the retries resolve before `FallbackSyncSweepWorker` (every 15 minutes)
+    # enqueues the next refresh for the same integration.
+    case attempt do
+      1 -> 30
+      2 -> 90
+      3 -> 240
+      _later -> 480
+    end
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
