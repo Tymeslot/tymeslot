@@ -236,9 +236,11 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   The identifier names the rejected attempt: an email address is carried
   under `:email` and masked before it reaches Logger, a user id under
-  `:user_id` as-is.
+  `:user_id` as-is. `nil` when the rejection identifies no account, which
+  carries neither key.
   """
-  @spec log_rate_limit_violation(String.t() | integer(), String.t(), event_metadata()) :: :ok
+  @spec log_rate_limit_violation(String.t() | integer() | nil, String.t(), event_metadata()) ::
+          :ok
   def log_rate_limit_violation(identifier, limit_type, metadata \\ %{}) do
     base_details = %{
       limit_type: limit_type,
