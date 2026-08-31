@@ -54,14 +54,8 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
             {:ok, :subscription_not_found}
 
           subscription ->
-            # Calculate days remaining
-            days_remaining = calculate_days_remaining(trial_ends_at)
-
             # Send reminder email
             send_trial_ending_email(subscription)
-
-            # Broadcast event for real-time UI updates
-            broadcast_trial_ending_event(subscription.user_id, days_remaining, trial_ends_at)
 
             {:ok, :trial_ending_notified}
         end
@@ -100,22 +94,6 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
     else
       nil
     end
-  end
-
-  defp calculate_days_remaining(trial_ends_at) do
-    diff_seconds = DateTime.diff(trial_ends_at, DateTime.utc_now(), :second)
-    max(0, ceil(diff_seconds / 86_400))
-  end
-
-  defp broadcast_trial_ending_event(user_id, days_remaining, trial_ends_at) do
-    PubSub.broadcast_to_user(
-      user_id,
-      {:trial_will_end,
-       %{
-         days_remaining: days_remaining,
-         trial_ends_at: trial_ends_at
-       }}
-    )
   end
 
   defp send_trial_ending_email(subscription) do

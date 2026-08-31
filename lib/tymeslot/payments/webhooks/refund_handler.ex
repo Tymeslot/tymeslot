@@ -158,9 +158,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
             latest_refund_amount = calculate_latest_refund_amount(charge)
             send_refund_email(subscription, latest_refund_amount, should_revoke, charge)
 
-            # Broadcast event for real-time UI updates
-            broadcast_refund_event(subscription.user_id, event["id"], should_revoke)
-
             {:ok, :refund_processed}
 
           error ->
@@ -277,13 +274,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @spec extract_charge_currency(map()) :: String.t()
   def extract_charge_currency(charge) do
     MapKeys.get(charge, :currency) || "eur"
-  end
-
-  defp broadcast_refund_event(user_id, event_id, access_revoked) do
-    PubSub.broadcast_to_user(
-      user_id,
-      {:refund_processed, %{event_id: event_id, access_revoked: access_revoked}}
-    )
   end
 
   defp send_refund_email(subscription, refund_amount_cents, revoked, charge) do

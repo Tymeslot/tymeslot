@@ -234,16 +234,4 @@ defmodule Tymeslot.Payments do
   """
   @spec subscribe_to_payment_events() :: :ok | {:error, term()}
   defdelegate subscribe_to_payment_events, to: PubSub
-
-  @doc """
-  Subscribes the calling process to one user's payment events.
-  """
-  @spec subscribe_to_user_events(integer()) :: :ok | {:error, term()}
-  defdelegate subscribe_to_user_events(user_id), to: PubSub
-
-  @doc """
-  Broadcasts a payment message to one user's subscribers.
-  """
-  @spec broadcast_to_user(integer(), term()) :: :ok | {:error, term()}
-  defdelegate broadcast_to_user(user_id, message), to: PubSub
 end

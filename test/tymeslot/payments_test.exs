@@ -143,16 +143,6 @@ defmodule Tymeslot.PaymentsTest do
       assert_receive ^event
     end
 
-    test "subscribe_to_user_events/1 delivers only that user's events" do
-      assert :ok = Payments.subscribe_to_user_events(11)
-
-      assert :ok = Payments.broadcast_to_user(11, {:dispute_created, %{dispute_id: "dp_mine"}})
-      assert :ok = Payments.broadcast_to_user(12, {:dispute_created, %{dispute_id: "dp_other"}})
-
-      assert_receive {:dispute_created, %{dispute_id: "dp_mine"}}
-      refute_receive {:dispute_created, %{dispute_id: "dp_other"}}
-    end
-
     # The context publishes events, never the transport: callers outside Core
     # must not be able to resolve the PubSub server or build a topic string,
     # because that is what put topic names beyond the reach of a rename here.

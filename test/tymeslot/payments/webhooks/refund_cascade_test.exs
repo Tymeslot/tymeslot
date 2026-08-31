@@ -100,7 +100,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "full refund revokes subscription access and notifies the user" do
       Application.put_env(:tymeslot, :subscription_manager, RevocationManager)
       {user, customer_id} = linked_subscription()
-      :ok = Payments.subscribe_to_user_events(user.id)
 
       charge = refunded_charge(customer_id, 10_000, 10_000)
       event = refunded_event()
@@ -109,9 +108,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
 
       # Revocation called with the right arguments
       assert_received {:revoked, ^customer_id, "canceled", %DateTime{}}
-
-      # User-channel broadcast announces access revoked
-      assert_received {:refund_processed, %{event_id: _, access_revoked: true}}
 
       # Global payment event also fired, carrying the revocation decision so
       # the SaaS consumer doesn't have to re-derive (or skip) it
@@ -134,7 +130,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "partial refund below threshold does NOT revoke access but still notifies" do
       Application.put_env(:tymeslot, :subscription_manager, RevocationManager)
       {user, customer_id} = linked_subscription()
-      :ok = Payments.subscribe_to_user_events(user.id)
 
       # 50% refund — below the default 90% threshold
       charge = refunded_charge(customer_id, 5_000, 10_000)
@@ -143,8 +138,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       assert {:ok, :refund_processed} = RefundHandler.process(event, charge)
 
       refute_received {:revoked, _customer, _status, _at}
-
-      assert_received {:refund_processed, %{event_id: _, access_revoked: false}}
 
       assert_received %{
         event: :charge_refunded,
@@ -156,7 +149,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       assert_received {:refund_email, ^user_id, 5_000, "eur", false}
     end
 
-    test "refund without a linked subscription is logged and does not broadcast on user channel" do
+    test "refund without a linked subscription is logged without user-facing side effects" do
       Application.put_env(:tymeslot, :subscription_manager, RevocationManager)
 
       # No matching subscription exists in the DB
@@ -172,35 +165,37 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
         event: :charge_refunded,
         data: %{customer_id: "cus_orphan", total_refunded: 10_000}
       }
+
+      # No linked user, so nobody to email
+      refute_received {:refund_email, _user_id, _amount, _currency, _revoked}
     end
 
     test "refund proceeds when SubscriptionManager is unavailable (Standalone mode)" do
       # Test env configures a Mox mock by default — unset it to simulate Standalone.
       Application.delete_env(:tymeslot, :subscription_manager)
       {user, customer_id} = linked_subscription()
-      :ok = Payments.subscribe_to_user_events(user.id)
 
       charge = refunded_charge(customer_id, 10_000, 10_000)
       event = refunded_event()
 
       assert {:ok, :refund_processed} = RefundHandler.process(event, charge)
 
-      # Broadcast still fires — but no manager call happened
-      assert_received {:refund_processed, %{access_revoked: true}}
+      # The user is still notified — but no manager call happened
+      user_id = user.id
+      assert_received {:refund_email, ^user_id, 10_000, "eur", true}
       refute_received {:revoked, _customer, _status, _at}
     end
 
-    test "manager error returns retry_later and skips broadcast" do
+    test "manager error returns retry_later and skips the user notification" do
       Application.put_env(:tymeslot, :subscription_manager, FailingManager)
-      {user, customer_id} = linked_subscription()
-      :ok = Payments.subscribe_to_user_events(user.id)
+      {_user, customer_id} = linked_subscription()
 
       charge = refunded_charge(customer_id, 10_000, 10_000)
       event = refunded_event()
 
       assert {:error, :retry_later, _reason} = RefundHandler.process(event, charge)
 
-      refute_received {:refund_processed, _payload}
+      refute_received {:refund_email, _user_id, _amount, _currency, _revoked}
     end
   end
 
@@ -211,7 +206,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
 
       assert {:ok, :refund_status_updated} = RefundHandler.process(event, refund)
 
-      refute_received {:refund_processed, _payload}
+      refute_received {:refund_email, _user_id, _amount, _currency, _revoked}
       refute_received {:revoked, _customer, _status, _at}
     end
   end

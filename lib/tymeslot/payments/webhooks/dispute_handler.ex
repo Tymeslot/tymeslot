@@ -118,9 +118,6 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
               # Send email to admin
               send_dispute_created_alert(dispute)
 
-              # Broadcast event
-              broadcast_dispute_event(user_id, :dispute_created, dispute_id)
-
               {:ok, :dispute_created}
           end
         end
@@ -272,10 +269,6 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         amount: amount
       }
     )
-  end
-
-  defp broadcast_dispute_event(user_id, event_type, dispute_id) do
-    PubSub.broadcast_to_user(user_id, {event_type, %{dispute_id: dispute_id}})
   end
 
   defp send_dispute_created_alert(dispute_data) do
