@@ -43,7 +43,7 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   @presets %{
     buffer_minutes: [0, 5, 10, 15, 30, 45, 60],
     advance_booking_days: [7, 14, 30, 60, 90, 180, 365],
-    min_advance_hours: [0, 1, 3, 4, 6, 12, 24, 48, 168]
+    min_advance_hours: [0, 1, 3, 6, 12, 24, 48, 168]
   }
 
   @default_custom_mode Map.new(Map.keys(@presets), &{&1, false})

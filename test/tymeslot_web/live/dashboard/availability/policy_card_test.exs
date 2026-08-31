@@ -62,11 +62,11 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.PolicyCardTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
-      |> element("[phx-click='update_min_advance_hours'][phx-value-min_advance_hours='4']")
+      |> element("[phx-click='update_min_advance_hours'][phx-value-min_advance_hours='6']")
       |> render_click()
 
       assert render(view) =~ "Minimum booking notice updated"
-      assert Repo.reload!(schedule).min_advance_hours == 4
+      assert Repo.reload!(schedule).min_advance_hours == 6
     end
 
     test "entering a custom buffer value outside the allowed range is rejected", %{

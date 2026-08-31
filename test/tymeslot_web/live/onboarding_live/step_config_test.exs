@@ -76,7 +76,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
                {"No minimum", 0},
                {"1 hour", 1},
                {"3 hours", 3},
-               {"4 hours", 4},
                {"6 hours", 6},
                {"12 hours", 12},
                {"24 hours", 24},
