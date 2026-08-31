@@ -8,6 +8,7 @@ defmodule Tymeslot.BookingTestHelpers do
   import Phoenix.LiveViewTest
 
   alias Tymeslot.TestHelpers.Eventually
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @endpoint TymeslotWeb.Endpoint
 
@@ -24,6 +25,7 @@ defmodule Tymeslot.BookingTestHelpers do
   # made every Rhythm walk raise on the last day of a month: the one day where
   # tomorrow falls outside the range already on screen.
   @next_month "button[phx-click='next_month']"
+  @month_label ".calendar-month-label"
   @next_week "button[phx-click='next_week']"
 
   @doc """
@@ -118,10 +120,24 @@ defmodule Tymeslot.BookingTestHelpers do
   # Quill's month grid pads with the neighbouring month's days and disables
   # them, so a rendered cell is no proof the date is bookable here: the month
   # itself is what has to move.
-  defp advance_month(view, today, target_date) do
-    if target_date.month != today.month or target_date.year != today.year do
+  #
+  # Read the month the calendar is actually showing rather than assuming it
+  # opened on today's. The schedule step opens on the next available day, which
+  # is not always in today's month -- on the last day of a month it is already
+  # showing the next one, and advancing again would leave the target behind and
+  # land on a month the booking window forbids.
+  defp advance_month(view, _today, target_date) do
+    unless showing_month?(view, target_date) do
       view |> element(@next_month) |> render_click()
     end
+  end
+
+  defp showing_month?(view, %Date{} = date) do
+    has_element?(
+      view,
+      @month_label,
+      LocalizationHelpers.get_month_year_display(date.year, date.month)
+    )
   end
 
   # Rhythm's strip renders exactly the seven days it offers and no padding, so
