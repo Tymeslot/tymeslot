@@ -154,7 +154,21 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         fn _date, _date_string -> {false, true} end
 
       is_map(availability_map) ->
-        fn _date, date_string -> {Map.get(availability_map, date_string, false), false} end
+        uncovered =
+          uncovered_lookup(
+            week_start,
+            organizer_profile,
+            availability_map,
+            user_timezone,
+            meeting_type
+          )
+
+        fn date, date_string ->
+          case Map.fetch(availability_map, date_string) do
+            {:ok, available} -> {available, false}
+            :error -> uncovered.(date, date_string)
+          end
+        end
 
       Demo.demo_profile?(organizer_profile) ->
         # Demo profiles answer the fallback question with the same demo
@@ -187,6 +201,49 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
           user_timezone
         )
     end
+  end
+
+  # A day the map does not carry is *unknown*, not unavailable.
+  #
+  # The map is folded over `Calculate.display_range/2` — a Sunday-anchored
+  # 42-day block around a month — while the strip renders a Monday-anchored
+  # week. `handle_week_navigation/2` refetches whenever the arrows move the
+  # week's midpoint into another month, so no arrow-driven week escapes the
+  # block; a week positioned by a *date* can, because nothing refetches for
+  # it. `SchedulingInit` seeds one from today and `NextAvailable.align_to/2`
+  # from the day it lands on. August 2026 is the shape: the block covers
+  # 2026-07-26..2026-09-05 and the week of the 31st runs to 2026-09-06.
+  #
+  # Reading the absent day as `false` painted it exactly like a fully booked
+  # one — greyed out and unclickable — on the strength of a question nobody
+  # asked the calendar. Both strips do it: Rhythm's week view and Quill's
+  # narrow-screen weekly row disable the button on the same value.
+  #
+  # An uncovered day is instead answered the way the strip answers when there
+  # is no map at all: the host's business hours, which is the same domain rule
+  # the month grid falls back to, and clicking the day fetches its real slots.
+  # The worst case becomes a day that turns out to be full, rather than a
+  # bookable day the booker can never reach. Resolved once, and only when the
+  # week actually has a gap, so a fully covered week pays nothing for it —
+  # the fallback costs a schedule lookup and a prefetch.
+  defp uncovered_lookup(
+         week_start,
+         organizer_profile,
+         availability_map,
+         user_timezone,
+         meeting_type
+       ) do
+    if week_covered?(week_start, availability_map) do
+      fn _date, _date_string -> {false, false} end
+    else
+      day_availability_lookup(week_start, organizer_profile, nil, user_timezone, meeting_type)
+    end
+  end
+
+  defp week_covered?(week_start, availability_map) do
+    Enum.all?(0..6, fn offset ->
+      Map.has_key?(availability_map, week_start |> Date.add(offset) |> Date.to_string())
+    end)
   end
 
   defp business_hours_lookup(
