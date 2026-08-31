@@ -2,15 +2,41 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   @moduledoc """
   A reusable base for ETS-based caches.
   Provides standard lookup, compute, and cleanup logic.
+
+  ## How a miss is computed
+
+  Concurrent misses on the same key are coalesced so the expensive work
+  happens once. The cache GenServer arbitrates that, but it never runs the
+  computation itself: the first caller to miss is told to *lead* and runs
+  `fun` in its own process, publishing the result to the cache when it is
+  done; callers that arrive while it is in flight block until then and are
+  handed the same value.
+
+  Running `fun` in the caller rather than in a cache-owned worker is what
+  makes the arrangement environment-independent. A computation that queries
+  the database or meets a `Mox` expectation keeps the caller's sandbox
+  connection and its mock allowances, neither of which a separate process
+  gets for free — which is why this path used to be bypassed under test,
+  leaving the coalescing that ships exercised by almost nothing.
   """
 
   require Logger
 
+  @typedoc """
+  One in-flight computation: the monitor on the process leading it, and the
+  callers blocked on its result. The leader is not among the waiters — it
+  returns its own value directly rather than through a `GenServer` reply.
+  """
   @type pending_entry :: %{
           required(:waiters) => [GenServer.from()],
           required(:ref) => reference()
         }
   @type state :: %{required(:pending) => %{term() => pending_entry()}}
+
+  # A waiter stays blocked in `GenServer.call/3` for as long as the leader's
+  # computation takes, so this bounds the slowest cached computation (a cold
+  # CalDAV round trip), not the arbitration call itself.
+  @compute_timeout :timer.seconds(90)
 
   defmacro __using__(opts) do
     quote do
@@ -31,6 +57,10 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       Get a value from cache or compute it if missing/expired.
       Coalesces concurrent requests for the same key to prevent cache stampedes.
 
+      `fun` always runs in the calling process, whichever caller ends up
+      leading the computation; the cache GenServer only decides who that is.
+      See the `Tymeslot.Infrastructure.CacheStore` moduledoc.
+
       Pass `cache_errors: false` in `opts` to skip storing an `{:error, _}`
       result: the next call recomputes instead of replaying a stale failure
       for the rest of the TTL. Off by default so existing callers keep their
@@ -42,15 +72,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
             value
 
           :miss ->
-            # In test environment, compute directly to avoid ownership issues with background tasks.
-            # This ensures that database connections and Mox expectations are preserved.
-            if Application.get_env(:tymeslot, :environment) == :test and
-                 not Application.get_env(:tymeslot, :force_cache_coalescing, false) do
-              CacheStore.compute_and_store(@table_name, key, fun, ttl, opts)
-            else
-              # Use GenServer to coalesce concurrent computations
-              GenServer.call(__MODULE__, {:compute_coalesced, key, fun, ttl, opts}, 90_000)
-            end
+            CacheStore.compute_coalesced(__MODULE__, @table_name, key, fun, ttl, opts)
         end
       end
 
@@ -92,18 +114,18 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       end
 
       @impl GenServer
-      def handle_call({:compute_coalesced, key, fun, ttl, opts}, from, state) do
-        CacheStore.handle_compute_coalesced(@table_name, key, fun, ttl, opts, from, state)
+      def handle_call({:join_computation, key}, from, state) do
+        CacheStore.handle_join_computation(@table_name, key, from, state)
       end
 
       @impl GenServer
-      def handle_info({:computation_done, key, value, ttl, opts}, state) do
-        CacheStore.handle_computation_done(@table_name, key, value, ttl, opts, state)
+      def handle_info({:computation_done, key, value}, state) do
+        CacheStore.handle_computation_done(key, value, state)
       end
 
       @impl GenServer
       def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-        CacheStore.handle_task_down(state, ref)
+        CacheStore.handle_leader_down(state, ref)
       end
 
       @impl GenServer
@@ -139,64 +161,55 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_compute_coalesced(
-          atom(),
-          any(),
-          (-> any()),
-          integer(),
-          keyword(),
-          GenServer.from(),
-          state()
-        ) :: {:reply, any(), state()} | {:noreply, state()}
-  def handle_compute_coalesced(table_name, key, fun, ttl, opts, from, state) do
+  @spec compute_coalesced(module(), atom(), any(), (-> any()), integer(), keyword()) :: any()
+  def compute_coalesced(server, table_name, key, fun, ttl, opts) do
+    case GenServer.call(server, {:join_computation, key}, @compute_timeout) do
+      :lead -> lead_computation(server, table_name, key, fun, ttl, opts)
+      {:value, value} -> value
+    end
+  end
+
+  # Runs in the leading caller, not in the cache. The result is stored before
+  # the cache is told about it, which keeps `get_or_compute/4`'s postcondition:
+  # once it returns, the value is already in ETS, so a call that immediately
+  # follows is a hit rather than a second computation.
+  defp lead_computation(server, table_name, key, fun, ttl, opts) do
+    value = compute_and_store(table_name, key, fun, ttl, opts)
+    send(server, {:computation_done, key, value})
+    value
+  end
+
+  @doc false
+  @spec handle_join_computation(atom(), any(), GenServer.from(), state()) ::
+          {:reply, :lead | {:value, any()}, state()} | {:noreply, state()}
+  def handle_join_computation(table_name, key, from, state) do
     case lookup(table_name, key) do
       {:ok, value} ->
-        {:reply, value, state}
+        {:reply, {:value, value}, state}
 
       :miss ->
         case Map.get(state.pending, key) do
           nil ->
-            parent = self()
-
-            {:ok, pid} =
-              Task.start(fn ->
-                value =
-                  try do
-                    fun.()
-                  catch
-                    kind, reason ->
-                      exit({kind, reason, __STACKTRACE__})
-                  end
-
-                send(parent, {:computation_done, key, value, ttl, opts})
-              end)
-
-            ref = Process.monitor(pid)
-            new_state = put_in(state.pending[key], %{waiters: [from], ref: ref})
-            {:noreply, new_state}
+            {:reply, :lead, put_in(state.pending[key], %{waiters: [], ref: monitor_caller(from)})}
 
           %{waiters: waiters} ->
-            new_state = put_in(state.pending[key].waiters, [from | waiters])
-            {:noreply, new_state}
+            {:noreply, put_in(state.pending[key].waiters, [from | waiters])}
         end
     end
   end
 
   @doc false
-  @spec handle_computation_done(atom(), any(), any(), integer(), keyword(), state()) ::
-          {:noreply, state()}
-  def handle_computation_done(table_name, key, value, ttl, opts, state) do
+  @spec handle_computation_done(any(), any(), state()) :: {:noreply, state()}
+  def handle_computation_done(key, value, state) do
     case Map.pop(state.pending, key) do
-      {nil, _value} ->
+      {nil, _pending} ->
         {:noreply, state}
 
       {%{waiters: waiters, ref: ref}, pending} ->
         Process.demonitor(ref, [:flush])
 
-        maybe_store(table_name, key, value, ttl, opts)
-
         Enum.each(waiters, fn waiter ->
-          GenServer.reply(waiter, value)
+          GenServer.reply(waiter, {:value, value})
         end)
 
         {:noreply, %{state | pending: pending}}
@@ -204,22 +217,30 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_task_down(state(), reference()) :: {:noreply, state()}
-  def handle_task_down(state, ref) do
-    entry = Enum.find(state.pending, fn {_key, val} -> val.ref == ref end)
-
-    case entry do
-      {key, %{waiters: waiters}} ->
-        Enum.each(waiters, fn waiter ->
-          GenServer.reply(waiter, {:error, :computation_failed})
-        end)
-
+  @spec handle_leader_down(state(), reference()) :: {:noreply, state()}
+  def handle_leader_down(state, ref) do
+    case Enum.find(state.pending, fn {_key, entry} -> entry.ref == ref end) do
+      {key, %{waiters: []}} ->
         {:noreply, %{state | pending: Map.delete(state.pending, key)}}
 
-      _other ->
+      {key, %{waiters: waiters}} ->
+        # The leader is a caller like any other, so it can go away for reasons
+        # that say nothing about the result — a visitor closing the booking
+        # page mid-fetch. Promote the longest-waiting caller rather than
+        # failing everyone who is still interested. A successor that is itself
+        # already dead brings its own `:DOWN` straight back here, so the
+        # promotion walks down the queue until someone alive takes it.
+        {successor, rest} = List.pop_at(waiters, -1)
+        GenServer.reply(successor, :lead)
+        entry = %{waiters: rest, ref: monitor_caller(successor)}
+        {:noreply, put_in(state.pending[key], entry)}
+
+      nil ->
         {:noreply, state}
     end
   end
+
+  defp monitor_caller({pid, _tag}), do: Process.monitor(pid)
 
   @doc false
   @spec lookup(atom(), any()) :: {:ok, any()} | :miss
@@ -236,6 +257,11 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
+  # A failing computation resolves to `{:error, :computation_failed}` in every
+  # environment. It used to re-raise under test, which meant the logging and
+  # the failure value the callers actually receive in production were reached
+  # by no test at all; the warning below carries the exception message, so a
+  # test whose cached computation blows up still says so in the log.
   @spec compute_and_store(atom(), any(), (-> any()), integer(), keyword()) :: any()
   def compute_and_store(table_name, key, fun, ttl, opts \\ []) do
     result =
@@ -243,17 +269,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
         {:ok, fun.()}
       rescue
         exception ->
-          if Application.get_env(:tymeslot, :environment) == :test do
-            reraise exception, __STACKTRACE__
-          end
-
           {:raised, exception, __STACKTRACE__}
       catch
         kind, reason ->
-          if Application.get_env(:tymeslot, :environment) == :test do
-            :erlang.raise(kind, reason, __STACKTRACE__)
-          end
-
           {:caught, kind, reason, __STACKTRACE__}
       end
 
