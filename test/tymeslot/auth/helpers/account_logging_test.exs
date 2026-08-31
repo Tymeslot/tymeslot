@@ -19,7 +19,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLoggingTest do
       end)
 
       assert_receive {:captured_log, %{meta: meta}}
-      assert meta[:identifier] == "a***@example.com"
+      assert meta[:identifier_masked] == "a***@example.com"
       refute inspect(meta) =~ "alice@example.com"
     end
 
@@ -29,7 +29,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLoggingTest do
       end)
 
       assert_receive {:captured_log, %{meta: meta}}
-      assert meta[:email] == "b***@example.com"
+      assert meta[:email_masked] == "b***@example.com"
       refute inspect(meta) =~ "bob@example.com"
     end
 
@@ -39,7 +39,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLoggingTest do
       end)
 
       assert_receive {:captured_log, %{meta: meta}}
-      assert meta[:identifier] == "c***@example.com"
+      assert meta[:identifier_masked] == "c***@example.com"
       refute inspect(meta) =~ "carol@example.com"
     end
 
@@ -49,7 +49,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLoggingTest do
       end)
 
       assert_receive {:captured_log, %{meta: meta}}
-      assert meta[:identifier] == 42
+      assert meta[:identifier_masked] == 42
     end
 
     test "drops a non-email binary identifier rather than logging it verbatim" do
@@ -62,7 +62,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLoggingTest do
       end)
 
       assert_receive {:captured_log, %{meta: meta}}
-      assert meta[:identifier] == nil
+      assert meta[:identifier_masked] == nil
       refute inspect(meta) =~ "raw-secret-token-value"
     end
   end

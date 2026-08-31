@@ -4,6 +4,11 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
 
   Provides consistent, structured logging across all account modules
   to improve debugging, monitoring, and audit trail capabilities.
+
+  Every identifier is masked here, at source, and emitted under a `_masked`
+  key (`identifier_masked`, `email_masked`) so both the reader of a log line
+  and `Tymeslot.Infrastructure.Logging.MetadataRedactor` can tell a masked
+  value from a raw one.
   """
 
   alias Tymeslot.Security.SecurityLogger
@@ -35,7 +40,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:operation, operation},
-          {:identifier, mask_identifier(identifier)},
+          {:identifier_masked, mask_identifier(identifier)},
           {:event, "#{operation}_success"}
         ],
         context
@@ -67,7 +72,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:operation, operation},
-          {:identifier, mask_identifier(identifier)},
+          {:identifier_masked, mask_identifier(identifier)},
           {:reason, reason},
           {:event, "#{operation}_failure"}
         ],
@@ -100,7 +105,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:operation, operation},
-          {:identifier, mask_identifier(identifier)},
+          {:identifier_masked, mask_identifier(identifier)},
           {:errors, inspect(errors)},
           {:event, "#{operation}_validation_failure"}
         ],
@@ -126,7 +131,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:user_id, user.id},
-          {:email, mask_identifier(user.email)},
+          {:email_masked, mask_identifier(user.email)},
           {:event, "user_created"}
         ],
         context
@@ -152,7 +157,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:user_id, user.id},
-          {:email, mask_identifier(user.email)},
+          {:email_masked, mask_identifier(user.email)},
           {:verification_type, verification_type},
           {:event, "user_#{verification_type}_verified"}
         ],
@@ -179,7 +184,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
       build_metadata(
         [
           {:user_id, user.id},
-          {:email, mask_identifier(user.email)},
+          {:email_masked, mask_identifier(user.email)},
           {:stage, stage},
           {:event, "password_reset_#{stage}"}
         ],

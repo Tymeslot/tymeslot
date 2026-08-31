@@ -185,7 +185,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       end)
 
       assert_receive {:captured_log, %{meta: %{event: "email_verification_failure"} = meta}}
-      assert meta[:identifier] == user.id
+      assert meta[:identifier_masked] == user.id
       refute inspect(meta) =~ token
     end
 

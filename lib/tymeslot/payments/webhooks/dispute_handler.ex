@@ -18,6 +18,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Mailer
   alias Tymeslot.Payments.{Config, PaymentQueries}
+  alias Tymeslot.Security.SecurityLogger
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type)
@@ -321,7 +322,11 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
 
     case Mailer.deliver(email_struct) do
       {:ok, _result} ->
-        Logger.info("Dispute email sent", template: template_fun, email: email)
+        Logger.info("Dispute email sent",
+          template: template_fun,
+          email_masked: SecurityLogger.mask_email(email)
+        )
+
         :ok
 
       {:error, reason} ->

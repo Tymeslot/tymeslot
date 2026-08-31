@@ -108,7 +108,10 @@ defmodule Tymeslot.Auth.Verification do
         resend_verification_email(socket_or_conn, user)
 
       {:error, :not_found} ->
-        Logger.warning("Attempted to resend verification for non-existent email", email: email)
+        Logger.warning("Attempted to resend verification for non-existent email",
+          email_masked: SecurityLogger.mask_email(email)
+        )
+
         {:error, :user_not_found}
 
       other ->
