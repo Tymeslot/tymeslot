@@ -374,9 +374,16 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
     end
 
     test "does not advance past the host's advance-booking window" do
-      # A host taking bookings only a few days out has no next month to
+      # A host whose window closes with the current month has no next month to
       # search; the forward arrow is disabled there and this must match it.
-      socket = socket_with(%{}, advance_booking_days: 3)
+      #
+      # The window is measured from today to the last day of this month rather
+      # than pinned to a literal: a fixed small number stops bounding anything
+      # once today is within that many days of the month end, and the test then
+      # passes or fails on the calendar date it happens to run on.
+      today = Date.utc_today()
+      days_left_in_month = Date.days_in_month(today) - today.day
+      socket = socket_with(%{}, advance_booking_days: days_left_in_month)
 
       assert {_socket, :done} = NextAvailable.apply(socket)
     end
