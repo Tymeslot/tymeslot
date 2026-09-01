@@ -42,6 +42,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   attribute.
   """
 
+  alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
+
   @doc "Enumerates the mailbox's folders so calendars can be picked out."
   @spec find_folder() :: String.t()
   def find_folder do
@@ -95,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   def get_item([_pair | _rest] = ids) do
     item_ids =
       Enum.map_join(ids, "\n", fn {id, change_key} ->
-        ~s(<t:ItemId Id="#{escape(id)}" ChangeKey="#{escape(change_key)}"/>)
+        ~s(<t:ItemId Id="#{XmlEscape.escape(id)}" ChangeKey="#{XmlEscape.escape(change_key)}"/>)
       end)
 
     """
@@ -164,7 +166,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
       </t:TimeZone>
       <m:MailboxDataArray>
         <t:MailboxData>
-          <t:Email><t:Address>#{escape(email)}</t:Address></t:Email>
+          <t:Email><t:Address>#{XmlEscape.escape(email)}</t:Address></t:Email>
           <t:AttendeeType>Required</t:AttendeeType>
         </t:MailboxData>
       </m:MailboxDataArray>
@@ -181,30 +183,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   end
 
   defp folder_element(:calendar), do: ~s(<t:DistinguishedFolderId Id="calendar"/>)
-  defp folder_element(id) when is_binary(id), do: ~s(<t:FolderId Id="#{escape(id)}"/>)
-
-  @doc """
-  Escapes the five XML metacharacters for interpolation into a body this module
-  or `Exchange.Seeding` builds.
-
-  EWS ids are base64 and so cannot contain any of them, but they reach the
-  builders from the server and from the database rather than from a constant,
-  so they are escaped rather than trusted to be well-formed. A seeded item's
-  subject, body and location are ordinary text and genuinely can.
-
-  Public so the two EWS body builders share one escaper rather than growing a
-  copy each. `&` must stay first: escaping it last would double-escape the
-  entities the other four introduce.
-  """
-  @spec escape(String.t()) :: String.t()
-  def escape(value) when is_binary(value) do
-    value
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&apos;")
-  end
+  defp folder_element(id) when is_binary(id), do: ~s(<t:FolderId Id="#{XmlEscape.escape(id)}"/>)
 
   # `DateTime.to_iso8601/1` renders a UTC datetime with a `Z` suffix, which is
   # what a `CalendarView` bound wants: it is an absolute instant.

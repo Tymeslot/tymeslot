@@ -45,8 +45,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Seeding do
   import SweetXml, only: [sigil_x: 2]
 
   alias Tymeslot.Integrations.Calendar.Exchange.Client
-  alias Tymeslot.Integrations.Calendar.Exchange.Requests
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
 
   @typedoc "The handle a seeded item is addressed by afterwards."
   @type item_id :: String.t()
@@ -147,7 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Seeding do
   defp delete_item_body(item_id) do
     """
     <m:DeleteItem DeleteType="HardDelete" SendMeetingCancellations="SendToNone">
-      <m:ItemIds><t:ItemId Id="#{Requests.escape(item_id)}"/></m:ItemIds>
+      <m:ItemIds><t:ItemId Id="#{XmlEscape.escape(item_id)}"/></m:ItemIds>
     </m:DeleteItem>
     """
   end
@@ -195,10 +195,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Seeding do
   defp body_element(nil), do: ""
 
   defp body_element(description),
-    do: ~s(<t:Body BodyType="Text">#{Requests.escape(description)}</t:Body>)
+    do: ~s(<t:Body BodyType="Text">#{XmlEscape.escape(description)}</t:Body>)
 
   defp element(_name, nil), do: ""
-  defp element(name, value), do: "<#{name}>#{Requests.escape(value)}</#{name}>"
+  defp element(name, value), do: "<#{name}>#{XmlEscape.escape(value)}</#{name}>"
 
   defp to_date(%Date{} = date), do: date
   defp to_date(%DateTime{} = datetime), do: DateTime.to_date(datetime)

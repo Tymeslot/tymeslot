@@ -13,8 +13,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
       rather than mistaking it for a batch of deletions.
     * `parse_ctag_response/1` extracts the CTag or returns `nil` when
       the server omits it.
-    * `xml_escape/1` escapes the five characters that would otherwise
-      break the wrapping XML body.
+
+  Escaping the sync token now belongs to `Calendar.Utils.XmlEscape`, and is
+  covered by that module's own test.
   """
 
   use ExUnit.Case, async: true
@@ -225,16 +226,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
 
     test "returns {:ok, nil} for malformed XML" do
       assert {:ok, nil} = SyncCollectionReport.parse_ctag_response("not xml at all")
-    end
-  end
-
-  describe "xml_escape/1" do
-    test "escapes the five XML special characters" do
-      assert SyncCollectionReport.xml_escape(~s(&<>"')) == "&amp;&lt;&gt;&quot;&apos;"
-    end
-
-    test "leaves ordinary text unchanged" do
-      assert SyncCollectionReport.xml_escape("hello world") == "hello world"
     end
   end
 end
