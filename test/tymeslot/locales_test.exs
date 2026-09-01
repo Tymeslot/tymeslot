@@ -152,4 +152,59 @@ defmodule Tymeslot.LocalesTest do
       refute Locales.pseudo_enabled?()
     end
   end
+
+  describe "default_from_env/1" do
+    setup do
+      Application.put_env(:tymeslot, :locales,
+        default: "en",
+        supported: [
+          %{code: "en", name: "English", country_code: :gbr},
+          %{code: "fr", name: "Français", country_code: :fra}
+        ]
+      )
+
+      :ok
+    end
+
+    test "returns a supported locale code unchanged" do
+      assert Locales.default_from_env("fr") == "fr"
+    end
+
+    test "trims surrounding whitespace" do
+      assert Locales.default_from_env("  fr\n") == "fr"
+    end
+
+    test "returns nil when unset so the configured default is left alone" do
+      assert Locales.default_from_env(nil) == nil
+    end
+
+    test "returns nil for a blank value" do
+      assert Locales.default_from_env("") == nil
+      assert Locales.default_from_env("   ") == nil
+    end
+
+    test "raises for a locale this build cannot render" do
+      assert_raise ArgumentError, ~r/Invalid DEFAULT_LOCALE: "de"/, fn ->
+        Locales.default_from_env("de")
+      end
+    end
+
+    test "the raised message lists the locales that are supported" do
+      assert_raise ArgumentError, ~r/Supported locales: en, fr/, fn ->
+        Locales.default_from_env("nope")
+      end
+    end
+
+    test "rejects the pseudo locale, which is a dev rendering aid not a language" do
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, true)
+
+      assert_raise ArgumentError, fn ->
+        Locales.default_from_env(Locales.pseudo_locale())
+      end
+    end
+
+    test "returns nil for a non-binary value" do
+      assert Locales.default_from_env(:fr) == nil
+    end
+  end
 end

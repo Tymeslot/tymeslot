@@ -592,6 +592,25 @@ config :tymeslot,
 config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "true") == "true"
 config :tymeslot, password_auth_enabled: System.get_env("PASSWORD_AUTH_ENABLED", "true") == "true"
 
+# Default locale for visitors who express no preference — no `?locale=`, no
+# session, no Accept-Language match. A self-hosted instance serving one country
+# wants this set once at deploy time rather than per visitor.
+#
+# This sets `:locales`'s `:default`, which `Tymeslot.Locales.default_locale/0`
+# reads, because that is the value the request pipeline actually resolves
+# against. `config :tymeslot, TymeslotWeb.Gettext, default_locale:` cannot serve
+# this purpose: Gettext reads a backend's `:default_locale` at compile time, so
+# overriding it from a release has no effect on rendering.
+#
+# `default_from_env/1` returns nil when unset or blank and raises on a code this
+# build cannot render. Keyword lists are deep merged, so `:supported` from
+# config/config.exs is preserved and only `:default` is replaced.
+default_locale = Tymeslot.Locales.default_from_env(System.get_env("DEFAULT_LOCALE"))
+
+if default_locale do
+  config :tymeslot, :locales, default: default_locale
+end
+
 # Social Authentication Configuration
 # These environment variables control whether social login is enabled
 #

@@ -85,4 +85,41 @@ defmodule Tymeslot.Locales do
   def supported_codes do
     Enum.map(supported(), & &1.code)
   end
+
+  @doc """
+  Resolves a raw `DEFAULT_LOCALE` environment value into a locale code.
+
+  Returns `nil` when the value is absent or blank, so the caller leaves the
+  configured default untouched. Raises `ArgumentError` for a code that is not
+  supported: a deployment that asks for a language this build cannot render
+  should stop at boot rather than quietly serve a different one.
+
+  Called from `config/runtime.exs`; the pseudo locale is deliberately not
+  accepted here, since it is a dev-only rendering aid rather than a language a
+  deployment can choose to default to.
+  """
+  @spec default_from_env(term()) :: String.t() | nil
+  def default_from_env(value) when is_binary(value) do
+    case String.trim(value) do
+      "" ->
+        nil
+
+      code ->
+        codes = supported_codes()
+
+        if code in codes do
+          code
+        else
+          raise ArgumentError, """
+          Invalid DEFAULT_LOCALE: #{inspect(code)}
+
+          Supported locales: #{Enum.join(codes, ", ")}
+
+          Leave DEFAULT_LOCALE unset to keep the built-in default.
+          """
+        end
+    end
+  end
+
+  def default_from_env(_value), do: nil
 end
