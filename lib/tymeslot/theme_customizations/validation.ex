@@ -302,18 +302,20 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
 
   @doc """
   Validates file size limits.
+
+  The caps come from `UploadConstraints`, which is also what the background
+  upload's `allow_upload` enforces at preflight. Restating them here as literals
+  is how they last drifted: the video branch capped at 100 MiB while the upload
+  refused anything over 100 MB, so a file between the two passed this validator
+  and was then rejected by the uploader.
   """
   @spec validate_file_size(Path.t(), file_kind()) :: validation_result()
   def validate_file_size(file_path, :image) do
-    # 20MB — keep in sync with UploadConstraints.max_file_size(:image)
-    max_size = 20_000_000
-    validate_file_size_limit(file_path, max_size, "Image")
+    validate_file_size_limit(file_path, UploadConstraints.max_file_size(:image), "Image")
   end
 
   def validate_file_size(file_path, :video) do
-    # 100MB
-    max_size = 100 * 1024 * 1024
-    validate_file_size_limit(file_path, max_size, "Video")
+    validate_file_size_limit(file_path, UploadConstraints.max_file_size(:video), "Video")
   end
 
   # Private helper functions

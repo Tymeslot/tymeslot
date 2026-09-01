@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Workers.EmailWorkerHandlers
+  alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.TransactionalEmailDelivery
   require Logger
 
@@ -76,16 +77,23 @@ defmodule Tymeslot.Workers.EmailWorker do
   # email job — the policy for them lives once in `TransactionalEmailDelivery`
   # and is shared with the Stripe-triggered workers that deliver outside this
   # worker entirely. `failure_message` is unused by those three cases.
-  defp handle_email_error(:rate_limited, %{attempt: attempt}) do
-    TransactionalEmailDelivery.handle_failure(:rate_limited, "", attempt: attempt)
+  defp handle_email_error(:rate_limited, %Oban.Job{} = job) do
+    TransactionalEmailDelivery.handle_failure(:rate_limited, "",
+      executions: SnoozePolicy.executions(job)
+    )
   end
 
-  defp handle_email_error(:circuit_open, _job) do
-    TransactionalEmailDelivery.handle_failure(:circuit_open, "", [])
+  defp handle_email_error(:circuit_open, %Oban.Job{} = job) do
+    TransactionalEmailDelivery.handle_failure(:circuit_open, "",
+      executions: SnoozePolicy.executions(job)
+    )
   end
 
-  defp handle_email_error({:recipient_rejected, reason}, _job) do
-    TransactionalEmailDelivery.handle_failure({:recipient_rejected, reason}, "", [])
+  defp handle_email_error({:recipient_rejected, reason}, %{args: args}) do
+    TransactionalEmailDelivery.handle_failure({:recipient_rejected, reason}, "",
+      action: args["action"],
+      meeting_id: args["meeting_id"]
+    )
   end
 
   defp handle_email_error(:invalid_email, _job) do

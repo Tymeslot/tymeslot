@@ -603,3 +603,23 @@ msgstr "Pianificazione duplicata. Le sue eccezioni per data non sono state copia
 #, elixir-autogen, elixir-format
 msgid "Used by %{meeting_types}, and by every meeting type that has no schedule of its own."
 msgstr "Usata da %{meeting_types} e da ogni tipo di riunione che non ha una pianificazione propria."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 year"
+msgstr "1 anno"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "12 hours"
+msgstr "12 ore"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "3 hours"
+msgstr "3 ore"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "6 hours"
+msgstr "6 ore"

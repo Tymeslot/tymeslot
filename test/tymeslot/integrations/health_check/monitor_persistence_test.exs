@@ -10,7 +10,10 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.HealthCheck.Monitor
 
   describe "get_state/3 and put_state/3" do
@@ -97,23 +100,25 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
   end
 
   describe "from_db_record/1" do
-    test "raises on an unrecognised status instead of silently degrading it" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
+    test "degrades an unrecognised status to :degraded and logs it, instead of raising" do
+      # A row's status can no longer be poisoned through the app (the
+      # database CHECK constraint added alongside this change rejects it,
+      # see `StatusCheckMigrationTest`), so the only way left to exercise
+      # this read path is a record that never touched the database at all —
+      # standing in for a row a hand-edited backup or a rolled-back release
+      # could still produce.
+      record = %IntegrationHealthStateSchema{
+        integration_type: "calendar",
+        integration_id: 123,
+        status: "some_future_status"
+      }
 
-      {:ok, _record} =
-        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+      log =
+        capture_log(fn ->
+          assert Monitor.from_db_record(record).status == :degraded
+        end)
 
-      # `update_fields/3` bypasses the schema's validated changeset, so it is
-      # the only way left to get an invalid status into the row for this test.
-      {1, _nil} =
-        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
-          status: "some_future_status"
-        )
-
-      assert_raise ArgumentError, ~r/unrecognised integration health status/, fn ->
-        Monitor.get_state(:calendar, integration.id, user.id)
-      end
+      assert log =~ "Unrecognised integration health status"
     end
 
     test "handles unexpected last_error_class string without crashing" do

@@ -63,7 +63,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
       ...> end)
       {:error, :circuit_open}
   """
-  @spec call(atom(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
+  @spec call(atom(), (-> any())) :: CircuitBreakerHelpers.result()
   def call(provider, fun) when provider in @video_providers and is_function(fun, 0) do
     breaker_name = breaker_name(provider)
     CircuitBreakerHelpers.call_with_breaker(breaker_name, provider, "Video", fun)
@@ -81,53 +81,17 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
   the breaker for every other tenant on that provider. Mirrors
   `CalendarCircuitBreaker.call_with_host/3`.
   """
-  @spec call_with_host(atom(), String.t(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
+  @spec call_with_host(atom(), String.t(), (-> any())) :: CircuitBreakerHelpers.result()
   def call_with_host(provider, host, fun)
       when is_atom(provider) and is_binary(host) and is_function(fun, 0) do
-    safe_host = String.replace(host, ~r/[^a-zA-Z0-9]/, "_")
-    breaker_id = "video_breaker_#{provider}_#{safe_host}"
-    breaker_name = {:via, Registry, {Tymeslot.Infrastructure.CircuitBreakerRegistry, breaker_id}}
-
-    ensure_breaker_exists(breaker_name, provider)
-
-    case CircuitBreaker.call(breaker_name, fun) do
-      :ok ->
-        :ok
-
-      {:ok, result} ->
-        {:ok, result}
-
-      {:error, :circuit_open} = error ->
-        Logger.warning("Video host circuit breaker open", provider: provider, host: host)
-        error
-
-      {:provider_error, reason} ->
-        Logger.error("Video host operation failed",
-          provider: provider,
-          host: host,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
-
-      {:error, reason} = error ->
-        Logger.error("Video host operation failed",
-          provider: provider,
-          host: host,
-          error: inspect(reason)
-        )
-
-        error
-    end
-  rescue
-    error ->
-      Logger.error("Video host circuit breaker error",
-        provider: provider,
-        host: host,
-        error: inspect(error)
-      )
-
-      {:error, :circuit_breaker_error}
+    CircuitBreakerHelpers.call_with_host_breaker(
+      "video_breaker",
+      provider,
+      host,
+      "Video",
+      get_config(provider),
+      fun
+    )
   end
 
   @doc """
@@ -147,12 +111,35 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
   end
 
   @doc """
-  Gets the status of a provider's circuit breaker.
+  Gets the status of a provider's circuit breaker, or the host-specific
+  breaker when `host` is given.
 
   Returns :closed, :open, or :half_open.
+
+  Self-hosted providers (MiroTalk) route live calls through
+  `call_with_host/3`'s per-host breaker (see `ProviderAdapter.breaker_host/1`)
+  rather than the bare per-provider breaker this function reads without a
+  `host` — so `status(:mirotalk)` alone always reports a breaker no live
+  traffic ever trips. Pass the tenant's host (e.g. via
+  `CircuitBreakerHelpers.host_from_base_url/1`) to see the breaker that
+  actually gates it.
   """
-  @spec status(atom()) :: map() | {:error, atom()} | {:error, {:invalid_provider, atom()}}
-  def status(provider) when provider in @video_providers do
+  @spec status(atom(), String.t() | nil) ::
+          map() | {:error, atom()} | {:error, {:invalid_provider, atom()}}
+  def status(provider, host \\ nil)
+
+  def status(provider, host)
+      when provider in @video_providers and is_binary(host) and host != "" do
+    breaker_name = CircuitBreakerHelpers.host_breaker_name("video_breaker", provider, host)
+
+    if breaker_exists?(breaker_name) do
+      CircuitBreaker.status(breaker_name)
+    else
+      {:error, :breaker_not_found}
+    end
+  end
+
+  def status(provider, _host) when provider in @video_providers do
     breaker_name = breaker_name(provider)
 
     if breaker_exists?(breaker_name) do
@@ -163,17 +150,33 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
     end
   end
 
-  def status(provider) do
+  def status(provider, _host) do
     {:error, {:invalid_provider, provider}}
   end
 
   @doc """
-  Resets a provider's circuit breaker to closed state.
+  Resets a provider's circuit breaker to closed state, or the host-specific
+  breaker when `host` is given (see `status/2`).
 
   Useful for manual recovery or testing.
   """
-  @spec reset(atom()) :: :ok | {:error, atom()}
-  def reset(provider) when provider in @video_providers do
+  @spec reset(atom(), String.t() | nil) :: :ok | {:error, atom()}
+  def reset(provider, host \\ nil)
+
+  def reset(provider, host)
+      when provider in @video_providers and is_binary(host) and host != "" do
+    breaker_name = CircuitBreakerHelpers.host_breaker_name("video_breaker", provider, host)
+
+    if breaker_exists?(breaker_name) do
+      CircuitBreaker.reset(breaker_name)
+      Logger.info("Video host circuit breaker reset", provider: provider, host: host)
+      :ok
+    else
+      {:error, :breaker_not_found}
+    end
+  end
+
+  def reset(provider, _host) when provider in @video_providers do
     breaker_name = breaker_name(provider)
 
     if breaker_exists?(breaker_name) do
@@ -185,7 +188,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
     end
   end
 
-  def reset(provider) do
+  def reset(provider, _host) do
     {:error, {:invalid_provider, provider}}
   end
 
@@ -222,18 +225,6 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
 
   defp breaker_name(provider) do
     Map.fetch!(@video_breaker_names, provider)
-  end
-
-  defp ensure_breaker_exists(name, provider) do
-    if !breaker_exists?(name) do
-      config = get_config(provider)
-      child_spec = {CircuitBreaker, name: name, config: config}
-
-      DynamicSupervisor.start_child(
-        Tymeslot.Infrastructure.DynamicCircuitBreakerSupervisor,
-        child_spec
-      )
-    end
   end
 
   defp breaker_exists?(name), do: CircuitBreakerHelpers.breaker_exists?(name)

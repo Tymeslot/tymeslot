@@ -9,7 +9,10 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
 
   Requesting a reset is rate limited per email *and* per IP: without the IP
   bound, an attacker enumerating addresses would get a fresh budget for each
-  one, and the mailbox owner would carry the cost.
+  one, and the mailbox owner would carry the cost. That limit is charged once,
+  inside `Tymeslot.Auth.PasswordReset`, which is also where a rejection is
+  audited. Checking it here as well would spend the budget twice per request
+  and reject at a layer that logs nothing.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -19,7 +22,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Tymeslot.Auth.AuthActions
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
+  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.AuthLive.SecurityHelper
 
   @typedoc "A LiveView `handle_event/3` return value."
@@ -51,14 +54,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   """
   @spec submit_request(String.t(), map(), Phoenix.LiveView.Socket.t()) :: reply()
   def submit_request(email, params, socket) do
-    metadata = SecurityHelper.extract_client_metadata(socket)
-
     with :ok <- SecurityHelper.validate_csrf_token(socket, params),
-         :ok <-
-           RateLimiter.check_password_reset_rate_limit(
-             email,
-             SecurityHelper.rate_limit_ip(metadata)
-           ),
          {:ok, new_state, message} <- AuthActions.request_password_reset(email, socket) do
       socket =
         socket
@@ -69,7 +65,6 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
       {:noreply, socket}
     else
       {:error, :invalid_csrf} -> general_error(socket, csrf_message())
-      {:error, :rate_limited, message} -> general_error(socket, message)
       {:error, message} -> general_error(socket, message)
     end
   end

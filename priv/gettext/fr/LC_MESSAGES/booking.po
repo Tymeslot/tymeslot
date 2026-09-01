@@ -1488,11 +1488,6 @@ msgstr "Impossible de reporter une réunion déjà commencée"
 msgid "Meeting is already cancelled"
 msgstr "La réunion est déjà annulée"
 
-#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "No timeslots available due to calendar parsing error"
-msgstr "Aucun créneau disponible en raison d’une erreur d’analyse du calendrier"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
@@ -1543,6 +1538,11 @@ msgstr "Le titre est obligatoire"
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Vous ne pouvez pas réserver plus de %{days} jours à l’avance"
 
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#, elixir-autogen, elixir-format
+msgid "No time slots could be loaded. Please try again."
+msgstr "Impossible de charger les créneaux. Veuillez réessayer."
+
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has been sent the confirmation and the calendar invite."
@@ -1552,6 +1552,22 @@ msgstr "%{name} a reçu la confirmation et l'invitation d'agenda."
 #, elixir-autogen, elixir-format
 msgid "%{name} would like to book time with you."
 msgstr "%{name} souhaite réserver un créneau avec vous."
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, your request %{organizer} has been sent."
+msgstr "%{name}, votre demande %{organizer} a été envoyée."
+
+#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. The slot is held for you while they decide."
+msgstr "%{organizer} valide chaque réservation personnellement : en envoyant ce formulaire, vous faites une demande plutôt que de réserver directement. Le créneau vous est réservé le temps de la décision."
+
+#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} still has to accept this time. We'll email you either way, and the slot is held for you until then."
+msgstr "%{organizer} doit encore accepter ce créneau. Nous vous écrirons dans tous les cas, et le créneau vous est réservé jusque-là."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -1609,15 +1625,31 @@ msgstr "Rendez-vous"
 msgid "Message"
 msgstr "Message"
 
+#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Needs approval"
+msgstr "Validation requise"
+
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody answered in time, so the slot was released and %{name} was told."
 msgstr "Personne n'a répondu à temps : le créneau a été libéré et %{name} en a été informé."
 
+#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Not confirmed yet"
+msgstr "Pas encore confirmé"
+
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Not set"
 msgstr "Non défini"
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#, elixir-autogen, elixir-format
+msgid "Payment received"
+msgstr "Paiement reçu"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -1629,15 +1661,43 @@ msgstr "Motif (facultatif)"
 msgid "Request expired"
 msgstr "Demande expirée"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
+#, elixir-autogen, elixir-format
+msgid "Request meeting"
+msgstr "Demander un rendez-vous"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Request sent!"
+msgstr "Demande envoyée !"
+
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Shared with %{name}."
 msgstr "Communiqué à %{name}."
 
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
+#, elixir-autogen, elixir-format
+msgid "Thanks, your payment went through. Your booking is not confirmed yet though:"
+msgstr "Merci, votre paiement a bien été effectué. Votre réservation n’est cependant pas encore confirmée :"
+
+#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The host"
+msgstr "L'organisateur"
+
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The slot is free again and %{name} has been told."
 msgstr "Le créneau est de nouveau libre et %{name} en a été informé."
+
+#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
+#, elixir-autogen, elixir-format
+msgid "This booking needs approval"
+msgstr "Cette réservation doit être validée"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -1683,63 +1743,3 @@ msgstr "Quand"
 #, elixir-autogen, elixir-format
 msgid "the person who booked"
 msgstr "la personne qui a réservé"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name}, your request %{organizer} has been sent."
-msgstr "%{name}, votre demande %{organizer} a été envoyée."
-
-#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. The slot is held for you while they decide."
-msgstr "%{organizer} valide chaque réservation personnellement : en envoyant ce formulaire, vous faites une demande plutôt que de réserver directement. Le créneau vous est réservé le temps de la décision."
-
-#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} still has to accept this time. We'll email you either way, and the slot is held for you until then."
-msgstr "%{organizer} doit encore accepter ce créneau. Nous vous écrirons dans tous les cas, et le créneau vous est réservé jusque-là."
-
-#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Needs approval"
-msgstr "Validation requise"
-
-#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Not confirmed yet"
-msgstr "Pas encore confirmé"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Request meeting"
-msgstr "Demander un rendez-vous"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Request sent!"
-msgstr "Demande envoyée !"
-
-#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
-#, elixir-autogen, elixir-format
-msgid "The host"
-msgstr "L'organisateur"
-
-#: lib/tymeslot_web/themes/shared/components/approval_notice.ex
-#, elixir-autogen, elixir-format
-msgid "This booking needs approval"
-msgstr "Cette réservation doit être validée"
-
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
-#, elixir-autogen, elixir-format
-msgid "Payment received"
-msgstr "Paiement reçu"
-
-#: lib/tymeslot_web/themes/quill/payment_processing/live.ex
-#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
-#, elixir-autogen, elixir-format
-msgid "Thanks, your payment went through. Your booking is not confirmed yet though:"
-msgstr "Merci, votre paiement a bien été effectué. Votre réservation n’est cependant pas encore confirmée :"

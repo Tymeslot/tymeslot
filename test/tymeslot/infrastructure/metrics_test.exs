@@ -417,5 +417,33 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
       refute url =~ "user:pass"
       assert url =~ "api.example.com"
     end
+
+    test "redacts a Telegram bot token carried in the URL path", %{handler_id: handler_id} do
+      ref = make_ref()
+      parent = self()
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :http, :request],
+        fn _event, _measurements, metadata, _config ->
+          send(parent, {:telemetry, ref, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      Metrics.track_http_request(
+        "POST",
+        "https://api.telegram.org/bot123456789:AAHslQCoMkPBiQdOLLGhTGh-Yr8lS7Kk_i0/sendMessage",
+        200,
+        100
+      )
+
+      assert_receive {:telemetry, ^ref, %{url: url}}
+      refute url =~ "AAHslQCoMkPBiQdOLLGhTGh-Yr8lS7Kk_i0"
+      refute url =~ "123456789:"
+      assert url =~ "api.telegram.org"
+    end
   end
 end

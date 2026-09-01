@@ -46,6 +46,36 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       assert updated_profile.avatar =~ ".png"
     end
 
+    test "stores the finished photo when a second file exceeds max_entries", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      png_content =
+        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
+          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+
+      png = fn name ->
+        %{
+          last_modified: System.system_time(:millisecond),
+          name: name,
+          content: png_content,
+          type: "image/png"
+        }
+      end
+
+      # Two files in one selection against `max_entries: 1`. The excess entry is
+      # `valid?: true` and is never issued an upload token, so unless it is
+      # cancelled the upload never settles and the chosen photo is dropped.
+      view
+      |> file_input("#avatar-upload-form", :avatar, [png.("a.png"), png.("b.png")])
+      |> render_upload("a.png")
+
+      assert render(view) =~ "Avatar updated successfully"
+      assert Repo.reload!(profile).avatar =~ ".png"
+    end
+
     test "uploaded avatar is reachable via /uploads and has nosniff header", %{
       conn: conn,
       profile: profile

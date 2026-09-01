@@ -60,26 +60,6 @@ defmodule Tymeslot.Payments.PaymentModulesTest do
       {:ok, pubsub_server: pubsub_server}
     end
 
-    test "broadcast_subscription_successful broadcasts to topic", %{pubsub_server: pubsub_server} do
-      Phoenix.PubSub.subscribe(pubsub_server, "payment:subscription_successful")
-
-      transaction = %{user_id: 1, subscription_id: "sub_1", id: 123}
-      PubSub.broadcast_subscription_successful(transaction)
-
-      assert_receive {:subscription_successful,
-                      %{user_id: 1, subscription_id: "sub_1", transaction: ^transaction}}
-    end
-
-    test "broadcast_subscription_failed broadcasts to topic", %{pubsub_server: pubsub_server} do
-      Phoenix.PubSub.subscribe(pubsub_server, "payment:subscription_failed")
-
-      transaction = %{user_id: 1, subscription_id: "sub_1", id: 123}
-      PubSub.broadcast_subscription_failed(transaction)
-
-      assert_receive {:subscription_failed,
-                      %{user_id: 1, subscription_id: "sub_1", transaction: ^transaction}}
-    end
-
     test "broadcast_subscription_event broadcasts to topic", %{pubsub_server: pubsub_server} do
       Phoenix.PubSub.subscribe(pubsub_server, "payment_events:tymeslot")
 

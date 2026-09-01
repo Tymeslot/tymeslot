@@ -107,24 +107,28 @@ defmodule Tymeslot.Auth.Authentication do
   end
 
   # Records the attempt against the account lockout tracker and audits the
-  # moment the account crosses a lockout threshold.
+  # moment the account crosses the throttle threshold.
   #
   # `check_auth_rate_limit/2` runs *before* this, as a read-only pre-check
   # (`AccountLockout.check_lockout_status/1`) that returns an error without
   # recording anything once the failure count reaches the throttle threshold
-  # (10 in the last hour). Because that pre-check short-circuits
-  # `authenticate_with_password/3` before this function can record another
-  # failure, the count freezes at the throttle threshold under sequential
-  # brute force: the lock threshold (20) is never reached via this path, so
-  # only `:account_throttled` fires here in practice. The 1-hour sliding
-  # window in `AccountLockout.check_lockout_status/1` also means the audit
-  # entry recurs roughly hourly as old attempts age out and throttling
-  # re-triggers, rather than firing once.
+  # (10 in the last hour). Under strictly sequential brute force that
+  # short-circuits `authenticate_with_password/3` before this function can
+  # record another failure, so the count freezes at the threshold and this
+  # emits once per hour, as the 1-hour sliding window ages old attempts out
+  # and throttling re-triggers. Throttling is the whole defence by design;
+  # see `Tymeslot.Security.AccountLockout` for why there is no harder tier.
+  #
+  # That is not the concurrent case: the pre-check is read-only and separate
+  # from the write below, so every request already past the pre-check when
+  # the threshold is crossed records its own failure here and emits its own
+  # `account_lockout` event. This function has no idempotency guard, so a
+  # burst of concurrent failed logins against one account produces one
+  # `account_lockout` audit entry per in-flight attempt, not one per lockout.
   defp record_auth_attempt(user, success, opts) do
     case RateLimiter.record_auth_attempt(user.email, success) do
-      {:error, lockout_type, _message}
-      when lockout_type in [:account_locked, :account_throttled] ->
-        SecurityLogger.log_account_lockout(user.email, to_string(lockout_type), %{
+      {:error, :account_throttled, _message} ->
+        SecurityLogger.log_account_lockout(user.email, "account_throttled", %{
           user_id: user.id,
           ip_address: opts[:ip_address],
           user_agent: opts[:user_agent]
@@ -137,7 +141,7 @@ defmodule Tymeslot.Auth.Authentication do
 
   defp log_auth_attempt(user, :success, opts) do
     StructuredLogger.log_auth_event(:login_success, user.id, %{
-      email: user.email,
+      email_masked: SecurityLogger.mask_email(user.email),
       ip_address: opts[:ip_address],
       user_agent: opts[:user_agent]
     })
@@ -152,7 +156,7 @@ defmodule Tymeslot.Auth.Authentication do
 
   defp log_auth_attempt(user, reason, opts) do
     StructuredLogger.log_auth_event(:login_failure, user.id, %{
-      email: user.email,
+      email_masked: SecurityLogger.mask_email(user.email),
       reason: reason,
       ip_address: opts[:ip_address],
       user_agent: opts[:user_agent]

@@ -178,8 +178,8 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # recovers is refused instantly. Snooze past the recovery window, the same
   # policy `VideoRoomWorker` already applies, rather than burning one of this
   # job's five attempts on a call known to be refused.
-  defp handle_result({:error, :circuit_open}, _action, _meeting, attempt) do
-    ErrorPolicy.to_result(:circuit_open, attempt)
+  defp handle_result({:error, :circuit_open}, _action, meeting, attempt) do
+    ErrorPolicy.to_result(:circuit_open, attempt, meeting.video_provider)
   end
 
   defp handle_result({:error, reason}, action, meeting, _attempt) do

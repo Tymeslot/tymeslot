@@ -372,4 +372,14 @@ defmodule Tymeslot.AnnouncementsTest do
       assert_received {:query_source, ^ref, "user_seen_announcements"}
     end
   end
+
+  describe "Announcements.docs_url/1" do
+    test "follows the operator-configured :docs_article_base_url" do
+      previous = Application.get_env(:tymeslot, :docs_article_base_url)
+      Application.put_env(:tymeslot, :docs_article_base_url, "https://docs.example.com")
+      on_exit(fn -> Application.put_env(:tymeslot, :docs_article_base_url, previous) end)
+
+      assert Announcements.docs_url("whats-new") == "https://docs.example.com/whats-new"
+    end
+  end
 end

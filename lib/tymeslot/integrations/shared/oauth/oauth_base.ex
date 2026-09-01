@@ -236,10 +236,13 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         call_list_events(integration, start_time, end_time)
       end
 
+      @impl Tymeslot.Integrations.Calendar.Provider
+      def list_events_representation, do: :raw
+
       # normalise_events/2 is intentionally not defaulted here — it is
       # provider-specific and must be implemented by each OAuth provider.
 
-      defoverridable check_connectivity: 1, list_events: 2
+      defoverridable check_connectivity: 1, list_events: 2, list_events_representation: 0
 
       # Provider-specific callbacks that must be implemented
       @callback validate_oauth_scope(config :: map()) :: :ok | {:error, String.t()}

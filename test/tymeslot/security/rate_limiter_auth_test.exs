@@ -4,6 +4,7 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
 
   alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
 
   describe "check_auth_rate_limit/2 — per-email bucket" do
     test "allows up to 10 attempts then blocks the 11th" do
@@ -103,15 +104,72 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
     # Isolated AccountLockout behaviour (thresholds, durations, counts) is tested in
     # account_lockout_test.exs. This block covers only the integration point where
     # check_auth_rate_limit/2 delegates to AccountLockout before the Hammer buckets.
-    test "locked account is blocked by check_auth_rate_limit" do
+    test "throttled account is blocked by check_auth_rate_limit" do
       email = "lockout-hammer-#{System.unique_integer([:positive])}@example.com"
 
-      for _i <- 1..20 do
+      for _i <- 1..10 do
         AccountLockout.check_and_record_attempt(email, false)
       end
 
       assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(email, nil)
-      assert message =~ "locked"
+      assert message =~ "Too many failed attempts"
+    end
+
+    # Throttling is the only tier AccountLockout has; piling on failures never
+    # escalates the account to a different, harder rejection.
+    test "far more failures than the threshold still surface as the throttle" do
+      email = "lockout-escalation-#{System.unique_integer([:positive])}@example.com"
+      on_exit(fn -> AccountLockout.clear_failed_attempts(email) end)
+
+      for _i <- 1..40 do
+        AccountLockout.check_and_record_attempt(email, false)
+      end
+
+      assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(email, nil)
+      assert message =~ "Too many failed attempts"
+    end
+  end
+
+  describe "rate-limit rejection logging" do
+    test "the rejection line masks the email and drops the bucket key that embeds it" do
+      email = "log-mask-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..10 do
+        assert :ok = RateLimiter.check_auth_rate_limit(email, nil)
+      end
+
+      LogCapture.with_capture([], fn ->
+        assert {:error, :rate_limited, _msg} = RateLimiter.check_auth_rate_limit(email, nil)
+      end)
+
+      event = LogCapture.await_log("Rate limit exceeded")
+      meta = LogCapture.user_metadata(event)
+
+      assert meta.identifier_masked == "l***@example.com"
+      assert meta.operation == "authentication"
+      refute Map.has_key?(meta, :bucket)
+      refute LogCapture.dump(event) =~ email
+    end
+
+    test "an IP-bucket rejection keeps the address readable" do
+      ip = "203.0.113.#{Enum.random(1..250)}"
+      run = System.unique_integer([:positive])
+
+      # A fresh email each time, so the 10-per-email bucket never trips first
+      # and the rejection under test is the IP one.
+      for i <- 1..50 do
+        assert :ok = RateLimiter.check_auth_rate_limit("ip-bucket-#{run}-#{i}@example.com", ip)
+      end
+
+      LogCapture.with_capture([], fn ->
+        assert {:error, :rate_limited, _msg} =
+                 RateLimiter.check_auth_rate_limit("ip-bucket-#{run}-last@example.com", ip)
+      end)
+
+      meta = "Rate limit exceeded" |> LogCapture.await_log() |> LogCapture.user_metadata()
+
+      assert meta.operation == "authentication (ip)"
+      assert meta.identifier_masked == ip
     end
   end
 
@@ -155,11 +213,11 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
       on_exit(fn -> AccountLockout.clear_failed_attempts(base) end)
 
       # Simulate the server-side recording path (uses the DB-normalised email).
-      for _i <- 1..20, do: RateLimiter.record_auth_attempt(base, false)
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(base, false)
 
       # The attacker now tries with the original mixed-case value.
       assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(mixed_case, nil)
-      assert message =~ "locked"
+      assert message =~ "Too many failed attempts"
     end
   end
 end

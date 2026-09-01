@@ -10,6 +10,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   that tracking survives process restarts.
   """
 
+  require Logger
+
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -83,14 +85,18 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   @doc """
   Persists the health state for an integration to the database.
-  Updates the existing record (created by get_state/get_or_init) through a
-  validated changeset, so a status outside `HealthStatus.values/0` is
-  rejected rather than silently written.
+  Updates the existing record (created by get_state/get_or_init) with a
+  single atomic statement; a no-op if the row was deleted concurrently
+  (e.g. by `Scheduler.schedule_all/1`'s orphan cleanup, or a cascading user
+  deletion). `health_state.status` is closed to `HealthStatus.values/0` by
+  `to_db_attrs/1` (via `HealthStatus.to_db_value/1`, which pattern-matches
+  only the valid atoms) before it ever reaches this call, and the
+  `status_must_be_known` database constraint backstops it.
   """
   @spec put_state(integration_type(), integer(), health_state()) :: {non_neg_integer(), nil}
   def put_state(type, integration_id, health_state) do
     attrs = to_db_attrs(health_state)
-    IntegrationHealthStateQueries.update_validated(type, integration_id, attrs)
+    IntegrationHealthStateQueries.update_fields(type, integration_id, Map.to_list(attrs))
   end
 
   @doc """
@@ -299,7 +305,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       consecutive_hard_failures: record.consecutive_hard_failures,
       successes: record.successes,
       last_check_at: record.last_check_at,
-      status: safe_to_status(record.status),
+      status: safe_to_status(record.status, record),
       backoff_ms: record.backoff_ms,
       last_error_class: safe_to_error_class(record.last_error_class),
       became_unhealthy_at: record.became_unhealthy_at,
@@ -329,18 +335,27 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     end
   end
 
-  # The canonical status set lives in `HealthCheck.HealthStatus`. Every write
-  # now goes through a validated changeset (`IntegrationHealthStateQueries.
-  # update_validated/3`), so a row with a status outside that set means the
-  # invariant broke upstream; raise rather than quietly degrading it.
-  defp safe_to_status(str) when is_binary(str) do
+  # The canonical status set lives in `HealthCheck.HealthStatus`, and the
+  # `status_must_be_known` database constraint closes it for every writer,
+  # so a row with a status outside that set means the invariant broke
+  # upstream — an operator edit, a restored backup predating the
+  # constraint, or a status retired by a rolled-back release. This is a
+  # read path reached from the scheduling sweep and dashboard rendering, so
+  # it must stay total: log and degrade gracefully rather than raise. The
+  # coerced value self-heals on the next `put_state/3` write for that row.
+  defp safe_to_status(str, record) when is_binary(str) do
     case HealthStatus.parse(str) do
       {:ok, status} ->
         status
 
       :error ->
-        raise ArgumentError,
-              "unrecognised integration health status in database: #{inspect(str)}"
+        Logger.error("Unrecognised integration health status in database, defaulting to degraded",
+          integration_type: record.integration_type,
+          integration_id: record.integration_id,
+          status: str
+        )
+
+        :degraded
     end
   end
 

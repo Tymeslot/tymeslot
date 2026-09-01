@@ -1,9 +1,12 @@
 defmodule Tymeslot.Bookings.CreateAdHocTest do
-  use Tymeslot.DataCase, async: true
+  # async: false — one test patches Oban.insert/1 with :meck to simulate a
+  # failed enqueue, and :meck replaces the module globally for every process.
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Meetings
@@ -113,6 +116,87 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       params = %{params | video_integration_id: vi.id}
       assert {:ok, _meeting} = CreateAdHoc.execute(params)
       assert_enqueued(worker: Tymeslot.Workers.VideoRoomWorker)
+    end
+
+    test "invites the attendee without waiting on the video room", %{
+      base_params: params,
+      user: user
+    } do
+      vi = insert(:video_integration, user: user)
+      params = %{params | video_integration_id: vi.id}
+
+      assert {:ok, meeting} = CreateAdHoc.execute(params)
+
+      # The iCal invitation carries the event's time and location, not the join
+      # link, so it goes out on the video path too rather than waiting for a
+      # room that may take days to arrive.
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "jane@example.com",
+          "event_uid" => meeting.uid,
+          "method" => "request",
+          "sequence" => 0
+        }
+      )
+
+      # The meeting.created fan-out is the one side effect that *is* deferred to
+      # the worker, so the booking is not announced from here.
+      assert Repo.reload!(meeting).announced_at == nil
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_confirmation_emails"}
+      )
+    end
+
+    test "invites the attendee and announces inline when the video room job cannot be enqueued",
+         %{base_params: params, user: user} do
+      vi = insert(:video_integration, user: user)
+      params = %{params | video_integration_id: vi.id}
+
+      # Only the video room insert fails; every other enqueue on this path (the
+      # invitation and the confirmation emails) must still reach the queue.
+      :meck.new(Oban, [:passthrough])
+
+      :meck.expect(Oban, :insert, fn changeset ->
+        if Changeset.get_field(changeset, :worker) == "Tymeslot.Workers.VideoRoomWorker" do
+          {:error, :queue_unavailable}
+        else
+          :meck.passthrough([changeset])
+        end
+      end)
+
+      meeting =
+        try do
+          assert {:ok, meeting} = CreateAdHoc.execute(params)
+          meeting
+        after
+          :meck.unload(Oban)
+        end
+
+      refute_enqueued(worker: Tymeslot.Workers.VideoRoomWorker)
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "jane@example.com",
+          "event_uid" => meeting.uid,
+          "method" => "request",
+          "sequence" => 0
+        }
+      )
+
+      # No worker is left to raise meeting.created, so the booking is announced
+      # here instead.
+      assert Repo.reload!(meeting).announced_at
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
     end
 
     test "attaches guest emails and schedules notifications", %{base_params: params} do

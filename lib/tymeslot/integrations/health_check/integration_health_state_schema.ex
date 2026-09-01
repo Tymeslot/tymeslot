@@ -50,10 +50,12 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
   end
 
   # The canonical status set lives in `HealthCheck.HealthStatus`. The sole
-  # runtime-derived writer (`Monitor.put_state/3`) goes through
-  # `IntegrationHealthStateQueries.update_validated/3`, which builds a
-  # changeset from this module, so this inclusion check binds that write
-  # rather than sitting on a path nothing reaches.
+  # runtime-derived writer (`Monitor.put_state/3`) writes through
+  # `IntegrationHealthStateQueries.update_fields/3`, a raw `update_all` that
+  # never builds a changeset, so this inclusion check only binds the seed
+  # (`get_or_init/3`) and test-only (`upsert/3`) callers; the
+  # `status_must_be_known` database constraint is what closes the value set
+  # for every writer.
   @valid_error_classes ~w(transient hard)
 
   @doc false

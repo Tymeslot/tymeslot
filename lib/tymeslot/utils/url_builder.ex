@@ -49,6 +49,23 @@ defmodule Tymeslot.Utils.UrlBuilder do
   end
 
   @doc """
+  Builds a host's public booking page URL.
+
+  Falls back to the bare application URL when the host has no username yet, so
+  callers always have a link that resolves rather than a dead path.
+
+  ## Examples
+      iex> UrlBuilder.booking_url("johndoe")
+      "https://example.com/johndoe"
+  """
+  @spec booking_url(String.t() | nil) :: String.t()
+  def booking_url(username) when is_binary(username) and username != "" do
+    build_url("/#{username}")
+  end
+
+  def booking_url(_no_username), do: base_url()
+
+  @doc """
   Builds an email change verification URL.
   """
   @spec email_change_url(String.t()) :: String.t()

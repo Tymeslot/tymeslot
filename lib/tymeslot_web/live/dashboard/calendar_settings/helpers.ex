@@ -10,11 +10,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Helpers do
     DisplayHelpers.format_provider_display_name(provider)
   end
 
-  @spec format_token_expiry(map()) :: String.t()
-  def format_token_expiry(integration) do
-    Calendar.format_token_expiry(integration)
-  end
-
   @spec needs_scope_upgrade?(map()) :: boolean()
   def needs_scope_upgrade?(integration) do
     Calendar.needs_scope_upgrade?(integration)

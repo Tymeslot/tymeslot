@@ -56,6 +56,12 @@ defmodule Tymeslot.Emails.Delivery do
   # instead of guessing again from the raw reason.
   defp classify_outcome({:error, {:recipient_rejected, _reason}}), do: :ignore
   defp classify_outcome({:error, _reason}), do: :failure
+  # A client-side timeout is reported to the caller as `:assumed_delivered`
+  # (see `handle_delivery_error/3` below) so a retry doesn't duplicate a mail
+  # that likely already went out, but it is still evidence the provider is
+  # unhealthy — a hung connection is the common shape of an SMTP/API outage,
+  # so it must count as a breaker failure or the breaker never opens for it.
+  defp classify_outcome({:ok, :assumed_delivered}), do: :failure
   defp classify_outcome(_other), do: :success
 
   defp do_deliver(email) do

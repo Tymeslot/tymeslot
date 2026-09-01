@@ -12,6 +12,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Security.Encryption
 
   @type status :: :pending_oauth | :active | :paused | :auto_disabled
@@ -42,7 +43,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
           updated_at: DateTime.t() | nil
         }
 
-  @valid_events ~w(meeting.created meeting.cancelled meeting.rescheduled)
+  @valid_events EventTypes.all()
   @valid_modes ~w(oauth webhook_url)
   @webhook_url_regex ~r{\Ahttps://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+\z}
 

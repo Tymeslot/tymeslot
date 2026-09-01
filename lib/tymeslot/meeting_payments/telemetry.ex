@@ -10,9 +10,10 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
       can be charted. Emitted via `:telemetry.span/3`.
     * `[:tymeslot, :meeting_payments, :webhook, :received, :start | :stop | :exception]`
       — wraps every Connect webhook handler. The `:processed` metadata key
-      on `:stop` distinguishes successful processing, idempotent replays
-      (which still emit telemetry rather than short-circuit silently), and
-      failures.
+      on `:stop` distinguishes successful processing, idempotent replays,
+      deliberately skipped events (e.g. an unpaid checkout session still
+      settling) — which all still emit telemetry rather than short-circuit
+      silently — and failures.
     * `[:tymeslot, :meeting_payments, :booking_payment, :status_changed]`
       — emitted whenever a `booking_payment` row's `status` field actually
       changes value. Carries the previous and new status atoms plus a
@@ -42,6 +43,7 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   @type status_change_reason ::
           :webhook_paid
           | :webhook_expired
+          | :webhook_async_payment_failed
           | :webhook_charge_refunded
           | :webhook_dispute_created
           | :webhook_dispute_closed
@@ -49,7 +51,7 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
           | :reconcile
 
   @typedoc "Webhook processing outcome surfaced as telemetry metadata."
-  @type webhook_processed :: :ok | :idempotent_replay | :error
+  @type webhook_processed :: :ok | :idempotent_replay | :skipped | :error
 
   @doc "Telemetry event prefix for Stripe API calls."
   @spec stripe_event() :: [atom()]

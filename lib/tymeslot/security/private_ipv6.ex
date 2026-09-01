@@ -7,9 +7,10 @@ defmodule Tymeslot.Security.PrivateIPv6 do
   both layers agree on what counts as a private, loopback, link-local, or
   unspecified IPv6 address.
 
-  IPv4-mapped (`::ffff:x.x.x.x`), IPv4-compatible (`::x.x.x.x`), and NAT64
-  (`64:ff9b::/96`) addresses embed an IPv4 address; all three are decoded and
-  delegated to `PrivateIPv4.private?/1` so the two modules stay in sync.
+  IPv4-mapped (`::ffff:x.x.x.x`), IPv4-compatible (`::x.x.x.x`), NAT64
+  (`64:ff9b::/96`), 6to4 (`2002::/16`), and Teredo (`2001:0::/32`) addresses
+  embed an IPv4 address; all five are decoded and delegated to
+  `PrivateIPv4.private?/1` so the two modules stay in sync.
 
   Ranges covered:
   - `::` — unspecified address (RFC 4291)
@@ -19,13 +20,17 @@ defmodule Tymeslot.Security.PrivateIPv6 do
     `PrivateIPv4`
   - `64:ff9b::/96` — NAT64 well-known prefix (RFC 6052), classified via
     `PrivateIPv4`
+  - `2002::/16` — 6to4 (RFC 3056), the embedded IPv4 sits in bits 16-47,
+    classified via `PrivateIPv4`
+  - `2001:0::/32` — Teredo (RFC 4380), the client's IPv4 sits in the last two
+    hextets, obfuscated with a bitwise NOT, classified via `PrivateIPv4`
   - `fe80::/10` — link-local unicast (RFC 4291)
   - `fec0::/10` — site-local unicast, deprecated (RFC 4291, RFC 3879)
   - `fc00::/7` — unique local unicast (RFC 4193)
   - `ff00::/8` — multicast (RFC 4291)
   """
 
-  import Bitwise, only: [band: 2, bsr: 2]
+  import Bitwise, only: [band: 2, bsr: 2, bxor: 2]
 
   alias Tymeslot.Security.PrivateIPv4
 
@@ -54,6 +59,18 @@ defmodule Tymeslot.Security.PrivateIPv6 do
   # ::x.x.x.x — IPv4-compatible, deprecated; classify the embedded IPv4 address
   def private?({0, 0, 0, 0, 0, 0, hi, lo}) do
     PrivateIPv4.private?(decode_ipv4(hi, lo))
+  end
+
+  # 2002::/16 — 6to4; the embedded IPv4 address is bits 16-47 (the second and
+  # third hextets)
+  def private?({0x2002, hi, lo, _s4, _s5, _s6, _s7, _s8}) do
+    PrivateIPv4.private?(decode_ipv4(hi, lo))
+  end
+
+  # 2001:0::/32 — Teredo; the client's IPv4 address occupies the last two
+  # hextets, obfuscated with a bitwise NOT (RFC 4380 §4)
+  def private?({0x2001, 0x0000, _server_hi, _server_lo, _flags, _obf_port, hi, lo}) do
+    PrivateIPv4.private?(decode_ipv4(bxor(hi, 0xFFFF), bxor(lo, 0xFFFF)))
   end
 
   # fe80::/10 — link-local (first hextet 0xFE80..0xFEBF)

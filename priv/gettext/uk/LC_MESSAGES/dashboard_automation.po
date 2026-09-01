@@ -187,6 +187,7 @@ msgid "Event Subscriptions"
 msgstr "Підписки на події"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr "Помилка"
@@ -281,11 +282,6 @@ msgstr "Згенерувати новий токен?"
 #, elixir-autogen, elixir-format
 msgid "Request timestamp"
 msgstr "Час запиту"
-
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Saving..."
-msgstr "Збереження..."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -582,6 +578,61 @@ msgstr "Зустріч створено"
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
 msgstr "Зустріч перенесено"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Connection failed"
+msgstr "Не вдалося підключитися"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled: %{reason}"
+msgstr "Вимкнено: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Failed: %{reason}"
+msgstr "Помилка: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Still checking — please try again in a moment."
+msgstr "Перевірка ще триває — спробуйте ще раз за хвилину."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Succeeded"
+msgstr "Успішно"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The connection test took too long to respond"
+msgstr "Тест з'єднання занадто довго не відповідав"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected to a private or restricted address"
+msgstr "Вебхук було перенаправлено на приватну або обмежену адресу"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected too many times"
+msgstr "Вебхук перенаправлявся занадто багато разів"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected without a destination address"
+msgstr "Вебхук було перенаправлено без цільової адреси"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "URL resolves to a private or restricted address"
+msgstr "URL-адреса вказує на приватну або обмежену адресу"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook returned status %{status}"
+msgstr "Вебхук повернув статус %{status}"
 
 #: lib/tymeslot/webhooks.ex
 #, elixir-autogen, elixir-format

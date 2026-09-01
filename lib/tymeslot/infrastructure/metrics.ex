@@ -213,11 +213,16 @@ defmodule Tymeslot.Infrastructure.Metrics do
   # Private functions
 
   defp sanitize_url(url) when is_binary(url) do
-    # Remove sensitive information from URLs
-    url
-    |> URI.parse()
-    |> Map.put(:userinfo, nil)
-    |> URI.to_string()
+    # Remove sensitive information from URLs. Beyond stripping userinfo, the
+    # path goes through the same `redact_path/1` treatment `request_target/1`
+    # applies before logging, so a credential carried in the path itself
+    # (Telegram's `bot<id>:<secret>`, a CalDAV/feed token) never reaches
+    # telemetry metadata in the first place — logging is not the only
+    # consumer of this event. The query string is dropped outright rather
+    # than redacted piecemeal.
+    uri = URI.parse(url)
+
+    URI.to_string(%{uri | userinfo: nil, path: redact_path(uri.path), query: nil})
   end
 
   defp sanitize_url(url), do: inspect(url)

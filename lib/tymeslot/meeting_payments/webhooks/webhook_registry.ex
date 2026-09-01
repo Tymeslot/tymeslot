@@ -12,12 +12,20 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookRegistry do
     ChargeDisputeClosed,
     ChargeDisputeCreated,
     ChargeRefunded,
+    CheckoutSessionAsyncPaymentFailed,
     CheckoutSessionCompleted,
     CheckoutSessionExpired
   }
 
   @handlers %{
     "checkout.session.completed" => CheckoutSessionCompleted,
+    # An asynchronous payment method (e.g. SEPA Direct Debit) that settles
+    # after Checkout completes fires this event with the session in its
+    # final "paid" state. Reusing the same handler is safe: its
+    # `payment_status == "paid"` gate is exactly what makes this event
+    # confirmable, and it is idempotent on `last_event_id` like any replay.
+    "checkout.session.async_payment_succeeded" => CheckoutSessionCompleted,
+    "checkout.session.async_payment_failed" => CheckoutSessionAsyncPaymentFailed,
     "checkout.session.expired" => CheckoutSessionExpired,
     "charge.refunded" => ChargeRefunded,
     "charge.dispute.created" => ChargeDisputeCreated,

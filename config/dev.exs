@@ -100,38 +100,38 @@ config :tymeslot, Tymeslot.Repo,
 # This allows SaaS to extend Core queues via :oban_additional_queues config
 config :tymeslot, Oban,
   repo: Tymeslot.Repo,
-  plugins: [
-    {Oban.Plugins.Pruner, max_age: 604_800},
-    {Oban.Plugins.Cron,
-     crontab: [
-       # Run every 30 minutes
-       {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
-       # Run every hour at the top of the hour
-       {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
-       # Run daily at 02:45 UTC
-       {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
-       # Run daily at 03:45 UTC to clean up cancelled meetings' orphaned rooms
-       {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
-       # Run daily at 02:00 UTC to renew expiring webhook channels
-       {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
-       # Run daily at 04:00 UTC
-       {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
-       # Run every 6 hours to detect silent/dead webhook channels
-       {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
-       # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
-       {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
-       # Run daily at 03:30 UTC to prune old/inactive calendar event cache
-       {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
-       # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
-       {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
-       # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
-       {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
-       # Run daily at 04:30 UTC to cross-check booking analytics against bookings
-       {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
-       # Run every 15 min to release approval requests whose deadline passed
-       # and whose per-meeting expiry job never fired
-       {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker}
-     ]}
+  pruner: [max_age: {7, :days}],
+  lifeline: [rescue_after: {1, :hour}],
+  cron: [
+    crontab: [
+      # Run every 30 minutes
+      {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
+      # Run every hour at the top of the hour
+      {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
+      # Run daily at 02:45 UTC
+      {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
+      # Run daily at 03:45 UTC to clean up cancelled meetings' orphaned rooms
+      {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
+      # Run daily at 02:00 UTC to renew expiring webhook channels
+      {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
+      # Run daily at 04:00 UTC
+      {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
+      # Run every 6 hours to detect silent/dead webhook channels
+      {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
+      # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
+      {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
+      # Run daily at 03:30 UTC to prune old/inactive calendar event cache
+      {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
+      # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
+      {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
+      # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
+      {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
+      # Run daily at 04:30 UTC to cross-check booking analytics against bookings
+      {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
+      # Run every 15 min to release approval requests whose deadline passed
+      # and whose per-meeting expiry job never fired
+      {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker}
+    ]
   ]
 
 # Enable swoosh api client

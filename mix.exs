@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.12.0",
+      version: "1.13.2",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -217,16 +217,23 @@ defmodule Tymeslot.MixProject do
         "esbuild embed",
         "esbuild iframe_embed"
       ],
-      "assets.deploy": [
+      # The minified build on its own, without digesting. Split out of
+      # `assets.deploy` so that a project consuming this one as a path
+      # dependency can build these assets and then digest them from its own
+      # tree. `phx.digest` needs the configured `:static_compressors` modules
+      # loaded, so running it here means running Mix in this project, which
+      # uses a separate `_build` and would recompile the whole application
+      # just to reach the digest step.
+      "assets.minify": [
         "tailwind tymeslot --minify",
         "tailwind quill --minify",
         "tailwind rhythm --minify",
         "esbuild tymeslot --minify",
         "esbuild bundles --minify",
         "esbuild embed --minify",
-        "esbuild iframe_embed --minify",
-        "phx.digest"
-      ]
+        "esbuild iframe_embed --minify"
+      ],
+      "assets.deploy": ["assets.minify", "phx.digest"]
     ]
   end
 

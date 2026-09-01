@@ -69,7 +69,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting.id, "send_emails" => true}
+        args: %{"meeting_id" => meeting.id, "announce" => true}
       )
 
       # The room must exist before the join link can go out, so the worker
@@ -108,7 +108,7 @@ defmodule Tymeslot.Bookings.ActivationTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting.id, "send_emails" => true}
+        args: %{"meeting_id" => meeting.id, "announce" => true}
       )
 
       refute_enqueued(

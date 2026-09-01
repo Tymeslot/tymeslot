@@ -176,21 +176,21 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       assert has_element?(view, "div.onboarding-connected-calendar")
     end
 
-    test "surfaces a crash-recovery message when the discovery task crashes and re-enables the form",
+    test "an exit at the HTTP boundary is absorbed into a discovery error and re-enables the form",
          %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_calendar_step(view)
 
       open_caldav_form(view)
 
-      # Force the async task itself to crash (rather than return an
-      # {:error, _} tuple) by having the HTTP boundary exit. The discovery
-      # chain runs inside `CalendarCircuitBreaker.with_breaker/3`, whose
-      # `rescue` converts a raised exception into `{:error, _}` — but `rescue`
-      # does not catch exits, so this propagates all the way out of the
-      # start_async task and LiveView delivers {:exit, reason} to
-      # handle_async/3. (The rescued-exception path is covered by the test
-      # below.)
+      # An exit rather than a raise, which takes a different route out:
+      # `CalendarCircuitBreaker.with_breaker/3` rescues exceptions, and
+      # `rescue` does not catch exits. What stops this one is
+      # `Tymeslot.Infrastructure.CacheStore.compute_and_store/5` — every
+      # discovery runs inside `DiscoveryCache.get_or_compute/2` — whose
+      # `catch` resolves any non-local exit to `{:error, :computation_failed}`.
+      # So the async task returns normally, `handle_async/3` never sees
+      # `{:exit, _}`, and the visitor gets a classified discovery error.
       Mox.stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         exit(:boom)
       end)
@@ -206,7 +206,8 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       render_async(view)
       html = render(view)
 
-      assert html =~ "Something went wrong while contacting the calendar server"
+      assert html =~ "An unexpected error occurred with CalDAV server"
+      refute html =~ "Something went wrong while contacting the calendar server"
       refute has_element?(view, "button[type='submit'][disabled]")
     end
 

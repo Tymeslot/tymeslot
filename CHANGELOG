@@ -1,4 +1,55 @@
 
+[1.13.2]
+* Let bookers reach a month whose only free day is the first
+* Tell bookers what to do when slots cannot be loaded
+* Stop greying out booking days nobody checked the calendar for
+* Follow the fifth redirect on a webhook delivery
+* Offer the same scheduling policy presets everywhere
+* Fall back to CalDAV discovery when a server answers 405
+* Build the poll participant link from the matched username
+* Cancel a profile photo the browser rejected as one too many
+* Ignore booking query parameters of an unexpected shape
+* Stop a password reset for an OAuth account crashing the page
+* Invite the attendee when an ad-hoc meeting books a video room
+* Send Slack notifications when Telegram is also connected
+
+
+[1.13.1]
+* Link the cancellation email to the host's booking page
+* webhooks: Include the meeting's guests in the payload
+* Open the schedule step on the next available day
+
+
+[1.13.0]
+* Let a password reset request use its full hourly allowance
+* Count only admins who can actually sign in with a password
+* Stop a replayed Connect webhook repeating its side effects
+* Keep a reconnected integration out of the deletion sweep
+* Show the booking and countdown messages in the visitor's language
+* Validate every redirect hop when testing a webhook endpoint
+* Stop a partial reminder send re-emailing the wrong recipient
+* Refuse a booking when the host's schedule cannot be read
+* Stop local errors opening the integration circuit breakers
+* Stop an unexpected message taking the booking page down
+* Put video provider calls behind their circuit breaker
+* Stop the circuit breaker serialising the work it protects
+* Refuse bookings for times the host's schedule never offered
+* Stamp events and doc links with the running instance, not a fixed host
+* Show one countdown for a meeting, not two that disagree
+* Translate the booking step and readiness messages
+* Answer the week strip's availability with the domain's rule
+* Show throttled webhook edits and stop one user throttling all
+* Refuse a conflicting integration reactivation instead of crashing
+* Show failed webhook deliveries in the failure colour
+* Validate every redirect hop when testing a custom video URL
+* Disable a Telegram integration once the bot is blocked or kicked
+* Stop dropping transactional emails during a mail outage
+* Put paid bookings on the organiser's calendar
+* Keep the Telegram bot token out of the request logs
+* Resolve the meeting type when a booking link is opened directly
+* Clear the file picker after a profile picture upload
+
+
 [1.12.0]
 * Stop a removed background video reporting a transcoding failure
 * Settle a conflicting calendar event change without retrying

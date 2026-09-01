@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -24,31 +25,45 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_reminder_emails(%{"meeting_id" => meeting_id} = args) do
     with_meeting(meeting_id, "reminder emails", fn meeting ->
-      # A void slot (cancelled, or an organizer reschedule request pending)
-      # means the original time is no longer valid — reminding anyone of it
-      # would contradict the cancellation/reschedule-request email. Pending
-      # reminder jobs are deleted when the slot is voided; this guards any
-      # job already in flight at that moment.
-      if MeetingState.slot_void?(meeting) do
-        Logger.info("Skipping reminder emails for inactive meeting",
-          meeting_id: meeting_id,
-          status: meeting.status
-        )
-
-        {:discard, "Meeting #{meeting.status}"}
-      else
-        reminder_value = Map.get(args, "reminder_value", 30)
-        reminder_unit = Map.get(args, "reminder_unit", "minutes")
-
-        if reminder_already_sent?(meeting, reminder_value, reminder_unit) do
-          Logger.info("Skipping reminder emails - already sent",
-            meeting_id: meeting_id
+      cond do
+        # A void slot (cancelled, or an organizer reschedule request pending)
+        # means the original time is no longer valid — reminding anyone of it
+        # would contradict the cancellation/reschedule-request email. Pending
+        # reminder jobs are deleted when the slot is voided; this guards any
+        # job already in flight at that moment.
+        MeetingState.slot_void?(meeting) ->
+          Logger.info("Skipping reminder emails for inactive meeting",
+            meeting_id: meeting_id,
+            status: meeting.status
           )
 
-          :ok
-        else
-          send_reminder_emails(meeting, reminder_value, reminder_unit)
-        end
+          {:discard, "Meeting #{meeting.status}"}
+
+        # A job snoozed past an outage (open mail breaker) can wake up after
+        # the meeting has already started — the reminder copy is worded as
+        # if the meeting is still ahead ("in 30 minutes"), so sending it late
+        # would be actively misleading rather than just unnecessary.
+        meeting_started?(meeting) ->
+          Logger.info("Skipping reminder emails - meeting already started",
+            meeting_id: meeting_id,
+            start_time: meeting.start_time
+          )
+
+          {:discard, "Meeting already started"}
+
+        true ->
+          reminder_value = Map.get(args, "reminder_value", 30)
+          reminder_unit = Map.get(args, "reminder_unit", "minutes")
+
+          if reminder_already_sent?(meeting, reminder_value, reminder_unit) do
+            Logger.info("Skipping reminder emails - already sent",
+              meeting_id: meeting_id
+            )
+
+            :ok
+          else
+            send_reminder_emails(meeting, reminder_value, reminder_unit)
+          end
       end
     end)
   end
@@ -130,7 +145,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
            "Partial cancellation email failure: one email succeeded, retry would duplicate"}
         else
           reason =
-            worker_actionable_reason([organizer_result, attendee_result]) ||
+            DeliveryOutcome.first_actionable([organizer_result, attendee_result]) ||
               "Failed to send cancellation emails"
 
           {:error, reason}
@@ -339,17 +354,24 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # circuit breaker) must be persisted even though the overall result is an
   # error the worker will retry. Otherwise a retry re-sends to the recipient
   # who already received it.
+  #
+  # A recipient permanently rejected by the provider is persisted as settled
+  # too, even though nothing was actually delivered: no retry can ever reach
+  # a dead address, so leaving its flag false would have the job keep
+  # re-attempting that recipient on every retry of the other, still-live one.
   defp process_email_results(meeting, organizer_result, attendee_result, email_type) do
-    organizer_success = match?({:ok, _result}, organizer_result)
-    attendee_success = match?({:ok, _result}, attendee_result)
+    organizer_delivered = match?({:ok, _result}, organizer_result)
+    attendee_delivered = match?({:ok, _result}, attendee_result)
+    organizer_settled = organizer_delivered or terminal_failure?(organizer_result)
+    attendee_settled = attendee_delivered or terminal_failure?(attendee_result)
 
-    case update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
+    case update_email_sent_flags(meeting, email_type, organizer_settled, attendee_settled) do
       :ok ->
         case check_email_errors(organizer_result, attendee_result) do
           nil ->
-            log_email_results(meeting, email_type, organizer_success, attendee_success)
+            log_email_results(meeting, email_type, organizer_delivered, attendee_delivered)
 
-            if organizer_success || attendee_success do
+            if organizer_delivered && attendee_delivered do
               :ok
             else
               {:error, "Failed to send all emails"}
@@ -364,6 +386,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
+  defp terminal_failure?({:error, {:recipient_rejected, _reason}}), do: true
+  defp terminal_failure?(_other), do: false
+
   defp check_email_errors(organizer_result, attendee_result) do
     results = [organizer_result, attendee_result]
 
@@ -372,7 +397,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           match?({:error, :rate_limited}, attendee_result) ->
         {:error, :rate_limited}
 
-      reason = worker_actionable_reason(results) ->
+      reason = DeliveryOutcome.first_actionable(results) ->
         {:error, reason}
 
       match?({:error, :invalid_email}, organizer_result) or
@@ -388,24 +413,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             nil
         end
     end
-  end
-
-  # The two failures `EmailWorker` must act on differently from an ordinary
-  # retry, preserved rather than flattened into a message — the same contract
-  # `DeliveryOutcome.from_error/2` gives every other handler.
-  #
-  # `:circuit_open` is the one that mattered here: the mail breaker stays open
-  # for five minutes, and this worker's backoff spends all five attempts inside
-  # the first fifteen seconds of that window, so flattening it dropped booking
-  # confirmations, reminders and cancellations outright for the duration of any
-  # mail outage. The worker snoozes past the window instead, at no cost in
-  # attempts.
-  defp worker_actionable_reason(results) do
-    Enum.find_value(results, fn
-      {:error, :circuit_open} -> :circuit_open
-      {:error, {:recipient_rejected, _reason} = rejection} -> rejection
-      _other -> nil
-    end)
   end
 
   defp update_email_sent_flags(
@@ -466,6 +473,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       organizer_sent: organizer_success,
       attendee_sent: attendee_success
     )
+  end
+
+  defp meeting_started?(meeting) do
+    DateTime.compare(meeting.start_time, DateTime.utc_now()) != :gt
   end
 
   defp reminder_already_sent?(meeting, reminder_value, reminder_unit) do

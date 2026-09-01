@@ -26,7 +26,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
-  @caldav_providers Enum.map(ProviderConfig.caldav_based_providers(), &Atom.to_string/1)
+  @caldav_providers ProviderConfig.caldav_based_provider_strings()
 
   # Staleness thresholds (minutes). Each threshold is the sync interval
   # plus a buffer for queue wait, network latency, and retries.

@@ -735,11 +735,6 @@ msgstr "Обліковий запис створено, але не вдалос
 msgid "Account created but profile setup failed. Please contact support."
 msgstr "Обліковий запис створено, але не вдалося налаштувати профіль. Зверніться до служби підтримки."
 
-#: lib/tymeslot/security/account_lockout.ex
-#, elixir-autogen, elixir-format
-msgid "Account locked for %{duration} minutes due to repeated failed attempts"
-msgstr "Обліковий запис заблоковано на %{duration} хв через повторні невдалі спроби"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please try again."
@@ -983,11 +978,6 @@ msgstr "Термін дії посилання для підтвердження
 msgid "You cannot reset your password because your account is managed by an external authentication provider."
 msgstr "Ви не можете скинути пароль, оскільки вашим обліковим записом керує зовнішній постачальник автентифікації."
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Your account has been locked due to too many failed attempts. Please try again later."
-msgstr "Ваш обліковий запис заблоковано через забагато невдалих спроб. Спробуйте пізніше."
-
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your password has been reset successfully"
@@ -1088,3 +1078,8 @@ msgstr "Пароль має містити щонайменше одну вел�
 #, elixir-autogen, elixir-format
 msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
 msgstr "Ваш обліковий запис створено, але лист для підтвердження ще не вдалося надіслати. Зачекайте кілька хвилин, а потім скористайтеся посиланням для повторного надсилання."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If an account exists with this email address, password reset instructions have been sent."
+msgstr "Якщо обліковий запис із цією електронною адресою існує, інструкції зі скидання пароля вже надіслано."

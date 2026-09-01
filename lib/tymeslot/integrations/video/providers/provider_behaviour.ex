@@ -221,5 +221,37 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
   @callback url_patterns() :: [String.t()]
 
-  @optional_callbacks update_meeting_room: 2, delete_meeting_room: 2, url_patterns: 0
+  @doc """
+  Pre-flight phase of the circuit-breaker split for `create_meeting_room/1`
+  (see `ProviderAdapter.with_breaker/2`). Runs entirely outside the shared
+  breaker.
+
+  Returns `{:ok, token}` to proceed to `finish_create_meeting_room/2`,
+  `{:error, reason}` for a per-tenant failure (bad scope, revoked grant) that
+  must never count against the breaker, or `{:provider_error, reason}` for a
+  failure that looks like the provider's own host is having trouble — handed
+  to the breaker so it still gets recorded.
+
+  Optional: providers that don't implement both this and
+  `finish_create_meeting_room/2` keep the old all-in-one behaviour via
+  `create_meeting_room/1`.
+  """
+  @callback precheck_create_meeting_room(config :: map()) ::
+              {:ok, term()} | {:error, term()} | {:provider_error, term()}
+
+  @doc """
+  Actual outbound API call phase of the circuit-breaker split, run behind the
+  shared breaker with the token `precheck_create_meeting_room/1` already
+  resolved.
+
+  Optional: see `precheck_create_meeting_room/1`.
+  """
+  @callback finish_create_meeting_room(token :: term(), config :: map()) ::
+              {:ok, RoomData.t()} | {:error, term()}
+
+  @optional_callbacks update_meeting_room: 2,
+                      delete_meeting_room: 2,
+                      url_patterns: 0,
+                      precheck_create_meeting_room: 1,
+                      finish_create_meeting_room: 2
 end

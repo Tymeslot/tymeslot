@@ -47,7 +47,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
     with {:ok, webhook} <- WebhookQueries.get_webhook(webhook_id),
          :ok = Logger.metadata(user_id: webhook.user_id),
          :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
-         {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
+         {:ok, meeting} <- MeetingQueries.get_meeting_with_guests(meeting_id),
          {:ok, _delivery} <- deliver_webhook(webhook, event_type, meeting, attempt) do
       :ok
     else

@@ -7,6 +7,8 @@ defmodule Tymeslot.Auth.AuthActions do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  require Logger
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Auth.{PasswordReset, Registration, Validation}
@@ -97,6 +99,15 @@ defmodule Tymeslot.Auth.AuthActions do
         {:ok, :reset_password_sent, message}
 
       {:error, :invalid_input, message} ->
+        {:error, message}
+
+      # An account with no password of its own cannot be sent a reset link, and
+      # `PasswordReset` already builds the specific, translated explanation for
+      # that. `normalize_auth_error/1` cannot reconstruct it from the atom, so
+      # pass the message through rather than collapsing it. This is the one
+      # deliberate exception to the identical confirmation the non-OAuth
+      # branches return; see `PasswordReset.process_password_reset_secure/2`.
+      {:error, :oauth_user, message} ->
         {:error, message}
 
       {:error, reason, _message} ->
@@ -207,16 +218,46 @@ defmodule Tymeslot.Auth.AuthActions do
 
   # Private Functions
 
+  # Written as a `case` rather than multi-clause heads because both call sites
+  # intercept `:invalid_input` before the funnel, and the type checker then
+  # reports a head for it as unreachable.
   defp normalize_auth_error(reason) do
     case reason do
-      :rate_limited -> dgettext("auth", "Too many attempts. Please try again later.")
-      :server_error -> dgettext("auth", "A server error occurred. Please try again")
-      :invalid_input -> dgettext("auth", "Invalid input provided")
-      :invalid_password -> dgettext("auth", "Invalid password")
-      :invalid_token -> get_token_error_message(:invalid_token)
-      :token_expired -> get_token_error_message(:token_expired)
+      :rate_limited ->
+        dgettext("auth", "Too many attempts. Please try again later.")
+
+      :server_error ->
+        server_error_message()
+
+      :invalid_input ->
+        dgettext("auth", "Invalid input provided")
+
+      :invalid_password ->
+        dgettext("auth", "Invalid password")
+
+      :invalid_token ->
+        get_token_error_message(:invalid_token)
+
+      :token_expired ->
+        get_token_error_message(:token_expired)
+
+      # A reason with no clause above is a bug: some layer below grew a failure
+      # this one was never taught to describe. It must not take the LiveView
+      # down with it on a public, unauthenticated page, so degrade to the
+      # generic message, but log loudly: the mapping still needs fixing, and a
+      # silent fallback is how that never happens.
+      other ->
+        Logger.error("Unmapped auth error reason",
+          reason: inspect(other),
+          event: :auth_error_unmapped
+        )
+
+        server_error_message()
     end
   end
+
+  defp server_error_message,
+    do: dgettext("auth", "A server error occurred. Please try again")
 
   defp get_token_error_message(:invalid_token),
     do: dgettext("auth", "Invalid or expired token")

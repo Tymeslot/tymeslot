@@ -12,6 +12,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
 
   import Tymeslot.Factory
@@ -163,6 +164,40 @@ defmodule Tymeslot.Auth.VerificationTest do
       # have consumed the legitimate token.
       assert {:ok, verified_user} = Verification.verify_user(token)
       assert verified_user.verified_at
+    end
+  end
+
+  describe "verify_user/1 never logs the raw token" do
+    test "an expired token's audit entry identifies the user, never the token" do
+      user = insert(:unverified_user)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
+
+      expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
+
+      Repo.update_all(
+        from(u in UserSchema, where: u.id == ^user.id),
+        set: [verification_sent_at: expired_time]
+      )
+
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:error, :token_expired} = Verification.verify_user(token)
+      end)
+
+      assert_receive {:captured_log, %{meta: %{event: "email_verification_failure"} = meta}}
+      assert meta[:identifier_masked] == user.id
+      refute inspect(meta) =~ token
+    end
+
+    test "an invalid token's audit entry never carries the raw token" do
+      unknown_token = "unknown-token-value-not-in-the-database"
+
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:error, :invalid_token} = Verification.verify_user(unknown_token)
+      end)
+
+      assert_receive {:captured_log, %{meta: meta}}
+      refute inspect(meta) =~ unknown_token
     end
   end
 

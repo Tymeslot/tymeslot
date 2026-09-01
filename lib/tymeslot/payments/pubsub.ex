@@ -5,11 +5,49 @@ defmodule Tymeslot.Payments.PubSub do
   This module provides a centralized way to broadcast payment events
   to apps, allowing them to handle app-specific logic (like confirmation emails)
   without coupling the payment library to specific app implementations.
+
+  Topic names are private to this module. Subscribers go through
+  `subscribe_to_payment_events/0` (re-exported by the `Tymeslot.Payments`
+  context) rather than building a topic and resolving the PubSub server
+  themselves, so renaming a topic here cannot silently orphan a subscriber.
   """
   require Logger
 
   alias Phoenix.PubSub
   alias Tymeslot.Infrastructure.AdminAlerts
+
+  # The topic every payment lifecycle event is published on.
+  @payment_events_topic "payment_events:tymeslot"
+
+  @doc """
+  Subscribes the calling process to the payment-events topic.
+
+  Returns `{:error, reason}` instead of raising when no PubSub server is
+  running, so a supervised subscriber can start without one.
+  """
+  @spec subscribe_to_payment_events() :: :ok | {:error, term()}
+  def subscribe_to_payment_events, do: subscribe(@payment_events_topic)
+
+  @doc """
+  Broadcasts a message on the payment-events topic.
+  """
+  @spec broadcast_to_payment_events(term()) :: :ok | {:error, term()}
+  def broadcast_to_payment_events(message), do: broadcast(@payment_events_topic, message)
+
+  defp subscribe(topic) do
+    case get_pubsub_server() do
+      nil ->
+        Logger.warning("No PubSub server found, skipping subscribe", topic: topic)
+        {:error, :no_pubsub_server}
+
+      pubsub_server ->
+        PubSub.subscribe(pubsub_server, topic)
+    end
+  rescue
+    # Phoenix.PubSub.subscribe/2 raises when the server is named but its
+    # registry is not running (a race against application start).
+    error -> {:error, error}
+  end
 
   @doc """
   General broadcast function to send any event to PubSub.
@@ -36,9 +74,7 @@ defmodule Tymeslot.Payments.PubSub do
           optional(atom()) => term()
         }) :: :ok
   def broadcast_subscription_event(event_data) do
-    topic = "payment_events:tymeslot"
-
-    case broadcast(topic, event_data) do
+    case broadcast_to_payment_events(event_data) do
       :ok ->
         :ok
 
@@ -57,7 +93,7 @@ defmodule Tymeslot.Payments.PubSub do
           reason: reason,
           context: %{
             event: :subscription_event,
-            topic: topic,
+            topic: @payment_events_topic,
             event_type: event_type,
             user_id: user_id
           }
@@ -72,15 +108,13 @@ defmodule Tymeslot.Payments.PubSub do
   """
   @spec broadcast_payment_event(atom(), map()) :: :ok
   def broadcast_payment_event(event_type, event_data) do
-    topic = "payment_events:tymeslot"
-
     message = %{
       event: event_type,
       data: event_data,
       timestamp: DateTime.utc_now()
     }
 
-    case broadcast(topic, message) do
+    case broadcast_to_payment_events(message) do
       :ok ->
         :ok
 
@@ -95,7 +129,7 @@ defmodule Tymeslot.Payments.PubSub do
           reason: reason,
           context: %{
             event: :payment_event,
-            topic: topic,
+            topic: @payment_events_topic,
             event_type: event_type
           }
         )
@@ -145,114 +179,5 @@ defmodule Tymeslot.Payments.PubSub do
   defp test_env? do
     Application.get_env(:tymeslot, :env, :prod) == :test or
       System.get_env("MIX_ENV") == "test"
-  end
-
-  @doc """
-  Broadcasts a subscription success event via PubSub.
-
-  Apps can subscribe to "payment:subscription_successful" topic to handle app-specific
-  post-subscription logic.
-
-  ## Parameters
-  - `transaction`: The completed subscription transaction struct
-
-  ## Example
-      Tymeslot.Payments.PubSub.broadcast_subscription_successful(transaction)
-  """
-  @spec broadcast_subscription_successful(struct()) :: :ok
-  def broadcast_subscription_successful(transaction) do
-    pubsub_server = get_pubsub_server()
-
-    if pubsub_server do
-      message =
-        {:subscription_successful,
-         %{
-           user_id: transaction.user_id,
-           subscription_id: transaction.subscription_id,
-           transaction: transaction
-         }}
-
-      case PubSub.broadcast(pubsub_server, "payment:subscription_successful", message) do
-        :ok ->
-          Logger.info("Broadcasted subscription_successful event", user_id: transaction.user_id)
-
-          :ok
-
-        {:error, reason} ->
-          Logger.error("PubSub broadcast failed for subscription_successful",
-            user_id: transaction.user_id,
-            reason: inspect(reason)
-          )
-
-          AdminAlerts.report(:pubsub_broadcast_failed,
-            summary: "PubSub broadcast failed for subscription_successful",
-            reason: reason,
-            context: %{
-              event: :subscription_successful,
-              topic: "payment:subscription_successful",
-              user_id: transaction.user_id
-            }
-          )
-
-          :ok
-      end
-    else
-      Logger.warning("No PubSub server configured, skipping subscription_successful broadcast")
-      :ok
-    end
-  end
-
-  @doc """
-  Broadcasts a subscription failure event via PubSub.
-
-  Apps can subscribe to "payment:subscription_failed" topic to handle app-specific
-  post-subscription failure logic.
-
-  ## Parameters
-  - `transaction`: The failed subscription transaction struct
-
-  ## Example
-      Tymeslot.Payments.PubSub.broadcast_subscription_failed(transaction)
-  """
-  @spec broadcast_subscription_failed(struct()) :: :ok
-  def broadcast_subscription_failed(transaction) do
-    pubsub_server = get_pubsub_server()
-
-    if pubsub_server do
-      message =
-        {:subscription_failed,
-         %{
-           user_id: transaction.user_id,
-           subscription_id: transaction.subscription_id,
-           transaction: transaction
-         }}
-
-      case PubSub.broadcast(pubsub_server, "payment:subscription_failed", message) do
-        :ok ->
-          Logger.info("Broadcasted subscription_failed event", user_id: transaction.user_id)
-          :ok
-
-        {:error, reason} ->
-          Logger.error("PubSub broadcast failed for subscription_failed",
-            user_id: transaction.user_id,
-            reason: inspect(reason)
-          )
-
-          AdminAlerts.report(:pubsub_broadcast_failed,
-            summary: "PubSub broadcast failed for subscription_failed",
-            reason: reason,
-            context: %{
-              event: :subscription_failed,
-              topic: "payment:subscription_failed",
-              user_id: transaction.user_id
-            }
-          )
-
-          :ok
-      end
-    else
-      Logger.warning("No PubSub server configured, skipping subscription_failed broadcast")
-      :ok
-    end
   end
 end

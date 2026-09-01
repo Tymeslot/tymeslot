@@ -9,6 +9,7 @@ defmodule Tymeslot.Profiles.Avatars do
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.AvatarUtils
   alias Tymeslot.Utils.MediaValidator
+  alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Helpers.UploadHandler
 
   @type profile :: ProfileSchema.t()
@@ -19,8 +20,8 @@ defmodule Tymeslot.Profiles.Avatars do
         }
   @type result(t) :: {:ok, t} | {:error, any()}
 
-  @accepted_extensions ~w(.jpg .jpeg .png .gif .webp)
-  @max_file_size 10_000_000
+  @accepted_extensions UploadConstraints.allowed_extensions(:avatar)
+  @max_file_size UploadConstraints.max_file_size(:avatar)
 
   @doc "Returns the list of accepted avatar file extensions."
   @spec accepted_extensions() :: [String.t()]

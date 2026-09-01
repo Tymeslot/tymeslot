@@ -10,11 +10,27 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Providers.Families
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
   @providers [:mirotalk, :google_meet, :teams, :zoom, :custom]
-  @oauth_providers [:google_meet, :teams, :zoom]
   @dev_only_providers []
+
+  # The single declaration site for "how does this provider connect?", in the
+  # shared vocabulary of `Tymeslot.Integrations.Providers.Families`. Video has
+  # no CalDAV or subscription providers, so those families are simply empty
+  # here; a provider missing from this table fails the build.
+  @provider_families %{
+    oauth: [:google_meet, :teams, :zoom],
+    other: [:mirotalk, :custom]
+  }
+
+  # Keyed by both the atom and the string form of every provider, so the two
+  # forms of the same provider cannot get different answers out of the
+  # predicates below.
+  @family_index Families.build_index(@provider_families, @providers ++ @dev_only_providers)
+
+  @oauth_providers Families.members(@provider_families, :oauth)
 
   # Compile-time lookup from the provider's string form to its atom, covering
   # every statically known provider regardless of runtime toggles. Parsing
@@ -272,16 +288,31 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def parse_known(_other), do: {:error, :unknown}
 
   @doc """
+  Returns the family a provider belongs to.
+
+  Accepts the atom or the string form and answers identically for both: the
+  database column and LiveView params carry the string. Anything the table
+  does not know — including the `:none` sentinel — is `:other`.
+
+  Deliberately toggle-agnostic: a persisted Zoom integration is an OAuth
+  integration whether or not Zoom is currently switched on in config, and the
+  reconnect UI has to keep saying so.
+  """
+  @spec family_of(atom() | String.t() | any()) :: Families.t()
+  def family_of(provider), do: Families.of(@family_index, provider)
+
+  @doc """
+  Checks whether a provider belongs to `family`. Accepts atom or string.
+  """
+  @spec in_family?(atom() | String.t() | any(), Families.t()) :: boolean()
+  def in_family?(provider, family), do: family_of(provider) == family
+
+  @doc """
   Checks whether a provider uses OAuth for setup/reconnect.
   Accepts atom or string.
   """
   @spec oauth_provider?(atom() | String.t() | any()) :: boolean()
-  def oauth_provider?(provider) do
-    case parse(provider) do
-      {:ok, atom} -> atom in @oauth_providers
-      {:error, :unknown} -> false
-    end
-  end
+  def oauth_provider?(provider), do: in_family?(provider, :oauth)
 
   @display_names %{
     mirotalk: "MiroTalk P2P",

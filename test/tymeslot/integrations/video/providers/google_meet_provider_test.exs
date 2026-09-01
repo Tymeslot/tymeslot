@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox

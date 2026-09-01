@@ -23,7 +23,7 @@ defmodule Tymeslot.Notifications.EventTypes do
   existing consumers see no change.
   """
 
-  @mapping %{
+  @events %{
     meeting_created: "meeting.created",
     meeting_requested: "meeting.requested",
     meeting_declined: "meeting.declined",
@@ -31,10 +31,6 @@ defmodule Tymeslot.Notifications.EventTypes do
     meeting_cancelled: "meeting.cancelled",
     meeting_rescheduled: "meeting.rescheduled"
   }
-
-  @doc "Every event type subscribers may select, as wire strings."
-  @spec all() :: [String.t()]
-  def all, do: Map.values(@mapping)
 
   @doc """
   Converts an internal event atom to the event-type string channels store and
@@ -45,10 +41,17 @@ defmodule Tymeslot.Notifications.EventTypes do
   unsubscribable wire name is a worse failure than a crash at the call site.
   """
   @spec to_event_type(atom()) :: String.t()
+  def to_event_type(atom) when is_map_key(@events, atom), do: Map.fetch!(@events, atom)
+
   def to_event_type(atom) when is_atom(atom) do
-    case Map.fetch(@mapping, atom) do
-      {:ok, wire_name} -> wire_name
-      :error -> raise ArgumentError, "unknown event type: #{inspect(atom)}"
-    end
+    raise ArgumentError, "unknown event type: #{inspect(atom)}"
   end
+
+  @doc """
+  The wire names every channel may subscribe to, i.e. the values of
+  `to_event_type/1`. Channels derive their `@valid_events` list from this so
+  adding an event here is what makes it subscribable everywhere.
+  """
+  @spec all() :: [String.t()]
+  def all, do: Map.values(@events)
 end

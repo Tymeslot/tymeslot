@@ -21,11 +21,13 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     # High priority for calendar sync
     priority: 1
 
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.RetryHelpers
+  alias Tymeslot.Workers.SnoozePolicy
   require Logger
 
   # Configuration
@@ -122,6 +124,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     case result do
       :ok ->
         clear_offline_queue_tag(job)
+        maybe_invalidate_availability_cache(job)
         :ok
 
       {:error, error_type} ->
@@ -175,6 +178,22 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp action_to_atom("delete"), do: :delete
   defp action_to_atom(_other), do: nil
 
+  # A successful "create" write has just added a busy block to the
+  # organiser's calendar; invalidate their availability cache so the next
+  # booking-page load reflects it immediately rather than the cached window
+  # from before the event existed. "update"/"delete" don't shift what counts
+  # as busy in a way booking-page callers observe, so this is create-only.
+  defp maybe_invalidate_availability_cache(%Oban.Job{
+         args: %{"action" => "create", "meeting_id" => meeting_id}
+       }) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} -> AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+      {:error, _reason} -> :ok
+    end
+  end
+
+  defp maybe_invalidate_availability_cache(_job), do: :ok
+
   # Group all handle_error_result/2 clauses together
   defp handle_error_result(:rate_limited, job) do
     # If provider supplied Retry-After in error message, honor it
@@ -184,8 +203,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       if is_integer(retry_after) do
         min(600, max(10, retry_after))
       else
-        # fallback heuristic
-        min(300, 60 * job.attempt)
+        # Fallback heuristic. Paced by executions rather than `job.attempt`, so
+        # a provider that keeps rate limiting is backed off further each time
+        # rather than being retried every minute forever: from Oban 2.24 a
+        # snooze no longer advances `attempt`.
+        min(300, 60 * SnoozePolicy.executions(job))
       end
 
     Logger.warning("Calendar service rate limited, snoozing",
@@ -289,7 +311,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     snooze_seconds =
       if is_integer(retry_after),
         do: min(600, max(10, retry_after)),
-        else: min(300, 60 * job.attempt)
+        else: min(300, 60 * SnoozePolicy.executions(job))
 
     Logger.warning("Calendar service rate limited, snoozing", snooze_seconds: snooze_seconds)
     {:snooze, snooze_seconds}

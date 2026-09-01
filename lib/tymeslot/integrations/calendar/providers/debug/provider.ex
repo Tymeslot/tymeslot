@@ -126,6 +126,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events_representation, do: :raw
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context) when is_list(raw_events) do
     events = Enum.map(raw_events, &normalise_event(&1, context))
     {:ok, events}

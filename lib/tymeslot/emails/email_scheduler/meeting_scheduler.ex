@@ -31,6 +31,13 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       |> Oban.insert()
 
     case result do
+      {:ok, %{conflict?: true}} ->
+        Logger.info("Confirmation email job already exists, skipping duplicate",
+          meeting_id: meeting_id
+        )
+
+        :ok
+
       {:ok, _job} ->
         Logger.info("Confirmation email job scheduled", meeting_id: meeting_id)
         :ok
@@ -214,6 +221,13 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       |> Oban.insert()
 
     case result do
+      {:ok, %{conflict?: true}} ->
+        Logger.info("Cancellation email job already exists, skipping duplicate",
+          meeting_id: meeting_id
+        )
+
+        :ok
+
       {:ok, _job} ->
         Logger.info("Cancellation email job scheduled", meeting_id: meeting_id)
         :ok

@@ -263,6 +263,31 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
 
       assert [_job] = all_enqueued(worker: EmailWorker)
     end
+
+    # The admin-alert email itself bouncing must not re-enqueue another
+    # admin-alert email to the same dead recipient: that email would bounce
+    # too, raising another :recipient_email_rejected report, forever. This is
+    # the same feedback loop as the EmailWorker case above, just reached
+    # through the recipient-rejected path instead of a permanent job failure.
+    test "a rejected admin-alert recipient is logged but never enqueues another email" do
+      assert :ok =
+               AdminAlerts.send_alert(:recipient_email_rejected, %{
+                 action: "send_admin_alert",
+                 reason_message: "ops@example.com is inactive"
+               })
+
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    test "a rejected recipient for an ordinary transactional email still enqueues an alert" do
+      assert :ok =
+               AdminAlerts.send_alert(:recipient_email_rejected, %{
+                 action: "send_booking_confirmation",
+                 meeting_id: 42
+               })
+
+      assert [_job] = all_enqueued(worker: EmailWorker)
+    end
   end
 
   describe "unknown alert types" do
