@@ -16,9 +16,17 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   own and is worth snoozing, whereas bad credentials or a missing meeting will
   fail identically on every attempt and should be discarded rather than
   consuming the queue for ten tries.
+
+  Both snoozing verdicts pace and bound themselves against how many times the
+  job has run, snoozes included, so callers pass
+  `Tymeslot.Workers.SnoozePolicy.executions/1` rather than `job.attempt`.
   """
 
   require Logger
+
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
+  alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Workers.SnoozePolicy
 
   @typedoc "A normalised failure reason."
   @type reason :: atom() | String.t() | term()
@@ -26,13 +34,26 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   @typedoc "An Oban `perform/1` return value."
   @type result :: :ok | {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
 
-  # Rate-limit snoozes grow with the attempt but never exceed five minutes;
+  # Rate-limit snoozes grow with each execution but never exceed five minutes;
   # beyond that the recovery policy is the better instrument.
   @max_rate_limit_snooze_seconds 300
   @rate_limit_snooze_step_seconds 60
 
   # A provider outage is worth waiting out at a fixed, unhurried interval.
   @service_unavailable_snooze_seconds 120
+
+  # A breaker stuck open forever (a decommissioned self-host, a revoked
+  # tenant) must not snooze the job forever with it. Ten cycles is generous
+  # relative to every caller's own `max_attempts` (5 or 10) while still
+  # guaranteeing the loop ends.
+  @max_circuit_open_snoozes 10
+
+  # Extra seconds added on top of the breaker's recovery window when
+  # snoozing, picked at random per job — same jitter `EmailWorker` and
+  # `TransactionalEmailDelivery` add to their own `:circuit_open` snooze, so a
+  # queue full of jobs snoozed during the same outage doesn't all wake in the
+  # same second and stampede the breaker's half-open probe slots.
+  @circuit_open_jitter_seconds 30
 
   # Failures that will repeat identically on every attempt, and the reason
   # recorded against the discarded job.
@@ -91,18 +112,27 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   Turns a categorised failure into the value Oban should receive.
   """
   @spec to_result(reason(), pos_integer()) :: result()
-  def to_result(:rate_limited, attempt) do
+  def to_result(:rate_limited, executions) do
     seconds =
-      min(@max_rate_limit_snooze_seconds, @rate_limit_snooze_step_seconds * attempt)
+      min(@max_rate_limit_snooze_seconds, @rate_limit_snooze_step_seconds * executions)
 
     Logger.warning("Video API rate limited, snoozing", snooze_seconds: seconds)
     {:snooze, seconds}
   end
 
-  def to_result(:service_unavailable, _attempt),
+  def to_result(:service_unavailable, _executions),
     do: {:snooze, @service_unavailable_snooze_seconds}
 
-  def to_result(reason, _attempt) when is_atom(reason) do
+  # The provider's circuit breaker is open, so every attempt made before it
+  # recovers fails instantly. Snoozing past the recovery window costs no
+  # attempt and waits the breaker out, rather than burning the job's limited
+  # retries on a call known to be refused. Bounded via `SnoozePolicy` so a
+  # breaker that never closes again does not snooze the job forever.
+  def to_result(:circuit_open, executions) do
+    circuit_open_result(executions, VideoCircuitBreaker.max_recovery_seconds())
+  end
+
+  def to_result(reason, _executions) when is_atom(reason) do
     if terminal?(reason) do
       Logger.error("Discarding video room job", reason: reason)
       {:discard, discard_reason(reason)}
@@ -112,5 +142,49 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   end
 
   # Anything unrecognised retries on the job's normal schedule.
-  def to_result(reason, _attempt), do: {:error, reason}
+  def to_result(reason, _executions), do: {:error, reason}
+
+  @doc """
+  Same as `to_result/2`, but for `:circuit_open` resolves the snooze against
+  `provider`'s own recovery window rather than the cross-provider worst case.
+
+  `provider` is whatever the caller has on hand for the record in play (an
+  atom or the string persisted on a meeting/integration row); anything that
+  does not parse to a known provider falls back to `to_result/2`'s
+  cross-provider window. Every other reason behaves exactly like `to_result/2`.
+  """
+  @spec to_result(reason(), pos_integer(), atom() | String.t()) :: result()
+  def to_result(:circuit_open, executions, provider) do
+    case ProviderConfig.parse_known(provider) do
+      {:ok, provider_atom} when provider_atom != :none ->
+        recovery_seconds =
+          div(VideoCircuitBreaker.get_config(provider_atom).recovery_timeout, 1000)
+
+        circuit_open_result(executions, recovery_seconds)
+
+      _unknown ->
+        to_result(:circuit_open, executions)
+    end
+  end
+
+  def to_result(reason, executions, _provider), do: to_result(reason, executions)
+
+  defp circuit_open_result(executions, recovery_seconds) do
+    case SnoozePolicy.snooze_or_exhaust(executions,
+           max_snoozes: @max_circuit_open_snoozes,
+           base_seconds: recovery_seconds,
+           jitter_seconds: @circuit_open_jitter_seconds
+         ) do
+      {:snooze, snooze_seconds} ->
+        Logger.warning("Video circuit breaker open, snoozing past the recovery window",
+          snooze_seconds: snooze_seconds
+        )
+
+        {:snooze, snooze_seconds}
+
+      :exhausted ->
+        Logger.error("Video circuit breaker still open after repeated snoozes, discarding")
+        {:discard, "Video provider unavailable — circuit breaker still open"}
+    end
+  end
 end

@@ -11,9 +11,9 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   alias Phoenix.Component
   alias Phoenix.LiveView
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
@@ -279,7 +279,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
            preserve_timezone: true
          ) do
       {:ok, profile} ->
-        booking_url = "#{Policy.app_url()}/#{profile.username || ""}"
+        booking_url = UrlBuilder.booking_url(profile.username)
 
         socket =
           socket

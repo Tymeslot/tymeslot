@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Providers.Families
 
   describe "caldav_based_provider_strings/0" do
     test "returns the caldav-based provider list as strings" do
@@ -24,6 +25,86 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
 
     test "all elements are binaries (database string shape)" do
       assert Enum.all?(ProviderConfig.caldav_based_provider_strings(), &is_binary/1)
+    end
+  end
+
+  describe "family predicates" do
+    test "every predicate answers identically for the atom and the string form" do
+      providers = ProviderConfig.provider_constraint_list()
+      assert providers != []
+
+      disagreeing =
+        Enum.reject(providers, fn string ->
+          {:ok, atom} = ProviderConfig.parse_known(string)
+
+          ProviderConfig.family_of(atom) == ProviderConfig.family_of(string) and
+            ProviderConfig.oauth_provider?(atom) == ProviderConfig.oauth_provider?(string) and
+            ProviderConfig.caldav_based?(atom) == ProviderConfig.caldav_based?(string) and
+            ProviderConfig.subscription?(atom) == ProviderConfig.subscription?(string)
+        end)
+
+      assert disagreeing == [],
+             "these providers get different answers as an atom than as a string: " <>
+               inspect(disagreeing)
+    end
+
+    test "caldav_based?/1 recognises the string form the database column carries" do
+      assert ProviderConfig.caldav_based?("caldav")
+      assert ProviderConfig.caldav_based?("nextcloud")
+      refute ProviderConfig.caldav_based?("ics_url")
+      refute ProviderConfig.caldav_based?("google")
+    end
+
+    test "oauth_provider?/1 recognises the string form the database column carries" do
+      assert ProviderConfig.oauth_provider?("google")
+      assert ProviderConfig.oauth_provider?("outlook")
+      refute ProviderConfig.oauth_provider?("caldav")
+    end
+
+    test "subscription?/1 recognises both forms" do
+      assert ProviderConfig.subscription?(:ics_url)
+      assert ProviderConfig.subscription?("ics_url")
+      refute ProviderConfig.subscription?("caldav")
+    end
+
+    test "family_of/1 files each provider under the family that describes it" do
+      assert ProviderConfig.family_of(:google) == :oauth
+      assert ProviderConfig.family_of(:baikal) == :caldav
+      assert ProviderConfig.family_of(:ics_url) == :subscription
+      assert ProviderConfig.family_of(:demo) == :other
+    end
+
+    test "every known provider is filed under a family in the shared vocabulary" do
+      providers = ProviderConfig.provider_constraint_list()
+      assert providers != []
+
+      unfiled = Enum.reject(providers, &(ProviderConfig.family_of(&1) in Families.all()))
+
+      assert unfiled == []
+    end
+
+    test "anything that is not a provider is :other and in no family" do
+      for value <- [:totally_unknown_atom, "totally_unknown_string_xyzzy", nil, 42] do
+        assert ProviderConfig.family_of(value) == :other
+        refute ProviderConfig.oauth_provider?(value)
+        refute ProviderConfig.caldav_based?(value)
+        refute ProviderConfig.subscription?(value)
+      end
+    end
+
+    test "in_family?/2 is the general form the named predicates spell out" do
+      assert ProviderConfig.in_family?("apple", :caldav)
+      refute ProviderConfig.in_family?("apple", :oauth)
+    end
+
+    test "the string list accessors hold exactly the providers their predicate accepts" do
+      providers = ProviderConfig.provider_constraint_list()
+
+      assert Enum.filter(providers, &ProviderConfig.caldav_based?/1) ==
+               ProviderConfig.caldav_based_provider_strings()
+
+      assert Enum.filter(providers, &ProviderConfig.subscription?/1) ==
+               ProviderConfig.subscription_provider_strings()
     end
   end
 
@@ -223,7 +304,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
     test "is kept out of the lists that build a CalDAV client" do
       refute :exchange in ProviderConfig.caldav_based_providers()
       refute "exchange" in ProviderConfig.caldav_based_provider_strings()
-      refute :exchange in ProviderConfig.subscription_providers()
+      refute "exchange" in ProviderConfig.subscription_provider_strings()
       refute :exchange in ProviderConfig.oauth_providers()
     end
 

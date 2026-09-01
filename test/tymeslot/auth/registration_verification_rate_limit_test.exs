@@ -22,9 +22,11 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   @moduletag :auth
   @moduletag :security
 
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.{Registration, UserQueries}
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LogCapture
 
   @client_ip {203, 0, 113, 50}
   @client_ip_string "203.0.113.50"
@@ -78,6 +80,25 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
     assert message =~ "resend"
   end
 
+  test "a refused verification email is recorded as a rate-limit audit entry" do
+    exhaust_verification_allowance()
+
+    # SecurityLogger emits at :info; config/test.exs pins the primary level to
+    # :warning, so lower it for the duration of the call.
+    LogCapture.with_capture([logger_level: :info], fn ->
+      assert {:error, :rate_limited, _message} =
+               Registration.register_user(signup_params("audited@example.com"), conn())
+    end)
+
+    assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
+
+    assert meta.limit_type == "email_verification"
+    assert meta.ip_address == @client_ip_string
+
+    assert {:ok, user} = UserQueries.get_user_by_email("audited@example.com")
+    assert meta.user_id == user.id
+  end
+
   test "the account is left complete, not stranded without a profile" do
     exhaust_verification_allowance()
 
@@ -91,7 +112,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   test "the registration broadcast still fires so downstream listeners record the signup" do
     # SaaS' LegalAcceptanceListener records the accepted terms off this event;
     # skipping it because an email could not be sent loses that record.
-    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, "auth:user_registered")
+    :ok = Auth.subscribe_to_user_registrations()
     exhaust_verification_allowance()
 
     assert {:error, :rate_limited, _message} =

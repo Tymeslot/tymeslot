@@ -100,6 +100,59 @@ defmodule Tymeslot.Integrations.Calendar.Ics.FeedTest do
                Feed.fetch_events("https://feeds.example.com/calendar.ics")
     end
 
+    test "follows its full two-hop redirect budget" do
+      # Three requests: the feed URL, one hop, and a second hop that answers.
+      stub_redirect_chain(2)
+
+      assert {:ok, [_first, _second]} =
+               Feed.fetch_events("https://feeds.example.com/hop/0")
+    end
+
+    test "refuses the hop one past the budget even when it would have answered" do
+      # Identical to the test above but with the calendar one hop further away,
+      # so the only thing standing between the fetch and a valid feed is the
+      # two-hop budget.
+      stub_redirect_chain(3)
+
+      assert {:error, :too_many_redirects} =
+               Feed.fetch_events("https://feeds.example.com/hop/0")
+    end
+
+    test "follows a hop that stays on plain http" do
+      # The feed fetcher deliberately does not enforce HTTPS: SSRF is handled
+      # by the guard inside `HTTPClient`, and self-hosters publish feeds over
+      # http on internal networks. Tightening the shared hop resolver to https
+      # would break them silently.
+      stub_sequential(
+        fn conn ->
+          conn
+          |> Conn.put_resp_header("location", "http://cdn.example.com/real.ics")
+          |> Conn.send_resp(302, "")
+        end,
+        fn conn ->
+          assert conn.scheme == :http
+          Conn.send_resp(conn, 200, @ics)
+        end
+      )
+
+      assert {:ok, [_first, _second]} =
+               Feed.fetch_events("https://feeds.example.com/calendar.ics")
+    end
+
+    test "reports a hop pointing at a non-http scheme as the status it was" do
+      stub_sequential(
+        fn conn ->
+          conn
+          |> Conn.put_resp_header("location", "ftp://files.example.com/real.ics")
+          |> Conn.send_resp(302, "")
+        end,
+        fn conn -> flunk("an ftp Location must never be fetched, got #{conn.request_path}") end
+      )
+
+      assert {:error, {:http_status, 302}} =
+               Feed.fetch_events("https://feeds.example.com/hop/0")
+    end
+
     test "gives up rather than following a redirect loop" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         conn
@@ -169,5 +222,22 @@ defmodule Tymeslot.Integrations.Calendar.Ics.FeedTest do
 
       assert Enum.uniq(messages) == messages
     end
+  end
+
+  # Serves `hops` redirects at /hop/0../hop/<hops-1> and the calendar itself at
+  # /hop/<hops>, so a budget that is one too small never reaches the feed and
+  # one too large reaches it a hop early.
+  defp stub_redirect_chain(hops) do
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      n = conn.request_path |> String.split("/") |> List.last() |> String.to_integer()
+
+      if n >= hops do
+        Conn.send_resp(conn, 200, @ics)
+      else
+        conn
+        |> Conn.put_resp_header("location", "https://feeds.example.com/hop/#{n + 1}")
+        |> Conn.send_resp(302, "")
+      end
+    end)
   end
 end

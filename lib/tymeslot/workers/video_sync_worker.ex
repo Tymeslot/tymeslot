@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.IntegrationResolver
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.VideoRoom.ErrorPolicy
 
   require Logger
 
@@ -75,7 +76,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        dispatch(action, meeting)
+        dispatch(action, meeting, attempt)
 
       {:error, :not_found} ->
         Logger.info("Meeting gone before video sync, discarding", meeting_id: meeting_id)
@@ -86,17 +87,17 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # Clause order matters: a meeting with no room at all is an ordinary no-op and
   # stays silent, whereas a meeting that holds a room nothing can reach is a
   # problem worth surfacing. Testing for the room first keeps the two apart.
-  defp dispatch(_action, %{video_room_id: nil}), do: discard_no_room()
-  defp dispatch(_action, %{organizer_user_id: nil}), do: discard_no_room()
+  defp dispatch(_action, %{video_room_id: nil}, _attempt), do: discard_no_room()
+  defp dispatch(_action, %{organizer_user_id: nil}, _attempt), do: discard_no_room()
 
-  defp dispatch(action, meeting) do
+  defp dispatch(action, meeting, attempt) do
     case IntegrationResolver.resolve_for_meeting(meeting) do
-      {:ok, integration_id} -> perform_action(action, meeting, integration_id)
+      {:ok, integration_id} -> perform_action(action, meeting, integration_id, attempt)
       {:error, reason} -> discard_unreachable(meeting, action, reason)
     end
   end
 
-  defp perform_action("update", meeting, integration_id) do
+  defp perform_action("update", meeting, integration_id, attempt) do
     result =
       Video.update_meeting_room(meeting.organizer_user_id,
         integration_id: integration_id,
@@ -106,17 +107,17 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         end_time: meeting.end_time
       )
 
-    handle_result(result, "update", meeting)
+    handle_result(result, "update", meeting, attempt)
   end
 
-  defp perform_action("delete", meeting, integration_id) do
+  defp perform_action("delete", meeting, integration_id, attempt) do
     result =
       Video.delete_meeting_room(meeting.organizer_user_id,
         integration_id: integration_id,
         room_id: meeting.video_room_id
       )
 
-    handle_result(result, "delete", meeting)
+    handle_result(result, "delete", meeting, attempt)
   end
 
   defp discard_no_room, do: {:discard, "No provider video room to sync"}
@@ -147,11 +148,11 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # holding a room id" mean "cleanup has not happened yet", which
   # `Tymeslot.Workers.OrphanedVideoRoomScanWorker` relies on to converge instead
   # of re-deleting every cancelled meeting's room nightly.
-  defp handle_result(:ok, "delete", meeting), do: clear_video_room(meeting)
+  defp handle_result(:ok, "delete", meeting, _attempt), do: clear_video_room(meeting)
 
-  defp handle_result(:ok, _action, _meeting), do: :ok
+  defp handle_result(:ok, _action, _meeting, _attempt), do: :ok
 
-  defp handle_result({:error, :meeting_not_found}, action, meeting) do
+  defp handle_result({:error, :meeting_not_found}, action, meeting, _attempt) do
     Logger.info("Provider video meeting already gone, treating as synced",
       meeting_id: meeting.id,
       action: action
@@ -164,7 +165,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # user reconnecting can fix that, and the provider has already flagged the
   # integration for reauth, so retrying would just replay a guaranteed failure
   # until the job exhausts its attempts and pages an admin.
-  defp handle_result({:error, :insufficient_scope}, action, meeting) do
+  defp handle_result({:error, :insufficient_scope}, action, meeting, _attempt) do
     Logger.error("Video provider scope insufficient, discarding job",
       meeting_id: meeting.id,
       action: action
@@ -173,7 +174,15 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     {:discard, "Video provider scope insufficient — reconnect required"}
   end
 
-  defp handle_result({:error, reason}, action, meeting) do
+  # The provider's circuit breaker is open: every attempt made before it
+  # recovers is refused instantly. Snooze past the recovery window, the same
+  # policy `VideoRoomWorker` already applies, rather than burning one of this
+  # job's five attempts on a call known to be refused.
+  defp handle_result({:error, :circuit_open}, _action, meeting, attempt) do
+    ErrorPolicy.to_result(:circuit_open, attempt, meeting.video_provider)
+  end
+
+  defp handle_result({:error, reason}, action, meeting, _attempt) do
     Logger.warning("Provider video sync failed, will retry",
       meeting_id: meeting.id,
       action: action,

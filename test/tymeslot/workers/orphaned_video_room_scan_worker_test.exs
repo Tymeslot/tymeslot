@@ -5,7 +5,7 @@ defmodule Tymeslot.Workers.OrphanedVideoRoomScanWorkerTest do
   that predate the fallback resolution.
   """
 
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :workers

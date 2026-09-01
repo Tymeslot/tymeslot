@@ -3,10 +3,14 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   Performs regular maintenance on Oban jobs:
 
   1. Cleans up stuck jobs in "executing" state
-  2. Deletes old failed/discarded jobs after 90 days
-  3. Provides metrics and logging for job health monitoring
+  2. Provides metrics and logging for job health monitoring
 
   This worker runs every 30 minutes to ensure job queue health.
+
+  Terminal-job retention (completed/discarded/cancelled) is handled by
+  `Oban.Plugins.Pruner`, not here: its `max_age` is a week in every
+  environment, so a second sweep with a longer window would never find
+  anything left to delete.
   """
 
   use Oban.Worker,
@@ -18,27 +22,21 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
 
   require Logger
 
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
 
   @stuck_job_threshold_hours 4
-  @old_job_retention_days 90
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     Logger.info("Starting Oban maintenance", args: args)
 
-    with {:ok, stuck_count} <- cleanup_stuck_jobs(),
-         {:ok, deleted_count} <- delete_old_jobs() do
-      Logger.info("Oban maintenance completed",
-        stuck_jobs_cleaned: stuck_count,
-        old_jobs_deleted: deleted_count
-      )
+    {:ok, stuck_count} = cleanup_stuck_jobs()
+    Logger.info("Oban maintenance completed", stuck_jobs_cleaned: stuck_count)
 
-      # Schedule next run
-      schedule_next_run()
+    # Schedule next run
+    schedule_next_run()
 
-      {:ok, %{stuck_cleaned: stuck_count, old_deleted: deleted_count}}
-    end
+    {:ok, %{stuck_cleaned: stuck_count}}
   end
 
   @doc """
@@ -58,8 +56,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   @spec start_if_not_scheduled() :: :ok | {:ok, Oban.Job.t()} | {:error, term()}
   def start_if_not_scheduled do
     # Check if a maintenance job is already scheduled
-    scheduled_count =
-      ObanJobQueries.count_active_maintenance_jobs("Tymeslot.Workers.ObanMaintenanceWorker")
+    scheduled_count = Jobs.count_active_maintenance_jobs(__MODULE__)
 
     if scheduled_count == 0 do
       Logger.info("Scheduling initial Oban maintenance job")
@@ -73,7 +70,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     threshold = DateTime.add(DateTime.utc_now(), -@stuck_job_threshold_hours, :hour)
 
     # Find stuck executing jobs
-    stuck_jobs = ObanJobQueries.get_stuck_executing_jobs(threshold)
+    stuck_jobs = Jobs.get_stuck_executing_jobs(threshold)
 
     # Clean up each stuck job
     cleaned_count =
@@ -127,24 +124,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     }
 
     # Update the job to discarded state
-    ObanJobQueries.update_job_to_discarded(job, error_info)
-  end
-
-  defp delete_old_jobs do
-    cutoff_date = DateTime.add(DateTime.utc_now(), -@old_job_retention_days, :day)
-
-    # Delete old completed, discarded, and cancelled jobs
-    {deleted_count, _value} = ObanJobQueries.delete_old_terminal_jobs(cutoff_date)
-
-    if deleted_count > 0 do
-      Logger.info("Deleted old jobs",
-        count: deleted_count,
-        retention_days: @old_job_retention_days,
-        states: ["completed", "discarded", "cancelled"]
-      )
-    end
-
-    {:ok, deleted_count}
+    Jobs.update_job_to_discarded(job, error_info)
   end
 
   defp format_duration(seconds) when seconds < 3600 do

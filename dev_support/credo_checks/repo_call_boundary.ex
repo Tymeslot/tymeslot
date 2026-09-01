@@ -1,6 +1,7 @@
 defmodule CredoChecks.RepoCallBoundary do
   @moduledoc """
-  Flags direct `Repo.*` calls outside of `*_queries.ex` and `*_schema.ex` files.
+  Flags direct `Repo.*` calls outside of `*_queries.ex` files and `*_schema.ex`
+  files that `use Ecto.Schema`.
 
   Query and mutation logic belongs in dedicated query modules or schemas — not
   in contexts, workers, LiveViews, or other orchestration modules. This check
@@ -16,7 +17,9 @@ defmodule CredoChecks.RepoCallBoundary do
 
   ## Excluded files
 
-  - `*_queries.ex` and `*_schema.ex` — query and schema modules
+  - `*_queries.ex` files — query modules
+  - `*_schema.ex` files that `use Ecto.Schema` — schema modules; the filename
+    suffix alone does not earn the exemption
   - Files under `/test/` — test files
   - Files under `/migrations/` or `/priv/repo/migrations/`
   - `repo.ex` itself
@@ -47,8 +50,9 @@ defmodule CredoChecks.RepoCallBoundary do
     category: :design,
     explanations: [
       check: """
-      Direct Repo calls should be confined to `*_queries.ex` and `*_schema.ex`
-      files. Move query and mutation logic to a dedicated queries module.
+      Direct Repo calls should be confined to `*_queries.ex` files and
+      `*_schema.ex` files that `use Ecto.Schema`. Move query and mutation
+      logic to a dedicated queries module.
 
       `Repo.transaction`, `Repo.rollback`, and `Repo.preload` are allowed
       everywhere as they are orchestration concerns, not query logic.
@@ -58,26 +62,11 @@ defmodule CredoChecks.RepoCallBoundary do
   alias Credo.IssueMeta
   alias Credo.SourceFile
 
-  @flagged_functions [
-    :get,
-    :get!,
-    :get_by,
-    :get_by!,
-    :one,
-    :one!,
-    :all,
-    :exists?,
-    :insert,
-    :insert!,
-    :update,
-    :update!,
-    :delete,
-    :delete!,
-    :insert_all,
-    :update_all,
-    :delete_all,
-    :aggregate
-  ]
+  # Everything except these three orchestration concerns is a query/mutation
+  # call and must live in a `*_queries.ex` or `*_schema.ex` file. This is an
+  # allowlist, not a denylist, so a newly-called `Repo.*` function is flagged
+  # by default rather than silently passing until someone remembers to list it.
+  @allowed_functions [:transaction, :rollback, :preload]
 
   @doc false
   @impl Credo.Check
@@ -85,7 +74,7 @@ defmodule CredoChecks.RepoCallBoundary do
   def run(%SourceFile{} = source_file, params) do
     filename = source_file.filename
 
-    if excluded?(filename) do
+    if excluded?(filename, source_file) do
       []
     else
       issue_meta = IssueMeta.for(source_file, params)
@@ -119,6 +108,11 @@ defmodule CredoChecks.RepoCallBoundary do
 
   defp collect_alias(ast, acc), do: {ast, acc}
 
+  # `Ecto.Repo` itself is the behaviour, never an app repo the codebase calls
+  # queries on directly; the only place it appears is `Ecto.Repo.t()` in a
+  # `@spec`, which is a type reference, not a call to flag.
+  defp repo_module?([:Ecto, :Repo]), do: false
+
   # A module reference points at a repo when its last segment ends in "Repo"
   # (e.g. `Repo`, `Tymeslot.SaasRepo`).
   defp repo_module?(parts) when is_list(parts) do
@@ -130,15 +124,28 @@ defmodule CredoChecks.RepoCallBoundary do
 
   defp repo_module?(_other), do: false
 
-  defp excluded?(filename) do
+  defp excluded?(filename, source_file) do
     basename = Path.basename(filename)
 
     String.ends_with?(basename, "_queries.ex") or
-      String.ends_with?(basename, "_schema.ex") or
+      schema_file?(basename, source_file) or
       basename == "repo.ex" or
       test_file?(filename) or
       migration_file?(filename) or
       String.contains?(filename, "/deps/")
+  end
+
+  # The `_schema.ex` suffix earns the exemption only when the file really is an
+  # Ecto schema. Keying on the name alone let any module named that way opt out
+  # of the boundary by filename, with nothing to warn a reader that it had.
+  #
+  # The source is stripped of strings, sigils and heredocs first so a `use
+  # Ecto.Schema` mentioned inside a `@moduledoc` (or any other string/heredoc)
+  # doesn't grant the exemption to a module that never actually uses it.
+  defp schema_file?(basename, source_file) do
+    String.ends_with?(basename, "_schema.ex") and
+      Credo.Code.clean_charlists_strings_and_sigils(source_file) =~
+        ~r/^\s*use\s+Ecto\.Schema\b/m
   end
 
   defp test_file?(filename) do
@@ -161,14 +168,14 @@ defmodule CredoChecks.RepoCallBoundary do
          issue_meta,
          repo_aliases
        ) do
-    if func_name in @flagged_functions and repo_reference?(aliases, repo_aliases) do
+    if func_name not in @allowed_functions and repo_reference?(aliases, repo_aliases) do
       module_prefix = aliases |> Enum.map(&Atom.to_string/1) |> Enum.join(".")
 
       issue =
         format_issue(issue_meta,
           message:
             "`#{module_prefix}.#{func_name}` should only be called from " <>
-              "`*_queries.ex` or `*_schema.ex` files.",
+              "`*_queries.ex` files or `*_schema.ex` files that `use Ecto.Schema`.",
           line_no: meta[:line],
           trigger: "#{module_prefix}.#{func_name}"
         )

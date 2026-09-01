@@ -16,7 +16,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.TestMocks
 
-  import Tymeslot.MeetingTestHelpers
+  import Tymeslot.AvailabilityTestHelpers
 
   setup do
     TestMocks.setup_all_mocks()
@@ -68,7 +68,9 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
   describe "account-wide limits" do
     test "daily cap blocks the booking once reached, whatever the type" do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_day: 1})
+      %{user: user} =
+        create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_day: 1})
+
       other_type = insert(:meeting_type, user: user)
       existing_booking(user, target_date(), ~T[10:00:00], %{meeting_type_id: other_type.id})
 
@@ -77,14 +79,17 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
     end
 
     test "a different day is unaffected by the daily cap" do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_day: 1})
+      %{user: user} =
+        create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_day: 1})
+
       existing_booking(user, Date.add(target_date(), 1), ~T[10:00:00])
 
       assert {:ok, _meeting} = Create.execute(booking_params(user), form_data(), @opts)
     end
 
     test "weekly cap blocks any other day of the same Monday-week" do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_week: 1})
+      %{user: user} =
+        create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_week: 1})
 
       # A Monday at least 3 days out, so the whole week is bookable.
       days_to_monday = rem(8 - Date.day_of_week(Date.utc_today()), 7)
@@ -109,7 +114,8 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
     end
 
     test "monthly cap counts bookings anywhere in the enclosing month" do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_month: 1})
+      %{user: user} =
+        create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_month: 1})
 
       next_month_first =
         Date.utc_today() |> Date.end_of_month() |> Date.add(1)
@@ -127,7 +133,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
   describe "per-meeting-type limits" do
     test "daily cap on the type blocks further bookings of that type" do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC"})
+      %{user: user} = create_always_bookable_profile(timezone: "Etc/UTC")
       type = insert(:meeting_type, user: user, max_bookings_per_day: 1)
       existing_booking(user, target_date(), ~T[10:00:00], %{meeting_type_id: type.id})
 
@@ -140,7 +146,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
     end
 
     test "bookings of other types don't count toward the type's cap" do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC"})
+      %{user: user} = create_always_bookable_profile(timezone: "Etc/UTC")
       type = insert(:meeting_type, user: user, max_bookings_per_day: 1)
       other_type = insert(:meeting_type, user: user)
       existing_booking(user, target_date(), ~T[10:00:00], %{meeting_type_id: other_type.id})
@@ -156,7 +162,9 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
   describe "which bookings count" do
     setup do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_day: 1})
+      %{user: user} =
+        create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_day: 1})
+
       %{user: user}
     end
 
@@ -187,7 +195,10 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       # At UTC+12, 20:00 UTC belongs to the NEXT host day while 10:00 UTC
       # belongs to the current one — the daily cap must not conflate them.
       %{user: user} =
-        create_user_with_profile(%{timezone: "Etc/GMT-12", max_bookings_per_day: 1})
+        create_always_bookable_profile(
+          timezone: "Etc/GMT-12",
+          profile: %{max_bookings_per_day: 1}
+        )
 
       existing_booking(user, target_date(), ~T[20:00:00])
 
@@ -201,7 +212,9 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
   describe "host-created ad-hoc bookings" do
     test "bypass the caps entirely" do
-      %{user: user} = create_user_with_profile(%{timezone: "Etc/UTC", max_bookings_per_day: 1})
+      %{user: user} =
+        create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_day: 1})
+
       existing_booking(user, target_date(), ~T[10:00:00])
 
       start_time = DateTime.new!(target_date(), ~T[15:00:00], "Etc/UTC")

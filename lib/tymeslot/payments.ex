@@ -9,8 +9,9 @@ defmodule Tymeslot.Payments do
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   alias Tymeslot.Payments.{
+    CustomerLookup,
     DatabaseOperations,
-    PaymentQueries,
+    PubSub,
     SubscriptionFlow,
     SubscriptionInvoice,
     SubscriptionInvoices,
@@ -35,21 +36,6 @@ defmodule Tymeslot.Payments do
   def process_failed_payment(stripe_id) do
     Logger.info("Processing failed payment", stripe_id: stripe_id)
     DatabaseOperations.process_failed_payment(stripe_id)
-  end
-
-  @doc """
-  Retrieves a transaction by its Stripe ID.
-
-  ## Parameters
-    * stripe_id - The Stripe session ID
-
-  ## Returns
-    * `{:ok, transaction}` - If the transaction is found
-    * `{:error, :transaction_not_found}` - If no transaction is found
-  """
-  @spec get_transaction(stripe_id()) :: {:ok, transaction()} | {:error, :transaction_not_found}
-  def get_transaction(stripe_id) do
-    PaymentQueries.get_transaction_by_stripe_id(stripe_id)
   end
 
   @doc """
@@ -204,4 +190,48 @@ defmodule Tymeslot.Payments do
       metadata
     )
   end
+
+  @doc """
+  Reads a user id out of Stripe metadata, which carries it as a string.
+
+  Returns `nil` for anything that is not a whole number, so a malformed or
+  absent value never becomes a wrong user.
+  """
+  @spec parse_user_id(any()) :: integer() | nil
+  defdelegate parse_user_id(id), to: CustomerLookup
+
+  @doc """
+  Records a checkout session's outcome against its transaction row, attaching
+  the subscription it produced.
+  """
+  @spec update_transaction_for_subscription(String.t(), String.t(), String.t(), map()) ::
+          {:ok, transaction()} | {:error, term()}
+  defdelegate update_transaction_for_subscription(
+                checkout_session_id,
+                subscription_id,
+                status,
+                metadata
+              ),
+              to: DatabaseOperations
+
+  @doc """
+  Broadcasts a subscription lifecycle event to the payment-events topic.
+  """
+  @spec broadcast_subscription_event(%{
+          required(:event) => atom(),
+          required(:user_id) => integer(),
+          optional(atom()) => term()
+        }) :: :ok
+  defdelegate broadcast_subscription_event(event_data), to: PubSub
+
+  @doc """
+  Subscribes the calling process to payment lifecycle events.
+
+  Every subscription, dispute, refund and trial event the payment webhooks
+  produce arrives as a message in the caller's mailbox. Returns
+  `{:error, reason}` rather than raising when no PubSub server is running, so a
+  supervised listener can start regardless.
+  """
+  @spec subscribe_to_payment_events() :: :ok | {:error, term()}
+  defdelegate subscribe_to_payment_events, to: PubSub
 end

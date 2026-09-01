@@ -8,6 +8,7 @@ defmodule Tymeslot.WebhooksTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Webhooks
+  alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
 
   # WebhookSchema.generate_secure_token/0: "ts_" plus 24 random bytes in
@@ -17,39 +18,6 @@ defmodule Tymeslot.WebhooksTest do
   setup do
     setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
     :ok
-  end
-
-  # ============================================================================
-  # SSRF Protection (existing tests)
-  # ============================================================================
-
-  describe "test_webhook_connection/2 - SSRF protection" do
-    setup do
-      setup_config(:tymeslot, :environment, :prod)
-      :ok
-    end
-
-    test "blocks requests to private IP addresses in production" do
-      assert {:error, message} = Webhooks.test_webhook_connection("https://192.168.1.1/webhook")
-      assert message =~ "Private"
-    end
-
-    test "blocks requests to localhost in production" do
-      assert {:error, message} = Webhooks.test_webhook_connection("https://localhost/webhook")
-      assert message =~ "Private"
-    end
-
-    test "blocks HTTP URLs in production" do
-      assert {:error, message} =
-               Webhooks.test_webhook_connection("http://example.com/webhook")
-
-      assert message =~ "HTTPS"
-    end
-
-    test "blocks requests to loopback address in production" do
-      assert {:error, message} = Webhooks.test_webhook_connection("https://127.0.0.1/webhook")
-      assert message =~ "Private"
-    end
   end
 
   # ============================================================================
@@ -328,6 +296,38 @@ defmodule Tymeslot.WebhooksTest do
       {:ok, active_again} = Webhooks.toggle_webhook(inactive)
       assert active_again.is_active == true
     end
+
+    # `record_delivery_failure/2` auto-disables past the failure threshold
+    # and stamps `disabled_at`/`disabled_reason`. Re-enabling that webhook
+    # through the same toggle a manual on/off uses must reset the failure
+    # bookkeeping too, or the very next failed delivery immediately
+    # auto-disables it again (one strike instead of a fresh threshold).
+    test "re-enabling an auto-disabled webhook resets failure bookkeeping" do
+      user = insert(:user)
+
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Auto-disabled",
+          url: "https://example.com/hook",
+          events: ["meeting.created"]
+        })
+
+      disabled =
+        Enum.reduce(1..WebhookSchema.max_failure_count(), webhook, fn _i, acc ->
+          {:ok, updated} = Webhooks.record_delivery_failure(acc, "HTTP 500")
+          updated
+        end)
+
+      assert disabled.is_active == false
+      assert disabled.disabled_at
+      assert disabled.disabled_reason
+
+      assert {:ok, reenabled} = Webhooks.toggle_webhook(disabled)
+      assert reenabled.is_active == true
+      assert reenabled.disabled_at == nil
+      assert reenabled.disabled_reason == nil
+      assert reenabled.failure_count == 0
+    end
   end
 
   describe "delete_webhook/1" do
@@ -343,42 +343,6 @@ defmodule Tymeslot.WebhooksTest do
 
       assert {:ok, _webhook} = Webhooks.delete_webhook(webhook)
       assert {:error, :not_found} = Webhooks.get_webhook(webhook.id, user.id)
-    end
-  end
-
-  # ============================================================================
-  # Validation
-  # ============================================================================
-
-  describe "validate_webhook_url/1" do
-    test "accepts valid HTTPS URL" do
-      assert :ok = Webhooks.validate_webhook_url("https://example.com/webhook")
-    end
-
-    test "accepts HTTP URL in non-production" do
-      assert :ok = Webhooks.validate_webhook_url("http://example.com/webhook")
-    end
-
-    test "accepts localhost in non-production" do
-      assert :ok = Webhooks.validate_webhook_url("http://localhost:4000/webhook")
-    end
-
-    test "rejects URL without protocol" do
-      assert {:error, _reason} = Webhooks.validate_webhook_url("example.com/webhook")
-    end
-
-    test "rejects HTTP URL in production" do
-      setup_config(:tymeslot, :environment, :prod)
-
-      assert {:error, message} = Webhooks.validate_webhook_url("http://example.com/webhook")
-      assert message =~ "HTTPS"
-    end
-
-    test "rejects private URLs in production" do
-      setup_config(:tymeslot, :environment, :prod)
-
-      assert {:error, message} = Webhooks.validate_webhook_url("https://192.168.1.1/webhook")
-      assert message =~ "Private"
     end
   end
 

@@ -245,6 +245,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
                  element to the JS hook and stops LiveView patching its data-* after
                  mount, so a same-id reschedule would otherwise count toward the old
                  time. A changed start → new id → the hook remounts with fresh data. --%>
+            <% templates = countdown_templates() %>
             <time
               id={"agenda-countdown-#{@entry.id}-#{DateTime.to_unix(@entry.start_at)}"}
               phx-hook="AgendaCountdown"
@@ -252,6 +253,10 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
               data-start={DateTime.to_iso8601(@entry.start_at)}
               data-end={DateTime.to_iso8601(@entry.end_at)}
               data-join={@entry.join_url && "agenda-cockpit-join-#{@entry.id}"}
+              data-tpl-now={templates.now}
+              data-tpl-minutes={templates.minutes}
+              data-tpl-hours={templates.hours}
+              data-tpl-days={templates.days}
               class="text-token-4xl font-black tabular-nums leading-none"
             >{relative_hint(@entry)}</time>
             <a

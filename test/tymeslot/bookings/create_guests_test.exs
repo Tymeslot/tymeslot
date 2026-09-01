@@ -13,6 +13,8 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings
 
+  import Tymeslot.AvailabilityTestHelpers
+
   setup do
     # The booking path asks the calendar module for the meeting type's
     # destination; these tests have no calendar integration, so stub it away.
@@ -24,8 +26,9 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
   end
 
   defp booking_setup(meeting_type_attrs) do
-    user = insert(:user)
-    insert(:profile, user: user)
+    # Guests are the subject here, so the host offers every hour of every day
+    # and the schedule never refuses the booking.
+    %{user: user} = create_always_bookable_profile(timezone: "America/New_York")
     meeting_type = insert(:meeting_type, Keyword.put(meeting_type_attrs, :user, user))
 
     meeting_params = %{

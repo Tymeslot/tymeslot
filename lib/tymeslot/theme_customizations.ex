@@ -30,10 +30,6 @@ defmodule Tymeslot.ThemeCustomizations do
   @type customization_input :: ThemeCustomizationSchema.t() | map() | nil
   @type upload_attrs :: %{path: String.t(), filename: String.t()}
   @type persistence_result :: {:ok, ThemeCustomizationSchema.t()} | {:error, Changeset.t()}
-  @type cleanup_entry :: %{
-          optional(:background_image_path) => String.t() | nil,
-          optional(:background_video_path) => String.t() | nil
-        }
 
   @doc """
   Gets a theme customization by profile ID and theme ID.
@@ -293,17 +289,6 @@ defmodule Tymeslot.ThemeCustomizations do
     end
   end
 
-  # Backward-compatible wrapper (to be removed after callers migrate)
-  @spec apply_color_scheme_change(map(), String.t() | atom()) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
-  def apply_color_scheme_change(socket_assigns, scheme_id) do
-    profile_id = socket_assigns.profile.id
-    theme_id = socket_assigns.theme_id
-    current_customization = socket_assigns.customization
-
-    apply_color_scheme_change(profile_id, theme_id, current_customization, scheme_id)
-  end
-
   @doc """
   Switches the customisation to the "custom" colour scheme and persists the seed
   hex used to derive the palette.
@@ -360,17 +345,6 @@ defmodule Tymeslot.ThemeCustomizations do
     end
   end
 
-  # Backward-compatible wrapper (to be removed after callers migrate)
-  @spec apply_background_change(map(), String.t(), String.t() | nil) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
-  def apply_background_change(socket_assigns, type, value) do
-    profile_id = socket_assigns.profile.id
-    theme_id = socket_assigns.theme_id
-    current_customization = socket_assigns.customization
-
-    apply_background_change(profile_id, theme_id, current_customization, type, value)
-  end
-
   @doc """
   Gets background description for display in the component.
   """
@@ -425,12 +399,6 @@ defmodule Tymeslot.ThemeCustomizations do
   def store_background_video(profile_id, theme_id, %{path: temp_path, filename: filename}) do
     Storage.store_background_video(profile_id, theme_id, %{path: temp_path, filename: filename})
   end
-
-  @doc """
-  Legacy cleanup function - now delegates to unified system.
-  """
-  @spec cleanup_old_backgrounds(cleanup_entry() | ThemeCustomizationSchema.t()) :: :ok
-  defdelegate cleanup_old_backgrounds(customization), to: FileLifecycle
 
   # Private functions
 

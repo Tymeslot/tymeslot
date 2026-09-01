@@ -9,6 +9,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
 
+  # Postgres advisory-lock class id for the first-integration primary-election
+  # race (see `acquire_primary_lock/1`). Advisory-lock class ids share a single
+  # namespace across the whole database connection; other allocations are
+  # `MeetingConflictQueries.@booking_limits_lock_class` (715_001) and the bare
+  # `2` in `ProviderCalendarEventQueries`.
+  @primary_lock_class 1
+
   @doc """
   Gets all active calendar integrations for a user.
   """
@@ -197,6 +204,32 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Finds an active calendar integration for a user and provider whose
+  `provider_account_id` is NULL.
+
+  This is the set the `unique_active_calendar_null_account_per_user` index
+  covers, so it is what a reactivation of a legacy row has to be checked
+  against.
+  """
+  @spec get_active_null_account_for_user(integer(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_active_null_account_for_user(user_id, provider)
+      when is_integer(user_id) and is_binary(provider) do
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and c.provider == ^provider and
+        is_nil(c.provider_account_id) and c.is_active == true
+    )
+    |> limit(1)
+    |> Repo.one()
+    |> null_account_result()
+  end
+
+  defp null_account_result(nil), do: {:error, :not_found}
+  defp null_account_result(integration), do: {:ok, integration}
+
+  @doc """
   Finds any calendar integration (active or inactive) by provider and account ID for a user.
   Used to detect inactive duplicates before creating a new row.
   """
@@ -381,13 +414,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   def toggle_active(%CalendarIntegrationSchema{} = integration) do
     if integration.is_active do
       integration
-      |> Changeset.change(%{is_active: false})
+      |> CalendarIntegrationSchema.activation_changeset(false)
       |> Repo.update()
     else
       case check_reactivation_conflict(integration) do
         :ok ->
           integration
-          |> Changeset.change(%{is_active: true})
+          |> CalendarIntegrationSchema.activation_changeset(true)
           |> Repo.update()
 
         {:error, :duplicate_account} = err ->
@@ -396,19 +429,56 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     end
   end
 
-  defp check_reactivation_conflict(%{provider_account_id: nil}), do: :ok
-
-  defp check_reactivation_conflict(%{provider_account_id: ""}), do: :ok
+  # Every uniqueness index here is predicated on `is_active = true`, so
+  # reactivating a row moves it *into* the index. A row whose account id is
+  # NULL falls under the legacy-row index on `(user_id, provider)`, and one
+  # whose account id is the empty string falls under the account index, because
+  # `''` is not NULL. Waving both through returned `:ok` for exactly the rows
+  # that contend, with no concurrency involved at all.
+  defp check_reactivation_conflict(%{provider_account_id: nil} = integration) do
+    if active_null_account_exists?(integration.user_id, integration.provider) do
+      {:error, :duplicate_account}
+    else
+      :ok
+    end
+  end
 
   defp check_reactivation_conflict(integration) do
-    case get_by_account_for_user(
-           integration.user_id,
-           integration.provider,
-           integration.provider_account_id
-         ) do
-      {:ok, _existing} -> {:error, :duplicate_account}
-      {:error, :not_found} -> :ok
+    if active_account_exists?(
+         integration.user_id,
+         integration.provider,
+         integration.provider_account_id
+       ) do
+      {:error, :duplicate_account}
+    else
+      :ok
     end
+  end
+
+  # Existence-only checks: the reactivation conflict check never needs the
+  # conflicting row's credentials, and decrypting them (as the equivalent
+  # `get_*` lookups do) can raise on a row whose ciphertext no longer decrypts
+  # under the current keyring — turning a refusal into a crash.
+  defp active_null_account_exists?(user_id, provider) do
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and c.provider == ^provider and
+        is_nil(c.provider_account_id) and c.is_active == true
+    )
+    |> Repo.exists?()
+  end
+
+  defp active_account_exists?(user_id, provider, provider_account_id) do
+    CalendarIntegrationSchema
+    |> where(
+      [c],
+      c.user_id == ^user_id and
+        c.provider == ^provider and
+        c.provider_account_id == ^provider_account_id and
+        c.is_active == true
+    )
+    |> Repo.exists?()
   end
 
   @doc """
@@ -437,6 +507,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     |> where([c], c.user_id == ^user_id)
     |> select([c], count(c.id))
     |> Repo.one() || 0
+  end
+
+  @doc """
+  Acquires a transaction-scoped Postgres advisory lock keyed on the given
+  user, so two concurrent first-integration inserts can't both observe
+  `count_for_user/1 == 1`. Must be called from inside a `Repo.transaction/1`;
+  the lock releases automatically at commit or rollback.
+  """
+  @spec acquire_primary_lock(integer()) :: :ok
+  def acquire_primary_lock(user_id) do
+    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@primary_lock_class, user_id])
+    :ok
   end
 
   @doc """

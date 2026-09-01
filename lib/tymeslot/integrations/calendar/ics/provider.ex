@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   one place this provider deliberately departs from every other one, and it is
   worth being explicit about why.
 
-  The availability path (`Runtime.EventQueries.fetch_events_from_providers/3`)
+  The availability path (`Runtime.EventFetcher.fetch_events_from_providers/3`)
   fans out over every client a user has and fails closed if any of them fails:
   one unreadable calendar means no slots are offered at all. A published feed
   has no date-range parameter, so serving that path from the network would
@@ -214,6 +214,12 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
         {:ok, events}
     end
   end
+
+  # The cache holds events that were normalised on the way in, so `list_events/2`
+  # hands back finished maps rather than feed text. `normalise_events/2` below
+  # still parses raw iCalendar, because the sync worker feeds it the feed itself.
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events_representation, do: :normalised
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context) do

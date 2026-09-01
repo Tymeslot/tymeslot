@@ -377,8 +377,8 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"min_advance_hours" => "168"})
 
-      # Value should revert to Custom button since 168 is not in onboarding presets
-      # (onboarding presets: [0, 1, 3, 6, 12, 24, 48])
+      # The custom input stays open: typing into it carries no `_preset` marker,
+      # so custom mode is left alone even when the value typed is also a preset.
       html = render(view)
       assert html =~ ~s(name="min_advance_hours")
 

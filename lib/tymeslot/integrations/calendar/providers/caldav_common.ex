@@ -19,6 +19,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
           required(:username) => String.t() | nil,
           required(:password) => String.t() | nil,
           required(:calendar_paths) => [String.t()],
+          # Carried on the client but never applied here: nothing below this
+          # module builds a TLS option from it, so CalDAV always verifies. See
+          # the field comment on `CalendarIntegrationSchema` before changing it.
           required(:verify_ssl) => boolean(),
           required(:provider) => atom()
         }

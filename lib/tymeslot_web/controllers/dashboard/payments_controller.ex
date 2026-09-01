@@ -43,11 +43,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
     end
   end
 
+  # Uses the shared boolean predicate for the yes/no decision, and only falls
+  # back to the raw `check_access/2` reason when denied, since the caller
+  # renders that reason into a specific flash message.
   defp check_connect_access(user_id) do
-    case Features.check_access(user_id, :meeting_payments) do
-      :ok -> :ok
-      {:error, :stripe_required} -> :ok
-      {:error, _reason} = error -> error
+    if Features.meeting_payments_allowed?(user_id) do
+      :ok
+    else
+      Features.check_access(user_id, :meeting_payments)
     end
   end
 

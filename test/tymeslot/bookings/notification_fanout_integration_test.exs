@@ -38,6 +38,7 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
@@ -65,7 +66,10 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
     )
 
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
-    _profile = insert(:profile, user: user, timezone: "UTC")
+    profile = insert(:profile, user: user, timezone: "UTC")
+    # Notification fan-out is the subject here, so the host offers every hour
+    # of every day and the schedule never refuses the bookings these tests make.
+    _schedule = open_schedule_for(profile)
 
     meeting_type =
       insert(:meeting_type,
@@ -187,7 +191,8 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
   describe "channel selection is honoured" do
     test "an integration not subscribed to the event receives no job", _ctx do
       quiet_user = insert(:user)
-      _quiet_profile = insert(:profile, user: quiet_user, timezone: "UTC")
+      quiet_profile = insert(:profile, user: quiet_user, timezone: "UTC")
+      _schedule = open_schedule_for(quiet_profile)
 
       quiet_type =
         insert(:meeting_type,
@@ -215,7 +220,8 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
 
     test "a deactivated integration is skipped while its active sibling still fires", _ctx do
       mixed_user = insert(:user)
-      _mixed_profile = insert(:profile, user: mixed_user, timezone: "UTC")
+      mixed_profile = insert(:profile, user: mixed_user, timezone: "UTC")
+      _schedule = open_schedule_for(mixed_profile)
 
       mixed_type =
         insert(:meeting_type,

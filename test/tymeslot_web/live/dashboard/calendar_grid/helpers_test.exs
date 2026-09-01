@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting
 
   describe "all_day_events_for_day/2" do
     defp make_assigns(events) do
@@ -73,18 +74,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
     test "defaults to Monday" do
       assigns = %{preferences: %{week_start_day: "monday"}}
       # 2026-03-25 is a Wednesday
-      assert Helpers.week_start(~D[2026-03-25], assigns) == ~D[2026-03-23]
+      assert PreferenceHelpers.week_start(~D[2026-03-25], assigns) == ~D[2026-03-23]
     end
 
     test "respects Sunday preference" do
       assigns = %{preferences: %{week_start_day: "sunday"}}
       # 2026-03-25 is a Wednesday; preceding Sunday is 2026-03-22
-      assert Helpers.week_start(~D[2026-03-25], assigns) == ~D[2026-03-22]
+      assert PreferenceHelpers.week_start(~D[2026-03-25], assigns) == ~D[2026-03-22]
     end
 
     test "handles nil preferences gracefully" do
       assigns = %{preferences: nil}
-      assert Helpers.week_start(~D[2026-03-25], assigns) == ~D[2026-03-23]
+      assert PreferenceHelpers.week_start(~D[2026-03-25], assigns) == ~D[2026-03-23]
     end
   end
 
@@ -221,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         end_at: ~U[2026-03-12 15:30:00Z]
       }
 
-      assert Helpers.format_time_range(event, "12h") == "2:00 PM \u2013 3:30 PM"
+      assert TimeFormatting.format_time_range(event, "12h") == "2:00 PM \u2013 3:30 PM"
     end
 
     test "24-hour format" do
@@ -231,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         end_at: ~U[2026-03-12 15:30:00Z]
       }
 
-      assert Helpers.format_time_range(event, "24h") == "14:00 \u2013 15:30"
+      assert TimeFormatting.format_time_range(event, "24h") == "14:00 \u2013 15:30"
     end
 
     test "all-day event returns 'All day' regardless of format" do
@@ -241,7 +242,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         end_at: ~U[2026-03-13 00:00:00Z]
       }
 
-      assert Helpers.format_time_range(event, "24h") == "All day"
+      assert TimeFormatting.format_time_range(event, "24h") == "All day"
     end
   end
 

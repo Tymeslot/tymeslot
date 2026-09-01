@@ -155,20 +155,6 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   end
 
   @doc """
-  Builds video room notification details.
-  """
-  @spec build_video_room_details(%{atom() => term()}, atom()) :: %{atom() => term()}
-  def build_video_room_details(meeting, video_room_status) do
-    base_details = build_appointment_details(meeting)
-
-    Map.merge(base_details, %{
-      video_room_status: video_room_status,
-      video_room_created_at: meeting.video_room_created_at,
-      video_room_expires_at: meeting.video_room_expires_at
-    })
-  end
-
-  @doc """
   Builds reminder notification details.
   """
   @spec build_reminder_details(%{atom() => term()}) :: %{atom() => term()}
@@ -182,35 +168,6 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       is_reminder: true,
       reminder_time: "#{reminder_time} minutes"
     })
-  end
-
-  @doc """
-  Builds email subject line for notification type.
-  """
-  @spec build_subject(atom(), %{atom() => term()}) :: String.t()
-  def build_subject(notification_type, meeting) do
-    case notification_type do
-      :confirmation ->
-        "Meeting Confirmed: #{meeting.title}"
-
-      :reminder ->
-        "Meeting Reminder: #{meeting.title} in 30 minutes"
-
-      :cancellation ->
-        "Meeting Cancelled: #{meeting.title}"
-
-      :reschedule ->
-        "Meeting Rescheduled: #{meeting.title}"
-
-      :video_room_created ->
-        "Video Room Ready: #{meeting.title}"
-
-      :video_room_failed ->
-        "Video Room Issue: #{meeting.title}"
-
-      _other ->
-        "Meeting Update: #{meeting.title}"
-    end
   end
 
   @doc """

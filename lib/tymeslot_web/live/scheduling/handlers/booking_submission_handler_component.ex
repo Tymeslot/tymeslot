@@ -35,11 +35,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   alias Phoenix.Component
   alias Phoenix.LiveView
-  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.DemoOrchestrator
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
   alias Tymeslot.Security.InputProcessor
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingGuards
@@ -373,7 +373,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     %{
       date: socket.assigns.selected_date,
       time: socket.assigns.selected_time,
-      duration: resolve_duration_minutes(socket),
+      duration: AvailabilityHelpers.duration_minutes(socket),
       user_timezone: socket.assigns.user_timezone,
       organizer_user_id: socket.assigns.organizer_user_id,
       meeting_type_id: get_meeting_type_id(socket),
@@ -435,19 +435,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> LiveView.push_event("payment_redirect_open_tab", %{url: url})
 
     {:awaiting_payment, socket}
-  end
-
-  defp resolve_duration_minutes(socket) do
-    case socket.assigns[:meeting_type] do
-      %{duration_minutes: mins} when is_integer(mins) ->
-        mins
-
-      _other ->
-        case socket.assigns[:duration] || socket.assigns[:selected_duration] do
-          nil -> 30
-          val -> TimeSlots.parse_duration(val)
-        end
-    end
   end
 
   defp get_meeting_type_id(socket) do

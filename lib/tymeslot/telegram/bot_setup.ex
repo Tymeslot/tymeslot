@@ -65,7 +65,7 @@ defmodule Tymeslot.Telegram.BotSetup do
       {:ok, status, response_body} ->
         Logger.error("Failed to register Telegram bot webhook",
           status: status,
-          response: response_body,
+          response: truncate(response_body, 2000),
           attempt: attempt + 1
         )
 
@@ -100,6 +100,16 @@ defmodule Tymeslot.Telegram.BotSetup do
       )
 
       error
+    end
+  end
+
+  # `API.set_webhook/3` runs with `decode_body: false`, so the body is always
+  # the raw binary Telegram sent, never a decoded map.
+  defp truncate(text, max) when is_binary(text) do
+    if String.length(text) > max do
+      String.slice(text, 0, max)
+    else
+      text
     end
   end
 end

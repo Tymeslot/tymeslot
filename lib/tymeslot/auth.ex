@@ -7,8 +7,6 @@ defmodule Tymeslot.Auth do
   It encapsulates the business logic and provides a clean interface for the web layer.
   """
 
-  require Logger
-
   alias Tymeslot.Auth.{
     AccountDeletion,
     AdminRoles,
@@ -26,6 +24,7 @@ defmodule Tymeslot.Auth do
   }
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.PubSub
   alias Tymeslot.Security.Token
 
   @doc """
@@ -78,14 +77,21 @@ defmodule Tymeslot.Auth do
   Updates a user's password after verifying their current password.
   Pure domain logic without HTTP concerns.
   """
-  @spec update_user_password(term(), String.t(), String.t(), String.t()) ::
+  @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, String.t()}
-  def update_user_password(user, current_password, new_password, new_password_confirmation) do
+  def update_user_password(
+        user,
+        current_password,
+        new_password,
+        new_password_confirmation,
+        opts \\ []
+      ) do
     PasswordUpdate.update_user_password(
       user,
       current_password,
       new_password,
-      new_password_confirmation
+      new_password_confirmation,
+      opts
     )
   end
 
@@ -185,34 +191,37 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Verifies a user's email address.
+
+  Deliberately broadcasts nothing: `user_registered` is published once, at
+  registration, and a second broadcast here made every subscriber keeping
+  per-event tallies count a verified password signup twice.
   """
   @spec verify_user_email(String.t()) :: {:ok, Ecto.Schema.t()} | {:error, any()}
   def verify_user_email(token) do
-    with {:ok, user} <- Verification.verify_user(token) do
-      # Broadcast verification event asynchronously under a supervisor so that
-      # a broadcast failure cannot take down the caller.
-      case Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-             user_broadcaster().broadcast_user_registered(user)
-           end) do
-        {:ok, _pid} ->
-          :ok
-
-        {:error, reason} ->
-          Logger.error("Failed to start user-registered broadcast task", reason: inspect(reason))
-      end
-
-      {:ok, user}
-    end
+    Verification.verify_user(token)
   end
 
   @doc """
-  Resends verification email to a user.
+  Subscribes the calling process to user-registration events.
+
+  Every account that completes registration is delivered to the caller's
+  mailbox as `{:user_registered, %{user: user, metadata: metadata}}`. The
+  context owns the topic, so a subscriber never spells one itself. Returns
+  `{:error, reason}` rather than raising when no PubSub server is running,
+  leaving the caller to decide whether a missing subscription is fatal.
   """
-  @spec resend_verification_email(Plug.Conn.t() | Phoenix.LiveView.Socket.t(), Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom(), String.t()}
-  def resend_verification_email(socket_or_conn, user) do
-    Verification.resend_verification_email(socket_or_conn, user)
-  end
+  @spec subscribe_to_user_registrations() :: :ok | {:error, term()}
+  defdelegate subscribe_to_user_registrations, to: PubSub
+
+  @doc """
+  Publishes a user-registration event to every subscriber.
+
+  The counterpart to `subscribe_to_user_registrations/0`: both name the event
+  rather than the transport, so the topic stays an implementation detail of
+  this context.
+  """
+  @spec broadcast_user_registered(struct(), map()) :: :ok
+  defdelegate broadcast_user_registered(user, metadata \\ %{}), to: PubSub
 
   @doc """
   Generates a fresh verification token for a user and persists it without sending an email.
@@ -326,6 +335,15 @@ defmodule Tymeslot.Auth do
   defdelegate any_admin_uses_password_auth?(), to: UserQueries
 
   @doc """
+  Counts admins, other than `user_id`, who can actually sign in today.
+  See `Tymeslot.Auth.UserQueries.count_signin_capable_admins_excluding/3`.
+  """
+  @spec count_signin_capable_admins_excluding(integer(), [atom()]) :: non_neg_integer()
+  def count_signin_capable_admins_excluding(user_id, usable_sso_providers \\ []) do
+    UserQueries.count_signin_capable_admins_excluding(user_id, usable_sso_providers)
+  end
+
+  @doc """
   Returns `true` if at least one admin account exists.
   """
   defdelegate any_admin?(), to: UserQueries
@@ -343,8 +361,4 @@ defmodule Tymeslot.Auth do
   See `Tymeslot.Auth.AdminRoles.demote/2` for the full contract.
   """
   defdelegate demote_admin(actor, user_id), to: AdminRoles, as: :demote
-
-  defp user_broadcaster do
-    Application.get_env(:tymeslot, :user_broadcaster, Tymeslot.Infrastructure.PubSub)
-  end
 end

@@ -57,11 +57,4 @@ defmodule Tymeslot.Telegram.TelegramDeliverySchema do
     |> validate_required(@required_fields)
     |> foreign_key_constraint(:integration_id)
   end
-
-  @spec successful?(t()) :: boolean()
-  def successful?(%__MODULE__{response_status: status})
-      when is_integer(status) and status >= 200 and status < 300,
-      do: true
-
-  def successful?(_delivery), do: false
 end

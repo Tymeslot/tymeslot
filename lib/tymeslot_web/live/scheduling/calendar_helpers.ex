@@ -1,17 +1,16 @@
 defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   @moduledoc """
-  Calendar grid rendering and month/week navigation for the scheduling
-  flow.
+  Calendar grid rendering and week navigation for the scheduling flow.
 
-  Owns the data the schedule view binds against (calendar days, week
-  days, slot DateTimes) plus the navigation handlers that move the
-  visible window and trigger a re-fetch when the month changes.
+  Provides the calendar and week day data the schedule view templates
+  render directly, plus the week-navigation handler that moves the
+  visible window and triggers a re-fetch when the month changes.
   """
 
   alias Phoenix.Component
-  alias Tymeslot.Availability.{BusinessHours, Calculate, Schedules}
+  alias Tymeslot.Availability.{Calculate, Schedules}
   alias Tymeslot.Demo
-  alias Tymeslot.Timezones
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -53,14 +52,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
       else
         schedule = Schedules.resolve_for(meeting_type, organizer_profile)
-
-        config = %{
-          schedule_id: schedule && schedule.id,
-          max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-          min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-          buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-          owner_timezone: organizer_profile.timezone
-        }
+        config = availability_config(schedule, organizer_profile, meeting_type)
 
         Calculate.get_calendar_days(user_timezone, year, month, config, availability_map)
       end
@@ -117,25 +109,20 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     if organizer_profile do
       today = user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
-      # Resolved once rather than inside the loop: the fallback branch below runs
-      # for all seven days and would otherwise repeat the same lookup each time.
-      schedule = fallback_schedule(organizer_profile, availability_map, meeting_type)
+      day_availability =
+        day_availability_lookup(
+          week_start,
+          organizer_profile,
+          availability_map,
+          user_timezone,
+          meeting_type
+        )
 
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
         date_string = Date.to_string(date)
 
-        {is_available, is_loading} =
-          cond do
-            availability_map == :loading ->
-              {false, true}
-
-            is_map(availability_map) ->
-              {Map.get(availability_map, date_string, false), false}
-
-            true ->
-              {day_available?(date, schedule, today), false}
-          end
+        {is_available, is_loading} = day_availability.(date, date_string)
 
         %{
           date: date_string,
@@ -151,38 +138,127 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     end
   end
 
-  @doc """
-  Handles previous month navigation.
-  """
-  @spec handle_prev_month(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def handle_prev_month(socket) do
-    current_month = socket.assigns.current_month
-    current_year = socket.assigns.current_year
+  # Resolved once rather than inside the loop: each branch is loop-invariant
+  # across the seven days, and building a closure here means only the branch
+  # actually taken pays its cost (a demo grid fetch or a schedule prefetch)
+  # instead of both running and one being discarded on every render.
+  defp day_availability_lookup(
+         week_start,
+         organizer_profile,
+         availability_map,
+         user_timezone,
+         meeting_type
+       ) do
+    cond do
+      availability_map == :loading ->
+        fn _date, _date_string -> {false, true} end
 
-    {prev_year, prev_month} =
-      if current_month == 1, do: {current_year - 1, 12}, else: {current_year, current_month - 1}
+      is_map(availability_map) ->
+        uncovered =
+          uncovered_lookup(
+            week_start,
+            organizer_profile,
+            availability_map,
+            user_timezone,
+            meeting_type
+          )
 
-    socket
-    |> assign(:current_month, prev_month)
-    |> assign(:current_year, prev_year)
-    |> update_calendar_data()
+        fn date, date_string ->
+          case Map.fetch(availability_map, date_string) do
+            {:ok, available} -> {available, false}
+            :error -> uncovered.(date, date_string)
+          end
+        end
+
+      Demo.demo_profile?(organizer_profile) ->
+        # Demo profiles answer the fallback question with the same demo
+        # generator the month grid uses, not Core's hard-coded business
+        # hours. `Demo.demo_profile?/1` also matches on username, which
+        # `Demo.get_calendar_days/5` does not — for such a profile the
+        # generator returns an empty grid, so fall back to business hours
+        # rather than render every day of the week as unavailable.
+        demo_days =
+          demo_calendar_days(week_start, organizer_profile, availability_map, user_timezone)
+
+        if demo_days == %{} do
+          business_hours_lookup(
+            week_start,
+            organizer_profile,
+            availability_map,
+            meeting_type,
+            user_timezone
+          )
+        else
+          fn _date, date_string -> {Map.get(demo_days, date_string, false), false} end
+        end
+
+      true ->
+        business_hours_lookup(
+          week_start,
+          organizer_profile,
+          availability_map,
+          meeting_type,
+          user_timezone
+        )
+    end
   end
 
-  @doc """
-  Handles next month navigation.
-  """
-  @spec handle_next_month(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def handle_next_month(socket) do
-    current_month = socket.assigns.current_month
-    current_year = socket.assigns.current_year
+  # A day the map does not carry is *unknown*, not unavailable.
+  #
+  # The map is folded over `Calculate.display_range/2` — a Sunday-anchored
+  # 42-day block around a month — while the strip renders a Monday-anchored
+  # week. `handle_week_navigation/2` refetches whenever the arrows move the
+  # week's midpoint into another month, so no arrow-driven week escapes the
+  # block; a week positioned by a *date* can, because nothing refetches for
+  # it. `SchedulingInit` seeds one from today and `NextAvailable.align_to/2`
+  # from the day it lands on. August 2026 is the shape: the block covers
+  # 2026-07-26..2026-09-05 and the week of the 31st runs to 2026-09-06.
+  #
+  # Reading the absent day as `false` painted it exactly like a fully booked
+  # one — greyed out and unclickable — on the strength of a question nobody
+  # asked the calendar. Both strips do it: Rhythm's week view and Quill's
+  # narrow-screen weekly row disable the button on the same value.
+  #
+  # An uncovered day is instead answered the way the strip answers when there
+  # is no map at all: the host's business hours, which is the same domain rule
+  # the month grid falls back to, and clicking the day fetches its real slots.
+  # The worst case becomes a day that turns out to be full, rather than a
+  # bookable day the booker can never reach. Resolved once, and only when the
+  # week actually has a gap, so a fully covered week pays nothing for it —
+  # the fallback costs a schedule lookup and a prefetch.
+  defp uncovered_lookup(
+         week_start,
+         organizer_profile,
+         availability_map,
+         user_timezone,
+         meeting_type
+       ) do
+    if week_covered?(week_start, availability_map) do
+      fn _date, _date_string -> {false, false} end
+    else
+      day_availability_lookup(week_start, organizer_profile, nil, user_timezone, meeting_type)
+    end
+  end
 
-    {next_year, next_month} =
-      if current_month == 12, do: {current_year + 1, 1}, else: {current_year, current_month + 1}
+  defp week_covered?(week_start, availability_map) do
+    Enum.all?(0..6, fn offset ->
+      Map.has_key?(availability_map, week_start |> Date.add(offset) |> Date.to_string())
+    end)
+  end
 
-    socket
-    |> assign(:current_month, next_month)
-    |> assign(:current_year, next_year)
-    |> update_calendar_data()
+  defp business_hours_lookup(
+         week_start,
+         organizer_profile,
+         availability_map,
+         meeting_type,
+         user_timezone
+       ) do
+    schedule = fallback_schedule(organizer_profile, availability_map, meeting_type)
+    fallback_config = fallback_config(schedule, organizer_profile, week_start, meeting_type)
+
+    fn date, _date_string ->
+      {Calculate.day_bookable_by_business_hours?(date, user_timezone, fallback_config), false}
+    end
   end
 
   @doc """
@@ -215,27 +291,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   end
 
   @doc """
-  Handles timezone change.
-  """
-  @spec handle_timezone_change(Phoenix.LiveView.Socket.t(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def handle_timezone_change(socket, timezone) do
-    socket
-    |> assign(:user_timezone, timezone)
-    |> update_calendar_data()
-  end
-
-  @doc """
-  Handles timezone search.
-  """
-  @spec handle_timezone_search(Phoenix.LiveView.Socket.t(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def handle_timezone_search(socket, search_term) do
-    filtered_timezones = Timezones.search(search_term)
-    assign(socket, :filtered_timezones, filtered_timezones)
-  end
-
-  @doc """
   Parses slot time string to DateTime for display.
   """
   @spec parse_slot_time(String.t()) :: DateTime.t()
@@ -250,6 +305,19 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     end
   end
 
+  # A week can straddle a month boundary, so build the lookup from every
+  # month it touches rather than assuming `week_start`'s month covers it.
+  defp demo_calendar_days(week_start, organizer_profile, availability_map, user_timezone) do
+    0..6
+    |> Enum.map(&Date.add(week_start, &1))
+    |> Enum.map(&{&1.year, &1.month})
+    |> Enum.uniq()
+    |> Enum.flat_map(fn {year, month} ->
+      Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
+    end)
+    |> Map.new(&{&1.date, &1.available})
+  end
+
   # Only the fallback path needs a schedule; a supplied availability map already
   # answers the question, so resolving one there would be a pointless query.
   defp fallback_schedule(_organizer_profile, :loading, _meeting_type), do: nil
@@ -262,35 +330,47 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
     end
   end
 
-  defp day_available?(date, schedule, today) do
-    is_weekday = BusinessHours.business_day?(date, schedule && schedule.id)
-    is_future = Date.compare(date, today) != :lt
-    is_within_limit = Date.diff(date, today) <= Schedules.policy(schedule, :advance_booking_days)
+  # The same config the month grid builds, so the week strip answers the
+  # availability question with the domain's rule rather than a second copy of
+  # it. Prefetched because this runs inside the template render of a public
+  # page: without it the seven per-day business-hours lookups each hit the
+  # database.
+  defp fallback_config(schedule, organizer_profile, week_start, meeting_type) do
+    config = availability_config(schedule, organizer_profile, meeting_type)
 
-    is_weekday && is_future && is_within_limit
+    Calculate.prefetch_schedule_data(
+      config,
+      schedule && schedule.id,
+      Date.add(week_start, -1),
+      Date.add(week_start, 7)
+    )
   end
 
-  defp update_calendar_data(socket) do
+  # The month grid and the week strip fallback answer the same availability
+  # question, so both build their `availability_config` from this single
+  # place rather than carrying their own copy of the policy keys.
+  #
+  # `owner_timezone` falls back to `Profiles.get_default_timezone()` for a
+  # profile with none set — the same fallback the enforcement path applies in
+  # `Tymeslot.Bookings.Policy.scheduling_config/2` and the real availability
+  # path applies in `AvailabilityHelpers.get_owner_timezone/1`, so a nil
+  # profile timezone resolves to the same zone everywhere.
+  @spec availability_config(map() | nil, map(), map() | nil) :: %{
+          required(:schedule_id) => integer() | nil,
+          required(:max_advance_booking_days) => pos_integer(),
+          required(:min_advance_hours) => non_neg_integer(),
+          required(:buffer_minutes) => non_neg_integer(),
+          required(:duration_minutes) => pos_integer(),
+          required(:owner_timezone) => String.t()
+        }
+  defp availability_config(schedule, organizer_profile, meeting_type) do
     %{
-      current_month: current_month,
-      current_year: current_year,
-      user_timezone: user_timezone,
-      organizer_profile: organizer_profile
-    } = socket.assigns
-
-    # Use availability map if present, otherwise nil (will use business hours only)
-    availability_map = Map.get(socket.assigns, :month_availability_map)
-
-    calendar_days =
-      get_calendar_days(
-        user_timezone,
-        current_year,
-        current_month,
-        organizer_profile,
-        availability_map,
-        Map.get(socket.assigns, :meeting_type)
-      )
-
-    assign(socket, :calendar_days, calendar_days)
+      schedule_id: schedule && schedule.id,
+      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
+      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
+      duration_minutes: (meeting_type && meeting_type.duration_minutes) || 30,
+      owner_timezone: organizer_profile.timezone || Profiles.get_default_timezone()
+    }
   end
 end

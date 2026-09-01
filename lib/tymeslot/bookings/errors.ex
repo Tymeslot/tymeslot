@@ -30,4 +30,27 @@ defmodule Tymeslot.Bookings.Errors do
           | :checkout_failed
           | :meeting_not_found
           | :failed_to_update_meeting
+
+  # `Tymeslot.Bookings.ScheduleCheck` is shared by `Create` and `Reschedule`,
+  # so its failure reasons are classified once, here, rather than in a table
+  # per caller: a reason ScheduleCheck grows in the future is then picked up
+  # by both without either module changing.
+  @schedule_check_classifications %{
+    slot_not_offered: :slot_taken,
+    slot_availability_unverifiable: :slot_taken
+  }
+
+  @doc """
+  Classifies a `Tymeslot.Bookings.ScheduleCheck.validate_slot_on_schedule/6`
+  failure reason into the shared vocabulary.
+
+  Returns `nil` for any reason ScheduleCheck does not produce, so a caller can
+  fall back to passing the reason through unchanged.
+  """
+  @spec classify_schedule_check_reason(atom()) :: classified_error() | nil
+  def classify_schedule_check_reason(reason)
+      when is_map_key(@schedule_check_classifications, reason),
+      do: Map.fetch!(@schedule_check_classifications, reason)
+
+  def classify_schedule_check_reason(_reason), do: nil
 end

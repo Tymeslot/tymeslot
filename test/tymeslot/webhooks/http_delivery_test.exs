@@ -304,31 +304,42 @@ defmodule Tymeslot.Webhooks.HttpDeliveryTest do
   # ────────────────────────────────────────────────────────────────────────────
 
   describe "post/3 - redirect error cases" do
-    test "returns {:error, :too_many_redirects} when max redirects are exhausted" do
-      # The first request is a POST. 301 redirects switch to GET (RFC 9110 §15.4),
-      # so subsequent hops are GETs. After the last GET decrements redirects_remaining
-      # to 0 the guard fires without making another HTTP call.
-      # Total calls: 1 POST + (@max_redirects - 1) GETs = @max_redirects requests.
+    test "follows exactly @max_redirects hops, delivering on the last one" do
+      # A budget of #{@max_redirects} redirects means the request after the
+      # #{@max_redirects}th hop is still ours to make: 1 POST + #{@max_redirects}
+      # GETs. A guard that fires when the counter reaches 0 rather than when it
+      # drops below it stops one hop early and fails this with
+      # :too_many_redirects, which is what `post/3` did until the counter was
+      # corrected.
       Tymeslot.HTTPClientMock
-      |> expect(:post, 1, fn _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["https://example.com/webhook"]}
-         }}
+      |> expect(:post, 1, fn url, _body, _headers, _opts ->
+        {:ok, redirect_from(url)}
       end)
-      |> expect(:get, @max_redirects - 1, fn _url, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["https://example.com/webhook"]}
-         }}
+      |> expect(:get, @max_redirects, fn url, _headers, _opts ->
+        if hop_index(url) == @max_redirects do
+          {:ok, %Req.Response{status: 200, body: "final"}}
+        else
+          {:ok, redirect_from(url)}
+        end
       end)
 
-      assert {:error, :too_many_redirects} =
-               HttpDelivery.post("https://example.com/webhook", "payload", [])
+      assert {:ok, 200, "final"} = HttpDelivery.post(hop_url(0), "payload", [])
+    end
+
+    test "returns {:error, :too_many_redirects} one hop past the budget" do
+      # Every hop redirects, so the chain runs 1 POST + #{@max_redirects} GETs
+      # and then refuses. `verify_on_exit!` fails the test if a
+      # #{@max_redirects + 1}th GET is attempted, pinning the upper bound as
+      # well as the lower one.
+      Tymeslot.HTTPClientMock
+      |> expect(:post, 1, fn url, _body, _headers, _opts ->
+        {:ok, redirect_from(url)}
+      end)
+      |> expect(:get, @max_redirects, fn url, _headers, _opts ->
+        {:ok, redirect_from(url)}
+      end)
+
+      assert {:error, :too_many_redirects} = HttpDelivery.post(hop_url(0), "payload", [])
     end
 
     test "returns {:error, :redirect_missing_location} when 3xx response has no Location header" do
@@ -459,6 +470,59 @@ defmodule Tymeslot.Webhooks.HttpDeliveryTest do
                HttpDelivery.post("https://example.com/webhook", "payload", [])
     end
 
+    test "refuses a hop that downgrades to plain http in production" do
+      with_config(:tymeslot, environment: :prod)
+
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 301,
+           body: "",
+           headers: %{"location" => ["http://203.0.113.10/hook"]}
+         }}
+      end)
+
+      assert {:error, :blocked_redirect} =
+               HttpDelivery.post("https://example.com/webhook", "payload", [])
+    end
+
+    test "follows the same public host over https in production" do
+      # The mirror of the test above, and the reason it can only be passing for
+      # the scheme: 203.0.113.10 is TEST-NET-3, so nothing about the address
+      # itself is what refuses the http hop.
+      with_config(:tymeslot, environment: :prod)
+
+      Tymeslot.HTTPClientMock
+      |> expect(:post, 1, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 301,
+           body: "",
+           headers: %{"location" => ["https://203.0.113.10/hook"]}
+         }}
+      end)
+      |> expect(:get, 1, fn "https://203.0.113.10/hook", _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: "OK"}}
+      end)
+
+      assert {:ok, 200, "OK"} =
+               HttpDelivery.post("https://example.com/webhook", "payload", [])
+    end
+
+    test "refuses a hop to a scheme that is not http at all" do
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 302,
+           body: "",
+           headers: %{"location" => ["ftp://files.example.com/payload"]}
+         }}
+      end)
+
+      assert {:error, :blocked_redirect} =
+               HttpDelivery.post("https://example.com/webhook", "payload", [])
+    end
+
     test "follows a public-to-public redirect successfully" do
       Tymeslot.HTTPClientMock
       |> expect(:post, fn "https://example.com/webhook", _body, _headers, _opts ->
@@ -476,5 +540,19 @@ defmodule Tymeslot.Webhooks.HttpDeliveryTest do
       assert {:ok, 200, "OK"} =
                HttpDelivery.post("https://example.com/webhook", "payload", [])
     end
+  end
+
+  # A chain of distinct hop URLs, so the stub's answer is derived from its
+  # argument rather than echoing a fixed response back at the assertion.
+  defp hop_url(n), do: "https://hop.example.com/#{n}"
+
+  defp hop_index(url), do: url |> String.split("/") |> List.last() |> String.to_integer()
+
+  defp redirect_from(url) do
+    %Req.Response{
+      status: 301,
+      body: "",
+      headers: %{"location" => [hop_url(hop_index(url) + 1)]}
+    }
   end
 end

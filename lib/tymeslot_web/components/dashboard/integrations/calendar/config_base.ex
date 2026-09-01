@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
 
       alias Phoenix.Component
       alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+      alias TymeslotWeb.Live.Shared.DocsUrl
     end
   end
 
@@ -195,10 +196,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
       end
 
       defp docs_guide_url(slug) do
-        base =
-          Application.get_env(:tymeslot, :docs_article_base_url, "https://tymeslot.app/docs")
-
-        "#{base}/#{slug}"
+        DocsUrl.article_url(slug)
       end
     end
   end

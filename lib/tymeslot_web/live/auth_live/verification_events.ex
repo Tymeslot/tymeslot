@@ -28,7 +28,7 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   import Phoenix.LiveView, only: [put_flash: 3]
 
   alias Tymeslot.Auth.{Session, SignupSecurity, Verification}
-  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.{RateLimiter, SecurityLogger}
   alias TymeslotWeb.AuthLive.SecurityHelper
 
   @typedoc "A LiveView `handle_event/3` return value."
@@ -88,6 +88,16 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
         :sent
 
       {:error, :rate_limited, message} ->
+        # This is the resend rate limit rejecting traffic the honeypot has
+        # already flagged as a bot, so it's the one worth recording. There
+        # is no account to identify it by: `identifier` is `nil` rather than
+        # the "honeypot" bucket tag, which would be filed under `:email` and
+        # dropped by masking as unparseable.
+        SecurityLogger.log_rate_limit_violation(nil, "email_verification_honeypot", %{
+          ip_address: SecurityHelper.rate_limit_ip(metadata),
+          user_agent: metadata.user_agent
+        })
+
         {:rate_limited, message}
     end
   end

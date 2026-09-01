@@ -11,7 +11,7 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
 
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack.{SlackDeliverySchema, SlackIntegrationSchema}
-  alias Tymeslot.Workers.SlackWorker
+  alias Tymeslot.Workers.{SlackWorker, TelegramWorker}
 
   setup :verify_on_exit!
 
@@ -487,6 +487,19 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
 
       jobs = all_enqueued(worker: SlackWorker)
       assert length(jobs) == 1
+    end
+
+    # Slack and Telegram integration ids come from separate sequences, so the
+    # same id on both sides is the ordinary case rather than a coincidence.
+    # With `:worker` left out of the uniqueness comparison that made these two
+    # jobs indistinguishable, and whichever arrived second was dropped as a
+    # conflict the caller reports as success.
+    test "does not deduplicate against a Telegram job carrying the same ids" do
+      assert :ok = TelegramWorker.schedule_delivery(7, "meeting.created", "m2")
+      assert :ok = SlackWorker.schedule_delivery(7, "meeting.created", "m2")
+
+      assert [_telegram] = all_enqueued(worker: TelegramWorker)
+      assert [_slack] = all_enqueued(worker: SlackWorker)
     end
   end
 end

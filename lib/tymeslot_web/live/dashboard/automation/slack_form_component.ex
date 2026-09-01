@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Slack
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Live.Shared.DocsUrl
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -227,7 +228,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                           "dashboard_automation_chat",
                           "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created - see the full setup guide on %{guide}.",
                           guide:
-                            ~s(<a href="https://tymeslot.app/docs/slack" target="_blank" rel="noopener noreferrer" class="font-black text-turquoise-700 hover:text-turquoise-900 underline">tymeslot.app/docs/slack</a>)
+                            DocsUrl.article_link(
+                              "slack",
+                              dgettext("dashboard_automation_chat", "our Slack docs")
+                            )
                         )
                       )}
                     <% end %>

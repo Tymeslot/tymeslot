@@ -35,6 +35,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     401 => :unauthorized,
     403 => :forbidden,
     404 => :not_found,
+    # The URL exists but does not speak this method: a PROPFIND at a path that
+    # is not DAV-mounted, or a reverse proxy answering unknown methods itself.
+    # Deliberately *not* folded into `:not_found`, which is a destructive
+    # sentinel elsewhere (it deletes calendar paths and local rows).
+    405 => :method_not_allowed,
     408 => :timeout,
     429 => :rate_limited
   }

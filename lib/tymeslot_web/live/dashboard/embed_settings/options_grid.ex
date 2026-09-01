@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
+  alias TymeslotWeb.Live.Shared.DocsUrl
 
   @doc """
   Renders the embed options grid.
@@ -55,20 +56,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               <div class="h-2 bg-tymeslot-200 rounded w-1/2"></div>
               <div class="mt-4 p-3 bg-linear-to-br from-turquoise-50 to-cyan-50 border-2 border-turquoise-200 rounded-token-lg">
                 <div class="flex items-center space-x-2">
-                  <svg
-                    class="w-4 h-4 text-turquoise-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    >
-                    </path>
-                  </svg>
+                  <.icon name="hero-calendar" class="w-4 h-4 text-turquoise-600" />
                   <div class="text-token-xs font-semibold text-turquoise-700">
                     {dgettext("dashboard_embed", "Your booking widget here")}
                   </div>
@@ -194,15 +182,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             <%!-- Floating button preview --%>
             <div class="absolute bottom-4 right-4">
               <div class="w-8 h-8 rounded-full shadow-lg flex items-center justify-center bg-turquoise-600">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  >
-                  </path>
-                </svg>
+                <.icon name="hero-calendar" class="w-4 h-4 text-white" />
               </div>
             </div>
           </div>
@@ -223,20 +203,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
          and the plugin (on WordPress.org, source on GitHub) works against any
          instance, cloud or self-hosted. --%>
     <div class="mt-8 flex items-start gap-3 rounded-token-xl border-2 border-indigo-200 bg-linear-to-r from-indigo-50 to-blue-50 p-5">
-      <svg
-        class="mt-0.5 h-6 w-6 shrink-0 text-indigo-600"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        aria-hidden="true"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 0 1-.657.643 48.39 48.39 0 0 1-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 0 1-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 0 0-1.003-.349c-1.036 0-1.875 1.008-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 0 1-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 0 0 .657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 0 1-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 0 0 5.427-.63 48.05 48.05 0 0 0 .582-4.717.532.532 0 0 0-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.008-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 0 0 .658-.663 48.422 48.422 0 0 0-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 0 1-.61-.58v0Z"
-        />
-      </svg>
+      <.icon name="hero-puzzle-piece" class="mt-0.5 h-6 w-6 shrink-0 text-indigo-600" />
       <div class="space-y-1">
         <p class="font-semibold text-indigo-900">{dgettext("dashboard_embed", "Using WordPress?")}</p>
         <p class="text-token-sm text-indigo-800">
@@ -269,15 +236,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       </div>
     </div>
 
-    <%!-- Hardcoded link to the cloud docs hub (slash-docs is not available in standalone Core) --%>
+    <%!-- Links to the docs hub; standalone Core does not serve /docs itself. --%>
     <p class="mt-6 text-center text-token-sm text-tymeslot-500">
       {raw(
         dgettext(
           "dashboard_embed",
           "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options.",
-          guide:
-            ~s(<a href="https://tymeslot.app/docs/embed" target="_blank" rel="noopener noreferrer" class="text-turquoise-600 hover:text-turquoise-700 font-medium underline">) <>
-              dgettext("dashboard_embed", "embedding guide") <> ~s(</a>)
+          guide: DocsUrl.article_link("embed", dgettext("dashboard_embed", "embedding guide"))
         )
       )}
     </p>
@@ -434,10 +399,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         :if={@selected}
         class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-full flex items-center justify-center text-white shadow-lg z-10"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7">
-          </path>
-        </svg>
+        <.icon name="hero-check" class="w-5 h-5" />
       </div>
       <div class="p-6">
         <div class="flex items-start justify-between mb-4">
@@ -473,20 +435,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         </div>
 
         <div class="mt-4 flex items-start space-x-2 text-token-xs text-tymeslot-700">
-          <svg
-            class="w-4 h-4 text-turquoise-600 shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            >
-            </path>
-          </svg>
+          <.icon name="hero-information-circle" class="w-4 h-4 text-turquoise-600 shrink-0 mt-0.5" />
           <span class="flex-1">{render_slot(@footer_info)}</span>
         </div>
       </div>

@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
     DateTime.compare(meeting.end_time, DateTime.utc_now()) == :lt
   end
 
-  # Policy helpers (surface booleans and tooltips)
+  # Policy helpers (surface booleans)
   @spec can_cancel?(Ecto.Schema.t()) :: boolean()
   def can_cancel?(meeting) do
     case Policy.can_cancel_meeting?(meeting) do
@@ -28,23 +28,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
     case Policy.can_reschedule_meeting?(meeting) do
       :ok -> true
       {:error, _reason} -> false
-    end
-  end
-
-  @spec action_tooltip(Ecto.Schema.t(), :cancel | :reschedule) :: String.t() | nil
-  def action_tooltip(meeting, action) do
-    case action do
-      :cancel ->
-        case Policy.can_cancel_meeting?(meeting) do
-          :ok -> nil
-          {:error, reason} -> reason
-        end
-
-      :reschedule ->
-        case Policy.can_reschedule_meeting?(meeting) do
-          :ok -> nil
-          {:error, reason} -> reason
-        end
     end
   end
 

@@ -48,6 +48,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
       assert {:ok, _msg} = Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
     end
 
+    test "falls back to the full RFC 4791 chain when discovery path returns 405" do
+      # 405 is the honest answer when the URL exists but does not speak
+      # PROPFIND — a DAV service root, or a reverse proxy refusing the method
+      # on behalf of the backend. It says the address was wrong, not the
+      # credentials, so it must reach the fallback like a 404 does rather than
+      # ending the walk as an unclassified status.
+      stub_rfc4791_chain(initial_status: 405)
+
+      assert {:ok, _message} = Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
+    end
+
     test "fails when credentials are valid but no calendar collection is reachable" do
       # The iCloud false-positive guard: the guessed path 403s and the
       # current-user-principal probe succeeds (proving credentials), but the
@@ -226,6 +237,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
       assert calendar.name == "Personal"
       assert calendar.path == "/caldav/users/user/calendars/1/"
       refute calendar.read_only
+    end
+
+    test "keeps probing when the supplied prefix answers 405 and the origin root does not" do
+      # The shape a reverse proxy in front of a CalDAV backend produces: it
+      # refuses PROPFIND under /caldav with a 405 of its own, while the origin
+      # root is genuinely reachable. A 405 that halted the probe would end
+      # discovery at the first candidate and never reach the calendars.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        case conn.request_path do
+          "/" -> xml_response(conn, principal_xml("/p/user/"))
+          "/p/user/" -> xml_response(conn, calendar_home_set_xml("/homes/user/"))
+          "/homes/user/" -> xml_response(conn, calendar_list_xml())
+          _refused -> Conn.send_resp(conn, 405, "Method Not Allowed")
+        end
+      end)
+
+      assert {:ok, [calendar]} = Discovery.discover_calendars(@subpath_client, skip_breaker: true)
+      assert calendar.name == "Personal"
     end
 
     test "test_connection/2 succeeds against the same server" do

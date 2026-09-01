@@ -57,6 +57,10 @@ defmodule TymeslotWeb.BrowserCase do
     Mox.set_mox_global(tags)
     TestMocks.setup_all_mocks()
 
+    # Signup and other flows read the verification module through Mox; without
+    # a default stub the mock swallows every call. Matches ConnCase/LiveCase.
+    DataCase.stub_verification_default()
+
     :ok
   end
 end

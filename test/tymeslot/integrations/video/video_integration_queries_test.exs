@@ -223,5 +223,131 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
 
       assert {:error, :not_found} = VideoIntegrationQueries.toggle_active(soft)
     end
+
+    test "a reconnect via update_credentials clears deleted_at instead of resurrecting the row" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: "acct-1",
+          is_active: true
+        )
+
+      assert {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      # An OAuth reconnect reaches its row by id (`reauthorize_existing/3` in
+      # `Tymeslot.Integrations.Video`), which does not exclude soft-deleted rows.
+      assert {:ok, fetched} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+
+      assert {:ok, reconnected} =
+               VideoIntegrationQueries.update_credentials(fetched, %{is_active: true})
+
+      assert reconnected.is_active
+      refute reconnected.deleted_at
+
+      # A previously blocked connect attempt for the same account must now find
+      # the reconnected row rather than colliding with a deleted-but-active one.
+      assert {:ok, found} =
+               VideoIntegrationQueries.get_by_account_for_user(user.id, "zoom", "acct-1")
+
+      assert found.id == integration.id
+    end
+  end
+
+  describe "delete_if_still_deleted/1" do
+    test "deletes a still-soft-deleted row and returns 1" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+      assert {:ok, soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      assert VideoIntegrationQueries.delete_if_still_deleted(soft.id) == 1
+      assert {:error, :not_found} = VideoIntegrationQueries.get(soft.id)
+    end
+
+    test "leaves a reconnected row alone and returns 0" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+      assert {:ok, soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      # Reconnected before the purge landed: `deleted_at` is nil again.
+      assert {:ok, reconnected} =
+               VideoIntegrationQueries.update_credentials(soft, %{is_active: true})
+
+      refute reconnected.deleted_at
+
+      assert VideoIntegrationQueries.delete_if_still_deleted(reconnected.id) == 0
+      assert {:ok, still_there} = VideoIntegrationQueries.get(reconnected.id)
+      assert still_there.id == reconnected.id
+    end
+
+    test "returns 0 for an id that does not exist" do
+      assert VideoIntegrationQueries.delete_if_still_deleted(-1) == 0
+    end
+  end
+
+  # Every uniqueness index is predicated on `is_active = true`, so reactivating
+  # a row moves it into the index. The nil and "" account ids used to be waved
+  # through, which is exactly the pair the legacy-row and account indexes
+  # cover, so the reactivation raised `Ecto.ConstraintError` rather than
+  # returning a refusal the dashboard can render.
+  describe "toggle_active/1 reactivation conflicts" do
+    test "refuses to reactivate a legacy null-account row beside an active one" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "zoom",
+        provider_account_id: nil,
+        is_active: true
+      )
+
+      dormant =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: nil,
+          is_active: false
+        )
+
+      assert {:error, :duplicate_account} = VideoIntegrationQueries.toggle_active(dormant)
+    end
+
+    test "refuses to reactivate an empty-account row beside an active one" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "zoom",
+        provider_account_id: "",
+        is_active: true
+      )
+
+      dormant =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: "",
+          is_active: false
+        )
+
+      assert {:error, :duplicate_account} = VideoIntegrationQueries.toggle_active(dormant)
+    end
+
+    test "reactivates a null-account row when nothing else is active" do
+      user = insert(:user)
+
+      dormant =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          provider_account_id: nil,
+          is_active: false
+        )
+
+      assert {:ok, reactivated} = VideoIntegrationQueries.toggle_active(dormant)
+      assert reactivated.is_active
+    end
   end
 end

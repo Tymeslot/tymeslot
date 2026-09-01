@@ -3,6 +3,7 @@ defmodule Tymeslot.ThemeCustomizationsUploadValidationTest do
   @moduletag :utils
 
   alias Tymeslot.ThemeCustomizations.Validation
+  alias TymeslotWeb.Helpers.UploadConstraints
 
   describe "Validation file upload tests" do
     test "validate_file_upload/1 requires path and filename" do
@@ -70,36 +71,40 @@ defmodule Tymeslot.ThemeCustomizationsUploadValidationTest do
       assert {:error, _reason} = Validation.validate_file_size("/nonexistent/file.jpg", :image)
     end
 
-    test "validate_file_size/2 accepts image at exactly the 20MB limit" do
+    # The caps below are the ones `allow_upload` enforces at preflight. They were
+    # restated here as literals and drifted: the video branch allowed 100 MiB
+    # while the uploader refused anything over 100 MB, so a ~102 MB file passed
+    # this validator and was then rejected on its way in. Drive the boundary from
+    # `UploadConstraints` so the two cannot part again.
+
+    test "validate_file_size/2 caps an image at UploadConstraints.max_file_size(:image)" do
+      max_size = UploadConstraints.max_file_size(:image)
       temp_file = Path.join(System.tmp_dir!(), "test_exact_#{:rand.uniform(100_000)}.jpg")
-      # Write exactly 20_000_000 bytes
-      File.write!(temp_file, :binary.copy(<<0>>, 20_000_000))
 
       try do
+        File.write!(temp_file, :binary.copy(<<0>>, max_size + 1))
+        assert {:error, message} = Validation.validate_file_size(temp_file, :image)
+        assert message =~ "too large"
+        assert message =~ "20.0MB"
+
+        File.write!(temp_file, :binary.copy(<<0>>, max_size))
         assert Validation.validate_file_size(temp_file, :image) == :ok
       after
         File.rm(temp_file)
       end
     end
 
-    test "validate_file_size/2 rejects image one byte over the 20MB limit" do
-      temp_file = Path.join(System.tmp_dir!(), "test_over_#{:rand.uniform(100_000)}.jpg")
-      File.write!(temp_file, :binary.copy(<<0>>, 20_000_001))
-
-      try do
-        assert {:error, message} = Validation.validate_file_size(temp_file, :image)
-        assert message =~ "too large"
-        assert message =~ "20.0MB"
-      after
-        File.rm(temp_file)
-      end
-    end
-
-    test "validate_file_size/2 accepts video at exactly the 100MB limit" do
+    test "validate_file_size/2 caps a video at UploadConstraints.max_file_size(:video)" do
+      max_size = UploadConstraints.max_file_size(:video)
       temp_file = Path.join(System.tmp_dir!(), "test_video_exact_#{:rand.uniform(100_000)}.mp4")
-      File.write!(temp_file, :binary.copy(<<0>>, 100 * 1024 * 1024))
 
       try do
+        File.write!(temp_file, :binary.copy(<<0>>, max_size + 1))
+        assert {:error, message} = Validation.validate_file_size(temp_file, :video)
+        assert message =~ "too large"
+        assert message =~ "100.0MB"
+
+        File.write!(temp_file, :binary.copy(<<0>>, max_size))
         assert Validation.validate_file_size(temp_file, :video) == :ok
       after
         File.rm(temp_file)

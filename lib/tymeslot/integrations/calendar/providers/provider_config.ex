@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Providers.Families
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
   # How far back and forward sync workers fetch events from providers.
@@ -45,25 +46,49 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     :exchange,
     :demo
   ]
-  @oauth_providers [:google, :outlook]
-  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal]
+  @dev_only_providers [:debug]
 
-  # Exchange Web Services is its own family: SOAP over HTTPS with credentials.
-  # It is deliberately not CalDAV — no PROPFIND discovery, no href/etag model —
-  # and not OAuth, because on-premises Exchange authenticates with Windows
-  # credentials rather than a token endpoint. Every "is this CalDAV?" branch
-  # must therefore answer no rather than yes with a carve-out: adding it to
-  # `@caldav_based_providers` would have `ProviderAdapter` and `CaldavCommon`
-  # build a CalDAV client for a SOAP provider.
-  @ews_providers [:exchange]
-
-  # Providers that subscribe to a published feed rather than talking a
+  # The single declaration site for "how does this provider connect?". Every
+  # provider list, string list and family predicate below derives from this
+  # table, and `Families.build_index/2` fails the build if a provider in
+  # `@providers` is missing from it, filed twice, or filed under a family
+  # outside the shared vocabulary — so adding a provider, or a family, is one
+  # edit here.
+  #
+  # EWS providers speak SOAP over HTTPS with credentials. They are deliberately
+  # not CalDAV — no PROPFIND discovery, no href/etag model — and not OAuth,
+  # because on-premises Exchange authenticates with Windows credentials rather
+  # than a token endpoint. Filing one under `:caldav` would have
+  # `ProviderAdapter` and `CaldavCommon` build a CalDAV client for a SOAP
+  # provider.
+  #
+  # Subscription providers subscribe to a published feed rather than talking a
   # calendar protocol. They are deliberately *not* CalDAV-family: they carry
   # no credentials, discover nothing, and can never be written to, so every
   # "is this CalDAV?" branch must answer no for them rather than yes with a
   # carve-out.
-  @subscription_providers [:ics_url]
-  @dev_only_providers [:debug]
+  #
+  # The internal providers (see the moduledoc) connect by no mechanism a user
+  # can pick, so they are filed under `:other` rather than left out.
+  @provider_families %{
+    oauth: [:google, :outlook],
+    caldav: [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal],
+    ews: [:exchange],
+    subscription: [:ics_url],
+    other: [:demo, :debug]
+  }
+
+  # Keyed by both the atom and the string form of every provider, so the two
+  # forms of the same provider cannot get different answers out of the
+  # predicates below.
+  @family_index Families.build_index(@provider_families, @providers ++ @dev_only_providers)
+
+  @oauth_providers Families.members(@provider_families, :oauth)
+  @caldav_based_providers Families.members(@provider_families, :caldav)
+  @caldav_based_provider_strings Families.member_strings(@provider_families, :caldav)
+  @ews_providers Families.members(@provider_families, :ews)
+  @ews_provider_strings Families.member_strings(@provider_families, :ews)
+  @subscription_provider_strings Families.member_strings(@provider_families, :subscription)
 
   # Compile-time lookup from the provider's string form to its atom, covering
   # every statically known provider regardless of runtime toggles. Parsing
@@ -259,35 +284,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def caldav_based_providers, do: @caldav_based_providers
 
   @doc """
-  Returns feed-subscription providers.
-  """
-  @spec subscription_providers() :: list(atom())
-  def subscription_providers, do: @subscription_providers
-
-  @subscription_provider_strings Enum.map(@subscription_providers, &Atom.to_string/1)
-
-  @doc """
   Returns feed-subscription providers as strings, for matching against
   database string values such as `integration.provider`.
   """
   @spec subscription_provider_strings() :: list(String.t())
   def subscription_provider_strings, do: @subscription_provider_strings
-
-  @doc """
-  Checks if a provider subscribes to a published feed.
-
-  Subscriptions are read-only by construction: they can block availability
-  but can never receive a booking.
-  """
-  @spec subscription?(atom() | String.t()) :: boolean()
-  def subscription?(provider) when is_atom(provider), do: provider in @subscription_providers
-
-  def subscription?(provider) when is_binary(provider),
-    do: provider in @subscription_provider_strings
-
-  def subscription?(_provider), do: false
-
-  @caldav_based_provider_strings Enum.map(@caldav_based_providers, &Atom.to_string/1)
 
   @doc """
   Returns CalDAV-based providers as strings, for matching against database
@@ -296,7 +297,33 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @spec caldav_based_provider_strings() :: list(String.t())
   def caldav_based_provider_strings, do: @caldav_based_provider_strings
 
-  @ews_provider_strings Enum.map(@ews_providers, &Atom.to_string/1)
+  @doc """
+  Returns the family a provider belongs to.
+
+  Accepts the atom or the string form and answers identically for both: the
+  database column and LiveView params carry the string. Anything the table
+  does not know is `:other`.
+  """
+  @spec family_of(atom() | String.t() | any()) :: Families.t()
+  def family_of(provider), do: Families.of(@family_index, provider)
+
+  @doc """
+  Checks whether a provider belongs to `family`. Accepts atom or string.
+
+  The named predicates below are the readable spellings of the families that
+  callers actually ask about; this is the general form.
+  """
+  @spec in_family?(atom() | String.t() | any(), Families.t()) :: boolean()
+  def in_family?(provider, family), do: family_of(provider) == family
+
+  @doc """
+  Checks if a provider subscribes to a published feed.
+
+  Subscriptions are read-only by construction: they can block availability
+  but can never receive a booking.
+  """
+  @spec subscription?(atom() | String.t() | any()) :: boolean()
+  def subscription?(provider), do: in_family?(provider, :subscription)
 
   @doc """
   Returns EWS-based providers.
@@ -312,12 +339,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def ews_provider_strings, do: @ews_provider_strings
 
   @doc """
-  Checks if a provider speaks Exchange Web Services.
+  Checks if a provider speaks Exchange Web Services. Accepts atom or string.
   """
-  @spec ews?(atom() | String.t()) :: boolean()
-  def ews?(provider) when is_atom(provider), do: provider in @ews_providers
-  def ews?(provider) when is_binary(provider), do: provider in @ews_provider_strings
-  def ews?(_provider), do: false
+  @spec ews?(atom() | String.t() | any()) :: boolean()
+  def ews?(provider), do: in_family?(provider, :ews)
 
   # Order follows @providers — the canonical provider list — for deterministic results.
   @providers_with_circuit_breakers for p <- @providers,
@@ -353,24 +378,16 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def valid_provider?(_provider), do: false
 
   @doc """
-  Checks if a provider is OAuth-based.
+  Checks if a provider is OAuth-based. Accepts atom or string.
   """
-  @spec oauth_provider?(atom()) :: boolean()
-  def oauth_provider?(provider) when is_atom(provider) do
-    provider in @oauth_providers
-  end
-
-  def oauth_provider?(_provider), do: false
+  @spec oauth_provider?(atom() | String.t() | any()) :: boolean()
+  def oauth_provider?(provider), do: in_family?(provider, :oauth)
 
   @doc """
-  Checks if a provider is CalDAV-based.
+  Checks if a provider is CalDAV-based. Accepts atom or string.
   """
-  @spec caldav_based?(atom()) :: boolean()
-  def caldav_based?(provider) when is_atom(provider) do
-    provider in @caldav_based_providers
-  end
-
-  def caldav_based?(_provider), do: false
+  @spec caldav_based?(atom() | String.t() | any()) :: boolean()
+  def caldav_based?(provider), do: in_family?(provider, :caldav)
 
   @doc """
   Returns the fixed CalDAV server URL for a provider, or `nil` if the user

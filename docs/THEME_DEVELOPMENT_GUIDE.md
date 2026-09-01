@@ -16,8 +16,7 @@ The theme system uses a centralized registry pattern that eliminates magic strin
 6. **Shared Context** (`TymeslotWeb.Themes.Shared.*`) - Shared helpers, handlers, and components
 7. **Capability System** (`Tymeslot.ThemeCustomizations.Capability`) - Capability-based customization logic
 8. **Dispatcher & Loader** (`TymeslotWeb.Themes.Core.Dispatcher`, `TymeslotWeb.Themes.Core.Loader`) - Systems for dynamically loading and dispatching theme actions
-9. **Event Bus** (`TymeslotWeb.Themes.Core.EventBus`) - Centralized event handling system for theme components
-10. **Wrapper Components** (per-theme) - Provides theme-specific layout, backgrounds, and UI chrome
+9. **Wrapper Components** (per-theme) - Provides theme-specific layout, backgrounds, and UI chrome
 
 ## Quick Reference
 
@@ -111,7 +110,7 @@ assets/css/scheduling/themes/[theme_name]/
 | `StateMachineHelpers` | Shared state model and transition logic — `default_states/0`, `states_for/1` (5-step flow when the meeting type has custom fields, 4-step otherwise), `determine_initial_state/1`, `can_navigate_to_step?/3`, `validate_state_transition/3`. Replaces the deleted per-theme state machines. |
 | `PathHandlers` | Navigation with locale preservation; `organizer_scheduling_path/1` for back-to-calendar links in cancel/reschedule pages |
 | `Customization.Helpers` | Wrapper background/customization helpers. Call `prepare_wrapper_assigns/1` once at the top of your wrapper (it derives `@has_video_background`, `@video_poster`, `@show_language_switcher`); use `get_background_style/1` for the inline gradient/colour/image style. There is no `generate_custom_css` — the `custom_css` string arrives as an assign already. |
-| `Customization.Video` | Video background rendering — `render_video_container/2` (crossfade + loading fallbacks) |
+| `Customization.Video` | Video source generation — `render_preset_video_sources/1` and `render_upload_video_sources/1` build the `<source>` markup for a preset or an uploaded background |
 | `LocaleHandler` | Locale metadata for the language switcher — `get_locales_with_metadata/0`, `supported_locales/0` |
 | `SchedulingLive` | Shared LiveView macro — `use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "N"` injects all common callbacks; only `render/1` (and optional overrides) needed in your LiveView |
 | `VideoSources` | Shared component rendering `<source>` elements for video backgrounds; import and use `<.video_sources theme_customization={@theme_customization} />` in your wrapper |
@@ -1292,16 +1291,18 @@ Then use it in your wrapper template:
 
 The component handles both user-uploaded videos and preset videos automatically, selecting the correct source paths and falling back to nothing if no video is configured.
 
-For full video container rendering with crossfade and loading fallbacks, you can still use `TymeslotWeb.Themes.Shared.Customization.Video` directly:
+To build the `<source>` markup yourself, rather than letting `<.video_sources />` do it, call `TymeslotWeb.Themes.Shared.Customization.Video` directly:
 
 ```elixir
 alias TymeslotWeb.Themes.Shared.Customization.Video
 
-# In your theme wrapper
-<div class="video-container">
-  <%= Video.render_video_container(@theme_key, assigns) %>
-</div>
+# In your theme wrapper, for a bundled preset background
+<video class="video-container" autoplay muted loop playsinline>
+  {Phoenix.HTML.raw(Video.render_preset_video_sources("blue-wave-desktop.mp4"))}
+</video>
 ```
+
+Use `render_upload_video_sources/1` instead when the background is an uploaded file rather than a bundled preset.
 
 ### Multi-Quality Video System
 

@@ -1,22 +1,14 @@
 defmodule TymeslotWeb.Helpers.FileOperations do
   @moduledoc """
-  Robust file operations with comprehensive error handling, security validation,
-  and retry mechanisms for upload management.
+  Robust file operations with retry mechanisms and path/filename security
+  for upload management.
   """
 
   require Logger
-  alias TymeslotWeb.Helpers.UploadConstraints
 
   @max_retries 3
   # 1 second base delay
   @retry_backoff_base 1000
-
-  # Security: Allowed file extensions by category
-  @allowed_extensions %{
-    avatar: UploadConstraints.allowed_extensions(:avatar),
-    image: UploadConstraints.allowed_extensions(:image),
-    video: UploadConstraints.allowed_extensions(:video)
-  }
 
   # Security: Maximum filename length
   @max_filename_length 255
@@ -52,22 +44,6 @@ defmodule TymeslotWeb.Helpers.FileOperations do
 
         # Don't fail the operation
         :ok
-    end
-  end
-
-  @doc """
-  Validates file extension against allowed types.
-  """
-  @spec validate_file_extension(String.t(), atom()) ::
-          :ok | {:error, {atom(), String.t(), [String.t()]}}
-  def validate_file_extension(filename, file_type) when is_atom(file_type) do
-    extension = String.downcase(Path.extname(filename))
-    allowed = Map.get(@allowed_extensions, file_type, [])
-
-    if extension in allowed do
-      :ok
-    else
-      {:error, {:invalid_extension, extension, allowed}}
     end
   end
 
@@ -160,23 +136,6 @@ defmodule TymeslotWeb.Helpers.FileOperations do
   end
 
   @doc """
-  Performs comprehensive file validation for uploads.
-  """
-  @spec validate_upload_file(map(), atom(), keyword()) ::
-          {:ok, map()} | {:error, atom() | tuple()}
-  def validate_upload_file(entry, file_type, opts \\ []) do
-    filename = entry.client_name || "unknown"
-    max_size = Keyword.get(opts, :max_size)
-
-    with :ok <- validate_file_extension(filename, file_type),
-         :ok <- validate_filename_security(filename),
-         :ok <- validate_file_size(entry, max_size) do
-      sanitized_filename = sanitize_filename(filename)
-      {:ok, %{entry | client_name: sanitized_filename}}
-    end
-  end
-
-  @doc """
   Atomically moves a file with rollback capability.
   """
   @spec atomic_file_move(String.t(), String.t(), map()) ::
@@ -236,34 +195,5 @@ defmodule TymeslotWeb.Helpers.FileOperations do
 
   defp delete_file_with_retry(_file_path, 0) do
     {:error, :max_retries_exceeded}
-  end
-
-  defp validate_filename_security(filename) do
-    cond do
-      String.contains?(filename, <<0>>) ->
-        {:error, :null_byte_in_filename}
-
-      String.contains?(filename, ["../", "..\\", "~/"]) ->
-        {:error, :path_traversal_in_filename}
-
-      String.length(filename) > @max_filename_length ->
-        {:error, :filename_too_long}
-
-      String.match?(filename, ~r/^[.]/) ->
-        {:error, :hidden_file_not_allowed}
-
-      true ->
-        :ok
-    end
-  end
-
-  defp validate_file_size(_entry, nil), do: :ok
-
-  defp validate_file_size(entry, max_size) when is_integer(max_size) do
-    if entry.client_size <= max_size do
-      :ok
-    else
-      {:error, {:file_too_large, entry.client_size, max_size}}
-    end
   end
 end

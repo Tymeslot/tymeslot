@@ -134,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
   end
 
   describe "fetch_and_apply/1 - 410 expired delta link" do
-    test "clears the stored delta link and returns :error" do
+    test "clears the stored delta link and reports a transient failure" do
       integration =
         outlook_integration(
           graph_delta_link:
@@ -147,7 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
 
       log =
         capture_log(fn ->
-          assert :error = DeltaSync.fetch_and_apply(integration)
+          assert {:error, :transient} = DeltaSync.fetch_and_apply(integration)
         end)
 
       assert log =~ "Outlook delta link expired"
@@ -185,7 +185,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
   describe "fetch_and_apply/1 - token refresh 3-tuple error" do
     # Regression: a 3-tuple api_error from refresh_token used to escape the
     # case clause in the fetch function and crash the caller. The fix wraps it
-    # into the catch-all handle_fetch_result clause that logs and returns :error.
+    # into the catch-all handle_fetch_result clause that logs and classifies it.
     test "logs and continues when token refresh returns an api_error 3-tuple" do
       insert(:calendar_integration,
         provider: "outlook",
@@ -213,7 +213,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
               token_expires_at: nil
             )
 
-          assert :error = DeltaSync.fetch_and_apply(integration)
+          assert {:error, :hard} = DeltaSync.fetch_and_apply(integration)
         end)
 
       assert log =~ "Outlook token refresh failed"
@@ -260,7 +260,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
     # the obsolete endpoint, clear the link, and let the next sync run a
     # re-bootstrap via `/me/calendarView/delta`. No HTTP must be issued
     # against the bad URL.
-    test "clears the link and returns :error without making any HTTP request" do
+    test "clears the link and reports a transient failure without any HTTP request" do
       obsolete_link =
         "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=frozen-window"
 
@@ -269,10 +269,38 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
       # Mox would raise if any HTTP request fires — the obsolete link must
       # never be sent back to Graph.
 
-      assert :error = DeltaSync.fetch_and_apply(integration)
+      assert {:error, :transient} = DeltaSync.fetch_and_apply(integration)
 
       {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
       assert is_nil(reloaded.graph_delta_link)
+    end
+  end
+
+  describe "fetch_and_apply/1 - transient Graph failure" do
+    # The failure behind the 2026-08-31 admin alert: Graph answered
+    # calendarView/delta with an empty-bodied 500 three times in 70 seconds.
+    # Nothing is wrong with the credentials or the stored link, so the class
+    # must let the caller abandon a spent job to the next scheduled sweep
+    # instead of raising an alert no operator here can act on.
+    test "classifies a Graph 500 as transient and leaves the stored link intact" do
+      link = "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=current"
+      integration = outlook_integration(graph_delta_link: link)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      log =
+        capture_log(fn ->
+          assert {:error, :transient} = DeltaSync.fetch_and_apply(integration)
+        end)
+
+      assert log =~ "Outlook delta fetch failed"
+
+      # A 5xx says nothing about whether the delta link is still valid, so
+      # clearing it would force a full re-bootstrap on every upstream blip.
+      {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
+      assert reloaded.graph_delta_link == link
     end
   end
 end

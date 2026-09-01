@@ -1,12 +1,17 @@
-defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
+defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
   @moduledoc """
-  Calendar event query operations (list, range, month queries).
+  Reads a user's events from their connected calendar providers.
 
   Responsibilities:
   - List events across all calendars
-  - Range queries with request coalescing
-  - Month queries with async fetching
+  - Range fetches with request coalescing
   - Event filtering and deduplication
+
+  Named a fetcher rather than a queries module because it performs no data
+  access of its own: this is provider HTTP fan-out, metrics, and the
+  fail-closed availability gate, on the live booking path. The `*_queries.ex`
+  suffix would have exempted the whole file from `CredoChecks.RepoCallBoundary`
+  for an exemption it never needed.
   """
 
   require Logger
@@ -59,53 +64,16 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
   end
 
   @doc """
-  Gets events for a month for display purposes.
-  Uses request coalescing to prevent duplicate API calls.
-  """
-  @spec get_events_for_month(user_id(), integer(), integer(), String.t()) ::
-          {:ok, list(map())} | {:error, term()}
-  def get_events_for_month(user_id, year, month, timezone) do
-    Metrics.time_operation(:get_events_for_month, %{year: year, month: month}, fn ->
-      Logger.info("Getting events for month", year: year, month: month, timezone: timezone)
-
-      {start_dt, end_dt} = month_utc_boundaries(year, month, timezone)
-      get_events_for_range_fresh(user_id, start_dt, end_dt)
-    end)
-  end
-
-  @doc """
   Gets fresh events for a date range.
   Uses request coalescing to prevent duplicate API calls when multiple
   requests for the same date range occur simultaneously.
   """
-  @spec get_events_for_range_fresh(Date.t(), Date.t()) :: {:error, :user_id_required}
-  def get_events_for_range_fresh(_start_date, _end_date) do
-    # No implicit user context allowed anymore
-    {:error, :user_id_required}
-  end
-
   @spec get_events_for_range_fresh(user_id(), Date.t() | DateTime.t(), Date.t() | DateTime.t()) ::
           {:ok, list(map())} | {:error, term()}
   def get_events_for_range_fresh(user_id, start_date, end_date) when is_integer(user_id) do
     RequestCoalescer.coalesce(user_id, start_date, end_date, fn ->
       fetch_events_from_providers(user_id, start_date, end_date)
     end)
-  end
-
-  @doc false
-  @spec month_utc_boundaries(integer(), 1..12, String.t()) :: {DateTime.t(), DateTime.t()}
-  def month_utc_boundaries(year, month, timezone) do
-    start_date = Date.new!(year, month, 1)
-    end_date = Date.end_of_month(start_date)
-
-    # Convert month boundaries in user's timezone to UTC so we don't miss events
-    # near day boundaries (e.g. UTC+12 starts 12h before UTC midnight)
-    start_dt =
-      DateTime.shift_zone!(DateTime.new!(start_date, ~T[00:00:00], timezone), "Etc/UTC")
-
-    end_dt = DateTime.shift_zone!(DateTime.new!(end_date, ~T[23:59:59], timezone), "Etc/UTC")
-
-    {start_dt, end_dt}
   end
 
   # --- Private Implementation ---

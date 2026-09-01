@@ -113,7 +113,6 @@ msgstr "Connectez un compte Stripe pour utiliser cette automatisation."
 msgid "Copy"
 msgstr "Copier"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex
 #, elixir-autogen, elixir-format
@@ -166,7 +165,6 @@ msgstr "Supprimer le webhook ?"
 msgid "Disabled"
 msgstr "Désactivé"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
@@ -189,11 +187,7 @@ msgid "Event Subscriptions"
 msgstr "Abonnements aux événements"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#, elixir-autogen, elixir-format
-msgid "Events to Subscribe *"
-msgstr "Événements à suivre *"
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr "Échec"
@@ -288,12 +282,6 @@ msgstr "Régénérer le jeton ?"
 #, elixir-autogen, elixir-format
 msgid "Request timestamp"
 msgstr "Horodatage de la requête"
-
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Saving..."
-msgstr "Enregistrement..."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -410,16 +398,19 @@ msgstr "Cette fonctionnalité d’automatisation est disponible avec le forfait 
 msgid "Total"
 msgstr "Total"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Se déclenche lorsque l’horaire d’une réservation est modifié"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Se déclenche lorsqu’une nouvelle réservation est créée avec succès"
 
+#: lib/tymeslot/webhooks.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
@@ -435,7 +426,6 @@ msgstr "Impossible d’effectuer cette action. Veuillez réessayer."
 msgid "Unable to verify subscription status. Please try again."
 msgstr "Impossible de vérifier le statut de l’abonnement. Veuillez réessayer."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Update Webhook"
@@ -471,13 +461,11 @@ msgstr "Détails du webhook"
 msgid "Webhook Integration Guide"
 msgstr "Guide d’intégration des webhooks"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook Name"
 msgstr "Nom du webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
@@ -543,7 +531,6 @@ msgstr "Que sont les webhooks ?"
 msgid "Your Webhooks"
 msgstr "Vos webhooks"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "My n8n Automation"
@@ -570,3 +557,78 @@ msgstr[1] "%{days} derniers jours"
 #, elixir-autogen, elixir-format
 msgid "Delivery History - %{name}"
 msgstr "Historique des livraisons - %{name}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please slow down."
+msgstr "Trop de requêtes. Veuillez ralentir."
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled"
+msgstr "Réunion annulée"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Created"
+msgstr "Réunion créée"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled"
+msgstr "Rendez-vous déplacé"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Connection failed"
+msgstr "Échec de la connexion"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled: %{reason}"
+msgstr "Désactivé : %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Failed: %{reason}"
+msgstr "Échec : %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Still checking — please try again in a moment."
+msgstr "Vérification en cours — veuillez réessayer dans un instant."
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Succeeded"
+msgstr "Réussi"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The connection test took too long to respond"
+msgstr "Le test de connexion a mis trop de temps à répondre"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected to a private or restricted address"
+msgstr "Le webhook a été redirigé vers une adresse privée ou restreinte"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected too many times"
+msgstr "Le webhook a été redirigé trop de fois"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected without a destination address"
+msgstr "Le webhook a été redirigé sans adresse de destination"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "URL resolves to a private or restricted address"
+msgstr "L'URL correspond à une adresse privée ou restreinte"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook returned status %{status}"
+msgstr "Le webhook a renvoyé le statut %{status}"

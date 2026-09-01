@@ -90,6 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   def categorize_error(:unauthorized), do: :auth
   def categorize_error(:forbidden), do: :permission
   def categorize_error(:not_found), do: :config
+  def categorize_error(:method_not_allowed), do: :config
   def categorize_error({:calendar_home_not_found, _url}), do: :config
   def categorize_error(:rate_limited), do: :rate_limit
   def categorize_error(:timeout), do: :timeout

@@ -4,6 +4,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   require Logger
 
   alias Tymeslot.Security.RateLimit
+  alias Tymeslot.Security.SecurityLogger
 
   @type bucket_key :: String.t()
   @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
@@ -44,10 +45,14 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
       {:error, :rate_limited} ->
         window_minutes = div(window_ms, 60_000)
 
+        # Neither the identifier nor the bucket key reaches the log line raw:
+        # the login and signup buckets are keyed on the email address, so a
+        # rejection under attack would otherwise write it twice per request,
+        # on the one path that fires at volume. `operation` already names the
+        # bucket, so the bucket key adds nothing but the identifier.
         Logger.warning("Rate limit exceeded",
           operation: operation,
-          identifier: identifier,
-          bucket: bucket_key,
+          identifier_masked: mask_identifier(identifier),
           limit: limit,
           window_minutes: window_minutes
         )
@@ -57,6 +62,20 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
            "Please wait a few minutes before trying again."}
     end
   end
+
+  # Callers pass an email on the account-keyed buckets and an IP address or a
+  # user id on the rest. Anything address-shaped is masked; an address that
+  # will not parse is dropped rather than logged verbatim, so a malformed
+  # value cannot slip through as "not an email".
+  defp mask_identifier(identifier) when is_binary(identifier) do
+    if String.contains?(identifier, "@") do
+      SecurityLogger.mask_email(identifier) || "[REDACTED]"
+    else
+      identifier
+    end
+  end
+
+  defp mask_identifier(identifier), do: identifier
 
   @spec invalid_user_id(String.t(), any()) :: {:error, :invalid_user_id}
   def invalid_user_id(operation, user_id) do

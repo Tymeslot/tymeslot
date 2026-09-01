@@ -20,6 +20,10 @@ defmodule Tymeslot.Telegram.API do
     })
   end
 
+  # The body is `Req.Response.body`. `Tymeslot.Infrastructure.HTTPClient` sets
+  # `decode_body: false`, so this is always the raw binary Telegram sent, not
+  # a decoded map — callers that need the parsed JSON call `Jason.decode/1`
+  # themselves.
   @spec set_webhook(String.t(), String.t(), String.t()) ::
           {:ok, non_neg_integer(), String.t()} | {:error, String.t()}
   def set_webhook(bot_token, webhook_url, secret_token) do
@@ -43,7 +47,18 @@ defmodule Tymeslot.Telegram.API do
         {:error, inspect(reason)}
 
       {:error, reason} ->
-        {:error, inspect(reason)}
+        {:error, redact_error(reason)}
     end
   end
+
+  # `reason` here is whatever the configured HTTP client module returns
+  # outside the `%{reason: ...}` shape above — notably
+  # `Tymeslot.Infrastructure.ResponseTooLargeError`, whose struct carries the
+  # full request URL, and the bot token lives in that URL's path. Exceptions
+  # already define a redacted `message/1` (`ResponseTooLargeError.message/1`
+  # prints scheme and host only); anything else falls back to `inspect/1`,
+  # which is safe only because no other shape reaching this branch carries a
+  # URL today.
+  defp redact_error(reason) when is_exception(reason), do: Exception.message(reason)
+  defp redact_error(reason), do: inspect(reason)
 end

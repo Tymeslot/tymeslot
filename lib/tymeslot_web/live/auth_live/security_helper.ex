@@ -46,15 +46,6 @@ defmodule TymeslotWeb.AuthLive.SecurityHelper do
   end
 
   @doc """
-  Extract client IP address from socket for rate limiting and security logging.
-  Delegates to the standardized ClientIP module for consistent IP extraction.
-  """
-  @spec extract_remote_ip(Phoenix.LiveView.Socket.t()) :: String.t()
-  def extract_remote_ip(socket) do
-    ClientIP.get(socket)
-  end
-
-  @doc """
   Extract client metadata for security logging and rate limiting.
   """
   @spec extract_client_metadata(Phoenix.LiveView.Socket.t()) :: map()

@@ -48,11 +48,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     end
   end
 
-  @spec format_create_time(map()) :: String.t()
-  def format_create_time(creating) do
-    "#{format_time_value(creating.start_hour, creating.start_minute)} – #{format_time_value(creating.end_hour, creating.end_minute)}"
-  end
-
   @spec format_time_value(integer(), integer()) :: String.t()
   def format_time_value(hour, minute) do
     "#{String.pad_leading("#{hour}", 2, "0")}:#{String.pad_leading("#{minute}", 2, "0")}"

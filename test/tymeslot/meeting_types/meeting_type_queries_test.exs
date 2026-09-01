@@ -403,42 +403,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
     end
   end
 
-  describe "create_default_meeting_types_individual/1 (legacy version)" do
-    test "creates default meeting types individually" do
-      user = insert(:user)
-
-      {:ok, meeting_types} = MeetingTypeQueries.create_default_meeting_types_individual(user.id)
-
-      assert length(meeting_types) == 2
-
-      # Verify both types were created
-      names = Enum.map(meeting_types, & &1.name)
-      assert "15 Minutes" in names
-      assert "30 Minutes" in names
-
-      # Verify they all belong to the user
-      assert Enum.all?(meeting_types, &(&1.user_id == user.id))
-    end
-
-    test "handles duplicates gracefully in individual creation" do
-      user = insert(:user)
-
-      # Create existing meeting type
-      insert(:meeting_type, user: user, name: "15 Minutes")
-
-      {:ok, meeting_types} = MeetingTypeQueries.create_default_meeting_types_individual(user.id)
-
-      # Should only create the non-duplicate type
-      assert length(meeting_types) == 1
-      assert hd(meeting_types).name == "30 Minutes"
-    end
-
-    test "returns error for invalid user_id in individual creation" do
-      assert {:error, :invalid_user_id} =
-               MeetingTypeQueries.create_default_meeting_types_individual(nil)
-    end
-  end
-
   describe "count_for_user/1" do
     test "returns count of meeting types for user" do
       user1 = insert(:user)

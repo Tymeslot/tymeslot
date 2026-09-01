@@ -11,6 +11,8 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Integrations.HealthCheck.HealthStatus
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           integration_type: String.t() | nil,
@@ -47,6 +49,15 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
     timestamps(type: :utc_datetime)
   end
 
+  # The canonical status set lives in `HealthCheck.HealthStatus`. The sole
+  # runtime-derived writer (`Monitor.put_state/3`) writes through
+  # `IntegrationHealthStateQueries.update_fields/3`, a raw `update_all` that
+  # never builds a changeset, so this inclusion check only binds the seed
+  # (`get_or_init/3`) and test-only (`upsert/3`) callers; the
+  # `status_must_be_known` database constraint is what closes the value set
+  # for every writer.
+  @valid_error_classes ~w(transient hard)
+
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(struct, attrs) do
@@ -66,6 +77,8 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :notification_sent_at
     ])
     |> validate_required([:integration_type, :integration_id, :user_id, :status])
+    |> validate_inclusion(:status, HealthStatus.strings())
+    |> validate_inclusion(:last_error_class, @valid_error_classes)
     |> unique_constraint([:integration_type, :integration_id])
   end
 
@@ -91,6 +104,8 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :notification_sent_at
     ])
     |> validate_required([:integration_type, :integration_id])
+    |> validate_inclusion(:status, HealthStatus.strings())
+    |> validate_inclusion(:last_error_class, @valid_error_classes)
     |> unique_constraint([:integration_type, :integration_id])
   end
 end

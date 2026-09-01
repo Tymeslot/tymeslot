@@ -6,9 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
 
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
+  alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Reminder
-
-  @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
 
   @doc """
   Converts Tymeslot event data into the Microsoft Graph event format.
@@ -45,7 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   @spec add_tymeslot_fingerprint(map()) :: map()
   def add_tymeslot_fingerprint(body) do
     Map.put(body, "singleValueExtendedProperties", [
-      %{"id" => @outlook_tymeslot_property_id, "value" => "tymeslot"}
+      %{"id" => TymeslotFingerprint.property_id(), "value" => "tymeslot"}
     ])
   end
 

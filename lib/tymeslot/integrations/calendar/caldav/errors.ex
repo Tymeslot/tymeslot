@@ -61,6 +61,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
         "The event no longer exists on the calendar server."
       )
 
+  def describe_error(:method_not_allowed),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
+      )
+
   def describe_error(:precondition_failed),
     do:
       dgettext(
@@ -122,15 +129,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   @doc """
   Tells whether a failure would fail identically on an identical retry.
 
-  Only the statuses the transport layer does not model qualify, and only in the
-  4xx range: the server understood the request and refused it, so replaying it
-  costs another round trip for a guaranteed identical answer. Retryable
-  conditions (timeouts, 5xx, rate limits) and the failures with their own
-  handling (`:unauthorized` flags the integration for reconnection,
-  `:not_found` removes the calendar path) are deliberately not terminal here —
-  each has a caller that already knows what to do with it.
+  A 4xx the request cannot talk its way out of qualifies: the server understood
+  the request and refused it, so replaying it costs another round trip for a
+  guaranteed identical answer. Retryable conditions (timeouts, 5xx, rate
+  limits) and the failures with their own handling (`:unauthorized` flags the
+  integration for reconnection, `:not_found` removes the calendar path) are
+  deliberately not terminal here — each has a caller that already knows what to
+  do with it.
+
+  `:method_not_allowed` needs its own clause rather than riding on the
+  `{:unexpected_status, 405}` one it replaced. Without it a 405 would fall to
+  the catch-all and become retryable, reinstating exactly the retry storm and
+  permanent-failure admin alert `SyncCalDavCalendarWorker` discards to avoid.
   """
   @spec terminal_error?(Base.error_reason() | term()) :: boolean()
+  def terminal_error?(:method_not_allowed), do: true
   def terminal_error?({:unexpected_status, status}) when status in 400..499, do: true
   def terminal_error?(_other), do: false
 end

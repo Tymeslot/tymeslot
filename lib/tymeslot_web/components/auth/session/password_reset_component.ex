@@ -309,45 +309,4 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
     </.auth_card_layout>
     """
   end
-
-  @doc """
-  Renders the password changed confirmation page using shared auth components.
-  """
-  @spec new_password_set_page(map()) :: Phoenix.LiveView.Rendered.t()
-  def new_password_set_page(assigns) do
-    assigns = assign(assigns, :contact_url, Application.get_env(:tymeslot, :contact_url))
-
-    ~H"""
-    <.auth_card_layout title={dgettext("auth", "Success!")}>
-      <:form>
-        <div class="text-center mb-8">
-          <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-emerald-50 border-2 border-emerald-100 shadow-xl shadow-emerald-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
-            <.icon name="hero-check-circle" class="w-10 h-10 text-emerald-600" />
-          </div>
-          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
-            {dgettext("auth", "Password Changed")}
-          </h2>
-          <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
-            {dgettext(
-              "auth",
-              "Your password has been successfully updated. You can now log in with your new credentials."
-            )}
-          </p>
-        </div>
-        <div class="mt-8">
-          <.auth_link_button href={~p"/auth/login"}>
-            {dgettext("auth", "Go to Login")}
-          </.auth_link_button>
-        </div>
-      </:form>
-      <:footer :if={@contact_url}>
-        <.auth_footer
-          prompt={dgettext("auth", "Need help?")}
-          href={@contact_url}
-          link_text={dgettext("auth", "Contact Support")}
-        />
-      </:footer>
-    </.auth_card_layout>
-    """
-  end
 end

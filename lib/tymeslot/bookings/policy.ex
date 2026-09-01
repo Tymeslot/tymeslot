@@ -1,7 +1,15 @@
 defmodule Tymeslot.Bookings.Policy do
   @moduledoc """
   Business rules and policies for bookings.
-  Pure functions that define what is allowed.
+
+  None of the functions here are pure. The attribute assembly performs
+  database reads: `scheduling_config/2` resolves the organiser's profile and
+  schedule; `build_meeting_attributes/1` additionally resolves the video
+  integration and meeting type. The verdict predicates `can_cancel_meeting?/1`
+  and `can_reschedule_meeting?/1` read the system clock (`Tymeslot.Clock`) and
+  emit `Logger.info` on their blocked branches. `meeting_is_current?/1` and
+  `meeting_is_past?/1` also read the clock but do no database access and no
+  logging.
   """
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.BuildParams
@@ -14,7 +22,7 @@ defmodule Tymeslot.Bookings.Policy do
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.ReminderUtils
-  alias TymeslotWeb.Endpoint
+  alias Tymeslot.Utils.UrlBuilder
 
   require Logger
 
@@ -27,6 +35,7 @@ defmodule Tymeslot.Bookings.Policy do
   computed from. A nil meeting type resolves the organiser's default schedule.
   """
   @spec scheduling_config(integer() | nil, map() | nil) :: %{
+          required(:schedule_id) => integer() | nil,
           required(:buffer_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
@@ -49,8 +58,17 @@ defmodule Tymeslot.Bookings.Policy do
 
   # `max_advance_booking_days` is this map's name for the schedule's
   # `advance_booking_days`; every other key is carried through unrenamed.
+  # `schedule_id` is carried so callers can recompute the schedule's own
+  # windows from this config alone. `owner_timezone` is set by the caller from
+  # `Profiles.get_profile_settings/1`, which already resolves a profile with no
+  # timezone to `Profiles.get_default_timezone()` — the same fallback the
+  # display path applies in
+  # `TymeslotWeb.Live.Scheduling.AvailabilityHelpers.get_owner_timezone/1` and
+  # `CalendarHelpers.availability_config/2`, so a nil profile timezone
+  # resolves to the same zone on both the display and enforcement paths.
   defp policy_values(schedule) do
     %{
+      schedule_id: schedule && schedule.id,
       buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
       min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
       max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days)
@@ -128,7 +146,9 @@ defmodule Tymeslot.Bookings.Policy do
 
   @doc """
   Builds meeting attributes from parameters and form data.
-  Pure transformation function.
+
+  Resolves the organiser's profile, schedule and integrations along the way, so
+  this reads from the database rather than being a pure transformation.
   """
   @spec build_meeting_attributes(BuildParams.t()) :: meeting_attributes()
   def build_meeting_attributes(%BuildParams{} = params) do
@@ -265,21 +285,6 @@ defmodule Tymeslot.Bookings.Policy do
       cancel_url: build_meeting_url(meeting_uid, "/cancel", org_username),
       meeting_url: nil
     }
-  end
-
-  @doc """
-  Determines if a calendar check failure should block booking.
-
-  Some calendar failures are recoverable (network issues),
-  while others should block the booking attempt.
-  """
-  @spec should_block_on_calendar_failure?(term()) :: boolean()
-  def should_block_on_calendar_failure?(reason) do
-    case reason do
-      :slot_unavailable -> true
-      :calendar_fetch_failed -> false
-      _other -> false
-    end
   end
 
   @doc """
@@ -451,9 +456,7 @@ defmodule Tymeslot.Bookings.Policy do
   Gets the application base URL based on configuration.
   """
   @spec app_url() :: String.t()
-  def app_url do
-    Endpoint.url()
-  end
+  defdelegate app_url, to: UrlBuilder, as: :base_url
 
   @doc """
   Builds the public accept/decline RSVP URLs for a guest's token.

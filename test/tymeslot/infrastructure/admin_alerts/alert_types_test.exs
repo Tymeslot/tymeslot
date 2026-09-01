@@ -145,6 +145,66 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
       assert msg =~ "sub_abc123"
     end
+
+    test ":recipient_email_rejected includes the connect account identifier and reason" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced",
+          connect_account_id: 42
+        })
+
+      assert msg =~ "connect account 42"
+      assert msg =~ "bounced"
+    end
+
+    test ":recipient_email_rejected includes the booking payment identifier when no connect account is present" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced",
+          booking_payment_id: 7
+        })
+
+      assert msg =~ "booking payment 7"
+    end
+
+    test ":recipient_email_rejected falls back to summary and reason with no identifier" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced"
+        })
+
+      assert msg == "Recipient permanently undeliverable, email discarded: bounced"
+    end
+
+    test ":recipient_email_rejected includes the meeting identifier when no other id is present" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message: "bounced",
+          meeting_id: 99
+        })
+
+      assert msg =~ "meeting 99"
+    end
+
+    # The provider's rejection text can embed the recipient's own address
+    # (e.g. Postmark's inactive-address message); the message this function
+    # returns reaches Logger and the persisted Oban job args, so it must not
+    # carry the raw address.
+    test ":recipient_email_rejected masks an email address embedded in the reason" do
+      msg =
+        AlertTypes.format_message(:recipient_email_rejected, %{
+          summary: "Recipient permanently undeliverable, email discarded",
+          reason_message:
+            "{422, %{\"ErrorCode\" => 406, \"Message\" => \"Found inactive addresses: jane.doe@example.com\"}}"
+        })
+
+      refute msg =~ "jane.doe@example.com"
+      assert msg =~ "j***@example.com"
+    end
   end
 
   describe "unhandled_crash" do
@@ -367,6 +427,87 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
     test "analytics_tracking_anomaly falls back to 'unknown' when :kind is absent" do
       key = AlertTypes.dedup_key(:analytics_tracking_anomaly, %{converting_visitors: 5})
       assert key == "analytics_tracking_anomaly:unknown"
+    end
+
+    # A rejected recipient's identity is the account it belongs to, not the
+    # rejection reason: two different hosts' bounces inside the same dedup
+    # window must raise two alerts, not collapse into one.
+    test "recipient_email_rejected differs across connect accounts" do
+      key_a =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          connect_account_id: 1
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          connect_account_id: 2
+        })
+
+      refute key_a == key_b
+    end
+
+    test "recipient_email_rejected is stable across differing reasons for the same connect account" do
+      key_a =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          connect_account_id: 1
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "mailbox full",
+          connect_account_id: 1
+        })
+
+      assert key_a == key_b
+      assert key_a =~ "recipient_email_rejected"
+      assert key_a =~ "1"
+    end
+
+    test "recipient_email_rejected differs across booking payments" do
+      key_a =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          booking_payment_id: 10
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          booking_payment_id: 20
+        })
+
+      refute key_a == key_b
+    end
+
+    test "recipient_email_rejected without an identifier falls back to the formatted message" do
+      metadata = %{summary: "Recipient permanently undeliverable", reason_message: "bounced"}
+
+      assert AlertTypes.dedup_key(:recipient_email_rejected, metadata) ==
+               AlertTypes.format_message(:recipient_email_rejected, metadata)
+    end
+
+    # EmailWorker — the caller responsible for the overwhelming majority of
+    # recipient rejections — has no connect account or booking payment to
+    # hand, only the meeting the email was for. Without this, every rejection
+    # from that path fell back to the message-based key and collapsed
+    # unrelated meetings into one alert per day.
+    test "recipient_email_rejected differs across meetings" do
+      key_a =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          meeting_id: 1
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:recipient_email_rejected, %{
+          reason_message: "bounced",
+          meeting_id: 2
+        })
+
+      refute key_a == key_b
     end
   end
 end

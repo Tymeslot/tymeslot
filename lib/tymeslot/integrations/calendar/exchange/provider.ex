@@ -287,6 +287,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     end
   end
 
+  # `list_events/2` above answers from the local event cache, whose rows were
+  # normalised on the way in, so it hands back finished maps rather than EWS
+  # XML. `normalise_events/2` below still parses raw `CalendarItem` elements,
+  # because the sync worker feeds it a live `list_raw_events/2` read.
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events_representation, do: :normalised
+
   @doc """
   Lists the raw calendar items falling in the requested range.
 

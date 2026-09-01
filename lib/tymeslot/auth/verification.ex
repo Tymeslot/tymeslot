@@ -10,7 +10,7 @@ defmodule Tymeslot.Auth.Verification do
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.{RateLimiter, Token}
+  alias Tymeslot.Security.{RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -56,26 +56,13 @@ defmodule Tymeslot.Auth.Verification do
   @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec verify_user(String.t() | integer()) :: verification_result()
   def verify_user(token) when is_binary(token) do
-    with {:ok, user} <- fetch_user_by_token(token),
-         :ok <- check_token_expiration(user),
-         {:ok, updated_user} <- mark_user_as_verified(user.id) do
-      Logger.info("Email verification successful", user_id: updated_user.id)
-      {:ok, updated_user}
-    else
-      {:error, :token_expired} = error ->
-        Logger.warning("Email verification failed - token expired")
-        AccountLogging.log_operation_failure("email_verification", token, :token_expired)
-        error
-
+    case fetch_user_by_token(token) do
       {:error, :invalid_token} = error ->
         Logger.warning("Email verification failed - invalid token")
-        AccountLogging.log_operation_failure("email_verification", token, :invalid_token)
         error
 
-      {:error, reason} = error ->
-        Logger.error("Email verification failed", reason: inspect(reason))
-        AccountLogging.log_operation_failure("email_verification", token, reason)
-        error
+      {:ok, user} ->
+        verify_fetched_user(user)
     end
   end
 
@@ -89,15 +76,7 @@ defmodule Tymeslot.Auth.Verification do
   @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec verify_user_email(socket_or_conn(), term(), map()) :: verification_result()
   def verify_user_email(socket_or_conn, user, _profile_params) do
-    ip_address = extract_ip_address(socket_or_conn)
-
-    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
-      :ok ->
-        do_verify_user_email(socket_or_conn, user)
-
-      {:error, :rate_limited, message} ->
-        {:error, :rate_limited, message}
-    end
+    send_within_rate_limit(socket_or_conn, user)
   end
 
   @doc """
@@ -114,15 +93,7 @@ defmodule Tymeslot.Auth.Verification do
   @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec resend_verification_email(socket_or_conn(), term()) :: verification_result()
   def resend_verification_email(socket_or_conn, user) do
-    ip_address = extract_ip_address(socket_or_conn)
-
-    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
-      :ok ->
-        do_verify_user_email(socket_or_conn, user)
-
-      {:error, :rate_limited, message} ->
-        {:error, :rate_limited, message}
-    end
+    send_within_rate_limit(socket_or_conn, user)
   end
 
   @doc """
@@ -137,7 +108,10 @@ defmodule Tymeslot.Auth.Verification do
         resend_verification_email(socket_or_conn, user)
 
       {:error, :not_found} ->
-        Logger.warning("Attempted to resend verification for non-existent email", email: email)
+        Logger.warning("Attempted to resend verification for non-existent email",
+          email_masked: SecurityLogger.mask_email(email)
+        )
+
         {:error, :user_not_found}
 
       other ->
@@ -147,6 +121,48 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   # Private functions
+
+  # Split out of `verify_user/1` so `user` (already resolved from the token)
+  # stays in scope for the failure branches below: they identify a failure
+  # by user id, never by the raw token.
+  @spec verify_fetched_user(term()) :: verification_result()
+  defp verify_fetched_user(user) do
+    with :ok <- check_token_expiration(user),
+         {:ok, updated_user} <- mark_user_as_verified(user.id) do
+      Logger.info("Email verification successful", user_id: updated_user.id)
+      {:ok, updated_user}
+    else
+      {:error, :token_expired} = error ->
+        Logger.warning("Email verification failed - token expired")
+        AccountLogging.log_operation_failure("email_verification", user.id, :token_expired)
+        error
+
+      {:error, reason} = error ->
+        Logger.error("Email verification failed", reason: inspect(reason))
+        # The token resolved and had not expired, only `mark_user_as_verified/1`
+        # failed, so the token may still be valid and unconsumed.
+        AccountLogging.log_operation_failure("email_verification", user.id, reason)
+        error
+    end
+  end
+
+  # The initial send and the resend are the same operation as far as the limiter
+  # is concerned: they share a bucket, a rejection message, and an audit entry.
+  defp send_within_rate_limit(socket_or_conn, user) do
+    ip_address = extract_ip_address(socket_or_conn)
+
+    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
+      :ok ->
+        do_verify_user_email(socket_or_conn, user)
+
+      {:error, :rate_limited, message} ->
+        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
+          ip_address: ip_address
+        })
+
+        {:error, :rate_limited, message}
+    end
+  end
 
   @spec fetch_user_by_token(String.t()) :: {:ok, term()} | {:error, :invalid_token}
   defp fetch_user_by_token(token) do

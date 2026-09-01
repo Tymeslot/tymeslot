@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox
@@ -541,6 +541,73 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert metadata[:passcode] == "123456"
       assert metadata[:dial_in_number] == "+1-555-0100"
       assert metadata[:conference_id] == "987654321"
+    end
+  end
+
+  # Pins the circuit-breaker split from `ProviderAdapter`: per-tenant scope
+  # and credential failures must never reach `finish_create_meeting_room/2`
+  # (and so never count against the shared Teams breaker), while a
+  # provider-host failure during token acquisition still needs to reach it.
+  describe "precheck_create_meeting_room/1" do
+    test "returns an error without any network call for a missing scope" do
+      config = %{valid_config() | oauth_scope: "User.Read"}
+
+      assert {:error, :invalid_configuration} =
+               TeamsProvider.precheck_create_meeting_room(config)
+    end
+
+    test "bypasses the breaker on a rejected/expired grant" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
+
+      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh_token", _scope ->
+        {:error, "Token refresh failed: invalid_grant"}
+      end)
+
+      assert {:error, "Token refresh failed: Token refresh failed: invalid_grant"} =
+               TeamsProvider.precheck_create_meeting_room(config)
+    end
+
+    test "lets the breaker witness a network/5xx failure from the OAuth host" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
+
+      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh_token", _scope ->
+        {:error, "Network error during token refresh: timeout"}
+      end)
+
+      assert {:provider_error,
+              "Token refresh failed: Network error during token refresh: timeout"} =
+               TeamsProvider.precheck_create_meeting_room(config)
+    end
+
+    test "returns {:ok, token} for a valid token, doing no refresh" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      assert {:ok, "valid_token"} = TeamsProvider.precheck_create_meeting_room(config)
+    end
+  end
+
+  describe "finish_create_meeting_room/2" do
+    test "makes the outbound Graph call with the already-resolved token" do
+      config = valid_config()
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
+        assert {"Authorization", "Bearer resolved_token"} in headers
+
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body: Jason.encode!(%{"id" => "m5", "onlineMeetingUrl" => "https://teams/join/m5"})
+         }}
+      end)
+
+      assert {:ok, room_data} = TeamsProvider.finish_create_meeting_room("resolved_token", config)
+      assert room_data.room_id == "m5"
     end
   end
 

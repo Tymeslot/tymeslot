@@ -13,6 +13,16 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   Sensitive keys are matched case-insensitively against the metadata key name
   (atom or string). Substring matching catches variants like `stripe_api_key`,
   `refresh_token`, `set_cookie`, `x_authorization`.
+
+  Personal identifiers (`email`, `identifier`) are matched more precisely than
+  secrets, because "email" appears in plenty of key names that carry no address
+  at all. See `@sensitive_key_suffixes` and `@sensitive_exact_keys` below.
+
+  A key whose value the writer has already masked is named with a `_masked`
+  suffix by convention (`email_masked`, `owner_email_masked`,
+  `identifier_masked`); none of the rules below matches such a key, so the
+  masked value survives to the log line. Masking at source is the primary
+  defence — this filter only catches what a call site forgot.
   """
 
   # `calendar_id` and `calendar_path` are personal identifiers, not secrets:
@@ -38,6 +48,17 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
     calendar_path
   )
 
+  # Matched on the whole key or on a `_`-anchored suffix, never as a bare
+  # substring: `attendee_email`, `organizer_email` and `new_email` all carry an
+  # address, while `email_action`, `email_type` and `email_masked` do not, and
+  # blanking those would cost diagnostics for no privacy gain.
+  @sensitive_key_suffixes ~w(email)
+
+  # Matched on the whole key only. `identifier` is the key the account-lockout
+  # and rate-limiter paths use for an email address; `provider_identifier` is an
+  # opaque calendar event id and stays readable.
+  @sensitive_exact_keys ~w(identifier)
+
   @redacted "[REDACTED]"
   @filter_id :tymeslot_metadata_redactor
 
@@ -59,14 +80,6 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   end
 
   def filter(event, _extra), do: event
-
-  @doc """
-  Returns the list of substrings that mark a metadata key as sensitive.
-
-  Exposed for tests.
-  """
-  @spec sensitive_substrings() :: [String.t()]
-  def sensitive_substrings, do: @sensitive_substrings
 
   defp redact_meta(meta) do
     if Enum.any?(meta, fn {k, _v} -> sensitive_key?(k) end) do
@@ -90,8 +103,14 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
 
   defp sensitive_key?(key) when is_binary(key) do
     downcased = String.downcase(key)
-    Enum.any?(@sensitive_substrings, &String.contains?(downcased, &1))
+
+    Enum.any?(@sensitive_substrings, &String.contains?(downcased, &1)) or
+      downcased in @sensitive_exact_keys or
+      Enum.any?(@sensitive_key_suffixes, &suffix_match?(downcased, &1))
   end
 
   defp sensitive_key?(_other), do: false
+
+  defp suffix_match?(key, suffix),
+    do: key == suffix or String.ends_with?(key, "_" <> suffix)
 end

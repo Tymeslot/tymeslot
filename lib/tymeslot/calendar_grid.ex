@@ -12,14 +12,13 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
@@ -28,7 +27,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
-  @caldav_providers Enum.map(ProviderConfig.caldav_based_providers(), &Atom.to_string/1)
+  @caldav_providers ProviderConfig.caldav_based_provider_strings()
 
   # Staleness thresholds (minutes). Each threshold is the sync interval
   # plus a buffer for queue wait, network latency, and retries.
@@ -152,9 +151,9 @@ defmodule Tymeslot.CalendarGrid do
              errors: [{integer(), term()}]
            }}
   def refresh_events(user_id) do
-    # list_active_for_user decrypts credentials; acceptable overhead for a
+    # The context call decrypts credentials; acceptable overhead for a
     # user-initiated refresh since we need id + provider for each integration.
-    integrations = CalendarIntegrationQueries.list_active_for_user(user_id)
+    integrations = CalendarManagement.list_active_calendar_integrations(user_id)
 
     {enqueued, skipped, errors} =
       Enum.reduce(integrations, {0, 0, []}, fn integration, {count, skip, errs} ->
@@ -321,7 +320,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec list_active_integrations(integer()) :: [CalendarIntegrationSchema.t()]
   def list_active_integrations(user_id) do
-    CalendarIntegrationQueries.list_active_for_user(user_id)
+    CalendarManagement.list_active_calendar_integrations(user_id)
   end
 
   @doc """
@@ -329,7 +328,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec get_or_create_preferences(integer()) :: term()
   def get_or_create_preferences(user_id) do
-    CalendarPreferencesQueries.get_or_create(user_id)
+    CalendarManagement.get_or_create_preferences(user_id)
   end
 
   @doc """
@@ -346,7 +345,7 @@ defmodule Tymeslot.CalendarGrid do
 
   def get_user_time_format(user_id, locale) do
     user_id
-    |> CalendarPreferencesQueries.get_or_create()
+    |> CalendarManagement.get_or_create_preferences()
     |> Map.get(:time_format)
     |> TimeFormat.resolve(locale)
   end
@@ -356,7 +355,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec save_preferences(integer(), map()) :: {:ok, term()} | {:error, Ecto.Changeset.t()}
   def save_preferences(user_id, attrs) do
-    CalendarPreferencesQueries.upsert(user_id, attrs)
+    CalendarManagement.save_preferences(user_id, attrs)
   end
 
   # Private

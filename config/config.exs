@@ -128,11 +128,6 @@ config :tymeslot,
 # what's-new modal shown on dashboard mount. SaaS appends its own catalog.
 config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 
-# Base URL for documentation articles linked from announcement CTAs. Kept in
-# config (rather than hardcoded in the catalogue) so Core's code stays free of
-# the SaaS marketing domain; self-hosters can point this at their own docs.
-config :tymeslot, :docs_base_url, "https://tymeslot.app/docs"
-
 # Feature Assigns - Default to allowing all features
 # SaaS can override these via on_mount hooks based on subscription status.
 # `:meeting_payments` defaults to false because Core treats it as a self-host
@@ -348,17 +343,16 @@ config :tz, :iana_version, "2026c"
 config :tymeslot, :tz_watch_enabled, false
 
 # Authentication configuration
-config :tymeslot, :auth, success_redirect_path: "/dashboard"
+config :tymeslot, :auth,
+  success_redirect_path: "/dashboard",
+  login_path: "/auth/login"
 
-# Input validation configuration
-config :tymeslot, :field_validation,
-  email_max_length: 254,
-  name_min_length: 2,
-  name_max_length: 100,
-  universal_max_length: 10_000,
-  password_min_length: 8,
-  password_max_length: 80,
-  full_name_max_length: 100
+# Input validation configuration. Core has no reader of its own; the key is
+# consumed by projects depending on this one as a path dependency, to cap
+# free-text form input. Those readers carry their own compile-time default
+# matching this value, so the cap holds even without this key — but keep it
+# here, or a "no reader in Core" sweep will delete a value something reads.
+config :tymeslot, :field_validation, universal_max_length: 10_000
 
 # Social Authentication Configuration moved to runtime.exs (needs runtime env vars)
 

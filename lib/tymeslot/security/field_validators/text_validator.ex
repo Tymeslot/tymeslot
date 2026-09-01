@@ -6,13 +6,14 @@ defmodule Tymeslot.Security.FieldValidators.TextValidator do
   short text content with configurable length limits.
   """
 
+  @text_min_length 1
+  @text_max_length 500
+
   @spec get_config(atom(), keyword()) :: integer() | nil
   def get_config(key, opts \\ []) do
-    config = Application.get_env(:tymeslot, :field_validation, [])
-
     case key do
-      :min_length -> Keyword.get(opts, :min_length, config[:text_min_length] || 1)
-      :max_length -> Keyword.get(opts, :max_length, config[:text_max_length] || 500)
+      :min_length -> Keyword.get(opts, :min_length, @text_min_length)
+      :max_length -> Keyword.get(opts, :max_length, @text_max_length)
       _other -> nil
     end
   end

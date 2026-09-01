@@ -167,7 +167,6 @@ msgstr "Календарі"
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -193,7 +192,6 @@ msgstr "Підключіть платформу, щоб посилання на 
 msgid "Connected"
 msgstr "Підключено"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
@@ -486,11 +484,6 @@ msgstr "Відсутній символ підкреслення: {{meeting_id}}
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
 msgstr "URL-адресу не налаштовано"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected"
-msgstr "Жодного календаря не вибрано"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -870,11 +863,6 @@ msgstr "%{status} - потребує уваги"
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Неможливо активувати повторно - цей обліковий запис уже використовується іншою активною інтеграцією"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
-#, elixir-autogen, elixir-format
-msgid "No calendars selected - nothing will sync until you pick at least one."
-msgstr "Жодного календаря не вибрано - синхронізація не почнеться, доки ви не виберете хоча б один."
-
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} day"
@@ -1149,11 +1137,6 @@ msgstr "Оброблена URL-адреса перевищує максимал�
 msgid "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
 msgstr "Не вдалося розшифрувати збережені облікові дані поточним ключем шифрування. Перепідключіть інтеграцію."
 
-#: lib/tymeslot/integrations/video/providers/teams_provider.ex
-#, elixir-autogen, elixir-format
-msgid "Teams integration is missing required permissions. Please disconnect and reconnect your Microsoft Teams integration in the dashboard to grant the necessary permissions for creating meetings."
-msgstr "Інтеграції з Teams бракує потрібних дозволів. Від'єднайте та знову підключіть інтеграцію з Microsoft Teams на панелі керування, щоб надати дозволи, необхідні для створення зустрічей."
-
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"
@@ -1266,3 +1249,8 @@ msgstr[2] "%{count} майбутніх бронювань досі викори�
 #, elixir-autogen, elixir-format
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr "Також видалити їхні кімнати для зустрічей. Учасники, які вже мають посилання на приєднання, побачать, що воно більше не працює."
+
+#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#, elixir-autogen, elixir-format
+msgid "URL redirects too many times"
+msgstr "URL-адреса перенаправляє забагато разів"

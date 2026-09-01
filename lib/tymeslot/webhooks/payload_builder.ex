@@ -68,6 +68,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
         location: meeting.location,
         organizer: build_organizer_data(meeting),
         attendee: build_attendee_data(meeting),
+        guests: build_guests_data(meeting),
         urls: build_urls(meeting),
         video: build_video_data(meeting),
         created_at: format_datetime(meeting.inserted_at),
@@ -96,6 +97,24 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       message: meeting.attendee_message
     }
   end
+
+  # Guests are read from the loaded association rather than fetched here, so
+  # this module stays a pure function of the struct it is handed — which is how
+  # its tests build meetings, without a database. `WebhookWorker` loads them.
+  # A meeting arriving without the association yields an empty list rather than
+  # a crash, and the worker's own test covers the path that must not be empty.
+  defp build_guests_data(%MeetingSchema{guests: guests}) when is_list(guests) do
+    Enum.map(guests, fn guest ->
+      %{
+        email: guest.email,
+        name: guest.name,
+        status: guest.status,
+        responded_at: format_datetime(guest.responded_at)
+      }
+    end)
+  end
+
+  defp build_guests_data(_meeting), do: []
 
   defp build_urls(meeting) do
     %{

@@ -14,6 +14,13 @@ defmodule Tymeslot.Webhooks.SsrfValidator do
   calendar/video SSRF should not silently open outbound webhooks to internal
   hosts. When set, the guard falls back to syntax/scheme-only validation, the
   same posture used outside production.
+
+  Note: a residual DNS-rebinding TOCTOU window exists between `check/1`
+  (and each redirect-hop check in `Tymeslot.Webhooks.HttpDelivery`) and the
+  TCP connect Finch performs afterwards, which re-resolves DNS independently.
+  A short-TTL record can answer public here and private by the time Finch
+  connects. See `deferred/2026-08-30-webhook-ssrf-dns-rebinding-toctou.md` for
+  the tracked fix (connection-IP pinning).
   """
 
   alias Tymeslot.Security.{DnsResolution, UrlValidation}

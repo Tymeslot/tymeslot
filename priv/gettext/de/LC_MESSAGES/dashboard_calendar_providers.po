@@ -1177,3 +1177,8 @@ msgstr "Tymeslot benötigt die E-Mail-Adresse des Postfachs, um dessen Frei/Gebu
 #, elixir-autogen, elixir-format
 msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
 msgstr "Verbindung zu %{url} hergestellt, Ihre Zugangsdaten wurden akzeptiert, aber es wurde keine Kalendersammlung gefunden. Bitte geben Sie die vollständige URL Ihrer Kalendersammlung ein, wie sie in den Einstellungen Ihres Kalenderservers angezeigt wird."
+
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
+msgstr "Der Kalenderserver hat unter dieser Adresse geantwortet, nimmt dort aber keine Kalenderanfragen entgegen. Bitte überprüfen Sie die Server-URL."

@@ -18,9 +18,12 @@ defmodule Tymeslot.DataCase do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Changeset
+  alias Tymeslot.Auth.Verification
+  alias Tymeslot.Auth.VerificationMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Repo
   alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
@@ -60,7 +63,25 @@ defmodule Tymeslot.DataCase do
       {:ok, %{"latest_charge" => nil}}
     end)
 
+    stub_verification_default()
+
     reset_stateful_components(tags)
+
+    :ok
+  end
+
+  @doc """
+  Points the verification mock at the real implementation.
+
+  Registration reads its verification module through the same
+  `:verification_module` key the session controller mocks, so without a default
+  the mock would swallow every signup. Delegating keeps signup tests on the real
+  implementation while leaving the seam available to a test that sets its own
+  expectation.
+  """
+  @spec stub_verification_default() :: :ok
+  def stub_verification_default do
+    Mox.stub(VerificationMock, :verify_user_email, &Verification.verify_user_email/3)
 
     :ok
   end
@@ -102,6 +123,11 @@ defmodule Tymeslot.DataCase do
     # Host-keyed breakers are registered dynamically and are not covered by
     # the per-provider reset above
     CalendarCircuitBreaker.reset_all_hosts()
+
+    # Video provider breakers. These matter now that `ProviderAdapter` routes
+    # room create/update/delete through them: three induced provider failures
+    # in one test would otherwise open the breaker for every test after it.
+    Enum.each([:mirotalk, :google_meet, :teams, :zoom], &VideoCircuitBreaker.reset/1)
 
     # Reset other circuit breakers
     Enum.each([:email_service_breaker, :oauth_github_breaker, :oauth_google_breaker], fn name ->

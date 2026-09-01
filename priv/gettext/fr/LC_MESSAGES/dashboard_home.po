@@ -212,19 +212,16 @@ msgstr "Avec"
 msgid "Your day"
 msgstr "Votre journée"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "in %{days}d"
 msgstr "dans %{days} j"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "in %{hours}h"
 msgstr "dans %{hours} h"
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "in %{minutes}m"

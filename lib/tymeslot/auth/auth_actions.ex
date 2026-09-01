@@ -7,6 +7,8 @@ defmodule Tymeslot.Auth.AuthActions do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  require Logger
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Auth.{PasswordReset, Registration, Validation}
@@ -99,6 +101,15 @@ defmodule Tymeslot.Auth.AuthActions do
       {:error, :invalid_input, message} ->
         {:error, message}
 
+      # An account with no password of its own cannot be sent a reset link, and
+      # `PasswordReset` already builds the specific, translated explanation for
+      # that. `normalize_auth_error/1` cannot reconstruct it from the atom, so
+      # pass the message through rather than collapsing it. This is the one
+      # deliberate exception to the identical confirmation the non-OAuth
+      # branches return; see `PasswordReset.process_password_reset_secure/2`.
+      {:error, :oauth_user, message} ->
+        {:error, message}
+
       {:error, reason, _message} ->
         {:error, normalize_auth_error(reason)}
     end
@@ -109,16 +120,19 @@ defmodule Tymeslot.Auth.AuthActions do
   """
   @spec reset_password(String.t(), String.t(), String.t(), term()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
-  def reset_password(token, password, password_confirmation, _socket) do
+  def reset_password(token, password, password_confirmation, socket) do
     if Config.password_auth_enabled?() do
-      do_reset_password(token, password, password_confirmation)
+      do_reset_password(token, password, password_confirmation,
+        ip: ClientIP.get(socket),
+        user_agent: ClientIP.get_user_agent(socket)
+      )
     else
       {:error, password_auth_disabled_message()}
     end
   end
 
-  defp do_reset_password(token, password, password_confirmation) do
-    case PasswordReset.reset_password(token, password, password_confirmation) do
+  defp do_reset_password(token, password, password_confirmation, opts) do
+    case PasswordReset.reset_password(token, password, password_confirmation, opts) do
       {:ok, _user, _message} ->
         {:ok, :password_reset_success,
          dgettext(
@@ -179,34 +193,6 @@ defmodule Tymeslot.Auth.AuthActions do
   # State Management
 
   @doc """
-  Updates socket with loading state.
-  """
-  @spec set_loading(Phoenix.LiveView.Socket.t(), boolean()) :: Phoenix.LiveView.Socket.t()
-  def set_loading(socket, loading) do
-    assign(socket, :loading, loading)
-  end
-
-  @doc """
-  Updates socket with error state.
-  """
-  @spec set_errors(Phoenix.LiveView.Socket.t(), %{atom() => String.t()}) ::
-          Phoenix.LiveView.Socket.t()
-  def set_errors(socket, errors) do
-    socket
-    |> assign(:errors, errors)
-    |> assign(:loading, false)
-  end
-
-  @doc """
-  Updates socket with form data.
-  """
-  @spec set_form_data(Phoenix.LiveView.Socket.t(), %{String.t() => term()}) ::
-          Phoenix.LiveView.Socket.t()
-  def set_form_data(socket, form_data) do
-    assign(socket, :form_data, form_data)
-  end
-
-  @doc """
   Transitions to a new authentication state.
   """
   @spec transition_state(term(), atom(), atom()) :: term()
@@ -232,16 +218,46 @@ defmodule Tymeslot.Auth.AuthActions do
 
   # Private Functions
 
+  # Written as a `case` rather than multi-clause heads because both call sites
+  # intercept `:invalid_input` before the funnel, and the type checker then
+  # reports a head for it as unreachable.
   defp normalize_auth_error(reason) do
     case reason do
-      :rate_limited -> dgettext("auth", "Too many attempts. Please try again later.")
-      :server_error -> dgettext("auth", "A server error occurred. Please try again")
-      :invalid_input -> dgettext("auth", "Invalid input provided")
-      :invalid_password -> dgettext("auth", "Invalid password")
-      :invalid_token -> get_token_error_message(:invalid_token)
-      :token_expired -> get_token_error_message(:token_expired)
+      :rate_limited ->
+        dgettext("auth", "Too many attempts. Please try again later.")
+
+      :server_error ->
+        server_error_message()
+
+      :invalid_input ->
+        dgettext("auth", "Invalid input provided")
+
+      :invalid_password ->
+        dgettext("auth", "Invalid password")
+
+      :invalid_token ->
+        get_token_error_message(:invalid_token)
+
+      :token_expired ->
+        get_token_error_message(:token_expired)
+
+      # A reason with no clause above is a bug: some layer below grew a failure
+      # this one was never taught to describe. It must not take the LiveView
+      # down with it on a public, unauthenticated page, so degrade to the
+      # generic message, but log loudly: the mapping still needs fixing, and a
+      # silent fallback is how that never happens.
+      other ->
+        Logger.error("Unmapped auth error reason",
+          reason: inspect(other),
+          event: :auth_error_unmapped
+        )
+
+        server_error_message()
     end
   end
+
+  defp server_error_message,
+    do: dgettext("auth", "A server error occurred. Please try again")
 
   defp get_token_error_message(:invalid_token),
     do: dgettext("auth", "Invalid or expired token")

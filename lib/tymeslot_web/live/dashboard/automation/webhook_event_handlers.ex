@@ -322,7 +322,22 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
                  :feature_access_checker_failed
                ] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
+
+          # `save_fn` is `Webhooks.create_webhook/2` or `update_webhook/2`,
+          # whose specs only promise a changeset or one of the access-error
+          # atoms above — but a case with no catch-all turns any drift from
+          # that contract into a `CaseClauseError` instead of a flash.
+          {:error, _other_reason} ->
+            Flash.error(webhook_write_failure_message(verb))
+            {:noreply, socket}
         end
+
+      # A throttled save previously assigned `%{form: ...}`, which the modal
+      # does not render, so the save silently did nothing.
+      {:error, :rate_limited} ->
+        Flash.error(dgettext("dashboard_automation", "Too many requests. Please slow down."))
+
+        {:noreply, socket}
 
       {:error, errors} ->
         {:noreply, assign(socket, :form_errors, errors)}

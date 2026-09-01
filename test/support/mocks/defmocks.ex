@@ -66,7 +66,6 @@ Mox.defmock(Tymeslot.Auth.OAuth.ClientMock, for: Tymeslot.Auth.OAuth.ClientBehav
 Mox.defmock(Tymeslot.Auth.OAuth.HelperMock, for: Tymeslot.Auth.OAuth.HelperBehaviour)
 Mox.defmock(Tymeslot.Auth.SessionMock, for: Tymeslot.Infrastructure.SessionBehaviour)
 Mox.defmock(Tymeslot.Auth.VerificationMock, for: Tymeslot.Infrastructure.VerificationBehaviour)
-Mox.defmock(Tymeslot.Auth.UserBroadcasterMock, for: Tymeslot.Auth.Behaviours.UserBroadcaster)
 
 # --- Payments ---
 Mox.defmock(Tymeslot.Payments.StripeMock, for: Tymeslot.Payments.Behaviours.StripeProvider)
