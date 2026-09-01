@@ -54,7 +54,7 @@ defmodule TymeslotWeb do
         plug TymeslotWeb.Plugs.SecurityHeadersPlug
         plug TymeslotWeb.Plugs.FetchCurrentUser
         plug TymeslotWeb.Plugs.SetLoggerMetadata
-        plug TymeslotWeb.Plugs.LocalePlug, prefer_user_locale: true
+        plug TymeslotWeb.Plugs.LocalePlug, prefer_user_locale: true, surface: :admin
         plug TymeslotWeb.Plugs.ThemePlug
       end
 
@@ -70,7 +70,7 @@ defmodule TymeslotWeb do
         plug TymeslotWeb.Plugs.EmbedTokenPlug
         plug TymeslotWeb.Plugs.FetchCurrentUser
         plug TymeslotWeb.Plugs.SetLoggerMetadata
-        plug TymeslotWeb.Plugs.LocalePlug
+        plug TymeslotWeb.Plugs.LocalePlug, surface: :booking
         plug TymeslotWeb.Plugs.ThemePlug
         plug TymeslotWeb.Plugs.ThemeProtectionPlug
       end

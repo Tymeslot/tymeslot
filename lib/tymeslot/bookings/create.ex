@@ -180,7 +180,7 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp default_locale, do: Locales.default_locale()
+  defp default_locale, do: Locales.booking_default_locale()
 
   defp resolve_meeting_type_for_duration(meeting_params) do
     type_id = Map.get(meeting_params, :meeting_type_id)

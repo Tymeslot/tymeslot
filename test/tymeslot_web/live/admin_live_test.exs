@@ -53,13 +53,17 @@ defmodule TymeslotWeb.AdminLiveTest do
       assert redirect_to =~ "/auth/login"
     end
 
-    test "admin user can mount /admin and lands on the settings tab", %{conn: conn} do
+    test "admin user can mount /admin and lands on the authentication tab", %{conn: conn} do
       admin = insert(:user, is_admin: true)
       conn = log_in_user(conn, admin)
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
+
       assert html =~ "Admin"
-      assert html =~ "Environment / config"
+      # The first tab's own sections, not another tab's.
+      assert html =~ "Password authentication"
+      assert html =~ "reCAPTCHA on signup"
+      refute html =~ "Booking analytics"
     end
 
     test "returns 404 when enable_admin_ui is false", %{conn: conn} do
@@ -151,7 +155,7 @@ defmodule TymeslotWeb.AdminLiveTest do
     test "toggling booking analytics persists and flips Analytics.enabled?/0", %{conn: conn} do
       on_exit(fn -> Application.put_env(:tymeslot, :booking_analytics_enabled, true) end)
 
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/general")
 
       html =
         lv
@@ -224,14 +228,6 @@ defmodule TymeslotWeb.AdminLiveTest do
                ~s(phx-value-key="password_auth_enabled" phx-value-state="false" disabled)
 
       assert html =~ "Cannot disable password authentication"
-    end
-
-    test "groups settings by section with named headings", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
-
-      assert html =~ "Authentication"
-      assert html =~ "reCAPTCHA"
-      assert html =~ "Admin alerts"
     end
 
     test "reCAPTCHA toggle descriptions mention the key requirement",
