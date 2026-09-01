@@ -183,10 +183,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   defp folder_element(:calendar), do: ~s(<t:DistinguishedFolderId Id="calendar"/>)
   defp folder_element(id) when is_binary(id), do: ~s(<t:FolderId Id="#{escape(id)}"/>)
 
-  # EWS ids are base64 and so cannot contain XML metacharacters, but they reach
-  # this module from the server and from the database rather than from a
-  # constant, so they are escaped rather than trusted to be well-formed.
-  defp escape(value) when is_binary(value) do
+  @doc """
+  Escapes the five XML metacharacters for interpolation into a body this module
+  or `Exchange.Seeding` builds.
+
+  EWS ids are base64 and so cannot contain any of them, but they reach the
+  builders from the server and from the database rather than from a constant,
+  so they are escaped rather than trusted to be well-formed. A seeded item's
+  subject, body and location are ordinary text and genuinely can.
+
+  Public so the two EWS body builders share one escaper rather than growing a
+  copy each. `&` must stay first: escaping it last would double-escape the
+  entities the other four introduce.
+  """
+  @spec escape(String.t()) :: String.t()
+  def escape(value) when is_binary(value) do
     value
     |> String.replace("&", "&amp;")
     |> String.replace("<", "&lt;")

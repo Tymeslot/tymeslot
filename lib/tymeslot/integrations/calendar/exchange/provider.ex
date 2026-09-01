@@ -380,6 +380,19 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def delete_event(_client, _uid, _opts \\ []), do: {:error, :read_only}
 
+  @doc """
+  Builds the transport config an EWS call is issued with.
+
+  Public for `Calendar.Diagnostics` alone, which reaches `Exchange.Seeding`
+  with it to plant and remove audit fixtures. It is the same conversion every
+  read in this module performs, and sharing it is the point: a second one would
+  be a second place to remember that the credentials arrive encrypted, and that
+  `verify_ssl` and `provider_account_email` have to be merged back on top of a
+  provider config shaped for the CalDAV family.
+  """
+  @spec transport_config(CalendarIntegrationSchema.t() | map()) :: map()
+  def transport_config(integration), do: to_config(integration)
+
   # --- Private ---
 
   # The reachability probe both connection callbacks run. It reads the
