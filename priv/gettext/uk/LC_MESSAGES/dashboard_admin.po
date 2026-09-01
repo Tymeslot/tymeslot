@@ -274,6 +274,7 @@ msgstr "Роль"
 msgid "Save"
 msgstr "Зберегти"
 
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Set %{name}"
@@ -598,6 +599,46 @@ msgstr "Білий текст кнопок на цьому кольорі має
 #, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Це зображення завелике. Виберіть менше за %{limit}."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page fallback language"
+msgstr "Резервна мова сторінки бронювання"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose one of the supported languages."
+msgstr "Виберіть одну з підтримуваних мов."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Dashboard fallback language"
+msgstr "Резервна мова панелі керування"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Localisation"
+msgstr "Локалізація"
+
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
+#, elixir-autogen, elixir-format
+msgid "Default"
+msgstr "Стандартна"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Install default (%{language})"
+msgstr "Стандартна для інсталяції (%{language})"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language public booking pages fall back to, along with booking emails and calendar invites for an attendee whose language is unknown. Detection still comes first: a visitor whose browser asks for a language this install supports gets that language regardless of this setting. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Мова, на яку повертаються публічні сторінки бронювання, а також листи про бронювання та запрошення в календар для учасника, мова якого невідома. Визначення все одно має пріоритет: відвідувач, браузер якого запитує мову, підтримувану цією інсталяцією, отримає саме її, незалежно від цього налаштування. Якщо не задано, використовується %{language}, стандартна мова цієї інсталяції."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language the dashboard, account pages, and account emails fall back to. Detection still comes first: a signed-in user's own language setting and the browser's Accept-Language header both win, and this is only what resolves when neither offers a language this install supports. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Мова, на яку повертаються панель керування, сторінки облікового запису та листи щодо облікового запису. Визначення все одно має пріоритет: збережена мова інтерфейсу особи, яка увійшла, і заголовок Accept-Language браузера мають перевагу; це налаштування діє лише тоді, коли жоден із них не пропонує мову, підтримувану цією інсталяцією. Якщо не задано, використовується %{language}, стандартна мова цієї інсталяції."
 
 #: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format

@@ -6,8 +6,8 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   short description, and a control on the right.
 
   Boolean settings use the two-tag Enabled/Disabled control with the active
-  tag rendered as disabled. Score, email, text, and colour settings use a
-  small inline form so admins save one value at a time.
+  tag rendered as disabled. Score, email, text, colour, and locale settings
+  use a small inline form so admins save one value at a time.
 
   Email branding is rendered by its own `email_branding_section/1` rather than
   through the generic loop. Its logo row takes an upload instead of a form
@@ -22,6 +22,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.AppSettings
+  alias TymeslotWeb.AdminLive.Components.LocaleSetting
   alias TymeslotWeb.AdminLive.Formatters
   alias TymeslotWeb.AdminLive.Tabs
 
@@ -322,6 +323,12 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         {dgettext("dashboard_admin", "Save")}
       </.action_button>
     </form>
+    """
+  end
+
+  defp setting_control(%{kind: :locale} = assigns) do
+    ~H"""
+    <LocaleSetting.locale_control key={@key} effective={@effective} disabled={@disabled} />
     """
   end
 

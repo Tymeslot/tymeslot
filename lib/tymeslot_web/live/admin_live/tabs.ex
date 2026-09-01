@@ -20,7 +20,7 @@ defmodule TymeslotWeb.AdminLive.Tabs do
   @settings_tabs [
     authentication: [:authentication, :recaptcha],
     email: [:admin_alerts, :email_branding],
-    general: [:payments, :analytics]
+    general: [:payments, :analytics, :localisation]
   ]
 
   @settings_tab_names Keyword.keys(@settings_tabs)

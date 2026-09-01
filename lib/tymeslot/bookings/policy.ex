@@ -469,5 +469,5 @@ defmodule Tymeslot.Bookings.Policy do
     }
   end
 
-  defp default_locale, do: Locales.default_locale()
+  defp default_locale, do: Locales.booking_default_locale()
 end

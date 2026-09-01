@@ -22,6 +22,7 @@ defmodule TymeslotWeb.AdminLiveTabsTest do
       assert email =~ "Email branding"
       assert general =~ "Payments"
       assert general =~ "Analytics"
+      assert general =~ "Localisation"
 
       # And a tab must not leak another tab's settings onto the page.
       refute auth =~ "Email brand name"

@@ -274,6 +274,7 @@ msgstr "Ruolo"
 msgid "Save"
 msgstr "Salva"
 
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Set %{name}"
@@ -598,6 +599,46 @@ msgstr "Il testo bianco dei pulsanti su questo colore ha un contrasto di solo %{
 #, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Questa immagine è troppo grande. Scegline una sotto %{limit}."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page fallback language"
+msgstr "Lingua di riserva della pagina di prenotazione"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose one of the supported languages."
+msgstr "Scegli una delle lingue supportate."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Dashboard fallback language"
+msgstr "Lingua di riserva della dashboard"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Localisation"
+msgstr "Localizzazione"
+
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
+#, elixir-autogen, elixir-format
+msgid "Default"
+msgstr "Predefinita"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Install default (%{language})"
+msgstr "Predefinita dell'installazione (%{language})"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language public booking pages fall back to, along with booking emails and calendar invites for an attendee whose language is unknown. Detection still comes first: a visitor whose browser asks for a language this install supports gets that language regardless of this setting. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Lingua a cui ricadono le pagine di prenotazione pubbliche, insieme alle email di prenotazione e agli inviti del calendario destinati a un partecipante di cui non si conosce la lingua. Il rilevamento ha comunque la precedenza: un visitatore il cui browser richiede una lingua supportata da questa installazione la ottiene a prescindere da questa impostazione. Se non la imposti, viene usata %{language}, l'impostazione predefinita configurata per questa installazione."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language the dashboard, account pages, and account emails fall back to. Detection still comes first: a signed-in user's own language setting and the browser's Accept-Language header both win, and this is only what resolves when neither offers a language this install supports. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Lingua a cui ricadono la dashboard, le pagine dell'account e le email dell'account. Il rilevamento ha comunque la precedenza: la lingua dell'interfaccia salvata da una persona che ha effettuato l'accesso e l'intestazione Accept-Language del browser prevalgono entrambe; questa impostazione si applica solo quando nessuna delle due offre una lingua supportata da questa installazione. Se non la imposti, viene usata %{language}, l'impostazione predefinita configurata per questa installazione."
 
 #: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format

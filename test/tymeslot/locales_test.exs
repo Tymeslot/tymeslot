@@ -8,7 +8,17 @@ defmodule Tymeslot.LocalesTest do
     existing = Application.get_env(:tymeslot, :locales)
     existing_pseudo = Application.get_env(:tymeslot, :pseudo_locale_enabled)
 
+    surface_defaults =
+      Map.new([:admin_default_locale, :booking_default_locale], fn key ->
+        {key, Application.get_env(:tymeslot, key)}
+      end)
+
     on_exit(fn ->
+      Enum.each(surface_defaults, fn
+        {key, nil} -> Application.delete_env(:tymeslot, key)
+        {key, value} -> Application.put_env(:tymeslot, key, value)
+      end)
+
       if existing do
         Application.put_env(:tymeslot, :locales, existing)
       else
@@ -39,6 +49,76 @@ defmodule Tymeslot.LocalesTest do
     test "falls back to 'en' when default key is missing from locales config" do
       Application.put_env(:tymeslot, :locales, supported: [])
       assert Locales.default_locale() == "en"
+    end
+  end
+
+  describe "admin_default_locale/0 and booking_default_locale/0" do
+    setup do
+      Application.put_env(:tymeslot, :locales,
+        default: "en",
+        supported: [%{code: "en"}, %{code: "de"}, %{code: "fr"}]
+      )
+
+      :ok
+    end
+
+    test "each falls back to the instance default when no override is set" do
+      Application.delete_env(:tymeslot, :admin_default_locale)
+      Application.delete_env(:tymeslot, :booking_default_locale)
+
+      assert Locales.admin_default_locale() == "en"
+      assert Locales.booking_default_locale() == "en"
+    end
+
+    test "each returns its own override, independently of the other" do
+      Application.put_env(:tymeslot, :admin_default_locale, "de")
+      Application.put_env(:tymeslot, :booking_default_locale, "fr")
+
+      assert Locales.admin_default_locale() == "de"
+      assert Locales.booking_default_locale() == "fr"
+    end
+
+    test "an override for one surface leaves the other on the instance default" do
+      Application.delete_env(:tymeslot, :admin_default_locale)
+      Application.put_env(:tymeslot, :booking_default_locale, "de")
+
+      assert Locales.admin_default_locale() == "en"
+      assert Locales.booking_default_locale() == "de"
+    end
+
+    test "a stored code that is no longer supported degrades to the instance default" do
+      # The override outlives the language: an admin picks German, a later
+      # deploy drops "de" from :supported. Returning "de" here would render
+      # untranslated msgids on every unmatched request.
+      Application.put_env(:tymeslot, :admin_default_locale, "de")
+      Application.put_env(:tymeslot, :booking_default_locale, "de")
+
+      Application.put_env(:tymeslot, :locales,
+        default: "en",
+        supported: [%{code: "en"}, %{code: "fr"}]
+      )
+
+      assert Locales.admin_default_locale() == "en"
+      assert Locales.booking_default_locale() == "en"
+    end
+
+    test "a non-string override is ignored" do
+      Application.put_env(:tymeslot, :admin_default_locale, :de)
+
+      assert Locales.admin_default_locale() == "en"
+    end
+
+    test "the instance default they fall back to is the configured one, not a hardcoded en" do
+      Application.put_env(:tymeslot, :locales,
+        default: "fr",
+        supported: [%{code: "en"}, %{code: "fr"}]
+      )
+
+      Application.delete_env(:tymeslot, :admin_default_locale)
+      Application.delete_env(:tymeslot, :booking_default_locale)
+
+      assert Locales.admin_default_locale() == "fr"
+      assert Locales.booking_default_locale() == "fr"
     end
   end
 

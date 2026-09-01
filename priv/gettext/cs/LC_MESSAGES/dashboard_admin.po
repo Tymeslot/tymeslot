@@ -274,6 +274,7 @@ msgstr "Role"
 msgid "Save"
 msgstr "Uložit"
 
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Set %{name}"
@@ -598,6 +599,46 @@ msgstr "Bílý text tlačítek na této barvě má kontrast pouze %{ratio}:1. Tl
 #, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Tento obrázek je příliš velký. Vyberte menší než %{limit}."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page fallback language"
+msgstr "Záložní jazyk rezervační stránky"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose one of the supported languages."
+msgstr "Vyberte jeden z podporovaných jazyků."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Dashboard fallback language"
+msgstr "Záložní jazyk nástěnky"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Localisation"
+msgstr "Lokalizace"
+
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
+#, elixir-autogen, elixir-format
+msgid "Default"
+msgstr "Výchozí"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Install default (%{language})"
+msgstr "Výchozí pro instalaci (%{language})"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language public booking pages fall back to, along with booking emails and calendar invites for an attendee whose language is unknown. Detection still comes first: a visitor whose browser asks for a language this install supports gets that language regardless of this setting. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Jazyk, na který se vracejí veřejné rezervační stránky, spolu s rezervačními e-maily a pozvánkami do kalendáře pro účastníka, jehož jazyk není znám. Rozpoznání má stále přednost: návštěvník, jehož prohlížeč požaduje jazyk podporovaný touto instalací, jej dostane bez ohledu na toto nastavení. Není-li nastaveno, použije se %{language}, výchozí jazyk této instalace."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language the dashboard, account pages, and account emails fall back to. Detection still comes first: a signed-in user's own language setting and the browser's Accept-Language header both win, and this is only what resolves when neither offers a language this install supports. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Jazyk, na který se vracejí nástěnka, stránky účtu a e-maily týkající se účtu. Rozpoznání má stále přednost: uložený jazyk rozhraní přihlášené osoby i hlavička Accept-Language prohlížeče mají přednost; toto nastavení se uplatní jen tehdy, když ani jedno z nich nenabízí jazyk podporovaný touto instalací. Není-li nastaveno, použije se %{language}, výchozí jazyk této instalace."
 
 #: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format

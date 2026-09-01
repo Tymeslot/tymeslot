@@ -6,7 +6,17 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   2. Query parameter (?locale=de) - Explicit user choice
   3. Session - User's previously selected locale
   4. Accept-Language header - Browser's preferred language
-  5. Default fallback (en) - When no preference is detected
+  5. The surface's default locale - When no preference is detected
+
+  ## Options
+
+    * `:prefer_user_locale` - consult the signed-in user's saved interface
+      language (source 2 above). Off by default, so public booking pages never
+      render in the language of whoever happens to be logged in.
+    * `:surface` - which admin-editable fallback ends the chain,
+      `:admin` or `:booking`. Defaults to `:booking`: the plug is mounted on
+      public pipelines as well as the authenticated one, and a public visitor
+      getting the booking fallback is the safe way to be wrong.
 
   The selected locale is stored in the session for persistence across requests
   and set in Gettext for translation rendering.
@@ -42,7 +52,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
         Locales.acceptable(get_locale_from_params(conn)) ||
         Locales.acceptable(get_locale_from_session(conn)) ||
         get_locale_from_header(conn) ||
-        Locales.default_locale()
+        surface_default(opts)
 
     # Store in session for persistence
     conn = put_session(conn, :locale, locale)
@@ -52,6 +62,16 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
     # Store in assigns for LiveView access
     assign(conn, :locale, locale)
+  end
+
+  # The end of the chain: the admin-editable fallback for the surface this
+  # pipeline serves. Reached only when no source above yielded a supported
+  # locale, so setting it never overrides a visitor's actual preference.
+  defp surface_default(opts) do
+    case Keyword.get(opts, :surface, :booking) do
+      :admin -> Locales.admin_default_locale()
+      _booking -> Locales.booking_default_locale()
+    end
   end
 
   # A locale carried by the URL path itself, set as a static route assign
