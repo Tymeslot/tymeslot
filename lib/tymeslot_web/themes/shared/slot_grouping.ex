@@ -24,18 +24,43 @@ defmodule TymeslotWeb.Themes.Shared.SlotGrouping do
 
   @type grouping :: flat() | hours()
 
+  # The coarsest interval that still puts three starts in an hour.
+  #
+  # Grouping by hour only earns the click it costs when an hour holds several
+  # slots. At a 30-minute interval an hour holds two, which is the density a
+  # duration-locked 30-minute meeting already shows flat, so the accordion
+  # would hide a list no longer than the one it replaced; at 60 it holds one,
+  # and opening an hour reveals a single time whose label repeats the button
+  # that was just clicked. Both are strictly worse than the flat grid.
+  #
+  # A fixed interval bound rather than a slot count, because the count varies
+  # with how booked up a day is: the same page would then render differently
+  # from one day to the next. Slots per hour is `60 / interval`, so this rule
+  # is a property of the meeting type alone and the organiser can predict it.
+  @max_two_tier_interval 20
+
   @doc """
   Whether the two-tier hour picker applies.
 
-  Only a grid finer than the meeting itself produces enough slots to need it.
-  An interval longer than the duration produces *fewer* slots than the default
-  and is left on the flat grid.
+  Two conditions, both necessary. The grid must be finer than the meeting
+  itself, since an interval longer than the duration produces *fewer* slots
+  than the default and belongs on the flat grid. And an hour must hold at
+  least three starts (`interval <= #{@max_two_tier_interval}`), or grouping by
+  hour compresses nothing and only adds a click.
   """
   @spec two_tier?(pos_integer() | nil, pos_integer() | nil) :: boolean()
   def two_tier?(interval, duration) when is_integer(interval) and is_integer(duration),
-    do: interval < duration
+    do: interval < duration and interval <= @max_two_tier_interval
 
   def two_tier?(_interval, _duration), do: false
+
+  @doc """
+  The coarsest interval the two-tier picker applies to.
+
+  Exposed so callers and tests can state the bound without copying the number.
+  """
+  @spec max_two_tier_interval() :: pos_integer()
+  def max_two_tier_interval, do: @max_two_tier_interval
 
   @doc """
   Groups `slots` for display.

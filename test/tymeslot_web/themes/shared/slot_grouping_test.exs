@@ -19,8 +19,31 @@ defmodule TymeslotWeb.Themes.Shared.SlotGroupingTest do
       refute SlotGrouping.two_tier?(60, 30)
     end
 
-    test "is true only when the interval is shorter than the duration" do
+    test "is true when the interval is shorter than the duration and fine enough" do
       assert SlotGrouping.two_tier?(5, 30)
+      assert SlotGrouping.two_tier?(15, 60)
+    end
+
+    test "is false when an hour would hold fewer than three slots" do
+      # 30 minutes puts two starts in an hour and 60 puts one, so grouping by
+      # hour hides a list no longer than the flat grid it replaces. The 60/90
+      # case rendered eight hour buttons each holding a single time whose label
+      # repeated the button that opened it.
+      refute SlotGrouping.two_tier?(30, 60)
+      refute SlotGrouping.two_tier?(45, 90)
+      refute SlotGrouping.two_tier?(60, 90)
+    end
+
+    test "the bound is the coarsest interval leaving three starts in an hour" do
+      bound = SlotGrouping.max_two_tier_interval()
+
+      assert 60 / bound >= 3
+      assert 60 / (bound + 1) < 3
+
+      # And it is the bound actually enforced, against a duration that cannot
+      # be what excludes the value.
+      assert SlotGrouping.two_tier?(bound, bound * 2)
+      refute SlotGrouping.two_tier?(bound + 1, bound * 2)
     end
   end
 
@@ -42,13 +65,15 @@ defmodule TymeslotWeb.Themes.Shared.SlotGroupingTest do
     end
 
     test "groups an interval that does not divide the hour into uneven hours" do
-      slots = ["9:00 AM", "9:50 AM", "10:40 AM"]
+      # 7 divides neither the hour nor itself into it, so the hours hold
+      # differing counts and the boundary falls mid-step.
+      slots = ["9:49 AM", "9:56 AM", "10:03 AM"]
 
-      assert {:hours, periods} = SlotGrouping.group(slots, 50, 60)
+      assert {:hours, periods} = SlotGrouping.group(slots, 7, 30)
 
       morning = Enum.find_value(periods, fn {label, hours} -> label == "Morning" && hours end)
 
-      assert morning == [{9, ["9:00 AM", "9:50 AM"]}, {10, ["10:40 AM"]}]
+      assert morning == [{9, ["9:49 AM", "9:56 AM"]}, {10, ["10:03 AM"]}]
     end
   end
 
