@@ -799,3 +799,23 @@ msgstr "Distanza tra gli orari di inizio proposti. Come impostazione predefinita
 #, elixir-autogen, elixir-format
 msgid "Same as meeting length"
 msgstr "Come la durata dell'incontro"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom interval (minutes)"
+msgstr "Intervallo personalizzato (minuti)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom…"
+msgstr "Personalizzato…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…"
+msgstr "In base alla durata dell'incontro, gli orari saranno proposti ogni %{minutes} minuti: %{examples}…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Times will be offered every %{minutes} minutes: %{examples}…"
+msgstr "Gli orari saranno proposti ogni %{minutes} minuti: %{examples}…"

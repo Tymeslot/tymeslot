@@ -799,3 +799,23 @@ msgstr "Наскільки далеко один від одного пропо�
 #, elixir-autogen, elixir-format
 msgid "Same as meeting length"
 msgstr "Як тривалість зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom interval (minutes)"
+msgstr "Власний інтервал (хвилини)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom…"
+msgstr "Власний…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…"
+msgstr "Відповідно до тривалості зустрічі час початку пропонуватиметься кожні %{minutes} хв: %{examples}…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Times will be offered every %{minutes} minutes: %{examples}…"
+msgstr "Час початку пропонуватиметься кожні %{minutes} хв: %{examples}…"
