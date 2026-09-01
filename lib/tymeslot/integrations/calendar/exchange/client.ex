@@ -47,6 +47,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
           | :rate_limited
           | :server_error
           | :network_error
+          | :tls_error
           | :malformed_xml
           | {:soap_fault, String.t()}
           | {:unexpected_status, pos_integer()}
@@ -130,6 +131,20 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   defp transport_error(%Mint.TransportError{reason: :timeout}, _url), do: {:error, :timeout}
   defp transport_error(%Req.TransportError{reason: :timeout}, _url), do: {:error, :timeout}
   defp transport_error(%Mint.HTTPError{reason: :timeout}, _url), do: {:error, :timeout}
+
+  # A refused certificate is told apart from every other transport failure
+  # because it is the one an account owner can act on, and the action is not
+  # the one `:network_error` suggests. An on-premises Exchange behind a
+  # self-signed or internal-CA certificate is the ordinary case for this
+  # provider, and the connection form carries a control for exactly it, so
+  # answering "check your network connection and server URL" points away from
+  # the fix. Both structs are matched: Req wraps Mint's, and which one surfaces
+  # depends on where in the stack the handshake failed.
+  defp transport_error(%Mint.TransportError{reason: {:tls_alert, _alert}}, _url),
+    do: {:error, :tls_error}
+
+  defp transport_error(%Req.TransportError{reason: {:tls_alert, _alert}}, _url),
+    do: {:error, :tls_error}
 
   defp transport_error(reason, url) do
     Logger.warning("Exchange EWS request failed",

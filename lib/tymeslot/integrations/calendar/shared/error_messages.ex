@@ -99,6 +99,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       when reason in [:network_error, :server_error, :server_unresponsive],
       do: :network
 
+  # Not `:network`, though it is a transport failure: the category decides what
+  # the reader is told to do next, and nothing about the network or the URL is
+  # wrong here. It is a configuration problem, and on a provider whose form
+  # offers a verification toggle it is one the reader can fix without leaving
+  # the page.
+  def categorize_error(:tls_error), do: :config
+
   # EWS names its failures in its own vocabulary rather than through an HTTP
   # status, so an Exchange failure arrives as `{:response_code, code}`. Only
   # the two an operator actually hits are named: a mailbox the account cannot
@@ -148,6 +155,18 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       "dashboard_calendar_providers",
       "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings.",
       url: url
+    )
+  end
+
+  # The sentence a refused TLS certificate gets, written once here. Both
+  # surfaces that report a connection failure read it from this function —
+  # `classify_and_format/3` on the discovery path and
+  # `ErrorHandler.sanitize_error_message/2` on the creation probe — so the two
+  # cannot describe the same failure differently.
+  def specific_message(:tls_error, _provider) do
+    dgettext(
+      "dashboard_calendar_providers",
+      "The server's TLS certificate was rejected. If it is self-signed or issued by an internal certificate authority, turn off certificate verification."
     )
   end
 

@@ -178,6 +178,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ClientTest do
       assert {:error, :timeout} = Client.call(config(), "<m:FindFolder/>")
     end
 
+    test "tells a refused certificate apart from a network failure" do
+      # An on-premises server behind a self-signed certificate is the ordinary
+      # case for this provider, and the connection form carries a toggle for
+      # exactly it. Collapsing this into `:network_error` tells the reader to
+      # check their network and URL, pointing away from the control that fixes
+      # it. The alert shape is the one a self-signed peer actually produces.
+      alert =
+        {:tls_alert,
+         {:bad_certificate, ~c"TLS client: Fatal - Bad Certificate\n selfsigned_peer"}}
+
+      ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, alert) end)
+
+      assert {:error, :tls_error} = Client.call(config(), "<m:FindFolder/>")
+    end
+
     test "maps any other transport failure to :network_error" do
       ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, :econnrefused) end)
 

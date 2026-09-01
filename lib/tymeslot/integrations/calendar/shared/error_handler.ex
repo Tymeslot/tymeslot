@@ -102,6 +102,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     )
   end
 
+  # Reached only from a provider that tells a refused certificate apart from a
+  # generic transport failure. The sentence lives in `ErrorMessages` so this
+  # surface and the discovery path, which classifies rather than sanitises,
+  # cannot describe the same failure differently.
+  def sanitize_error_message(:tls_error, provider) do
+    ErrorMessages.specific_message(:tls_error, provider)
+  end
+
   def sanitize_error_message(:forbidden, :mailbox_org) do
     dgettext(
       "dashboard_calendar_providers",
