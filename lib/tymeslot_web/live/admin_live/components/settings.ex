@@ -150,22 +150,28 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     effective = Map.fetch!(assigns.effective_values, assigns.key)
     kind = Formatters.kind(assigns.key)
 
-    disabled =
-      parent_disabled?(assigns.key, assigns.effective_values) or
-        own_value_off?(kind, effective)
+    # Two states that used to share one flag, which made every switched-off
+    # boolean render its own toggle at 60% opacity - reading as "you cannot
+    # click this" on the one control that is the only way back on.
+    #
+    # `disabled` is genuine inertness: a dependent setting whose parent is off
+    # has a control that really is unusable until the parent is switched on.
+    # `muted` is merely "this setting is not doing anything at the moment",
+    # which is worth saying in the description but must never be said about a
+    # live control.
+    disabled = parent_disabled?(assigns.key, assigns.effective_values)
+    muted = disabled or own_value_off?(kind, effective)
 
     assigns =
       assigns
       |> assign(:effective, effective)
       |> assign(:kind, kind)
       |> assign(:disabled, disabled)
+      |> assign(:muted, muted)
 
     ~H"""
-    <div class={[
-      "px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap transition-opacity",
-      @disabled && "opacity-60"
-    ]}>
-      <.row_header key={@key} />
+    <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
+      <.row_header key={@key} muted={@muted} />
 
       <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />
     </div>
@@ -177,10 +183,11 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   # which render their own controls, stay visually identical to the generic
   # ones.
   attr :key, :atom, required: true
+  attr :muted, :boolean, default: false
 
   defp row_header(assigns) do
     ~H"""
-    <div class="flex-1 min-w-0">
+    <div class={["flex-1 min-w-0 transition-opacity", @muted && "opacity-60"]}>
       <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">
         {Formatters.humanise(@key)}
       </h4>
@@ -566,7 +573,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       phx-value-key={@key}
       phx-value-state={@state}
       disabled={@active or @locked}
-      aria-pressed={@active}
+      aria-pressed={to_string(@active)}
       aria-disabled={@locked}
       title={@lock_reason}
       class={[
