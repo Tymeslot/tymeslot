@@ -4,7 +4,11 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
   against a configured provider integration.
   """
 
-  use Tymeslot.DataCase, async: true
+  # Not async: several tests here induce real Zoom video-breaker failures
+  # (VideoCircuitBreaker is an application-wide singleton keyed by provider),
+  # so this module needs the DataCase-wide breaker reset that only runs
+  # between non-async modules.
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox

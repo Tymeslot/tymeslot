@@ -286,7 +286,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             <.loading_spinner show={@availability_status == :loading} />
                           </h2>
                           <div class="calendar-nav-cluster">
-                            <%= if @availability_status in [:error, :timeout] do %>
+                            <%= if @availability_status == :error do %>
                               <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
                                 <svg
                                   class="w-3 h-3"

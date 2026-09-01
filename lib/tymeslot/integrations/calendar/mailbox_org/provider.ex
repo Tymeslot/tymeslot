@@ -178,6 +178,9 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   def list_events(client, opts), do: CaldavCommon.list_events(client, opts)
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events_representation, do: :raw
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context),
     do: EventProcessor.normalise_events(raw_events, context)
 

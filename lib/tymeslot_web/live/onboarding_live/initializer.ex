@@ -15,12 +15,12 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   alias Phoenix.Component
   alias Tymeslot.Auth
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Timezones
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.AvatarHandlers
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
@@ -114,8 +114,5 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   defp load_default_schedule(profile), do: Schedules.get_default(profile.id)
 
   defp build_booking_url(nil), do: ""
-
-  defp build_booking_url(profile) do
-    "#{Policy.app_url()}/#{profile.username || ""}"
-  end
+  defp build_booking_url(profile), do: UrlBuilder.booking_url(profile.username)
 end

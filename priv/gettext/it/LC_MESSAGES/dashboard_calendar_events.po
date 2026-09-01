@@ -60,11 +60,6 @@ msgstr "1 giorno prima"
 msgid "1 hour before"
 msgstr "1 ora prima"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "10 minutes before"
-msgstr "10 minuti prima"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "12-hour or 24-hour clock"
@@ -79,16 +74,6 @@ msgstr "12h"
 #, elixir-autogen, elixir-format
 msgid "24h"
 msgstr "24h"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "30 minutes before"
-msgstr "30 minuti prima"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "5 minutes before"
-msgstr "5 minuti prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format

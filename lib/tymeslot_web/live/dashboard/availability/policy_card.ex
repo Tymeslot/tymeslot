@@ -5,9 +5,16 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   Buffer, advance booking window and minimum notice belong to a single named
   schedule, so they are edited here beside the weekly pattern they constrain
   rather than on the account-wide meeting settings page.
+
+  The quick-pick tags render from `CustomInputModeHelper.presets/1`, which is
+  also what validates the `_preset` marker a tag click carries. Rendering them
+  from literals is what let this card offer values the validator refused, so a
+  click on one saved the value but left the card stuck in custom-input mode.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
+
+  alias TymeslotWeb.CustomInputModeHelper
 
   @doc """
   Renders the three scheduling policy settings for one schedule.
@@ -65,10 +72,9 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   @spec buffer_minutes_setting(map()) :: Phoenix.LiveView.Rendered.t()
   def buffer_minutes_setting(assigns) do
     assigns =
-      assign(
-        assigns,
-        :buffer_value,
-        if(assigns.schedule, do: assigns.schedule.buffer_minutes, else: 0)
+      assign(assigns,
+        buffer_value: if(assigns.schedule, do: assigns.schedule.buffer_minutes, else: 0),
+        presets: CustomInputModeHelper.presets(:buffer_minutes)
       )
 
     ~H"""
@@ -86,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
       >
         <div class="flex flex-wrap items-center gap-3">
           <%!-- Quick preset tags --%>
-          <%= for minutes <- [0, 5, 10, 15, 30, 60] do %>
+          <%= for minutes <- @presets do %>
             <button
               type="button"
               phx-click="update_buffer_minutes"
@@ -100,16 +106,12 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 )
               ]}
             >
-              <%= if minutes == 0 do %>
-                {dgettext("dashboard_availability", "No buffer")}
-              <% else %>
-                {dgettext("dashboard_availability", "%{minutes} min", minutes: minutes)}
-              <% end %>
+              {buffer_label(minutes)}
             </button>
           <% end %>
 
           <%!-- Custom input tag --%>
-          <%= if @custom_mode or @buffer_value not in [0, 5, 10, 15, 30, 60] do %>
+          <%= if @custom_mode or @buffer_value not in @presets do %>
             <div class="btn-tag-selector btn-tag-selector-primary--active p-0! overflow-hidden">
               <input
                 type="number"
@@ -159,10 +161,9 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   @spec advance_booking_days_setting(map()) :: Phoenix.LiveView.Rendered.t()
   def advance_booking_days_setting(assigns) do
     assigns =
-      assign(
-        assigns,
-        :booking_days,
-        if(assigns.schedule, do: assigns.schedule.advance_booking_days, else: 90)
+      assign(assigns,
+        booking_days: if(assigns.schedule, do: assigns.schedule.advance_booking_days, else: 90),
+        presets: CustomInputModeHelper.presets(:advance_booking_days)
       )
 
     ~H"""
@@ -180,14 +181,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
       >
         <div class="flex flex-wrap items-center gap-3">
           <%!-- Quick preset tags --%>
-          <%= for {days, label} <- [
-          {7, dgettext("dashboard_availability", "1 week")},
-          {14, dgettext("dashboard_availability", "2 weeks")},
-          {30, dgettext("dashboard_availability", "1 month")},
-          {60, dgettext("dashboard_availability", "2 months")},
-          {90, dgettext("dashboard_availability", "3 months")},
-          {180, dgettext("dashboard_availability", "6 months")}
-        ] do %>
+          <%= for days <- @presets do %>
             <button
               type="button"
               phx-click="update_advance_booking_days"
@@ -201,12 +195,12 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 )
               ]}
             >
-              {label}
+              {booking_days_label(days)}
             </button>
           <% end %>
 
           <%!-- Custom input tag --%>
-          <%= if @custom_mode or @booking_days not in [7, 14, 30, 60, 90, 180] do %>
+          <%= if @custom_mode or @booking_days not in @presets do %>
             <div class="btn-tag-selector btn-tag-selector-secondary--active p-0! overflow-hidden">
               <input
                 type="number"
@@ -256,10 +250,9 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   @spec min_advance_hours_setting(map()) :: Phoenix.LiveView.Rendered.t()
   def min_advance_hours_setting(assigns) do
     assigns =
-      assign(
-        assigns,
-        :notice_hours,
-        if(assigns.schedule, do: assigns.schedule.min_advance_hours, else: 24)
+      assign(assigns,
+        notice_hours: if(assigns.schedule, do: assigns.schedule.min_advance_hours, else: 24),
+        presets: CustomInputModeHelper.presets(:min_advance_hours)
       )
 
     ~H"""
@@ -277,14 +270,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
       >
         <div class="flex flex-wrap items-center gap-3">
           <%!-- Quick preset tags --%>
-          <%= for {hours, label} <- [
-          {0, dgettext("dashboard_availability", "instant")},
-          {1, dgettext("dashboard_availability", "1 hour")},
-          {4, dgettext("dashboard_availability", "4 hours")},
-          {24, dgettext("dashboard_availability", "1 day")},
-          {48, dgettext("dashboard_availability", "2 days")},
-          {168, dgettext("dashboard_availability", "1 week")}
-        ] do %>
+          <%= for hours <- @presets do %>
             <button
               type="button"
               phx-click="update_min_advance_hours"
@@ -298,12 +284,12 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 )
               ]}
             >
-              {label}
+              {notice_hours_label(hours)}
             </button>
           <% end %>
 
           <%!-- Custom input tag --%>
-          <%= if @custom_mode or @notice_hours not in [0, 1, 4, 24, 48, 168] do %>
+          <%= if @custom_mode or @notice_hours not in @presets do %>
             <div class="btn-tag-selector btn-tag-selector-tertiary--active p-0! overflow-hidden">
               <input
                 type="number"
@@ -342,4 +328,31 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
     </div>
     """
   end
+
+  # Tag labels. These cover the preset lists above with room to spare; a preset
+  # added without a label here raises on render rather than rendering a blank
+  # tag, which is the failure we want to hear about.
+
+  defp buffer_label(0), do: dgettext("dashboard_availability", "No buffer")
+
+  defp buffer_label(minutes),
+    do: dgettext("dashboard_availability", "%{minutes} min", minutes: minutes)
+
+  defp booking_days_label(7), do: dgettext("dashboard_availability", "1 week")
+  defp booking_days_label(14), do: dgettext("dashboard_availability", "2 weeks")
+  defp booking_days_label(30), do: dgettext("dashboard_availability", "1 month")
+  defp booking_days_label(60), do: dgettext("dashboard_availability", "2 months")
+  defp booking_days_label(90), do: dgettext("dashboard_availability", "3 months")
+  defp booking_days_label(180), do: dgettext("dashboard_availability", "6 months")
+  defp booking_days_label(365), do: dgettext("dashboard_availability", "1 year")
+
+  defp notice_hours_label(0), do: dgettext("dashboard_availability", "instant")
+  defp notice_hours_label(1), do: dgettext("dashboard_availability", "1 hour")
+  defp notice_hours_label(3), do: dgettext("dashboard_availability", "3 hours")
+  defp notice_hours_label(4), do: dgettext("dashboard_availability", "4 hours")
+  defp notice_hours_label(6), do: dgettext("dashboard_availability", "6 hours")
+  defp notice_hours_label(12), do: dgettext("dashboard_availability", "12 hours")
+  defp notice_hours_label(24), do: dgettext("dashboard_availability", "1 day")
+  defp notice_hours_label(48), do: dgettext("dashboard_availability", "2 days")
+  defp notice_hours_label(168), do: dgettext("dashboard_availability", "1 week")
 end

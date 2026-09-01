@@ -54,12 +54,14 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   @default_cutoff_days 14
   @default_hard_failure_count 168
+  @unhealthy_status HealthStatus.to_db_value(:unhealthy)
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
@@ -96,7 +98,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
         # against the race where a concurrent sync worker reset the row to
         # "healthy" after list_pausable returned the stale unhealthy snapshot.
         case IntegrationHealthStateQueries.get(type, row.integration_id) do
-          {:ok, %{status: "unhealthy"} = fresh_row} ->
+          {:ok, %{status: @unhealthy_status} = fresh_row} ->
             case deactivate(type, integration) do
               {:ok, paused} ->
                 Logger.info("Auto-pausing integration",

@@ -6,7 +6,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditorTest do
 
   import Phoenix.LiveViewTest
 
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
+
+  # The lead-time select's options, as `{minutes, label}`. The method select's
+  # options carry non-numeric values, so they never match.
+  defp offered_lead_times(html) do
+    ~r/<option value="(\d+)"[^>]*>([^<]*)<\/option>/
+    |> Regex.scan(html)
+    |> Enum.map(fn [_match, minutes, label] -> {String.to_integer(minutes), label} end)
+  end
 
   defp base_assigns(overrides \\ %{}) do
     Map.merge(
@@ -48,6 +57,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditorTest do
     assert html =~ ~s(phx-click="remove_event_reminder")
     assert html =~ ~s(phx-value-index="0")
     assert html =~ ~s(phx-value-index="1")
+  end
+
+  describe "the offered lead times against the whitelist that validates them" do
+    # The editor's options and `parse_reminder/1`'s whitelist were once two
+    # independent literals: an option added to one and not the other either
+    # offered a lead time the server rejects, or accepted one never shown.
+
+    test "every lead time the editor offers is accepted by parse_reminder/1" do
+      html = render_component(&RemindersEditor.reminders_editor/1, base_assigns())
+      offered = offered_lead_times(html)
+
+      # Anchor: no options at all would make the rejection below vacuous.
+      refute Enum.empty?(offered)
+
+      assert Enum.map(offered, fn {minutes, _label} -> minutes end) ==
+               Shared.reminder_minutes_presets()
+
+      assert Enum.reject(offered, fn {minutes, _label} ->
+               Shared.parse_reminder(%{"method" => "popup", "minutes" => to_string(minutes)}) ==
+                 {:ok, %{method: :popup, minutes_before: minutes}}
+             end) == []
+    end
+
+    test "every offered lead time carries a label" do
+      html = render_component(&RemindersEditor.reminders_editor/1, base_assigns())
+      offered = offered_lead_times(html)
+
+      refute Enum.empty?(offered)
+      assert Enum.reject(offered, fn {_minutes, label} -> String.trim(label) != "" end) == []
+    end
   end
 
   describe "reminder_label/1" do

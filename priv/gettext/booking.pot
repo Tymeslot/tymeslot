@@ -1483,11 +1483,6 @@ msgstr ""
 msgid "Meeting is already cancelled"
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "No timeslots available due to calendar parsing error"
-msgstr ""
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
@@ -1545,3 +1540,8 @@ msgid "%{hour}, %{count} available time"
 msgid_plural "%{hour}, %{count} available times"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#, elixir-autogen, elixir-format
+msgid "No time slots could be loaded. Please try again."
+msgstr ""

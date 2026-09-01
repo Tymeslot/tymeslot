@@ -108,6 +108,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # so the caller can still let the breaker witness it.
   @spec precheck_create_meeting_room(map()) ::
           {:ok, map()} | {:error, term()} | {:provider_error, term()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def precheck_create_meeting_room(config) do
     classify_token_result(ensure_valid_token(config))
   end
@@ -119,6 +120,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # `config` argument is unused: Meet space creation needs no tenant data
   # beyond the access token already embedded in `valid_token`.
   @spec finish_create_meeting_room(map(), map()) :: {:ok, RoomData.t()} | {:error, term()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def finish_create_meeting_room(valid_token, _config) do
     with {:ok, space} <- create_meet_space(valid_token),
          {:ok, room_data} <- extract_space_data(space) do
@@ -428,7 +430,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         # withdrawal at Google. Flag the integration so the dashboard shows the
         # "Reconnect required" badge immediately. Mirrors Zoom's flag_revoked_token/1.
         flag_revoked_token(config)
-        {:error, "Google Meet API error: HTTP 401 (see logs for details)"}
+        {:error, {:http_error, 401, "Google Meet API error: HTTP 401 (see logs for details)"}}
 
       {:ok, %Req.Response{status: 403, body: body}} ->
         Logger.error(
@@ -438,7 +440,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "Google Meet API error: HTTP 403 (Meet API may be disabled; see logs)"}
+        {:error,
+         {:http_error, 403,
+          "Google Meet API error: HTTP 403 (Meet API may be disabled; see logs)"}}
 
       {:ok, %Req.Response{status: status, body: body}} ->
         Logger.error("Google Meet API error creating space",
@@ -446,10 +450,15 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "Google Meet API error: HTTP #{status} (see logs for details)"}
+        {:error,
+         {:http_error, status, "Google Meet API error: HTTP #{status} (see logs for details)"}}
 
       {:error, reason} ->
-        {:error, "HTTP error: #{inspect(reason)}"}
+        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
+        # transport reason atom) rather than flattened to prose, so
+        # `BreakerOutcome` recognises a genuine transport failure and lets the
+        # breaker witness it.
+        {:error, reason}
     end
   end
 
@@ -492,10 +501,15 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "Google Meet API error: HTTP #{status} (see logs for details)"}
+        {:error,
+         {:http_error, status, "Google Meet API error: HTTP #{status} (see logs for details)"}}
 
       {:error, reason} ->
-        {:error, "HTTP error: #{inspect(reason)}"}
+        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
+        # transport reason atom) rather than flattened to prose, so
+        # `BreakerOutcome` recognises a genuine transport failure and lets the
+        # breaker witness it.
+        {:error, reason}
     end
   end
 

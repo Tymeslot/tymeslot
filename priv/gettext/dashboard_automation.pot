@@ -187,6 +187,7 @@ msgid "Event Subscriptions"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr ""
@@ -280,11 +281,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Request timestamp"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Saving..."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
@@ -580,4 +576,59 @@ msgstr ""
 #: lib/tymeslot/webhooks.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Connection failed"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Disabled: %{reason}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Failed: %{reason}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Still checking — please try again in a moment."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex
+#, elixir-autogen, elixir-format
+msgid "Succeeded"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The connection test took too long to respond"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected to a private or restricted address"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected too many times"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "The webhook redirected without a destination address"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "URL resolves to a private or restricted address"
+msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook returned status %{status}"
 msgstr ""

@@ -78,6 +78,36 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
       assert filtered.meta.calendar_integration_id == 42
     end
 
+    test "redacts personal identifier keys but keeps pre-masked and non-address ones" do
+      filtered =
+        MetadataRedactor.filter(
+          event(%{
+            email: "alice@example.com",
+            attendee_email: "bob@example.com",
+            identifier: "carol@example.com",
+            email_masked: "a***@example.com",
+            identifier_masked: "c***@example.com",
+            owner_email_masked: "d***@example.com",
+            email_action: "reminder",
+            provider_identifier: "evt_abc123"
+          }),
+          []
+        )
+
+      assert filtered.meta.email == "[REDACTED]"
+      assert filtered.meta.attendee_email == "[REDACTED]"
+      assert filtered.meta.identifier == "[REDACTED]"
+
+      # `_masked` names a value the writer already masked, and the two keys
+      # below carry no address at all — blanking either costs diagnostics for
+      # no privacy gain.
+      assert filtered.meta.email_masked == "a***@example.com"
+      assert filtered.meta.identifier_masked == "c***@example.com"
+      assert filtered.meta.owner_email_masked == "d***@example.com"
+      assert filtered.meta.email_action == "reminder"
+      assert filtered.meta.provider_identifier == "evt_abc123"
+    end
+
     test "leaves non-sensitive metadata untouched" do
       filtered =
         MetadataRedactor.filter(

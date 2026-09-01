@@ -344,6 +344,24 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert %DateTime{time_zone: "America/Chicago"} = result.end_time_attendee_tz
     end
 
+    test "derives the host's booking page URL from their username" do
+      %{user: user} = create_user_with_profile(%{username: "sarah-rodriguez"})
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.booking_url == "http://localhost:4002/sarah-rodriguez"
+    end
+
+    test "falls back to the app root when the host has no username" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.booking_url == "http://localhost:4002"
+    end
+
     test "handles missing organizer_user_id gracefully with default timezone" do
       %{user: user} = create_user_with_profile(%{timezone: "America/Chicago"})
 

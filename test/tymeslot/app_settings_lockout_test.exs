@@ -310,5 +310,26 @@ defmodule Tymeslot.AppSettingsLockoutTest do
       assert {:ok, _settings} = AppSettings.update(%{meeting_payments_enabled: true})
       assert Application.get_env(:tymeslot, :meeting_payments_enabled) == true
     end
+
+    test "an unrelated update still succeeds when payments are already enabled without a Stripe key" do
+      # Mirrors an install where meeting payments are on at the config layer
+      # (or via a prior DB override) with no Stripe platform credentials —
+      # the guard must only refuse a write that itself turns payments on, not
+      # every subsequent update to unrelated settings.
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+
+      assert {:ok, _settings} = AppSettings.update(%{email_brand_name: "X"})
+    end
+
+    test "locked_states for password_auth_enabled is unaffected by an unconfigured payments toggle" do
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+      insert(:user, is_admin: true, password_hash: nil, google_user_id: "google-789")
+
+      values = AppSettings.effective_values()
+
+      assert values[:password_auth_enabled].locked_states == []
+    end
   end
 end

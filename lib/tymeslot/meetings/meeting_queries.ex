@@ -40,6 +40,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Fetches a meeting with its guests loaded.
+
+  A webhook payload describes the meeting to an external system, and the people
+  invited to it are part of that description, so the delivery path needs them
+  alongside the meeting itself.
+  """
+  @spec get_meeting_with_guests(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
+  def get_meeting_with_guests(id) do
+    with {:ok, meeting} <- get_meeting(id) do
+      {:ok, Repo.preload(meeting, :guests)}
+    end
+  end
+
+  @doc """
   Gets a single meeting by ID and locks it for update.
   """
   @spec get_meeting_for_update(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
@@ -206,11 +220,11 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   workers for the same meeting.
   """
   @spec upsert_reminder_sent(Meeting.t(), %{
-          value: integer(),
-          unit: String.t(),
-          organizer_sent: boolean(),
-          attendee_sent: boolean()
-        }) :: {:ok, Meeting.t()} | {:error, :not_found}
+          :value => integer(),
+          :unit => String.t(),
+          optional(:organizer_sent) => boolean(),
+          optional(:attendee_sent) => boolean()
+        }) :: {:ok, Meeting.t()} | {:error, :not_found | Changeset.t()}
   def upsert_reminder_sent(%Meeting{} = meeting, %{value: val, unit: unit} = attrs) do
     organizer_sent = Map.get(attrs, :organizer_sent, false)
     attendee_sent = Map.get(attrs, :attendee_sent, false)
@@ -268,7 +282,18 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     end
   end
 
-  defp reminder_entry_match?(entry, val, unit) do
+  @doc """
+  Whether a `reminders_sent` entry matches the given `(value, unit)` reminder
+  config.
+
+  Public because it is the single authority on entry-matching, shared with
+  `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, which reads
+  `reminders_sent` to decide whether a reminder still needs sending: writer
+  and reader must never disagree about which entry a `(value, unit)` config
+  identifies.
+  """
+  @spec reminder_entry_match?(map(), integer(), String.t()) :: boolean()
+  def reminder_entry_match?(entry, val, unit) do
     case entry do
       %{"value" => v, "unit" => u} -> v == val and u == unit
       %{value: v, unit: u} -> v == val and u == unit
@@ -287,9 +312,18 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     }
   end
 
-  # Missing keys mean a pre-upsert entry; treat both recipients as already
-  # sent rather than guessing, so old rows never trigger a fresh send.
-  defp reminder_entry_flag(entry, string_key, atom_key) do
+  @doc """
+  Whether a `reminders_sent` entry records the recipient identified by
+  `string_key`/`atom_key` as sent.
+
+  Missing keys mean a pre-upsert entry; treated as already sent rather than
+  guessing, so old rows never trigger a fresh send. Public and shared with
+  `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, the reader of this
+  field: this is the single authority on legacy-entry semantics, so the
+  default here cannot silently diverge from what the reader assumes.
+  """
+  @spec reminder_entry_flag(map(), String.t(), atom()) :: boolean()
+  def reminder_entry_flag(entry, string_key, atom_key) do
     case entry do
       %{^string_key => sent} when is_boolean(sent) -> sent
       %{^atom_key => sent} when is_boolean(sent) -> sent

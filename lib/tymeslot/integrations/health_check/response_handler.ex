@@ -181,23 +181,13 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   # Private Functions
 
   # Splits the reason into whole-word tokens for matching. Non-UTF-8 reasons
-  # (some providers hand back raw bytes) tokenise to nothing rather than
-  # blowing up `String.downcase/1`.
-  defp error_tokens(reason) do
-    if String.valid?(reason) do
-      reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
-    else
-      []
-    end
-  end
-
   # `invalid_grant` and `:token_expired` mean the grant itself is gone —
   # expired, or revoked by the user in their provider account. Everything else
   # on the permanent list is the provider refusing the credentials for some
   # other reason. The two get different messages because they send the user to
   # different places, and neither is a decryption problem.
   defp reauth_cause(reason) when is_binary(reason) do
-    if "invalid_grant" in error_tokens(reason),
+    if "invalid_grant" in BreakerOutcome.error_tokens(reason),
       do: :expired_grant,
       else: :rejected_credentials
   end

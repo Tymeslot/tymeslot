@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Live.Scheduling.NextAvailable
 
   @doc """
   Handles calendar events updated via PubSub.
@@ -47,6 +48,11 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
   @doc """
   Handles month availability fetch completion (error).
+
+  There is no crash counterpart: the fetch runs in a *linked* task, so a
+  task that raises takes the LiveView with it and never delivers a
+  `:DOWN` anyone could act on. A handler for one would be unreachable
+  code pretending the page degrades gracefully.
   """
   @spec handle_availability_error(Phoenix.LiveView.Socket.t(), reference(), any()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -58,21 +64,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     end)
   end
 
-  @doc """
-  Handle task crash or timeout.
-  """
-  @spec handle_availability_down(Phoenix.LiveView.Socket.t(), reference(), any()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_availability_down(socket, ref, reason) do
-    finalize_availability_task(socket, ref, :timeout, nil, fn ->
-      Logger.warning("Month availability task failed", reason: inspect(reason))
-    end)
-  end
-
   # Applies the terminal availability-task state, but only for the *current*
   # task ref — a stale ref (the user moved on before the fetch finished) is a
-  # no-op. `on_active` runs only when the ref matches, so error/timeout warnings
-  # are never emitted for superseded tasks.
+  # no-op. `on_active` runs only when the ref matches, so an error warning is
+  # never emitted for a superseded fetch.
   defp finalize_availability_task(socket, ref, status, map, on_active \\ fn -> :ok end) do
     if ref == socket.assigns[:availability_task_ref] do
       on_active.()
@@ -83,12 +78,39 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
         |> assign(:availability_status, status)
         |> assign(:availability_task, nil)
         |> assign(:availability_task_ref, nil)
+        |> apply_auto_selection(status)
 
       {:noreply, socket}
     else
       {:noreply, socket}
     end
   end
+
+  # Landing the booker on the first bookable day. This runs on the task result
+  # rather than on schedule-step entry because the availability map does not
+  # exist yet at entry — it is precisely this message that carries it.
+  #
+  # A `:refetch` means the whole loaded range was dead, so the window has moved
+  # forward and needs its own fetch; the hop counter inside NextAvailable stops
+  # that walking forever.
+  #
+  # Only a loaded map is searched. On an :error the map is nil, which
+  # is indistinguishable from "no day is free" — advancing the month on a
+  # failed fetch would march the booker through months nobody has successfully
+  # looked at.
+  defp apply_auto_selection(socket, :loaded) do
+    case NextAvailable.apply(socket) do
+      {socket, :done} -> socket
+      {socket, :refetch} -> AvailabilityHelpers.fetch_month_availability_async(socket)
+    end
+  end
+
+  # A failed fetch still spends the attempt. The booker is on the schedule step
+  # looking at the error banner; leaving the landing armed means the next fetch
+  # to succeed — a month arrow, a week arrow, a calendar-sync broadcast — picks
+  # a day and re-aligns the window onto it, moving the calendar backwards under
+  # a booker who asked to go forwards.
+  defp apply_auto_selection(socket, _failed), do: NextAvailable.settle(socket)
 
   @doc """
   Handles common dropdown closing logic.
@@ -193,11 +215,30 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_unexpected(socket, message) do
     Logger.warning("Scheduling LiveView ignoring unexpected message",
-      message: inspect(message, limit: 50, printable_limit: 200),
+      message_shape: message_shape(message),
       current_state: socket.assigns[:current_state],
       organizer_user_id: socket.assigns[:organizer_user_id]
     )
 
+    Logger.debug(fn ->
+      "Scheduling LiveView ignoring unexpected message (full): " <>
+        inspect(message, limit: 50, printable_limit: 200)
+    end)
+
     {:noreply, socket}
   end
+
+  # Logs only what shape the message has — never its content, which on this
+  # public, unauthenticated page may carry booker PII (e.g. a stray Swoosh
+  # post-delivery message embeds attendee name/email).
+  defp message_shape(message) when is_tuple(message) and tuple_size(message) > 0 do
+    "{#{inspect(elem(message, 0))}, arity: #{tuple_size(message)}}"
+  end
+
+  defp message_shape(message) when is_atom(message), do: inspect(message)
+  defp message_shape(message) when is_reference(message), do: "reference"
+  defp message_shape(message) when is_pid(message), do: "pid"
+  defp message_shape(message) when is_map(message), do: "map"
+  defp message_shape(message) when is_list(message), do: "list"
+  defp message_shape(_message), do: "other"
 end

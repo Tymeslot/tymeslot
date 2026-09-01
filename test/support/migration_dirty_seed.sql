@@ -30,9 +30,10 @@
 --    rejects — deliberately, checking what each rejected row covered.
 --
 -- Tables seeded: users, profiles, user_sessions, calendar_integrations,
---                video_integrations, connect_accounts, payment_transactions,
---                booking_payments, meetings, weekly_availability,
---                availability_breaks, availability_overrides
+--                video_integrations, provider_calendar_events, connect_accounts,
+--                payment_transactions, booking_payments, meetings,
+--                weekly_availability, availability_breaks,
+--                availability_overrides
 
 -- ============================================================================
 -- USERS
@@ -138,22 +139,104 @@ SELECT id, 'mirotalk', 'https://old-meet.example.com', 'Old MiroTalk', false, '{
 FROM users WHERE email = 'seed-user-2@example.com';
 
 -- ============================================================================
--- CALENDAR EVENTS (legacy shape) — REMOVED
+-- PROVIDER CALENDAR EVENTS
 -- ============================================================================
 --
--- This section held six rows in the legacy `calendar_events` table, written as
--- regression cases for 20260408110831_recreate_provider_calendar_events (which
--- renames the table to `provider_calendar_events` and adds four NOT NULL
--- columns) and 20260415185057_add_sync_state_to_provider_calendar_events.
+-- The synced calendar cache. Written against the post-rename table: the rename
+-- (20260408110831_recreate_provider_calendar_events) and the columns added
+-- through 20260415185057_add_sync_state_to_provider_calendar_events are all
+-- before the pin, so the table these rows load into already carries its full
+-- NOT NULL set. Only `uid`, `provider`, `provider_calendar_id` and `synced_at`
+-- have no default and must be supplied; the rest are deliberately omitted from
+-- some column lists so their defaults are exercised too.
 --
--- Both migrations are before the pinned version, so by the time this file is
--- loaded the rename has already happened, `calendar_events` does not exist, and
--- every one of those INSERTs fails with undefined_table.
+-- This is the largest table on a real installation and the one migrations
+-- reach for most, so an empty one lets a migration pass by touching nothing.
+-- The shapes below are the ones a migration can trip over: the two mutually
+-- exclusive ways a row expresses its timing, a row carrying almost no data at
+-- all, and the columns that decide whether a row blocks time.
 --
--- `provider_calendar_events` is worth seeding again — it is a table later
--- migrations do touch. Add fresh rows here against the post-rename table and
--- its NOT NULL columns; the pin is well past the rename, so nothing needs to
--- move to do it.
+-- Note `start_at`, `end_at` and `synced_at` are still naive `timestamp` at the
+-- pin — only `inserted_at`/`updated_at` were converted to `timestamptz`, by the
+-- pinned migration itself. Literals here are UTC wall-clock accordingly.
+
+-- All-day row: the timing shape that has no timestamps at all. The released
+-- `calendar_events` table had start_at/end_at NOT NULL, so any migration that
+-- reasons about "when does this event happen" by reading them alone silently
+-- skips this row, and any migration that re-tightens them rejects it outright.
+INSERT INTO provider_calendar_events (calendar_integration_id, uid, provider, provider_calendar_id, provider_event_id, summary, all_day, start_date, end_date, timezone, status, transparency, etag, synced_at, inserted_at, updated_at)
+SELECT ci.id, 'seed-pce-allday@example.com', 'caldav', '/luka/main-calendar/', '/luka/main-calendar/allday.ics', 'Company offsite', true, '2026-07-06', '2026-07-08', 'Europe/Berlin', 'confirmed', 'opaque', '"etag-allday-1"', '2026-07-01 06:15:00', NOW(), NOW()
+FROM calendar_integrations ci
+JOIN users u ON u.id = ci.user_id
+WHERE u.email = 'seed-user-1@example.com' AND ci.name = 'CalDAV Server 1';
+
+-- Timed row on the same integration: the inverse shape, and a second uid under
+-- one calendar_integration_id, which is what the unique index is on. A
+-- recurring master with an exception list and a non-empty attendees array, so
+-- a migration rewriting either array type meets values rather than empties.
+INSERT INTO provider_calendar_events (calendar_integration_id, uid, provider, provider_calendar_id, provider_event_id, summary, description, location, all_day, start_at, end_at, timezone, status, transparency, organiser, attendees, recurrence_rule, recurrence_exceptions, recurring_event_id, etag, synced_at, provider_updated_at, inserted_at, updated_at)
+SELECT ci.id, 'seed-pce-timed@example.com', 'caldav', '/luka/main-calendar/', '/luka/main-calendar/weekly.ics', 'Weekly planning', 'Standing agenda in the shared doc.', 'Meeting room 2', false, '2026-07-02 09:00:00', '2026-07-02 10:00:00', 'Europe/Berlin', 'confirmed', 'opaque', '{"email":"organiser@example.com","name":"Organiser"}'::jsonb, ARRAY['{"email":"attendee@example.com","status":"accepted"}'::jsonb], 'FREQ=WEEKLY;BYDAY=TH', ARRAY['2026-07-16'::date], 'seed-pce-timed@example.com', '"etag-timed-1"', '2026-07-01 06:15:00', '2026-06-30 11:00:00', NOW(), NOW()
+FROM calendar_integrations ci
+JOIN users u ON u.id = ci.user_id
+WHERE u.email = 'seed-user-1@example.com' AND ci.name = 'CalDAV Server 1';
+
+-- The degenerate row: every nullable column left NULL, including summary,
+-- location, etag and provider_event_id, and neither timing shape filled in, so
+-- it occupies no time and identifies nothing. Providers do return rows this
+-- thin. It also reuses the all-day row's uid under a different integration,
+-- which the (calendar_integration_id, uid) index must allow — a migration that
+-- re-creates that index without the integration column fails here.
+INSERT INTO provider_calendar_events (calendar_integration_id, uid, provider, provider_calendar_id, synced_at, inserted_at, updated_at)
+SELECT ci.id, 'seed-pce-allday@example.com', 'nextcloud', '/remote.php/dav/calendars/luka/personal/', '2026-07-01 06:20:00', NOW(), NOW()
+FROM calendar_integrations ci
+JOIN users u ON u.id = ci.user_id
+WHERE u.email = 'seed-user-1@example.com' AND ci.name = 'Nextcloud';
+
+-- Cancelled row, still in the cache. `status` and `transparency` are the two
+-- columns that decide whether a row blocks time, so a migration that filters
+-- or backfills availability data has to meet a row it must not count. Paired
+-- with a sync_state that is not "synced", which is the queue the sync workers
+-- select on.
+INSERT INTO provider_calendar_events (calendar_integration_id, uid, provider, provider_calendar_id, provider_event_id, summary, all_day, start_at, end_at, status, transparency, sync_state, sync_attempts, sync_last_attempt_at, sync_last_error, etag, synced_at, inserted_at, updated_at)
+SELECT ci.id, 'seed-pce-cancelled@example.com', 'nextcloud', '/remote.php/dav/calendars/luka/personal/', 'nc-cancelled-1', 'Cancelled review', false, '2026-07-03 13:00:00', '2026-07-03 14:00:00', 'cancelled', 'opaque', 'locally_deleted', 3, '2026-07-01 06:22:00', 'server returned 507 insufficient storage', NULL, '2026-07-01 06:20:00', NOW(), NOW()
+FROM calendar_integrations ci
+JOIN users u ON u.id = ci.user_id
+WHERE u.email = 'seed-user-1@example.com' AND ci.name = 'Nextcloud';
+
+-- Transparent row on a deactivated integration: the other half of the
+-- blocks-time pair, hanging off a parent that is_active = false. A migration
+-- that backfills through calendar_integrations with an active-only join skips
+-- this row, and a later NOT NULL on whatever it skipped then fails.
+INSERT INTO provider_calendar_events (calendar_integration_id, uid, provider, provider_calendar_id, provider_event_id, summary, all_day, start_at, end_at, status, transparency, visibility, colour, synced_at, inserted_at, updated_at)
+SELECT ci.id, 'seed-pce-transparent@example.com', 'caldav', '/luka/archive/', '/luka/archive/oldbooking.ics', 'Out of office (informational)', false, '2026-06-20 08:00:00', '2026-06-20 17:00:00', 'confirmed', 'transparent', 'private', '#7c3aed', '2026-06-19 22:05:00', NOW(), NOW()
+FROM calendar_integrations ci
+JOIN users u ON u.id = ci.user_id
+WHERE u.email = 'seed-user-1@example.com' AND ci.name = 'Deactivated';
+
+-- Second user, third provider, and the Tymeslot-authored shape: a row this
+-- application wrote rather than read, linked to a video integration and
+-- carrying its raw iCalendar body. `provider_event_id` is a CalDAV href rooted
+-- at a collection the parent integration does not list in calendar_paths,
+-- which is the case a migration repairing misfiled rows from the href must
+-- leave alone rather than guess at. The summary is deliberately past 255 bytes:
+-- these columns are `text` from 20260417062658, and anything that narrows them
+-- again has to fail loudly here.
+INSERT INTO provider_calendar_events (calendar_integration_id, video_integration_id, uid, provider, provider_calendar_id, provider_event_id, summary, description, location, all_day, start_at, end_at, timezone, status, transparency, video_link, raw_ical, created_by_tymeslot, sync_state, ical_sequence, last_notified_state, provider_metadata, attendees, synced_at, inserted_at, updated_at)
+SELECT ci.id,
+       (SELECT vi.id FROM video_integrations vi WHERE vi.user_id = u.id AND vi.name = 'Old MiroTalk'),
+       'seed-pce-tymeslot@example.com', 'radicale', '/luka/bookings/', '/luka/unlisted-collection/booking.ics',
+       repeat('Discovery call with a customer whose calendar entry title nobody trimmed ', 12),
+       'Booked through Tymeslot.', 'https://old-meet.example.com/room/abc', false, '2026-07-09 15:30:00', '2026-07-09 16:00:00', 'UTC', 'tentative', 'opaque',
+       'https://old-meet.example.com/room/abc',
+       'BEGIN:VCALENDAR' || chr(13) || chr(10) || 'BEGIN:VEVENT' || chr(13) || chr(10) || 'UID:seed-pce-tymeslot@example.com' || chr(13) || chr(10) || 'END:VEVENT' || chr(13) || chr(10) || 'END:VCALENDAR',
+       true, 'locally_created', 4,
+       '{"title":"Discovery call","attendees":["attendee@example.com"]}'::jsonb,
+       '{"source":"seed","etag_missing":true}'::jsonb,
+       ARRAY['{"email":"attendee@example.com","status":"needs-action"}'::jsonb],
+       '2026-07-08 20:00:00', NOW(), NOW()
+FROM calendar_integrations ci
+JOIN users u ON u.id = ci.user_id
+WHERE u.email = 'seed-user-2@example.com' AND ci.name = 'Radicale';
 
 -- ============================================================================
 -- PAYMENT TRANSACTIONS (pre-retention-migration shape)
@@ -204,14 +287,6 @@ VALUES (999999999, 499, 'succeeded', 'ch_seed_pt_3', '{}', NOW() - INTERVAL '8 d
 SET session_replication_role = replica;
 DELETE FROM users WHERE id = 999999999;
 SET session_replication_role = DEFAULT;
-
--- ============================================================================
---
--- A seventh legacy `calendar_events` row lived here, covering the
--- add_attendee_notification_tracking backfill against a row whose every
--- referenced field is NULL or degenerate. Removed for the same reason as the
--- block above: the table is already `provider_calendar_events` by the time this
--- file is loaded, so the INSERT could not resolve its table.
 
 -- ============================================================================
 -- CONNECT ACCOUNTS

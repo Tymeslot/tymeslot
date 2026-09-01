@@ -104,6 +104,7 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
         Migrator.run(Tymeslot.Repo, migrations_path(), :up, to: @seed_schema_version)
 
         load_seed!()
+        assert_seeded_calendar_events!()
         seeded = seeded_availability!()
 
         # Run everything after the pin — this is the actual test.
@@ -189,6 +190,49 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
         #{Exception.message(error)}
         """)
     end
+  end
+
+  # `provider_calendar_events` is the largest table on a real installation and
+  # the one migrations reach for most, so a migration touching it while the seed
+  # holds none of its rows proves only that the migration does not crash. The
+  # seed's `INSERT ... SELECT`s hang off the seeded calendar integrations, and
+  # an `INSERT ... SELECT` whose `WHERE` matches nothing inserts nothing and
+  # reports success, so the census below is what stands between a renamed
+  # integration and a section that silently seeds an empty table again.
+  defp assert_seeded_calendar_events! do
+    census = %{
+      total: scalar!("SELECT COUNT(*) FROM provider_calendar_events"),
+      integrations:
+        scalar!("SELECT COUNT(DISTINCT calendar_integration_id) FROM provider_calendar_events"),
+      all_day:
+        scalar!(
+          "SELECT COUNT(*) FROM provider_calendar_events WHERE all_day AND start_at IS NULL"
+        ),
+      timed:
+        scalar!(
+          "SELECT COUNT(*) FROM provider_calendar_events WHERE NOT all_day AND start_at IS NOT NULL"
+        ),
+      blocks_time_edge:
+        scalar!(
+          "SELECT COUNT(*) FROM provider_calendar_events WHERE status = 'cancelled' OR transparency = 'transparent'"
+        )
+    }
+
+    assert census.total >= 6 and census.integrations >= 3 and census.all_day > 0 and
+             census.timed > 0 and census.blocks_time_edge >= 2,
+           """
+           The dirty seed left provider_calendar_events without the shapes the
+           PROVIDER CALENDAR EVENTS section is meant to cover, so every migration
+           touching that table would run against data it was not given.
+
+           An `INSERT ... SELECT` that matched no calendar integration is the
+           usual cause: the section selects its parents by user email and
+           integration name, so renaming a seeded integration empties it without
+           any statement failing. Repair the section in
+           test/support/migration_dirty_seed.sql rather than relaxing this check.
+
+           #{inspect(census)}
+           """
   end
 
   # The availability rows as the seed left them, keyed by profile: this is the

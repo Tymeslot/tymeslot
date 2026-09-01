@@ -27,6 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
 
   # Microsoft Graph rejects these query parameters on the `events/delta`
   # change-tracking resource. Stored `graph_delta_link` URLs written before
@@ -37,10 +38,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
 
   @doc """
   Fetches and applies Outlook delta changes for an integration that has a
-  stored `graph_delta_link`. Returns `:ok` on success, `:error` on any
-  failure (already logged with context).
+  stored `graph_delta_link`. Returns `:ok` on success, or `{:error, class}` on
+  any failure (already logged with context).
+
+  The class distinguishes a remote that is briefly unwell (`:transient` — a
+  Graph 5xx, a timeout, an open circuit) from one that needs somebody to act
+  (`:hard` — bad credentials, a failed local write). The caller decides what to
+  do with a job that runs out of retries; only `:transient` is safe to abandon
+  to the next scheduled sweep.
   """
-  @spec fetch_and_apply(map()) :: :ok | :error
+  @spec fetch_and_apply(map()) :: :ok | {:error, ErrorAnalysis.error_class()}
   def fetch_and_apply(integration) do
     delta_link = integration.graph_delta_link
 
@@ -55,7 +62,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
       )
 
       CalendarIntegrationWebhookQueries.update_delta_link(integration, nil)
-      :error
+      {:error, :transient}
     else
       do_fetch_and_apply(integration, delta_link)
     end
@@ -90,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
       calendar_integration_id: integration.id
     )
 
-    :error
+    {:error, :transient}
   end
 
   defp handle_fetch_result({:error, :delta_link_expired}, integration) do
@@ -99,16 +106,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     )
 
     CalendarIntegrationWebhookQueries.update_delta_link(integration, nil)
-    :error
+    {:error, :transient}
   end
 
-  defp handle_fetch_result({:error, _reason} = fetch_error, integration) do
+  defp handle_fetch_result({:error, reason} = fetch_error, integration) do
     Logger.warning("Outlook delta fetch failed",
       calendar_integration_id: integration.id,
       error: format_error(fetch_error)
     )
 
-    :error
+    {:error, ErrorAnalysis.classify_error(reason)}
   end
 
   defp handle_fetch_result(refresh_error, integration) do
@@ -117,7 +124,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
       error: format_error(refresh_error)
     )
 
-    :error
+    # Deliberately not classified: a refresh that fails is the credential path,
+    # which is the case an operator most needs to hear about. Rather than let
+    # the conservative "unknown means transient" default silence a revoked
+    # grant, keep every refresh failure alertable.
+    {:error, :hard}
   end
 
   defp apply_delta(integration, events, new_delta_link) do
@@ -137,7 +148,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
           error: reason
         )
 
-        :error
+        # Ours, not the remote's: a failed local write does not heal by waiting
+        # for the next sweep, so it stays alertable.
+        {:error, :hard}
     end
   end
 

@@ -13,7 +13,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   seconds. The mail circuit breaker stays open for five minutes, so without
   this every attempt would be spent while the provider was known-unavailable
   and the email then discarded for good. Snoozing past the recovery window
-  costs no attempt — Oban's snooze raises `max_attempts` in step.
+  costs no attempt, so it is bounded here by `SnoozePolicy` instead.
 
   A permanently rejected recipient is discarded for the matching reason: no
   number of retries can reach a dead address, and exhausting the attempts
@@ -30,12 +30,21 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Workers.SnoozePolicy
 
   @circuit_open_jitter_seconds 30
   # Matches `EmailWorker`'s cap for the same reason; callers here don't
-  # necessarily have an attempt number to hand, so this is the ceiling that
+  # necessarily have an execution count to hand, so this is the ceiling that
   # formula converges on.
   @rate_limited_snooze_seconds 300
+
+  # Bounds how many times a job may snooze past an open breaker or a rate
+  # limit before it is let fail normally. 12 snoozes at the ~5 minute mail
+  # breaker recovery window is roughly an hour — long enough to ride out a
+  # transient provider blip without letting a permanently broken mailer
+  # (bad credentials, a revoked API key) snooze silently forever.
+  @circuit_open_max_snoozes 12
+  @rate_limited_max_snoozes 10
 
   @typedoc "An Oban `perform/1` return value."
   @type outcome :: :ok | {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
@@ -58,34 +67,65 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   discard a permanently rejected recipient, or fall back to an ordinary
   retry. `failure_message` is only used for that last, generic case.
 
-  `metadata` may include `:attempt` (the job's current attempt number) to
-  scale the `:rate_limited` snooze the same way `EmailWorker` does; callers
-  that omit it get the formula's attempt-1 value.
+  `metadata` may include `:executions` (how many times Oban has run the job,
+  snoozes included, from `SnoozePolicy.executions/1`) to bound the snooze loops
+  and to scale the `:rate_limited` snooze the same way `EmailWorker` does;
+  callers that omit it get the formula's first-execution value. Passing
+  `job.attempt` in its place leaves both loops unbounded, since a snooze does
+  not advance `attempt` from Oban 2.24 on.
   """
   @spec handle_failure(term(), String.t(), keyword()) :: outcome()
   def handle_failure(:circuit_open, _failure_message, metadata) do
-    snooze_seconds =
-      CircuitBreakerSupervisor.email_breaker_recovery_seconds() +
-        :rand.uniform(@circuit_open_jitter_seconds)
+    executions = Keyword.get(metadata, :executions, 1)
+    base_seconds = CircuitBreakerSupervisor.email_breaker_recovery_seconds()
 
-    Logger.warning(
-      "Email circuit breaker open, snoozing past the recovery window",
-      Keyword.put(metadata, :snooze_seconds, snooze_seconds)
-    )
+    case SnoozePolicy.snooze_or_exhaust(executions,
+           max_snoozes: @circuit_open_max_snoozes,
+           base_seconds: base_seconds,
+           jitter_seconds: @circuit_open_jitter_seconds
+         ) do
+      {:snooze, snooze_seconds} ->
+        Logger.warning(
+          "Email circuit breaker open, snoozing past the recovery window",
+          Keyword.put(metadata, :snooze_seconds, snooze_seconds)
+        )
 
-    {:snooze, snooze_seconds}
+        {:snooze, snooze_seconds}
+
+      :exhausted ->
+        Logger.error(
+          "Email circuit breaker still open after the maximum number of snoozes, failing the job",
+          Keyword.put(metadata, :max_snoozes, @circuit_open_max_snoozes)
+        )
+
+        {:error, "Email circuit breaker did not recover after the maximum wait"}
+    end
   end
 
   def handle_failure(:rate_limited, _failure_message, metadata) do
-    attempt = Keyword.get(metadata, :attempt, 1)
-    snooze_seconds = min(@rate_limited_snooze_seconds, 60 * attempt)
+    executions = Keyword.get(metadata, :executions, 1)
+    base_seconds = min(@rate_limited_snooze_seconds, 60 * executions)
 
-    Logger.warning(
-      "Email service rate limited, snoozing",
-      Keyword.put(metadata, :snooze_seconds, snooze_seconds)
-    )
+    case SnoozePolicy.snooze_or_exhaust(executions,
+           max_snoozes: @rate_limited_max_snoozes,
+           base_seconds: base_seconds
+         ) do
+      {:snooze, snooze_seconds} ->
+        Logger.warning(
+          "Email service rate limited, snoozing",
+          Keyword.put(metadata, :snooze_seconds, snooze_seconds)
+        )
 
-    {:snooze, snooze_seconds}
+        {:snooze, snooze_seconds}
+
+      :exhausted ->
+        Logger.error(
+          "Email service still rate limited after the maximum number of snoozes, failing the job",
+          Keyword.put(metadata, :max_snoozes, @rate_limited_max_snoozes)
+        )
+
+        {:error, "Email service still rate limited after the maximum wait"}
+    end
   end
 
   def handle_failure({:recipient_rejected, reason}, _failure_message, metadata) do

@@ -78,51 +78,51 @@ defmodule Tymeslot.Availability.Calculate do
     # Prefetch schedule data once for all adjacent-day lookups
     config = prefetch_schedule_data(config, schedule_id, Date.add(date, -1), Date.add(date, 1))
 
-    business_hours_windows =
-      BusinessHours.windows_for_target_date(
-        date,
-        schedule_id,
-        owner_timezone,
-        user_timezone,
-        config
-      )
+    with {:ok, business_hours_windows} <-
+           BusinessHours.windows_for_target_date_or_error(
+             date,
+             schedule_id,
+             owner_timezone,
+             user_timezone,
+             config
+           ) do
+      if Enum.empty?(business_hours_windows) do
+        {:ok, []}
+      else
+        blocking_events = Enum.filter(events, &CalendarEvent.blocking?/1)
 
-    if Enum.empty?(business_hours_windows) do
-      {:ok, []}
-    else
-      blocking_events = Enum.filter(events, &CalendarEvent.blocking?/1)
+        events_in_user_tz =
+          Events.convert_events_to_timezone(blocking_events, owner_timezone, user_timezone)
 
-      events_in_user_tz =
-        Events.convert_events_to_timezone(blocking_events, owner_timezone, user_timezone)
+        all_available_slots =
+          business_hours_windows
+          |> Enum.flat_map(fn window ->
+            breaks = BusinessHours.breaks_for_day(window.date, schedule_id, config)
 
-      all_available_slots =
-        business_hours_windows
-        |> Enum.flat_map(fn window ->
-          breaks = BusinessHours.breaks_for_day(window.date, schedule_id, config)
+            all_slots =
+              TimeSlots.generate_slots_for_range_with_breaks(
+                window.start_dt,
+                window.end_dt,
+                duration_minutes,
+                date,
+                breaks,
+                slot_interval_minutes
+              )
 
-          all_slots =
-            TimeSlots.generate_slots_for_range_with_breaks(
-              window.start_dt,
-              window.end_dt,
+            Conflicts.filter_available_slots(
+              all_slots,
+              events_in_user_tz,
               duration_minutes,
+              user_timezone,
               date,
-              breaks,
-              slot_interval_minutes
+              config
             )
+          end)
+          |> Enum.uniq()
+          |> Enum.sort_by(&TimeSlots.parse_time_slot/1, Time)
 
-          Conflicts.filter_available_slots(
-            all_slots,
-            events_in_user_tz,
-            duration_minutes,
-            user_timezone,
-            date,
-            config
-          )
-        end)
-        |> Enum.uniq()
-        |> Enum.sort_by(&TimeSlots.parse_time_slot/1, Time)
-
-      {:ok, all_available_slots}
+        {:ok, all_available_slots}
+      end
     end
   end
 
@@ -196,7 +196,7 @@ defmodule Tymeslot.Availability.Calculate do
 
     max_advance_booking_days = config_policy(config).max_advance_booking_days
     max_booking_date = Date.add(today, max_advance_booking_days)
-    duration_minutes = Map.get(config, :duration_minutes, 30)
+    duration_minutes = config |> Map.get(:duration_minutes) |> Kernel.||(30)
 
     blocking_events = Enum.filter(events, &CalendarEvent.blocking?/1)
 
@@ -315,8 +315,9 @@ defmodule Tymeslot.Availability.Calculate do
     # `range_availability/6` already do. Without it the per-day fallback runs an
     # uncached override lookup and a weekly-availability lookup for every
     # non-past day in the grid — up to 42 of each, from inside the template
-    # render of a public page. Padded by a day at each end for the adjacent-day
-    # lookups `check_today_fallback_availability/3` performs.
+    # render of a public page. Padded by a day at each end to match the ±1 day
+    # `available_slots/6` and `range_availability/6` prefetch, harmless slack
+    # rather than a requirement of the fallback path.
     #
     # Only the business-hours fallback (`availability_map` neither a map nor
     # `:loading`) ever reads `weekly_schedule`/`overrides` back out of
@@ -399,9 +400,6 @@ defmodule Tymeslot.Availability.Calculate do
 
   # Private functions
 
-  # Prefetches the schedule's weekly pattern and overrides into config to avoid
-  # N+1 queries. A nil schedule id means no schedule could be resolved, and the
-  # hard-coded fallback hours are used instead.
   @doc """
   Loads the schedule's weekly days and date overrides into `config` once, so
   that per-date lookups read them from memory instead of the database.
@@ -499,7 +497,7 @@ defmodule Tymeslot.Availability.Calculate do
     case result do
       {:ok, %{end_datetime: %DateTime{} = end_dt}} ->
         min_advance_hours = config_policy(config).min_advance_hours
-        duration_minutes = Map.get(config, :duration_minutes, 30)
+        duration_minutes = config |> Map.get(:duration_minutes) |> Kernel.||(30)
         latest_start = DateTime.add(end_dt, -(min_advance_hours * 60 + duration_minutes), :minute)
         DateTime.compare(now, latest_start) != :gt
 

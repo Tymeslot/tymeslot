@@ -28,8 +28,8 @@ const JOIN_LEAD_MS = 10 * 60 * 1000;
 const PLACEHOLDER = "__N__";
 
 function relative(ms, templates) {
-  if (ms <= 0) return templates.now;
   const seconds = Math.floor(ms / 1000);
+  if (seconds <= 0) return templates.now;
   if (seconds < 3600) {
     return templates.minutes.replace(PLACEHOLDER, Math.max(Math.floor(seconds / 60), 1));
   }
@@ -41,22 +41,30 @@ function relative(ms, templates) {
 
 export const AgendaCountdown = {
   mounted() {
+    this._readTemplates();
+    this._render();
+    this._timer = setInterval(() => this._render(), TICK_MS);
+  },
+
+  updated() {
+    // `phx-update="ignore"` still lets LiveView merge `data-*` attributes on
+    // this element (only non-`data-*` attributes and children are left
+    // alone), so the templates must be re-read here too, not just on mount.
+    this._readTemplates();
+    this._render();
+  },
+
+  destroyed() {
+    clearInterval(this._timer);
+  },
+
+  _readTemplates() {
     this._templates = {
       now: this.el.dataset.tplNow,
       minutes: this.el.dataset.tplMinutes,
       hours: this.el.dataset.tplHours,
       days: this.el.dataset.tplDays,
     };
-    this._render();
-    this._timer = setInterval(() => this._render(), TICK_MS);
-  },
-
-  updated() {
-    this._render();
-  },
-
-  destroyed() {
-    clearInterval(this._timer);
   },
 
   _render() {

@@ -68,6 +68,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # `{:provider_error, _}` so the caller can still let the breaker witness it.
   @spec precheck_create_meeting_room(map()) ::
           {:ok, String.t()} | {:error, term()} | {:provider_error, term()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def precheck_create_meeting_room(config) do
     with {:ok, :valid} <- validate_teams_scope(config) do
       classify_token_result(get_access_token(config))
@@ -80,6 +81,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # resolved, so it never repeats the OAuth round-trip.
   @spec finish_create_meeting_room(String.t(), map()) ::
           {:ok, RoomData.t()} | {:error, term()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def finish_create_meeting_room(token, config) do
     case create_scheduled_meeting(token, config) do
       {:ok, meeting} ->
@@ -384,7 +386,11 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         decode_and_format_error(status, body)
 
       {:error, reason} ->
-        {:error, "Network error: #{inspect(reason)}"}
+        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or
+        # a transport reason atom) rather than flattened to prose, so
+        # `BreakerOutcome` recognises a genuine transport failure and lets the
+        # breaker witness it.
+        {:error, reason}
     end
   end
 
@@ -512,31 +518,41 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     Application.get_env(:tymeslot, :teams_oauth_helper, TeamsOAuthHelper)
   end
 
+  # Formats a Teams/Graph API error response into an `{:error, {:http_error,
+  # status, message}}` tuple. Tagged with `status` (rather than flattened to
+  # prose) so `BreakerOutcome` can tell a genuine outage (5xx/429/408) from a
+  # request problem and let the breaker witness it.
   defp decode_and_format_error(status, body) do
     case Jason.decode(body) do
       {:ok, %{"error" => error}} ->
         message = error["message"] || "Unknown error"
         code = error["code"] || "Unknown"
 
+        # Graph's own message/code are provider-supplied and can echo request
+        # fragments, so they are redacted and bounded before they reach the
+        # returned reason (and, downstream, a log line or Oban's stored error).
+        detail = Redactor.redact_and_truncate("#{code} - #{message}", 512)
+
         # Check if this is an authentication error that might be due to missing scopes
         error_message =
           if code == "AuthenticationError" do
-            "Teams API error (#{status}): #{code} - #{message}. " <>
+            "Teams API error (#{status}): #{detail}. " <>
               "This usually means the integration needs to be re-authenticated with Teams-specific permissions. " <>
               "Please disconnect and reconnect your Microsoft Teams integration in the dashboard."
           else
-            "Teams API error (#{status}): #{code} - #{message}"
+            "Teams API error (#{status}): #{detail}"
           end
 
-        {:error, error_message}
+        {:error, {:http_error, status, error_message}}
 
       _other ->
         # Undecodable body: still bounded and scrubbed before it reaches a log
         # line, so a provider that answers with something unexpected cannot
         # write an unbounded blob (or whatever it happens to contain) to disk.
         {:error,
-         "Failed to create meeting with status #{status}: " <>
-           Redactor.redact_and_truncate(body)}
+         {:http_error, status,
+          "Failed to create meeting with status #{status}: " <>
+            Redactor.redact_and_truncate(body)}}
     end
   end
 end

@@ -16,8 +16,7 @@ The theme system uses a centralized registry pattern that eliminates magic strin
 6. **Shared Context** (`TymeslotWeb.Themes.Shared.*`) - Shared helpers, handlers, and components
 7. **Capability System** (`Tymeslot.ThemeCustomizations.Capability`) - Capability-based customization logic
 8. **Dispatcher & Loader** (`TymeslotWeb.Themes.Core.Dispatcher`, `TymeslotWeb.Themes.Core.Loader`) - Systems for dynamically loading and dispatching theme actions
-9. **Event Bus** (`TymeslotWeb.Themes.Core.EventBus`) - Centralized event handling system for theme components
-10. **Wrapper Components** (per-theme) - Provides theme-specific layout, backgrounds, and UI chrome
+9. **Wrapper Components** (per-theme) - Provides theme-specific layout, backgrounds, and UI chrome
 
 ## Quick Reference
 

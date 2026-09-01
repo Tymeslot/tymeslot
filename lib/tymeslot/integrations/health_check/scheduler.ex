@@ -13,7 +13,12 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
-  alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, VideoCircuitBreaker}
+  alias Tymeslot.Infrastructure.{
+    CalendarCircuitBreaker,
+    CircuitBreakerHelpers,
+    VideoCircuitBreaker
+  }
+
   alias Tymeslot.Integrations.HealthCheck.{Monitor, ProviderHelpers}
   alias Tymeslot.Workers.IntegrationHealthWorker
 
@@ -65,7 +70,24 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
   # Private Functions
 
+  # Isolated per-row: an exception while scheduling one integration (e.g. a
+  # malformed health state row) must not abort the sweep for every
+  # integration after it, nor take down the supervised HealthCheck GenServer.
   defp schedule_if_due(type, integration, now, force) do
+    do_schedule_if_due(type, integration, now, force)
+  rescue
+    e ->
+      Logger.error("Failed to schedule integration health check, skipping row",
+        type: type,
+        integration_id: integration.id,
+        provider: integration.provider,
+        error: Exception.format(:error, e, __STACKTRACE__)
+      )
+
+      :ok
+  end
+
+  defp do_schedule_if_due(type, integration, now, force) do
     health_state = Monitor.get_state(type, integration.id, integration.user_id)
 
     if force || due_for_check?(health_state, now) do
@@ -149,8 +171,16 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     circuit_status =
       try do
         case type do
-          :calendar -> CalendarCircuitBreaker.status(provider_atom)
-          :video -> VideoCircuitBreaker.status(provider_atom)
+          :calendar ->
+            CalendarCircuitBreaker.status(provider_atom)
+
+          :video ->
+            # Self-hosted providers (MiroTalk) key their circuit breaker per
+            # host — see `VideoCircuitBreaker.status/2` — so this must check
+            # the same breaker `ProviderAdapter` actually trips, or a tenant
+            # whose host is down never gets skipped here.
+            host = CircuitBreakerHelpers.host_from_base_url(Map.get(integration, :base_url))
+            VideoCircuitBreaker.status(provider_atom, host)
         end
       rescue
         e ->

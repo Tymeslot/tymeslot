@@ -25,15 +25,23 @@ defmodule Tymeslot.Notifications.Recipients do
 
   @doc """
   Determines the recipients for a given notification type and meeting.
+
+  Every notification type currently routes to both participants; the type is
+  accepted for a future channel that needs to route differently, not used
+  today.
   """
   @spec determine_recipients(term(), atom()) ::
-          {atom(),
+          {:both,
            %{
              required(:organizer) => participant(),
              required(:attendee) => participant()
            }}
-  def determine_recipients(meeting, notification_type) do
-    base_recipients = %{
+  def determine_recipients(meeting, _notification_type) do
+    {:both, base_recipients(meeting)}
+  end
+
+  defp base_recipients(meeting) do
+    %{
       organizer: %{
         email: meeting.organizer_email,
         name: meeting.organizer_name,
@@ -45,23 +53,6 @@ defmodule Tymeslot.Notifications.Recipients do
         timezone: meeting.attendee_timezone || get_organizer_timezone(meeting)
       }
     }
-
-    case notification_type do
-      :confirmation ->
-        {:both, base_recipients}
-
-      :reminder ->
-        {:both, base_recipients}
-
-      :cancellation ->
-        {:both, base_recipients}
-
-      :reschedule ->
-        {:both, base_recipients}
-
-      _unknown_type ->
-        {:both, base_recipients}
-    end
   end
 
   # Meeting-level context shared by both recipient variants of
@@ -78,18 +69,6 @@ defmodule Tymeslot.Notifications.Recipients do
       meeting_start: meeting.start_time,
       meeting_end: meeting.end_time
     }
-  end
-
-  @doc """
-  Determines if a recipient should receive a specific notification.
-  """
-  @spec should_receive_notification?(atom(), atom(), term()) :: boolean()
-  def should_receive_notification?(recipient_type, notification_type, _unused_meeting) do
-    case {recipient_type, notification_type} do
-      {:organizer, _any_type} -> true
-      {:attendee, _any_type} -> true
-      _invalid_combination -> false
-    end
   end
 
   @doc """
@@ -185,12 +164,6 @@ defmodule Tymeslot.Notifications.Recipients do
         with :ok <- validate_recipient(organizer, :organizer) do
           validate_recipient(attendee, :attendee)
         end
-
-      {:organizer_only, %{organizer: organizer}} ->
-        validate_recipient(organizer, :organizer)
-
-      {:attendee_only, %{attendee: attendee}} ->
-        validate_recipient(attendee, :attendee)
 
       _invalid_structure ->
         {:error, "Invalid recipient structure"}

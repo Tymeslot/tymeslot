@@ -5,7 +5,11 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
   limit.
   """
 
-  use Tymeslot.DataCase, async: true
+  # Not async: these tests induce real Zoom video-breaker failures
+  # (VideoCircuitBreaker is an application-wide singleton keyed by provider),
+  # so this module needs the DataCase-wide breaker reset that only runs
+  # between non-async modules.
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :bookings
 

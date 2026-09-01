@@ -6,6 +6,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Webhooks.PayloadBuilder
 
   describe "build_payload/3" do
@@ -147,6 +148,49 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       assert video.enabled == true
       assert is_nil(video.organizer_url)
       assert is_nil(video.attendee_url)
+    end
+  end
+
+  describe "build_payload/3 guests" do
+    test "describes each guest the meeting was booked with" do
+      meeting =
+        build(:meeting,
+          guests: [
+            %GuestSchema{
+              email: "colleague@example.com",
+              name: "A Colleague",
+              status: "accepted",
+              responded_at: ~U[2026-09-01 10:00:00Z]
+            }
+          ]
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert [guest] = payload.data.meeting.guests
+      assert guest.email == "colleague@example.com"
+      assert guest.name == "A Colleague"
+      assert guest.status == "accepted"
+      assert guest.responded_at == "2026-09-01T10:00:00Z"
+    end
+
+    test "reports an empty list for a meeting booked without guests" do
+      meeting = build(:meeting, guests: [])
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert payload.data.meeting.guests == []
+    end
+
+    test "reports an empty list rather than crashing on an unloaded association" do
+      # The builder formats what it is handed. A caller that forgets to load the
+      # association gets a payload that understates the meeting, which the
+      # worker's own test is there to catch — not a 500 on the delivery path.
+      meeting = build(:meeting)
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert payload.data.meeting.guests == []
     end
   end
 

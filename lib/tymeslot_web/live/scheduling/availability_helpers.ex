@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   Availability calculation and fetch orchestration for the scheduling flow.
 
   Owns the slot lookup for a single date, the cached range query that
-  powers the calendar grid, and the sync/async fetch task lifecycle.
+  powers the calendar grid, and the availability fetch task lifecycle.
   """
 
   alias Phoenix.Component
@@ -188,12 +188,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
             )
 
           AvailabilityCache.get_or_compute_events(cache_key, fn ->
-            with {:ok, events} <-
-                   CalendarEvents.get_calendar_events_from_context(
-                     start_date,
-                     user_id,
-                     context
-                   ) do
+            with {:ok, events} <- booking_window_events(user_id, start_date, context) do
               schedule = Schedules.resolve_for(meeting_type, organizer_profile)
 
               config =
@@ -201,7 +196,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
                   schedule,
                   meeting_type,
                   build_limit_checker(user_id, organizer_profile, context, start_date, end_date),
-                  duration_minutes
+                  duration_minutes || 30
                 )
 
               Calculate.range_availability(
@@ -219,8 +214,12 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   end
 
   @doc """
-  Orchestrates fetching availability for a month, either synchronously (in tests) or asynchronously.
-  Updates the socket with loading states and task references.
+  Starts the month availability fetch and marks the socket as loading.
+
+  The result always comes back as a `{ref, result}` message finalised by
+  `TymeslotWeb.Themes.Shared.InfoHandlers`, in every environment. There
+  is no second finaliser, so no test can pin behaviour production never
+  has; see `start_availability_task/2` for the one thing that does vary.
   """
   @spec perform_availability_fetch(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def perform_availability_fetch(socket) do
@@ -239,11 +238,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       |> assign(:availability_status, :loading)
       |> assign(:availability_fetch_start_time, start_time)
 
-    if Application.get_env(:tymeslot, :environment) == :test do
-      perform_sync_availability_fetch(socket, context)
-    else
-      perform_async_availability_fetch(socket, context)
-    end
+    start_availability_task(socket, context)
   end
 
   @doc """
@@ -298,57 +293,37 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         socket
       end
 
-    # Always clear the ref to ensure any pending messages (sync or async) are ignored
+    # Always clear the ref so a result already in flight for the previous
+    # window is ignored when it arrives.
     assign(socket, :availability_task_ref, nil)
   end
 
-  @doc """
-  Performs a truly synchronous availability fetch for test environments.
-
-  Unlike the async version, this directly updates the socket with availability data
-  instead of using message passing, making tests deterministic and faster.
-  """
-  @spec perform_sync_availability_fetch(Phoenix.LiveView.Socket.t(), map()) ::
-          Phoenix.LiveView.Socket.t()
-  def perform_sync_availability_fetch(socket, context) do
-    duration_minutes = duration_minutes(socket)
-
-    {start_date, end_date} =
-      Calculate.display_range(socket.assigns.current_year, socket.assigns.current_month)
-
-    case get_range_availability(
-           socket.assigns.organizer_user_id,
-           start_date,
-           end_date,
-           socket.assigns.user_timezone,
-           socket.assigns.organizer_profile,
-           context,
-           duration_minutes
-         ) do
-      {:ok, availability_map} ->
-        socket
-        |> assign(:month_availability_map, availability_map)
-        |> assign(:availability_status, :loaded)
-        |> assign(:availability_task, nil)
-        |> assign(:availability_task_ref, nil)
-
-      {:error, reason} ->
-        Logger.warning("Month availability fetch failed in sync mode", reason: inspect(reason))
-
-        socket
-        |> assign(:month_availability_map, nil)
-        |> assign(:availability_status, :error)
-        |> assign(:availability_task, nil)
-        |> assign(:availability_task_ref, nil)
-    end
-  end
-
-  @doc """
-  Performs an asynchronous availability fetch using Task.async.
-  """
-  @spec perform_async_availability_fetch(Phoenix.LiveView.Socket.t(), map()) ::
-          Phoenix.LiveView.Socket.t()
-  def perform_async_availability_fetch(socket, context) do
+  # The fetch runs in a linked task, or inline under the deterministic
+  # harness, but *both modes deliver the result identically*: a
+  # `{ref, {:ok, map}}` / `{ref, {:error, reason}}` message that
+  # `TymeslotWeb.Themes.Shared.InfoHandlers` finalises after `mount` and
+  # `handle_params/3` have run. The ref match, the loaded/error
+  # transitions, the landing on the first bookable day and its refetch
+  # hop are therefore one code path with one ordering, whichever mode is
+  # selected — the divergence the two-branch fetch used to introduce was
+  # not the concurrency, it was the second finaliser and the second
+  # ordering that came with it.
+  #
+  # `:async_availability_fetch` picks the mode. It defaults to `true`;
+  # `config/test.exs` sets it `false` so the result is owned by the test
+  # process: a task still in flight when a test ends is killed mid-query
+  # and takes the checked-out sandbox connection down with it, failing
+  # every test that follows. It is a named behavioural flag rather than
+  # an `:environment` comparison so a test can opt *back into* the task
+  # path (`AvailabilityAsyncFetchTest` does) instead of the whole suite
+  # being locked out of the branch that ships.
+  #
+  # `Task.async/1` links, so the task's lifetime is exactly the
+  # LiveView's: a booker who closes the tab cannot leave a calendar fetch
+  # running behind them. The cost of the link is that a fetch which
+  # *raises* takes the page down with it rather than arriving as a
+  # `:DOWN` — which is why `InfoHandlers` has no `:DOWN` handler.
+  defp start_availability_task(socket, context) do
     # Extract values needed for closure to avoid capturing socket
     organizer_user_id = socket.assigns.organizer_user_id
     current_year = socket.assigns.current_year
@@ -359,22 +334,62 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     duration_minutes = duration_minutes(socket)
     {start_date, end_date} = Calculate.display_range(current_year, current_month)
 
-    task =
-      Task.async(fn ->
-        get_range_availability(
-          organizer_user_id,
-          start_date,
-          end_date,
-          user_timezone,
-          organizer_profile,
-          context,
-          duration_minutes
-        )
-      end)
+    fetch = fn ->
+      get_range_availability(
+        organizer_user_id,
+        start_date,
+        end_date,
+        user_timezone,
+        organizer_profile,
+        context,
+        duration_minutes
+      )
+    end
 
-    socket
-    |> assign(:availability_task, task)
-    |> assign(:availability_task_ref, task.ref)
+    if async_fetch?() do
+      task = Task.async(fetch)
+
+      socket
+      |> assign(:availability_task, task)
+      |> assign(:availability_task_ref, task.ref)
+    else
+      # Same message, same mailbox, same arrival point — just computed
+      # by this process instead of a task it would have to wait for.
+      ref = make_ref()
+      send(self(), {ref, fetch.()})
+
+      socket
+      |> assign(:availability_task, nil)
+      |> assign(:availability_task_ref, ref)
+    end
+  end
+
+  defp async_fetch?, do: Application.get_env(:tymeslot, :async_availability_fetch, true)
+
+  # The provider fetch behind this is window-shaped, not month-shaped:
+  # `Events.get_calendar_events/3` ignores the date it is given and always asks
+  # for `today .. today + advance_booking_days`. Folding it under a key built
+  # from the 42-day *display* range therefore stores the same event list once
+  # per rendered month and guarantees a miss for anything that moves the
+  # calendar — worst of all the next-available forward search, which re-enters
+  # this function once per hop and would otherwise buy an identical round trip
+  # to the host's calendar each time, on exactly the fully booked hosts the
+  # search exists to help.
+  #
+  # So the events get their own entry, keyed on the user alone because that is
+  # the fetch's entire input. The folded map keeps its display-range key: the
+  # fold is what actually differs between hops.
+  #
+  # Errors stay uncached, for the reason `get_or_compute_events/2` exists at
+  # all — a timed-out calendar must be retried on the next request, not pinned
+  # empty for the TTL. `AvailabilityCache.invalidate_for_user/1` drops this
+  # entry with the folded maps, so a calendar sync cannot leave the two
+  # disagreeing about how fresh they are.
+  defp booking_window_events(user_id, start_date, context) do
+    AvailabilityCache.get_or_compute_events(
+      AvailabilityCache.booking_window_events_key(user_id),
+      fn -> CalendarEvents.get_calendar_events_from_context(start_date, user_id, context) end
+    )
   end
 
   defp parse_duration_minutes(duration) when is_integer(duration) and duration > 0 do

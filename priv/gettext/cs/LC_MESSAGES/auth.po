@@ -735,11 +735,6 @@ msgstr "Účet byl vytvořen, ale ověření e-mailu se nezdařilo. Kontaktujte 
 msgid "Account created but profile setup failed. Please contact support."
 msgstr "Účet byl vytvořen, ale nastavení profilu se nezdařilo. Kontaktujte prosím podporu."
 
-#: lib/tymeslot/security/account_lockout.ex
-#, elixir-autogen, elixir-format
-msgid "Account locked for %{duration} minutes due to repeated failed attempts"
-msgstr "Účet byl na %{duration} min zablokován kvůli opakovaným neúspěšným pokusům"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please try again."
@@ -983,11 +978,6 @@ msgstr "Platnost ověřovacího odkazu vypršela"
 msgid "You cannot reset your password because your account is managed by an external authentication provider."
 msgstr "Heslo nelze obnovit, protože váš účet spravuje externí poskytovatel ověření."
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Your account has been locked due to too many failed attempts. Please try again later."
-msgstr "Váš účet byl zablokován kvůli příliš mnoha neúspěšným pokusům. Zkuste to prosím později."
-
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your password has been reset successfully"
@@ -1088,3 +1078,8 @@ msgstr "Heslo musí obsahovat alespoň jedno velké písmeno"
 #, elixir-autogen, elixir-format
 msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
 msgstr "Váš účet byl vytvořen, ale ověřovací e-mail se zatím nepodařilo odeslat. Počkejte prosím několik minut a poté použijte odkaz pro opětovné odeslání."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If an account exists with this email address, password reset instructions have been sent."
+msgstr "Pokud s touto e-mailovou adresou existuje účet, byly odeslány pokyny k obnovení hesla."

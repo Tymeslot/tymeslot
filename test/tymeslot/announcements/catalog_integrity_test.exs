@@ -71,11 +71,11 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
 
         refute String.starts_with?(slug, "/"),
                "cta_docs_slug #{inspect(slug)} for #{key} must not start with /; " <>
-                 "it is composed onto :docs_base_url, so store just the slug"
+                 "it is composed onto :docs_article_base_url, so store just the slug"
 
         refute Regex.match?(~r{https?://}i, slug),
                "cta_docs_slug #{inspect(slug)} for #{key} looks like an absolute URL; " <>
-                 "store just the slug — the base URL comes from :docs_base_url"
+                 "store just the slug — the base URL comes from :docs_article_base_url"
       end
     end
 

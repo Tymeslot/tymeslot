@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Utils.UrlBuilder
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -161,10 +162,30 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       view_url: meeting.view_url || "#",
       reschedule_url: meeting.reschedule_url || "#",
       cancel_url: meeting.cancel_url || "#",
+      booking_url: booking_url(meeting),
       meeting_url: meeting.meeting_url,
       organizer_video_url: meeting.organizer_video_url,
       attendee_video_url: meeting.attendee_video_url
     }
+  end
+
+  # The host's public booking page, resolved at send time rather than read from
+  # the meeting row. Unlike the per-meeting action URLs it is not persisted, so
+  # it always reflects the host's current username.
+  defp booking_url(meeting) do
+    meeting
+    |> Map.get(:organizer_user_id)
+    |> organizer_username()
+    |> UrlBuilder.booking_url()
+  end
+
+  defp organizer_username(nil), do: nil
+
+  defp organizer_username(user_id) do
+    case Profiles.get_profile_by_user_id(user_id) do
+      {:ok, %{username: username}} -> username
+      {:error, :not_found} -> nil
+    end
   end
 
   defp reminder_details(meeting, reminder_interval) do

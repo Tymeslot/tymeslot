@@ -103,6 +103,8 @@ defmodule Tymeslot.Telegram.BotSetup do
     end
   end
 
+  # `API.set_webhook/3` runs with `decode_body: false`, so the body is always
+  # the raw binary Telegram sent, never a decoded map.
   defp truncate(text, max) when is_binary(text) do
     if String.length(text) > max do
       String.slice(text, 0, max)
@@ -110,8 +112,4 @@ defmodule Tymeslot.Telegram.BotSetup do
       text
     end
   end
-
-  # A JSON response reaches us already decoded, so bound its inspected form
-  # rather than logging an unbounded term.
-  defp truncate(other, max), do: other |> inspect() |> truncate(max)
 end

@@ -167,7 +167,6 @@ msgstr "Календарі"
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -1137,11 +1136,6 @@ msgstr "Оброблена URL-адреса перевищує максимал�
 #, elixir-autogen, elixir-format
 msgid "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
 msgstr "Не вдалося розшифрувати збережені облікові дані поточним ключем шифрування. Перепідключіть інтеграцію."
-
-#: lib/tymeslot/integrations/video/providers/teams_provider.ex
-#, elixir-autogen, elixir-format
-msgid "Teams integration is missing required permissions. Please disconnect and reconnect your Microsoft Teams integration in the dashboard to grant the necessary permissions for creating meetings."
-msgstr "Інтеграції з Teams бракує потрібних дозволів. Від'єднайте та знову підключіть інтеграцію з Microsoft Teams на панелі керування, щоб надати дозволи, необхідні для створення зустрічей."
 
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format

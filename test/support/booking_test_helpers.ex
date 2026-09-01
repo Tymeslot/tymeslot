@@ -8,6 +8,7 @@ defmodule Tymeslot.BookingTestHelpers do
   import Phoenix.LiveViewTest
 
   alias Tymeslot.TestHelpers.Eventually
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @endpoint TymeslotWeb.Endpoint
 
@@ -19,6 +20,13 @@ defmodule Tymeslot.BookingTestHelpers do
   @next_step "button[data-testid='next-step']"
   @calendar_day "button[data-testid='calendar-day']"
   @time_slot "button[data-testid='time-slot']"
+  # Quill paginates the date grid by month, Rhythm by week, and neither theme
+  # renders the other's control. Reaching for Quill's unconditionally is what
+  # made every Rhythm walk raise on the last day of a month: the one day where
+  # tomorrow falls outside the range already on screen.
+  @next_month "button[phx-click='next_month']"
+  @month_label ".calendar-month-label"
+  @next_week "button[phx-click='next_week']"
 
   @doc """
   Navigates through the complete booking flow from profile page to booking form.
@@ -70,18 +78,12 @@ defmodule Tymeslot.BookingTestHelpers do
     # Wait for availability to load and select an available date
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
-    date_str = Date.to_string(target_date)
 
-    # Navigate to next month if tomorrow falls outside the currently displayed month
-    if target_date.month != today.month || target_date.year != today.year do
-      view |> element("button[phx-click='next_month']") |> render_click()
-    end
+    advance_calendar_to(view, today, target_date)
 
-    wait_until(fn ->
-      has_element?(view, "#{@calendar_day}[phx-value-date='#{date_str}']:not([disabled])")
-    end)
+    wait_until(fn -> has_element?(view, "#{day_selector(target_date)}:not([disabled])") end)
 
-    view |> element("#{@calendar_day}[phx-value-date='#{date_str}']") |> render_click()
+    view |> element(day_selector(target_date)) |> render_click()
 
     # Wait for time slots to load
     wait_until(fn -> has_element?(view, @time_slot) end)
@@ -102,6 +104,56 @@ defmodule Tymeslot.BookingTestHelpers do
 
     view
   end
+
+  # Bring `target_date` into the displayed range, driving whichever control the
+  # rendered theme actually offers.
+  defp advance_calendar_to(view, today, target_date) do
+    wait_until(fn -> has_element?(view, @calendar_day) end)
+
+    cond do
+      has_element?(view, @next_month) -> advance_month(view, today, target_date)
+      has_element?(view, @next_week) -> advance_week(view, target_date)
+      true -> :ok
+    end
+  end
+
+  # Quill's month grid pads with the neighbouring month's days and disables
+  # them, so a rendered cell is no proof the date is bookable here: the month
+  # itself is what has to move.
+  #
+  # Read the month the calendar is actually showing rather than assuming it
+  # opened on today's. The schedule step opens on the next available day, which
+  # is not always in today's month -- on the last day of a month it is already
+  # showing the next one, and advancing again would leave the target behind and
+  # land on a month the booking window forbids.
+  defp advance_month(view, _today, target_date) do
+    unless showing_month?(view, target_date) do
+      view |> element(@next_month) |> render_click()
+    end
+  end
+
+  defp showing_month?(view, %Date{} = date) do
+    has_element?(
+      view,
+      @month_label,
+      LocalizationHelpers.get_month_year_display(date.year, date.month)
+    )
+  end
+
+  # Rhythm's strip renders exactly the seven days it offers and no padding, so
+  # a missing cell is proof the date sits in a later week.
+  defp advance_week(view, target_date) do
+    day = day_selector(target_date)
+
+    if has_element?(view, day) do
+      :ok
+    else
+      view |> element(@next_week) |> render_click()
+      wait_until(fn -> has_element?(view, day) end)
+    end
+  end
+
+  defp day_selector(date), do: "#{@calendar_day}[phx-value-date='#{Date.to_string(date)}']"
 
   defp wait_until(fun, timeout \\ 5000) do
     Eventually.eventually(fun, timeout: timeout, interval: 100)

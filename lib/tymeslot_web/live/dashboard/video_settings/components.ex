@@ -7,9 +7,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
 
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
-
-  @oauth_providers ~w(google_meet teams zoom)
 
   @doc """
   Renders a single connected video integration as a shared `connection_row`:
@@ -33,7 +32,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       |> assign(:status, video_status(integration, assigns.health_state))
       |> assign(:summary, video_summary(integration))
       |> assign(:type_tag, type_tag(integration.provider))
-      |> assign(:oauth?, integration.provider in @oauth_providers)
+      |> assign(:oauth?, ProviderConfig.oauth_provider?(integration.provider))
       |> assign(
         :display_name,
         if(integration.name == provider_name, do: provider_name, else: integration.name)
@@ -134,14 +133,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     |> Enum.join(" · ")
   end
 
-  defp summary_segments(%{provider: provider} = integration) when provider in @oauth_providers do
-    [
-      integration.provider_account_email,
-      dgettext("dashboard_integrations", "OAuth"),
-      dgettext("dashboard_integrations", "rooms created automatically")
-    ]
-  end
-
   defp summary_segments(%{provider: "mirotalk"} = integration) do
     [host(integration.base_url), dgettext("dashboard_integrations", "self-hosted")]
   end
@@ -150,8 +141,18 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     [Map.get(integration, :custom_meeting_url), dgettext("dashboard_integrations", "custom link")]
   end
 
-  defp summary_segments(integration) do
-    [integration.provider_account_email || host(integration.base_url)]
+  # OAuth membership is read from the video family table rather than restated
+  # here, so a new OAuth provider describes itself correctly without an edit.
+  defp summary_segments(%{provider: provider} = integration) do
+    if ProviderConfig.oauth_provider?(provider) do
+      [
+        integration.provider_account_email,
+        dgettext("dashboard_integrations", "OAuth"),
+        dgettext("dashboard_integrations", "rooms created automatically")
+      ]
+    else
+      [integration.provider_account_email || host(integration.base_url)]
+    end
   end
 
   # Status-first badge mapping. Precedence lives in the canonical
@@ -166,12 +167,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     end
   end
 
-  defp type_tag(provider) when provider in @oauth_providers,
-    do: dgettext("dashboard_integrations", "OAuth")
-
   defp type_tag("mirotalk"), do: dgettext("dashboard_integrations", "self-hosted")
   defp type_tag("custom"), do: dgettext("dashboard_integrations", "custom")
-  defp type_tag(_provider), do: nil
+
+  defp type_tag(provider) do
+    if ProviderConfig.oauth_provider?(provider) do
+      dgettext("dashboard_integrations", "OAuth")
+    end
+  end
 
   defp host(nil), do: nil
   defp host(base_url), do: URI.parse(base_url).host

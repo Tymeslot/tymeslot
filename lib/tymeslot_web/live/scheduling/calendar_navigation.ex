@@ -30,7 +30,11 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
         Date.new!(current_year, current_month + 1, 1)
       end
 
-    Date.compare(next_month_first_day, max_booking_date) != :lt
+    # Strictly after, not "not before": the max booking date is itself
+    # bookable (`Availability.Calculate` disables a day only once it is `:gt`),
+    # so a next month whose first day *is* that date still has a day to offer.
+    # `next_week_disabled?/3` below already reads it this way.
+    Date.compare(next_month_first_day, max_booking_date) == :gt
   end
 
   @doc """

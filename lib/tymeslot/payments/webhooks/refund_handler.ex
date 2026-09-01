@@ -28,6 +28,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Payments.CustomerLookup
+  alias Tymeslot.Payments.PubSub
   alias Tymeslot.Payments.Webhooks.WebhookUtils
   alias Tymeslot.Utils.MapKeys
 
@@ -83,7 +84,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     )
 
     # Broadcast event for SaaS to handle subscription revocation
-    Tymeslot.Payments.PubSub.broadcast_payment_event(:charge_refunded, %{
+    PubSub.broadcast_payment_event(:charge_refunded, %{
       event_id: event["id"],
       charge_id: charge_id,
       customer_id: customer_id,
@@ -156,9 +157,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
             # refund rather than the cumulative total across the charge.
             latest_refund_amount = calculate_latest_refund_amount(charge)
             send_refund_email(subscription, latest_refund_amount, should_revoke, charge)
-
-            # Broadcast event for real-time UI updates
-            broadcast_refund_event(subscription.user_id, event["id"], should_revoke)
 
             {:ok, :refund_processed}
 
@@ -276,14 +274,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @spec extract_charge_currency(map()) :: String.t()
   def extract_charge_currency(charge) do
     MapKeys.get(charge, :currency) || "eur"
-  end
-
-  defp broadcast_refund_event(user_id, event_id, access_revoked) do
-    Phoenix.PubSub.broadcast(
-      Tymeslot.PubSub,
-      "user:#{user_id}",
-      {:refund_processed, %{event_id: event_id, access_revoked: access_revoked}}
-    )
   end
 
   defp send_refund_email(subscription, refund_amount_cents, revoked, charge) do

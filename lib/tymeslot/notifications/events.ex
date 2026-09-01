@@ -51,13 +51,13 @@ defmodule Tymeslot.Notifications.Events do
       end)
 
     # Dispatch webhooks (don't fail if webhooks fail)
-    Dispatcher.dispatch(:meeting_created, meeting)
+    dispatch_webhooks(:meeting_created, meeting)
 
     # Dispatch Telegram notifications (don't fail if Telegram fails)
-    TelegramDispatcher.dispatch(:meeting_created, meeting)
+    dispatch_telegram(:meeting_created, meeting)
 
     # Dispatch Slack notifications (don't fail if Slack fails)
-    SlackDispatcher.dispatch(:meeting_created, meeting)
+    dispatch_slack(:meeting_created, meeting)
 
     result
   end
@@ -79,13 +79,13 @@ defmodule Tymeslot.Notifications.Events do
     cancel_reminders(meeting)
 
     # Dispatch webhooks (don't fail if webhooks fail)
-    Dispatcher.dispatch(:meeting_cancelled, meeting)
+    dispatch_webhooks(:meeting_cancelled, meeting)
 
     # Dispatch Telegram notifications (don't fail if Telegram fails)
-    TelegramDispatcher.dispatch(:meeting_cancelled, meeting)
+    dispatch_telegram(:meeting_cancelled, meeting)
 
     # Dispatch Slack notifications (don't fail if Slack fails)
-    SlackDispatcher.dispatch(:meeting_cancelled, meeting)
+    dispatch_slack(:meeting_cancelled, meeting)
 
     result
   end
@@ -108,13 +108,13 @@ defmodule Tymeslot.Notifications.Events do
     schedule_reminders(updated_meeting)
 
     # Dispatch webhooks (don't fail if webhooks fail)
-    Dispatcher.dispatch(:meeting_rescheduled, updated_meeting)
+    dispatch_webhooks(:meeting_rescheduled, updated_meeting)
 
     # Dispatch Telegram notifications (don't fail if Telegram fails)
-    TelegramDispatcher.dispatch(:meeting_rescheduled, updated_meeting)
+    dispatch_telegram(:meeting_rescheduled, updated_meeting)
 
     # Dispatch Slack notifications (don't fail if Slack fails)
-    SlackDispatcher.dispatch(:meeting_rescheduled, updated_meeting)
+    dispatch_slack(:meeting_rescheduled, updated_meeting)
 
     result
   end
@@ -153,6 +153,36 @@ defmodule Tymeslot.Notifications.Events do
 
       {:error, {:notifications_failed, exception}}
   end
+
+  # `Dispatcher.dispatch/2` (and its Telegram/Slack counterparts) resolves an
+  # internal event atom to a wire name via `EventTypes.to_event_type/1`, which
+  # raises on an atom it doesn't recognise. These three calls sit outside the
+  # `send_notifications/3` rescue, on purpose — that rescue is scoped to the
+  # in-process email render — so each dispatch gets its own guard: a channel
+  # that can't resolve the event name is best-effort like the rest of the
+  # fan-out, not a reason to abort the remaining channels or escape into the
+  # booking caller.
+  defp dispatch_webhooks(event, meeting), do: dispatch_channel(:webhooks, event, meeting)
+  defp dispatch_telegram(event, meeting), do: dispatch_channel(:telegram, event, meeting)
+  defp dispatch_slack(event, meeting), do: dispatch_channel(:slack, event, meeting)
+
+  defp dispatch_channel(channel, event, meeting) do
+    dispatch_fun(channel).(event, meeting)
+  rescue
+    exception ->
+      Logger.error("Channel dispatch failed",
+        channel: channel,
+        event: event,
+        meeting_id: Map.get(meeting, :id),
+        error: Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, {:dispatch_failed, exception}}
+  end
+
+  defp dispatch_fun(:webhooks), do: &Dispatcher.dispatch/2
+  defp dispatch_fun(:telegram), do: &TelegramDispatcher.dispatch/2
+  defp dispatch_fun(:slack), do: &SlackDispatcher.dispatch/2
 
   defp cancel_reminders_strict(meeting) do
     Orchestrator.cancel_reminder_notifications(meeting)

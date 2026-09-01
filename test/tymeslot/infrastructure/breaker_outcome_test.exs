@@ -83,6 +83,24 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
       assert BreakerOutcome.classify({:error, :not_found}) == :ignore
       assert BreakerOutcome.classify({:error, "misconfigured"}) == :ignore
     end
+
+    test "classifies a 3-element {:error, reason, message} tuple by its reason, ignoring the message" do
+      assert BreakerOutcome.classify({:error, :network_error, "Network error: timeout"}) ==
+               :failure
+
+      assert BreakerOutcome.classify({:error, :rate_limited, "Too many requests"}) == :failure
+
+      assert BreakerOutcome.classify({:error, :unauthorized, "Token expired or invalid"}) ==
+               :ignore
+
+      assert BreakerOutcome.classify({:error, :not_found, "Calendar not found"}) == :ignore
+      assert BreakerOutcome.classify({:error, :gone, "sync token expired"}) == :ignore
+    end
+
+    test "classifies :rate_limited and :service_unavailable as :failure" do
+      assert BreakerOutcome.classify({:error, :rate_limited}) == :failure
+      assert BreakerOutcome.classify({:error, :service_unavailable}) == :failure
+    end
   end
 
   describe "permanent_credential_error?/1" do
@@ -119,6 +137,17 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
       refute BreakerOutcome.permanent_credential_error?(:some_other_atom)
       refute BreakerOutcome.permanent_credential_error?(%{})
       refute BreakerOutcome.permanent_credential_error?(nil)
+    end
+  end
+
+  describe "error_tokens/1" do
+    test "splits a reason into lowercased whole-word tokens" do
+      assert BreakerOutcome.error_tokens("OAuth error: invalid_client detected") ==
+               ["oauth", "error", "invalid_client", "detected"]
+    end
+
+    test "returns an empty list for a non-UTF-8 binary instead of raising" do
+      assert BreakerOutcome.error_tokens(<<0xFF, 0xFE>>) == []
     end
   end
 end

@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
+    NextAvailable,
     OrganizerHelpers,
     PreviewToken,
     ThemeUtils
@@ -187,18 +188,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if socket.assigns[:username_context] && socket.assigns[:organizer_user_id] do
       case resolve_meeting_type(socket, duration_str) do
-        nil ->
-          socket
-
-        meeting_type ->
-          # Re-initialise the engine with a fresh snapshot whenever the meeting type
-          # changes so the `:questions` step always reflects the current custom fields.
-          defs = CustomFields.snapshot_for(meeting_type)
-
-          socket
-          |> assign(:meeting_type, meeting_type)
-          |> assign(:engine, QEngine.init(defs))
-          |> OrganizerHelpers.assign_booking_window()
+        nil -> socket
+        meeting_type -> assign_meeting_type(socket, meeting_type)
       end
     else
       socket
@@ -227,10 +218,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     socket
     |> maybe_assign_from_params(:duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_duration, normalize_duration_param(params))
-    |> maybe_assign_from_params(:selected_date, params["date"])
+    |> maybe_assign_from_params(:selected_date, date_param(params))
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
-    |> assign(:is_rescheduling, params["reschedule_meeting_uid"] != nil)
+    |> assign(:is_rescheduling, is_binary(params["reschedule_meeting_uid"]))
     |> handle_confirmation_params(params)
   end
 
@@ -252,8 +243,31 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     end
   end
 
-  defp maybe_assign_from_params(socket, _key, nil), do: socket
-  defp maybe_assign_from_params(socket, key, value), do: assign(socket, key, value)
+  # Query parameters are whatever the URL says they are: Phoenix decodes
+  # `?date[]=x` to a list and `?date[a]=b` to a map, and every consumer
+  # downstream (`Date.from_iso8601/1` among them) is written for strings only.
+  # A param of any other shape is treated as absent rather than assigned on and
+  # left to fail deep in the flow.
+  defp maybe_assign_from_params(socket, key, value) when is_binary(value),
+    do: assign(socket, key, value)
+
+  defp maybe_assign_from_params(socket, _key, _value), do: socket
+
+  # A date that does not parse is no more usable than one that was never named,
+  # and dropping it here is what lets `NextAvailable` land the booker on a real
+  # day: it stands down for any non-empty `:selected_date`, so a malformed one
+  # left on the socket would strand the schedule step with no day selected and
+  # a calendar-parsing error where the times belong.
+  defp date_param(params), do: parsed_date(params["date"])
+
+  defp parsed_date(value) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, _date} -> value
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp parsed_date(_value), do: nil
 
   defp normalize_duration_param(params) do
     duration = params["slug"] || params["duration"]
@@ -371,6 +385,16 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> assign(:current_year, current_year)
       |> assign(:current_month, current_month)
       |> assign(:duration, normalized_duration)
+      # Arriving at the step is a fresh landing: it gets its own hop budget,
+      # even if an earlier visit spent one on a duration that was booked out.
+      |> NextAvailable.reset()
+      # `mount` reaches this entry before `handle_params` runs, so a date named
+      # in the URL is not yet on the socket. The auto-selection runs later, off
+      # the fetch result, by which point `handle_params` has seeded it anyway —
+      # but this entry is also reached on an in-page step transition, whose
+      # params arrive with the event rather than through `handle_params`.
+      # Seeding here covers that arrival.
+      |> maybe_assign_from_params(:selected_date, date_param(params))
 
     # Trigger month availability fetch in background if not already loading or loaded for this month
     if AvailabilityHelpers.can_fetch_availability?(socket) do
@@ -399,8 +423,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if has_selection || is_reschedule do
       case resolve_booking_meeting_type(socket, params, is_reschedule) do
-        {:unresolvable, socket} -> socket
-        {:ok, socket} -> do_handle_booking_entry(socket, params)
+        {:unresolvable, socket} ->
+          socket
+
+        {:ok, socket} ->
+          socket
+          |> route_past_unanswered_questions()
+          |> do_handle_booking_entry(params)
       end
     else
       username = socket.assigns[:username_context]
@@ -439,6 +468,29 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       meeting_type -> {:ok, assign_meeting_type(socket, meeting_type)}
     end
   end
+
+  # `/:username/:slug/book` can be entered directly (a reschedule deep-link,
+  # or a locale switch mid-flow, both of which redirect straight back to this
+  # URL). Neither passes through the `:questions` step, so a meeting type with
+  # required custom fields would otherwise seed the engine with definitions
+  # but no answers and render the booking step, which has no UI for them —
+  # every submit then fails validation with no way to correct it. Route to
+  # `:questions` instead whenever the freshly-resolved engine still has
+  # unanswered required fields; forward navigation from there already lands
+  # back on `:booking` once answered.
+  defp route_past_unanswered_questions(socket) do
+    if unanswered_required_questions?(socket.assigns[:engine]) do
+      assign(socket, :current_state, :questions)
+    else
+      socket
+    end
+  end
+
+  defp unanswered_required_questions?(%QEngine{} = engine) do
+    not QEngine.skipped?(engine) && match?({:error, _errors}, QEngine.validate_all(engine))
+  end
+
+  defp unanswered_required_questions?(_engine), do: false
 
   defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting

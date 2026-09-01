@@ -1483,11 +1483,6 @@ msgstr "Schůzku, která už začala, nelze přesunout"
 msgid "Meeting is already cancelled"
 msgstr "Schůzka už byla zrušena"
 
-#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
-#, elixir-autogen, elixir-format
-msgid "No timeslots available due to calendar parsing error"
-msgstr "Kvůli chybě při zpracování kalendáře nejsou dostupné žádné termíny"
-
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
@@ -1546,3 +1541,8 @@ msgid_plural "%{hour}, %{count} available times"
 msgstr[0] "%{hour}, %{count} dostupný čas"
 msgstr[1] "%{hour}, %{count} dostupné časy"
 msgstr[2] "%{hour}, %{count} dostupných časů"
+
+#: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
+#, elixir-autogen, elixir-format
+msgid "No time slots could be loaded. Please try again."
+msgstr "Termíny se nepodařilo načíst. Zkuste to prosím znovu."
