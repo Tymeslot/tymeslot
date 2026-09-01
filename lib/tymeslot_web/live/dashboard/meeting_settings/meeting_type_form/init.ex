@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
+  alias TymeslotWeb.CustomInputModeHelper
 
   @doc """
   Initialises the socket from the assigned meeting type on first render.
@@ -56,6 +57,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       end
     end)
     |> Component.assign(:form_data, build_form_data(type))
+    |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
     |> Component.assign(:__initialized__, true)
   end
 
@@ -163,17 +165,43 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @doc "Builds the initial form data map from an existing meeting type or nil."
   @spec build_form_data(Ecto.Schema.t() | nil) :: map()
   def build_form_data(nil) do
-    %{"name" => "", "duration" => "30", "description" => "", "icon" => "none"}
+    %{
+      "name" => "",
+      "duration" => "30",
+      "slot_interval" => "",
+      "description" => "",
+      "icon" => "none"
+    }
   end
 
   def build_form_data(type) do
     %{
       "name" => type.name || "",
       "duration" => to_string(type.duration_minutes || 30),
+      "slot_interval" => slot_interval_form_value(type.slot_interval_minutes),
       "description" => type.description || "",
       "icon" => type.icon || "none"
     }
   end
+
+  # nil means "use the meeting type's own duration"; represented as a blank
+  # string so the form's "same as meeting length" option is selected.
+  defp slot_interval_form_value(nil), do: ""
+  defp slot_interval_form_value(minutes), do: to_string(minutes)
+
+  # An interval the dropdown does not offer — written by a seed, an import or a
+  # support fix — opens the custom input straight away, so the organiser can
+  # see and edit the value that is actually in force rather than a nearest
+  # offered approximation of it.
+  defp initial_custom_input_mode(%{slot_interval_minutes: minutes}) when is_integer(minutes) do
+    Map.put(
+      CustomInputModeHelper.default_custom_mode(),
+      :slot_interval_minutes,
+      not CustomInputModeHelper.preset_value?(:slot_interval_minutes, minutes)
+    )
+  end
+
+  defp initial_custom_input_mode(_type), do: CustomInputModeHelper.default_custom_mode()
 
   @doc "Returns whether guests are allowed for an existing meeting type."
   @spec get_allow_guests(Ecto.Schema.t() | nil) :: boolean()

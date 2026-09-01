@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
   alias Phoenix.Component
   alias Tymeslot.Availability.{Calculate, Schedules, TimeSlots}
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -18,6 +19,34 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   require Logger
 
   import Component, only: [assign: 3]
+
+  @doc """
+  Builds the availability config shared by the slot-list and calendar-range
+  paths.
+
+  Both paths must agree: the calendar's day dots and the slot panel are
+  computed from the same schedule policy, and a key present in one map but not
+  the other is exactly how a day comes to show bookable with nothing on it.
+  `duration_minutes` defaults to nil for callers (such as the slot-list path)
+  that pass it to the domain positionally instead.
+  """
+  @spec schedule_config(
+          map() | nil,
+          map() | nil,
+          (DateTime.t() -> boolean()) | nil,
+          integer() | nil
+        ) :: map()
+  def schedule_config(schedule, meeting_type, limit_checker, duration_minutes \\ nil) do
+    %{
+      schedule_id: schedule && schedule.id,
+      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
+      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
+      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
+      slot_interval_minutes: Policy.slot_interval_minutes(meeting_type),
+      limit_checker: limit_checker,
+      duration_minutes: duration_minutes
+    }
+  end
 
   @doc """
   Gets available slots for a specific date.
@@ -65,20 +94,16 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
                    context
                  ),
                duration_minutes <- parse_duration_minutes(duration) do
-            schedule =
-              Schedules.resolve_for(
-                ContextUtils.get_from_context(context, :meeting_type),
-                organizer_profile
-              )
+            meeting_type = ContextUtils.get_from_context(context, :meeting_type)
+            schedule = Schedules.resolve_for(meeting_type, organizer_profile)
 
-            config = %{
-              schedule_id: schedule && schedule.id,
-              max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-              min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-              buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-              limit_checker:
-                build_limit_checker(organizer_user_id, organizer_profile, context, date, date)
-            }
+            config =
+              schedule_config(
+                schedule,
+                meeting_type,
+                build_limit_checker(organizer_user_id, organizer_profile, context, date, date),
+                duration_minutes
+              )
 
             Calculate.available_slots(
               date,
@@ -166,15 +191,13 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
             with {:ok, events} <- booking_window_events(user_id, start_date, context) do
               schedule = Schedules.resolve_for(meeting_type, organizer_profile)
 
-              config = %{
-                schedule_id: schedule && schedule.id,
-                max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-                min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-                buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-                duration_minutes: duration_minutes || 30,
-                limit_checker:
-                  build_limit_checker(user_id, organizer_profile, context, start_date, end_date)
-              }
+              config =
+                schedule_config(
+                  schedule,
+                  meeting_type,
+                  build_limit_checker(user_id, organizer_profile, context, start_date, end_date),
+                  duration_minutes || 30
+                )
 
               Calculate.range_availability(
                 start_date,
@@ -414,5 +437,19 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       _unresolved ->
         parse_duration_minutes(socket.assigns[:duration] || socket.assigns[:selected_duration])
     end
+  end
+
+  @doc """
+  The slot interval the flow is operating on, in minutes, or nil to use the
+  meeting type's own duration.
+
+  Sibling resolver to `duration_minutes/1`, so the display path and the
+  submit path cannot disagree about the interval either. Delegates to
+  `Tymeslot.Bookings.Policy.slot_interval_minutes/1`, the resolver both the
+  web and domain layers share.
+  """
+  @spec slot_interval_minutes(Phoenix.LiveView.Socket.t()) :: pos_integer() | nil
+  def slot_interval_minutes(socket) do
+    Policy.slot_interval_minutes(socket.assigns[:meeting_type])
   end
 end

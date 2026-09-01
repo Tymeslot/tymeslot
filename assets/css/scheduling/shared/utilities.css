@@ -32,3 +32,10 @@
     transform: rotate(360deg);
   }
 }
+
+/* Two-Tier Hour Picker: count badge on the hour toggle */
+.slot-hour-count {
+  font-size: var(--theme-font-size-xs);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}

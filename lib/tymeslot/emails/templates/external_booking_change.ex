@@ -222,7 +222,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
   # Organizer locale — currently the system default. When per-user locale
   # preferences are added, resolve from the meeting's organizer_user_id.
-  defp organizer_locale, do: Locales.default_locale()
+  defp organizer_locale, do: Locales.admin_default_locale()
 
   defp email_subject(:deleted, title, date_short),
     do:

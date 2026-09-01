@@ -24,19 +24,32 @@ defmodule Tymeslot.Availability.TimeSlots do
     - duration_minutes: Meeting duration in minutes
     - selected_date: The date for slot generation
     - breaks: List of {start_time, end_time} tuples representing break periods
+    - interval_minutes: Optional spacing between slot starts. Defaults to the
+      meeting duration, which is the historical behaviour. A shorter interval
+      offers overlapping starts; a longer one offers fewer, rounder starts.
+      When set explicitly, the grid also anchors to a wall-clock boundary
+      (e.g. 60 minutes lands on the hour) instead of wherever the window
+      happens to start; a nil interval keeps the unanchored, duration-locked
+      grid unchanged.
 
   Returns a list of formatted time strings like "9:00 AM", excluding slots that
   would overlap with break periods.
   """
-  @spec generate_slots_for_range_with_breaks(DateTime.t(), DateTime.t(), integer(), Date.t(), [
-          {Time.t(), Time.t()}
-        ]) :: [String.t()]
+  @spec generate_slots_for_range_with_breaks(
+          DateTime.t(),
+          DateTime.t(),
+          integer(),
+          Date.t(),
+          [{Time.t(), Time.t()}],
+          pos_integer() | nil
+        ) :: [String.t()]
   def generate_slots_for_range_with_breaks(
         start_dt,
         end_dt,
         duration_minutes,
         selected_date,
-        breaks
+        breaks,
+        interval_minutes \\ nil
       ) do
     start_date = DateTime.to_date(start_dt)
     end_date = DateTime.to_date(end_dt)
@@ -44,7 +57,8 @@ defmodule Tymeslot.Availability.TimeSlots do
     slot_range = determine_slot_range(start_date, end_date, selected_date, start_dt, end_dt)
 
     # Generate all possible slots first
-    all_slots = generate_slots_for_determined_range(slot_range, duration_minutes)
+    all_slots =
+      generate_slots_for_determined_range(slot_range, duration_minutes, interval_minutes)
 
     # Filter out slots that overlap with breaks
     case slot_range do
@@ -84,10 +98,11 @@ defmodule Tymeslot.Availability.TimeSlots do
     end
   end
 
-  defp generate_slots_for_determined_range(:no_slots, _duration_minutes), do: []
+  defp generate_slots_for_determined_range(:no_slots, _duration_minutes, _interval_minutes),
+    do: []
 
-  defp generate_slots_for_determined_range({start_dt, end_dt}, duration_minutes) do
-    generate_slots_for_single_day(start_dt, end_dt, duration_minutes)
+  defp generate_slots_for_determined_range({start_dt, end_dt}, duration_minutes, interval_minutes) do
+    generate_slots_for_single_day(start_dt, end_dt, duration_minutes, interval_minutes)
   end
 
   @doc """
@@ -140,13 +155,25 @@ defmodule Tymeslot.Availability.TimeSlots do
 
   # Private functions
 
-  defp generate_slots_for_single_day(start_dt, end_dt, duration_minutes) do
-    total_minutes = DateTime.diff(end_dt, start_dt, :minute)
+  defp generate_slots_for_single_day(start_dt, end_dt, duration_minutes, interval_minutes) do
+    # Only an explicit interval anchors the grid to a wall-clock boundary
+    # (e.g. 60 minutes lands on the hour). A nil interval keeps the historical
+    # duration-locked anchor at `start_dt` exactly, so meeting types that have
+    # never set an interval see no change at all.
+    grid_start = align_to_interval(start_dt, interval_minutes)
+    total_minutes = DateTime.diff(end_dt, grid_start, :minute)
+    # A slot's length is always the duration; the interval only moves its start.
+    # Falling back to the duration makes this a strict generalisation of the
+    # duration-locked grid this replaced.
+    interval = interval_minutes || duration_minutes
 
     if total_minutes < duration_minutes do
       []
     else
-      slot_count = div(total_minutes, duration_minutes)
+      # The last legal start is the one that still leaves room for the full
+      # meeting, so the count is measured over `total - duration`, not `total`.
+      # With interval == duration this is exactly div(total, duration).
+      slot_count = div(total_minutes - duration_minutes, interval) + 1
 
       # Iteration walks forward in UTC. On a DST fall-back day the wall-clock
       # hour repeats, producing two DateTime structs with different offsets but
@@ -155,10 +182,42 @@ defmodule Tymeslot.Availability.TimeSlots do
       # occurrence.
       0..(slot_count - 1)
       |> Enum.map(fn i ->
-        slot_datetime = DateTime.add(start_dt, i * duration_minutes, :minute)
+        slot_datetime = DateTime.add(grid_start, i * interval, :minute)
         format_datetime_slot(slot_datetime)
       end)
       |> Enum.uniq()
+    end
+  end
+
+  # Rounds `start_dt` forward to the next wall-clock boundary — never earlier
+  # than `start_dt`, so a slot is never offered before the window opens.
+  #
+  # An interval that divides the hour (5, 10, 15, 20, 30, 60) aligns to its
+  # own multiples since local midnight, e.g. 15 minutes lands on the
+  # quarter-hour. An interval that does NOT divide the hour (45, 90, 120, or
+  # anything else that isn't a divisor of 60) aligns to the next whole hour
+  # instead and steps by the interval from there: anchoring those to
+  # multiples-of-the-interval-since-midnight would silently reinterpret
+  # "every 2 hours" as "only on even hours" and discard availability the
+  # owner's window actually offers (a 09:00-17:00 window with a 120-minute
+  # interval must still offer 09:00, not just 10:00/12:00/...).
+  #
+  # Alignment reads the wall clock `start_dt` already carries, which is the
+  # booker's once business-hours windows have been shifted into their
+  # timezone, so the grid the booker sees lands on round numbers in the clock
+  # they're reading. A nil interval is the duration-locked default, not an
+  # explicit choice, so it is left completely alone.
+  defp align_to_interval(start_dt, nil), do: start_dt
+
+  defp align_to_interval(start_dt, interval_minutes) do
+    boundary = if rem(60, interval_minutes) == 0, do: interval_minutes, else: 60
+    minutes_since_midnight = start_dt.hour * 60 + start_dt.minute
+    remainder = rem(minutes_since_midnight, boundary)
+
+    if remainder == 0 do
+      start_dt
+    else
+      DateTime.add(start_dt, boundary - remainder, :minute)
     end
   end
 

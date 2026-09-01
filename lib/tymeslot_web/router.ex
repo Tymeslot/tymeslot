@@ -291,8 +291,14 @@ defmodule TymeslotWeb.Router do
         TymeslotWeb.Hooks.AppLocaleHook,
         TymeslotWeb.Hooks.EnsureAdminHook
       ] do
-      live "/", AdminLive, :settings
-      live "/settings", AdminLive, :settings
+      # One route per tab; `TymeslotWeb.AdminLive.Tabs` is the list these must
+      # match. `/settings` is kept as an alias for the old single-tab URL so
+      # existing bookmarks still land somewhere sensible.
+      live "/", AdminLive, :authentication
+      live "/settings", AdminLive, :authentication
+      live "/authentication", AdminLive, :authentication
+      live "/email", AdminLive, :email
+      live "/general", AdminLive, :general
       live "/users", AdminLive, :users
     end
   end

@@ -13,11 +13,27 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   - **Port 587**: STARTTLS (explicit TLS) - `ssl: false, tls: :always`
   - **Other ports**: Opportunistic TLS - `ssl: false, tls: :if_available`
 
+  On port 465 the TLS options are additionally passed as `:sockopts`. gen_smtp
+  reads `:tls_options` only when upgrading an existing connection with
+  STARTTLS; on the implicit-TLS path it forwards `:sockopts` into
+  `:ssl.connect/4` and ignores `:tls_options` entirely. Without this every
+  port-465 send fails before the certificate is even examined, with
+  `{:options, :incompatible, [verify: :verify_peer, cacerts: :undefined]}`.
+
   ## Certificate Verification
 
   Uses OTP 26+ `:public_key.cacerts_get()` to read OS certificate store,
   with automatic fallback to bundled `:castore` certificates for minimal
   Docker containers where the OS cert store may be empty.
+
+  Two options cover servers a public trust store cannot validate, which is
+  the common case for a self-hosted relay:
+
+    * `:cacertfile` — a PEM bundle to trust instead of the public store, for
+      a relay whose certificate is issued by a private CA.
+    * `:tls_verify` — `:none` disables certificate verification entirely.
+      This removes the protection against an intercepted connection, so it
+      is a last resort for a self-signed relay; prefer `:cacertfile`.
 
   ## Example
 
@@ -33,11 +49,19 @@ defmodule Tymeslot.Mailer.SMTPConfig do
 
   require Logger
 
+  @typedoc """
+  How far to trust the relay's certificate: `:peer` verifies it against the
+  trust store (the default), `:none` accepts any certificate.
+  """
+  @type tls_verify :: :peer | :none
+
   @type smtp_opts :: [
           host: String.t(),
           port: pos_integer(),
           username: String.t(),
-          password: String.t()
+          password: String.t(),
+          tls_verify: tls_verify(),
+          cacertfile: String.t() | nil
         ]
 
   @type smtp_config :: keyword()
@@ -51,6 +75,9 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   - `:port` (optional) - SMTP port (default: 587)
   - `:username` (required) - SMTP username
   - `:password` (required) - SMTP password
+  - `:tls_verify` (optional) - `:peer` (default) or `:none`
+  - `:cacertfile` (optional) - path to a PEM bundle to trust instead of the
+    public certificate store
 
   ## Raises
 
@@ -64,26 +91,26 @@ defmodule Tymeslot.Mailer.SMTPConfig do
     smtp_password = validate_password!(opts[:password])
 
     {use_ssl, tls_mode} = determine_tls_mode(smtp_port)
-    cacerts = load_cacerts()
-    tls_options = build_tls_options(smtp_host, cacerts)
+    tls_options = build_tls_options(smtp_host, opts)
 
-    config = [
-      adapter: Swoosh.Adapters.SMTP,
-      relay: smtp_host,
-      port: smtp_port,
-      username: smtp_username,
-      password: smtp_password,
-      ssl: use_ssl,
-      tls: tls_mode,
-      tls_options: tls_options,
-      auth: :if_available,
-      # Retry failed sends twice (total 3 attempts: initial + 2 retries)
-      retries: 2,
-      # Connection timeout in milliseconds
-      timeout: 10_000,
-      # Direct relay to configured host, skip DNS MX lookup overhead
-      no_mx_lookups: true
-    ]
+    config =
+      [
+        adapter: Swoosh.Adapters.SMTP,
+        relay: smtp_host,
+        port: smtp_port,
+        username: smtp_username,
+        password: smtp_password,
+        ssl: use_ssl,
+        tls: tls_mode,
+        tls_options: tls_options,
+        auth: :if_available,
+        # Retry failed sends twice (total 3 attempts: initial + 2 retries)
+        retries: 2,
+        # Connection timeout in milliseconds
+        timeout: 10_000,
+        # Direct relay to configured host, skip DNS MX lookup overhead
+        no_mx_lookups: true
+      ] ++ implicit_tls_sockopts(use_ssl, tls_options)
 
     log_config(config)
     config
@@ -171,6 +198,15 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   defp determine_tls_mode(587), do: {false, :always}
   defp determine_tls_mode(_arg), do: {false, :if_available}
 
+  # gen_smtp reads `:tls_options` only in its STARTTLS upgrade path. On the
+  # implicit-TLS path (`ssl: true`) it builds the socket options from
+  # `:sockopts` alone and hands them straight to `:ssl.connect/4`, so without
+  # this every port-465 send fails on OTP's default `verify: :verify_peer`
+  # with no CA certificates. The plain-TCP path must not receive them: they
+  # are not valid `:gen_tcp` options.
+  defp implicit_tls_sockopts(true, tls_options), do: [sockopts: tls_options]
+  defp implicit_tls_sockopts(false, _tls_options), do: []
+
   # Loads CA certificates with fallback to castore
   defp load_cacerts do
     certs =
@@ -236,28 +272,80 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   end
 
   # Builds TLS options for OTP 26+ certificate verification
-  defp build_tls_options(smtp_host, cacerts) do
-    [
+  defp build_tls_options(smtp_host, opts) do
+    base = [
       # Modern TLS versions only (TLS 1.2 and 1.3)
       versions: [:"tlsv1.2", :"tlsv1.3"],
-      # Verify peer certificate (strict security)
-      verify: :verify_peer,
-      # CA certificates for chain validation
-      cacerts: cacerts,
       # Server Name Indication for hostname verification (prevents MITM)
       server_name_indication: String.to_charlist(smtp_host),
-      # RFC 6125 hostname matching, including wildcard certificates. Without this,
-      # OTP's default matcher rejects a wildcard cert (e.g. `*.mailbox.org`) when
-      # connecting to a subdomain host (e.g. `smtp.mailbox.org`) with a fatal
-      # `{:bad_cert, {:hostname_check_failed, ...}}` alert. This is the same
-      # matcher Mint/Finch/Req use for HTTPS.
-      customize_hostname_check: [
-        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-      ],
       # Maximum certificate chain depth: root CA + up to 3 intermediates + server cert
       # Industry standard allows 3-5 levels; 5 provides good compatibility
       depth: 5
     ]
+
+    base ++
+      verify_options(
+        validate_tls_verify!(opts[:tls_verify]),
+        validate_cacertfile!(opts[:cacertfile])
+      )
+  end
+
+  # Verification disabled: no trust store is consulted, and none is required.
+  # Demanding one here would defeat the point for the operator who turned
+  # verification off precisely because they have no usable CA bundle.
+  defp verify_options(:none, _cacertfile) do
+    Logger.warning(
+      "SMTP certificate verification is DISABLED (SMTP_TLS_VERIFY=none). The connection " <>
+        "is encrypted but the relay's identity is not checked, so an intercepted " <>
+        "connection cannot be detected. Prefer SMTP_CACERTFILE with your relay's CA."
+    )
+
+    [verify: :verify_none]
+  end
+
+  defp verify_options(:peer, cacertfile) do
+    [verify: :verify_peer] ++
+      trust_store(cacertfile) ++ [customize_hostname_check: hostname_check()]
+  end
+
+  # A private CA replaces the public store rather than extending it: a relay
+  # whose certificate chains to an internal CA has no reason to also be
+  # accepted under a public root.
+  defp trust_store(nil), do: [cacerts: load_cacerts()]
+  defp trust_store(cacertfile), do: [cacertfile: cacertfile]
+
+  # RFC 6125 hostname matching, including wildcard certificates. Without this,
+  # OTP's default matcher rejects a wildcard cert (e.g. `*.mailbox.org`) when
+  # connecting to a subdomain host (e.g. `smtp.mailbox.org`) with a fatal
+  # `{:bad_cert, {:hostname_check_failed, ...}}` alert. This is the same
+  # matcher Mint/Finch/Req use for HTTPS.
+  defp hostname_check do
+    [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+  end
+
+  defp validate_tls_verify!(nil), do: :peer
+  defp validate_tls_verify!(mode) when mode in [:peer, :none], do: mode
+
+  defp validate_tls_verify!(mode) do
+    raise ArgumentError, "SMTP TLS verify must be :peer or :none, got: #{inspect(mode)}"
+  end
+
+  defp validate_cacertfile!(nil), do: nil
+
+  defp validate_cacertfile!(path) when is_binary(path) do
+    trimmed = String.trim(path)
+
+    if File.regular?(trimmed) do
+      trimmed
+    else
+      raise ArgumentError,
+            "SMTP CA certificate file not found or not readable: #{inspect(trimmed)} " <>
+              "(SMTP_CACERTFILE must point at a PEM bundle inside the container)"
+    end
+  end
+
+  defp validate_cacertfile!(path) do
+    raise ArgumentError, "SMTP CA certificate file must be a string, got: #{inspect(path)}"
   end
 
   # Logs SMTP configuration at startup (without password)
@@ -277,6 +365,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
       username: config[:username],
       ssl: ssl_mode,
       tls: tls_mode,
+      verify: config[:tls_options][:verify],
       timeout: config[:timeout],
       retries: config[:retries]
     )

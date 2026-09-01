@@ -160,7 +160,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     Map.get(appointment_details, :booking_url) || Urls.get_app_url()
   end
 
-  defp organizer_locale(_appointment_details), do: Locales.default_locale()
+  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
 
   # Builds a `METHOD:PUBLISH` + `STATUS:CANCELLED` ICS attachment so the
   # attendee's calendar client shows the event as cancelled. We avoid iTIP

@@ -13,16 +13,11 @@ defmodule Tymeslot.Availability.Conflicts do
   @typedoc """
   Configuration options controlling conflict detection and booking constraints.
   All keys are optional; sensible defaults are applied when absent.
+
+  An alias of `Calculate.availability_config/0`, the canonical definition,
+  rather than a second copy that can drift from it.
   """
-  @type availability_config :: %{
-          optional(:buffer_minutes) => non_neg_integer(),
-          optional(:min_advance_hours) => non_neg_integer(),
-          optional(:max_advance_booking_days) => pos_integer(),
-          optional(:duration_minutes) => pos_integer(),
-          optional(:schedule_id) => integer() | nil,
-          optional(:limit_checker) => (DateTime.t() -> boolean()) | nil,
-          optional(atom()) => term()
-        }
+  @type availability_config :: Calculate.availability_config()
 
   @doc """
   Filters available slots based on conflicts and booking rules.
@@ -116,6 +111,7 @@ defmodule Tymeslot.Availability.Conflicts do
         config \\ %{}
       ) do
     duration_minutes = config |> Map.get(:duration_minutes, 30) |> max(1) |> min(1440)
+    slot_interval_minutes = Map.get(config, :slot_interval_minutes)
 
     %{
       buffer_minutes: buffer_minutes,
@@ -159,7 +155,8 @@ defmodule Tymeslot.Availability.Conflicts do
           window.end_dt,
           duration_minutes,
           date,
-          breaks
+          breaks,
+          slot_interval_minutes
         )
 
       Enum.any?(slots, fn slot ->

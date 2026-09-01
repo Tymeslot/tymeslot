@@ -1,6 +1,7 @@
 defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :meeting_types
   @moduletag :database
   @moduletag :schema
 
@@ -269,5 +270,70 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       refute changeset.valid?
       assert "must be at least USD 0.50" in errors_on(changeset).price_cents
     end
+  end
+
+  describe "slot_interval_minutes" do
+    test "defaults to nil so an existing type keeps using its event length" do
+      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, valid_attrs())
+
+      assert Changeset.get_field(changeset, :slot_interval_minutes) == nil
+    end
+
+    test "accepts an interval shorter than the duration" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 5)
+        )
+
+      assert changeset.valid?
+      assert Changeset.get_change(changeset, :slot_interval_minutes) == 5
+    end
+
+    test "accepts an interval longer than the duration" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 60)
+        )
+
+      assert changeset.valid?
+    end
+
+    test "accepts a value that does not divide the hour" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 7)
+        )
+
+      assert changeset.valid?
+    end
+
+    test "rejects an interval below the floor" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 4)
+        )
+
+      refute changeset.valid?
+      assert "must be greater than or equal to 5" in errors_on(changeset).slot_interval_minutes
+    end
+
+    test "rejects an interval above the ceiling" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 481)
+        )
+
+      refute changeset.valid?
+      assert "must be less than or equal to 480" in errors_on(changeset).slot_interval_minutes
+    end
+  end
+
+  defp valid_attrs do
+    %{name: "Intro call", duration_minutes: 30, user_id: 1}
   end
 end

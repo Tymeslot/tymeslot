@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
     locale =
       Locales.acceptable(params["locale"]) ||
         Locales.acceptable(session["locale"]) ||
-        Locales.default_locale()
+        Locales.booking_default_locale()
 
     # Set for Gettext process dictionary (global — reaches every backend)
     Gettext.put_locale(locale)

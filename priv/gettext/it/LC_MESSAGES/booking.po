@@ -1535,6 +1535,14 @@ msgstr "Il titolo è obbligatorio"
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Non puoi prenotare con più di %{days} giorni di anticipo"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{hour}, %{count} available time"
+msgid_plural "%{hour}, %{count} available times"
+msgstr[0] "%{hour}, %{count} orario disponibile"
+msgstr[1] "%{hour}, %{count} orari disponibili"
+
 #: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."

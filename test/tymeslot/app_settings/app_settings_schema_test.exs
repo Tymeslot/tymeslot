@@ -4,7 +4,64 @@ defmodule Tymeslot.AppSettings.AppSettingsSchemaTest do
   @moduletag :database
   @moduletag :schema
 
+  alias Ecto.Changeset
   alias Tymeslot.AppSettings.AppSettingsSchema
+  alias Tymeslot.Locales
+
+  describe "changeset/2 locale default validation" do
+    test "accepts a supported locale code for each surface" do
+      changeset =
+        AppSettingsSchema.changeset(%AppSettingsSchema{}, %{
+          admin_default_locale: "de",
+          booking_default_locale: "fr"
+        })
+
+      assert changeset.valid?
+      assert Changeset.get_change(changeset, :admin_default_locale) == "de"
+      assert Changeset.get_change(changeset, :booking_default_locale) == "fr"
+    end
+
+    test "rejects a locale code this install does not support" do
+      changeset =
+        AppSettingsSchema.changeset(%AppSettingsSchema{}, %{admin_default_locale: "zz"})
+
+      refute changeset.valid?
+      assert "is not a supported language" in errors_on(changeset).admin_default_locale
+    end
+
+    test "rejects a well-formed code that is simply not in the supported set" do
+      # "es" is a real locale and would pass any format check; only the
+      # configured set can reject it.
+      refute "es" in Locales.supported_codes()
+
+      changeset =
+        AppSettingsSchema.changeset(%AppSettingsSchema{}, %{booking_default_locale: "es"})
+
+      refute changeset.valid?
+    end
+
+    test "accepts nil, which clears the override" do
+      changeset =
+        AppSettingsSchema.changeset(
+          %AppSettingsSchema{admin_default_locale: "de"},
+          %{admin_default_locale: nil}
+        )
+
+      assert changeset.valid?
+      assert Changeset.get_change(changeset, :admin_default_locale) == nil
+    end
+
+    test "a blank submission clears the override rather than storing an empty string" do
+      changeset =
+        AppSettingsSchema.changeset(
+          %AppSettingsSchema{booking_default_locale: "fr"},
+          %{booking_default_locale: "  "}
+        )
+
+      assert changeset.valid?
+      assert Changeset.get_change(changeset, :booking_default_locale) == nil
+    end
+  end
 
   describe "changeset/2 email_brand_name validation" do
     test "rejects a name over the 60-grapheme display cap" do

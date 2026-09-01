@@ -65,6 +65,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:selected_date, nil)
     |> assign(:selected_time, nil)
     |> assign(:available_slots, [])
+    # These three describe the slot list currently on screen and are refreshed
+    # with it on every fetch. They are defaulted here as well because the slot
+    # panel renders before any date is picked, and a template reading them at
+    # mount would otherwise raise. nil interval means "use the meeting length",
+    # which is the flat grid every meeting type had before intervals existed.
+    |> assign(:expanded_hour, nil)
+    |> assign(:slot_interval_minutes, nil)
+    |> assign(:duration_minutes, nil)
     |> assign(:loading_slots, false)
     |> assign(:calendar_error, nil)
     |> assign(:timezone_dropdown_open, false)
