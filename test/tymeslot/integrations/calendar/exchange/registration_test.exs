@@ -18,11 +18,39 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RegistrationTest do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
   setup do
     CalendarCircuitBreaker.reset(:exchange)
     :ok
+  end
+
+  describe "the connection UI pairing" do
+    test "setup_component/0 names a module that exists" do
+      # A bare module reference as a value produces no compile warning, so a
+      # rename on either side would hand the LiveView a missing module at
+      # runtime rather than failing the build.
+      assert Code.ensure_loaded?(Provider.setup_component())
+    end
+
+    test "the picker's form gate admits exchange" do
+      # Without this the Connect button falls through to the catch-all and
+      # flashes "Unsupported provider": the provider renders a card that
+      # cannot be used.
+      assert "exchange" in ProviderConfig.ews_provider_strings()
+
+      form_providers =
+        ProviderConfig.caldav_based_provider_strings() ++
+          ProviderConfig.subscription_provider_strings() ++
+          ProviderConfig.ews_provider_strings()
+
+      assert "exchange" in form_providers
+    end
+
+    test "is enabled, so the card renders at all" do
+      assert ProviderConfig.provider_enabled?(:exchange)
+    end
   end
 
   describe "the registry" do

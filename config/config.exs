@@ -376,13 +376,7 @@ config :tymeslot, :calendar_providers, %{
   baikal: [enabled: true],
   google: [enabled: true],
   outlook: [enabled: true],
-  # Registered but not yet connectable. Exchange has no connection UI: no
-  # config component, no entry in the picker's connect handler, and no icon
-  # asset, so an enabled Exchange renders a provider card with a broken icon
-  # and a Connect button that can only flash "Unsupported provider". The pin
-  # lifts when that UI lands; `config/test.exs` leaves it on so the
-  # registration tests still exercise the enabled path.
-  exchange: [enabled: false],
+  exchange: [enabled: true],
   # Internal providers — never user-connectable. Disabled explicitly because
   # the runtime toggle defaults to enabled for any provider in @providers.
   demo: [enabled: false],

@@ -21,9 +21,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias TymeslotWeb.Live.Shared.Flash
 
   # Providers whose setup happens in an in-app form rather than an OAuth
-  # redirect: the CalDAV family plus feed subscriptions.
+  # redirect: the CalDAV family, feed subscriptions, and Exchange.
   @form_provider_strings ProviderConfig.caldav_based_provider_strings() ++
-                           ProviderConfig.subscription_provider_strings()
+                           ProviderConfig.subscription_provider_strings() ++
+                           ProviderConfig.ews_provider_strings()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do

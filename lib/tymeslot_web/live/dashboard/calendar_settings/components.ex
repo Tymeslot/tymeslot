@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     AppleConfig,
     BaikalConfig,
     CaldavConfig,
+    ExchangeConfig,
     IcsUrlConfig,
     MailboxOrgConfig,
     NextcloudConfig,
@@ -128,6 +129,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             target={@myself}
             form_errors={@form_errors}
             form_values={@form_values}
+            saving={@is_saving}
+          />
+        <% :exchange -> %>
+          <.live_component
+            module={ExchangeConfig}
+            id="exchange-config"
+            target={@myself}
+            form_errors={@form_errors}
+            form_values={@form_values}
+            discovered_calendars={@discovered_calendars}
+            show_calendar_selection={@show_calendar_selection}
+            discovery_credentials={@discovery_credentials}
             saving={@is_saving}
           />
         <% :apple -> %>
@@ -551,7 +564,24 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     end
   end
 
+  # A provider that is read-only by construction gets its own sentence. The
+  # warning below says "no longer", which is the right thing to tell someone
+  # whose writable calendar has become read-only and whose bookings are now
+  # failing; saying it about an Exchange mailbox or a subscribed feed would
+  # report a breakage where nothing has changed and nothing is wrong.
+  defp read_only_booking_target_warning(%{provider: provider}) when is_binary(provider) do
+    if ProviderConfig.read_only?(provider) do
+      dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
+    else
+      nil
+    end
+  end
+
   defp read_only_booking_target_warning(integration) do
+    writable_provider_warning(integration)
+  end
+
+  defp writable_provider_warning(integration) do
     calendar_list = integration.calendar_list || []
     booking_id = Map.get(integration, :default_booking_calendar_id)
 

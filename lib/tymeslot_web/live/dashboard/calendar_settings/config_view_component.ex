@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
+  alias Tymeslot.Integrations.Calendar.Exchange.Creation, as: ExchangeCreation
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Security.RateLimiter
@@ -27,6 +28,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   require Logger
 
   @caldav_providers ProviderConfig.caldav_based_providers()
+
+  # Every provider whose setup this component drives. Exchange is listed
+  # alongside the CalDAV family because both fill an in-app credentials form,
+  # not because it speaks CalDAV: it is deliberately absent from
+  # `@caldav_providers`, which still gates everything CalDAV-shaped below.
+  @form_providers @caldav_providers ++ ProviderConfig.ews_providers()
   @parent_component_id "calendar-settings"
 
   @impl Phoenix.LiveComponent
@@ -65,6 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
         "url" -> :url
         "username" -> :username
         "password" -> :password
+        "mailbox" -> :mailbox
         _other -> nil
       end
 
@@ -164,27 +172,59 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
       :ok ->
         socket = assign(socket, is_saving: true, form_values: params)
 
-        processed_params =
-          case Map.get(full_params, "selected_calendars") do
-            calendars when is_list(calendars) ->
-              selection =
-                Calendar.prepare_selection_params(calendars, socket.assigns.discovered_calendars)
-
-              SanitizeMerge.merge(params, selection)
-
-            _other ->
-              params
-          end
-
         result =
-          Calendar.create_integration_with_validation(
+          create_integration(
+            normalize_provider(params["provider"] || socket.assigns.selected_provider),
             user_id,
-            processed_params,
-            metadata: socket.assigns.security_metadata
+            params,
+            full_params,
+            socket
           )
 
         handle_create_integration_result(result, socket)
     end
+  end
+
+  # Exchange goes through its own creation entry point, so the CalDAV-shaped
+  # `prepare_selection_params/2` is not used: it returns `calendar_paths`,
+  # which an EWS integration has no place for, and the mailbox and TLS fields
+  # it knows nothing about have to travel with the same params. The selection
+  # is resolved to the discovered entries by `FolderId` here instead.
+  defp create_integration(:exchange, user_id, params, full_params, socket) do
+    selected =
+      full_params
+      |> Map.get("selected_calendars", [])
+      |> List.wrap()
+      |> MapSet.new()
+
+    calendar_list =
+      Enum.filter(socket.assigns.discovered_calendars, &MapSet.member?(selected, &1.id))
+
+    Calendar.create_exchange_with_validation(
+      user_id,
+      Map.put(params, "calendar_list", calendar_list),
+      metadata: socket.assigns.security_metadata
+    )
+  end
+
+  defp create_integration(_provider, user_id, params, full_params, socket) do
+    processed_params =
+      case Map.get(full_params, "selected_calendars") do
+        calendars when is_list(calendars) ->
+          selection =
+            Calendar.prepare_selection_params(calendars, socket.assigns.discovered_calendars)
+
+          SanitizeMerge.merge(params, selection)
+
+        _other ->
+          params
+      end
+
+    Calendar.create_integration_with_validation(
+      user_id,
+      processed_params,
+      metadata: socket.assigns.security_metadata
+    )
   end
 
   # The feed probe behind `add_subscription` can take up to a few network
@@ -286,13 +326,41 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
     """
   end
 
+  # Exchange collects a mailbox address the CalDAV discovery validator knows
+  # nothing about. It is checked here rather than at creation so a mistyped
+  # address is reported on the form the user is looking at, not after they have
+  # already chosen calendars on the next step.
+  defp do_discover_calendars(:exchange, sanitized_params, socket) do
+    mailbox = socket.assigns.form_values["mailbox"]
+
+    case CalendarInputValidation.validate_single_field(:mailbox, mailbox,
+           metadata: socket.assigns.security_metadata
+         ) do
+      {:ok, _sanitized} ->
+        discover(:exchange, sanitized_params, socket,
+          verify_ssl: ExchangeCreation.verify_ssl?(socket.assigns.form_values)
+        )
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> assign(:form_errors, Map.put(socket.assigns.form_errors, :mailbox, error))
+         |> assign(:is_saving, false)}
+    end
+  end
+
   defp do_discover_calendars(provider, sanitized_params, socket) do
+    discover(provider, sanitized_params, socket, [])
+  end
+
+  defp discover(provider, sanitized_params, socket, opts) do
     case Calendar.discover_and_filter_calendars(
            provider,
            sanitized_params["url"],
            sanitized_params["username"],
            sanitized_params["password"],
-           socket.assigns.current_user.id
+           socket.assigns.current_user.id,
+           opts
          ) do
       {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
         {:noreply,
@@ -335,12 +403,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
     )
   end
 
-  defp normalize_provider(p) when p in @caldav_providers, do: p
+  defp normalize_provider(p) when p in @form_providers, do: p
 
   # Matching the string against the known providers avoids converting arbitrary
   # user input to an atom at all, so there is no ArgumentError to rescue.
   defp normalize_provider(p) when is_binary(p) do
-    Enum.find(@caldav_providers, :caldav, &(Atom.to_string(&1) == p))
+    Enum.find(@form_providers, :caldav, &(Atom.to_string(&1) == p))
   end
 
   defp normalize_provider(_other_provider), do: :caldav

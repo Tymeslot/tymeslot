@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Exchange.Creation, as: ExchangeCreation
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -339,6 +340,21 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
+  Validates and creates a read-only Exchange (EWS) integration.
+  """
+  @spec create_exchange_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
+          {:ok, integration()}
+          | {:error,
+             {:form_errors, %{String.t() => term()}}
+             | {:changeset, Ecto.Changeset.t()}
+             | {:rate_limited, String.t()}
+             | :unattributable
+             | :duplicate_integration}
+  def create_exchange_with_validation(user_id, params, opts \\ []) do
+    ExchangeCreation.create_with_validation(user_id, params, opts)
+  end
+
+  @doc """
   Prepare selection params from selected paths and discovered calendars.
   """
   @spec prepare_selection_params([String.t()], list()) ::
@@ -492,12 +508,13 @@ defmodule Tymeslot.Integrations.Calendar do
           String.t(),
           String.t(),
           String.t(),
-          user_id()
+          user_id(),
+          keyword()
         ) ::
           {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
           | {:error, any()}
-  def discover_and_filter_calendars(provider, url, username, password, user_id) do
-    Workflows.discover_and_filter_calendars(provider, url, username, password, user_id)
+  def discover_and_filter_calendars(provider, url, username, password, user_id, opts \\ []) do
+    Workflows.discover_and_filter_calendars(provider, url, username, password, user_id, opts)
   end
 
   # ---------------------------
