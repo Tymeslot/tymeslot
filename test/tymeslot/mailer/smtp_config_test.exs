@@ -153,6 +153,69 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       assert config[:tls_options][:server_name_indication] == ~c"smtp.example.com"
     end
 
+    test "port 465 repeats the TLS options as sockopts" do
+      # gen_smtp reads :tls_options only when upgrading with STARTTLS. On the
+      # implicit-TLS path it passes :sockopts straight to :ssl.connect/4, so
+      # without this every port-465 send fails with
+      # {:options, :incompatible, [verify: :verify_peer, cacerts: :undefined]}.
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          port: 465,
+          username: "user",
+          password: "pass"
+        )
+
+      assert config[:sockopts] == config[:tls_options]
+    end
+
+    test "ports that negotiate over plain TCP carry no sockopts" do
+      # TLS options are not valid :gen_tcp options: passing them on the STARTTLS
+      # and opportunistic paths would fail the connection before the upgrade.
+      for port <- [587, 25, 2525] do
+        config =
+          SMTPConfig.build(
+            host: "smtp.example.com",
+            port: port,
+            username: "user",
+            password: "pass"
+          )
+
+        refute Keyword.has_key?(config, :sockopts)
+      end
+    end
+
+    test "a CA bundle replaces the public trust store" do
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          cacertfile: cacertfile_fixture()
+        )
+
+      assert config[:tls_options][:cacertfile] == cacertfile_fixture()
+      refute Keyword.has_key?(config[:tls_options], :cacerts)
+      assert config[:tls_options][:verify] == :verify_peer
+    end
+
+    test "tls_verify: :none disables verification and needs no trust store" do
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          tls_verify: :none
+        )
+
+      tls_opts = config[:tls_options]
+      assert tls_opts[:verify] == :verify_none
+      refute Keyword.has_key?(tls_opts, :cacerts)
+      refute Keyword.has_key?(tls_opts, :cacertfile)
+      # Hostname matching is meaningless once the certificate is not checked.
+      refute Keyword.has_key?(tls_opts, :customize_hostname_check)
+    end
+
     test "CA certificates are loaded from system or castore" do
       config =
         SMTPConfig.build(
@@ -305,6 +368,32 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
     end
   end
 
+  describe "build/1 TLS validation" do
+    test "raises on an unrecognised verification mode" do
+      assert_raise ArgumentError, ~r/SMTP TLS verify must be :peer or :none/, fn ->
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          tls_verify: :maybe
+        )
+      end
+    end
+
+    test "raises when the CA bundle does not exist" do
+      # Failing at boot beats failing on the first email of the day: a typo in
+      # the mounted path is otherwise invisible until a user waits for mail.
+      assert_raise ArgumentError, ~r/SMTP CA certificate file not found/, fn ->
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          cacertfile: "/nonexistent/ca-bundle.pem"
+        )
+      end
+    end
+  end
+
   describe "logging" do
     test "logs SMTP configuration at startup, password in neither message nor metadata" do
       LogCapture.attach(level: :info, logger_level: :info)
@@ -329,5 +418,11 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       refute LogCapture.message_text(msg) =~ "secret123"
       refute inspect(meta, limit: :infinity, printable_limit: :infinity) =~ "secret123"
     end
+  end
+
+  # A real, readable PEM file: `build/1` rejects a path that is not one, so a
+  # made-up string would exercise the validation rather than the option.
+  defp cacertfile_fixture do
+    CAStore.file_path()
   end
 end

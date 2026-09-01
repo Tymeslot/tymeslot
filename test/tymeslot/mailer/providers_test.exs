@@ -162,6 +162,67 @@ defmodule Tymeslot.Mailer.ProvidersTest do
       )
     end
 
+    test "SMTP_TLS_VERIFY=none turns off certificate verification" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_VERIFY", "none"}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:tls_options][:verify] == :verify_none
+        end
+      )
+    end
+
+    test "verification stays on when SMTP_TLS_VERIFY is unset" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_VERIFY", nil}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:tls_options][:verify] == :verify_peer
+        end
+      )
+    end
+
+    test "SMTP_CACERTFILE replaces the public trust store" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_CACERTFILE", CAStore.file_path()}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:tls_options][:cacertfile] == CAStore.file_path()
+        end
+      )
+    end
+
+    test "raises on an unrecognised SMTP_TLS_VERIFY" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_VERIFY", "insecure"}
+        ],
+        fn ->
+          assert_raise ArgumentError, ~r/Invalid SMTP_TLS_VERIFY/, fn ->
+            Providers.build("smtp")
+          end
+        end
+      )
+    end
+
     test "raises on an unparsable SMTP port" do
       with_env(
         [
