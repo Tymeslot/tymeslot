@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.AdminLive.Components.Settings do
   @moduledoc """
-  Settings tab. Settings are grouped into sections (Authentication,
-  reCAPTCHA, Payments, Analytics, Admin alerts, Email branding); each section
-  is a single grouped card and each row shows the setting name, a short
-  description, and a control on the right.
+  The settings tabs. Each tab renders the sections
+  `TymeslotWeb.AdminLive.Tabs` assigns it, in the order declared there; each
+  section is a single grouped card and each row shows the setting name, a
+  short description, and a control on the right.
 
   Boolean settings use the two-tag Enabled/Disabled control with the active
   tag rendered as disabled. Score, email, text, and colour settings use a
@@ -23,9 +23,9 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
 
   alias Tymeslot.AppSettings
   alias TymeslotWeb.AdminLive.Formatters
+  alias TymeslotWeb.AdminLive.Tabs
 
-  @sections [:authentication, :recaptcha, :payments, :analytics, :admin_alerts, :email_branding]
-
+  attr :tab, :atom, required: true
   attr :effective_values, :map, required: true
   attr :email_logo_url, :string, default: nil
   attr :upload, :map, required: true
@@ -43,9 +43,10 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
 
     ~H"""
     <div>
-      <h2 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-4">
-        {dgettext("dashboard_admin", "Environment / config")}
-      </h2>
+      <%!-- The tab bar already names this page on screen, so a visible heading
+           would just repeat the active pill. Screen readers still need
+           something to land on. --%>
+      <h2 class="sr-only">{Tabs.name(@tab)}</h2>
 
       <.info_box variant={:info}>
         {dgettext(
@@ -54,29 +55,30 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         )}
       </.info_box>
 
+      <%!-- Branding is still rendered by its own component rather than the
+           generic loop, so its upload and preview state reaches only the
+           section that uses it. --%>
       <div class="space-y-8 mt-6">
-        <.settings_section
-          :for={
-            section <-
-              @grouped
-              |> Map.keys()
-              |> Enum.reject(&(&1 == :email_branding))
-              |> Enum.sort_by(&section_order/1)
-          }
-          section={section}
-          keys={Map.fetch!(@grouped, section)}
-          effective_values={@effective_values}
-        />
-        <.email_branding_section
-          effective_values={@effective_values}
-          email_logo_url={@email_logo_url}
-          upload={@upload}
-          logo_errors={@logo_errors}
-          stock_accent={@stock_accent}
-          accent_preview={@accent_preview}
-          accent_draft={@accent_draft}
-          max_logo_bytes={@max_logo_bytes}
-        />
+        <%= for section <- Tabs.sections(@tab) do %>
+          <%= if section == :email_branding do %>
+            <.email_branding_section
+              effective_values={@effective_values}
+              email_logo_url={@email_logo_url}
+              upload={@upload}
+              logo_errors={@logo_errors}
+              stock_accent={@stock_accent}
+              accent_preview={@accent_preview}
+              accent_draft={@accent_draft}
+              max_logo_bytes={@max_logo_bytes}
+            />
+          <% else %>
+            <.settings_section
+              section={section}
+              keys={Map.fetch!(@grouped, section)}
+              effective_values={@effective_values}
+            />
+          <% end %>
+        <% end %>
       </div>
     </div>
     """
@@ -581,6 +583,4 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   end
 
   defp format_score(nil), do: ""
-
-  defp section_order(section), do: Enum.find_index(@sections, &(&1 == section)) || 99
 end

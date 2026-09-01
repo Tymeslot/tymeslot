@@ -69,6 +69,7 @@ msgid "Admins"
 msgstr "Administrateurs"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication"
 msgstr "Authentification"
@@ -166,6 +167,7 @@ msgid "Display name"
 msgstr "Nom affiché"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
@@ -185,11 +187,6 @@ msgstr "Saisissez un nombre entre 0.0 et 1.0."
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Saisissez une adresse e-mail valide."
-
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
-#, elixir-autogen, elixir-format
-msgid "Environment / config"
-msgstr "Environnement / configuration"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -282,11 +279,6 @@ msgstr "Enregistrer"
 msgid "Set %{name}"
 msgstr "Définir %{name}"
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Paramètres"
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Signup min score"
@@ -332,7 +324,7 @@ msgstr "Utilisateur introuvable."
 msgid "User promoted to admin."
 msgstr "Utilisateur promu administrateur."
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Utilisateurs"
@@ -606,3 +598,8 @@ msgstr "Le texte blanc des boutons sur cette couleur n’offre qu’un contraste
 #, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Cette image est trop volumineuse. Choisissez-en une de moins de %{limit}."
+
+#: lib/tymeslot_web/live/admin_live/tabs.ex
+#, elixir-autogen, elixir-format
+msgid "General"
+msgstr "Général"

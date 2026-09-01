@@ -1,10 +1,10 @@
 defmodule TymeslotWeb.AdminLive do
   @moduledoc """
-  Self-hosted admin control panel. Two tabs:
+  Self-hosted admin control panel. One `live_action` per tab:
 
-    * `:settings` — toggle admin-editable runtime settings (registration,
-      password auth). These overrides shadow any matching environment
-      variable / application config value.
+    * the settings tabs (`:authentication`, `:email`, `:general`) each render
+      the sections `TymeslotWeb.AdminLive.Tabs` assigns them. Their overrides
+      shadow any matching environment variable / application config value.
     * `:users` — list users with counts at the top and
       promote/demote admin actions.
 
@@ -12,7 +12,7 @@ defmodule TymeslotWeb.AdminLive do
   plugs on the static path and the `EnsureAdminHook` on_mount on the live
   socket. Returning here from a non-admin context 404s rather than 403s.
 
-  `/admin` resolves to `:settings`; each tab's rendering lives in its own
+  `/admin` resolves to `:authentication`; each tab's rendering lives in its own
   component module under `TymeslotWeb.AdminLive.Components.*`. This module
   owns the LiveView callbacks, data loading, and event handling.
   """
@@ -536,27 +536,6 @@ defmodule TymeslotWeb.AdminLive do
   # --- Render: each tab is a thin shell around its component module ---
 
   @impl Phoenix.LiveView
-  def render(%{live_action: :settings} = assigns) do
-    ~H"""
-    <Layout.admin_layout
-      live_action={@live_action}
-      current_user={@current_user}
-      profile={@profile}
-    >
-      <Settings.settings_tab
-        effective_values={@effective_values}
-        email_logo_url={@email_logo_url}
-        upload={@uploads.email_logo}
-        logo_errors={logo_error_messages(@uploads.email_logo)}
-        stock_accent={@stock_accent}
-        accent_preview={@accent_preview}
-        accent_draft={@accent_draft}
-        max_logo_bytes={@max_logo_bytes}
-      />
-    </Layout.admin_layout>
-    """
-  end
-
   def render(%{live_action: :users} = assigns) do
     ~H"""
     <Layout.admin_layout
@@ -571,6 +550,30 @@ defmodule TymeslotWeb.AdminLive do
         admin_count={@admin_count}
         pending_action={@pending_action}
         role_change_submitting={@role_change_submitting}
+      />
+    </Layout.admin_layout>
+    """
+  end
+
+  # Every other live_action is a settings tab. The router only routes the ones
+  # `Tabs` declares, so there is no unknown-tab case to guard here.
+  def render(assigns) do
+    ~H"""
+    <Layout.admin_layout
+      live_action={@live_action}
+      current_user={@current_user}
+      profile={@profile}
+    >
+      <Settings.settings_tab
+        tab={@live_action}
+        effective_values={@effective_values}
+        email_logo_url={@email_logo_url}
+        upload={@uploads.email_logo}
+        logo_errors={logo_error_messages(@uploads.email_logo)}
+        stock_accent={@stock_accent}
+        accent_preview={@accent_preview}
+        accent_draft={@accent_draft}
+        max_logo_bytes={@max_logo_bytes}
       />
     </Layout.admin_layout>
     """

@@ -69,6 +69,7 @@ msgid "Admins"
 msgstr "Адміністратори"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication"
 msgstr "Автентифікація"
@@ -166,6 +167,7 @@ msgid "Display name"
 msgstr "Відображуване ім'я"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Електронна пошта"
@@ -185,11 +187,6 @@ msgstr "Введіть число від 0,0 до 1,0."
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Введіть дійсну адресу електронної пошти."
-
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
-#, elixir-autogen, elixir-format
-msgid "Environment / config"
-msgstr "Середовище / конфігурація"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -282,11 +279,6 @@ msgstr "Зберегти"
 msgid "Set %{name}"
 msgstr "Встановити %{name}"
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Налаштування"
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Signup min score"
@@ -332,7 +324,7 @@ msgstr "Користувача не знайдено."
 msgid "User promoted to admin."
 msgstr "Користувача підвищено до адміністратора."
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Користувачі"
@@ -606,3 +598,8 @@ msgstr "Білий текст кнопок на цьому кольорі має
 #, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Це зображення завелике. Виберіть менше за %{limit}."
+
+#: lib/tymeslot_web/live/admin_live/tabs.ex
+#, elixir-autogen, elixir-format
+msgid "General"
+msgstr "Загальні"

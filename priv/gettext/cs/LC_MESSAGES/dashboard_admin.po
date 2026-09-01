@@ -69,6 +69,7 @@ msgid "Admins"
 msgstr "Správci"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication"
 msgstr "Ověření"
@@ -166,6 +167,7 @@ msgid "Display name"
 msgstr "Zobrazované jméno"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
@@ -185,11 +187,6 @@ msgstr "Zadejte číslo mezi 0,0 a 1,0."
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Zadejte platnou e-mailovou adresu."
-
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
-#, elixir-autogen, elixir-format
-msgid "Environment / config"
-msgstr "Prostředí / konfigurace"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -282,11 +279,6 @@ msgstr "Uložit"
 msgid "Set %{name}"
 msgstr "Nastavit „%{name}“"
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Nastavení"
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Signup min score"
@@ -332,7 +324,7 @@ msgstr "Uživatel nebyl nalezen."
 msgid "User promoted to admin."
 msgstr "Uživateli bylo uděleno oprávnění správce."
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Uživatelé"
@@ -606,3 +598,8 @@ msgstr "Bílý text tlačítek na této barvě má kontrast pouze %{ratio}:1. Tl
 #, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Tento obrázek je příliš velký. Vyberte menší než %{limit}."
+
+#: lib/tymeslot_web/live/admin_live/tabs.ex
+#, elixir-autogen, elixir-format
+msgid "General"
+msgstr "Obecné"
