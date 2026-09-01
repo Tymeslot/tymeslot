@@ -289,10 +289,14 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   This previously resolved the clock through a `"time_format_type"` msgid, which
   meant any translator could change how times render by editing what looked like
   a normal string, and several catalogues had: "24 Std.", "24 год".
+
+  Takes anything with a clock face, `Time` as readily as `DateTime`: an hour
+  label and a bare interval example carry no date, and only the clock fields
+  are read.
   """
-  @spec format_time_by_locale(DateTime.t()) :: String.t()
-  def format_time_by_locale(dt) do
-    LocaleFormat.format_time(dt, Gettext.get_locale(TymeslotWeb.Gettext))
+  @spec format_time_by_locale(Calendar.time()) :: String.t()
+  def format_time_by_locale(time) do
+    LocaleFormat.format_time(time, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   @doc """
