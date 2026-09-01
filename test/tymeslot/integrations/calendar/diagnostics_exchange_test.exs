@@ -1,7 +1,14 @@
-defmodule Tymeslot.Integrations.Calendar.DiagnosticsTest do
+defmodule Tymeslot.Integrations.Calendar.DiagnosticsExchangeTest do
   @moduledoc """
   Covers the Exchange half of the diagnostic surface `mix calendar_audit` runs
   through.
+
+  A sibling of `Tymeslot.Integrations.Calendar.DiagnosticsTest`, which despite
+  its name lives in `calendar_test.exs` and covers the CalDAV, OAuth and
+  subscription paths. Kept separate rather than merged into it because the two
+  need different case templates: that one is a `DataCase` stubbing the HTTP
+  client, while these assert on the SOAP actually put on the wire and so need
+  `ExchangeCase`'s real transport.
 
   Every other provider the audit covers is probed by pairing `list_events/2`
   with `normalise_events/2`. Exchange cannot be: its `list_events/2` reads the
