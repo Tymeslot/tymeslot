@@ -83,6 +83,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   # predicates below.
   @family_index Families.build_index(@provider_families, @providers ++ @dev_only_providers)
 
+  # Providers whose module refuses every write. See `read_only?/1`.
+  @read_only_providers [:ics_url, :exchange]
+
   @oauth_providers Families.members(@provider_families, :oauth)
   @caldav_based_providers Families.members(@provider_families, :caldav)
   @caldav_based_provider_strings Families.member_strings(@provider_families, :caldav)
@@ -324,6 +327,29 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   """
   @spec subscription?(atom() | String.t() | any()) :: boolean()
   def subscription?(provider), do: in_family?(provider, :subscription)
+
+  @doc """
+  Checks whether a provider can never receive a booking.
+
+  A read-only provider's module refuses every write (`create_event/2` and
+  friends answer `{:error, :read_only}`), so one of its calendars blocks
+  availability but can never be the calendar an accepted booking is written
+  to. Two things follow, and both are enforced by callers rather than here:
+  such an integration must not be promoted to the user's primary, and its
+  calendar entries must not be offered as a default booking target.
+
+  Kept as its own list rather than derived from a family, because it cuts
+  across two of them: a subscribed feed and a read-only Exchange mailbox are
+  read-only for entirely different reasons, and a future writable EWS phase
+  would remove `:exchange` from here without touching the `:ews` family.
+  """
+  @spec read_only?(atom() | String.t() | any()) :: boolean()
+  def read_only?(provider) do
+    case parse_known(provider) do
+      {:ok, atom} -> atom in @read_only_providers
+      {:error, :unknown} -> false
+    end
+  end
 
   @doc """
   Returns EWS-based providers.

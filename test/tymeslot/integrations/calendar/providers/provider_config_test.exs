@@ -313,6 +313,49 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
     end
   end
 
+  describe "read_only?/1" do
+    test "names the providers whose module refuses every write" do
+      assert ProviderConfig.read_only?(:exchange)
+      assert ProviderConfig.read_only?("exchange")
+      assert ProviderConfig.read_only?(:ics_url)
+      assert ProviderConfig.read_only?("ics_url")
+    end
+
+    test "answers false for every provider that can receive a booking" do
+      writable =
+        ProviderConfig.provider_constraint_list()
+        |> Enum.map(fn name ->
+          {:ok, provider} = ProviderConfig.parse_known(name)
+          provider
+        end)
+        |> Enum.reject(&(&1 in [:exchange, :ics_url]))
+
+      assert writable != []
+      assert Enum.filter(writable, &ProviderConfig.read_only?/1) == []
+    end
+
+    test "answers false for a term that is not a provider" do
+      refute ProviderConfig.read_only?(nil)
+      refute ProviderConfig.read_only?("not_a_provider")
+    end
+
+    test "agrees with the provider module refusing writes" do
+      # The list is hand-maintained, so pin it to the property it claims:
+      # every provider it names must actually reject a create.
+      assert {:error, :read_only} =
+               Tymeslot.Integrations.Calendar.Exchange.Provider.create_event(%{}, %{})
+
+      assert {:error, :read_only} =
+               Tymeslot.Integrations.Calendar.Ics.Provider.create_event(%{}, %{})
+
+      assert ProviderConfig.get_provider_module(:exchange) ==
+               Tymeslot.Integrations.Calendar.Exchange.Provider
+
+      assert ProviderConfig.get_provider_module(:ics_url) ==
+               Tymeslot.Integrations.Calendar.Ics.Provider
+    end
+  end
+
   describe "ews?/1" do
     test "answers for the string form the database stores" do
       assert ProviderConfig.ews?("exchange")
