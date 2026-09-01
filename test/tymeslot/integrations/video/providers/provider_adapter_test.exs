@@ -1,14 +1,30 @@
 defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
-  use ExUnit.Case, async: true
+  # Not async: the Zoom describes below dispatch through the real
+  # VideoCircuitBreaker, an application-wide singleton keyed by provider, so
+  # this module needs to run with nothing else concurrently tripping it.
+  use ExUnit.Case, async: false
   @moduletag :integrations
 
   import Mox
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.ZoomOAuthHelperMock
 
   setup :verify_on_exit!
+
+  setup do
+    # `reset/1` is a cast, so it has to be flushed before the next test
+    # starts: a following test that dispatches to Zoom would otherwise race
+    # the reset this one left behind.
+    on_exit(fn ->
+      VideoCircuitBreaker.reset(:zoom)
+      assert %{status: :closed, failure_count: 0} = VideoCircuitBreaker.status(:zoom)
+    end)
+
+    :ok
+  end
 
   describe "detect_provider_from_url/1 (private but tested via valid_meeting_url? and extract_room_id)" do
     test "detects mirotalk" do

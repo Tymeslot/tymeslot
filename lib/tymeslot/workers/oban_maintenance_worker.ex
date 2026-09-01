@@ -30,14 +30,13 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   def perform(%Oban.Job{args: args}) do
     Logger.info("Starting Oban maintenance", args: args)
 
-    with {:ok, stuck_count} <- cleanup_stuck_jobs() do
-      Logger.info("Oban maintenance completed", stuck_jobs_cleaned: stuck_count)
+    {:ok, stuck_count} = cleanup_stuck_jobs()
+    Logger.info("Oban maintenance completed", stuck_jobs_cleaned: stuck_count)
 
-      # Schedule next run
-      schedule_next_run()
+    # Schedule next run
+    schedule_next_run()
 
-      {:ok, %{stuck_cleaned: stuck_count}}
-    end
+    {:ok, %{stuck_cleaned: stuck_count}}
   end
 
   @doc """
@@ -57,8 +56,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   @spec start_if_not_scheduled() :: :ok | {:ok, Oban.Job.t()} | {:error, term()}
   def start_if_not_scheduled do
     # Check if a maintenance job is already scheduled
-    scheduled_count =
-      Jobs.count_active_maintenance_jobs("Tymeslot.Workers.ObanMaintenanceWorker")
+    scheduled_count = Jobs.count_active_maintenance_jobs(__MODULE__)
 
     if scheduled_count == 0 do
       Logger.info("Scheduling initial Oban maintenance job")

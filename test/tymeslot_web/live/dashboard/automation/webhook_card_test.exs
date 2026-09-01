@@ -16,7 +16,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
         is_active: true,
         events: ["meeting.created", "meeting.cancelled"],
         last_triggered_at: ~U[2026-01-08 12:00:00Z],
-        last_status: "success"
+        last_status: "success",
+        disabled_reason: nil
       }
 
       assigns = %{
@@ -37,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
       assert html =~ "meeting.created"
       assert html =~ "meeting.cancelled"
       assert html =~ "Last triggered"
-      assert html =~ "success"
+      assert html =~ "Succeeded"
     end
 
     # `increment_failure_count/2` stores "failed: <reason>", so a whole-string
@@ -50,7 +51,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
         is_active: true,
         events: ["meeting.created"],
         last_triggered_at: ~U[2026-01-08 12:00:00Z],
-        last_status: "failed: HTTP 500"
+        last_status: "failed: HTTP 500",
+        disabled_reason: nil
       }
 
       assigns = %{
@@ -66,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
       }
 
       html = render_component(&WebhookCard.webhook_card/1, assigns)
-      assert html =~ "failed: HTTP 500"
+      assert html =~ "Failed: HTTP 500"
       assert html =~ "text-red-600"
     end
 
@@ -83,7 +85,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
         is_active: true,
         events: ["meeting.created"],
         last_triggered_at: ~U[2026-01-08 12:00:00Z],
-        last_status: "failed: connection refused"
+        last_status: "failed: connection refused",
+        disabled_reason: nil
       }
 
       assigns = %{
@@ -99,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
       }
 
       html = render_component(&WebhookCard.webhook_card/1, assigns)
-      assert html =~ "failed: connection refused"
+      assert html =~ "Failed: connection refused"
       assert html =~ "text-red-600"
       refute html =~ "Never triggered"
     end
@@ -112,7 +115,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
         is_active: true,
         events: ["meeting.created"],
         last_triggered_at: nil,
-        last_status: nil
+        last_status: nil,
+        disabled_reason: nil
       }
 
       assigns = %{
@@ -140,7 +144,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
         is_active: false,
         events: [],
         last_triggered_at: nil,
-        last_status: nil
+        last_status: nil,
+        disabled_reason: nil
       }
 
       assigns = %{
@@ -160,6 +165,35 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
       refute html =~ "Last triggered"
     end
 
+    # An auto-disabled webhook (`Webhooks.record_delivery_failure/2` past the
+    # failure threshold) must tell the user why, not just that it stopped.
+    test "surfaces the disabled reason for an auto-disabled webhook" do
+      webhook = %{
+        id: 1,
+        name: "Auto-disabled Webhook",
+        url: "https://example.com/webhook",
+        is_active: false,
+        events: [],
+        last_triggered_at: nil,
+        last_status: nil,
+        disabled_reason: "Too many consecutive failures: HTTP 500"
+      }
+
+      assigns = %{
+        webhook: webhook,
+        testing: false,
+        target: "#webhook-1",
+        on_edit: "edit",
+        on_delete: "delete",
+        on_toggle: "toggle",
+        on_test: "test",
+        on_view_deliveries: "logs"
+      }
+
+      html = render_component(&WebhookCard.webhook_card/1, assigns)
+      assert html =~ "Too many consecutive failures: HTTP 500"
+    end
+
     test "renders testing state with the button disabled and showing 'Testing' label" do
       webhook = %{
         id: 1,
@@ -168,7 +202,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
         is_active: true,
         events: [],
         last_triggered_at: nil,
-        last_status: nil
+        last_status: nil,
+        disabled_reason: nil
       }
 
       assigns = %{

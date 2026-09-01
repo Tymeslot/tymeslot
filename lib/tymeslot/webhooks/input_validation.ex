@@ -21,12 +21,22 @@ defmodule Tymeslot.Webhooks.InputValidation do
     field(:events, {:array, :string}, default: [])
   end
 
+  # Interactive validation (every blur, every event-checkbox toggle) and the
+  # actual save used to share this one bucket, so typing could spend the
+  # budget the save needed and refuse a save the user never rate-limited
+  # themselves on. Interactive callers pass `:bucket` / `:limit` to use a
+  # separate, looser budget; the save path keeps the defaults below.
+  @default_bucket "webhook_form"
+  @default_limit 60
+  @window_ms 60_000
+
   @doc """
   Validates webhook form input.
 
   ## Parameters
   - `params` - Map containing webhook form parameters
-  - `opts` - Options including metadata for logging
+  - `opts` - Options including metadata for logging, plus `:bucket` and
+    `:limit` to use a rate-limit budget other than the save path's default
 
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
@@ -35,8 +45,10 @@ defmodule Tymeslot.Webhooks.InputValidation do
           {:ok, map()} | {:error, map() | :rate_limited}
   def validate_webhook_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
+    bucket = Keyword.get(opts, :bucket, @default_bucket)
+    limit = Keyword.get(opts, :limit, @default_limit)
 
-    case check_rate_limit("webhook_form", metadata) do
+    case check_rate_limit(bucket, metadata, limit) do
       :ok ->
         with {:ok, sanitized_params} <- sanitize_text_fields(params, metadata) do
           sanitized_params
@@ -95,8 +107,8 @@ defmodule Tymeslot.Webhooks.InputValidation do
   # break: never one instance-wide bucket, the actor is always required.
   # A bare literal key gave every logged-in user of an instance the same 60/min
   # budget, so one of them could refuse webhook edits for all the others.
-  defp check_rate_limit(bucket_key, metadata) do
-    case RateLimiter.check_rate_limit(actor_bucket(bucket_key, metadata), 60, 60_000) do
+  defp check_rate_limit(bucket_key, metadata, limit) do
+    case RateLimiter.check_rate_limit(actor_bucket(bucket_key, metadata), limit, @window_ms) do
       :ok -> :ok
       {:error, _reason} -> {:error, :rate_limited}
     end
@@ -133,6 +145,15 @@ defmodule Tymeslot.Webhooks.InputValidation do
 
   defp sanitize_field_for_form(value, _field, _metadata) when value in [nil, ""], do: {:ok, value}
 
+  # `UniversalSanitizer`'s moduledoc warns `:plain_text` mode away from
+  # values that get interpolated into URLs, because `:strict` mode is the
+  # one that would normally guard against that. Here the value IS the URL
+  # itself, not something interpolated into one: `:strict` would mangle a
+  # legitimate query string or a `--` path segment via its SQL-injection and
+  # path-traversal stripping, and `:plain_text` only strips null bytes and
+  # trims — every scheme/host/private-IP check still runs afterwards via
+  # `validate_url_format/1` -> `UrlValidation.validate_http_url/2`, which is
+  # what actually rejects `javascript:`, `data:`, and similar.
   defp sanitize_field_for_form(value, field, metadata) when is_binary(value) do
     case UniversalSanitizer.sanitize_and_validate(value, mode: :plain_text, metadata: metadata) do
       {:ok, sanitized} -> {:ok, sanitized}

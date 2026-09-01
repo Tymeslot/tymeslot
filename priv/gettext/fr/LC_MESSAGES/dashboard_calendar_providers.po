@@ -1132,3 +1132,8 @@ msgstr "Le calendrier de réservation n’existe plus sur Outlook. Veuillez reco
 #, elixir-autogen, elixir-format
 msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
 msgstr "Connexion à %{url} établie et vos identifiants ont été acceptés, mais aucune collection de calendriers n’a été trouvée. Saisissez l’URL complète de votre collection de calendriers, telle qu’indiquée dans les paramètres de votre serveur de calendrier."
+
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
+msgstr "Le serveur de calendrier a répondu à cette adresse, mais il n’y accepte pas les requêtes de calendrier. Veuillez vérifier l’URL du serveur."

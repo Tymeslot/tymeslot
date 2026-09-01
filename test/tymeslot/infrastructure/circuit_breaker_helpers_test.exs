@@ -72,6 +72,32 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpersTest do
                  fn -> {:ok, :ignored} end
                )
     end
+
+    test "returns {:error, :circuit_breaker_error} instead of exiting when the breaker dies mid-call" do
+      # `GenServer.call/3` signals a dead/crashed target as an *exit*, not a
+      # raised exception, so `rescue` alone cannot see it. Simulate that by
+      # registering a plain process (not a real breaker) under the via tuple
+      # that exits the instant it receives the call.
+      key = "cbh_dying_#{System.unique_integer([:positive])}"
+      via = {:via, Registry, {@registry, key}}
+      test_pid = self()
+
+      spawn(fn ->
+        Registry.register(@registry, key, nil)
+        send(test_pid, :registered)
+
+        receive do
+          {:"$gen_call", _from, _request} -> exit(:simulated_crash)
+        end
+      end)
+
+      assert_receive :registered
+
+      assert {:error, :circuit_breaker_error} =
+               CircuitBreakerHelpers.call_with_breaker(via, :test, "Test", fn ->
+                 {:ok, :ignored}
+               end)
+    end
   end
 
   describe "breaker_exists?/1" do

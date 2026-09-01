@@ -372,4 +372,75 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
       assert meta.email_masked == nil
     end
   end
+
+  describe "monitoring webhook payload" do
+    setup do
+      Mox.set_mox_global()
+
+      original_enabled = Application.get_env(:tymeslot, :security_monitoring_enabled)
+      original_webhook = Application.get_env(:tymeslot, :security_monitoring_webhook)
+
+      Application.put_env(:tymeslot, :security_monitoring_enabled, true)
+      Application.put_env(:tymeslot, :security_monitoring_webhook, "https://example.com/webhook")
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :security_monitoring_enabled, original_enabled)
+        Application.put_env(:tymeslot, :security_monitoring_webhook, original_webhook)
+      end)
+
+      :ok
+    end
+
+    test "carries lockout_type to the webhook, not just the Logger line" do
+      test_pid = self()
+
+      Mox.expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        send(test_pid, {:webhook_body, Jason.decode!(body)})
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_account_lockout("alice@example.com", "account_throttled", %{
+          user_id: 7
+        })
+      end)
+
+      assert_receive {:webhook_body, payload}, 1000
+      assert payload["lockout_type"] == "account_throttled"
+      assert payload["email_masked"] == "a***@example.com"
+      refute Jason.encode!(payload) =~ "alice@example.com"
+    end
+
+    test "carries limit_type to the webhook" do
+      test_pid = self()
+
+      Mox.expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        send(test_pid, {:webhook_body, Jason.decode!(body)})
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_rate_limit_violation("dave@example.com", "signup", %{})
+      end)
+
+      assert_receive {:webhook_body, payload}, 1000
+      assert payload["limit_type"] == "signup"
+    end
+
+    test "carries provider to the webhook" do
+      test_pid = self()
+
+      Mox.expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        send(test_pid, {:webhook_body, Jason.decode!(body)})
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      capture_security_logs(fn ->
+        SecurityLogger.log_social_auth_event("github", false, %{ip_address: "203.0.113.5"})
+      end)
+
+      assert_receive {:webhook_body, payload}, 1000
+      assert payload["provider"] == "github"
+    end
+  end
 end

@@ -103,19 +103,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Manage calendars"
   end
 
-  test "renders shared close_button correctly" do
-    assigns = %{target: "some-target"}
-    html = render_component(&UIComponents.close_button/1, assigns)
-    doc = Floki.parse_document!(html)
-
-    assert Floki.find(
-             doc,
-             "button[phx-click='back_to_providers'][phx-target='some-target'][title='Close']"
-           ) != []
-
-    assert Floki.text(doc) =~ "Close"
-  end
-
   test "renders shared form_submit_button correctly" do
     # Non-saving state
     assigns = %{saving: false, text: "Save Me"}

@@ -68,12 +68,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
   Uses request coalescing to prevent duplicate API calls when multiple
   requests for the same date range occur simultaneously.
   """
-  @spec get_events_for_range_fresh(Date.t(), Date.t()) :: {:error, :user_id_required}
-  def get_events_for_range_fresh(_start_date, _end_date) do
-    # No implicit user context allowed anymore
-    {:error, :user_id_required}
-  end
-
   @spec get_events_for_range_fresh(user_id(), Date.t() | DateTime.t(), Date.t() | DateTime.t()) ::
           {:ok, list(map())} | {:error, term()}
   def get_events_for_range_fresh(user_id, start_date, end_date) when is_integer(user_id) do

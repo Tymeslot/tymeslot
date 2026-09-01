@@ -41,9 +41,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
     )
 
     # Broadcast event for apps to handle
-    topic = "payment_events:tymeslot"
-
-    PubSub.broadcast(topic, %{
+    PubSub.broadcast_to_payment_events(%{
       event: normalize_event_name(event_type),
       subscription_id: subscription_id,
       subscription_data: subscription

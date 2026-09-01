@@ -3,7 +3,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   Tests for the booking cancellation module.
   """
 
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :bookings
 

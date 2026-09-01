@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Providers.DirectoryTest do
 
   alias Tymeslot.Integrations.Providers.Descriptor
   alias Tymeslot.Integrations.Providers.Directory
+  alias Tymeslot.Integrations.Providers.Families
 
   describe "list/1" do
     test "lists calendar providers" do
@@ -68,6 +69,34 @@ defmodule Tymeslot.Integrations.Providers.DirectoryTest do
     test "returns error for unknown provider" do
       assert {:error, :unknown_provider} = Directory.oauth?(:calendar, "nonexistent")
       assert {:error, :unknown_provider} = Directory.oauth?(:calendar, :nonexistent)
+    end
+  end
+
+  describe "family" do
+    test "descriptors carry the family their domain's config declares" do
+      assert %Descriptor{family: :oauth} = Directory.get(:calendar, :google)
+      assert %Descriptor{family: :caldav} = Directory.get(:calendar, :baikal)
+      assert %Descriptor{family: :subscription} = Directory.get(:calendar, :ics_url)
+      assert %Descriptor{family: :oauth} = Directory.get(:video, :zoom)
+      assert %Descriptor{family: :other} = Directory.get(:video, :mirotalk)
+    end
+
+    test "oauth is never a second opinion: it is exactly :oauth-family membership" do
+      descriptors = Directory.list(:calendar) ++ Directory.list(:video)
+      assert descriptors != []
+
+      disagreeing = Enum.reject(descriptors, &(&1.oauth == (&1.family == :oauth)))
+
+      assert disagreeing == [],
+             "these descriptors' oauth flag contradicts their family: " <>
+               inspect(Enum.map(disagreeing, & &1.type))
+    end
+
+    test "every provider is filed under a family in the shared vocabulary" do
+      descriptors = Directory.list(:calendar) ++ Directory.list(:video)
+      assert descriptors != []
+
+      assert Enum.reject(descriptors, &(&1.family in Families.all())) == []
     end
   end
 

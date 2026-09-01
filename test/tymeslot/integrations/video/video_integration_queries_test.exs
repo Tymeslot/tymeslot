@@ -256,6 +256,37 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
     end
   end
 
+  describe "delete_if_still_deleted/1" do
+    test "deletes a still-soft-deleted row and returns 1" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+      assert {:ok, soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      assert VideoIntegrationQueries.delete_if_still_deleted(soft.id) == 1
+      assert {:error, :not_found} = VideoIntegrationQueries.get(soft.id)
+    end
+
+    test "leaves a reconnected row alone and returns 0" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+      assert {:ok, soft} = VideoIntegrationQueries.soft_delete(integration)
+
+      # Reconnected before the purge landed: `deleted_at` is nil again.
+      assert {:ok, reconnected} =
+               VideoIntegrationQueries.update_credentials(soft, %{is_active: true})
+
+      refute reconnected.deleted_at
+
+      assert VideoIntegrationQueries.delete_if_still_deleted(reconnected.id) == 0
+      assert {:ok, still_there} = VideoIntegrationQueries.get(reconnected.id)
+      assert still_there.id == reconnected.id
+    end
+
+    test "returns 0 for an id that does not exist" do
+      assert VideoIntegrationQueries.delete_if_still_deleted(-1) == 0
+    end
+  end
+
   # Every uniqueness index is predicated on `is_active = true`, so reactivating
   # a row moves it into the index. The nil and "" account ids used to be waved
   # through, which is exactly the pair the legacy-row and account indexes

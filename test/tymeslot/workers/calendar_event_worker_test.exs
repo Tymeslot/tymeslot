@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -36,6 +37,33 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
       assert updated_meeting.calendar_integration_id == integration.id
       assert updated_meeting.calendar_path == "primary"
+    end
+
+    test "invalidates the organiser's availability cache after a successful create" do
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario()
+      expect_calendar_create_success(integration.id)
+
+      cache_key =
+        AvailabilityCache.month_availability_key(
+          meeting.organizer_user_id,
+          2026,
+          6,
+          "UTC",
+          30
+        )
+
+      # Seed the cache the way a booking-page render would, so we can prove
+      # the worker's post-create write clears it rather than leaving the
+      # busy block computed before the event existed.
+      assert "stale" == AvailabilityCache.get_or_compute(cache_key, fn -> "stale" end)
+
+      assert :ok =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "create",
+                 "meeting_id" => meeting.id
+               })
+
+      assert "fresh" == AvailabilityCache.get_or_compute(cache_key, fn -> "fresh" end)
     end
 
     test "handles rate limiting by snoozing with exponential backoff" do

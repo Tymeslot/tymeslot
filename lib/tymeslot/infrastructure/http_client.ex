@@ -5,12 +5,14 @@ defmodule Tymeslot.Infrastructure.ResponseTooLargeError do
   the budget, so the oversized body is never fully held in memory.
   """
 
+  alias Tymeslot.Infrastructure.HTTPClient
+
   defexception [:url, :max_bytes]
 
   @impl Exception
   def message(%__MODULE__{url: url, max_bytes: max_bytes}) do
-    %URI{scheme: scheme, host: host} = URI.parse(url)
-    "response from #{scheme}://#{host} exceeded the #{max_bytes} byte limit"
+    origin = HTTPClient.log_safe_origin(url)
+    "response from #{origin} exceeded the #{max_bytes} byte limit"
   end
 end
 
@@ -58,6 +60,23 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     report: 60_000,
     propfind: 60_000
   }
+
+  @doc """
+  Reduces a URL to `scheme://host` for logging: never the path or query,
+  since some destinations (the Telegram Bot API) carry their credential in
+  the URL path. Falls back to `"unknown"` for a URL with no scheme/host
+  (relative or malformed) rather than logging a bare `"://"`.
+  """
+  @spec log_safe_origin(String.t()) :: String.t()
+  def log_safe_origin(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host} when is_binary(scheme) and is_binary(host) ->
+        "#{scheme}://#{host}"
+
+      _other ->
+        "unknown"
+    end
+  end
 
   @doc """
   Performs a GET request.
@@ -194,10 +213,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
           {:ok, Response.t()} | {:error, Exception.t()}
   defp finish_capped_body({:ok, %Response{} = response}, url, max_bytes) do
     if Response.get_private(response, :tymeslot_body_too_large, false) do
-      %URI{scheme: scheme, host: host} = URI.parse(url)
-
       Logger.warning("Aborted an oversized HTTP response",
-        url: "#{scheme}://#{host}",
+        url: log_safe_origin(url),
         status_code: response.status,
         max_response_bytes: max_bytes
       )
@@ -255,10 +272,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         do_request(method, url, body, headers, safe_options)
 
       {:error, reason} ->
-        %URI{scheme: scheme, host: host} = URI.parse(url)
-
         Logger.warning("Blocked outbound request by SSRF protection",
-          url: "#{scheme}://#{host}",
+          url: log_safe_origin(url),
           reason: inspect(reason)
         )
 
@@ -384,11 +399,9 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     # in the URL path, and this debug log is not the place to re-derive which
     # paths are safe to print.
     if proxy_config do
-      %URI{scheme: scheme, host: host} = URI.parse(url)
-
       Logger.debug("Using proxy for request",
         proxy: "#{proxy_config.host}:#{proxy_config.port}",
-        url: "#{scheme}://#{host}"
+        url: log_safe_origin(url)
       )
     end
 

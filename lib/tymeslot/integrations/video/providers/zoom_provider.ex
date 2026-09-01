@@ -72,6 +72,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   # `{:provider_error, _}` so the caller can still let the breaker witness it.
   @spec precheck_create_meeting_room(map()) ::
           {:ok, String.t()} | {:error, term()} | {:provider_error, term()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def precheck_create_meeting_room(config) do
     with {:ok, :valid} <- validate_zoom_scope(config, :write) do
       classify_token_result(get_access_token(config))
@@ -84,6 +85,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   # resolved, so it never repeats the OAuth round-trip.
   @spec finish_create_meeting_room(String.t(), map()) ::
           {:ok, RoomData.t()} | {:error, term()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def finish_create_meeting_room(token, config) do
     with {:ok, {start_time, end_time}} <- Payload.get_meeting_times(config),
          {:ok, meeting} <- create_scheduled_meeting(token, start_time, end_time, config) do
@@ -405,7 +407,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         Payload.decode_and_format_error(status, body)
 
       {:error, reason} ->
-        {:error, "Network error: #{inspect(reason)}"}
+        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
+        # transport reason atom) rather than flattened to prose, so
+        # `BreakerOutcome` recognises a genuine transport failure and lets the
+        # breaker witness it.
+        {:error, reason}
     end
   end
 
@@ -480,7 +486,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         Payload.decode_and_format_error(status, body)
 
       {:error, reason} ->
-        {:error, "Network error: #{inspect(reason)}"}
+        {:error, reason}
     end
   end
 
@@ -579,7 +585,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   defp handle_error_response({:error, reason}, _config, _operation),
-    do: {:error, "Network error: #{inspect(reason)}"}
+    do: {:error, reason}
 
   defp delete_scheduled_meeting(token, room_id, config) do
     url = "#{@api_base_url}/meetings/#{room_id}"

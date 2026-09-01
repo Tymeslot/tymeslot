@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.Providers.CustomProvider

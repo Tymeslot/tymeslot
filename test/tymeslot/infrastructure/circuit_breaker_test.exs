@@ -3,6 +3,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
 
   @moduletag :infrastructure
 
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Infrastructure.CircuitBreaker
 
   @registry Tymeslot.Infrastructure.CircuitBreakerRegistry
@@ -83,6 +85,32 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
                CircuitBreaker.call(name, fn -> raise "boom" end)
 
       assert %{failure_count: 0} = CircuitBreaker.status(name)
+    end
+
+    test "a 3-element {:error, reason, message} return counts as a failure, not a success" do
+      name = start_breaker(config: %{failure_threshold: 1})
+
+      assert {:error, :network_error, "boom"} =
+               CircuitBreaker.call(name, fn -> {:error, :network_error, "boom"} end)
+
+      assert %{status: :open} = CircuitBreaker.status(name)
+    end
+
+    test "an unrecognised outcome from a custom :classify function is treated as :ignore rather than crashing the breaker" do
+      name = start_breaker()
+
+      log =
+        capture_log(fn ->
+          assert {:ok, :whatever} =
+                   CircuitBreaker.call(name, fn -> {:ok, :whatever} end,
+                     classify: fn _result -> :bogus end
+                   )
+        end)
+
+      assert log =~ "unrecognised outcome"
+
+      # The breaker survived and treated the bogus outcome as :ignore (untouched state).
+      assert %{status: :closed, success_count: 0, failure_count: 0} = CircuitBreaker.status(name)
     end
   end
 
@@ -176,6 +204,33 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       assert %{status: :closed} = CircuitBreaker.status(name)
     end
 
+    test "an :ignore outcome releases the grant instead of permanently spending it" do
+      name =
+        start_breaker(
+          config: %{
+            failure_threshold: 1,
+            recovery_timeout: @time_window_ms,
+            half_open_requests: 2
+          }
+        )
+
+      CircuitBreaker.call(name, fn -> {:provider_error, :fail} end)
+      assert %{status: :open} = CircuitBreaker.status(name)
+
+      Process.sleep(@sleep_ms)
+
+      # A local, non-provider error must not permanently burn one of the
+      # round's two grants — otherwise only one success is ever reachable
+      # and the circuit can never close.
+      assert {:error, :insufficient_scope} =
+               CircuitBreaker.call(name, fn -> {:error, :insufficient_scope} end)
+
+      assert {:ok, :ok1} = CircuitBreaker.call(name, fn -> {:ok, :ok1} end)
+      assert {:ok, :ok2} = CircuitBreaker.call(name, fn -> {:ok, :ok2} end)
+
+      assert %{status: :closed} = CircuitBreaker.status(name)
+    end
+
     test "failure in half-open immediately reopens the circuit" do
       name =
         start_breaker(
@@ -241,6 +296,23 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       # Defaults should still be present
       assert config.recovery_timeout == :timer.minutes(5)
       assert config.half_open_requests == 3
+    end
+  end
+
+  describe "idle timeout" do
+    test "defaults to :infinity so a statically supervised breaker is never idle-stopped" do
+      name = start_breaker()
+
+      assert %{idle_timeout: :infinity} = :sys.get_state(name)
+    end
+
+    test "an explicit :idle_timeout is armed and self-stops the breaker after that many ms" do
+      name = via_name()
+      start_supervised!({CircuitBreaker, name: name, config: %{}, idle_timeout: 50})
+      pid = GenServer.whereis(name)
+
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 1_000
     end
   end
 

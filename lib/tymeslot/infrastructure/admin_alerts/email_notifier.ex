@@ -73,6 +73,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   defp self_referential?(:oban_job_failure, %{worker: worker}),
     do: to_string(worker) == email_worker_name()
 
+  # A rejected recipient alert about the admin-alert email itself (e.g. the
+  # configured `:admin_alert_email` bounces) would otherwise re-enqueue
+  # another admin-alert email to that same dead address, which bounces again,
+  # raising another alert — the exact feedback loop this function exists to
+  # break. `TransactionalEmailDelivery`/`EmailWorker` tag every
+  # `:recipient_email_rejected` report with the job's `action`, and
+  # `"send_admin_alert"` is the action `AdminAlertScheduler` uses exclusively.
+  defp self_referential?(:recipient_email_rejected, %{action: "send_admin_alert"}), do: true
+
   defp self_referential?(_type, _metadata), do: false
 
   # Resolved at runtime rather than into a module attribute: naming the module

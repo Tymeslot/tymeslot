@@ -45,11 +45,14 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   # Query-string key carrying the schedule the page is editing.
   @schedule_param "schedule"
 
-  # {preset values, value used when switching a preset into custom mode}
-  @policy_presets %{
-    buffer_minutes: {[0, 5, 10, 15, 30, 60], 45},
-    advance_booking_days: {[7, 14, 30, 60, 90, 180], 120},
-    min_advance_hours: {[0, 1, 4, 24, 48, 168], 12}
+  # Value seeded into the custom input when a field currently sitting on a
+  # preset is switched into custom mode. The preset lists themselves are
+  # `CustomInputModeHelper.presets/1`, the same table the card renders its tags
+  # from, so this cannot fall out of step with what the user sees.
+  @policy_custom_seed %{
+    buffer_minutes: 45,
+    advance_booking_days: 120,
+    min_advance_hours: 12
   }
 
   @impl Phoenix.LiveComponent
@@ -400,9 +403,12 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   defp enable_custom_policy(socket, field) do
     schedule = socket.assigns.selected_schedule
-    {presets, fallback} = Map.fetch!(@policy_presets, field)
     current = Map.fetch!(schedule, field)
-    custom_value = if current in presets, do: fallback, else: current
+
+    custom_value =
+      if current in CustomInputModeHelper.presets(field),
+        do: Map.fetch!(@policy_custom_seed, field),
+        else: current
 
     case Schedules.update_policy(schedule, %{field => custom_value}) do
       {:ok, updated} ->

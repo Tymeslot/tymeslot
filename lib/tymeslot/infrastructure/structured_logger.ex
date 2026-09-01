@@ -52,9 +52,6 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
       :password_reset_completed ->
         Logger.info("Password reset completed", merged_metadata)
 
-      :account_locked ->
-        Logger.error("Account locked due to too many failed attempts", merged_metadata)
-
       _other ->
         Logger.info("Authentication event", merged_metadata)
     end

@@ -59,14 +59,28 @@ defmodule Tymeslot.WebhooksSsrfTest do
 
     setup do
       setup_config(:tymeslot, :environment, :prod)
+      # Literal private-IP redirect targets (127.0.0.1, 169.254.169.254) are
+      # rejected by `UrlValidation`'s syntax-level check alone, before the
+      # DNS resolver is ever consulted — a test built on one would keep
+      # passing even if the per-hop `SsrfValidator.check/1` call were deleted
+      # from `HttpDelivery.follow_redirect/7` entirely, since nothing else
+      # in this test proves that call still happens. Substituting the DNS
+      # resolver and redirecting to a hostname that only "resolves" private
+      # according to the stub closes that gap: the redirect can only be
+      # blocked if the hop is actually re-validated.
+      setup_config(:tymeslot, :dns_resolver_module, Tymeslot.DnsResolverMock)
       :ok
     end
 
-    test "blocks a redirect to a private address even when the initial URL is public" do
-      # The initial URL passes the syntax/scheme check, but the probe must not
-      # follow a same-request redirect to a private/loopback address blind —
-      # every hop is re-validated (mirrors the fix applied to the custom video
-      # provider's reachability probe).
+    test "blocks a redirect to a hostname that DNS-resolves to a private address" do
+      stub(Tymeslot.DnsResolverMock, :check_private_ip, fn url, _opts ->
+        if String.contains?(url, "rebinding.example.com") do
+          {:error, "URL resolves to a private or local network address"}
+        else
+          :ok
+        end
+      end)
+
       expect(Tymeslot.HTTPClientMock, :post, 1, fn "https://example.com/webhook",
                                                    _body,
                                                    _headers,
@@ -75,15 +89,31 @@ defmodule Tymeslot.WebhooksSsrfTest do
          %Req.Response{
            status: 302,
            body: "",
-           headers: %{"location" => ["http://127.0.0.1:8080/internal"]}
+           headers: %{"location" => ["https://rebinding.example.com/internal"]}
          }}
       end)
 
-      assert {:error, _message} =
+      assert {:error, message} =
                Webhooks.test_webhook_connection("https://example.com/webhook")
+
+      # Specifically the redirect-hop rejection (`:blocked_redirect`), not
+      # the generic initial-URL rejection (`:blocked_by_ssrf`) — the two map
+      # to distinct messages in `Webhooks.map_test_connection_result/1`, so
+      # this fails if the hop check stops running (the initial check alone
+      # would never reach this message) or is replaced by a syntax-only check
+      # that a bare hostname sails through.
+      assert message =~ "redirected to a private or restricted address"
     end
 
-    test "blocks a redirect to the cloud metadata endpoint" do
+    test "blocks a redirect to a hostname that DNS-resolves to the cloud metadata address" do
+      stub(Tymeslot.DnsResolverMock, :check_private_ip, fn url, _opts ->
+        if String.contains?(url, "metadata.example.com") do
+          {:error, "URL resolves to a private or local network address"}
+        else
+          :ok
+        end
+      end)
+
       expect(Tymeslot.HTTPClientMock, :post, 1, fn "https://example.com/webhook",
                                                    _body,
                                                    _headers,
@@ -92,12 +122,14 @@ defmodule Tymeslot.WebhooksSsrfTest do
          %Req.Response{
            status: 302,
            body: "",
-           headers: %{"location" => ["http://169.254.169.254/latest/meta-data/"]}
+           headers: %{"location" => ["https://metadata.example.com/latest/meta-data/"]}
          }}
       end)
 
-      assert {:error, _message} =
+      assert {:error, message} =
                Webhooks.test_webhook_connection("https://example.com/webhook")
+
+      assert message =~ "redirected to a private or restricted address"
     end
   end
 end

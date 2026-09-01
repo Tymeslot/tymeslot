@@ -56,9 +56,14 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
   # Mirrors `locked_states_for(:meeting_payments_enabled, ...)` below so the
   # UI hint and the actual write-path enforcement cannot drift apart: a
   # concurrent request that races past the UI's greyed-out toggle must still
-  # be refused here, under the row lock.
-  defp meeting_payments_would_be_unusable?(merged_row, attrs) do
-    next_effective_value(:meeting_payments_enabled, merged_row, attrs) == true and
+  # be refused here, under the row lock. Gated on the update itself setting
+  # the key (rather than the *effective* value) so this stays scoped to
+  # payments writes: an install that already has meeting payments enabled
+  # without Stripe credentials must still be able to save unrelated settings,
+  # and the auth toggles must not grey out because of an unrelated payments
+  # misconfiguration.
+  defp meeting_payments_would_be_unusable?(_merged_row, attrs) do
+    match?({:ok, true}, Map.fetch(attrs, :meeting_payments_enabled)) and
       not MeetingPayments.platform_configured?()
   end
 

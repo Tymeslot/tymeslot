@@ -1,4 +1,13 @@
 defmodule Tymeslot.AuthTest do
+  @moduledoc """
+  Tests for the `Tymeslot.Auth` context.
+
+  This module is `async: true`, so nothing in it may write Application env:
+  those flags are global and a test flipping one switches it for every module
+  running alongside. `Tymeslot.AuthRegistrationDisabledTest` is the `async:
+  false` home for the registration flag.
+  """
+
   use Tymeslot.DataCase, async: true
 
   @moduletag :auth
@@ -7,6 +16,7 @@ defmodule Tymeslot.AuthTest do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Auth.UserTokenQueries
+  alias Tymeslot.Infrastructure.PubSub
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
 
@@ -93,25 +103,6 @@ defmodule Tymeslot.AuthTest do
     end
   end
 
-  describe "register_user/3 — registration disabled" do
-    test "returns registration_disabled error when flag is off" do
-      original = Application.get_env(:tymeslot, :registration_enabled)
-      Application.put_env(:tymeslot, :registration_enabled, false)
-      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
-
-      params = %{
-        "email" => "new@example.com",
-        "password" => "ValidPassword123!",
-        "password_confirmation" => "ValidPassword123!",
-        "name" => "New User",
-        "terms_accepted" => "true"
-      }
-
-      assert {:error, :registration_disabled, "Registration is currently disabled."} =
-               Auth.register_user(params, %Plug.Conn{})
-    end
-  end
-
   describe "password_reset" do
     test "oauth users cannot reset passwords" do
       oauth_user = insert(:user, provider: "google", password_hash: nil)
@@ -120,20 +111,48 @@ defmodule Tymeslot.AuthTest do
   end
 
   describe "verify_user_email/1" do
-    test "verifies email, returns the user, and broadcasts :user_registered" do
+    test "verifies the email without re-broadcasting :user_registered" do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
       {:ok, _updated} = UserTokenQueries.set_verification_token(user, token)
 
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "auth:user_registered")
+      assert :ok = Auth.subscribe_to_user_registrations()
 
       assert {:ok, verified_user} = Auth.verify_user_email(token)
       assert verified_user.id == user.id
 
       user_id = user.id
-      # The broadcast runs in a supervised task, so there is no synchronisation
-      # point to wait on; the window is generous rather than tight.
-      assert_receive {:user_registered, %{user: %{id: ^user_id}}}, 5_000
+      # Registration already broadcast this event for this user at signup;
+      # a second broadcast at verification made every subscriber keeping
+      # per-event tallies count a verified password signup twice. The refute
+      # matches this test's user id only, so a registration broadcast from a
+      # concurrently running async test cannot trip it.
+      refute_receive {:user_registered, %{user: %{id: ^user_id}}}, 200
+    end
+  end
+
+  describe "subscribe_to_user_registrations/0" do
+    test "delivers a real registration broadcast to the caller" do
+      assert :ok = Auth.subscribe_to_user_registrations()
+
+      user = insert(:user)
+      user_id = user.id
+      metadata = %{terms_accepted: true, ip: "203.0.113.7"}
+
+      assert :ok = Auth.broadcast_user_registered(user, metadata)
+
+      assert_receive {:user_registered, %{user: %{id: ^user_id}, metadata: ^metadata}}
+    end
+
+    # Subscribers outside this context must not be able to spell the topic or
+    # resolve the transport: that is precisely what let a rename here orphan
+    # them without a compile error.
+    test "neither the context nor its PubSub module exposes a topic or server accessor" do
+      context_functions = Keyword.keys(Auth.__info__(:functions))
+      pubsub_functions = Keyword.keys(PubSub.__info__(:functions))
+
+      refute :get_pubsub_server in context_functions
+      refute :user_registered_topic in pubsub_functions
     end
   end
 

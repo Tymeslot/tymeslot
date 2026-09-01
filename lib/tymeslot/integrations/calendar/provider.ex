@@ -135,6 +135,27 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
               {:ok, list()} | {:error, any()}
 
   @doc """
+  Declares which representation `list_events/2` hands back.
+
+  `:raw` is the provider's own wire format, the shape its own
+  `normalise_events/2` parses: iCalendar text for the CalDAV family, decoded
+  API payloads for the OAuth providers. Pairing the two callbacks is only
+  valid for these.
+
+  `:normalised` means `list_events/2` has already mapped its events into the
+  plain-map shape the availability path consumes. Cache-backed providers
+  return this: they read the local event cache rather than the network (see
+  `Tymeslot.Integrations.Calendar.Ics.Provider`), so there is no raw payload
+  left to parse and feeding the result to `normalise_events/2` would fail
+  deep inside a parser.
+
+  There is no default implementation: every provider must declare its
+  representation explicitly, so a new provider that omits it fails
+  `mix compile --warnings-as-errors` instead of being silently assumed raw.
+  """
+  @callback list_events_representation() :: :raw | :normalised
+
+  @doc """
   Discovers the user's calendars given a persisted integration.
 
   Unified entry point for the dashboard's "discover calendars" flow. CalDAV

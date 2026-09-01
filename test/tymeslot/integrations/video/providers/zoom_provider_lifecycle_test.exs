@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox
@@ -113,9 +113,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
          }}
       end)
 
-      assert {:error, message} = ZoomProvider.create_meeting_room(config)
+      assert {:error, {:http_error, 401, message}} = ZoomProvider.create_meeting_room(config)
       assert String.contains?(message, "Invalid access token")
-      assert String.contains?(message, "401")
       assert String.contains?(message, "124")
     end
 
@@ -154,8 +153,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
         {:error, :timeout}
       end)
 
-      assert {:error, message} = ZoomProvider.create_meeting_room(config)
-      assert String.contains?(message, "Network error")
+      assert {:error, :timeout} = ZoomProvider.create_meeting_room(config)
     end
 
     test "refreshes token when validate_token returns :needs_refresh and persists to database" do

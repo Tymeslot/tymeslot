@@ -91,6 +91,7 @@ defmodule Tymeslot.EmailTestHelpers do
       organizer_video_url: "https://meet.example.com/#{uid}?role=host",
       attendee_video_url: "https://meet.example.com/#{uid}?role=guest",
       view_url: "#{base_url}/meetings/#{uid}",
+      booking_url: "#{base_url}/johndoe",
       reminder_time: "30 minutes",
       reminders_summary: "I'll send you a reminder 30 minutes before our appointment.",
       reminders_enabled: true,

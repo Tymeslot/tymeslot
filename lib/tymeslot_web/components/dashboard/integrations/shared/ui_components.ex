@@ -7,39 +7,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
-  Renders a close button (red X) in the top-right corner.
-
-  ## Examples
-
-      <.close_button target={@target} />
-  """
-  attr :target, :any, required: true
-  attr :class, :string, default: "absolute top-0 right-0"
-
-  @spec close_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def close_button(assigns) do
-    ~H"""
-    <button
-      type="button"
-      phx-click="back_to_providers"
-      phx-target={@target}
-      class={[
-        @class,
-        "group flex items-center gap-1 p-2 text-red-500 hover:text-red-700",
-        "hover:bg-red-50 rounded-md transition-all duration-200",
-        "focus:outline-hidden focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-      ]}
-      title={dgettext("dashboard_integrations", "Close")}
-    >
-      <.icon name="hero-x-mark" class="w-6 h-6" />
-      <span class="text-sm font-medium text-red-500 group-hover:text-red-700 transition-colors duration-200">
-        {dgettext("dashboard_integrations", "Close")}
-      </span>
-    </button>
-    """
-  end
-
-  @doc """
   Renders a form submit button with loading state.
 
   ## Examples

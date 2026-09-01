@@ -59,17 +59,20 @@ defmodule TymeslotWeb.StripeConnectWebhookController do
 
   defp process(conn, payload, signature, secret) do
     case raw_event_id(payload) do
-      {:ok, event_id} -> process_with_idempotency(conn, payload, signature, secret, event_id)
-      :error -> dispatch(conn, payload, signature, secret)
+      {:ok, event_id, event_type} ->
+        process_with_idempotency(conn, payload, signature, secret, event_id, event_type)
+
+      :error ->
+        dispatch(conn, payload, signature, secret)
     end
   end
 
-  defp process_with_idempotency(conn, payload, signature, secret, event_id) do
+  defp process_with_idempotency(conn, payload, signature, secret, event_id, event_type) do
     case IdempotencyCache.reserve(event_id) do
       {:ok, :reserved} ->
         conn
         |> dispatch(payload, signature, secret)
-        |> settle_reservation(event_id)
+        |> settle_reservation(event_id, event_type)
 
       {:ok, :in_progress} ->
         Logger.info("Connect webhook already in progress, asking Stripe to retry",
@@ -101,23 +104,27 @@ defmodule TymeslotWeb.StripeConnectWebhookController do
     end
   end
 
-  # 200 and 400 are terminal for this event (dispatched, or permanently
-  # rejected) so the reservation is confirmed; 503 means Stripe will retry,
-  # so the reservation is released to allow that retry through.
-  defp settle_reservation(%{status: 503} = conn, event_id) do
-    IdempotencyCache.release(event_id)
+  # Only a 200 means the event was actually verified and dispatched, so only
+  # a 200 reserves the dedup slot. A 400 is a payload-level rejection (bad
+  # signature, unparseable event) — marking it processed here would let a
+  # forged, unsigned payload carrying a guessed event id permanently swallow
+  # Stripe's genuine, correctly-signed delivery of that same event id. A 503
+  # is transient and must also allow a retry through. Both non-200 outcomes
+  # therefore release the reservation rather than confirm it.
+  defp settle_reservation(%{status: 200} = conn, event_id, event_type) do
+    IdempotencyCache.mark_processed(event_id, event_type)
     conn
   end
 
-  defp settle_reservation(conn, event_id) do
-    IdempotencyCache.mark_processed(event_id)
+  defp settle_reservation(conn, event_id, _event_type) do
+    IdempotencyCache.release(event_id)
     conn
   end
 
   defp raw_event_id(payload) do
     with {:ok, decoded} <- Jason.decode(payload),
          id when is_binary(id) and id != "" <- Map.get(decoded, "id") do
-      {:ok, id}
+      {:ok, id, Map.get(decoded, "type")}
     else
       _unusable -> :error
     end

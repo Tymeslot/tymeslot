@@ -243,6 +243,61 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Counts admins, other than `excluded_user_id`, who can actually sign in
+  today: password-capable per `any_admin_uses_password_auth?/1`'s criteria,
+  or authenticated via one of `usable_sso_providers` (`:google`, `:github`,
+  `:oauth`).
+
+  `usable_sso_providers` is data, not a config lookup: callers (see
+  `Tymeslot.Release.check_last_admin/2`) pass only the providers already
+  confirmed enabled *and* credential-configured system-wide, mirroring
+  `Tymeslot.AppSettings.LockoutPolicy`'s "usable auth path" definition. This
+  keeps the query module free of `AppSettings` reads while still refusing to
+  count an SSO identity nobody can currently use to log in.
+
+  Used to guard demoting the last admin: counting bare `is_admin` rows (as
+  `count_admins/1` does) would let an operator demote the only admin who can
+  actually authenticate, as long as some other `is_admin` row happens to
+  exist without a usable sign-in path.
+  """
+  @spec count_signin_capable_admins_excluding(integer(), [atom()], module()) :: non_neg_integer()
+  def count_signin_capable_admins_excluding(
+        excluded_user_id,
+        usable_sso_providers \\ [],
+        repo \\ Repo
+      ) do
+    password_capable =
+      dynamic(
+        [u],
+        not is_nil(u.password_hash) and not is_nil(u.verified_at) and
+          (is_nil(u.provider) or u.provider == "email")
+      )
+
+    sso_capable = sso_capable_condition(usable_sso_providers)
+
+    condition =
+      dynamic(
+        [u],
+        u.is_admin and u.id != ^excluded_user_id and (^password_capable or ^sso_capable)
+      )
+
+    repo.aggregate(
+      from(u in UserSchema, where: ^condition),
+      :count,
+      :id
+    )
+  end
+
+  defp sso_capable_condition(usable_sso_providers) do
+    Enum.reduce(usable_sso_providers, dynamic(false), fn
+      :google, acc -> dynamic([u], ^acc or not is_nil(u.google_user_id))
+      :github, acc -> dynamic([u], ^acc or not is_nil(u.github_user_id))
+      :oauth, acc -> dynamic([u], ^acc or (u.provider == "oauth" and not is_nil(u.provider_uid)))
+      _other, acc -> acc
+    end)
+  end
+
+  @doc """
   Returns `true` if the `users` table has at least one row.
   """
   @spec any_user?(module()) :: boolean()

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Webhooks.DeliveryStatus
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.Automation.Helpers
@@ -68,6 +69,14 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               <% end %>
             </div>
 
+            <%= if @webhook.disabled_reason do %>
+              <div class="mb-3 text-token-sm text-red-600 font-medium">
+                {dgettext("dashboard_automation", "Disabled: %{reason}",
+                  reason: @webhook.disabled_reason
+                )}
+              </div>
+            <% end %>
+
             <div class="text-token-sm text-tymeslot-600 font-mono mb-3 truncate">
               {@webhook.url}
             </div>
@@ -102,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                   )}
                   <%= if @webhook.last_status do %>
                     <span class={["ml-1", status_color(@webhook.last_status)]}>
-                      ({@webhook.last_status})
+                      ({status_label(@webhook.last_status)})
                     </span>
                   <% end %>
                 </span>
@@ -196,9 +205,30 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
     """
   end
 
-  defp status_color("success"), do: "text-green-600 font-bold"
-  # The failure writer stores "failed: <reason>", never a bare "failed", so a
-  # whole-string match on "failed" rendered every failed delivery neutral.
-  defp status_color("failed" <> _reason), do: "text-red-600 font-bold"
-  defp status_color(_status), do: "text-tymeslot-600 font-medium"
+  defp status_color(last_status) do
+    case DeliveryStatus.state(last_status) do
+      :success -> "text-green-600 font-bold"
+      :failed -> "text-red-600 font-bold"
+      :unknown -> "text-tymeslot-600 font-medium"
+    end
+  end
+
+  # The raw reason (e.g. "HTTP 500", "connection refused") is machine
+  # diagnostic text, not UI copy, so only the state word is translated; the
+  # reason is interpolated untranslated, same as the disabled-reason badge.
+  defp status_label(last_status) do
+    case DeliveryStatus.state(last_status) do
+      :success ->
+        dgettext("dashboard_automation", "Succeeded")
+
+      :failed ->
+        case DeliveryStatus.reason(last_status) do
+          nil -> dgettext("dashboard_automation", "Failed")
+          reason -> dgettext("dashboard_automation", "Failed: %{reason}", reason: reason)
+        end
+
+      :unknown ->
+        last_status
+    end
+  end
 end

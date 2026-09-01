@@ -734,11 +734,6 @@ msgstr "Account creato, ma la verifica dell'email non è riuscita. Contatta l'as
 msgid "Account created but profile setup failed. Please contact support."
 msgstr "Account creato, ma la configurazione del profilo non è riuscita. Contatta l'assistenza."
 
-#: lib/tymeslot/security/account_lockout.ex
-#, elixir-autogen, elixir-format
-msgid "Account locked for %{duration} minutes due to repeated failed attempts"
-msgstr "Account bloccato per %{duration} minuti a causa di ripetuti tentativi non riusciti"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please try again."
@@ -982,11 +977,6 @@ msgstr "Il link di verifica è scaduto"
 msgid "You cannot reset your password because your account is managed by an external authentication provider."
 msgstr "Non puoi reimpostare la password perché il tuo account è gestito da un provider di autenticazione esterno."
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Your account has been locked due to too many failed attempts. Please try again later."
-msgstr "Il tuo account è stato bloccato a causa di troppi tentativi non riusciti. Riprova più tardi."
-
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your password has been reset successfully"
@@ -1085,3 +1075,8 @@ msgstr "La password deve contenere almeno una lettera maiuscola"
 #, elixir-autogen, elixir-format
 msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
 msgstr "Il tuo account è stato creato, ma l'email di verifica non è ancora stata inviata. Attendi qualche minuto, poi usa il link per inviarla di nuovo."
+
+#: lib/tymeslot/auth/password_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If an account exists with this email address, password reset instructions have been sent."
+msgstr "Se esiste un account con questo indirizzo e-mail, le istruzioni per reimpostare la password sono state inviate."

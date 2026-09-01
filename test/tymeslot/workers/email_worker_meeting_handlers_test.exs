@@ -154,6 +154,32 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
                })
     end
 
+    # A permanent rejection of one recipient used to short-circuit the whole
+    # job to a discard, throwing away the other recipient's still-retryable
+    # send. The organizer here is dead and the attendee is not — the job
+    # must keep retrying for the attendee's sake, not discard both.
+    test "a rejected recipient does not discard the other recipient's retryable send" do
+      meeting = insert(:meeting)
+      rejection = {:recipient_rejected, {422, %{"ErrorCode" => 406}}}
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:error, rejection}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:error, "transient"}
+      end)
+
+      # A generic retryable error, not the rejection tuple: `EmailWorker`
+      # treats `{:error, {:recipient_rejected, _}}` as job-terminal, so if the
+      # rejection leaked through here the whole job — attendee send included
+      # — would be discarded instead of retried.
+      assert {:error, "Failed to send all emails"} =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+    end
+
     test "handles partial failure" do
       meeting = insert(:meeting)
 
@@ -283,7 +309,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       assert updated.reminder_email_sent == true
     end
 
-    test "marks reminder sent and succeeds when organizer sent but attendee fails" do
+    test "marks the organizer sent but retries when the attendee send fails transiently" do
       meeting = insert(:meeting)
 
       expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
@@ -294,7 +320,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
         {:error, "inactive recipient"}
       end)
 
-      assert :ok =
+      assert {:error, _reason} =
                EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
@@ -313,7 +339,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
       assert updated.reminder_email_sent == true
     end
 
-    test "marks reminder sent and succeeds when attendee sent but organizer fails" do
+    test "marks the attendee sent but retries when the organizer send fails transiently" do
       meeting = insert(:meeting)
 
       expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
@@ -324,7 +350,7 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
         {:ok, "sent"}
       end)
 
-      assert :ok =
+      assert {:error, _reason} =
                EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id,
                  "reminder_value" => 30,
@@ -341,6 +367,49 @@ defmodule Tymeslot.Workers.EmailWorkerMeetingHandlersTest do
              } in updated.reminders_sent
 
       assert updated.reminder_email_sent == true
+    end
+
+    test "retrying a partial reminder send only re-attempts the recipient still marked unsent" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:error, "inactive recipient"}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      # Retry: only the attendee callback is expected. `verify_on_exit!`
+      # enforces that :send_appointment_reminder_to_organizer is NOT called a
+      # second time — the whole point of persisting per-recipient flags is
+      # that a retry doesn't re-send to a recipient who already got it.
+      expect(EmailServiceMock, :send_appointment_reminder_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+
+      assert %{
+               "value" => 30,
+               "unit" => "minutes",
+               "organizer_sent" => true,
+               "attendee_sent" => true
+             } in updated.reminders_sent
     end
 
     test "returns error when both organizer and attendee emails fail" do

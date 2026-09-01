@@ -8,7 +8,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.PasswordValidator
-  alias Tymeslot.Security.{Password, RateLimiter, Token}
+  alias Tymeslot.Security.{Password, Token}
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
@@ -127,6 +127,28 @@ defmodule TymeslotWeb.AuthLiveTest do
       |> render_submit()
 
       assert render(view) =~ "Check Your Email"
+    end
+
+    test "OAuth-only user is told to use their provider instead of crashing", %{conn: conn} do
+      oauth_user =
+        insert(:user,
+          provider: "google",
+          password_hash: nil,
+          email: "oauth-reset-#{System.unique_integer([:positive])}@example.com"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      result =
+        view
+        |> form("#reset-password-form", %{"email" => oauth_user.email})
+        |> render_submit()
+
+      # The OAuth branch is the one deliberate exception to the identical
+      # "if an account exists" confirmation, so the specific message must
+      # survive the trip through AuthActions rather than being discarded.
+      assert result =~ "managed by an external authentication provider"
+      refute result =~ "Check Your Email"
     end
 
     test "empty email shows an error rather than the success confirmation", %{conn: conn} do
@@ -352,134 +374,6 @@ defmodule TymeslotWeb.AuthLiveTest do
         })
 
       assert result =~ "Security validation failed"
-    end
-  end
-
-  describe "rate limiting — password reset" do
-    setup do
-      on_exit(fn -> RateLimiter.clear_all() end)
-      :ok
-    end
-
-    test "submit_reset_request is blocked after exhausting the per-email rate limit", %{
-      conn: conn
-    } do
-      email = "rl-reset-#{System.unique_integer([:positive])}@example.com"
-
-      # Exhaust the 1-hour per-email bucket (limit: 5)
-      for _i <- 1..5 do
-        RateLimiter.check_password_reset_rate_limit(email, "test-rate-limit-ip")
-      end
-
-      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
-
-      result =
-        view
-        |> form("#reset-password-form", %{"email" => email})
-        |> render_submit()
-
-      assert result =~ "Too many"
-    end
-  end
-
-  describe "rate limiting — verification resend" do
-    setup do
-      on_exit(fn -> RateLimiter.clear_all() end)
-      :ok
-    end
-
-    test "resend_verification is blocked after exhausting the per-user rate limit", %{conn: conn} do
-      user = insert(:unverified_user)
-
-      # Exhaust the 1-hour per-user bucket (limit: 5)
-      for _i <- 1..5 do
-        RateLimiter.check_verification_rate_limit(user.id, "test-rate-limit-ip")
-      end
-
-      conn =
-        init_test_session(conn, %{
-          "unverified_user_id" => user.id,
-          "unverified_user_email" => user.email,
-          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
-
-      render_hook(view, "resend_verification", %{})
-
-      assert render(view) =~ "Too many email verification attempts. Please try again later."
-    end
-
-    test "resend_verification disables the button with a live cooldown countdown",
-         %{conn: conn} do
-      user = insert(:unverified_user)
-
-      conn =
-        init_test_session(conn, %{
-          "unverified_user_id" => user.id,
-          "unverified_user_email" => user.email,
-          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
-
-      html = render_hook(view, "resend_verification", %{})
-
-      assert html =~ "Resend available in"
-      assert has_element?(view, "button[phx-click='resend_verification'][disabled]")
-
-      # The countdown ticks down via handle_info without re-enabling prematurely.
-      send(view.pid, :resend_cooldown_tick)
-      assert has_element?(view, "button[phx-click='resend_verification'][disabled]")
-    end
-
-    test "the cooldown re-enables the button once it elapses", %{conn: conn} do
-      user = insert(:unverified_user)
-
-      conn =
-        init_test_session(conn, %{
-          "unverified_user_id" => user.id,
-          "unverified_user_email" => user.email,
-          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
-
-      render_hook(view, "resend_verification", %{})
-      assert has_element?(view, "button[phx-click='resend_verification'][disabled]")
-
-      # Drive the countdown to zero (cooldown starts at @resend_cooldown_seconds = 60).
-      for _tick <- 1..60, do: send(view.pid, :resend_cooldown_tick)
-
-      html = render(view)
-      refute html =~ "Resend available in"
-      assert html =~ "Resend Verification Email"
-      refute has_element?(view, "button[phx-click='resend_verification'][disabled]")
-    end
-
-    test "a second resend during the cooldown is ignored and does not reset the countdown",
-         %{conn: conn} do
-      user = insert(:unverified_user)
-
-      conn =
-        init_test_session(conn, %{
-          "unverified_user_id" => user.id,
-          "unverified_user_email" => user.email,
-          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
-
-      render_hook(view, "resend_verification", %{})
-      for _tick <- 1..5, do: send(view.pid, :resend_cooldown_tick)
-      assert render(view) =~ "Resend available in 55s"
-
-      # A double-click before the disabled patch lands must not restart the cooldown
-      # (which would otherwise spawn a second timer chain and drain it early).
-      render_hook(view, "resend_verification", %{})
-      html = render(view)
-      assert html =~ "Resend available in 55s"
-      refute html =~ "Resend available in 60s"
     end
   end
 

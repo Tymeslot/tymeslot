@@ -225,9 +225,13 @@ defmodule Tymeslot.Payments do
   defdelegate broadcast_subscription_event(event_data), to: PubSub
 
   @doc """
-  The PubSub server payment events are broadcast on, or `nil` when none is
-  running.
+  Subscribes the calling process to payment lifecycle events.
+
+  Every subscription, dispute, refund and trial event the payment webhooks
+  produce arrives as a message in the caller's mailbox. Returns
+  `{:error, reason}` rather than raising when no PubSub server is running, so a
+  supervised listener can start regardless.
   """
-  @spec get_pubsub_server() :: module() | nil
-  defdelegate get_pubsub_server, to: PubSub
+  @spec subscribe_to_payment_events() :: :ok | {:error, term()}
+  defdelegate subscribe_to_payment_events, to: PubSub
 end

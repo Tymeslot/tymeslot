@@ -70,7 +70,10 @@ defmodule Tymeslot.Auth.PasswordReset do
       _other ->
         # Always return the same message for non-OAuth cases to prevent user enumeration
         {:ok, :reset_initiated,
-         "If an account exists with this email address, password reset instructions have been sent."}
+         dgettext(
+           "auth",
+           "If an account exists with this email address, password reset instructions have been sent."
+         )}
     end
   end
 
@@ -108,8 +111,11 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
+  # `:ip_address` is the canonical key (matches `PasswordUpdate.update_user_password/5`'s
+  # convention, and what the audit entry itself is keyed under); `:ip` is
+  # accepted too since `AuthActions` still passes it for this flow's callers.
   defp extract_ip_from_opts(opts) do
-    opts[:ip] ||
+    opts[:ip_address] || opts[:ip] ||
       case opts[:socket_or_conn] do
         nil -> nil
         soc -> ClientIP.get(soc)
@@ -137,7 +143,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:error, reason} ->
         Logger.error("Failed to send password reset email",
           user_id: user.id,
-          email: user.email,
+          email_masked: SecurityLogger.mask_email(user.email),
           reason: inspect(reason),
           event: :password_reset_email_failed
         )
@@ -154,7 +160,7 @@ defmodule Tymeslot.Auth.PasswordReset do
         # this records token storage only, not delivery (mirrors the verification flow).
         Logger.info("Password reset token stored",
           user_id: updated_user.id,
-          email: updated_user.email,
+          email_masked: SecurityLogger.mask_email(updated_user.email),
           event: :password_reset_token_persisted
         )
 
@@ -182,7 +188,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:ok, :duplicate} ->
         Logger.info("Password reset email already queued; updated with fresh token",
           user_id: user.id,
-          email: user.email,
+          email_masked: SecurityLogger.mask_email(user.email),
           event: :password_reset_email_deduplicated
         )
 
@@ -191,7 +197,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:error, reason} ->
         Logger.error("Failed to schedule password reset email",
           user_id: user.id,
-          email: user.email,
+          email_masked: SecurityLogger.mask_email(user.email),
           reason: inspect(reason),
           event: :password_reset_email_failed
         )
@@ -245,7 +251,7 @@ defmodule Tymeslot.Auth.PasswordReset do
           {:error, :token_expired} ->
             Logger.warning("Password reset token expired",
               user_id: user.id,
-              email: user.email,
+              email_masked: SecurityLogger.mask_email(user.email),
               event: :password_reset_token_expired
             )
 
@@ -265,7 +271,7 @@ defmodule Tymeslot.Auth.PasswordReset do
     - token: String.t() (password reset token)
     - new_password: String.t() (new password)
     - password_confirmation: String.t() (password confirmation)
-    - opts: Keyword list; `:ip` and `:user_agent` are recorded on the audit
+    - opts: Keyword list; `:ip_address` (or `:ip`) and `:user_agent` are recorded on the audit
       entry the completed reset emits
 
   ## Returns
@@ -338,7 +344,7 @@ defmodule Tymeslot.Auth.PasswordReset do
           {:error, :token_expired} ->
             Logger.warning("Password reset token expired",
               user_id: user.id,
-              email: user.email,
+              email_masked: SecurityLogger.mask_email(user.email),
               event: :password_reset_token_expired
             )
 
@@ -389,7 +395,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:error, errors} ->
         Logger.error("Failed to update password",
           user_id: user.id,
-          email: user.email,
+          email_masked: SecurityLogger.mask_email(user.email),
           errors: inspect(errors),
           event: :password_reset_update_password_failed
         )
@@ -440,7 +446,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
     Logger.info("Invalidated all sessions after password reset",
       user_id: user.id,
-      email: user.email,
+      email_masked: SecurityLogger.mask_email(user.email),
       event: :sessions_invalidated_password_reset
     )
 

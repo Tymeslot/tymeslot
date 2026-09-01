@@ -15,7 +15,19 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
 
   The actual write happens inside a supervised Task to avoid adding
   latency to the LiveView mount path. Any failure inside the Task
-  is swallowed — analytics must never break the booking flow.
+  is swallowed — analytics must never break the booking flow;
+  `Tymeslot.Analytics.log_page_view/1` emits the outcome as telemetry
+  so a drop is still observable.
+
+  `:async_page_view_logging` selects the write mode. It defaults to
+  `true`; setting it `false` runs the write inline on the mount path
+  instead, which trades a little mount latency for a write that
+  completes within the caller's lifetime. The test environment sets
+  it `false` so the write is owned by the test process and cannot
+  outlive it — a fire-and-forget Task racing sandbox teardown dies
+  with a `DBConnection.OwnershipError` that ExUnit does not fail on.
+  It is read via `Application.compile_env/3` rather than `Mix.env()`,
+  which lies when Core is built as a path dependency.
 
   Only cheap, in-memory data (user agent, IP, socket ID, params,
   session referrer) is captured before spawning the Task. The
@@ -31,6 +43,12 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias TymeslotWeb.Helpers.ClientIP
+
+  @async_page_view_logging Application.compile_env(
+                             :tymeslot,
+                             :async_page_view_logging,
+                             true
+                           )
 
   @scheduling_referrer_session_key "scheduling_referrer"
   @user_token_session_key "user_token"
@@ -71,7 +89,7 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
   end
 
   defp log_async(params, referrer, ip, user_agent, session_id, user_token) do
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    run_page_view_write(fn ->
       {user_id, meeting_type_id, path} = resolve_target(params)
 
       Analytics.log_page_view(%{
@@ -86,6 +104,20 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
         viewer_user_id: resolve_viewer(user_token)
       })
     end)
+  end
+
+  # Compile-time branch: the mode cannot change at runtime, so neither
+  # arm costs the mount path a check.
+  if @async_page_view_logging do
+    defp run_page_view_write(write) do
+      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, write)
+      :ok
+    end
+  else
+    defp run_page_view_write(write) do
+      write.()
+      :ok
+    end
   end
 
   # The signed-in viewer, if any — used by `Analytics.log_page_view/1` to skip an

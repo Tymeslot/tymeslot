@@ -12,6 +12,18 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
   as `:reserved` again.
 
   Uses the centralized CacheStore infrastructure for ETS tier.
+
+  **Single-node reservation only.** The `:processing` slot `reserve/1` grants
+  lives in node-local ETS and is not visible to another node until the
+  handler finishes and `mark_processed/3` writes the durable `webhook_events`
+  row. Two nodes that both receive the same event while it is still in
+  flight on the first will both be granted `{:ok, :reserved}` — the database
+  check in `confirm_reservation/1` finds nothing yet, because nothing has
+  been persisted. On a single-instance deployment (the only topology this
+  codebase currently ships) this window does not exist. Making the
+  reservation itself durable (a unique-constrained insert into
+  `webhook_events` before dispatch, treating a unique-violation as
+  `:already_processed`) would close it for a future multi-node deployment.
   """
 
   require Logger

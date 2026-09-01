@@ -16,15 +16,16 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   setup :verify_on_exit!
 
   # ---------------------------------------------------------------------------
-  # toggle_calendar_integration/1
+  # toggle_with_primary_rebalance/1 — reactivation health reset and conflicts
   # ---------------------------------------------------------------------------
 
-  describe "toggle_calendar_integration/1" do
+  describe "toggle_with_primary_rebalance/1 — health state on toggle" do
     test "enqueues an IntegrationHealthWorker probe when reactivating (inactive → active)" do
       user = insert(:user)
+      _profile = insert(:profile, user: user)
       integration = insert(:calendar_integration, user: user, is_active: false)
 
-      assert {:ok, updated} = CalendarManagement.toggle_calendar_integration(integration)
+      assert {:ok, updated} = CalendarManagement.toggle_with_primary_rebalance(integration)
       assert updated.is_active
 
       assert_enqueued(
@@ -35,9 +36,10 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
 
     test "does NOT enqueue a probe when deactivating (active → inactive)" do
       user = insert(:user)
+      _profile = insert(:profile, user: user)
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      assert {:ok, updated} = CalendarManagement.toggle_calendar_integration(integration)
+      assert {:ok, updated} = CalendarManagement.toggle_with_primary_rebalance(integration)
       refute updated.is_active
 
       refute_enqueued(
@@ -48,6 +50,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
 
     test "returns {:error, :duplicate_account} when reactivating would collide with an active integration" do
       user = insert(:user)
+      _profile = insert(:profile, user: user)
 
       insert(:calendar_integration,
         user: user,
@@ -65,7 +68,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
         )
 
       assert {:error, :duplicate_account} =
-               CalendarManagement.toggle_calendar_integration(dormant)
+               CalendarManagement.toggle_with_primary_rebalance(dormant)
     end
   end
 

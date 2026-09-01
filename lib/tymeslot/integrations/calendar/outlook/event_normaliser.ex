@@ -11,9 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
+  alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Timezones
-
-  @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
 
   @spec normalise_events(list(map()), map()) :: {:ok, list(CalendarEvent.t())}
   def normalise_events(raw_events, context) do
@@ -77,8 +76,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
 
   defp tymeslot_origin?(%{"singleValueExtendedProperties" => props})
        when is_list(props) do
+    property_id = TymeslotFingerprint.property_id()
+
     Enum.any?(props, fn
-      %{"id" => @outlook_tymeslot_property_id, "value" => "tymeslot"} -> true
+      %{"id" => ^property_id, "value" => "tymeslot"} -> true
       _other -> false
     end)
   end

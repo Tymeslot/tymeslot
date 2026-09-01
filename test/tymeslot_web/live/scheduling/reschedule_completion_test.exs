@@ -121,6 +121,56 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
     }
   end
 
+  describe "the day a reschedule opens on" do
+    @tag :capture_log
+    test "the schedule step opens on a bookable day with its times listed", %{
+      conn: conn,
+      profile: profile,
+      meeting: meeting
+    } do
+      # The auto-selection used to stand down for the whole reschedule journey:
+      # it treated `is_rescheduling` as a deliberate choice of day, on the
+      # belief that a reschedule link carried a date. It carries only the uid,
+      # so nothing was being preserved — the rescheduler simply got the empty
+      # grid, and does so against the calendar that was full enough to force
+      # the move in the first place.
+      #
+      # This walks the real entry rather than setting the assign, because the
+      # two disagree on ordering: `do_handle_schedule_entry/2` runs before
+      # `handle_params/3` on the connected mount, so `is_rescheduling` is not
+      # yet on the socket at the moment a synchronous fetch resolves. A unit
+      # test on the assign cannot see that; this does.
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}?timezone=#{profile.timezone}&reschedule_meeting_uid=#{meeting.uid}"
+        )
+
+      view |> element("button[data-testid='duration-option']") |> render_click()
+      view |> element("button[data-testid='next-step']") |> render_click()
+
+      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
+
+      state = :sys.get_state(view.pid).socket.assigns
+
+      assert state.is_rescheduling,
+             "the reschedule context must survive the step transition, or this proves nothing"
+
+      assert {:ok, %Date{}} = Date.from_iso8601(state.selected_date)
+
+      document = view |> render() |> Floki.parse_document!()
+
+      assert Floki.find(document, "button.calendar-day--selected") != [],
+             "expected the reschedule to open on a day painted as selected"
+
+      assert Floki.attribute(document, "button.time-slot-button", "phx-value-time") != [],
+             "expected that day's times to be listed"
+
+      # The hour stays the rescheduler's decision, exactly as for a new booking.
+      assert state.selected_time == nil
+    end
+  end
+
   describe "the schedule a reschedule is offered against" do
     @tag :capture_log
     test "comes from the meeting's own type, not a duration match", %{

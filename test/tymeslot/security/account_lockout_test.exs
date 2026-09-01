@@ -6,6 +6,7 @@ defmodule Tymeslot.Security.AccountLockoutTest do
   @moduletag :security
 
   alias Tymeslot.Security.AccountLockout
+  alias Tymeslot.Test.LogCapture
 
   @test_identifier "test_user@example.com"
 
@@ -48,7 +49,7 @@ defmodule Tymeslot.Security.AccountLockoutTest do
       assert :ok = AccountLockout.check_lockout_status(@test_identifier)
     end
 
-    test "returns {:error, :account_throttled, _} at 10-19 attempts" do
+    test "returns {:error, :account_throttled, _} from the tenth attempt onwards" do
       for _i <- 1..10 do
         AccountLockout.check_and_record_attempt(@test_identifier, false)
       end
@@ -59,16 +60,28 @@ defmodule Tymeslot.Security.AccountLockoutTest do
       assert message =~ "Too many failed attempts"
     end
 
-    test "returns {:error, :account_locked, _} at 20+ attempts" do
-      for _i <- 1..20 do
+    # Throttling is the only tier: piling on failures past the threshold never
+    # escalates to a harder lock, and never stops throttling either.
+    test "stays throttled, and only throttled, well past the threshold" do
+      for _i <- 1..40 do
         AccountLockout.check_and_record_attempt(@test_identifier, false)
       end
 
-      assert {:error, :account_locked, message} =
+      assert AccountLockout.get_failed_attempt_count(@test_identifier) == 40
+
+      assert {:error, :account_throttled, message} =
                AccountLockout.check_lockout_status(@test_identifier)
 
-      assert message =~ "Account locked"
-      assert message =~ "minutes"
+      assert message =~ "Too many failed attempts"
+    end
+
+    test "the attempt that crosses the threshold is itself throttled" do
+      for _i <- 1..9 do
+        assert :ok = AccountLockout.check_and_record_attempt(@test_identifier, false)
+      end
+
+      assert {:error, :account_throttled, _message} =
+               AccountLockout.check_and_record_attempt(@test_identifier, false)
     end
 
     test "lockout status only considers last-hour attempts" do
@@ -83,17 +96,27 @@ defmodule Tymeslot.Security.AccountLockoutTest do
     end
   end
 
-  describe "lockout duration calculation" do
-    test "flat lockout duration is 240 minutes regardless of attempt count" do
-      # Flat 4-hour lockout: all 20+ attempt counts hit the same duration (30 * 8 = 240 minutes).
-      for _i <- 1..20 do
-        AccountLockout.check_and_record_attempt(@test_identifier, false)
-      end
+  describe "failed-attempt logging" do
+    # This line fires on every failed attempt, so it is the highest-volume
+    # identifier in the auth path; it must never carry the raw address.
+    test "masks the identifier on both the first and subsequent attempts" do
+      email = "lockout-log-#{System.unique_integer([:positive])}@example.com"
+      on_exit(fn -> AccountLockout.clear_failed_attempts(email) end)
 
-      assert {:error, :account_locked, message} =
-               AccountLockout.check_lockout_status(@test_identifier)
+      LogCapture.with_capture([logger_level: :info], fn ->
+        AccountLockout.check_and_record_attempt(email, false)
+        AccountLockout.check_and_record_attempt(email, false)
+      end)
 
-      assert message =~ "240 minutes"
+      first = LogCapture.await_log("First failed attempt recorded")
+      assert LogCapture.user_metadata(first).identifier_masked == "l***@example.com"
+      refute LogCapture.dump(first) =~ email
+
+      subsequent = LogCapture.await_log("Failed attempt recorded")
+      meta = LogCapture.user_metadata(subsequent)
+      assert meta.identifier_masked == "l***@example.com"
+      assert meta.total_attempts == 2
+      refute LogCapture.dump(subsequent) =~ email
     end
   end
 

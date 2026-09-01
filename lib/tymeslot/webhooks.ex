@@ -17,7 +17,6 @@ defmodule Tymeslot.Webhooks do
 
   alias Tymeslot.Features
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Security.UrlValidation
 
   alias Tymeslot.Webhooks.{
     HttpDelivery,
@@ -98,10 +97,21 @@ defmodule Tymeslot.Webhooks do
 
   @doc """
   Toggles webhook active status.
+
+  Re-enabling a webhook that was auto-disabled (i.e. `disabled_at` is set)
+  goes through `enable_webhook/1` instead of a bare flip, so the failure
+  bookkeeping (`failure_count`, `disabled_at`, `disabled_reason`) is reset
+  along with `is_active`. Otherwise a manual re-enable left the counter at
+  the auto-disable threshold, so the very next failed delivery immediately
+  disabled the webhook again.
   """
   @spec toggle_webhook(WebhookSchema.t()) ::
           {:ok, WebhookSchema.t()}
           | {:error, Ecto.Changeset.t() | Features.access_error()}
+  def toggle_webhook(%WebhookSchema{is_active: false, disabled_at: %DateTime{}} = webhook) do
+    enable_webhook(webhook)
+  end
+
   def toggle_webhook(webhook) do
     with :ok <- Features.check_access(webhook.user_id, :automations_allowed) do
       WebhookQueries.toggle_webhook(webhook)
@@ -173,13 +183,20 @@ defmodule Tymeslot.Webhooks do
   # Validation & Testing
   # ============================================================================
 
+  # Upper bound on the whole test-connection probe (initial request plus every
+  # redirect hop), so a target that answers every request with a slow redirect
+  # cannot block the calling LiveView process indefinitely.
+  @test_connection_deadline_ms 20_000
+
   @doc """
   Tests a webhook connection by sending a test payload.
 
-  Delegates transport to `HttpDelivery.post/3`, which re-validates every
-  redirect hop with `SsrfValidator` rather than following redirects blind:
-  a host that resolves publicly at the initial check must not be able to
-  302 the probe to a private or loopback address.
+  The URL is validated once, here, and `HttpDelivery.post/4` is told to skip
+  its own initial check (`skip_initial_check: true`) since re-running it on
+  the same URL would only double the DNS resolution cost without changing the
+  answer. Every redirect hop is still independently re-validated by
+  `HttpDelivery` — a host that resolves publicly at this check must not be
+  able to 302 the probe to a private or loopback address.
   """
   @spec test_webhook_connection(String.t(), String.t() | nil) :: :ok | {:error, String.t()}
   def test_webhook_connection(url, token \\ nil) do
@@ -187,36 +204,56 @@ defmodule Tymeslot.Webhooks do
       payload = PayloadBuilder.build_test_payload()
       headers = build_headers(payload, token)
 
-      case HttpDelivery.post(url, Jason.encode!(payload), headers) do
-        {:ok, status, _body} when status >= 200 and status < 300 ->
-          :ok
-
-        {:ok, status, _body} ->
-          {:error, "Webhook returned status #{status}"}
-
-        {:error, :blocked_by_ssrf} ->
-          {:error, "URL resolves to a private or restricted address"}
-
-        {:error, reason} ->
-          {:error, "Connection failed: #{inspect(reason)}"}
-      end
+      run_bounded_test_connection(url, payload, headers)
     end
   end
 
-  @doc """
-  Validates a webhook URL format.
-  Checks for protocol and prevents SSRF by blocking private IP ranges in production.
-  """
-  @spec validate_webhook_url(String.t()) :: :ok | {:error, String.t()}
-  def validate_webhook_url(url) do
-    strict? =
-      Application.get_env(:tymeslot, :environment, :prod) == :prod and
-        not SsrfValidator.allow_private?()
+  defp run_bounded_test_connection(url, payload, headers) do
+    task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        HttpDelivery.post(url, Jason.encode!(payload), headers, skip_initial_check: true)
+      end)
 
-    UrlValidation.validate_http_url(url,
-      block_private_ips: strict?,
-      enforce_https: strict?
-    )
+    case Task.yield(task, @test_connection_deadline_ms) || Task.shutdown(task, :brutal_kill) do
+      {:ok, result} ->
+        map_test_connection_result(result)
+
+      nil ->
+        {:error, dgettext("dashboard_automation", "The connection test took too long to respond")}
+    end
+  end
+
+  defp map_test_connection_result({:ok, status, _body}) when status >= 200 and status < 300,
+    do: :ok
+
+  defp map_test_connection_result({:ok, status, _body}) do
+    {:error,
+     dgettext("dashboard_automation", "Webhook returned status %{status}", status: status)}
+  end
+
+  defp map_test_connection_result({:error, :blocked_by_ssrf}) do
+    {:error, dgettext("dashboard_automation", "URL resolves to a private or restricted address")}
+  end
+
+  defp map_test_connection_result({:error, :blocked_redirect}) do
+    {:error,
+     dgettext(
+       "dashboard_automation",
+       "The webhook redirected to a private or restricted address"
+     )}
+  end
+
+  defp map_test_connection_result({:error, :too_many_redirects}) do
+    {:error, dgettext("dashboard_automation", "The webhook redirected too many times")}
+  end
+
+  defp map_test_connection_result({:error, :redirect_missing_location}) do
+    {:error,
+     dgettext("dashboard_automation", "The webhook redirected without a destination address")}
+  end
+
+  defp map_test_connection_result({:error, _reason}) do
+    {:error, dgettext("dashboard_automation", "Connection failed")}
   end
 
   # ============================================================================

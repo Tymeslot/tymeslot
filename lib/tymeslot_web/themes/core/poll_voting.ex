@@ -20,6 +20,11 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: TymeslotWeb.Endpoint,
+    router: TymeslotWeb.Router,
+    statics: TymeslotWeb.static_paths()
+
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [connected?: 1, push_patch: 2, put_flash: 3]
 
@@ -247,20 +252,15 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   # --- URL building ---
 
+  # The page mounted on `/:username/poll/:token`, so both segments are already on
+  # the socket, and `username_context` is the username the router matched. There
+  # is no username-less form to fall back to: a bare `/poll/<token>` is swallowed
+  # by the catch-all `live "/:username/:slug"` in another live_session, so
+  # `push_patch/2` rejects it and takes the LiveView down with it.
   defp put_participant_in_url(socket, participant) do
-    "#{poll_path(socket)}?p=#{participant.token}"
-  end
+    %{username_context: username, poll: poll} = socket.assigns
 
-  defp poll_path(socket) do
-    poll = socket.assigns.poll
-
-    case socket.assigns[:organizer_profile] do
-      %{username: username} when is_binary(username) and byte_size(username) > 0 ->
-        "/#{username}/poll/#{poll.token}"
-
-      _no_username ->
-        "/poll/#{poll.token}"
-    end
+    ~p"/#{username}/poll/#{poll.token}?p=#{participant.token}"
   end
 
   # --- Flash messages ---

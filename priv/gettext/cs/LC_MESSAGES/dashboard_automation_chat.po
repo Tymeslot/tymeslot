@@ -629,6 +629,7 @@ msgid "Waiting for Telegram connection... (link expires in 10 minutes)"
 msgstr "Čekání na připojení ke službě Telegram… (platnost odkazu vyprší za 10 minut)"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
 #, elixir-autogen, elixir-format
 msgid "auto-disabled"
 msgstr "automaticky vypnuto"
@@ -712,3 +713,33 @@ msgstr "Vaše integrace Telegram"
 #, elixir-autogen, elixir-format
 msgid "our Slack docs"
 msgstr "naší dokumentaci ke Slacku"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "bot token was rejected"
+msgstr "token bota byl odmítnut"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "bot was blocked by the user"
+msgstr "bota uživatel zablokoval"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "bot was kicked from the group"
+msgstr "bot byl odebrán ze skupiny"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "chat is no longer reachable"
+msgstr "chat již není dostupný"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "repeatedly rate-limited by Telegram"
+msgstr "opakovaně omezováno Telegramem"
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
+#, elixir-autogen, elixir-format
+msgid "too many consecutive delivery failures"
+msgstr "příliš mnoho po sobě jdoucích chyb doručení"

@@ -166,37 +166,47 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   defp handle_side_effects(meeting, video_integration_id)
        when is_integer(video_integration_id) do
+    notify_attendee(meeting)
+
+    # `meeting.created` is the one side effect deferred to the worker, so its
+    # payload can carry the join link. It is raised here only when the job never
+    # made it onto the queue and nothing downstream will announce the booking.
     case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
       :ok -> :ok
-      {:error, _error} -> schedule_notifications(meeting)
+      {:error, _error} -> announce_meeting(meeting)
     end
   end
 
   defp handle_side_effects(meeting, _no_video) do
-    schedule_notifications(meeting)
+    notify_attendee(meeting)
+    announce_meeting(meeting)
   end
 
-  defp schedule_notifications(meeting) do
-    result =
-      case Events.meeting_created(meeting) do
-        {:ok, _result} ->
-          :ok
+  # Routes the attendee-facing calendar invitation through AttendeeNotifications,
+  # so the iCal METHOD and SEQUENCE the attendee first receives are the ones
+  # every later update numbers itself against.
+  #
+  # This never waits on the video room: the invitation carries the event's time
+  # and location, not the join link, so a provider that takes days to answer, or
+  # never answers at all, must not hold the attendee's calendar entry hostage.
+  defp notify_attendee(meeting) do
+    {:ok, _result} = AttendeeNotifications.event_created(meeting, attendees_for(meeting))
+    :ok
+  end
 
-        {:error, reason} ->
-          Logger.error("Failed to schedule notifications for ad-hoc meeting",
-            meeting_id: meeting.id,
-            error: inspect(reason)
-          )
+  defp announce_meeting(meeting) do
+    case Events.meeting_created(meeting) do
+      {:ok, _result} ->
+        :ok
 
-          :ok
-      end
+      {:error, reason} ->
+        Logger.error("Failed to schedule notifications for ad-hoc meeting",
+          meeting_id: meeting.id,
+          error: inspect(reason)
+        )
 
-    # After event creation, also route the attendee-facing calendar invitation
-    # through AttendeeNotifications so last_notified_state / ical_sequence are
-    # initialised correctly.
-    {:ok, _job} = AttendeeNotifications.event_created(meeting, attendees_for(meeting))
-
-    result
+        :ok
+    end
   end
 
   defp attendees_for(%{attendee_email: email}) when is_binary(email) and email != "" do

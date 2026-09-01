@@ -30,6 +30,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.CustomInputModeHelper
 
   @steps_without_theme [
     :welcome,
@@ -59,8 +60,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # converting user-supplied text into an atom.
   @all_step_names Enum.map(@all_steps, &Atom.to_string/1)
 
-  @buffer_time_values [0, 15, 30, 45, 60]
-
   @buffer_minutes_constraints %{
     min: Constraints.buffer_minutes_range().first,
     max: Constraints.buffer_minutes_range().last,
@@ -70,8 +69,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     color: "turquoise"
   }
 
-  @advance_booking_values [7, 14, 30, 90, 180, 365]
-
   @advance_booking_constraints %{
     min: Constraints.advance_booking_days_range().first,
     max: Constraints.advance_booking_days_range().last,
@@ -80,8 +77,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     unit: "days",
     color: "cyan"
   }
-
-  @min_advance_values [0, 1, 3, 6, 12, 24, 48]
 
   @min_advance_constraints %{
     min: Constraints.min_advance_hours_range().first,
@@ -95,17 +90,14 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @custom_input_config %{
     "buffer_minutes" => %{
       field: :buffer_minutes,
-      presets: @buffer_time_values,
       constraints: @buffer_minutes_constraints
     },
     "advance_booking_days" => %{
       field: :advance_booking_days,
-      presets: @advance_booking_values,
       constraints: @advance_booking_constraints
     },
     "min_advance_hours" => %{
       field: :min_advance_hours,
-      presets: @min_advance_values,
       constraints: @min_advance_constraints
     }
   }
@@ -280,68 +272,65 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # Scheduling preset accessors
   # -------------------------------------------------------------------
 
+  # The wizard offers exactly the values `CustomInputModeHelper` validates a
+  # preset click against, so a tag here can never be read as client tampering.
+  # Only the labels are the wizard's own; the dashboard availability card words
+  # the same values differently and in its own gettext domain.
   @spec buffer_time_options() :: [option()]
-  def buffer_time_options do
-    [
-      {dgettext("onboarding_wizard", "No buffer"), 0},
-      {dgettext("onboarding_wizard", "15 min"), 15},
-      {dgettext("onboarding_wizard", "30 min"), 30},
-      {dgettext("onboarding_wizard", "45 min"), 45},
-      {dgettext("onboarding_wizard", "60 min"), 60}
-    ]
-  end
-
-  @spec buffer_time_values() :: [integer()]
-  def buffer_time_values, do: @buffer_time_values
+  def buffer_time_options, do: options(:buffer_minutes, &buffer_time_label/1)
 
   @spec buffer_minutes_constraints() :: map()
   def buffer_minutes_constraints, do: @buffer_minutes_constraints
 
   @spec advance_booking_options() :: [option()]
-  def advance_booking_options do
-    [
-      {dgettext("onboarding_wizard", "1 week"), 7},
-      {dgettext("onboarding_wizard", "2 weeks"), 14},
-      {dgettext("onboarding_wizard", "1 month"), 30},
-      {dgettext("onboarding_wizard", "3 months"), 90},
-      {dgettext("onboarding_wizard", "6 months"), 180},
-      {dgettext("onboarding_wizard", "1 year"), 365}
-    ]
-  end
-
-  @spec advance_booking_values() :: [integer()]
-  def advance_booking_values, do: @advance_booking_values
+  def advance_booking_options, do: options(:advance_booking_days, &advance_booking_label/1)
 
   @spec advance_booking_constraints() :: map()
   def advance_booking_constraints, do: @advance_booking_constraints
 
   @spec min_advance_options() :: [option()]
-  def min_advance_options do
-    [
-      {dgettext("onboarding_wizard", "No minimum"), 0},
-      {dgettext("onboarding_wizard", "1 hour"), 1},
-      {dgettext("onboarding_wizard", "3 hours"), 3},
-      {dgettext("onboarding_wizard", "6 hours"), 6},
-      {dgettext("onboarding_wizard", "12 hours"), 12},
-      {dgettext("onboarding_wizard", "24 hours"), 24},
-      {dgettext("onboarding_wizard", "48 hours"), 48}
-    ]
-  end
-
-  @spec min_advance_values() :: [integer()]
-  def min_advance_values, do: @min_advance_values
+  def min_advance_options, do: options(:min_advance_hours, &min_advance_label/1)
 
   @spec min_advance_constraints() :: map()
   def min_advance_constraints, do: @min_advance_constraints
+
+  defp options(field, label_fun) do
+    field
+    |> CustomInputModeHelper.presets()
+    |> Enum.map(&{label_fun.(&1), &1})
+  end
+
+  defp buffer_time_label(0), do: dgettext("onboarding_wizard", "No buffer")
+
+  defp buffer_time_label(minutes),
+    do: dgettext("onboarding_wizard", "%{minutes} min", minutes: minutes)
+
+  defp advance_booking_label(7), do: dgettext("onboarding_wizard", "1 week")
+  defp advance_booking_label(14), do: dgettext("onboarding_wizard", "2 weeks")
+  defp advance_booking_label(30), do: dgettext("onboarding_wizard", "1 month")
+  defp advance_booking_label(60), do: dgettext("onboarding_wizard", "2 months")
+  defp advance_booking_label(90), do: dgettext("onboarding_wizard", "3 months")
+  defp advance_booking_label(180), do: dgettext("onboarding_wizard", "6 months")
+  defp advance_booking_label(365), do: dgettext("onboarding_wizard", "1 year")
+
+  defp min_advance_label(0), do: dgettext("onboarding_wizard", "No minimum")
+  defp min_advance_label(168), do: dgettext("onboarding_wizard", "1 week")
+
+  defp min_advance_label(hours),
+    do: dngettext("onboarding_wizard", "%{count} hour", "%{count} hours", hours)
 
   @doc """
   Returns custom input configuration for all scheduling preference fields.
 
   Maps setting names to their field configuration including:
   - field: The profile schema field atom
-  - presets: List of preset values
+  - presets: List of preset values, from `CustomInputModeHelper`
   - constraints: Min/max/step/default values
   """
   @spec custom_input_config() :: map()
-  def custom_input_config, do: @custom_input_config
+  def custom_input_config do
+    Map.new(@custom_input_config, fn {setting, config} ->
+      {setting, Map.put(config, :presets, CustomInputModeHelper.presets(config.field))}
+    end)
+  end
 end

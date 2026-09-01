@@ -4,7 +4,7 @@ defmodule Tymeslot.Integrations.Video.RoomsMeetingContextTest do
   meeting events, and generated meeting metadata across the provider types.
   """
 
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox

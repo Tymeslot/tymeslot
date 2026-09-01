@@ -79,6 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           :unauthorized
           | :forbidden
           | :not_found
+          | :method_not_allowed
           | :precondition_failed
           | :conditional_not_supported
           | :rate_limited

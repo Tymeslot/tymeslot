@@ -1,7 +1,7 @@
 defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
   @moduledoc """
   Covers the CalDAV sync worker's error handling: provider authentication
-  failures (401), missing calendar paths (404), refused requests (415),
+  failures (401), missing calendar paths (404), refused requests (415 and 405),
   sync-token expiry (410), the deletion circuit breaker, and a delta the
   server answered without any event data.
   """
@@ -166,6 +166,37 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
 
       # The refusal says nothing about the credentials, so it must not push the
       # user through a reconnection they do not need.
+      assert updated.needs_reauth == false
+    end
+
+    test "discards a 405 without treating the calendar as gone" do
+      # 405 is modelled as `:method_not_allowed` so discovery can fall back on
+      # it. Two things must survive that: it stays terminal here (a retryable
+      # 405 re-sends the same bytes for the same refusal three times, then
+      # raises a permanent-failure admin alert nobody can act on), and it never
+      # behaves like `:not_found`, which deletes calendar paths and pushes the
+      # owner through a reconnection they do not need.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1(), path2()]
+        )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 405, "Method Not Allowed")
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      updated =
+        Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
+
+      assert updated.calendar_paths == [path1(), path2()]
       assert updated.needs_reauth == false
     end
 

@@ -103,18 +103,18 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
     end
   end
 
-  # Uses the shared boolean predicate for the yes/no decision (it already
-  # treats `:stripe_required` as allowed: the host has the plan but no
+  # Mirrors `Features.meeting_payments_allowed?/1`'s yes/no decision
+  # (`:stripe_required` counts as allowed: the host has the plan but no
   # charges-enabled Connect account yet, and the schema changeset, driven by
   # `FormMapper.payment_opts/1`'s `host_charges_enabled`, is the authority on
-  # whether a price may actually be persisted without a live account). Falls
-  # back to the raw `check_access/2` reason only when denied, since callers
-  # render that reason into a specific message.
+  # whether a price may actually be persisted without a live account), but
+  # checks access only once so the denied reason it returns to the caller
+  # (rendered into a specific message) reflects the same read.
   defp gate_payment(user_id, %{payment_required: true}) do
-    if Features.meeting_payments_allowed?(user_id) do
-      :ok
-    else
-      Features.check_access(user_id, :meeting_payments)
+    case Features.check_access(user_id, :meeting_payments) do
+      :ok -> :ok
+      {:error, :stripe_required} -> :ok
+      {:error, _reason} = error -> error
     end
   end
 

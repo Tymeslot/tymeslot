@@ -8,8 +8,14 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   never assemble a destination path themselves.
   """
 
+  alias Phoenix.Component
   alias Phoenix.LiveView
+  alias Phoenix.LiveView.UploadConfig
   alias TymeslotWeb.Helpers.FileOperations
+
+  # LiveView records the `max_entries` breach against the upload config rather
+  # than against the offending entry, so it arrives through `upload_errors/1`.
+  @too_many_files :too_many_files
 
   @doc """
   Discards the entries of `upload_key` that can never finish, and reports
@@ -21,10 +27,20 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   about that entry's siblings. A caller that reads only its own entry is
   therefore one concurrent selection away from crashing the LiveView.
 
-  An entry the client rejected — over `max_file_size`, past `max_entries`,
-  wrong extension — is never uploaded at all, so it stays not-done for the
-  life of the LiveView. Waiting for it would block every later upload on that
-  key, so those entries are cancelled here rather than waited on.
+  Two kinds of entry never finish, and both are cancelled here rather than
+  waited on, because either would block every later upload on that key for the
+  life of the LiveView:
+
+    * one that failed validation — over `max_file_size`, wrong extension — and
+      so is never uploaded at all;
+    * one selected past `max_entries`. Preflight issues upload tokens only to
+      entries inside the limit, so an excess entry can never make progress,
+      yet it is `valid?: true`: LiveView keys `:too_many_files` on the upload
+      config, not on the entry.
+
+  An entry merely waiting for its preflight round trip looks identical to an
+  excess one, so "not preflighted" alone is not the discriminator; it only
+  means stalled once the upload is reporting that it is full.
 
   Returns the (possibly updated) socket and `:settled` when consuming is safe,
   or `:in_progress` when an entry is still genuinely uploading.
@@ -32,10 +48,12 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   @spec settle_upload(Phoenix.LiveView.Socket.t(), atom()) ::
           {Phoenix.LiveView.Socket.t(), :settled | :in_progress}
   def settle_upload(socket, upload_key) when is_atom(upload_key) do
+    full? = upload_full?(socket, upload_key)
+
     socket =
       socket
       |> upload_entries(upload_key)
-      |> Enum.reject(& &1.valid?)
+      |> Enum.filter(&stalled?(&1, full?))
       |> Enum.reduce(socket, &LiveView.cancel_upload(&2, upload_key, &1.ref))
 
     case Enum.reject(upload_entries(socket, upload_key), & &1.done?) do
@@ -85,6 +103,19 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   end
 
   # Private helpers
+
+  # Rejected outright: the client never uploads it.
+  defp stalled?(%{valid?: false}, _full?), do: true
+  # Still awaiting a token it can only be granted from inside `max_entries`.
+  defp stalled?(%{done?: false, preflighted?: false}, full?), do: full?
+  defp stalled?(_entry, _full?), do: false
+
+  defp upload_full?(socket, upload_key) do
+    case socket.assigns[:uploads] do
+      %{^upload_key => %UploadConfig{} = conf} -> @too_many_files in Component.upload_errors(conf)
+      _not_configured -> false
+    end
+  end
 
   defp get_upload_base_dir do
     Application.get_env(:tymeslot, :upload_directory, "uploads")

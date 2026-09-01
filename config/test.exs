@@ -84,7 +84,7 @@ config :tymeslot, Tymeslot.Repo,
 # Queues are loaded at runtime in application.ex from :oban_queues config
 config :tymeslot, Oban,
   repo: Tymeslot.Repo,
-  plugins: [{Oban.Plugins.Pruner, max_age: 3_600}],
+  pruner: [max_age: {1, :hour}],
   testing: :manual
 
 # In test we don't send emails
@@ -162,6 +162,21 @@ config :tymeslot, :analytics_salt_secret, "test_analytics_salt_secret_fixed_for_
 # tests exercise the live path. Tests covering the disabled path override this
 # per-test with `Application.put_env/3`.
 config :tymeslot, :booking_analytics_enabled, true
+
+# Write page views inline rather than in a fire-and-forget Task, so the write is
+# owned by the test process. A supervised Task outlives the test that mounted the
+# LiveView, and hits a torn-down sandbox connection with a
+# `DBConnection.OwnershipError` that ExUnit reports but does not fail on.
+config :tymeslot, :async_page_view_logging, false
+
+# Resolve month availability inline rather than in a linked Task, so the result
+# is owned by the test process. Both modes deliver the same `{ref, result}`
+# message to the same handler at the same point in the LiveView lifecycle; what
+# the inline mode removes is a task still in flight when a test ends, which is
+# killed mid-query and takes the checked-out sandbox connection with it.
+# `TymeslotWeb.Live.Scheduling.AvailabilityAsyncFetchTest` flips this back on to
+# cover the task path itself.
+config :tymeslot, :async_availability_fetch, false
 
 # Enable all providers for testing
 config :tymeslot, :video_providers, %{

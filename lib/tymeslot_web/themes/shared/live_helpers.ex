@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
-  alias Tymeslot.Analytics
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
@@ -25,6 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
+    NextAvailable,
     OrganizerHelpers,
     PreviewToken,
     ThemeUtils
@@ -190,19 +190,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if socket.assigns[:username_context] && socket.assigns[:organizer_user_id] do
       case resolve_meeting_type(socket, duration_str) do
-        nil ->
-          socket
-
-        meeting_type ->
-          # Re-initialise the engine with a fresh snapshot whenever the meeting type
-          # changes so the `:questions` step always reflects the current custom fields.
-          defs = CustomFields.snapshot_for(meeting_type)
-
-          socket
-          |> assign(:meeting_type, meeting_type)
-          |> assign(:engine, QEngine.init(defs))
-          |> maybe_subscribe_to_group_seats()
-          |> OrganizerHelpers.assign_booking_window()
+        nil -> socket
+        meeting_type -> assign_meeting_type(socket, meeting_type)
       end
     else
       socket
@@ -233,13 +222,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     socket
     |> maybe_assign_from_params(:duration, normalize_duration_param(params))
     |> maybe_assign_from_params(:selected_duration, normalize_duration_param(params))
-    |> maybe_assign_from_params(:selected_date, params["date"])
+    |> maybe_assign_from_params(:selected_date, date_param(params))
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
     |> maybe_assign_from_params(:reschedule_seat_token, seat_token)
     |> assign(
       :is_rescheduling,
-      params["reschedule_meeting_uid"] != nil or seat_token != nil
+      is_binary(params["reschedule_meeting_uid"]) or seat_token != nil
     )
     |> handle_confirmation_params(params)
   end
@@ -269,8 +258,31 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     end
   end
 
-  defp maybe_assign_from_params(socket, _key, nil), do: socket
-  defp maybe_assign_from_params(socket, key, value), do: assign(socket, key, value)
+  # Query parameters are whatever the URL says they are: Phoenix decodes
+  # `?date[]=x` to a list and `?date[a]=b` to a map, and every consumer
+  # downstream (`Date.from_iso8601/1` among them) is written for strings only.
+  # A param of any other shape is treated as absent rather than assigned on and
+  # left to fail deep in the flow.
+  defp maybe_assign_from_params(socket, key, value) when is_binary(value),
+    do: assign(socket, key, value)
+
+  defp maybe_assign_from_params(socket, _key, _value), do: socket
+
+  # A date that does not parse is no more usable than one that was never named,
+  # and dropping it here is what lets `NextAvailable` land the booker on a real
+  # day: it stands down for any non-empty `:selected_date`, so a malformed one
+  # left on the socket would strand the schedule step with no day selected and
+  # a calendar-parsing error where the times belong.
+  defp date_param(params), do: parsed_date(params["date"])
+
+  defp parsed_date(value) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, _date} -> value
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp parsed_date(_value), do: nil
 
   defp normalize_duration_param(params) do
     duration = params["slug"] || params["duration"]
@@ -389,6 +401,16 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> assign(:current_year, current_year)
       |> assign(:current_month, current_month)
       |> assign(:duration, normalized_duration)
+      # Arriving at the step is a fresh landing: it gets its own hop budget,
+      # even if an earlier visit spent one on a duration that was booked out.
+      |> NextAvailable.reset()
+      # `mount` reaches this entry before `handle_params` runs, so a date named
+      # in the URL is not yet on the socket. The auto-selection runs later, off
+      # the fetch result, by which point `handle_params` has seeded it anyway —
+      # but this entry is also reached on an in-page step transition, whose
+      # params arrive with the event rather than through `handle_params`.
+      # Seeding here covers that arrival.
+      |> maybe_assign_from_params(:selected_date, date_param(params))
 
     # Trigger month availability fetch in background if not already loading or loaded for this month
     if AvailabilityHelpers.can_fetch_availability?(socket) do
@@ -409,8 +431,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     if selection_made?(socket, params) || is_reschedule do
       case resolve_booking_meeting_type(socket, params, is_reschedule) do
-        {:unresolvable, socket} -> socket
-        {:ok, socket} -> do_handle_booking_entry(socket, params)
+        {:unresolvable, socket} ->
+          socket
+
+        {:ok, socket} ->
+          socket
+          |> route_past_unanswered_questions()
+          |> do_handle_booking_entry(params)
       end
     else
       redirect_to_schedule_step(socket, params)
@@ -473,6 +500,29 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     end
   end
 
+  # `/:username/:slug/book` can be entered directly (a reschedule deep-link,
+  # or a locale switch mid-flow, both of which redirect straight back to this
+  # URL). Neither passes through the `:questions` step, so a meeting type with
+  # required custom fields would otherwise seed the engine with definitions
+  # but no answers and render the booking step, which has no UI for them —
+  # every submit then fails validation with no way to correct it. Route to
+  # `:questions` instead whenever the freshly-resolved engine still has
+  # unanswered required fields; forward navigation from there already lands
+  # back on `:booking` once answered.
+  defp route_past_unanswered_questions(socket) do
+    if unanswered_required_questions?(socket.assigns[:engine]) do
+      assign(socket, :current_state, :questions)
+    else
+      socket
+    end
+  end
+
+  defp unanswered_required_questions?(%QEngine{} = engine) do
+    not QEngine.skipped?(engine) && match?({:error, _errors}, QEngine.validate_all(engine))
+  end
+
+  defp unanswered_required_questions?(_engine), do: false
+
   defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting
     client_ip = ClientIP.get(socket)
@@ -496,80 +546,6 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> assign(:client_ip, client_ip)
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)
-  end
-
-  @doc """
-  Captures UTM and arbitrary tracking params plus the referrer host from
-  the request, and assigns the combined map under `:tracking`. The shape
-  matches what `Tymeslot.Bookings.Create.execute/3` expects on the
-  meeting params, so merging this assign into the meeting params at
-  submit time persists the attribution on the booking.
-
-  **First-touch attribution only.** This function is called once in `mount/3`.
-  Internal LiveView navigations within the same session (e.g. schedule →
-  booking → confirmation) do not invoke `mount/3` again, so the tracking
-  assign is never refreshed mid-session. The UTM and referrer values
-  recorded here reflect the URL the visitor first arrived on.
-  """
-  @spec assign_tracking(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def assign_tracking(socket, params) do
-    if Analytics.enabled?() do
-      referrer = raw_referrer_from_socket(socket)
-
-      tracking =
-        params
-        |> Analytics.extract_attribution(referrer)
-        |> maybe_put_visitor_hash(socket)
-
-      assign(socket, :tracking, tracking)
-    else
-      assign(socket, :tracking, %{})
-    end
-  end
-
-  # `PageViewHook` (an on_mount hook, so it runs before this mount/3 helper)
-  # computes the cookieless visitor hash and assigns it. Carry it into the
-  # tracking map so it persists onto the booking and lets analytics join the
-  # booking back to its page-view. Absent when the visit was not tracked
-  # (e.g. dead render); then no hash is attached.
-  defp maybe_put_visitor_hash(tracking, socket) do
-    case socket.assigns[:visitor_hash] do
-      hash when is_binary(hash) -> Map.put(tracking, :visitor_hash, hash)
-      _other -> tracking
-    end
-  end
-
-  @doc """
-  Appends preserved tracking params to a path so UTM and custom URL
-  params survive cross-route navigation in the scheduling flow.
-
-  The `:referrer_host` key is local to the visitor's session (captured
-  from the request header at mount) and is therefore omitted — it is
-  not a query-string-shaped value.
-  """
-  @spec tracking_path(String.t(), map() | nil) :: String.t()
-  def tracking_path(path, nil), do: path
-
-  def tracking_path(path, tracking) do
-    query =
-      tracking
-      |> Enum.flat_map(fn
-        {:tracking_params, custom} when is_map(custom) -> Map.to_list(custom)
-        {:referrer_host, _value} -> []
-        {_key, nil} -> []
-        {key, value} -> [{to_string(key), value}]
-      end)
-      |> URI.encode_query()
-
-    cond do
-      query == "" -> path
-      String.contains?(path, "?") -> path <> "&" <> query
-      true -> path <> "?" <> query
-    end
-  end
-
-  defp raw_referrer_from_socket(socket) do
-    socket.assigns[:scheduling_referrer]
   end
 
   defp maybe_subscribe_to_calendar_events(socket) do

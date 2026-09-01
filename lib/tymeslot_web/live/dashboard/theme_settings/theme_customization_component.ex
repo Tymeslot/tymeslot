@@ -290,22 +290,44 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   end
 
   def handle_event("validate_image", _params, socket) do
-    {:noreply, BackgroundUploads.consume(socket, :image)}
+    {:noreply, consume_upload_and_notify(socket, :image)}
   end
 
   def handle_event("save_background_image", _params, socket) do
-    {:noreply, BackgroundUploads.consume(socket, :image)}
+    {:noreply, consume_upload_and_notify(socket, :image)}
   end
 
   def handle_event("validate_video", _params, socket) do
-    {:noreply, BackgroundUploads.consume(socket, :video)}
+    {:noreply, consume_upload_and_notify(socket, :video)}
   end
 
   def handle_event("save_background_video", _params, socket) do
-    {:noreply, BackgroundUploads.consume(socket, :video)}
+    {:noreply, consume_upload_and_notify(socket, :video)}
   end
 
   # Private functions
+
+  # `AutoUpload` (mounted at the root of this component's markup, see
+  # `render/1`) only clears the file picker once it receives "upload-complete",
+  # so re-selecting the same background file after a successful upload needs
+  # this pushed explicitly. `BackgroundUploads.consume/2` doesn't report
+  # success directly, so success is inferred from the stored path changing;
+  # a no-op (not ready yet, rate-limited, or a validation error) leaves the
+  # path untouched and pushes nothing.
+  defp consume_upload_and_notify(socket, kind) do
+    path_before = background_path(socket.assigns.customization, kind)
+    socket = BackgroundUploads.consume(socket, kind)
+    path_after = background_path(socket.assigns.customization, kind)
+
+    if path_after != path_before do
+      push_event(socket, "upload-complete", %{})
+    else
+      socket
+    end
+  end
+
+  defp background_path(customization, :image), do: customization.background_image_path
+  defp background_path(customization, :video), do: customization.background_video_path
 
   # Rate limiting helper that validates user_id and checks rate limit before executing operation
   @spec with_rate_limit(Socket.t(), String.t(), (-> {:noreply, Socket.t()})) ::

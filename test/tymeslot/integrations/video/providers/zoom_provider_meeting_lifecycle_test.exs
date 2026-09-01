@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox
@@ -90,8 +90,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
          }}
       end)
 
-      assert {:error, message} = ZoomProvider.update_meeting_room("123", config)
-      assert String.contains?(message, "401")
+      assert {:error, {:http_error, 401, message}} =
+               ZoomProvider.update_meeting_room("123", config)
+
       assert String.contains?(message, "Invalid access token")
     end
 
@@ -211,8 +212,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
         {:error, :timeout}
       end)
 
-      assert {:error, message} = ZoomProvider.update_meeting_room("123", config)
-      assert String.contains?(message, "Network error")
+      assert {:error, :timeout} = ZoomProvider.update_meeting_room("123", config)
     end
 
     test "rejects malformed meeting_start_time without making an HTTP call" do
@@ -399,8 +399,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
          }}
       end)
 
-      assert {:error, message} = ZoomProvider.delete_meeting_room("123", config)
-      assert String.contains?(message, "401")
+      assert {:error, {:http_error, 401, message}} =
+               ZoomProvider.delete_meeting_room("123", config)
+
+      assert String.contains?(message, "Invalid access token")
     end
 
     test "returns error on network failure" do
@@ -412,8 +414,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
         {:error, :timeout}
       end)
 
-      assert {:error, message} = ZoomProvider.delete_meeting_room("123", config)
-      assert String.contains?(message, "Network error")
+      assert {:error, :timeout} = ZoomProvider.delete_meeting_room("123", config)
     end
 
     test "refreshes token when validate_token returns :needs_refresh and persists to database" do

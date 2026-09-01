@@ -2,7 +2,8 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   @moduledoc """
   Determines reminder-email timing: whether a reminder is still worth
   scheduling given how far out the meeting is, and the exact instant it
-  should fire. Pure functions only.
+  should fire. Reads the clock and the `:notifications` config; otherwise
+  side-effect free.
   """
 
   @doc """

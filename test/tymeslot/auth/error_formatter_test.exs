@@ -20,7 +20,6 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
     end
 
     test "formats account status errors" do
-      assert ErrorFormatter.format_auth_error(:account_locked) =~ "account has been locked"
       assert ErrorFormatter.format_auth_error(:account_throttled) =~ "Too many login attempts"
       assert ErrorFormatter.format_auth_error(:email_not_verified) =~ "verify your email"
     end

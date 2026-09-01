@@ -4,7 +4,12 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
 
   This struct carries cross-domain provider metadata that UI and services
   can consume without reaching into provider modules directly.
+
+  `:family` and `:oauth` both come from the family table in the domain's
+  `ProviderConfig`; see `Tymeslot.Integrations.Providers.Families`.
   """
+
+  alias Tymeslot.Integrations.Providers.Families
 
   @enforce_keys [:domain, :type, :display_name, :config_schema, :provider_module]
   defstruct domain: nil,
@@ -24,12 +29,12 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
   @type domain :: :calendar | :video
 
   @typedoc """
-  How a provider connects, for grouping in the picker. `oauth` alone cannot
-  answer this: a CalDAV server and a subscribed feed are both "not OAuth" but
-  belong under different headings, and filing a feed under "CalDAV servers"
-  tells the user something untrue about what it is.
+  How a provider connects, for grouping in the picker. The vocabulary is
+  shared across domains and defined once, in
+  `Tymeslot.Integrations.Providers.Families`; this alias exists so descriptor
+  callers do not need to know that.
   """
-  @type family :: :oauth | :caldav | :subscription | :other
+  @type family :: Families.t()
 
   @type t :: %__MODULE__{
           domain: domain(),

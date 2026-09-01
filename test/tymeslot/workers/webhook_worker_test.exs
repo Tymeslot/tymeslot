@@ -10,6 +10,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
@@ -86,6 +87,28 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       assert delivery.webhook_id == webhook.id
       assert delivery.response_status == 200
       assert delivery.delivered_at
+    end
+
+    test "carries the meeting's guests to the endpoint" do
+      meeting = insert(:meeting)
+      webhook = insert(:webhook)
+
+      {:ok, _guests} = Guests.create_for_meeting(meeting.id, ["colleague@example.com"])
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        guests = body |> Jason.decode!() |> get_in(["data", "meeting", "guests"])
+
+        assert [%{"email" => "colleague@example.com", "status" => "pending"}] = guests
+
+        {:ok, %{status: 200, body: "ok"}}
+      end)
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
     end
 
     test "records the failure when the remote endpoint responds with a 5xx error" do

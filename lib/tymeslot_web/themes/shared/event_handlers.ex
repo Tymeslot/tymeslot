@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
-  alias TymeslotWeb.Themes.Shared.LiveHelpers
+  alias TymeslotWeb.Themes.Shared.BookingTracking
   import Phoenix.Component, only: [assign: 3]
 
   @doc """
@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
     path =
       socket
       |> path_handlers_module.build_path_with_locale(locale)
-      |> LiveHelpers.tracking_path(socket.assigns[:tracking])
+      |> BookingTracking.tracking_path(socket.assigns[:tracking])
 
     {:noreply, LiveView.redirect(socket, external: path)}
   end

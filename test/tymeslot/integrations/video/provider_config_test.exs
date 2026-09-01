@@ -70,5 +70,37 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
     test "returns false for a non-string, non-atom value" do
       assert ProviderConfig.oauth_provider?(42) == false
     end
+
+    test "answers identically for the atom and the string form of every provider" do
+      providers = ProviderConfig.provider_constraint_list_all()
+      assert providers != []
+
+      disagreeing =
+        Enum.reject(providers, fn string ->
+          {:ok, atom} = ProviderConfig.parse_known(string)
+
+          ProviderConfig.family_of(atom) == ProviderConfig.family_of(string) and
+            ProviderConfig.oauth_provider?(atom) == ProviderConfig.oauth_provider?(string)
+        end)
+
+      assert disagreeing == [],
+             "these providers get different answers as an atom than as a string: " <>
+               inspect(disagreeing)
+    end
+  end
+
+  describe "family_of/1" do
+    test "files each provider under the family that describes it" do
+      assert ProviderConfig.family_of(:zoom) == :oauth
+      assert ProviderConfig.family_of("zoom") == :oauth
+      assert ProviderConfig.family_of(:mirotalk) == :other
+      assert ProviderConfig.family_of(:custom) == :other
+    end
+
+    test "answers :other for the video-disabled sentinel and for non-providers" do
+      assert ProviderConfig.family_of(:none) == :other
+      assert ProviderConfig.family_of("not_a_provider_xyzzy") == :other
+      assert ProviderConfig.family_of(nil) == :other
+    end
   end
 end

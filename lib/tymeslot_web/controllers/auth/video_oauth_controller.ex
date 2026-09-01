@@ -39,7 +39,7 @@ defmodule TymeslotWeb.VideoOAuthController do
       )
       |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
-      error -> handle_google_meet_error(conn, error)
+      error -> handle_callback_error(conn, :google, error)
     end
   end
 
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.VideoOAuthController do
       )
       |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
-      error -> handle_teams_oauth_error(conn, error)
+      error -> handle_callback_error(conn, :teams, error)
     end
   end
 
@@ -155,7 +155,7 @@ defmodule TymeslotWeb.VideoOAuthController do
       |> put_flash(:info, dgettext("dashboard_integrations", "Zoom connected successfully!"))
       |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
-      error -> handle_zoom_oauth_error(conn, error)
+      error -> handle_callback_error(conn, :zoom, error)
     end
   end
 
@@ -190,90 +190,70 @@ defmodule TymeslotWeb.VideoOAuthController do
     |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
-  defp handle_google_meet_error(conn, error) do
-    case error do
-      {:error, guard_reason}
-      when guard_reason in [:state_user_mismatch, :unauthenticated, :invalid_state] ->
-        reject_callback(conn)
-
-      {:error, :rate_limited, message} ->
-        Logger.warning("Rate limit exceeded for Google Meet OAuth callback")
-
-        conn
-        |> put_flash(:error, message)
-        |> redirect(to: ~p"/dashboard/integrations?tab=video")
-
-      {:error, reason} ->
-        Logger.error("Google Meet OAuth flow failed", reason: inspect(reason))
-
-        conn
-        |> put_flash(
-          :error,
-          dgettext("dashboard_integrations", "Failed to connect Google Meet. Please try again.")
-        )
-        |> redirect(to: ~p"/dashboard/integrations?tab=video")
-    end
+  # One handler for all three video providers' OAuth callback errors. The
+  # provider atom threads through only the two places behaviour genuinely
+  # differs: the display label used in log lines, and the provider-specific
+  # "missing required field" case (Teams, Zoom). Everything else — the guard
+  # rejection, the rate-limit flash, and the generic failure fallback — was
+  # previously copy-pasted three times over.
+  @spec handle_callback_error(Plug.Conn.t(), :google | :teams | :zoom, term()) :: Plug.Conn.t()
+  defp handle_callback_error(conn, _provider, {:error, guard_reason})
+       when guard_reason in [:state_user_mismatch, :unauthenticated, :invalid_state] do
+    reject_callback(conn)
   end
 
-  defp handle_teams_oauth_error(conn, {:error, guard_reason})
-       when guard_reason in [:state_user_mismatch, :unauthenticated, :invalid_state],
-       do: reject_callback(conn)
-
-  defp handle_teams_oauth_error(conn, error) do
-    message =
-      case error do
-        {:error, :rate_limited, msg} ->
-          Logger.warning("Rate limit exceeded for Teams OAuth callback")
-          msg
-
-        {:error, :missing_teams_fields} ->
-          Logger.warning(
-            "Teams OAuth callback missing required fields: tenant_id or teams_user_id"
-          )
-
-          dgettext(
-            "dashboard_integrations",
-            "Missing required Microsoft Teams information. Please try again."
-          )
-
-        {:error, reason} ->
-          Logger.error("Teams OAuth flow failed", reason: inspect(reason))
-
-          dgettext(
-            "dashboard_integrations",
-            "Failed to connect Microsoft Teams. Please try again."
-          )
-      end
-
-    conn
-    |> put_flash(:error, message)
-    |> redirect(to: ~p"/dashboard/integrations?tab=video")
+  defp handle_callback_error(conn, provider, {:error, :rate_limited, message}) do
+    Logger.warning("Rate limit exceeded for OAuth callback", provider: provider_label(provider))
+    flash_and_redirect(conn, message)
   end
 
-  defp handle_zoom_oauth_error(conn, {:error, guard_reason})
-       when guard_reason in [:state_user_mismatch, :unauthenticated, :invalid_state],
-       do: reject_callback(conn)
+  defp handle_callback_error(conn, :teams, {:error, :missing_teams_fields}) do
+    Logger.warning("Teams OAuth callback missing required fields: tenant_id or teams_user_id")
 
-  defp handle_zoom_oauth_error(conn, error) do
-    message =
-      case error do
-        {:error, :rate_limited, msg} ->
-          Logger.warning("Rate limit exceeded for Zoom OAuth callback")
-          msg
+    flash_and_redirect(
+      conn,
+      dgettext(
+        "dashboard_integrations",
+        "Missing required Microsoft Teams information. Please try again."
+      )
+    )
+  end
 
-        {:error, :missing_zoom_account_id} ->
-          Logger.warning("Zoom OAuth callback missing provider_account_id")
+  defp handle_callback_error(conn, :zoom, {:error, :missing_zoom_account_id}) do
+    Logger.warning("Zoom OAuth callback missing provider_account_id")
 
-          dgettext(
-            "dashboard_integrations",
-            "Could not identify your Zoom account. Please try again."
-          )
+    flash_and_redirect(
+      conn,
+      dgettext(
+        "dashboard_integrations",
+        "Could not identify your Zoom account. Please try again."
+      )
+    )
+  end
 
-        {:error, reason} ->
-          Logger.error("Zoom OAuth flow failed", reason: inspect(reason))
-          dgettext("dashboard_integrations", "Failed to connect Zoom. Please try again.")
-      end
+  defp handle_callback_error(conn, provider, {:error, reason}) do
+    Logger.error("OAuth flow failed",
+      provider: provider_label(provider),
+      reason: inspect(reason)
+    )
 
+    flash_and_redirect(conn, generic_connect_failure_message(provider))
+  end
+
+  defp provider_label(:google), do: "Google Meet"
+  defp provider_label(:teams), do: "Microsoft Teams"
+  defp provider_label(:zoom), do: "Zoom"
+
+  defp generic_connect_failure_message(:google),
+    do: dgettext("dashboard_integrations", "Failed to connect Google Meet. Please try again.")
+
+  defp generic_connect_failure_message(:teams),
+    do: dgettext("dashboard_integrations", "Failed to connect Microsoft Teams. Please try again.")
+
+  defp generic_connect_failure_message(:zoom),
+    do: dgettext("dashboard_integrations", "Failed to connect Zoom. Please try again.")
+
+  defp flash_and_redirect(conn, message) do
     conn
     |> put_flash(:error, message)
     |> redirect(to: ~p"/dashboard/integrations?tab=video")

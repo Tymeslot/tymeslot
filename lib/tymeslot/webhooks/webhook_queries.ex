@@ -7,7 +7,13 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
 
   alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Repo
-  alias Tymeslot.Webhooks.{WebhookDeliverySchema, WebhookEventSchema, WebhookSchema}
+
+  alias Tymeslot.Webhooks.{
+    DeliveryStatus,
+    WebhookDeliverySchema,
+    WebhookEventSchema,
+    WebhookSchema
+  }
 
   # ============================================================================
   # Webhook Queries
@@ -108,7 +114,7 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
 
     update_webhook(webhook, %{
       last_triggered_at: triggered_at,
-      last_status: "success",
+      last_status: DeliveryStatus.encode_success(),
       failure_count: 0
     })
   end
@@ -127,7 +133,7 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
          |> select([w], w)
          |> Repo.update_all(
            set: [
-             last_status: "failed: #{reason}",
+             last_status: DeliveryStatus.encode_failure(reason),
              last_triggered_at: DateTime.utc_now(:second)
            ],
            inc: [failure_count: 1]

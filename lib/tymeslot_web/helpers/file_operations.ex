@@ -1,22 +1,14 @@
 defmodule TymeslotWeb.Helpers.FileOperations do
   @moduledoc """
-  Robust file operations with comprehensive error handling, security validation,
-  and retry mechanisms for upload management.
+  Robust file operations with retry mechanisms and path/filename security
+  for upload management.
   """
 
   require Logger
-  alias TymeslotWeb.Helpers.UploadConstraints
 
   @max_retries 3
   # 1 second base delay
   @retry_backoff_base 1000
-
-  # Security: Allowed file extensions by category
-  @allowed_extensions %{
-    avatar: UploadConstraints.allowed_extensions(:avatar),
-    image: UploadConstraints.allowed_extensions(:image),
-    video: UploadConstraints.allowed_extensions(:video)
-  }
 
   # Security: Maximum filename length
   @max_filename_length 255
@@ -52,22 +44,6 @@ defmodule TymeslotWeb.Helpers.FileOperations do
 
         # Don't fail the operation
         :ok
-    end
-  end
-
-  @doc """
-  Validates file extension against allowed types.
-  """
-  @spec validate_file_extension(String.t(), atom()) ::
-          :ok | {:error, {atom(), String.t(), [String.t()]}}
-  def validate_file_extension(filename, file_type) when is_atom(file_type) do
-    extension = String.downcase(Path.extname(filename))
-    allowed = Map.get(@allowed_extensions, file_type, [])
-
-    if extension in allowed do
-      :ok
-    else
-      {:error, {:invalid_extension, extension, allowed}}
     end
   end
 

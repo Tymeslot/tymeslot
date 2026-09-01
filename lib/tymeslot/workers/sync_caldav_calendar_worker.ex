@@ -128,7 +128,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     {:discard, "CalDAV server returned a server error; the next scheduled sync will retry"}
   end
 
-  # A 4xx the transport layer does not model (415, 405, 400…) is the server
+  # A 4xx there is no talking the request out of (415, 400…, and the modelled
+  # `:method_not_allowed`) is the server
   # refusing the request itself: the remaining attempts re-send the same bytes
   # for the same refusal, then page an operator about a server-side condition
   # no operator action can fix. `Http` has already logged the status and the

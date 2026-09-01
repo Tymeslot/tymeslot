@@ -3,8 +3,8 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
   @moduletag :payments
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Phoenix.PubSub
   alias Phoenix.PubSub.Supervisor
+  alias Tymeslot.Payments
   alias Tymeslot.Payments.Webhooks.SubscriptionHandler
   alias TymeslotSaas.Payments.PaymentEventListener
 
@@ -47,8 +47,9 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
 
   describe "process/2" do
     test "broadcasts subscription events" do
-      # Subscribe to the topic
-      PubSub.subscribe(Tymeslot.PubSub, "payment_events:tymeslot")
+      # Subscribe through the context, so a topic rename cannot leave the
+      # handler broadcasting where nobody listens.
+      assert :ok = Payments.subscribe_to_payment_events()
 
       subscription = %{"id" => "sub_123", "status" => "active"}
       event = %{type: "customer.subscription.created"}
@@ -63,7 +64,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
     end
 
     test "handles unknown subscription events with generic name" do
-      PubSub.subscribe(Tymeslot.PubSub, "payment_events:tymeslot")
+      assert :ok = Payments.subscribe_to_payment_events()
 
       subscription = %{"id" => "sub_123"}
       event = %{type: "customer.subscription.something_else"}

@@ -78,31 +78,30 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     {:cont, socket}
   end
 
-  # The static render is thrown away the moment the socket connects, so the
-  # integration-status fetch below only runs once connected — its badges are
-  # cosmetic and the disconnected render already uses the same defaults when
-  # the connected fetch times out. The profile itself cannot be deferred the
-  # same way: every dashboard sub-component (schedule settings, theme
-  # customisation, ...) keys its own queries off `profile.id`, so the static
-  # render needs the real row, not the zero-id placeholder, to avoid crashing.
+  # The static render is thrown away the moment the socket connects, but
+  # several dashboard surfaces (onboarding checklist, theme lock overlay,
+  # calendar-connect banner) branch on `integration_status` in that first
+  # paint too, so it must be the real value there, not the all-false
+  # default — otherwise a fully set-up host sees a false "setup incomplete"
+  # flash before the socket connects. `DashboardContext.get_integration_status/1`
+  # is cache-backed (5 minutes), so fetching it synchronously here is cheap.
   defp load_profile_and_integration_status(user, socket) do
     if connected?(socket) do
       fetch_profile_and_integration_status(user)
     else
-      profile = Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
-      {profile, DashboardContext.default_integration_status()}
+      {profile_or_placeholder(user), DashboardContext.get_integration_status(user.id)}
     end
   end
 
   defp fetch_profile_and_integration_status(user) do
     # Load profile and integration status concurrently — they are independent
     profile_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
+      Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn ->
+        profile_or_placeholder(user)
       end)
 
     integration_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn ->
         DashboardContext.get_integration_status(user.id)
       end)
 
@@ -126,6 +125,10 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       end
 
     {profile, integration_status}
+  end
+
+  defp profile_or_placeholder(user) do
+    Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
   end
 
   defp payments_allowed?(user_id), do: Features.meeting_payments_allowed?(user_id)

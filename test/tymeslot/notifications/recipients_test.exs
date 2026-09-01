@@ -66,24 +66,6 @@ defmodule Tymeslot.Notifications.RecipientsTest do
     end
   end
 
-  describe "should_receive_notification?/3" do
-    test "organiser receives every notification type" do
-      meeting = meeting_with_organizer()
-
-      for type <- [:confirmation, :reminder, :cancellation, :reschedule] do
-        assert Recipients.should_receive_notification?(:organizer, type, meeting)
-      end
-    end
-
-    test "attendee receives every notification type" do
-      meeting = meeting_with_organizer()
-
-      for type <- [:confirmation, :reminder, :cancellation, :reschedule] do
-        assert Recipients.should_receive_notification?(:attendee, type, meeting)
-      end
-    end
-  end
-
   describe "get_organizer_timezone/1" do
     test "returns the organiser's profile timezone" do
       meeting = meeting_with_organizer()
@@ -174,13 +156,6 @@ defmodule Tymeslot.Notifications.RecipientsTest do
     test "rejects an unknown recipient structure" do
       assert {:error, "Invalid recipient structure"} =
                Recipients.validate_recipients(:not_a_tuple)
-    end
-
-    test "validates :organizer_only structure" do
-      meeting = meeting_with_organizer()
-      {:both, %{organizer: organizer}} = Recipients.determine_recipients(meeting, :confirmation)
-
-      assert Recipients.validate_recipients({:organizer_only, %{organizer: organizer}}) == :ok
     end
   end
 end

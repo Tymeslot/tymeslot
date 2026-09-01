@@ -210,4 +210,117 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
       assert length(current) == Date.days_in_month(~D[2025-06-01])
     end
   end
+
+  # Rhythm's week view and Quill's narrow-screen weekly row both render from
+  # `get_week_days/5` and both disable the day button on `available: false`,
+  # so the distinction between "the calendar says no" and "nobody asked the
+  # calendar" is made once, here, for both themes.
+  describe "get_week_days/5 with a week the availability map does not cover" do
+    test "the fetched block genuinely fails to cover the week of a month's last day" do
+      # August 2026 is the shape: a 31-day month whose 1st is a Saturday. The
+      # fetch is Sunday-anchored and the strip is Monday-anchored, so the week
+      # of the 31st runs one day past the block. Next occurrence 2027-05.
+      {_start_date, end_date} = CalendarHelpers.display_range(2026, 8)
+      week_start = Date.beginning_of_week(~D[2026-08-31], :monday)
+
+      assert end_date == ~D[2026-09-05]
+      assert week_start == ~D[2026-08-31]
+
+      assert Date.compare(Date.add(week_start, 6), end_date) == :gt,
+             "the week strip no longer escapes the fetched block; this fixture is stale"
+    end
+
+    test "a day past the end of the block is offered, not greyed out" do
+      profile = bookable_profile()
+      week_start = future_monday()
+
+      # Everything but the trailing Sunday, which is what a block ending on a
+      # Saturday leaves uncovered.
+      map = availability_for(week_start, 0..5, true)
+
+      days = CalendarHelpers.get_week_days(week_start, profile, map, "Etc/UTC")
+      uncovered = Enum.at(days, 6)
+
+      assert uncovered.date == Date.to_string(Date.add(week_start, 6))
+
+      assert uncovered.available,
+             "a day the fetch never covered was rendered as fully booked"
+
+      # Not a spinner either: nothing is going to fetch it, so a loading state
+      # would never resolve.
+      refute uncovered.loading
+    end
+
+    test "the six days before the start of the block are offered, not greyed out" do
+      # The mirror case, reachable through `NextAvailable.align_to/2`: landing
+      # on the block's first day (a Sunday) moves the strip to the Monday six
+      # days earlier, entirely outside the block.
+      profile = bookable_profile()
+      week_start = future_monday()
+      map = availability_for(week_start, 6..6, true)
+
+      days = CalendarHelpers.get_week_days(week_start, profile, map, "Etc/UTC")
+      uncovered = Enum.take(days, 6)
+
+      assert Enum.all?(uncovered, & &1.available),
+             "days before the fetched block were rendered as fully booked"
+    end
+
+    test "a gap in the week does not override the days the map does answer for" do
+      # The fallback is business hours, which would say yes to every day here.
+      # It must only ever answer for days the map is silent about, or a real
+      # conflict would be painted as bookable and the booker sent to a slot
+      # list that turns out to be empty.
+      profile = bookable_profile()
+      week_start = future_monday()
+
+      map =
+        week_start
+        |> availability_for(0..5, true)
+        |> Map.put(Date.to_string(Date.add(week_start, 2)), false)
+
+      days = CalendarHelpers.get_week_days(week_start, profile, map, "Etc/UTC")
+
+      refute Enum.at(days, 2).available
+      assert Enum.at(days, 6).available
+    end
+
+    defp bookable_profile do
+      profile = insert(:profile, timezone: "Etc/UTC")
+
+      schedule =
+        insert(:availability_schedule,
+          profile: profile,
+          is_default: true,
+          advance_booking_days: 90,
+          min_advance_hours: 0,
+          buffer_minutes: 0
+        )
+
+      for day_of_week <- 1..7 do
+        insert(:weekly_availability,
+          schedule: schedule,
+          day_of_week: day_of_week,
+          start_time: ~T[09:00:00],
+          end_time: ~T[17:00:00],
+          is_available: true
+        )
+      end
+
+      profile
+    end
+
+    # Far enough ahead that every day of the week is future and inside the
+    # booking window, so the business-hours fallback's answer is governed by
+    # the schedule rather than by which day the suite happens to run on.
+    defp future_monday do
+      Date.utc_today() |> Date.add(14) |> Date.beginning_of_week(:monday)
+    end
+
+    defp availability_for(week_start, offsets, value) do
+      Map.new(offsets, fn offset ->
+        {week_start |> Date.add(offset) |> Date.to_string(), value}
+      end)
+    end
+  end
 end

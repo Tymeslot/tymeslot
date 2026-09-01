@@ -249,9 +249,9 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  # Reads the record resolved by prepare_booking_data/2 — a nil record
-  # with a meeting_type_id set means the type doesn't exist (or belongs to
-  # another host).
+  # Reads the record resolved by resolve_meeting_type_for_duration/1 (called
+  # from prepare_booking_data/2) — a nil record with a meeting_type_id set
+  # means the type doesn't exist (or belongs to another host).
   defp validate_meeting_type_active(%{meeting_type_id: nil}), do: :ok
   defp validate_meeting_type_active(%{meeting_type: %{is_active: true}}), do: :ok
 
@@ -271,7 +271,8 @@ defmodule Tymeslot.Bookings.Create do
       booking_data.start_datetime,
       booking_data.duration_minutes,
       booking_data.user_timezone,
-      config
+      config,
+      booking_data.organizer_user_id
     )
   end
 

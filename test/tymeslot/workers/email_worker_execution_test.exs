@@ -91,6 +91,27 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
                  "meeting_id" => meeting.id
                })
     end
+
+    # A permanent rejection of one recipient used to discard the whole job,
+    # throwing away the other recipient's still-retryable send. Neither
+    # succeeded here, so nothing has gone out yet — the job must retry, not
+    # discard, or the still-live recipient never gets their cancellation
+    # email.
+    test "retries rather than discarding when one recipient is rejected and the other fails transiently" do
+      profile = insert(:profile)
+      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
+        {{:error, {:recipient_rejected, {422, %{"ErrorCode" => 406}}}},
+         {:error, :delivery_failed}}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
+    end
   end
 
   describe "perform/1 error handling" do

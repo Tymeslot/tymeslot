@@ -86,6 +86,56 @@ defmodule Tymeslot.Bookings.RescheduleScheduleCheckTest do
     end
   end
 
+  describe "reschedule enforcement duration matches the display grid" do
+    test "accepts a slot offered by the meeting type's current duration after the type's duration changed" do
+      %{user: user} =
+        create_bookable_profile(
+          timezone: "Etc/UTC",
+          days: [1, 2, 3, 4, 5],
+          hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
+        )
+
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+
+      start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          meeting_type_id: meeting_type.id,
+          duration: 30,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30, :minute)
+        )
+
+      # The host edits the meeting type's duration after the booking exists:
+      # the reschedule page's grid now steps by 45 minutes even though the
+      # meeting itself stays 30 minutes long.
+      {:ok, _meeting_type} =
+        MeetingTypes.update_meeting_type(meeting_type, %{duration_minutes: 45})
+
+      target_date = next_bookable_weekday(5)
+
+      # 09:45 is off the original 30-minute lattice (09:00, 09:30, 10:00, ...)
+      # but is exactly what the 45-minute grid the page now renders offers.
+      new_params = %{
+        date: Date.to_string(target_date),
+        time: "9:45 AM",
+        duration: "45min",
+        user_timezone: "Etc/UTC"
+      }
+
+      assert {:ok, updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated.start_time.hour == 9
+      assert updated.start_time.minute == 45
+      # The meeting's own duration is never changed by a reschedule.
+      assert updated.duration == 30
+    end
+  end
+
   describe "duration authority on reschedule" do
     test "keeps the original meeting's duration even after its meeting type is deleted" do
       %{user: user} = create_always_bookable_profile()

@@ -141,6 +141,25 @@ defmodule Tymeslot.Emails.DeliveryTest do
       assert CircuitBreaker.status(breaker).status == :open
       assert {:error, :circuit_open} = Delivery.deliver(valid_email())
     end
+
+    # A hung SMTP/API connection is the common shape of a mail outage, and is
+    # reported to the caller as "assume delivered" so a retry doesn't
+    # duplicate a message that likely already went out — but that must not
+    # also hide the outage from the breaker, or the breaker never opens and
+    # every subsequent send is spent inside the outage instead of snoozing
+    # past it.
+    test "a timeout still opens the breaker, even though the caller sees assumed delivery" do
+      setup_config(:tymeslot, :test_delivery_error, :timeout)
+      breaker = CircuitBreakerSupervisor.email_breaker_name()
+      threshold = CircuitBreaker.status(breaker).config.failure_threshold
+
+      for _attempt <- 1..threshold do
+        assert {:ok, :assumed_delivered} = Delivery.deliver(valid_email())
+      end
+
+      assert CircuitBreaker.status(breaker).status == :open
+      assert {:error, :circuit_open} = Delivery.deliver(valid_email())
+    end
   end
 
   describe "timeout_error?/1" do

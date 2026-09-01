@@ -12,7 +12,9 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   about, so every request is SSRF-guarded, capped in size, and limited to two
   redirect hops — each hop revalidated in turn, since `HTTPClient` disables
   Req's automatic redirect following precisely so a public host cannot bounce
-  us onto an internal address.
+  us onto an internal address. Where each hop points is resolved by
+  `Tymeslot.Infrastructure.RedirectLocation`, shared with the other two
+  subsystems that follow redirects by hand.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -20,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.RedirectLocation
   alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Security.SsrfBlockedError
@@ -184,9 +187,11 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
 
   defp handle_response(status, _body, headers, url, opts, redirects_left)
        when status in @redirect_statuses do
-    case redirect_target(headers, url) do
+    case RedirectLocation.next_url(headers, url) do
+      # A 3xx whose Location is missing or not a plain HTTP target is reported
+      # as the status it was, not as a redirect we silently gave up on.
+      {:error, _unfollowable} -> {:error, {:http_status, status}}
       {:ok, target} -> fetch_body(target, opts, redirects_left - 1)
-      :error -> {:error, {:http_status, status}}
     end
   end
 
@@ -199,26 +204,6 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
 
   defp handle_response(status, _body, _headers, _url, _opts, _redirects_left),
     do: {:error, {:http_status, status}}
-
-  # Req normalises response headers to lower-cased string keys holding a list
-  # of values.
-  defp redirect_target(headers, current_url) do
-    location =
-      case headers["location"] do
-        [value | _rest] -> value
-        value when is_binary(value) -> value
-        _other -> nil
-      end
-
-    case location && URI.merge(URI.parse(current_url), location) do
-      %URI{scheme: scheme, host: host} = uri
-      when scheme in ["http", "https"] and is_binary(host) ->
-        {:ok, URI.to_string(uri)}
-
-      _other ->
-        :error
-    end
-  end
 
   # The transfer itself is capped at `@max_feed_bytes` by the HTTP client, which
   # aborts at the chunk that crosses the budget. This second check costs nothing

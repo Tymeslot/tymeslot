@@ -233,9 +233,49 @@ defmodule Tymeslot.MeetingTypesFormTest do
       def check_access(_user_id, _feature), do: :ok
     end
 
+    defmodule CountingDenyPaymentsChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :meeting_payments) do
+        Agent.update(__MODULE__, &(&1 + 1))
+        {:error, :pro_required}
+      end
+
+      def check_access(_user_id, _feature), do: :ok
+    end
+
     setup do
       setup_config(:tymeslot, feature_access_checker: DenyPaymentsChecker)
       :ok
+    end
+
+    test "checks meeting_payments access exactly once on the denied path" do
+      {:ok, _pid} = Agent.start_link(fn -> 0 end, name: CountingDenyPaymentsChecker)
+      setup_config(:tymeslot, feature_access_checker: CountingDenyPaymentsChecker)
+      user = insert(:user)
+
+      assert {:error, :pro_required} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 %{
+                   "name" => "Forged Paid",
+                   "duration" => "30",
+                   "description" => "",
+                   "is_active" => "true",
+                   "calendar_integration_id" => "",
+                   "target_calendar_id" => nil,
+                   "payment_required" => "true",
+                   "price" => "50.00"
+                 },
+                 %{
+                   meeting_mode: "in_person",
+                   selected_video_integration_id: nil,
+                   selected_icon: "none"
+                 }
+               )
+
+      assert Agent.get(CountingDenyPaymentsChecker, & &1) == 1
+      Agent.stop(CountingDenyPaymentsChecker)
     end
 
     test "rejects a forged payment_required=true create when access is denied" do

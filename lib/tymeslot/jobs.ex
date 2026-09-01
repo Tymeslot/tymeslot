@@ -16,17 +16,27 @@ defmodule Tymeslot.Jobs do
   alias Tymeslot.Jobs.ObanJobQueries
 
   @doc """
-  Counts maintenance worker jobs in active states.
+  Returns the args currently stored on a job's row, or `nil` when no row exists.
 
-  A worker calls this with its own name before enqueuing, so a scheduled run
-  cannot pile up behind one that has not finished.
+  A worker whose uniqueness covers `:executing` with `replace: [:args]` can have
+  its row's args rewritten by a conflicting insert while it runs; the running
+  process only ever sees the args it started with. Rereading the row is how such
+  a worker notices the replacement before it finishes.
   """
-  defdelegate count_active_maintenance_jobs(worker_name), to: ObanJobQueries
+  defdelegate get_current_args(job), to: ObanJobQueries
 
   @doc """
-  User ids that already have a pending job for any of `actions` on `worker_name`.
+  Counts maintenance worker jobs in active states.
+
+  A worker calls this with its own module before enqueuing, so a scheduled run
+  cannot pile up behind one that has not finished.
   """
-  defdelegate user_ids_with_pending_jobs_for_actions(worker_name, actions), to: ObanJobQueries
+  defdelegate count_active_maintenance_jobs(worker_module), to: ObanJobQueries
+
+  @doc """
+  User ids that already have a pending job for any of `actions` on `worker_module`.
+  """
+  defdelegate user_ids_with_pending_jobs_for_actions(worker_module, actions), to: ObanJobQueries
 
   @doc """
   Jobs still marked `executing` since before `threshold_datetime`.

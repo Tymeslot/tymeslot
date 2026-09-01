@@ -575,65 +575,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
     end
   end
 
-  describe "extra booking edge cases" do
-    @tag :capture_log
-    test "prevents double booking the same slot (race condition simulation)", %{conn: conn} do
-      # This test uses a mock to simulate a slow booking process and then attempts a second one.
-      # However, since we are in a single-threaded test process usually, we need to be careful.
-      # A better way is to use a second connection or just verify the backend logic.
-
-      user = insert(:user)
-      profile = insert(:profile, user: user, booking_theme: "1", username: "race-condition")
-      _integration = insert(:calendar_integration, user: user, is_active: true)
-
-      insert(:meeting_type, user: user, name: "30 Minutes", duration_minutes: 30, is_active: true)
-
-      date = Date.to_string(next_business_day(Date.utc_today()))
-      time = "10:00 AM"
-      timezone = "America/New_York"
-
-      # 1. Start first booking
-      {:ok, view1, _html} =
-        live(
-          conn,
-          ~p"/#{profile.username}/30-minutes/book?date=#{date}&time=#{time}&timezone=#{timezone}"
-        )
-
-      # 2. Start second booking (different attendee)
-      {:ok, view2, _html} =
-        live(
-          conn,
-          ~p"/#{profile.username}/30-minutes/book?date=#{date}&time=#{time}&timezone=#{timezone}"
-        )
-
-      # Submit first
-      view1
-      |> form("form[data-testid='booking-form']", %{
-        "booking" => %{"name" => "First", "email" => "first@example.com"}
-      })
-      |> render_submit()
-
-      wait_until(fn -> has_element?(view1, "[data-testid='confirmation-heading']") end)
-
-      # Submit second for the same slot
-      view2
-      |> form("form[data-testid='booking-form']", %{
-        "booking" => %{"name" => "Second", "email" => "second@example.com"}
-      })
-      |> render_submit()
-
-      # The flash is delivered to the parent LiveView via
-      # `send(self(), {:flash, _})` from the submission handler, which is
-      # processed after `render_submit/1` returns. Drain the mailbox via a
-      # synchronous `:sys.get_state/1` before asserting on the render.
-      _drain = :sys.get_state(view2.pid)
-
-      # Second one should fail because the slot is now taken
-      assert render(view2) =~ "This time slot is no longer available"
-      refute has_element?(view2, "[data-testid='confirmation-heading']")
-    end
-  end
-
   # Returns the next 2nd-Sunday-of-March (US DST spring-forward) after `today`.
   defp next_dst_spring_forward(%Date{} = today) do
     Enum.find_value(today.year..(today.year + 2), fn year ->

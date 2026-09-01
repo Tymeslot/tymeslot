@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               <%= if @integration.status == :auto_disabled do %>
                 <div class="mt-2 text-token-sm text-red-600 font-medium">
                   {dgettext("dashboard_automation_chat", "Disabled: %{reason}",
-                    reason: @integration.disabled_reason
+                    reason: disabled_reason_label(@integration.disabled_reason)
                   )}
                 </div>
               <% end %>
@@ -274,6 +274,29 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
 
   defp event_dot_style(:active), do: "bg-turquoise-500"
   defp event_dot_style(_status), do: "bg-tymeslot-400"
+
+  defp disabled_reason_label(nil), do: dgettext("dashboard_automation_chat", "auto-disabled")
+  defp disabled_reason_label(""), do: dgettext("dashboard_automation_chat", "auto-disabled")
+
+  defp disabled_reason_label("invalid_token"),
+    do: dgettext("dashboard_automation_chat", "bot token was rejected")
+
+  defp disabled_reason_label("bot_blocked"),
+    do: dgettext("dashboard_automation_chat", "bot was blocked by the user")
+
+  defp disabled_reason_label("bot_kicked"),
+    do: dgettext("dashboard_automation_chat", "bot was kicked from the group")
+
+  defp disabled_reason_label("chat_unreachable"),
+    do: dgettext("dashboard_automation_chat", "chat is no longer reachable")
+
+  defp disabled_reason_label("too_many_failures"),
+    do: dgettext("dashboard_automation_chat", "too many consecutive delivery failures")
+
+  defp disabled_reason_label("rate_limited"),
+    do: dgettext("dashboard_automation_chat", "repeatedly rate-limited by Telegram")
+
+  defp disabled_reason_label(reason) when is_binary(reason), do: reason
 
   defp truncate_chat_id(chat_id) when is_binary(chat_id) do
     if String.length(chat_id) > 12 do

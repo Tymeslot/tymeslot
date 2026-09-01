@@ -30,9 +30,23 @@ defmodule Tymeslot.Bookings.ScheduleCheck do
   indistinguishable between an actual conflict and a schedule gate that
   refused for its own reasons.
   """
-  @spec validate_slot_on_schedule(Date.t(), DateTime.t(), pos_integer(), String.t(), map()) ::
+  @spec validate_slot_on_schedule(
+          Date.t(),
+          DateTime.t(),
+          pos_integer(),
+          String.t(),
+          map(),
+          integer() | nil
+        ) ::
           :ok | {:error, :slot_not_offered | :slot_availability_unverifiable}
-  def validate_slot_on_schedule(date, start_datetime, duration_minutes, user_timezone, config) do
+  def validate_slot_on_schedule(
+        date,
+        start_datetime,
+        duration_minutes,
+        user_timezone,
+        config,
+        organizer_user_id \\ nil
+      ) do
     case Calculate.offers_slot(
            date,
            start_datetime,
@@ -48,16 +62,21 @@ defmodule Tymeslot.Bookings.ScheduleCheck do
         Logger.info(
           "Schedule refused a booking: requested time is not on the offered schedule",
           date: Date.to_iso8601(date),
-          start_datetime: DateTime.to_iso8601(start_datetime)
+          start_datetime: DateTime.to_iso8601(start_datetime),
+          organizer_user_id: organizer_user_id
         )
 
         {:error, :slot_not_offered}
 
+      # A genuine schedule-read failure (e.g. an unconvertible timezone) surfaces
+      # as `{:error, reason}` from `Calculate.offers_slot/6` and is refused as
+      # unverifiable rather than being misreported as "not offered".
       {:error, reason} ->
         Logger.warning(
           "Schedule availability could not be determined, refusing booking",
           date: Date.to_iso8601(date),
           start_datetime: DateTime.to_iso8601(start_datetime),
+          organizer_user_id: organizer_user_id,
           reason: inspect(reason)
         )
 

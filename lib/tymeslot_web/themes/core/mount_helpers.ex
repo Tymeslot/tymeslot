@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
-  alias TymeslotWeb.Themes.Core.{Context, EventBus, MeetingManagement, PollVoting, Registry}
+  alias TymeslotWeb.Themes.Core.{Context, MeetingManagement, PollVoting, Registry}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
   @doc """
@@ -60,13 +60,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     else
       case Context.from_params(params) do
         %Context{} = context ->
-          EventBus.subscribe_to_theme(context.theme_id)
-
           socket = Context.assign_to_socket(socket, context)
-
-          EventBus.emit_theme_mounted(context.theme_id, %{
-            preview_mode: context.preview_mode
-          })
 
           delegate_fn.(context.theme_id, :mount, [params, session, socket])
 
@@ -89,11 +83,6 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
       {:ok, :ready} ->
         case prepare_theme_context(profile, params, socket) do
           {:ok, context, socket} ->
-            EventBus.emit_theme_mounted(context.theme_id, %{
-              user_id: profile.user_id,
-              preview_mode: context.preview_mode
-            })
-
             delegate_fn.(context.theme_id, :mount, [params, session, socket])
 
           {:error, error_socket} ->
@@ -195,8 +184,6 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   def prepare_theme_context(profile, params, socket) do
     case Context.from_params(params, profile) do
       %Context{} = context ->
-        EventBus.subscribe_to_theme(context.theme_id)
-
         socket =
           socket
           |> Context.assign_to_socket(context)

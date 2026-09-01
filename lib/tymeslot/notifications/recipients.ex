@@ -26,15 +26,24 @@ defmodule Tymeslot.Notifications.Recipients do
 
   @doc """
   Determines the recipients for a given notification type and meeting.
+
+  Routing depends on the meeting, not the notification type: every type routes
+  the same way today, and the type is accepted for a future channel that needs
+  to route differently. A group meeting routes to the organizer only — see
+  `recipients_for/2`.
   """
   @spec determine_recipients(term(), atom()) ::
-          {atom(),
+          {:both | :organizer_only,
            %{
              required(:organizer) => participant(),
              required(:attendee) => participant()
            }}
-  def determine_recipients(meeting, notification_type) do
-    base_recipients = %{
+  def determine_recipients(meeting, _notification_type) do
+    recipients_for(meeting, base_recipients(meeting))
+  end
+
+  defp base_recipients(meeting) do
+    %{
       organizer: %{
         email: meeting.organizer_email,
         name: meeting.organizer_name,
@@ -46,23 +55,6 @@ defmodule Tymeslot.Notifications.Recipients do
         timezone: meeting.attendee_timezone || get_organizer_timezone(meeting)
       }
     }
-
-    case notification_type do
-      :confirmation ->
-        recipients_for(meeting, base_recipients)
-
-      :reminder ->
-        recipients_for(meeting, base_recipients)
-
-      :cancellation ->
-        recipients_for(meeting, base_recipients)
-
-      :reschedule ->
-        recipients_for(meeting, base_recipients)
-
-      _unknown_type ->
-        {:both, base_recipients}
-    end
   end
 
   # A group meeting's row carries no attendee of its own — `attendee_email`,
@@ -93,18 +85,6 @@ defmodule Tymeslot.Notifications.Recipients do
       meeting_start: meeting.start_time,
       meeting_end: meeting.end_time
     }
-  end
-
-  @doc """
-  Determines if a recipient should receive a specific notification.
-  """
-  @spec should_receive_notification?(atom(), atom(), term()) :: boolean()
-  def should_receive_notification?(recipient_type, notification_type, _unused_meeting) do
-    case {recipient_type, notification_type} do
-      {:organizer, _any_type} -> true
-      {:attendee, _any_type} -> true
-      _invalid_combination -> false
-    end
   end
 
   @doc """

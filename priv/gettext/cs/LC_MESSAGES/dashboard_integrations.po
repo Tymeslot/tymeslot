@@ -167,7 +167,6 @@ msgstr "Kalendáře"
 msgid "Cancel"
 msgstr "Zrušit"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -1137,11 +1136,6 @@ msgstr "Zpracovaná URL překračuje maximální délku %{max_length} znaků (m�
 #, elixir-autogen, elixir-format
 msgid "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
 msgstr "Uložené přihlašovací údaje se nepodařilo dešifrovat aktuálním šifrovacím klíčem. Připojte prosím integraci znovu."
-
-#: lib/tymeslot/integrations/video/providers/teams_provider.ex
-#, elixir-autogen, elixir-format
-msgid "Teams integration is missing required permissions. Please disconnect and reconnect your Microsoft Teams integration in the dashboard to grant the necessary permissions for creating meetings."
-msgstr "Integraci Teams chybí potřebná oprávnění. Odpojte prosím integraci Microsoft Teams na nástěnce a připojte ji znovu, aby získala oprávnění potřebná k vytváření schůzek."
 
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format

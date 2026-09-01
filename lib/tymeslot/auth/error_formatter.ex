@@ -44,7 +44,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   end
 
   defp account_status_error?(reason) do
-    reason in [:account_locked, :account_throttled, :email_not_verified]
+    reason in [:account_throttled, :email_not_verified]
   end
 
   defp rate_limit_error?(reason) do
@@ -71,13 +71,6 @@ defmodule Tymeslot.Auth.ErrorFormatter do
 
   defp password_reset_error?(reason) do
     reason == :password_reset_failed
-  end
-
-  defp format_account_status_error(:account_locked) do
-    dgettext(
-      "auth",
-      "Your account has been locked due to too many failed attempts. Please try again later."
-    )
   end
 
   defp format_account_status_error(:account_throttled) do

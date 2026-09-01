@@ -227,7 +227,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                         dgettext(
                           "dashboard_automation_chat",
                           "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created - see the full setup guide on %{guide}.",
-                          guide: slack_guide_link()
+                          guide:
+                            DocsUrl.article_link(
+                              "slack",
+                              dgettext("dashboard_automation_chat", "our Slack docs")
+                            )
                         )
                       )}
                     <% end %>
@@ -557,12 +561,5 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     |> assign(:channels_error, nil)
     |> assign(:channels_loaded_for, integration.id)
     |> start_async(:load_channels, fn -> Slack.list_channels(integration) end)
-  end
-
-  defp slack_guide_link do
-    url = DocsUrl.article_url("slack")
-    label = dgettext("dashboard_automation_chat", "our Slack docs")
-
-    ~s(<a href="#{url}" target="_blank" rel="noopener noreferrer" class="font-black text-turquoise-700 hover:text-turquoise-900 underline">#{label}</a>)
   end
 end

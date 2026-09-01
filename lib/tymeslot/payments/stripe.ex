@@ -11,6 +11,7 @@ defmodule Tymeslot.Payments.Stripe do
   alias Stripe.{BillingPortal, Checkout.Session, Customer, Subscription, Webhook}
   alias Tymeslot.Payments.Behaviours.StripeProvider
   alias Tymeslot.Payments.RetryHelper
+  alias Tymeslot.Security.SecurityLogger
 
   @type stripe_result :: {:ok, map()} | {:error, any()}
 
@@ -37,7 +38,7 @@ defmodule Tymeslot.Payments.Stripe do
   @spec create_customer(map()) :: stripe_result()
   def create_customer(params) when is_map(params) do
     email = params.email
-    Logger.info("Creating Stripe customer", email: email)
+    Logger.info("Creating Stripe customer", email_masked: SecurityLogger.mask_email(email))
 
     customer_params =
       Map.merge(

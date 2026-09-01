@@ -144,6 +144,68 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
              perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => 999_999})
   end
 
+  test "skips the sweep entirely when the integration was reconnected before this attempt ran" do
+    %{user: user} = create_user_with_profile()
+    integration = insert_zoom_integration(user)
+
+    meeting =
+      insert_meeting_for_user(user, %{
+        video_integration_id: integration.id,
+        video_provider: "zoom",
+        video_room_id: "reconnected-before-run"
+      })
+
+    {:ok, soft} = VideoIntegrationQueries.soft_delete(integration)
+    {:ok, _reconnected} = VideoIntegrationQueries.update_credentials(soft, %{is_active: true})
+
+    # No HTTP expectation: draining a reconnected integration's rooms is
+    # exactly the bug being guarded against, so the provider must not be
+    # contacted at all.
+    assert :ok =
+             perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
+
+    assert Repo.reload!(meeting).video_room_id == "reconnected-before-run"
+    assert {:ok, still_there} = VideoIntegrationQueries.get(integration.id)
+    assert still_there.is_active
+  end
+
+  test "keeps a reconnect that lands mid-drain, even though the purge acted on a stale read" do
+    %{user: user} = create_user_with_profile()
+    integration = insert_zoom_integration(user)
+
+    meeting =
+      insert_meeting_for_user(user, %{
+        video_integration_id: integration.id,
+        video_provider: "zoom",
+        video_room_id: "777"
+      })
+
+    {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+    stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+    # The reconnect commits while the provider call for the only room in this
+    # batch is in flight — after `perform/1`'s up-front guard already passed,
+    # and before `purge/3` runs.
+    expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+      {:ok, fetched} = VideoIntegrationQueries.get(integration.id)
+
+      {:ok, _reconnected} =
+        VideoIntegrationQueries.update_credentials(fetched, %{is_active: true})
+
+      {:ok, %Req.Response{status: 204, body: ""}}
+    end)
+
+    assert :ok =
+             perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
+
+    # The room delete itself still happened (it raced ahead of the reconnect),
+    # but the reconnected row must not be purged out from under the user.
+    refute Repo.reload!(meeting).video_room_id
+    assert {:ok, still_there} = VideoIntegrationQueries.get(integration.id)
+    assert still_there.is_active
+  end
+
   defp insert_zoom_integration(user) do
     insert(:video_integration,
       user: user,

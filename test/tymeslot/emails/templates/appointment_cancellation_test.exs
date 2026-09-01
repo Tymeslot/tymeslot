@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
   alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.Notifications.ContentBuilder
+  alias TymeslotWeb.Endpoint
   import Tymeslot.EmailTestHelpers
   import Tymeslot.Factory
 
@@ -313,6 +314,44 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       assert email.text_body =~ "Meeting Cancelled"
       assert email.text_body =~ details.attendee_name
     end
+  end
+
+  # Regression: the "Schedule New Appointment" CTA used to be hardcoded to the
+  # bare application root, so the attendee landed on the landing page instead of
+  # a page where they could book again. See issue #90.
+  describe "attendee cancellation email booking CTA" do
+    test "button links to the host's booking page rather than the app root" do
+      details = build_appointment_details(%{booking_url: "https://tymeslot.example.com/sarah"})
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      assert cta_href(email.html_body) == "https://tymeslot.example.com/sarah"
+    end
+
+    test "text body links to the host's booking page rather than the app root" do
+      details = build_appointment_details(%{booking_url: "https://tymeslot.example.com/sarah"})
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      assert email.text_body =~ "https://tymeslot.example.com/sarah"
+    end
+
+    test "falls back to the app root when the details carry no booking URL" do
+      details = Map.delete(build_appointment_details(), :booking_url)
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      assert cta_href(email.html_body) == Endpoint.url()
+    end
+  end
+
+  # The footer wordmark also links to the app root, so the CTA has to be located
+  # by its own label rather than by scanning every href in the document.
+  defp cta_href(html_body) do
+    [_full, href] =
+      Regex.run(~r/<a href="([^"]+)"[^>]*>\s*Schedule New Appointment\s*<\/a>/s, html_body)
+
+    href
   end
 
   describe "locale rendering - attendee cancellation emails" do

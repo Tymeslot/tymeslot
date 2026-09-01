@@ -11,16 +11,21 @@ defmodule Tymeslot.MeetingTypes.Duration do
 
   @doc """
   Normalizes duration inputs into the slug format used in URLs.
-  """
-  @spec normalize_duration_slug(String.t() | nil) :: String.t() | nil
-  def normalize_duration_slug(nil), do: nil
 
+  Anything that is not a string normalises to `nil`. The callers sit directly
+  on query parameters, and Phoenix decodes `?duration[]=30min` to a list and
+  `?duration[a]=b` to a map; without this clause either shape raises here, on
+  the public booking page's disconnected render.
+  """
+  @spec normalize_duration_slug(term()) :: String.t() | nil
   def normalize_duration_slug(duration) when is_binary(duration) do
     case Regex.run(~r/^(\d+)min$/, duration) do
       [_match, minutes] -> "#{minutes}-minutes"
       _no_match -> duration
     end
   end
+
+  def normalize_duration_slug(_duration), do: nil
 
   @doc """
   Finds a meeting type by duration string (now deprecated in favor of find_by_slug).

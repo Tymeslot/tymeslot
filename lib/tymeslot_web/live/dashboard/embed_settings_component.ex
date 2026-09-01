@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview
@@ -57,7 +58,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       |> assign(:base_url, base_url)
       |> assign(:username, username)
       |> assign(:theme_id, theme_id)
-      |> assign(:booking_url, "#{base_url}/#{username}")
+      |> assign(:booking_url, UrlBuilder.booking_url(username))
       |> assign(:is_ready, is_ready)
       |> assign(:error_reason, error_reason)
       |> assign(:allowed_domains, allowed_domains)

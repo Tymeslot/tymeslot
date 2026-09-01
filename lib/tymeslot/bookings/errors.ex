@@ -41,14 +41,16 @@ defmodule Tymeslot.Bookings.Errors do
   # `:host_not_found`/`:host_missing` and `:meeting_type_not_found`/
   # `:meeting_type_missing` are likewise distinct upstream reasons that share
   # one user-facing meaning, so they collapse to a single atom each.
+  # `ScheduleCheck`'s own reasons (`:slot_not_offered`,
+  # `:slot_availability_unverifiable`) are deliberately absent: they are
+  # classified once, by `classify_schedule_check_reason/1` below, which
+  # `classify_error/1` falls back to for any other atom.
   @error_classifications %{
     meeting_type_inactive: :meeting_type_inactive,
     meeting_type_not_found: :meeting_type_not_found,
     meeting_type_missing: :meeting_type_not_found,
     time_conflict: :slot_taken,
     slot_unavailable: :slot_taken,
-    slot_not_offered: :slot_taken,
-    slot_availability_unverifiable: :slot_taken,
     availability_unverifiable: :slot_taken,
     booking_limit_reached: :booking_limit_reached,
     organizer_required: :organizer_required,
@@ -56,6 +58,15 @@ defmodule Tymeslot.Bookings.Errors do
     payments_unavailable: :payments_unavailable,
     host_not_found: :host_not_found,
     host_missing: :host_not_found
+  }
+
+  # `Tymeslot.Bookings.ScheduleCheck` is shared by `Create` and `Reschedule`,
+  # so its failure reasons are classified once, here, rather than in a table
+  # per caller: a reason ScheduleCheck grows in the future is then picked up
+  # by both without either module changing.
+  @schedule_check_classifications %{
+    slot_not_offered: :slot_taken,
+    slot_availability_unverifiable: :slot_taken
   }
 
   @doc """
@@ -74,6 +85,24 @@ defmodule Tymeslot.Bookings.Errors do
 
   def classify_error({:custom_field_errors, _errors}), do: :custom_field_errors
   def classify_error({:checkout_failed, _reason}), do: :checkout_failed
+
+  def classify_error(reason) when is_atom(reason),
+    do: classify_schedule_check_reason(reason) || :booking_failed
+
   def classify_error(reason) when is_binary(reason), do: reason
   def classify_error(_other), do: :booking_failed
+
+  @doc """
+  Classifies a `Tymeslot.Bookings.ScheduleCheck.validate_slot_on_schedule/6`
+  failure reason into the shared vocabulary.
+
+  Returns `nil` for any reason ScheduleCheck does not produce, so a caller can
+  fall back to passing the reason through unchanged.
+  """
+  @spec classify_schedule_check_reason(atom()) :: classified_error() | nil
+  def classify_schedule_check_reason(reason)
+      when is_map_key(@schedule_check_classifications, reason),
+      do: Map.fetch!(@schedule_check_classifications, reason)
+
+  def classify_schedule_check_reason(_reason), do: nil
 end

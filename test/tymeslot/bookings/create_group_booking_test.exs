@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.Create
@@ -31,7 +32,12 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     end)
 
     user = insert(:user)
-    _profile = insert(:profile, user: user)
+    profile = insert(:profile, user: user)
+
+    # The subject here is group seating, not availability, so the host offers
+    # whatever time the fixture picks and the schedule is never the reason a
+    # booking is refused.
+    _schedule = open_schedule_for(profile)
 
     meeting_type =
       insert(:meeting_type, user: user, max_participants: 2, allow_guests: true)
@@ -158,7 +164,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting.id, "send_emails" => true}
+        args: %{"meeting_id" => meeting.id, "announce" => true}
       )
 
       refute_enqueued(

@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   @moduletag :integrations
 
   import Mox

@@ -117,6 +117,30 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       assert has_element?(view, "[data-testid='poll-participant-name']", "Ada Lovelace")
     end
 
+    test "the patched ?p= URL is a live route that resumes the participant", %{
+      conn: conn,
+      view: view,
+      poll: poll,
+      profile: profile
+    } do
+      view
+      |> form("form[data-testid='poll-register-form']", %{
+        "name" => "Ada Lovelace",
+        "email" => "ada@example.com"
+      })
+      |> render_submit()
+
+      participant = Repo.get_by!(PollParticipantSchema, poll_id: poll.id)
+      resume_url = poll_path(profile.username, poll.token) <> "?p=#{participant.token}"
+
+      # The page patches to a path it builds itself. Only `/:username/poll/:token`
+      # reaches this LiveView: a username-less `/poll/<token>` lands on a
+      # different live_session, which `push_patch/2` refuses and crashes on, so
+      # this asserts the built path both patches and mounts.
+      {:ok, resumed, _html} = live(conn, resume_url)
+      assert has_element?(resumed, "[data-testid='poll-participant-name']", "Ada Lovelace")
+    end
+
     test "casting votes persists responses and re-renders the tallies", %{
       view: view,
       poll: poll,

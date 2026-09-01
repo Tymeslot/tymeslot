@@ -1133,3 +1133,8 @@ msgstr "Календаря для бронювань більше немає в 
 #, elixir-autogen, elixir-format
 msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
 msgstr "З'єднання з %{url} встановлено, ваші облікові дані прийнято, але колекції календарів не знайдено. Введіть повну URL-адресу вашої колекції календарів, як зазначено в налаштуваннях вашого календарного сервера."
+
+#: lib/tymeslot/integrations/calendar/caldav/errors.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
+msgstr "Календарний сервер відповів на цю адресу, але не приймає там календарні запити. Будь ласка, перевірте URL сервера."

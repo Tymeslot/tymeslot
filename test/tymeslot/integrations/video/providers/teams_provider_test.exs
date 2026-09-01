@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Mox
@@ -552,8 +552,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     test "returns an error without any network call for a missing scope" do
       config = %{valid_config() | oauth_scope: "User.Read"}
 
-      assert {:error, message} = TeamsProvider.precheck_create_meeting_room(config)
-      assert message =~ "missing required permissions"
+      assert {:error, :invalid_configuration} =
+               TeamsProvider.precheck_create_meeting_room(config)
     end
 
     test "bypasses the breaker on a rejected/expired grant" do

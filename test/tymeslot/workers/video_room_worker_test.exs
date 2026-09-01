@@ -300,6 +300,29 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       assert length(email_jobs_after_second) == length(email_jobs_after_first)
     end
 
+    test "exhausts recovery even when snoozes no longer advance the job's attempt" do
+      %{meeting: meeting} = setup_future_meeting_scenario()
+
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :econnrefused}}
+      end)
+
+      args = %{"meeting_id" => meeting.id, "announce" => true}
+
+      # Recovery advances purely by snoozing, and from Oban 2.24 a snooze rolls
+      # `attempt` back and records itself in `meta["snoozed"]` instead. A loop
+      # counting attempts alone would therefore sit on attempt 5 for as long as
+      # the deadline allowed, retrying a meeting booked far in advance far more
+      # than the five times it is budgeted.
+      for snoozed <- 0..4 do
+        assert {:snooze, _seconds} =
+                 perform_job(VideoRoomWorker, args, attempt: 5, meta: %{"snoozed" => snoozed})
+      end
+
+      assert {:discard, "Recovery attempts exhausted"} =
+               perform_job(VideoRoomWorker, args, attempt: 5, meta: %{"snoozed" => 5})
+    end
+
     test "discards recovery when reminder deadline already passed" do
       %{meeting: meeting, meeting_type: _meeting_type} = setup_future_meeting_scenario()
 

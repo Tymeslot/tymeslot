@@ -3,9 +3,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   Reusable reminders editor for the calendar create/detail modals.
 
   Renders the current reminders as removable rows plus an "Add reminder" control
-  offering preset lead times (5 min, 10 min, 30 min, 1 hour, 1 day before) and a
-  method (popup/email). Reminders are synced to the calendar provider, which
-  fires the alert on the user's own devices — Tymeslot does not fire them itself.
+  offering preset lead times and a method (popup/email). The lead times offered
+  are exactly `Shared.reminder_minutes_presets/0`, the list `Shared.parse_reminder/1`
+  validates an added reminder against, labelled through `reminder_label/1`'s own
+  `minutes_label/1`; there is no second copy of the values to fall out of step.
+  Reminders are synced to the calendar provider, which fires the alert on the
+  user's own devices — Tymeslot does not fire them itself.
 
   Add/remove actions dispatch `add_event` / `remove_event` back to the owning
   LiveComponent via `phx-target`, carrying `method` + `minutes` (add) or `index`
@@ -17,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
 
   attr :reminders, :list, default: []
   attr :myself, :any, required: true
@@ -140,13 +144,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
         minutes
       )
 
+  # Offer exactly the lead times `parse_reminder/1` accepts, labelled by the same
+  # function that labels a saved reminder. A value added to the whitelist shows
+  # up here with a label already; one removed stops being offered.
   defp presets do
-    [
-      {5, dgettext("dashboard_calendar_events", "5 minutes before")},
-      {10, dgettext("dashboard_calendar_events", "10 minutes before")},
-      {30, dgettext("dashboard_calendar_events", "30 minutes before")},
-      {60, dgettext("dashboard_calendar_events", "1 hour before")},
-      {1440, dgettext("dashboard_calendar_events", "1 day before")}
-    ]
+    Enum.map(Shared.reminder_minutes_presets(), &{&1, minutes_label(&1)})
   end
 end

@@ -199,9 +199,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
       stub_feed()
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
-      connected = subscribe(view)
+      subscribe(view)
 
-      assert connected =~ "Read-only"
+      # The connected row is painted by the parent LiveView, which only reloads
+      # the hub's integration list when it handles the `{:integration_added,
+      # :calendar}` announcement `handle_async` sends. `render_async/2` waits on
+      # the probe task, not on that message, so its own render call can reach
+      # the mailbox first and hand back pre-refresh markup. Poll, for the same
+      # reason the success flash above is polled rather than snapshotted.
+      wait_until(fn -> render(view) =~ "Read-only" end)
 
       # One synthetic calendar, always selected: there is nothing to manage.
       refute has_element?(view, "button[phx-click='manage_calendars']")

@@ -22,6 +22,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   @moduletag :auth
   @moduletag :security
 
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.{Registration, UserQueries}
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
@@ -111,7 +112,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   test "the registration broadcast still fires so downstream listeners record the signup" do
     # SaaS' LegalAcceptanceListener records the accepted terms off this event;
     # skipping it because an email could not be sent loses that record.
-    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, "auth:user_registered")
+    :ok = Auth.subscribe_to_user_registrations()
     exhaust_verification_allowance()
 
     assert {:error, :rate_limited, _message} =

@@ -53,7 +53,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       #{MeetingComponents.custom_answers_section(appointment_details)}
 
       #{Text.centered_text(dgettext("emails", "Would you like to schedule a new appointment?"), padding: "24px 0 10px 0")}
-      #{Buttons.action_button(:confirmed, dgettext("emails", "Schedule New Appointment"), Urls.get_app_url(), full_width: true)}
+      #{Buttons.action_button(:confirmed, dgettext("emails", "Schedule New Appointment"), booking_url(appointment_details), full_width: true)}
 
       #{Text.system_footer_note(dgettext("emails", "This time slot is now available for booking again."))}
       #{Text.system_footer_note(dgettext("emails", "If you have any questions, please don't hesitate to reach out."))}
@@ -148,10 +148,16 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     #{dgettext("emails", "This time slot is now available for booking again.")}
 
     #{dgettext("emails", "Would you like to schedule a new appointment?")}
-    #{dgettext("emails", "Visit:")} #{Urls.get_app_url()}
+    #{dgettext("emails", "Visit:")} #{booking_url(appointment_details)}
 
     #{dgettext("emails", "If you have any questions, please don't hesitate to reach out.")}
     """
+  end
+
+  # Detail maps built by hand rather than by `AppointmentBuilder` may carry no
+  # booking URL; fall back to the app root so the CTA is never empty.
+  defp booking_url(appointment_details) do
+    Map.get(appointment_details, :booking_url) || Urls.get_app_url()
   end
 
   defp organizer_locale(_appointment_details), do: Locales.default_locale()

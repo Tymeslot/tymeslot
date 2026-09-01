@@ -9,14 +9,8 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
   alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Repo
 
-  setup do
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment:subscription_successful")
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment:subscription_failed")
-    :ok
-  end
-
   describe "process_subscription_failure/2" do
-    test "moves the transaction to pending_reconciliation, stores invoice metadata, and broadcasts" do
+    test "moves the transaction to pending_reconciliation and stores invoice metadata" do
       user = insert(:user)
       subscription_id = "sub_failing_1"
 
@@ -46,11 +40,6 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
       assert reloaded.metadata["failed_invoice_id"] == "in_failed_1"
       assert reloaded.metadata["failure_reason"] == "subscription_cycle"
       assert reloaded.metadata["payment_attempt_count"] == 2
-
-      assert_received {:subscription_failed,
-                       %{user_id: user_id, subscription_id: ^subscription_id}}
-
-      assert user_id == user.id
     end
 
     test "returns :subscription_not_found when no matching active subscription exists" do
@@ -58,13 +47,11 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
 
       assert {:error, :subscription_not_found} =
                DatabaseOperations.process_subscription_failure("sub_orphan", invoice)
-
-      refute_received {:subscription_failed, _payload}
     end
   end
 
   describe "update_transaction_for_subscription/4" do
-    test "links the checkout session to a subscription_id and broadcasts subscription_successful" do
+    test "links the checkout session to a subscription_id" do
       user = insert(:user)
       checkout_session_id = "cs_link_1"
       subscription_id = "sub_link_1"
@@ -88,11 +75,6 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
       assert updated.status == "completed"
       assert updated.metadata["plan"] == "pro"
       assert updated.metadata["checkout_session"] == checkout_session_id
-
-      assert_received {:subscription_successful,
-                       %{user_id: user_id, subscription_id: ^subscription_id}}
-
-      assert user_id == user.id
     end
 
     test "returns :transaction_not_found when the checkout session has no matching transaction" do
@@ -103,8 +85,6 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
                  "completed",
                  %{}
                )
-
-      refute_received {:subscription_successful, _payload}
     end
   end
 

@@ -72,7 +72,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
       payment_status: object["payment_status"]
     )
 
-    {:ok, :ok}
+    {:ok, :skipped}
   end
 
   defp classify(:ok), do: {:ok, :ok}

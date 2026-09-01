@@ -47,7 +47,6 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
          :ok <- check_auth_ip_bucket(ip) do
       :ok
     else
-      {:error, :account_locked, message} -> {:error, :rate_limited, message}
       {:error, :account_throttled, message} -> {:error, :rate_limited, message}
       error -> error
     end

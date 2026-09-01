@@ -116,6 +116,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
 
       {:error, :circuit_open} = error ->
         error
+
+      {:error, _reason, _msg} = error ->
+        error
     end
   end
 

@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         <.custom_input_toggle
           field_name="buffer_minutes"
           current_value={@buffer_minutes}
-          preset_values={StepConfig.buffer_time_values()}
+          preset_values={CustomInputModeHelper.presets(:buffer_minutes)}
           constraints={StepConfig.buffer_minutes_constraints()}
           style_variant="primary"
           custom_mode={Map.get(@custom_input_mode, :buffer_minutes, false)}
@@ -118,7 +119,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         <.custom_input_toggle
           field_name="advance_booking_days"
           current_value={@advance_booking_days}
-          preset_values={StepConfig.advance_booking_values()}
+          preset_values={CustomInputModeHelper.presets(:advance_booking_days)}
           constraints={StepConfig.advance_booking_constraints()}
           style_variant="secondary"
           custom_mode={Map.get(@custom_input_mode, :advance_booking_days, false)}
@@ -177,7 +178,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         <.custom_input_toggle
           field_name="min_advance_hours"
           current_value={@min_advance_hours}
-          preset_values={StepConfig.min_advance_values()}
+          preset_values={CustomInputModeHelper.presets(:min_advance_hours)}
           constraints={StepConfig.min_advance_constraints()}
           style_variant="tertiary"
           custom_mode={Map.get(@custom_input_mode, :min_advance_hours, false)}

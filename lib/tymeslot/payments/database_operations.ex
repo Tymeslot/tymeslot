@@ -6,7 +6,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
 
   require Logger
 
-  alias Tymeslot.Payments.{ErrorHandler, PaymentQueries, PubSub, SubscriptionNotifications}
+  alias Tymeslot.Payments.{ErrorHandler, PaymentQueries, SubscriptionNotifications}
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   @type transaction :: PaymentTransaction.t()
@@ -150,9 +150,6 @@ defmodule Tymeslot.Payments.DatabaseOperations do
   @spec process_subscription_failure_updates(transaction()) :: :failure_processed
   defp process_subscription_failure_updates(transaction) do
     Logger.warning("Subscription failure processed", stripe_id: transaction.stripe_id)
-
-    # Broadcast subscription failure event for apps to handle their own business logic
-    PubSub.broadcast_subscription_failed(transaction)
 
     :failure_processed
   end

@@ -64,11 +64,6 @@ msgstr "За 1 день"
 msgid "1 hour before"
 msgstr "За 1 годину"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "10 minutes before"
-msgstr "За 10 хвилин"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "12-hour or 24-hour clock"
@@ -83,16 +78,6 @@ msgstr "12 год"
 #, elixir-autogen, elixir-format
 msgid "24h"
 msgstr "24 год"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "30 minutes before"
-msgstr "За 30 хвилин"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "5 minutes before"
-msgstr "За 5 хвилин"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format

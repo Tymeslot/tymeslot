@@ -6,8 +6,13 @@ defmodule Tymeslot.Integrations.Calendar.DiagnosticsTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Diagnostics
+  alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
+
+  @feed_url "https://feeds.example.com/secret-address/basic.ics"
+  @range_start ~U[2026-08-01 00:00:00Z]
+  @range_end ~U[2026-08-31 23:59:59Z]
 
   defp integration_for(provider) do
     %CalendarIntegrationSchema{
@@ -73,6 +78,69 @@ defmodule Tymeslot.Integrations.Calendar.DiagnosticsTest do
                  range_start,
                  range_end
                )
+    end
+
+    test "a raw provider is still dispatched into list_events" do
+      integration =
+        insert(:calendar_integration,
+          provider: "radicale",
+          base_url: "https://radicale.example.com",
+          calendar_paths: []
+        )
+
+      # The CalDAV read path's own guard, reached without any HTTP: proof the
+      # raw branch still pairs list_events with normalise_events rather than
+      # short-circuiting the way a cache-backed provider does.
+      assert {:error, "No calendars configured"} =
+               Diagnostics.fetch_and_normalise_provider_events(
+                 integration,
+                 @range_start,
+                 @range_end
+               )
+    end
+  end
+
+  describe "fetch_and_normalise_provider_events/3 with a cache-backed provider" do
+    setup do
+      integration =
+        insert(:calendar_integration,
+          provider: "ics_url",
+          base_url: "https://feeds.example.com",
+          username_encrypted: nil,
+          password_encrypted: nil,
+          subscription_url_encrypted: Encryption.encrypt(@feed_url)
+        )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "ics_url",
+        provider_calendar_id: "subscription",
+        uid: "cached-event",
+        summary: "Sprint planning",
+        start_at: ~U[2026-08-10 09:00:00.000000Z],
+        end_at: ~U[2026-08-10 10:00:00.000000Z],
+        all_day: false
+      )
+
+      %{integration: integration}
+    end
+
+    test "refuses instead of feeding cache rows to the provider's parser", %{
+      integration: integration
+    } do
+      assert {:error, {:no_raw_representation, "ics_url"}} =
+               Diagnostics.fetch_and_normalise_provider_events(
+                 integration,
+                 @range_start,
+                 @range_end
+               )
+    end
+
+    test "the fresh-fetch path serves the same integration", %{integration: integration} do
+      assert {:ok, events} =
+               Diagnostics.fetch_fresh_events(integration, @range_start, @range_end)
+
+      assert Enum.map(events, & &1[:uid]) == ["cached-event"]
     end
   end
 

@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.CircuitBreakerHelpers
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.MeetingContext
@@ -316,7 +317,17 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     if ProviderConfig.circuit_breaker_enabled?(provider_type) do
       VideoCircuitBreaker.with_breaker(provider_type, [host: breaker_host(config)], fun)
     else
-      fun.()
+      # The breaker-enabled path unwraps `{:provider_error, reason}` back to
+      # `{:error, reason}` inside `VideoCircuitBreaker`/`CircuitBreakerHelpers`.
+      # With the breaker disabled that unwrap never runs, so `create_room/3`
+      # would otherwise hand `{:provider_error, _}` straight to
+      # `create_meeting_room/2`'s `with/else`, which has no clause for it and
+      # raises `WithClauseError`. Unwrap here too so the tag stays an internal
+      # detail of `with_breaker/3` regardless of which arm ran.
+      case fun.() do
+        {:provider_error, reason} -> {:error, reason}
+        other -> other
+      end
     end
   end
 
@@ -324,12 +335,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   # its host lets `VideoCircuitBreaker` key the breaker per host instead of
   # sharing one breaker across every tenant on the provider. OAuth providers'
   # configs have no `base_url`, so this is a no-op for them.
-  defp breaker_host(%{base_url: base_url}) when is_binary(base_url) do
-    case URI.parse(base_url) do
-      %URI{host: host} when is_binary(host) -> host
-      _other -> nil
-    end
-  end
+  defp breaker_host(%{base_url: base_url}) when is_binary(base_url),
+    do: CircuitBreakerHelpers.host_from_base_url(base_url)
 
   defp breaker_host(_config), do: nil
 

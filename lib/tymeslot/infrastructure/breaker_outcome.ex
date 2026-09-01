@@ -69,10 +69,16 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
 
   def permanent_credential_error?(_reason), do: false
 
-  # Splits the reason into whole-word tokens for matching. Non-UTF-8 reasons
-  # (some providers hand back raw bytes) tokenise to nothing rather than
-  # blowing up `String.downcase/1`.
-  defp error_tokens(reason) do
+  @doc """
+  Splits an error reason into whole-word, lowercased tokens for marker
+  matching (used by `permanent_credential_error?/1`). Exposed so other
+  modules doing the same kind of matching (e.g. `HealthCheck.ResponseHandler`)
+  can share this rather than carrying their own copy. Non-UTF-8 reasons (some
+  providers hand back raw bytes) tokenise to nothing rather than blowing up
+  `String.downcase/1`.
+  """
+  @spec error_tokens(term()) :: [String.t()]
+  def error_tokens(reason) do
     if String.valid?(reason) do
       reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
     else
@@ -80,10 +86,14 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
     end
   end
 
-  # Reasons that describe the connection itself rather than the response.
+  # Reasons that describe the connection itself rather than the response, plus
+  # the structured "provider cannot serve this right now" reasons a client can
+  # report directly instead of a raw HTTP status (rate limiting, an explicit
+  # outage signal).
   @transport_reasons ~w(
     timeout network_error closed econnrefused econnreset ehostunreach
     enetunreach etimedout nxdomain closed_by_peer socket_closed_remotely
+    rate_limited service_unavailable
   )a
 
   # Transport-level exception structs, matched by name so that neither Req nor
@@ -104,6 +114,9 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   def classify(:ok), do: :success
   def classify({:ok, _result}), do: :success
   def classify({:provider_error, _reason}), do: :failure
+  # The calendar clients report errors as `{:error, reason, message}`; the
+  # message carries no classification signal, only the reason does.
+  def classify({:error, reason, _message}), do: classify_error(reason)
   def classify({:error, reason}), do: classify_error(reason)
   # `execute_function/2` normalises bare values into `{:ok, _}`, so anything
   # still untagged here came from a caller reporting its own result.

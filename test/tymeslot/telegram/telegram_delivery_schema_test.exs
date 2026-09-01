@@ -51,23 +51,4 @@ defmodule Tymeslot.Telegram.TelegramDeliverySchemaTest do
       assert changeset.valid?
     end
   end
-
-  describe "successful?/1" do
-    test "returns true for 2xx status codes" do
-      assert TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: 200})
-      assert TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: 201})
-      assert TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: 299})
-    end
-
-    test "returns false for non-2xx status codes" do
-      refute TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: 199})
-      refute TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: 300})
-      refute TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: 400})
-      refute TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: 500})
-    end
-
-    test "returns false for nil status" do
-      refute TelegramDeliverySchema.successful?(%TelegramDeliverySchema{response_status: nil})
-    end
-  end
 end

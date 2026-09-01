@@ -5,7 +5,11 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   path, the idempotent already-gone path, and the no-room discard.
   """
 
-  use Tymeslot.DataCase, async: true
+  # Not async: several tests here induce real Zoom video-breaker failures
+  # (VideoCircuitBreaker is an application-wide singleton keyed by provider),
+  # so this module needs the DataCase-wide breaker reset that only runs
+  # between non-async modules.
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :workers
 
@@ -15,6 +19,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
   alias Ecto.UUID
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
@@ -64,6 +69,12 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
     end
 
     test "returns an error so Oban retries when Zoom responds transiently" do
+      # A real 5xx counts as a failure against the shared, VM-wide zoom
+      # circuit breaker (`BreakerOutcome.classify/1`). Reset it around this
+      # test so a single transient-failure assertion here cannot nudge a
+      # concurrently running test elsewhere closer to tripping it for real.
+      on_exit(fn -> VideoCircuitBreaker.reset(:zoom) end)
+
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 

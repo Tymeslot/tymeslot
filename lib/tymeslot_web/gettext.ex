@@ -33,6 +33,6 @@ defmodule TymeslotWeb.Gettext do
   catalogs (the booking domain) pseudo the visible English text rather than
   the developer key.
   """
-  use Gettext.Backend, otp_app: :tymeslot
+  use Gettext.Backend, otp_app: :tymeslot, split_module_by: [:locale, :domain]
   use TymeslotWeb.Gettext.PseudoFallback
 end
