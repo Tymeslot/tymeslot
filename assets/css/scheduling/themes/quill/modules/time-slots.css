@@ -170,13 +170,26 @@
   gap: var(--space-2xs);
 }
 
+/* The open hour has to be unmistakable. The minute drawer renders beneath the
+   whole row rather than beneath the button that opened it, so its position
+   says nothing about which hour it belongs to; the button's own state is the
+   only thing that does. Kept distinct from --selected (a filled primary
+   gradient) because both can be on screen at once, on different hours. */
 .time-slot-button--expanded {
   background: var(--surface-medium-light);
-  border-color: var(--border-strong);
+  border-color: var(--theme-primary);
+  color: var(--theme-primary);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-primary-sm);
 }
 
+/* A contained drawer rather than a left rule. The rule sat at the row's left
+   edge, which is the first hour in the row and not the open one, so it
+   pointed at the wrong button whenever the open hour was not first. */
 .time-slots-grid--minutes {
   margin-top: var(--space-xs);
-  padding-left: var(--space-xs);
-  border-left: var(--border-width-thin) solid var(--border-light);
+  padding: var(--space-xs);
+  background: var(--surface-very-light);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-md);
 }
