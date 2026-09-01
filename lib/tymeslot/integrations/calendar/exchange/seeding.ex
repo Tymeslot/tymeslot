@@ -185,7 +185,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Seeding do
     <t:Recurrence>
       <t:DailyRecurrence><t:Interval>#{interval}</t:Interval></t:DailyRecurrence>
       <t:NumberedRecurrence>
-        <t:StartDate>#{Date.to_iso8601(to_date(start_time))}</t:StartDate>
+        <t:StartDate>#{Date.to_iso8601(series_start_date(start_time))}</t:StartDate>
         <t:NumberOfOccurrences>#{count}</t:NumberOfOccurrences>
       </t:NumberedRecurrence>
     </t:Recurrence>
@@ -200,8 +200,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Seeding do
   defp element(_name, nil), do: ""
   defp element(name, value), do: "<#{name}>#{XmlEscape.escape(value)}</#{name}>"
 
-  defp to_date(%Date{} = date), do: date
-  defp to_date(%DateTime{} = datetime), do: DateTime.to_date(datetime)
+  # The recurrence range is bounded by a calendar day, whichever shape the
+  # fixture's start carries: a timed series starts on the day its first
+  # occurrence falls on.
+  defp series_start_date(%Date{} = date), do: date
+  defp series_start_date(%DateTime{} = datetime), do: DateTime.to_date(datetime)
 
   defp midnight_utc(%Date{} = date),
     do: date |> DateTime.new!(~T[00:00:00], "Etc/UTC") |> DateTime.to_iso8601()
