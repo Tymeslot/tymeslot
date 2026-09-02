@@ -54,6 +54,7 @@ Idempotency-Key: <your own key>   (optional, strongly recommended)
     "attendee_name": "Robin Vale",
     "attendee_email": "robin@example.com",
     "attendee_timezone": "Etc/UTC",
+    "attendee_locale": "en",
     "view_url": "https://example.com/host/meeting/6f1c2f7a-…",
     "reschedule_url": "https://example.com/host/meeting/6f1c2f7a-…/reschedule",
     "cancel_url": "https://example.com/host/meeting/6f1c2f7a-…/cancel",
@@ -78,6 +79,7 @@ you show the attendee in your own system.
 | `meeting_type` | one of these three | The slug of one of the organiser's meeting types. Supplies the duration, the title and the video room. |
 | `title` | unless `meeting_type` is given | What the meeting is called. Wins over the meeting type's name when both are given. |
 | `attendee_timezone` | no | IANA name, e.g. `Europe/Berlin`. Defaults to `Etc/UTC`. Sets the time zone the attendee's invitation and pages are rendered in. |
+| `attendee_locale` | no | Language code the instance serves, e.g. `fr`. Defaults to the instance's booking language. Sets the language of the confirmation, reminder and cancellation mail, and of the attendee's pages. |
 | `guest_emails` | no | Up to 20 additional addresses, copied on the invitation. |
 | `force` | no | `true` skips the availability checks below. Default `false`. |
 

@@ -72,6 +72,7 @@ defmodule TymeslotWeb.BookingApiController do
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
       attendee_timezone: meeting.attendee_timezone,
+      attendee_locale: meeting.attendee_locale,
       view_url: meeting.view_url,
       reschedule_url: meeting.reschedule_url,
       cancel_url: meeting.cancel_url,

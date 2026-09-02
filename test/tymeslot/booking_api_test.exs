@@ -5,6 +5,7 @@ defmodule Tymeslot.BookingApiTest do
   import Tymeslot.TestMocks
 
   alias Tymeslot.BookingApi
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles.ProfileQueries
 
@@ -155,6 +156,18 @@ defmodule Tymeslot.BookingApiTest do
       assert violation_fields(result) == ["attendee_timezone"]
     end
 
+    test "rejects a language the instance does not serve", %{profile: profile} do
+      result = BookingApi.create_booking(profile, body(%{"attendee_locale" => "kl"}))
+
+      assert violation_fields(result) == ["attendee_locale"]
+    end
+
+    test "rejects a language that is not a string", %{profile: profile} do
+      result = BookingApi.create_booking(profile, body(%{"attendee_locale" => 42}))
+
+      assert violation_fields(result) == ["attendee_locale"]
+    end
+
     test "rejects a guest list holding something that is not an email", %{profile: profile} do
       result =
         BookingApi.create_booking(profile, body(%{"guest_emails" => ["ok@example.com", 7]}))
@@ -186,6 +199,18 @@ defmodule Tymeslot.BookingApiTest do
     test "defaults the attendee time zone to UTC", %{profile: profile} do
       assert {:ok, :created, meeting} = BookingApi.create_booking(profile, body())
       assert meeting.attendee_timezone == "Etc/UTC"
+    end
+
+    test "defaults the attendee language to the instance booking default", %{profile: profile} do
+      assert {:ok, :created, meeting} = BookingApi.create_booking(profile, body())
+      assert meeting.attendee_locale == Locales.booking_default_locale()
+    end
+
+    test "honours an explicit attendee language", %{profile: profile} do
+      assert {:ok, :created, meeting} =
+               BookingApi.create_booking(profile, body(%{"attendee_locale" => "fr"}))
+
+      assert meeting.attendee_locale == "fr"
     end
 
     test "honours an explicit end_time", %{profile: profile} do

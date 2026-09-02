@@ -224,6 +224,7 @@ defmodule Tymeslot.BookingApi do
       attendee_name: params.attendee_name,
       attendee_email: params.attendee_email,
       attendee_timezone: params.attendee_timezone,
+      attendee_locale: params.attendee_locale,
       organizer_user_id: user_id,
       calendar_integration_id: calendar_integration_id,
       calendar_path: calendar_path,

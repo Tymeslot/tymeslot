@@ -10,6 +10,7 @@ defmodule Tymeslot.BookingApi.Params do
   attendee details the endpoint does not model into fields nothing reads.
   """
 
+  alias Tymeslot.Locales
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Timezones
 
@@ -24,6 +25,7 @@ defmodule Tymeslot.BookingApi.Params do
           attendee_name: String.t(),
           attendee_email: String.t(),
           attendee_timezone: String.t(),
+          attendee_locale: String.t(),
           start_time: DateTime.t(),
           end_time: DateTime.t() | nil,
           duration_minutes: pos_integer() | nil,
@@ -51,6 +53,7 @@ defmodule Tymeslot.BookingApi.Params do
       attendee_name: text(body, "attendee_name", @name_max_length),
       attendee_email: email(body, "attendee_email"),
       attendee_timezone: timezone(body, "attendee_timezone"),
+      attendee_locale: locale(body, "attendee_locale"),
       start_time: timestamp(body, "start_time"),
       end_time: optional_timestamp(body, "end_time"),
       duration_minutes: duration(body, "duration_minutes"),
@@ -118,6 +121,27 @@ defmodule Tymeslot.BookingApi.Params do
         if Timezones.valid?(value),
           do: {:ok, value},
           else: {:error, "is not a known IANA time zone"}
+
+      _other ->
+        {:error, "must be a string"}
+    end
+  end
+
+  # Symmetric with the time zone above: both describe the attendee, not the
+  # instance. Omitted, the booking falls back to the instance setting, which is
+  # what a single-country deployment wants; a caller booking for someone in
+  # another language says so once, here, and the confirmation, reminder and
+  # cancellation mail all follow.
+  defp locale(body, field) do
+    case Map.get(body, field) do
+      nil ->
+        {:ok, Locales.booking_default_locale()}
+
+      value when is_binary(value) ->
+        case Locales.acceptable(String.trim(value)) do
+          nil -> {:error, "is not a language this instance serves"}
+          code -> {:ok, code}
+        end
 
       _other ->
         {:error, "must be a string"}
