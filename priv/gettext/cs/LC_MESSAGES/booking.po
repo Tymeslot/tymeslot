@@ -360,8 +360,7 @@ msgstr "Přejít na kalendář"
 msgid "Great! Your meeting is still scheduled as planned."
 msgstr "Výborně! Vaše schůzka se koná podle plánu."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Hi! I'm %{name}."
 msgstr "Dobrý den, jsem %{name}."
@@ -413,7 +412,7 @@ msgstr "Pozdní večer"
 msgid "Let me know what you'd like to discuss..."
 msgstr "Napište, co chcete probrat…"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
 msgstr "Pojďme se sejít!"
@@ -648,7 +647,7 @@ msgid "Schedule with"
 msgstr "Schůzka s hostitelem"
 
 #: lib/tymeslot/profiles/organizer_context.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
 msgstr "Schůzka s hostitelem %{name}"
@@ -1242,8 +1241,7 @@ msgstr "Příliš mnoho pokusů o rezervaci. Zkuste to prosím později."
 msgid "Your booking is already being processed. Please wait..."
 msgstr "Vaše rezervace se už zpracovává. Počkejte prosím…"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Vyberte si níže některou z možností."

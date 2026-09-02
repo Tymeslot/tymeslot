@@ -124,6 +124,7 @@ msgstr "Ungültige Design-Auswahl"
 msgid "JPG, PNG or WebP. Max 5MB."
 msgstr "JPG, PNG oder WebP. Max. 5 MB."
 
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -263,3 +264,83 @@ msgstr "Modernes Design mit gleitenden Übergängen, Videohintergrund und einem 
 #, elixir-autogen, elixir-format
 msgid "Could not save your theme customization. Please try again."
 msgstr "Ihre Design-Anpassung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "(your current theme)"
+msgstr "(Ihr aktuelles Design)"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Page Text"
+msgstr "Text der Buchungsseite"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page preview"
+msgstr "Vorschau der Buchungsseite"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page text updated"
+msgstr "Text der Buchungsseite aktualisiert"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Greeting"
+msgstr "Begrüßung"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Heading"
+msgstr "Überschrift"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Instruction"
+msgstr "Hinweis"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "No preview yet"
+msgstr "Noch keine Vorschau"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a username for your booking page to see it here."
+msgstr "Wählen Sie einen Benutzernamen für Ihre Buchungsseite, um sie hier zu sehen."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Replace the wording that introduces you at the top of your booking page. Applies to every theme."
+msgstr "Ersetzen Sie den Text, mit dem Sie oben auf Ihrer Buchungsseite vorgestellt werden. Gilt für jedes Design."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Save Text"
+msgstr "Text speichern"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "The preview updates when you save."
+msgstr "Die Vorschau wird beim Speichern aktualisiert."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your wording is kept either way."
+msgstr "Schalten Sie dies aus, um zum vorgegebenen Text zurückzukehren, der in jede von Tymeslot unterstützte Sprache übersetzt ist. Ihr Text bleibt in jedem Fall erhalten."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Use my own wording"
+msgstr "Eigenen Text verwenden"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Your heading replaces:"
+msgstr "Ihre Überschrift ersetzt:"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Your own wording is shown to everyone, in whatever language they pick. Only the built-in text is translated."
+msgstr "Ihr eigener Text wird allen angezeigt, unabhängig von der gewählten Sprache. Nur der vorgegebene Text wird übersetzt."

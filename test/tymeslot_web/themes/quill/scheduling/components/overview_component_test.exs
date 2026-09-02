@@ -49,6 +49,89 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
     end
   end
 
+  describe "introductory text" do
+    test "shows the theme's own wording when the organiser has not customised it" do
+      html = render_overview(organizer_profile: build(:profile, full_name: "Sarah Rodriguez"))
+
+      assert html =~ "Let&#39;s Connect!"
+      assert html =~ "Hi! I&#39;m Sarah Rodriguez."
+      assert html =~ "Pick an option below."
+    end
+
+    test "shows the organiser's wording in place of all three lines" do
+      profile =
+        build(:profile,
+          full_name: "Sarah Rodriguez",
+          booking_text_enabled: true,
+          booking_heading: "Ready to grow your business?",
+          booking_greeting: "I am Sarah, and I help teams ship.",
+          booking_instruction: "Choose whichever session suits you."
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ "Ready to grow your business?"
+      assert html =~ "I am Sarah, and I help teams ship."
+      assert html =~ "Choose whichever session suits you."
+      refute html =~ "Let&#39;s Connect!"
+      refute html =~ "Pick an option below."
+    end
+
+    test "keeps the theme's wording when the organiser has switched the customisation off" do
+      profile =
+        build(:profile,
+          full_name: "Sarah Rodriguez",
+          booking_text_enabled: false,
+          booking_heading: "Ready to grow your business?"
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ "Let&#39;s Connect!"
+      refute html =~ "Ready to grow your business?"
+    end
+
+    test "drops the greeting rather than render half a sentence for a nameless profile" do
+      profile = build(:profile, full_name: nil, user: build(:user, name: nil))
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ "Pick an option below."
+      refute html =~ "Hi! I&#39;m"
+    end
+
+    test "shows a custom greeting even for a nameless profile" do
+      profile =
+        build(:profile,
+          full_name: nil,
+          user: build(:user, name: nil),
+          booking_text_enabled: true,
+          booking_heading: "Book us",
+          booking_greeting: "Hi! We are the support team.",
+          booking_instruction: "Pick a slot."
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~ "Hi! We are the support team."
+    end
+
+    test "escapes wording the organiser typed rather than rendering it as markup" do
+      profile =
+        build(:profile,
+          booking_text_enabled: true,
+          booking_heading: "<script>alert(1)</script>",
+          booking_greeting: "Hi!",
+          booking_instruction: "Pick."
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      refute html =~ "<script>alert(1)</script>"
+      assert html =~ "&lt;script&gt;"
+    end
+  end
+
   defp render_overview(overrides) do
     base = %{
       id: "overview-step",

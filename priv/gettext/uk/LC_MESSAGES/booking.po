@@ -360,8 +360,7 @@ msgstr "Перейти до календаря"
 msgid "Great! Your meeting is still scheduled as planned."
 msgstr "Чудово! Ваша зустріч відбудеться, як заплановано."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Hi! I'm %{name}."
 msgstr "Вітаю! Я %{name}."
@@ -413,7 +412,7 @@ msgstr "Пізня ніч"
 msgid "Let me know what you'd like to discuss..."
 msgstr "Напишіть, що ви хочете обговорити…"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
 msgstr "Зв’яжімося!"
@@ -648,7 +647,7 @@ msgid "Schedule with"
 msgstr "Зустріч із"
 
 #: lib/tymeslot/profiles/organizer_context.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
 msgstr "Зустріч із %{name}"
@@ -1242,8 +1241,7 @@ msgstr "Забагато спроб бронювання. Спробуйте п�
 msgid "Your booking is already being processed. Please wait..."
 msgstr "Ваше бронювання вже обробляється. Будь ласка, зачекайте..."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Оберіть варіант нижче."

@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias Tymeslot.Demo
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   import TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
@@ -105,13 +106,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
 
                   <div>
                     <h1 class="section-header overview-title">
-                      {dgettext("booking", "Let's Connect!")}
+                      {BookingText.heading(
+                        @organizer_profile,
+                        :quill,
+                        Profiles.display_name(@organizer_profile)
+                      )}
                     </h1>
                     <p class="overview-description text-glass-primary">
-                      <%= if display_name = Profiles.display_name(@organizer_profile) do %>
-                        {dgettext("booking", "Hi! I'm %{name}.", name: display_name)}
+                      <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile)) do %>
+                        {greeting}
                       <% end %>
-                      {dgettext("booking", "Pick an option below.")}
+                      {BookingText.instruction(@organizer_profile)}
                     </p>
 
                     <div class="overview-duration-list">

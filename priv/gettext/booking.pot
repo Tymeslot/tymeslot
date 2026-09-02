@@ -360,8 +360,7 @@ msgstr ""
 msgid "Great! Your meeting is still scheduled as planned."
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Hi! I'm %{name}."
 msgstr ""
@@ -413,7 +412,7 @@ msgstr ""
 msgid "Let me know what you'd like to discuss..."
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
 msgstr ""
@@ -648,7 +647,7 @@ msgid "Schedule with"
 msgstr ""
 
 #: lib/tymeslot/profiles/organizer_context.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
 msgstr ""
@@ -1242,8 +1241,7 @@ msgstr ""
 msgid "Your booking is already being processed. Please wait..."
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr ""

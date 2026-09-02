@@ -146,4 +146,17 @@ defmodule Tymeslot.Validation.Constraints do
 
   @spec override_reason_max_length() :: pos_integer()
   def override_reason_max_length, do: 100
+
+  # Booking-page introductory text. The caps are the point at which the copy
+  # stops behaving on the tightest viewport the booker supports: at 80
+  # characters a Rhythm heading pushes the primary action to the bottom edge of
+  # an 812x375 landscape phone, so 60 keeps roughly 30px of headroom. The
+  # greeting and instruction render smaller and sit above the action, so they
+  # take the looser cap.
+
+  @spec booking_heading_max_length() :: pos_integer()
+  def booking_heading_max_length, do: 60
+
+  @spec booking_welcome_line_max_length() :: pos_integer()
+  def booking_welcome_line_max_length, do: 80
 end
