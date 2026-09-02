@@ -22,12 +22,17 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Mox
-  import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
+
+  import Tymeslot.AvailabilityTestHelpers,
+    only: [open_schedule_for: 1, create_bookable_profile: 1, next_bookable_weekday: 0]
+
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.{Create, RescheduleSeat}
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes
@@ -130,6 +135,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
       assert participant_email == "mover@example.com"
       assert appointment_details.uid == new_meeting.uid
       assert appointment_details.attendee_name == "Mover"
+      assert String.contains?(appointment_details.cancel_url, moved.management_token)
       assert old_event.uid == old_meeting.uid
       assert old_event.ical_sequence == old_meeting.ical_sequence
       assert old_event.start_time == old_meeting.start_time
@@ -137,9 +143,14 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
       {:ok, "sent"}
     end)
 
+    # The organiser's copy is built from the bare (new) meeting, not the
+    # mover's own overlay — it must not carry the mover's tokenised seat
+    # links (see `GroupMeetingEmails.send_seat_reschedule_emails/3`).
     expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn organizer_email,
-                                                                             _details ->
+                                                                             details ->
       assert organizer_email == "organizer@example.com"
+      refute String.contains?(details.cancel_url || "", moved.management_token)
+      refute String.contains?(details.reschedule_url || "", moved.management_token)
       {:ok, "sent"}
     end)
 
@@ -153,6 +164,50 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
                "old_start_time" => DateTime.to_iso8601(old_meeting.start_time),
                "old_end_time" => DateTime.to_iso8601(old_meeting.end_time)
              })
+  end
+
+  # `SeatRelease.release/1` cannot be driven into its error branch through
+  # the public API (its own status-transition attrs are always valid), so
+  # the failure is forced with :meck. The move itself must still succeed —
+  # only the old meeting's emptiness check failed — and the old meeting
+  # must be treated the same as "seats remain" (calendar refreshed, not
+  # left stale), never crash the caller.
+  test "the old meeting's emptiness check failing does not crash the move and still refreshes its calendar event",
+       %{old_meeting: old_meeting, mover: mover} do
+    :meck.new(MeetingQueries, [:passthrough])
+
+    :meck.expect(MeetingQueries, :update_meeting_status, fn meeting, attrs ->
+      if meeting.id == old_meeting.id do
+        changeset =
+          %MeetingSchema{}
+          |> Changeset.change()
+          |> Changeset.add_error(:status, "simulated failure")
+
+        {:error, changeset}
+      else
+        :meck.passthrough([meeting, attrs])
+      end
+    end)
+
+    result =
+      try do
+        RescheduleSeat.execute(mover.management_token, new_slot_params())
+      after
+        :meck.unload(MeetingQueries)
+      end
+
+    assert {:ok, %{meeting: new_meeting}} = result
+
+    # The status flip rolled back — the old meeting is still confirmed, not
+    # cancelled and not left in some third, undefined state.
+    assert Repo.get!(MeetingSchema, old_meeting.id).status == "confirmed"
+
+    assert_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "update", "meeting_id" => old_meeting.id}
+    )
+
+    assert_enqueued(worker: CalendarEventWorker, args: %{"meeting_id" => new_meeting.id})
   end
 
   test "a full new slot changes nothing and reports :slot_taken",
@@ -282,5 +337,91 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
              RescheduleSeat.execute(mover.management_token, new_slot_params())
 
     assert new_meeting.capacity == old_meeting.capacity
+  end
+
+  # A seat move that lands on a time with no live group meeting used to
+  # hand-build the new slot from ten fields, dropping the video integration,
+  # description and reminder configuration a fresh booking would carry — and
+  # `after_commit/3` scheduled only the calendar job, so nobody on that slot
+  # ever got a reminder.
+  test "a seat move creating a brand-new slot inherits the meeting type's video integration, description, and reminders",
+       %{user: user, meeting_type: meeting_type, mover: mover} do
+    integration = insert(:video_integration, user: user, provider: "mirotalk")
+
+    {:ok, meeting_type} =
+      MeetingTypes.update_meeting_type(meeting_type, %{
+        allow_video: true,
+        video_integration_id: integration.id
+      })
+
+    assert {:ok, %{meeting: new_meeting}} =
+             RescheduleSeat.execute(mover.management_token, new_slot_params())
+
+    assert new_meeting.video_integration_id == integration.id
+    assert new_meeting.description == meeting_type.description
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_reminder_emails", "meeting_id" => new_meeting.id}
+    )
+  end
+
+  # `Validation.prepare_new_times/2` never ran `ScheduleCheck`, so a seat
+  # move could land outside the organiser's own working hours — an
+  # unauthenticated seat-token holder could confirm a meeting the organiser
+  # never offered.
+  describe "schedule enforcement" do
+    setup do
+      %{user: user} =
+        create_bookable_profile(
+          hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
+        )
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          is_active: true,
+          max_participants: 2
+        )
+
+      date = next_bookable_weekday()
+
+      old_params = %{
+        date: date,
+        time: "10:00",
+        duration: "30min",
+        user_timezone: "Etc/UTC",
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id
+      }
+
+      {:ok, old_meeting} =
+        Create.execute(old_params, %{"name" => "Mover", "email" => "mover-hours@example.com"})
+
+      mover =
+        old_meeting.id
+        |> ParticipantQueries.list_live_for_meeting()
+        |> Enum.find(&(&1.email == "mover-hours@example.com"))
+
+      %{old_meeting: old_meeting, mover: mover, date: date}
+    end
+
+    test "a seat move to a time outside the organiser's schedule is refused",
+         %{old_meeting: old_meeting, mover: mover, date: date} do
+      outside_hours_params = %{
+        date: Date.to_iso8601(date),
+        time: "22:00",
+        duration: "30min",
+        user_timezone: "Etc/UTC"
+      }
+
+      assert {:error, :slot_taken} =
+               RescheduleSeat.execute(mover.management_token, outside_hours_params)
+
+      # Atomicity: the old seat still stands
+      assert [%{email: "mover-hours@example.com"}] =
+               ParticipantQueries.list_live_for_meeting(old_meeting.id)
+    end
   end
 end

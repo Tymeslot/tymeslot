@@ -7,6 +7,8 @@ defmodule Tymeslot.Notifications.Events do
   require Logger
 
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Slack.Dispatcher, as: SlackDispatcher
@@ -67,8 +69,10 @@ defmodule Tymeslot.Notifications.Events do
   Handles a seat being booked on a group meeting.
 
   Every seat schedules its own confirmation email job (participant plus a
-  per-seat organiser notification). `created_meeting?` marks the first seat:
-  reminder jobs are meeting-level, so they are scheduled exactly once here.
+  per-seat organiser notification). Reminders are meeting-level and scheduled
+  exactly once, by `Tymeslot.Bookings.SeatEffects` at whichever seat's
+  booking created the meeting — not here, so this never needs to know
+  `created_meeting?`.
 
   The integration dispatchers fire per seat, not per slot, because a booking
   is a person: a host's webhook, Telegram or Slack automation needs to hear
@@ -80,8 +84,8 @@ defmodule Tymeslot.Notifications.Events do
       room worker will release this seat's confirmation once the join link
       exists, so scheduling it here would only send a linkless duplicate.
   """
-  @spec seat_booked(term(), term(), boolean(), keyword()) :: {:ok, term()} | {:error, term()}
-  def seat_booked(meeting, participant, created_meeting?, opts \\ []) do
+  @spec seat_booked(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def seat_booked(meeting, participant, opts \\ []) do
     result =
       if Keyword.get(opts, :defer_emails?, false) do
         {:ok, :deferred_to_video_room}
@@ -89,11 +93,47 @@ defmodule Tymeslot.Notifications.Events do
         Orchestrator.schedule_seat_confirmation(meeting, participant)
       end
 
-    if created_meeting?, do: schedule_reminders(meeting)
-
     dispatch_seat_integrations(meeting, participant)
 
     result
+  end
+
+  @doc """
+  Announces a video-room job's outcome for its meeting: the full
+  `meeting_created/1` event for a solo meeting, or — for a group meeting —
+  releasing every live seat's own confirmation email.
+
+  A group meeting never raises `meeting_created/1` here. `seat_booked/3`
+  already fanned its webhook/Telegram/Slack integrations out per seat at
+  booking time, and reminders were already scheduled once, at whichever
+  seat's booking created the meeting (see `Tymeslot.Bookings.SeatEffects`).
+  Re-raising the full event on top of that duplicated it with a payload
+  carrying no attendee at all, since a group meeting row has none of its own.
+
+  Only the confirmation email was ever waiting on this: exactly one seat's,
+  for a fresh booking, but every live seat's release is idempotent —
+  `Tymeslot.Notifications.Orchestrator.schedule_seat_confirmation/2` is
+  uniqued on `(meeting_id, participant_id)`, so releasing an already-sent
+  seat here is a no-op in the common case. Only a room recovery spanning past
+  that job's uniqueness window could resend one; still a better trade than
+  the group confirmation this replaces silently dropping the first booker's
+  email outright.
+  """
+  @spec announce_video_room_outcome(term()) :: :ok
+  def announce_video_room_outcome(meeting) do
+    if MeetingSchema.group?(meeting) do
+      release_seat_confirmations(meeting)
+    else
+      meeting_created(meeting)
+    end
+
+    :ok
+  end
+
+  defp release_seat_confirmations(meeting) do
+    meeting.id
+    |> ParticipantQueries.list_live_for_meeting()
+    |> Enum.each(&Orchestrator.schedule_seat_confirmation(meeting, &1))
   end
 
   defp dispatch_seat_integrations(meeting, participant) do

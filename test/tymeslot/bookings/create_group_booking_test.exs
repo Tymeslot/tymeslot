@@ -10,19 +10,24 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.WorkerTestHelpers, only: [expect_mirotalk_success: 0]
 
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
+  alias Tymeslot.Webhooks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
+  alias Tymeslot.Workers.WebhookWorker
+
+  setup :verify_on_exit!
 
   setup do
     # The booking path asks the calendar module for the meeting type's
@@ -191,22 +196,95 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
       )
     end
 
-    test "the room worker's email hand-off reaches every seat, not a missing attendee", ctx do
-      {:ok, meeting} = execute(ctx, "one@example.com")
-      {:ok, _joined} = execute(ctx, "two@example.com")
+    # A group meeting type with an auto-creating video provider used to never
+    # send the first booker a confirmation: the room worker released a
+    # solo-shaped `meeting.created` event against a meeting with no
+    # `attendee_*` fields of its own, which `ContentBuilder.validate_content/2`
+    # then refused as missing fields. Running the real job end to end is the
+    # point — a hand-called helper would not have caught that.
+    test "the first booker's confirmation reaches them once the room worker runs for real", ctx do
+      assert {:ok, meeting} = execute(ctx, "one@example.com")
+      assert [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
 
-      Meetings.schedule_email_notifications(meeting)
+      expect_mirotalk_success()
 
-      for participant <- ParticipantQueries.list_live_for_meeting(meeting.id) do
-        assert_enqueued(
-          worker: EmailWorker,
-          args: %{
-            "action" => "send_seat_confirmation_emails",
-            "meeting_id" => meeting.id,
-            "participant_id" => participant.id
-          }
-        )
-      end
+      assert :ok =
+               perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id, "announce" => true})
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_seat_confirmation_emails",
+          "meeting_id" => meeting.id,
+          "participant_id" => participant.id
+        }
+      )
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn attendee_email,
+                                                                              _details ->
+        assert attendee_email == "one@example.com"
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_seat_confirmation_emails",
+                 "meeting_id" => meeting.id,
+                 "participant_id" => participant.id
+               })
+    end
+
+    # The same missing-attendee `meeting.created` used to fan out a SECOND
+    # time once the room existed, on top of the one `seat_booked/4` already
+    # sent at booking time.
+    test "the room worker never re-dispatches meeting.created for a group meeting", ctx do
+      {:ok, _webhook} =
+        Webhooks.create_webhook(ctx.user.id, %{
+          name: "Bookings",
+          url: "https://example.com/hooks/bookings",
+          events: ["meeting.created"]
+        })
+
+      assert {:ok, meeting} = execute(ctx, "one@example.com")
+      assert length(all_enqueued(worker: WebhookWorker)) == 1
+
+      expect_mirotalk_success()
+
+      assert :ok =
+               perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id, "announce" => true})
+
+      assert length(all_enqueued(worker: WebhookWorker)) == 1
+    end
+  end
+
+  describe "video rooms on providers outside the auto-create allow-list" do
+    # Zoom does not auto-create a room (no API-driven creation for it), so the
+    # group path fell back to `Policy.auto_creates_video_room?/1`'s allow-list
+    # and never scheduled one at all — even though the solo path honours an
+    # explicit `:with_video_room` opt for exactly this case.
+    test "a Zoom-configured meeting type still gets a room when the caller opts in", ctx do
+      integration = insert(:video_integration, user: ctx.user, provider: "zoom")
+
+      {:ok, _meeting_type} =
+        MeetingTypes.update_meeting_type(ctx.meeting_type, %{
+          allow_video: true,
+          video_integration_id: integration.id
+        })
+
+      assert {:ok, meeting} =
+               Create.execute(ctx.meeting_params, form_data("zoom@example.com"),
+                 skip_calendar_check: true,
+                 with_video_room: true
+               )
+
+      assert_enqueued(
+        worker: VideoRoomWorker,
+        args: %{"meeting_id" => meeting.id, "announce" => true}
+      )
     end
   end
 

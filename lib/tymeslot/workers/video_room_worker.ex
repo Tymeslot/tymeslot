@@ -212,12 +212,14 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
       room_id: Map.get(meeting, :video_room_id)
     )
 
-    # A room that arrives after recovery has already announced the booking
-    # without one must not announce it again; `meeting_created/1` claims the
-    # event once per meeting, so this call is a no-op in that case.
+    # A room that arrives after recovery has already announced a solo
+    # meeting without one must not announce it again; `meeting_created/1`
+    # claims the event once per meeting, so this call is a no-op in that
+    # case. A group meeting is never claimed here at all — see
+    # `Events.announce_video_room_outcome/1`.
     if announce and Map.get(meeting, :id) do
       Logger.info("Announcing the meeting now its room exists", meeting_id: meeting.id)
-      Events.meeting_created(meeting)
+      Events.announce_video_room_outcome(meeting)
     end
 
     :ok

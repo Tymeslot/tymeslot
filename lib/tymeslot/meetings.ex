@@ -21,7 +21,6 @@ defmodule Tymeslot.Meetings do
     MeetingQueries,
     MeetingSchema,
     MeetingState,
-    ParticipantQueries,
     ParticipantSchema,
     Recipient,
     SeatLookup,
@@ -29,7 +28,7 @@ defmodule Tymeslot.Meetings do
   }
 
   alias Tymeslot.Integrations.Calendar.IcsGenerator
-  alias Tymeslot.Notifications.{ContentBuilder, Orchestrator}
+  alias Tymeslot.Notifications.ContentBuilder
 
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Utils.DateTimeUtils
@@ -127,56 +126,6 @@ defmodule Tymeslot.Meetings do
   defdelegate convert_type_to_group(meeting_type_id, capacity),
     to: Tymeslot.Workers.GroupConversionWorker,
     as: :enqueue
-
-  @doc """
-  Schedules email notifications for a meeting via Oban.
-
-  A group meeting has no attendee of its own, so its confirmations are
-  per-seat: one job per live participant, each idempotent on
-  `(meeting_id, participant_id)`. That matters here because this is the hand
-  the `VideoRoomWorker` plays once the join link exists, and seats booked
-  while the room was being created have already scheduled their own.
-  """
-  @spec schedule_email_notifications(Ecto.Schema.t()) :: :ok | {:error, any()}
-  def schedule_email_notifications(meeting) do
-    if group?(meeting) do
-      meeting.id
-      |> ParticipantQueries.list_live_for_meeting()
-      |> Enum.each(&schedule_seat_notifications(meeting, &1))
-    else
-      schedule_meeting_notifications(meeting)
-    end
-  end
-
-  defp schedule_meeting_notifications(meeting) do
-    case Orchestrator.schedule_meeting_notifications(meeting) do
-      {:ok, _result} ->
-        Logger.info("Meeting notifications scheduled", meeting_id: meeting.id)
-
-      {:error, reason} ->
-        Logger.warning("Failed to schedule meeting notifications",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-    end
-  end
-
-  defp schedule_seat_notifications(meeting, participant) do
-    case Orchestrator.schedule_seat_confirmation(meeting, participant) do
-      {:ok, _result} ->
-        Logger.info("Seat notifications scheduled",
-          meeting_id: meeting.id,
-          participant_id: participant.id
-        )
-
-      {:error, reason} ->
-        Logger.warning("Failed to schedule seat notifications",
-          meeting_id: meeting.id,
-          participant_id: participant.id,
-          reason: inspect(reason)
-        )
-    end
-  end
 
   @doc """
   Cancels a meeting including all side effects.

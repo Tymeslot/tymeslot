@@ -25,6 +25,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
 
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -35,11 +36,18 @@ defmodule Tymeslot.Bookings.SeatRelease do
   Cancels `meeting` when no live participant remains on it.
 
   Returns `{:ok, :meeting_cancelled}` when it cancelled the meeting (having
-  run the cancellation side effects) and `{:ok, :seats_remain}` when someone
-  is still on the slot, including the case where a booker took a seat while
-  the leaver was committing.
+  run the cancellation side effects), `{:ok, :seats_remain}` when someone is
+  still on the slot, including the case where a booker took a seat while the
+  leaver was committing, and `{:error, :release_check_failed}` when the
+  emptiness check itself could not be completed — the meeting's status is
+  unchanged in that case (the transaction rolled back), but a caller must not
+  read this as "seats remain": that would be reporting an unknown as a known
+  answer. Both callers (`CancelSeat.after_commit/2`,
+  `RescheduleSeat.release_old_meeting/1`) handle this alongside the other two
+  outcomes.
   """
-  @spec release(Meeting.t()) :: {:ok, :meeting_cancelled | :seats_remain}
+  @spec release(Meeting.t()) ::
+          {:ok, :meeting_cancelled | :seats_remain} | {:error, :release_check_failed}
   def release(%Meeting{} = meeting) do
     case Repo.transaction(fn -> cancel_if_emptied(meeting) end) do
       {:ok, {:cancelled, cancelled_meeting}} ->
@@ -51,14 +59,28 @@ defmodule Tymeslot.Bookings.SeatRelease do
 
       {:error, reason} ->
         # The seat is released either way; an emptied meeting that failed to
-        # cancel is a stale calendar entry, not a lost booking, so this never
-        # fails the participant's action.
+        # cancel here is a stale calendar entry, not a lost booking, so this
+        # never fails the participant's own action. What it must not do is
+        # claim to know the meeting is still populated: both callers
+        # (`CancelSeat.after_commit/2`, `RescheduleSeat.release_old_meeting/1`)
+        # now match this outcome explicitly, alongside the other two, so
+        # reporting it honestly here cannot crash them. A meeting that should
+        # have been cancelled and now sits confirmed with nobody on it,
+        # blocking the organiser's slot, is exactly the kind of thing that
+        # needs a human, since nothing else ever revisits it. `Logger.error`
+        # alone is easy to miss in the noise; the admin alert is not.
         Logger.error("Failed to cancel emptied group meeting",
           meeting_id: meeting.id,
           reason: inspect(reason)
         )
 
-        {:ok, :seats_remain}
+        AdminAlerts.report(:group_meeting_release_failed,
+          summary: "Failed to cancel an emptied group meeting; it may be stranded confirmed",
+          reason: reason,
+          context: %{meeting_id: meeting.id}
+        )
+
+        {:error, :release_check_failed}
     end
   end
 

@@ -413,7 +413,7 @@ defmodule Tymeslot.Bookings.Create do
 
     cond do
       CreateGroup.applicable?(booking_data) ->
-        CreateGroup.create(meeting_attrs, booking_data)
+        CreateGroup.create(meeting_attrs, booking_data, opts)
 
       paid_meeting_type?(booking_data) ->
         PaidBooking.create(meeting_attrs, booking_data,

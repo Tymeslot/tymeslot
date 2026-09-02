@@ -7,7 +7,9 @@ defmodule Tymeslot.Bookings.Validation do
   """
 
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.ScheduleCheck
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
@@ -164,17 +166,24 @@ defmodule Tymeslot.Bookings.Validation do
   end
 
   @doc """
-  Parses and validates the requested new time for a reschedule, returning the
-  meeting attrs to write.
+  Parses and validates the requested new time for a single-seat reschedule
+  (move-my-seat), returning the meeting attrs to write.
 
-  Shared by the whole-meeting and single-seat reschedule paths, which must
-  agree on what counts as a valid new slot: a divergence here would let a seat
-  move to a time the meeting itself could not be booked at.
+  Used by `Tymeslot.Bookings.RescheduleSeat` alone — the whole-meeting
+  reschedule path (`Tymeslot.Bookings.Reschedule`) resolves its own new-time
+  window because it additionally re-derives `ScheduleCheck`'s grid step from
+  the meeting type's *current* duration rather than the meeting's persisted
+  one. Both paths must still agree on what counts as a valid new slot: a
+  divergence here would let a seat move to a time the meeting itself could
+  not be booked at, which is why this also runs `ScheduleCheck` against
+  `meeting_type` rather than only the notice/window checks.
   """
-  @spec prepare_new_times(map(), integer()) ::
+  @spec prepare_new_times(map(), integer(), map() | nil) ::
           {:ok, %{start_time: DateTime.t(), end_time: DateTime.t(), duration_minutes: integer()}}
           | {:error, term()}
-  def prepare_new_times(params, organizer_user_id) do
+  def prepare_new_times(params, organizer_user_id, meeting_type \\ nil) do
+    config = Policy.scheduling_config(organizer_user_id, meeting_type)
+
     with {:ok, {start_datetime, end_datetime}} <-
            parse_meeting_times(
              params.date,
@@ -182,18 +191,30 @@ defmodule Tymeslot.Bookings.Validation do
              params.duration,
              params.user_timezone
            ),
+         {:ok, date} <- parse_date(params.date),
+         :ok <- validate_booking_time(start_datetime, params.user_timezone, config),
+         duration_minutes <- TimeSlots.parse_duration(params.duration),
          :ok <-
-           validate_booking_time(
+           ScheduleCheck.validate_slot_on_schedule(
+             date,
              start_datetime,
+             duration_minutes,
              params.user_timezone,
-             Policy.scheduling_config(organizer_user_id)
+             config,
+             organizer_user_id
            ) do
       {:ok,
        %{
          start_time: start_datetime,
          end_time: end_datetime,
-         duration_minutes: TimeSlots.parse_duration(params.duration)
+         duration_minutes: duration_minutes
        }}
+    else
+      {:error, reason} when is_atom(reason) ->
+        {:error, Errors.classify_schedule_check_reason(reason) || reason}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 

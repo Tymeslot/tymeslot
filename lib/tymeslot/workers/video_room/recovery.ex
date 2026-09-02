@@ -97,13 +97,17 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   Announces the meeting without a video room link.
 
   Used both on entering recovery and when the failure is already known to be
-  unrecoverable, so the attendees still receive their confirmation and anything
-  subscribed to `meeting.created` still learns about the booking.
+  unrecoverable, so the attendees still receive their confirmation and — for
+  a solo meeting — anything subscribed to `meeting.created` still learns
+  about the booking. A group meeting instead just releases each live seat's
+  own confirmation email; see `Events.announce_video_room_outcome/1`.
 
-  Recovery keeps retrying the room after this, and a late success announces the
-  booking on its own account. `Events.meeting_created/1` claims the event once
-  per meeting, so whichever of the two gets there first is the only one that
-  fans out.
+  Recovery keeps retrying the room after this, and a late success announces
+  the booking on its own account. For a solo meeting `Events.meeting_created/1`
+  claims the event once per meeting, so whichever of the two gets there first
+  is the only one that fans out; a group meeting's per-seat confirmation jobs
+  are themselves uniqued, so re-releasing them here is likewise a no-op in
+  the common case.
   """
   @spec send_fallback_notifications(String.t()) :: :ok
   def send_fallback_notifications(meeting_id) do
@@ -113,8 +117,7 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Events.meeting_created(meeting)
-        :ok
+        Events.announce_video_room_outcome(meeting)
 
       {:error, _reason} ->
         Logger.error("Could not fetch meeting for fallback announcement",

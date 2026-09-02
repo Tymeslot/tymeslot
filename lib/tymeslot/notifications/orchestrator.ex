@@ -45,7 +45,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     content = ContentBuilder.build_appointment_details(meeting)
 
     with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content),
+         :ok <- ContentBuilder.validate_content(content, Meetings.group?(meeting)),
          result <- schedule_confirmation_job(meeting.id) do
       case result do
         :ok -> :ok

@@ -10,17 +10,14 @@ defmodule Tymeslot.Bookings.CreateGroup do
   meeting type holds more than one seat.
   """
 
-  alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.Telemetry
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
-  alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events
-  alias Tymeslot.Workers.VideoRoomWorker
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -29,28 +26,22 @@ defmodule Tymeslot.Bookings.CreateGroup do
 
   def applicable?(_booking_data), do: false
 
-  # Booker-scoped fields that live on the `meeting_participants` row for a
-  # group booking, not on the shared meeting slot. `:attendee_locale` is
-  # deliberately excluded: `MeetingSchema.group_changeset/2` still requires
-  # it, so the first booker's locale seeds the (attendee-less) meeting row.
-  @booker_scoped_attrs [
-    :attendee_name,
-    :attendee_email,
-    :attendee_message,
-    :attendee_phone,
-    :attendee_company,
-    :attendee_timezone,
-    :custom_field_answers
-  ]
+  # `:attendee_locale` is deliberately kept off `SeatEffects.slot_attrs/2`'s
+  # drop list: the first booker's locale seeds the (attendee-less) meeting
+  # row, used to localise content built straight from the meeting rather
+  # than through a participant recipient.
 
   @doc """
   Routes a group meeting type's booking through the seat transaction instead
   of the solo/paid meeting-row transaction: the slot is a shared meeting row
   and each booker becomes a `meeting_participants` record rather than the
   meeting's sole attendee.
+
+  Options are the same ones `Tymeslot.Bookings.Create.execute/3` accepts;
+  only `:with_video_room` matters here (see `SeatEffects.schedule_new_slot_effects/2`).
   """
-  @spec create(map(), map()) :: {:ok, map()} | {:error, Errors.classified_error()}
-  def create(meeting_attrs, booking_data) do
+  @spec create(map(), map(), keyword()) :: {:ok, map()} | {:error, Errors.classified_error()}
+  def create(meeting_attrs, booking_data, opts \\ []) do
     %{meeting_type: meeting_type} = booking_data
 
     meeting_attrs
@@ -58,23 +49,24 @@ defmodule Tymeslot.Bookings.CreateGroup do
     |> GroupScheduling.book_seat(build_seat_request(booking_data),
       on_booked: &schedule_calendar_job/1
     )
-    |> map_result()
+    |> map_result(opts)
   end
 
   defp map_result(
-         {:ok, %{meeting: meeting, participant: participant, created_meeting?: created?}}
+         {:ok, %{meeting: meeting, participant: participant, created_meeting?: created?}},
+         opts
        ) do
     Telemetry.booking_created()
-    publish_seat_change(meeting)
+    SeatEffects.broadcast_and_invalidate(meeting)
 
-    Events.seat_booked(meeting, participant, created?,
-      defer_emails?: schedule_video_room(meeting, created?)
-    )
+    defer_emails? = created? and schedule_new_slot_effects(meeting, opts)
+
+    Events.seat_booked(meeting, participant, defer_emails?: defer_emails?)
 
     {:ok, meeting}
   end
 
-  defp map_result({:error, :slot_full}), do: {:error, :slot_taken}
+  defp map_result({:error, :slot_full}, _opts), do: {:error, :slot_taken}
 
   # `book_seat/3` exhausts its retry on a rare first-booker index collision
   # and surfaces the raw changeset. Its `organizer_user_id` error is worded
@@ -83,7 +75,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # other lost-race case. A duplicate seat is worth naming: the booker has
   # this slot already, most likely from a second tab, and "try again" is the
   # wrong advice.
-  defp map_result({:error, %Ecto.Changeset{} = changeset}) do
+  defp map_result({:error, %Ecto.Changeset{} = changeset}, _opts) do
     cond do
       GroupScheduling.lost_first_booker_race?(changeset) -> {:error, :slot_taken}
       duplicate_seat?(changeset) -> {:error, :already_booked}
@@ -91,7 +83,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
     end
   end
 
-  defp map_result({:error, reason}), do: {:error, Errors.classify_error(reason)}
+  defp map_result({:error, reason}, _opts), do: {:error, Errors.classify_error(reason)}
 
   defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
     Enum.any?(errors, fn {_field, {_message, opts}} ->
@@ -108,18 +100,12 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # Returns whether this seat's confirmation is now the video worker's job.
   # A failure to schedule only means the emails go without a link — never
   # that the seat is lost.
-  defp schedule_video_room(meeting, true = _created_meeting?) do
-    Policy.auto_creates_video_room?(meeting) and
-      VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) == :ok
+  defp schedule_new_slot_effects(meeting, opts) do
+    SeatEffects.schedule_new_slot_effects(meeting, Keyword.put(opts, :announce, true))
   end
 
-  defp schedule_video_room(_meeting, _joined_existing_slot), do: false
-
-  defp group_meeting_attrs(meeting_attrs, meeting_type) do
-    meeting_attrs
-    |> Map.drop(@booker_scoped_attrs)
-    |> Map.merge(%{title: meeting_type.name, summary: meeting_type.name})
-  end
+  defp group_meeting_attrs(meeting_attrs, meeting_type),
+    do: SeatEffects.slot_attrs(meeting_attrs, meeting_type.name)
 
   defp build_seat_request(booking_data) do
     %{form_data: form_data, meeting_type: meeting_type} = booking_data
@@ -152,17 +138,6 @@ defmodule Tymeslot.Bookings.CreateGroup do
     end
   end
 
-  defp schedule_calendar_job(%{meeting: meeting, created_meeting?: true}),
-    do: CalendarJobs.schedule_job(meeting, "create")
-
-  defp schedule_calendar_job(%{meeting: meeting, created_meeting?: false}),
-    do: CalendarJobs.schedule_job(meeting, "update")
-
-  # Broadcast and cache invalidation happen after the seat transaction has
-  # committed, never from inside it — matches `SeatBroadcast`'s contract.
-  defp publish_seat_change(meeting) do
-    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-    SeatBroadcast.broadcast_seat_change(meeting.meeting_type_id)
-    :ok
-  end
+  defp schedule_calendar_job(%{meeting: meeting, created_meeting?: created?}),
+    do: SeatEffects.schedule_calendar_job(meeting, created?)
 end

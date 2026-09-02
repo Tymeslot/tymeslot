@@ -65,11 +65,24 @@ defmodule Tymeslot.Bookings.CancelSeat do
     transaction_result =
       Repo.transaction(fn ->
         # Serialises with book_seat/3, which locks the same row before it
-        # counts seats, so a booker cannot slip in mid-cancellation.
+        # counts seats, so a booker cannot slip in mid-cancellation. It also
+        # serialises two concurrent cancels of this *same* seat: both can
+        # pass the pre-transaction `ensure_live/1` check off the same stale
+        # read before either commits. Re-checking liveness here, after the
+        # lock and against a fresh read, is what stops the loser from
+        # blindly re-cancelling a participant the winner already cancelled
+        # and re-running the last-leaver side effects (resurrecting the
+        # calendar event the winner just deleted, re-notifying the
+        # organiser) against a meeting that has already been finalised.
         GroupMeetingQueries.lock_for_update(meeting.id)
 
-        case ParticipantQueries.cancel(participant) do
-          {:ok, cancelled} -> cancelled
+        with {:ok, current} <- ParticipantQueries.get(participant.id),
+             :ok <- ensure_live(current) do
+          case ParticipantQueries.cancel(current) do
+            {:ok, cancelled} -> cancelled
+            {:error, reason} -> Repo.rollback(reason)
+          end
+        else
           {:error, reason} -> Repo.rollback(reason)
         end
       end)
@@ -77,6 +90,14 @@ defmodule Tymeslot.Bookings.CancelSeat do
     case transaction_result do
       {:ok, cancelled} ->
         after_commit(meeting, cancelled)
+
+      {:error, :already_cancelled} ->
+        Logger.info("Seat already cancelled by a concurrent request",
+          meeting_id: meeting.id,
+          participant_id: participant.id
+        )
+
+        {:error, :already_cancelled}
 
       {:error, reason} ->
         Logger.error("Failed to cancel seat",
@@ -102,6 +123,18 @@ defmodule Tymeslot.Bookings.CancelSeat do
         {:ok, :meeting_cancelled}
 
       {:ok, :seats_remain} ->
+        CalendarJobs.schedule_job(meeting, "update")
+        Events.seat_cancelled(meeting, cancelled, notify_organizer: true)
+        {:ok, :seat_cancelled}
+
+      {:error, :release_check_failed} ->
+        # The emptiness check failed, not the meeting's status transition —
+        # `release/1`'s own transaction rolled back on failure, so the
+        # meeting is still confirmed either way. That is exactly the
+        # `:seats_remain` state as far as this seat's own cancellation is
+        # concerned: the leaver still needs their calendar event refreshed
+        # and the organiser still needs telling. `SeatRelease` has already
+        # alerted on the check itself failing.
         CalendarJobs.schedule_job(meeting, "update")
         Events.seat_cancelled(meeting, cancelled, notify_organizer: true)
         {:ok, :seat_cancelled}
