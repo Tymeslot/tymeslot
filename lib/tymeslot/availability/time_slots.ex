@@ -16,6 +16,39 @@ defmodule Tymeslot.Availability.TimeSlots do
   end
 
   @doc """
+  Generates time slots for a date range, excluding break periods, on the
+  historical duration-locked grid.
+
+  Equivalent to `generate_slots_for_range_with_breaks/7` with no interval and
+  no anchor, and kept as its own arity because the duration-locked grid needs
+  neither.
+  """
+  @spec generate_slots_for_range_with_breaks(
+          DateTime.t(),
+          DateTime.t(),
+          integer(),
+          Date.t(),
+          [{Time.t(), Time.t()}]
+        ) :: [String.t()]
+  def generate_slots_for_range_with_breaks(
+        start_dt,
+        end_dt,
+        duration_minutes,
+        selected_date,
+        breaks
+      ) do
+    generate_slots_for_range_with_breaks(
+      start_dt,
+      end_dt,
+      duration_minutes,
+      selected_date,
+      breaks,
+      nil,
+      nil
+    )
+  end
+
+  @doc """
   Generates time slots for a date range, excluding break periods.
 
   ## Parameters
@@ -31,6 +64,11 @@ defmodule Tymeslot.Availability.TimeSlots do
       (e.g. 60 minutes lands on the hour) instead of wherever the window
       happens to start; a nil interval keeps the unanchored, duration-locked
       grid unchanged.
+    - owner_timezone: The clock that anchoring reads. `start_dt` has already
+      been shifted into the booker's timezone by the time it gets here, so
+      the boundary has to be measured somewhere else: the interval is the
+      owner's setting and means "this far apart, on my clock". Required
+      whenever `interval_minutes` is set, ignored when it is nil.
 
   Returns a list of formatted time strings like "9:00 AM", excluding slots that
   would overlap with break periods.
@@ -41,7 +79,8 @@ defmodule Tymeslot.Availability.TimeSlots do
           integer(),
           Date.t(),
           [{Time.t(), Time.t()}],
-          pos_integer() | nil
+          pos_integer() | nil,
+          String.t() | nil
         ) :: [String.t()]
   def generate_slots_for_range_with_breaks(
         start_dt,
@@ -49,7 +88,8 @@ defmodule Tymeslot.Availability.TimeSlots do
         duration_minutes,
         selected_date,
         breaks,
-        interval_minutes \\ nil
+        interval_minutes,
+        owner_timezone
       ) do
     start_date = DateTime.to_date(start_dt)
     end_date = DateTime.to_date(end_dt)
@@ -58,7 +98,12 @@ defmodule Tymeslot.Availability.TimeSlots do
 
     # Generate all possible slots first
     all_slots =
-      generate_slots_for_determined_range(slot_range, duration_minutes, interval_minutes)
+      generate_slots_for_determined_range(
+        slot_range,
+        duration_minutes,
+        interval_minutes,
+        owner_timezone
+      )
 
     # Filter out slots that overlap with breaks
     case slot_range do
@@ -98,11 +143,27 @@ defmodule Tymeslot.Availability.TimeSlots do
     end
   end
 
-  defp generate_slots_for_determined_range(:no_slots, _duration_minutes, _interval_minutes),
-    do: []
+  defp generate_slots_for_determined_range(
+         :no_slots,
+         _duration_minutes,
+         _interval_minutes,
+         _owner_timezone
+       ),
+       do: []
 
-  defp generate_slots_for_determined_range({start_dt, end_dt}, duration_minutes, interval_minutes) do
-    generate_slots_for_single_day(start_dt, end_dt, duration_minutes, interval_minutes)
+  defp generate_slots_for_determined_range(
+         {start_dt, end_dt},
+         duration_minutes,
+         interval_minutes,
+         owner_timezone
+       ) do
+    generate_slots_for_single_day(
+      start_dt,
+      end_dt,
+      duration_minutes,
+      interval_minutes,
+      owner_timezone
+    )
   end
 
   @doc """
@@ -155,12 +216,21 @@ defmodule Tymeslot.Availability.TimeSlots do
 
   # Private functions
 
-  defp generate_slots_for_single_day(start_dt, end_dt, duration_minutes, interval_minutes) do
+  defp generate_slots_for_single_day(
+         start_dt,
+         end_dt,
+         duration_minutes,
+         interval_minutes,
+         owner_timezone
+       ) do
     # Only an explicit interval anchors the grid to a wall-clock boundary
-    # (e.g. 60 minutes lands on the hour). A nil interval keeps the historical
-    # duration-locked anchor at `start_dt` exactly, so meeting types that have
-    # never set an interval see no change at all.
-    grid_start = align_to_interval(start_dt, interval_minutes)
+    # (e.g. 60 minutes lands on the hour), and the clock it lands on is the
+    # owner's, not the booker's: the interval is the owner's setting, so a
+    # 60-minute grid has to sit on the hour in the owner's calendar whoever is
+    # looking at it. A nil interval keeps the historical duration-locked anchor
+    # at `start_dt` exactly, so meeting types that have never set an interval
+    # see no change at all.
+    grid_start = align_to_interval(start_dt, interval_minutes, owner_timezone)
     total_minutes = DateTime.diff(end_dt, grid_start, :minute)
     # A slot's length is always the duration; the interval only moves its start.
     # Falling back to the duration makes this a strict generalisation of the
@@ -189,11 +259,12 @@ defmodule Tymeslot.Availability.TimeSlots do
     end
   end
 
-  # Rounds `start_dt` forward to the next wall-clock boundary — never earlier
-  # than `start_dt`, so a slot is never offered before the window opens.
+  # Rounds `start_dt` forward to the next boundary on the owner's wall clock,
+  # never earlier than `start_dt`, so a slot is never offered before the
+  # window opens.
   #
   # An interval that divides the hour (5, 10, 15, 20, 30, 60) aligns to its
-  # own multiples since local midnight, e.g. 15 minutes lands on the
+  # own multiples since owner-local midnight, e.g. 15 minutes lands on the
   # quarter-hour. An interval that does NOT divide the hour (45, 90, 120, or
   # anything else that isn't a divisor of 60) aligns to the next whole hour
   # instead and steps by the interval from there: anchoring those to
@@ -202,16 +273,31 @@ defmodule Tymeslot.Availability.TimeSlots do
   # owner's window actually offers (a 09:00-17:00 window with a 120-minute
   # interval must still offer 09:00, not just 10:00/12:00/...).
   #
-  # Alignment reads the wall clock `start_dt` already carries, which is the
-  # booker's once business-hours windows have been shifted into their
-  # timezone, so the grid the booker sees lands on round numbers in the clock
-  # they're reading. A nil interval is the duration-locked default, not an
-  # explicit choice, so it is left completely alone.
-  defp align_to_interval(start_dt, nil), do: start_dt
+  # `start_dt` carries the booker's wall clock by this point, because
+  # business-hours windows are shifted into the booker's timezone before slot
+  # generation, so the boundary is measured on the owner's clock instead. That
+  # matters twice over. The offset between the two clocks need not be a whole
+  # number of hours, so reading the booker's clock would land the owner's
+  # 09:00 on a :30 or :45 boundary of their own; and rounding only ever moves
+  # forward, so it would also discard the owner's first partial slot. The
+  # booker sees a start such as 12:30 rather than 13:00, which is simply what
+  # the owner's 09:00 looks like on their clock.
+  #
+  # The distance to the boundary is measured on the owner's clock and then
+  # applied as elapsed time, which keeps the result at or after `start_dt`
+  # through a DST transition in either zone. A nil interval is the
+  # duration-locked default, not an explicit choice, so it is left completely
+  # alone and never reads the owner's clock at all.
+  defp align_to_interval(start_dt, nil, _owner_timezone), do: start_dt
 
-  defp align_to_interval(start_dt, interval_minutes) do
+  defp align_to_interval(start_dt, interval_minutes, owner_timezone)
+       when is_binary(owner_timezone) do
+    # An unresolvable timezone falls back to `start_dt` unchanged, which
+    # anchors on the booker's clock rather than failing the page outright.
+    owner_dt = DateTimeUtils.convert_to_timezone(start_dt, owner_timezone)
+
     boundary = if rem(60, interval_minutes) == 0, do: interval_minutes, else: 60
-    minutes_since_midnight = start_dt.hour * 60 + start_dt.minute
+    minutes_since_midnight = owner_dt.hour * 60 + owner_dt.minute
     remainder = rem(minutes_since_midnight, boundary)
 
     if remainder == 0 do

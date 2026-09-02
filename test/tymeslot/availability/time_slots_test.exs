@@ -431,7 +431,24 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     {start_dt, end_dt, date}
   end
 
-  describe "generate_slots_for_range_with_breaks/6 with an explicit interval" do
+  # `generate_slots_for_range_with_breaks/7` anchored on the window's own
+  # timezone, which is what every single-timezone case below wants: the owner
+  # and the booker share a clock there, so the anchor cannot be what makes an
+  # assertion pass. The cases where the two clocks differ live in
+  # `Tymeslot.Availability.TimeSlotsOwnerAnchorTest`.
+  defp slots_on_own_clock(start_dt, end_dt, duration_minutes, date, breaks, interval_minutes) do
+    TimeSlots.generate_slots_for_range_with_breaks(
+      start_dt,
+      end_dt,
+      duration_minutes,
+      date,
+      breaks,
+      interval_minutes,
+      start_dt.time_zone
+    )
+  end
+
+  describe "generate_slots_for_range_with_breaks/7 with an explicit interval" do
     setup do
       date = ~D[2026-06-15]
       {:ok, start_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
@@ -442,7 +459,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
 
     test "an interval shorter than the duration produces overlapping starts",
          %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], 5)
+      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 5)
 
       assert List.first(slots) == "9:00 AM"
       assert List.last(slots) == "9:30 AM"
@@ -452,14 +469,14 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
 
     test "an interval longer than the duration produces fewer, rounder starts",
          %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 20, date, [], 60)
+      slots = slots_on_own_clock(start_dt, end_dt, 20, date, [], 60)
 
       assert slots == ["9:00 AM"]
     end
 
     test "an interval that does not divide the window is still bounded by it",
          %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], 7)
+      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 7)
 
       assert List.first(slots) == "9:00 AM"
       assert "9:07 AM" in slots
@@ -471,37 +488,17 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
          %{date: date, start_dt: start_dt} do
       {:ok, short_end} = DateTime.new(date, ~T[09:10:00], "Europe/London")
 
-      assert TimeSlots.generate_slots_for_range_with_breaks(start_dt, short_end, 30, date, [], 5) ==
+      assert slots_on_own_clock(start_dt, short_end, 30, date, [], 5) ==
                []
     end
 
     test "a nil interval falls back to the duration",
          %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      with_nil =
-        TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], nil)
+      with_nil = slots_on_own_clock(start_dt, end_dt, 30, date, [], nil)
 
       without = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
 
       assert with_nil == without
-    end
-
-    # The setup fixture's window opens exactly on the hour, so it can't tell
-    # "nil skips alignment" apart from "alignment happened to be a no-op".
-    # An off-hour window can: a nil interval must leave the grid anchored at
-    # the window's own open time, byte-identical to omitting the argument.
-    test "a nil interval leaves an off-hour window's grid completely untouched" do
-      date = ~D[2026-06-15]
-      start_dt = DateTime.new!(date, ~T[09:15:00], "America/New_York")
-      end_dt = DateTime.new!(date, ~T[10:15:00], "America/New_York")
-
-      with_explicit_nil =
-        TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], nil)
-
-      without_argument =
-        TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
-
-      assert with_explicit_nil == without_argument
-      assert List.first(with_explicit_nil) == "9:15 AM"
     end
 
     test "an off-hour window with an interval that divides the hour aligns forward to the fix's target case" do
@@ -509,7 +506,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       start_dt = DateTime.new!(date, ~T[09:15:00], "America/New_York")
       end_dt = DateTime.new!(date, ~T[17:00:00], "America/New_York")
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 60, date, [], 60)
+      slots = slots_on_own_clock(start_dt, end_dt, 60, date, [], 60)
 
       assert List.first(slots) == "10:00 AM"
       assert length(slots) == 7
@@ -525,7 +522,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       start_dt = DateTime.new!(date, ~T[09:00:00], "America/New_York")
       end_dt = DateTime.new!(date, ~T[17:00:00], "America/New_York")
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 60, date, [], 120)
+      slots = slots_on_own_clock(start_dt, end_dt, 60, date, [], 120)
 
       assert "9:00 AM" in slots
       assert slots == ["9:00 AM", "11:00 AM", "1:00 PM", "3:00 PM"]
@@ -536,7 +533,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       start_dt = DateTime.new!(date, ~T[09:05:00], "Europe/London")
       end_dt = DateTime.new!(date, ~T[10:00:00], "Europe/London")
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], 15)
+      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 15)
 
       assert slots == ["9:15 AM", "9:30 AM"]
 
@@ -555,7 +552,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       breaks = [{~T[09:20:00], ~T[09:30:00]}]
 
       slots =
-        TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks, 5)
+        slots_on_own_clock(start_dt, end_dt, 30, date, breaks, 5)
 
       # A 30-minute meeting starting at 9:00 runs to 9:30 and so overlaps the
       # break; every start before the break ends is excluded.
@@ -572,15 +569,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
         {:ok, end_dt} = DateTime.new(date, ~T[09:00:00], "Europe/London")
         end_dt = DateTime.add(end_dt, window_minutes, :minute)
 
-        generalised =
-          TimeSlots.generate_slots_for_range_with_breaks(
-            start_dt,
-            end_dt,
-            duration,
-            date,
-            [],
-            duration
-          )
+        generalised = slots_on_own_clock(start_dt, end_dt, duration, date, [], duration)
 
         default =
           TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, duration, date, [])
@@ -592,7 +581,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
   end
 
-  describe "generate_slots_for_range_with_breaks/6 with an explicit interval, across DST transitions" do
+  describe "generate_slots_for_range_with_breaks/7 with an explicit interval, across DST transitions" do
     # Europe/London falls back at 02:00 BST -> 01:00 GMT on 2026-10-25, so
     # wall-clock 01:00-01:59 happens twice. An interval whose grid walks
     # straight through that hour must resolve the repeat the same way plain
@@ -602,7 +591,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       start_dt = DateTime.new!(date, ~T[00:45:00], "Europe/London")
       end_dt = DateTime.new!(date, ~T[03:00:00], "Europe/London")
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], 15)
+      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 15)
 
       assert slots == [
                "12:45 AM",
@@ -628,7 +617,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       start_dt = DateTime.new!(date, ~T[00:45:00], "Europe/London")
       end_dt = DateTime.new!(date, ~T[03:00:00], "Europe/London")
 
-      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [], 20)
+      slots = slots_on_own_clock(start_dt, end_dt, 30, date, [], 20)
 
       assert slots == ["2:00 AM", "2:20 AM"]
       refute Enum.any?(slots, &String.starts_with?(&1, "1:"))

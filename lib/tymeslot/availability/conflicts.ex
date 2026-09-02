@@ -156,7 +156,8 @@ defmodule Tymeslot.Availability.Conflicts do
           duration_minutes,
           date,
           breaks,
-          slot_interval_minutes
+          slot_interval_minutes,
+          owner_timezone
         )
 
       Enum.any?(slots, fn slot ->

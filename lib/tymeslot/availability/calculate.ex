@@ -106,7 +106,8 @@ defmodule Tymeslot.Availability.Calculate do
                 duration_minutes,
                 date,
                 breaks,
-                slot_interval_minutes
+                slot_interval_minutes,
+                owner_timezone
               )
 
             Conflicts.filter_available_slots(
