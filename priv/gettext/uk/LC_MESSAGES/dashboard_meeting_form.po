@@ -809,3 +809,18 @@ msgstr "Розклад оновлено та збережено"
 #, elixir-autogen, elixir-format
 msgid "Selected schedule is not one of yours"
 msgstr "Обраний розклад вам не належить"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit cannot exceed %{max}"
+msgstr "Ліміт учасників не може перевищувати %{max}"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be a valid number"
+msgstr "Ліміт учасників має бути дійсним числом"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be at least %{min}"
+msgstr "Ліміт учасників має бути щонайменше %{min}"

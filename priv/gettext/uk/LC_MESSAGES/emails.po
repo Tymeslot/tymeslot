@@ -2046,3 +2046,11 @@ msgstr "%{name} через %{brand}"
 #, elixir-autogen, elixir-format
 msgid "Important notification from %{brand}"
 msgstr "Важливе сповіщення від %{brand}"
+
+#: lib/tymeslot/workers/email_worker_handlers/group_meeting_emails.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} учасник"
+msgstr[1] "%{count} учасники"
+msgstr[2] "%{count} учасників"

@@ -1050,8 +1050,7 @@ msgstr "Guests"
 msgid "Hosted by %{name}"
 msgstr "Hosted by %{name}"
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Please wait a moment and try again."
@@ -1066,15 +1065,13 @@ msgstr "Remove guest %{email}"
 msgid "The invitation link may have expired or already been used. Please contact the meeting host."
 msgstr "The invitation link may have expired or already been used. Please contact the meeting host."
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid"
 msgstr "This link is no longer valid"
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
 #: lib/tymeslot_web/controllers/seat_controller.ex
-#: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
 msgstr "Too many attempts"

@@ -809,3 +809,18 @@ msgstr "Zeitplan aktualisiert und gespeichert"
 #, elixir-autogen, elixir-format
 msgid "Selected schedule is not one of yours"
 msgstr "Der gewählte Zeitplan gehört nicht zu Ihrem Konto"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit cannot exceed %{max}"
+msgstr "Teilnehmerlimit darf %{max} nicht überschreiten"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be a valid number"
+msgstr "Teilnehmerlimit muss eine gültige Zahl sein"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be at least %{min}"
+msgstr "Teilnehmerlimit muss mindestens %{min} betragen"

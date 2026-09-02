@@ -1050,8 +1050,7 @@ msgstr "Гості"
 msgid "Hosted by %{name}"
 msgstr "Організатор: %{name}"
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Зачекайте мить і спробуйте ще раз."
@@ -1066,15 +1065,13 @@ msgstr "Видалити гостя %{email}"
 msgid "The invitation link may have expired or already been used. Please contact the meeting host."
 msgstr "Термін дії посилання на запрошення міг закінчитися, або його вже використали. Зверніться до організатора зустрічі."
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#: lib/tymeslot_web/controllers/seat_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid"
 msgstr "Це посилання більше не дійсне"
 
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/components/shared/token_page.ex
 #: lib/tymeslot_web/controllers/seat_controller.ex
-#: lib/tymeslot_web/controllers/seat_html.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
 msgstr "Забагато спроб"

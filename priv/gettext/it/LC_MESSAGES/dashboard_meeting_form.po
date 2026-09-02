@@ -809,3 +809,18 @@ msgstr "Pianificazione aggiornata e salvata"
 #, elixir-autogen, elixir-format
 msgid "Selected schedule is not one of yours"
 msgstr "La pianificazione selezionata non è tua"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit cannot exceed %{max}"
+msgstr "Il limite di partecipanti non può superare %{max}"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be a valid number"
+msgstr "Il limite di partecipanti deve essere un numero valido"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be at least %{min}"
+msgstr "Il limite di partecipanti deve essere almeno %{min}"

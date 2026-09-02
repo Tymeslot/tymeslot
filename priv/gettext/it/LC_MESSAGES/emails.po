@@ -2035,3 +2035,10 @@ msgstr "%{name} tramite %{brand}"
 #, elixir-autogen, elixir-format
 msgid "Important notification from %{brand}"
 msgstr "Notifica importante da %{brand}"
+
+#: lib/tymeslot/workers/email_worker_handlers/group_meeting_emails.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} partecipante"
+msgstr[1] "%{count} partecipanti"

@@ -809,3 +809,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Selected schedule is not one of yours"
 msgstr ""
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit cannot exceed %{max}"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be a valid number"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be at least %{min}"
+msgstr ""
