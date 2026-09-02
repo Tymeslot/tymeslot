@@ -52,6 +52,28 @@ defmodule TymeslotWeb.Components.CoreComponentsInputConstraintsTest do
       refute html =~ "pattern"
     end
 
+    test "render disabled, which is not one of Phoenix's globals either" do
+      html =
+        render_component(&CoreComponents.input/1,
+          name: "profile[heading]",
+          value: "",
+          disabled: true
+        )
+
+      assert html =~ "disabled"
+    end
+
+    test "leave no disabled attribute behind when the field is enabled" do
+      html =
+        render_component(&CoreComponents.input/1,
+          name: "profile[heading]",
+          value: "",
+          disabled: false
+        )
+
+      refute html =~ "disabled"
+    end
+
     test "do not displace an aria attribute the component adds for errors" do
       html =
         render_component(&CoreComponents.input/1,

@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
   attr :required, :boolean, default: false
+  attr :disabled, :boolean, default: false
   attr :placeholder, :string, default: nil
   attr :icon, :string, default: nil, doc: "optional hero icon name rendered inside the input"
 
@@ -102,6 +103,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         assigns.errors
         |> error_aria(error_id)
         |> Map.merge(html_constraints(assigns))
+        |> disabled_attr(assigns.disabled)
         |> Map.merge(assigns.rest)
       )
 
@@ -279,6 +281,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   # makes `maxlength={60}` reach the rendered input. Unset ones stay out of the
   # map rather than rendering as empty attributes.
   @html_constraints [:min, :max, :step, :minlength, :maxlength, :pattern]
+
+  # `disabled` is a form attribute, not one of Phoenix's HTML globals, so it has
+  # to be declared and threaded through by hand. Only the true case is merged:
+  # `disabled={false}` must leave no attribute behind at all.
+  defp disabled_attr(rest, true), do: Map.put(rest, :disabled, true)
+  defp disabled_attr(rest, _disabled), do: rest
 
   defp html_constraints(assigns) do
     Map.reject(
