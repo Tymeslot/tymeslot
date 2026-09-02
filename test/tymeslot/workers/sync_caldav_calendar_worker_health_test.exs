@@ -43,7 +43,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
         provider_account_id: "http://localhost:65432||alice",
         is_active: true,
         needs_reauth: false,
-        caldav_sync_tier: 1
+        # Tier 3 so a failing cycle is exactly one refused request. On tier 1 a
+        # refusal also demotes (see `CalDAV.TierDemotionTest`), and against a
+        # server that refuses everything the extra requests trip the calendar
+        # circuit breaker, which is correct but is not what these tests are
+        # about.
+        caldav_sync_tier: 3
       )
 
     %{integration: integration}
@@ -91,7 +96,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
 
     test "leaves consecutive_hard_failures alone so SyncGating does not pause the integration",
          %{integration: integration} do
-      for _cycle <- 1..4, do: run_failing_sync(integration)
+      for _cycle <- 1..3, do: run_failing_sync(integration)
 
       state = health(integration)
       assert state.status == :unhealthy
