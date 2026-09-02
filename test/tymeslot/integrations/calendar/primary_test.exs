@@ -25,6 +25,128 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
     )
   end
 
+  defp insert_exchange(user, attrs \\ []) do
+    insert(
+      :calendar_integration,
+      Keyword.merge(
+        [
+          user: user,
+          provider: "exchange",
+          base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+        ],
+        attrs
+      )
+    )
+  end
+
+  describe "the read-only-never-primary invariant (Exchange)" do
+    test "set_primary_calendar_integration refuses an Exchange mailbox", %{user: user} do
+      exchange = insert_exchange(user)
+
+      assert {:error, :not_bookable} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, exchange.id)
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
+    end
+
+    test "deleting a writable primary promotes the writable integration over an Exchange mailbox",
+         %{user: user} do
+      # Promotion here takes the most recently added candidate, so the Exchange
+      # mailbox is the newest of the three: only the eligibility filter keeps
+      # it from winning.
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}],
+          inserted_at: ~N[2024-01-01 10:00:00]
+        )
+
+      fallback =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: ["/dav/fallback"],
+          inserted_at: ~N[2024-01-02 10:00:00]
+        )
+
+      _exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, _result} = CalendarPrimary.delete_with_primary_handling(primary)
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == fallback.id
+    end
+
+    test "deactivating a writable primary promotes the writable integration over an Exchange mailbox",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}],
+          inserted_at: ~N[2024-01-01 10:00:00]
+        )
+
+      fallback =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: ["/dav/fallback"],
+          inserted_at: ~N[2024-01-02 10:00:00]
+        )
+
+      _exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(primary)
+      refute toggled.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == fallback.id
+    end
+
+    test "deactivating a writable primary with only an Exchange mailbox remaining clears the primary",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}]
+        )
+
+      _exchange = insert_exchange(user)
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(primary)
+      refute toggled.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
+    end
+
+    test "activating an Exchange mailbox does not adopt it as the primary", %{user: user} do
+      exchange = insert_exchange(user)
+
+      assert {:ok, toggled_off} = CalendarManagement.toggle_with_primary_rebalance(exchange)
+      refute toggled_off.is_active
+
+      assert {:ok, toggled_on} = CalendarManagement.toggle_with_primary_rebalance(toggled_off)
+      assert toggled_on.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
+    end
+  end
+
   describe "the subscription-never-primary invariant" do
     test "toggling a subscription-only account off and on leaves the primary unset", %{
       user: user

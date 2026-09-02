@@ -221,6 +221,64 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
     end
   end
 
+  describe "resolve(user_id) — mixed with a read-only Exchange mailbox" do
+    setup do
+      user = insert(:user)
+      %{user: user}
+    end
+
+    test "falls back to the writable integration over an Exchange mailbox", %{user: user} do
+      writable =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_paths: ["/calendars/writable/"],
+          default_booking_calendar_id: nil
+        )
+
+      # Carries a booking calendar, which the first fallback tier looks for, so
+      # an eligible mailbox would win this outright.
+      insert(:calendar_integration,
+        user: user,
+        provider: "exchange",
+        is_active: true,
+        default_booking_calendar_id: "AAMkAG=="
+      )
+
+      # No primary recorded, so every tier resolves from the bookable list.
+      insert(:profile, user: user)
+
+      result = BookingIntegrationResolver.resolve(user.id)
+
+      assert %CalendarIntegrationSchema{} = result
+      assert result.id == writable.id
+    end
+
+    test "returns nil when the primary on record is an Exchange mailbox", %{user: user} do
+      exchange =
+        insert(:calendar_integration,
+          user: user,
+          provider: "exchange",
+          is_active: true,
+          default_booking_calendar_id: "AAMkAG=="
+        )
+
+      insert(:profile, user: user, primary_calendar_integration_id: exchange.id)
+
+      # A booking client cannot be built for a read-only provider, so handing
+      # this integration back would fail every write. Nothing is better.
+      assert BookingIntegrationResolver.resolve(user.id) == nil
+    end
+
+    test "returns nil when the user only has an Exchange mailbox", %{user: user} do
+      insert(:calendar_integration, user: user, provider: "exchange", is_active: true)
+      insert(:profile, user: user)
+
+      assert BookingIntegrationResolver.resolve(user.id) == nil
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # resolve({integration_id, user_id})
   # ---------------------------------------------------------------------------

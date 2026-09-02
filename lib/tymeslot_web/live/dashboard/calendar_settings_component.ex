@@ -415,10 +415,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   # --- Private Helpers ---
 
-  # A subscription has no discoverable calendar list to refresh — discovery
-  # returns the same synthetic entry every time — so "refresh" means
+  # A subscription has no discoverable calendar list to refresh (discovery
+  # returns the same synthetic entry every time), so "refresh" means
   # re-fetching the feed instead, through the same worker the scheduled sync
   # sweep uses.
+  #
+  # This asks about the feed family specifically, not about read-only
+  # providers: an Exchange mailbox is read-only too, but it discovers real
+  # folders and has no feed to re-fetch, so it belongs on the discovery path
+  # with every other credentialed provider.
   defp refresh_one(%{provider: provider} = integration) do
     if ProviderConfig.subscription?(provider) do
       %{"calendar_integration_id" => integration.id}

@@ -77,6 +77,18 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
       assert %{has_calendar: false} = DashboardContext.get_integration_status(user.id)
     end
 
+    test "reports has_calendar: false when the only integration is a read-only Exchange mailbox" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "exchange",
+        base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+      )
+
+      assert %{has_calendar: false} = DashboardContext.get_integration_status(user.id)
+    end
+
     test "reports has_calendar: true with a CalDAV integration present" do
       user = insert(:user)
 

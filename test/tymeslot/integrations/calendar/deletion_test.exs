@@ -21,6 +21,15 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
     )
   end
 
+  defp insert_exchange(user, name) do
+    insert(:calendar_integration,
+      user: user,
+      provider: "exchange",
+      name: name,
+      base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+    )
+  end
+
   describe "delete_with_primary_reassignment/2" do
     setup do
       user = insert(:user)
@@ -212,6 +221,49 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
 
       assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
       assert profile.primary_calendar_integration_id == writable.id
+    end
+
+    test "deleting the primary promotes the writable integration over an Exchange mailbox", %{
+      user: user
+    } do
+      # The journey: Google is primary, a CalDAV account and a read-only
+      # Exchange mailbox sit beside it, and the user removes Google. Promotion
+      # walks the list in name order, so the Exchange row is named to come
+      # first: whichever way the tie is broken, only the eligibility filter can
+      # keep it from being promoted.
+      primary = insert(:calendar_integration, user: user, provider: "google", name: "A Google")
+      exchange = insert_exchange(user, "B Exchange")
+      caldav = insert(:calendar_integration, user: user, provider: "caldav", name: "C CalDAV")
+
+      CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, {:deleted_promoted, promoted_id}} =
+               Deletion.delete_with_primary_reassignment(user.id, primary.id)
+
+      assert promoted_id == caldav.id
+
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == caldav.id
+
+      # The mailbox is untouched: it still blocks busy time, it just never
+      # takes a booking.
+      assert {:ok, _still_there} =
+               CalendarManagement.get_calendar_integration(exchange.id, user.id)
+    end
+
+    test "deleting the primary with only an Exchange mailbox remaining clears the primary", %{
+      user: user
+    } do
+      primary = insert(:calendar_integration, user: user)
+      _exchange = insert_exchange(user, "Exchange")
+
+      CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert Deletion.delete_with_primary_reassignment(user.id, primary.id) ==
+               {:ok, {:deleted_cleared_primary}}
+
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
     end
 
     test "deleting the primary with only a subscription remaining clears the primary", %{
