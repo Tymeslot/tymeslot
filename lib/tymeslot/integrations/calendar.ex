@@ -6,11 +6,17 @@ defmodule Tymeslot.Integrations.Calendar do
   and the higher-level orchestration wrappers used by LiveViews and
   controllers.
 
-  Related sibling modules:
+  Related sibling modules — public surface of the calendar domain, not detail
+  behind this facade. Each is a sanctioned entry point covered by Core's own
+  tests, so a rename goes red here before it breaks a downstream build.
 
     * `Tymeslot.Integrations.Calendar.Diagnostics` — direct provider-event
       operations and ephemeral integration builders used by `mix calendar_audit`
       and other diagnostic tooling.
+    * `Tymeslot.Integrations.Calendar.EventColour` — the palette: which colour
+      keys exist and what each maps to per provider. A pure lookup table.
+    * `Tymeslot.Integrations.Calendar.Recurrence.RRule` — RFC 5545 recurrence
+      parsing. Also pure, and already called directly from the calendar grid.
     * `Tymeslot.Integrations.Calendar.DisplayHelpers` — user-facing string
       helpers (provider display names, calendar name extraction, error
       message normalisation).
