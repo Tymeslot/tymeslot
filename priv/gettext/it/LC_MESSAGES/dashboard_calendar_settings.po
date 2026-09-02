@@ -302,3 +302,13 @@ msgstr "Impossibile aggiornare il colore"
 #, elixir-autogen, elixir-format
 msgid "Rename, recolour, and choose which calendars sync"
 msgstr "Rinomina, cambia colore e scegli quali calendari sincronizzare"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange servers"
+msgstr "Server Exchange"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "read-only, blocks time but takes no bookings"
+msgstr "di sola lettura, blocca gli orari ma non accetta prenotazioni"
