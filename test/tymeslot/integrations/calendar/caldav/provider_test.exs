@@ -323,6 +323,79 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       assert Provider.perform_connection_test(integration) ==
                {:ok, "CalDAV connection successful"}
     end
+
+    test "probes the stored calendar path rather than re-guessing a discovery URL" do
+      # A server whose calendar collection does not live where the naming
+      # heuristic guesses, and whose origin root refuses PROPFIND (405): the
+      # full discovery chain dead-ends on both, while the path the sync worker
+      # actually uses answers fine. Re-guessing here is what made the periodic
+      # health check report a syncing calendar as unreachable.
+      integration = %{
+        base_url: "https://caldav.example.com",
+        username: "user",
+        password: "pass",
+        calendar_paths: ["/dav/user/personal/"]
+      }
+
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, url, _body, _headers, _opts ->
+        send(test_pid, {:propfind, url})
+
+        if String.contains?(url, "/dav/user/personal/") do
+          {:ok, %Req.Response{status: 207, body: ""}}
+        else
+          {:ok, %Req.Response{status: 405, body: ""}}
+        end
+      end)
+
+      assert Provider.perform_connection_test(integration) ==
+               {:ok, "CalDAV connection successful"}
+
+      assert_received {:propfind, "https://caldav.example.com/dav/user/personal/"}
+      refute_received {:propfind, _other_url}
+    end
+
+    test "still reports a genuine failure against the stored calendar path" do
+      # The stored path is not a free pass: revoked credentials on the very
+      # collection the sync worker reads must still fail the check.
+      integration = %{
+        base_url: "https://caldav.example.com",
+        username: "user",
+        password: "stale",
+        calendar_paths: ["/dav/user/personal/"]
+      }
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
+
+      assert Provider.perform_connection_test(integration) == {:error, :unauthorized}
+    end
+
+    test "falls back to full discovery when no calendar path has been stored yet" do
+      # Onboarding: nothing is discovered yet, so the guessed URL is all there
+      # is to probe. `check_connectivity/1` would probe `/` here, which is
+      # exactly the request some servers refuse.
+      integration = %{
+        base_url: "https://caldav.example.com",
+        username: "user",
+        password: "pass",
+        calendar_paths: []
+      }
+
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, url, _body, _headers, _opts ->
+        send(test_pid, {:propfind, url})
+        {:ok, %Req.Response{status: 207, body: ""}}
+      end)
+
+      assert Provider.perform_connection_test(integration) ==
+               {:ok, "CalDAV connection successful"}
+
+      assert_received {:propfind, "https://caldav.example.com/calendars/user/"}
+    end
   end
 
   describe "discover_calendars/1" do

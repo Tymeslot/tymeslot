@@ -88,9 +88,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Quick connectivity probe via a PROPFIND request with a short timeout.
 
   Sends a minimal PROPFIND to the first configured calendar path (or `/`) to
-  verify that the server is reachable and credentials are accepted. Intended
-  for use by the audit runner and diagnostic tooling; not a substitute for
-  `test_connection/2`, which performs a fuller discovery-based check.
+  verify that the server is reachable and credentials are accepted. Used by the
+  audit runner and diagnostic tooling, and by `test_connection/2` itself once a
+  client has stored calendar paths to probe.
+
+  Call it directly only with a non-empty `:calendar_paths`. Its `/` fallback is
+  a last resort for the audit runner, and a server whose DAV root answers 405
+  fails it while syncing perfectly.
 
   Returns `{:ok, %{status: :ok}}` on success, or `{:error, reason}`.
   """
@@ -116,18 +120,38 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
-  Tests a connection using `Discovery.test_connection/2`.
+  Tests a connection, probing whichever URL this client can actually be
+  expected to reach.
+
   Returns `{:ok, message}` or `{:error, reason}` (reason is passed through).
   """
   @spec test_connection(caldav_client(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(client, opts \\ []) do
     with :ok <- validate_credentials(client) do
-      case Discovery.test_connection(client, opts) do
+      case probe(client, opts) do
         {:ok, _result} -> {:ok, success_message(client.provider)}
         {:error, reason} -> {:error, reason}
       end
     end
   end
+
+  # A client carrying stored calendar paths has already been through discovery
+  # once and had that path validated, and it is the same path `CalDAV.Sync`
+  # builds every request from. Probe it, rather than re-deriving a URL from
+  # `UrlBuilder`'s naming heuristic on every check: where the heuristic guesses
+  # wrong and the server also refuses a PROPFIND at its origin root (405, as
+  # some self-hosted setups answer), the full discovery chain dead-ends and
+  # reports a calendar that is syncing perfectly as unreachable. That
+  # false-positive drove the periodic health check to email a user about an
+  # integration with nothing wrong with it.
+  #
+  # With no stored paths there is nothing to probe — this is onboarding, before
+  # discovery has run — so the guess-then-RFC4791 chain is the only option.
+  # `check_connectivity/1` must not be used there: with an empty path list it
+  # falls back to probing `/`, which is exactly the request those servers
+  # refuse, so new users on such a server would fail to connect at all.
+  defp probe(%{calendar_paths: [_first | _rest]} = client, _opts), do: check_connectivity(client)
+  defp probe(client, opts), do: Discovery.test_connection(client, opts)
 
   @doc """
   Discovers available calendars via `Discovery.discover_calendars/2`.
