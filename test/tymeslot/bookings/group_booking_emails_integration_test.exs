@@ -24,12 +24,16 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.Bookings.Create
   alias Tymeslot.EmailServiceMock
+  alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
 
   setup :verify_on_exit!
 
@@ -49,7 +53,8 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
         name: "Group Workshop",
         duration_minutes: 30,
         is_active: true,
-        max_participants: 3
+        max_participants: 3,
+        allow_guests: true
       )
 
     tomorrow = Date.add(Date.utc_today(), 1)
@@ -110,11 +115,21 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
       }
     )
 
+    tokens_by_id =
+      meeting.id
+      |> ParticipantQueries.list_live_for_meeting()
+      |> Map.new(&{&1.id, &1.management_token})
+
+    # The organiser's copy is built from the bare meeting, not the booker's
+    # own overlay — it must not carry the booker's identity or their
+    # tokenised seat links (see
+    # `GroupMeetingEmails.send_seat_confirmation_emails/2`).
     expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn organizer_email,
                                                                              details ->
       assert organizer_email == "organizer@example.com"
-      assert details.attendee_name == "Second Booker"
-      assert details.attendee_email == "second@example.com"
+      refute details.attendee_name == "Second Booker"
+      refute String.contains?(details.cancel_url || "", tokens_by_id[second_id])
+      refute String.contains?(details.reschedule_url || "", tokens_by_id[second_id])
       refute inspect(details) =~ "first@example.com"
       {:ok, "sent"}
     end)
@@ -123,6 +138,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
                                                                             details ->
       assert attendee_email == "second@example.com"
       assert details.attendee_name == "Second Booker"
+      assert String.contains?(details.cancel_url, tokens_by_id[second_id])
       refute inspect(details) =~ "first@example.com"
       {:ok, "sent"}
     end)
@@ -306,5 +322,190 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
                "meeting_id" => meeting.id,
                "participant_id" => second_id
              })
+  end
+
+  # An emptied group meeting is still `group?/1` (capacity-based), so its
+  # cancellation must fall through to the dedicated "organiser only" wording
+  # rather than a fan-out over zero participants that would tell the
+  # organiser "the appointment with 0 participants has been cancelled".
+  test "the last seat leaving cancels the meeting and the organiser email carries no participant count",
+       %{meeting_params: meeting_params} do
+    meeting = book_seat!(meeting_params, "Solo Booker", "solo@example.com")
+    [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
+
+    assert {:ok, :meeting_cancelled} = CancelSeat.execute(participant.management_token)
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_cancellation_emails", "meeting_id" => meeting.id}
+    )
+
+    expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn organizer_email, details ->
+      assert organizer_email == "organizer@example.com"
+      assert details.attendee_name in [nil, ""]
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_cancellation_emails",
+               "meeting_id" => meeting.id
+             })
+  end
+
+  # `cancel_reminder_emails/1` only sweeps pending `send_reminder_emails`
+  # jobs, not the `send_seat_reminder` jobs dispatched once that job runs —
+  # so a seat cancelled after dispatch, or a meeting voided after dispatch,
+  # must be caught by the handler itself.
+  test "a seat reminder for a since-cancelled participant discards instead of emailing",
+       %{meeting_params: meeting_params} do
+    meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
+    first = Enum.find(ParticipantQueries.list_live_for_meeting(meeting.id), & &1)
+
+    _joined = book_seat!(meeting_params, "Second Booker", "second@example.com")
+
+    assert {:ok, :seat_cancelled} = CancelSeat.execute(first.management_token)
+
+    # No EmailServiceMock expectation is set: if the handler tried to send
+    # anyway, this would crash on the unexpected Mox call rather than quietly
+    # pass.
+    assert {:discard, _reason} =
+             GroupMeetingEmails.handle_seat_reminder_emails(%{
+               "meeting_id" => meeting.id,
+               "participant_id" => first.id,
+               "reminder_value" => 30,
+               "reminder_unit" => "minutes"
+             })
+  end
+
+  test "a seat reminder for a voided meeting discards instead of emailing",
+       %{meeting_params: meeting_params} do
+    meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
+    first = Enum.find(ParticipantQueries.list_live_for_meeting(meeting.id), & &1)
+
+    assert {:ok, _cancelled} =
+             MeetingQueries.update_meeting_status(meeting, %{status: "cancelled"})
+
+    assert {:discard, _reason} =
+             GroupMeetingEmails.handle_seat_reminder_emails(%{
+               "meeting_id" => meeting.id,
+               "participant_id" => first.id,
+               "reminder_value" => 30,
+               "reminder_unit" => "minutes"
+             })
+  end
+
+  # `send_participant_guest_confirmations/4`'s body was previously
+  # uncovered. A group booker's own guests must be confirmed the same way a
+  # solo attendee's are.
+  test "a group booker's guests are emailed when their seat is confirmed",
+       %{meeting_params: meeting_params} do
+    meeting =
+      book_seat!(
+        Map.put(meeting_params, :guest_emails, ["guest@example.com"]),
+        "Booker With Guest",
+        "hasguest@example.com"
+      )
+
+    participant_id = participant_id!(meeting.id, "hasguest@example.com")
+    [guest] = GuestQueries.list_for_participant(participant_id)
+    refute guest.confirmation_sent_at
+
+    stub(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    stub(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_guest_confirmation, fn guest_email, _details ->
+      assert guest_email == "guest@example.com"
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_confirmation_emails",
+               "meeting_id" => meeting.id,
+               "participant_id" => participant_id
+             })
+
+    assert GuestQueries.get_by_token(guest.rsvp_token)
+           |> elem(1)
+           |> Map.get(:confirmation_sent_at)
+  end
+
+  # `send_seat_reschedule_emails/3` previously sent the mover's own
+  # confirmation and the organiser's, but never touched guests — a mover's
+  # guests re-booked at the new slot (fresh, unsent rows) would keep
+  # whatever confirmation they had for the old, now-voided slot and never
+  # learn where the meeting moved to.
+  test "a seat reschedule also re-sends the mover's still-unsent guests",
+       %{meeting_params: meeting_params} do
+    meeting =
+      book_seat!(
+        Map.put(meeting_params, :guest_emails, ["guest@example.com"]),
+        "Booker With Guest",
+        "hasguest@example.com"
+      )
+
+    participant_id = participant_id!(meeting.id, "hasguest@example.com")
+    [guest] = GuestQueries.list_for_participant(participant_id)
+    refute guest.confirmation_sent_at
+
+    stub(EmailServiceMock, :send_seat_reschedule_to_participant, fn _email, _details, _old ->
+      {:ok, "sent"}
+    end)
+
+    stub(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_guest_confirmation, fn guest_email, _details ->
+      assert guest_email == "guest@example.com"
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_reschedule_emails",
+               "meeting_id" => meeting.id,
+               "participant_id" => participant_id,
+               "old_uid" => meeting.uid,
+               "old_ical_sequence" => 0,
+               "old_start_time" => DateTime.to_iso8601(meeting.start_time),
+               "old_end_time" => DateTime.to_iso8601(meeting.end_time)
+             })
+
+    assert GuestQueries.get_by_token(guest.rsvp_token)
+           |> elem(1)
+           |> Map.get(:confirmation_sent_at)
+  end
+
+  # A provider outage (:circuit_open) previously got flattened into a plain
+  # string by the per-seat handlers, losing the snooze semantics
+  # `EmailWorker` relies on to ride out the breaker's recovery window instead
+  # of burning ordinary retries on a provider it already knows is down.
+  test "a circuit-open failure on a seat email is preserved, not flattened to a string",
+       %{meeting_params: meeting_params} do
+    meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
+    first_id = participant_id!(meeting.id, "first@example.com")
+
+    expect(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+      {:error, :circuit_open}
+    end)
+
+    # `EmailWorker` translates the preserved `:circuit_open` reason into a
+    # snooze past the breaker's recovery window (~300s) rather than an
+    # ordinary retry — the whole point of not flattening it to a string.
+    assert {:snooze, snooze_seconds} =
+             perform_job(EmailWorker, %{
+               "action" => "send_seat_meeting_cancellation",
+               "meeting_id" => meeting.id,
+               "participant_id" => first_id
+             })
+
+    assert snooze_seconds >= 300
   end
 end

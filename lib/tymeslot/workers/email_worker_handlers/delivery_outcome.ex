@@ -61,7 +61,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome do
         ]
     )
 
-    if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
+    if delivered?(organizer_result) or delivered?(attendee_result) do
       {:discard, "Partial #{label} failure: retry would duplicate"}
     else
       from_error(
@@ -70,6 +70,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome do
       )
     end
   end
+
+  # `{:ok, :skipped}` means a recipient was deliberately not sent to (e.g. a
+  # last-leaver seat cancellation with no organiser notification), not that
+  # something already went out. Counting it as delivered here would make a
+  # genuine single-recipient failure look like a partial success, discarding
+  # a job a retry could still fix instead of retrying it.
+  defp delivered?(result), do: match?({:ok, outcome} when outcome != :skipped, result)
 
   @doc """
   The list form of the same contract, for a handler that sends to more than

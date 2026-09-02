@@ -10,7 +10,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
@@ -102,10 +104,17 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end)
   end
 
-  # Fetches the meeting and runs `fun` with it, or discards the job with a
-  # consistent log line when the meeting no longer exists. `action` names the
-  # email action for the warning (e.g. "confirmation emails").
-  defp with_meeting(meeting_id, action, fun) do
+  @doc """
+  Fetches the meeting and runs `fun` with it, or discards the job with a
+  consistent log line when the meeting no longer exists. `action` names the
+  email action for the warning (e.g. "confirmation emails").
+
+  Public so `GroupMeetingEmails`'s per-seat handlers share this instead of
+  carrying their own copy — the meeting-lookup contract is identical for
+  both, only what runs on success differs.
+  """
+  @spec with_meeting(term(), String.t(), (MeetingSchema.t() -> term())) :: term()
+  def with_meeting(meeting_id, action, fun) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
         fun.(meeting)
@@ -124,8 +133,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
 
     if Meetings.group?(meeting) do
-      participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
-      GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
+      # `group?/1` is capacity-based, not "has live participants": a meeting
+      # emptied by every participant leaving is still a group meeting, so it
+      # must fall through to `send_solo_cancellation_emails/1`'s dedicated
+      # emptied-group clause below rather than dispatching a fan-out over an
+      # empty list.
+      case Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant)) do
+        [] -> send_solo_cancellation_emails(meeting)
+        participants -> GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
+      end
     else
       send_solo_cancellation_emails(meeting)
     end
@@ -236,16 +252,30 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       # stamped with `confirmation_sent_at` after a successful send, so Oban
       # retries only re-attempt unsent guests. Failures are logged but never
       # block the organiser/attendee confirmation result.
-      if need_attendee?, do: send_guest_confirmations(meeting, appointment_details, email_service)
+      if need_attendee? do
+        meeting.id
+        |> GuestQueries.list_unsent_for_meeting()
+        |> send_guest_confirmations(meeting, appointment_details, email_service)
+      end
 
       process_email_results(meeting, organizer_result, attendee_result, :confirmation)
     end
   end
 
-  defp send_guest_confirmations(meeting, appointment_details, email_service) do
-    meeting.id
-    |> GuestQueries.list_unsent_for_meeting()
-    |> Enum.each(fn guest ->
+  @doc """
+  Sends `email_service.send_guest_confirmation/2` to every guest in `guests`,
+  stamping `confirmation_sent_at` on each successful send so a retry only
+  re-attempts the ones still unsent. Failures are logged but never block the
+  caller's own organiser/attendee result.
+
+  Public and shared with `GroupMeetingEmails`: the loop is identical for a
+  meeting's guests and one participant's guests, they only differ in how
+  `guests` was queried (`GuestQueries.list_unsent_for_meeting/1` vs
+  `GuestQueries.list_unsent_for_participant/1`).
+  """
+  @spec send_guest_confirmations([GuestSchema.t()], MeetingSchema.t(), map(), module()) :: :ok
+  def send_guest_confirmations(guests, meeting, appointment_details, email_service) do
+    Enum.each(guests, fn guest ->
       details = AppointmentBuilder.put_guest(appointment_details, guest)
 
       case email_service.send_guest_confirmation(guest.email, details) do
@@ -260,6 +290,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           )
       end
     end)
+
+    :ok
   end
 
   # Group reminders are dispatched (one per-seat job per live participant,
@@ -355,7 +387,31 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
       GroupMeetingEmails.send_group_reschedule_requests(meeting, participants)
     else
-      GroupMeetingEmails.send_solo_reschedule_request(meeting)
+      send_solo_reschedule_request(meeting)
+    end
+  end
+
+  # The solo counterpart to `GroupMeetingEmails.send_group_reschedule_requests/2`,
+  # kept here (not there) since it is solo-only and this module already owns
+  # every other solo-meeting send.
+  defp send_solo_reschedule_request(meeting) do
+    case Config.email_service_module().send_reschedule_request(meeting) do
+      {:ok, _result} ->
+        Logger.info("Reschedule request email sent successfully",
+          meeting_id: meeting.id,
+          to: meeting.attendee_email
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to send reschedule request email",
+          meeting_id: meeting.id,
+          to: meeting.attendee_email,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
     end
   end
 

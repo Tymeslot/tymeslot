@@ -24,8 +24,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
 
   Split out of `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, which
   still owns the solo-meeting paths and the meeting-level bookkeeping
-  (`process_email_results/4`).
+  (`process_email_results/4`), and shares its `with_meeting/3` lookup and
+  `send_guest_confirmations/4` send loop with this module.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
@@ -34,12 +37,24 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
-  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
+  alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
+
+  # Bounds how many per-seat `Oban.insert/1` calls `dispatch_seat_jobs/2` runs
+  # concurrently. Sequential inserts for a meeting near `max_participants` (in
+  # the hundreds) can outrun `EmailWorker`'s 30-second timeout, which discards
+  # rather than retries — stranding every participant queued after the
+  # cut-off. Bounded concurrency keeps the wall-clock time well inside that
+  # budget without reaching for `Oban.insert_all/2`: only the paid Smart
+  # Engine deduplicates a bulk insert, so on the engine this project runs, a
+  # bulk insert would silently drop the per-seat uniqueness guarantee the
+  # whole retry story depends on.
+  @dispatch_max_concurrency 20
+  @dispatch_task_timeout_ms 5_000
 
   @doc """
   One live participant's copy of a whole-meeting cancellation. Dispatched by
@@ -64,6 +79,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   One live participant's reminder. Dispatched by
   `send_group_reminder_emails/4` so a failure sending to one participant
   cannot block or discard the rest.
+
+  Guarded the same way as the solo reminder handler
+  (`MeetingEmails.handle_reminder_emails/1`): a void slot or a meeting that
+  has already started discards rather than sends a now-misleading reminder.
+  The seat handler needs its own copy of that guard because
+  `cancel_reminder_emails/1` only sweeps pending `send_reminder_emails` jobs,
+  not the `send_seat_reminder` jobs this dispatches — those can still be
+  in flight when the meeting is cancelled or voided.
   """
   @spec handle_seat_reminder_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -73,14 +96,36 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
         "reminder_value" => reminder_value,
         "reminder_unit" => reminder_unit
       }) do
-    with_meeting_and_participant(
-      meeting_id,
-      participant_id,
-      "seat reminder email",
-      fn meeting, participant ->
-        send_seat_reminder_email(meeting, participant, reminder_value, reminder_unit)
+    MeetingEmails.with_meeting(meeting_id, "seat reminder email", fn meeting ->
+      cond do
+        MeetingState.slot_void?(meeting) ->
+          Logger.info("Skipping seat reminder email for inactive meeting",
+            meeting_id: meeting_id,
+            participant_id: participant_id,
+            status: meeting.status
+          )
+
+          {:discard, "Meeting #{meeting.status}"}
+
+        meeting_started?(meeting) ->
+          Logger.info("Skipping seat reminder email - meeting already started",
+            meeting_id: meeting_id,
+            participant_id: participant_id,
+            start_time: meeting.start_time
+          )
+
+          {:discard, "Meeting already started"}
+
+        true ->
+          case find_live_recipient(meeting, participant_id) do
+            nil ->
+              {:discard, "Participant not found or cancelled"}
+
+            recipient ->
+              send_seat_reminder_email(meeting, recipient, reminder_value, reminder_unit)
+          end
       end
-    )
+    end)
   end
 
   @doc """
@@ -108,7 +153,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   independent retry benefit).
   """
   @spec send_group_cancellation_emails(MeetingSchema.t(), [Recipient.t()]) ::
-          :ok | {:error, String.t()}
+          :ok | {:error, term()}
   def send_group_cancellation_emails(meeting, participants) do
     with :ok <-
            dispatch_seat_jobs(participants, fn recipient ->
@@ -120,7 +165,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
       organizer_details =
         meeting
         |> AppointmentBuilder.from_meeting()
-        |> Map.put(:attendee_name, "#{length(participants)} participants")
+        |> Map.put(:attendee_name, participant_count_label(participants))
 
       send_organizer_email(
         Config.email_service_module().send_cancellation_email_to_organizer(
@@ -137,16 +182,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   whole meeting was cancelled. Performed by the per-seat job dispatched from
   `send_group_cancellation_emails/2`.
   """
-  @spec send_seat_meeting_cancellation_email(MeetingSchema.t(), ParticipantSchema.t()) ::
-          :ok | {:error, String.t()}
-  def send_seat_meeting_cancellation_email(meeting, participant) do
-    recipient = Recipient.from_participant(participant)
+  @spec send_seat_meeting_cancellation_email(MeetingSchema.t(), Recipient.t()) ::
+          :ok | {:error, term()}
+  def send_seat_meeting_cancellation_email(meeting, recipient) do
     details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
 
     result =
       Config.email_service_module().send_cancellation_email_to_attendee(recipient.email, details)
 
-    send_seat_result(result, "cancellation", meeting.id, participant.id)
+    send_seat_result(result, "cancellation", meeting.id, recipient.participant_id)
   end
 
   @doc """
@@ -154,7 +198,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   reminder sent inline.
   """
   @spec send_group_reminder_emails(MeetingSchema.t(), [Recipient.t()], pos_integer(), String.t()) ::
-          :ok | {:error, String.t()}
+          :ok | {:error, term()}
   def send_group_reminder_emails(meeting, participants, reminder_value, reminder_unit) do
     with :ok <-
            dispatch_seat_jobs(participants, fn recipient ->
@@ -170,7 +214,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
       organizer_details =
         meeting
         |> AppointmentBuilder.from_meeting(reminder)
-        |> Map.put(:attendee_name, "#{length(participants)} participants")
+        |> Map.put(:attendee_name, participant_count_label(participants))
 
       send_organizer_email(
         Config.email_service_module().send_appointment_reminder_to_organizer(
@@ -189,13 +233,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   """
   @spec send_seat_reminder_email(
           MeetingSchema.t(),
-          ParticipantSchema.t(),
+          Recipient.t(),
           pos_integer(),
           String.t()
         ) ::
-          :ok | {:error, String.t()}
-  def send_seat_reminder_email(meeting, participant, reminder_value, reminder_unit) do
-    recipient = Recipient.from_participant(participant)
+          :ok | {:error, term()}
+  def send_seat_reminder_email(meeting, recipient, reminder_value, reminder_unit) do
     reminder = %{value: reminder_value, unit: reminder_unit}
     details = AppointmentBuilder.from_meeting(meeting, recipient, reminder)
 
@@ -205,7 +248,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
         details
       )
 
-    send_seat_result(result, "reminder", meeting.id, participant.id)
+    send_seat_result(result, "reminder", meeting.id, recipient.participant_id)
   end
 
   @doc """
@@ -215,7 +258,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   since the host is the one making the request.
   """
   @spec send_group_reschedule_requests(MeetingSchema.t(), [Recipient.t()]) ::
-          :ok | {:error, String.t()}
+          :ok | {:error, term()}
   def send_group_reschedule_requests(meeting, participants) do
     dispatch_seat_jobs(participants, fn recipient ->
       EmailScheduler.schedule_seat_reschedule_request(meeting.id, recipient.participant_id)
@@ -228,51 +271,35 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   rather than the whole meeting. Performed by the per-seat job dispatched
   from `send_group_reschedule_requests/2`.
   """
-  @spec send_seat_reschedule_request(MeetingSchema.t(), ParticipantSchema.t()) ::
-          :ok | {:error, String.t()}
-  def send_seat_reschedule_request(meeting, participant) do
-    recipient = Recipient.from_participant(participant)
-
+  @spec send_seat_reschedule_request(MeetingSchema.t(), Recipient.t()) :: :ok | {:error, term()}
+  def send_seat_reschedule_request(meeting, recipient) do
     meeting
     |> Meetings.meeting_as_seen_by(recipient)
     |> Config.email_service_module().send_reschedule_request()
-    |> send_seat_result("reschedule request", meeting.id, participant.id)
+    |> send_seat_result("reschedule request", meeting.id, recipient.participant_id)
   end
 
-  @doc """
-  The solo counterpart: one reschedule request to the meeting's own attendee.
-
-  Lives beside the group version so the caller has both halves of the same
-  decision in one place.
-  """
-  @spec send_solo_reschedule_request(MeetingSchema.t()) :: :ok | {:error, term()}
-  def send_solo_reschedule_request(meeting) do
-    case Config.email_service_module().send_reschedule_request(meeting) do
-      {:ok, _result} ->
-        Logger.info("Reschedule request email sent successfully",
-          meeting_id: meeting.id,
-          to: meeting.attendee_email
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to send reschedule request email",
-          meeting_id: meeting.id,
-          to: meeting.attendee_email,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
-    end
-  end
-
-  # Schedules `schedule_fun` for every participant. Each per-seat job is
-  # uniqued on `(action, meeting_id, participant_id)`, so re-running this on
-  # retry after a downstream (e.g. organiser-email) failure cannot duplicate
-  # a job that was already enqueued.
+  # Schedules `schedule_fun` for every participant, bounded to
+  # `@dispatch_max_concurrency` concurrent inserts so a meeting with hundreds
+  # of participants cannot run the sequential-insert wall-clock time past
+  # `EmailWorker`'s timeout. Each per-seat job is uniqued on
+  # `(action, meeting_id, participant_id)`, so re-running this on retry after
+  # a downstream (e.g. organiser-email) failure cannot duplicate a job that
+  # was already enqueued — a task that times out is treated as a failure
+  # (not silently dropped), so the whole dispatch retries rather than losing
+  # that participant.
   defp dispatch_seat_jobs(participants, schedule_fun) do
-    results = Enum.map(participants, schedule_fun)
+    results =
+      Tymeslot.TaskSupervisor
+      |> Task.Supervisor.async_stream_nolink(participants, schedule_fun,
+        max_concurrency: @dispatch_max_concurrency,
+        timeout: @dispatch_task_timeout_ms,
+        on_timeout: :kill_task
+      )
+      |> Enum.map(fn
+        {:ok, result} -> result
+        {:exit, reason} -> {:error, reason}
+      end)
 
     if Enum.all?(results, &(&1 == :ok)) do
       :ok
@@ -281,10 +308,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
     end
   end
 
+  # Preserves `:circuit_open` and `{:recipient_rejected, _}` through
+  # `DeliveryOutcome.from_error/2` rather than flattening every failure into a
+  # string, so `EmailWorker` can snooze past a provider outage or discard a
+  # dead address instead of burning ordinary retries on either.
   defp send_organizer_email({:ok, _result}, _label), do: :ok
 
   defp send_organizer_email({:error, reason}, label),
-    do: {:error, "Failed to send organiser #{label} email: #{inspect(reason)}"}
+    do: DeliveryOutcome.from_error(reason, "Failed to send organiser #{label} email")
 
   defp send_seat_result({:ok, _result}, _label, _meeting_id, _participant_id), do: :ok
 
@@ -296,39 +327,21 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
       error: inspect(reason)
     )
 
-    {:error, "Failed to send seat #{label} email: #{inspect(reason)}"}
+    DeliveryOutcome.from_error(reason, "Failed to send seat #{label} email")
   end
 
-  # Fetches the meeting and its participant and runs `fun` with both, or
-  # discards the job with a consistent log line when either no longer
-  # exists. `action` names the email action for the warning (e.g. "seat
-  # reminder email"). Mirrors `MeetingEmails.with_meeting/3`, scoped to the
-  # per-seat jobs dispatched from this module.
+  # Fetches the meeting and its live participant and runs `fun` with both, or
+  # discards the job with a consistent log line when either no longer exists
+  # or the participant has since cancelled their seat — a seat cancelled
+  # between dispatch and this job running must not still receive the seat
+  # copy of a whole-meeting cancellation or a reschedule request.
   defp with_meeting_and_participant(meeting_id, participant_id, action, fun) do
-    with_meeting(meeting_id, action, fn meeting ->
-      case ParticipantQueries.get(participant_id) do
-        {:ok, participant} -> fun.(meeting, participant)
-        {:error, :not_found} -> {:discard, "Participant not found"}
+    MeetingEmails.with_meeting(meeting_id, action, fn meeting ->
+      case find_live_recipient(meeting, participant_id) do
+        nil -> {:discard, "Participant not found or cancelled"}
+        recipient -> fun.(meeting, recipient)
       end
     end)
-  end
-
-  # The meeting-only half of the same contract, for the seat handlers that
-  # resolve their participant themselves (through `Meetings.recipients/1`, or
-  # by id because the seat is already cancelled).
-  defp with_meeting(meeting_id, action, fun) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} ->
-        fun.(meeting)
-
-      {:error, :not_found} ->
-        Logger.warning("Attempted to send email for non-existent meeting",
-          email_action: action,
-          meeting_id: meeting_id
-        )
-
-        {:discard, "Meeting not found"}
-    end
   end
 
   @spec handle_seat_confirmation_emails(%{String.t() => term()}) ::
@@ -337,7 +350,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
         "meeting_id" => meeting_id,
         "participant_id" => participant_id
       }) do
-    with_meeting(meeting_id, "seat confirmation emails", fn meeting ->
+    MeetingEmails.with_meeting(meeting_id, "seat confirmation emails", fn meeting ->
       case find_live_recipient(meeting, participant_id) do
         nil -> {:discard, "Participant not found or cancelled"}
         recipient -> send_seat_confirmation_emails(meeting, recipient)
@@ -350,7 +363,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   def handle_seat_cancellation_emails(
         %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
       ) do
-    with_meeting(meeting_id, "seat cancellation emails", fn meeting ->
+    MeetingEmails.with_meeting(meeting_id, "seat cancellation emails", fn meeting ->
       case ParticipantQueries.get(participant_id) do
         {:ok, participant} ->
           notify_organizer? = Map.get(args, "notify_organizer", true)
@@ -367,7 +380,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   def handle_seat_reschedule_emails(
         %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
       ) do
-    with_meeting(meeting_id, "seat reschedule emails", fn meeting ->
+    MeetingEmails.with_meeting(meeting_id, "seat reschedule emails", fn meeting ->
       with {:ok, participant} <- ParticipantQueries.get(participant_id),
            {:ok, old_event} <- parse_old_event(args) do
         send_seat_reschedule_emails(meeting, participant, old_event)
@@ -378,10 +391,20 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
     end)
   end
 
+  # A primary-key fetch, not a scan of `Meetings.recipients/1`'s full live
+  # list: every seat handler above resolves exactly one participant, so
+  # loading every live participant on the meeting to find it (as this used
+  # to) is wasted work that grows with `max_participants`. The meeting-id
+  # check guards against a job whose `participant_id` belongs to a different
+  # meeting ever being treated as live here.
   defp find_live_recipient(meeting, participant_id) do
-    meeting
-    |> Meetings.recipients()
-    |> Enum.find(&(&1.participant_id == participant_id))
+    case ParticipantQueries.get(participant_id) do
+      {:ok, %{cancelled_at: nil, meeting_id: meeting_id} = participant} ->
+        if meeting_id == meeting.id, do: Recipient.from_participant(participant)
+
+      _not_found_or_cancelled ->
+        nil
+    end
   end
 
   # One participant's confirmation plus the organiser's per-seat notification.
@@ -390,10 +413,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   # email that already went out — mirroring the cancellation-email semantics.
   defp send_seat_confirmation_emails(meeting, recipient) do
     details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
+    organizer_details = AppointmentBuilder.from_meeting(meeting)
     email_service = Config.email_service_module()
 
     organizer_result =
-      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
+      email_service.send_appointment_confirmation_to_organizer(
+        organizer_details.organizer_email,
+        organizer_details
+      )
 
     attendee_result =
       email_service.send_appointment_confirmation_to_attendee(recipient.email, details)
@@ -423,7 +450,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
 
     organizer_result =
       if notify_organizer? do
-        email_service.send_cancellation_email_to_organizer(details.organizer_email, details)
+        organizer_details = AppointmentBuilder.from_meeting(meeting)
+
+        email_service.send_cancellation_email_to_organizer(
+          organizer_details.organizer_email,
+          organizer_details
+        )
       else
         {:ok, :skipped}
       end
@@ -453,6 +485,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
 
   defp parse_old_event(_args), do: {:error, :invalid_snapshot}
 
+  # Also re-sends the mover's still-unsent guests: `RescheduleSeat` re-books
+  # the seat's guests against the new participant row (fresh, unsent), so
+  # without this call they would keep the confirmation they already had for
+  # the old slot — now voided — and never learn where the meeting moved to.
   defp send_seat_reschedule_emails(meeting, participant, old_event) do
     recipient = Recipient.from_participant(participant)
     details = AppointmentBuilder.from_meeting(meeting, recipient, nil)
@@ -461,8 +497,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
     attendee_result =
       email_service.send_seat_reschedule_to_participant(recipient.email, details, old_event)
 
+    organizer_details = AppointmentBuilder.from_meeting(meeting)
+
     organizer_result =
-      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
+      email_service.send_appointment_confirmation_to_organizer(
+        organizer_details.organizer_email,
+        organizer_details
+      )
+
+    send_participant_guest_confirmations(meeting, recipient, details, email_service)
 
     DeliveryOutcome.from_dual_send(
       "seat reschedule",
@@ -472,27 +515,25 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
     )
   end
 
-  # Same mechanics as `MeetingEmails` uses for a solo booking, scoped to one
-  # participant's
-  # guests. Guests are stamped after a successful send so Oban retries only
-  # re-attempt unsent guests.
+  # Same send loop `MeetingEmails.send_guest_confirmations/4` uses for a
+  # solo booking's guests; only the query scoping it to one participant's
+  # guests differs, so that loop is shared rather than copied.
   defp send_participant_guest_confirmations(meeting, recipient, details, email_service) do
     recipient.participant_id
     |> GuestQueries.list_unsent_for_participant()
-    |> Enum.each(fn guest ->
-      guest_details = AppointmentBuilder.put_guest(details, guest)
+    |> MeetingEmails.send_guest_confirmations(meeting, details, email_service)
+  end
 
-      case email_service.send_guest_confirmation(guest.email, guest_details) do
-        {:ok, _result} ->
-          GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+  defp meeting_started?(meeting) do
+    DateTime.compare(meeting.start_time, DateTime.utc_now()) != :gt
+  end
 
-        other ->
-          Logger.error("Guest confirmation email failed",
-            meeting_id: meeting.id,
-            guest_email: guest.email,
-            result: inspect(other)
-          )
-      end
-    end)
+  # Untranslated, ungrammatical at count 1 ("1 participants") if built with
+  # plain interpolation — routed through `dngettext/5` like every other
+  # pluralised string in the email templates.
+  defp participant_count_label(participants) do
+    count = length(participants)
+
+    dngettext("emails", "%{count} participant", "%{count} participants", count, count: count)
   end
 end

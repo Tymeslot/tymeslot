@@ -3,6 +3,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   Internal handlers for EmailWorker actions.
   """
 
+  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Workers.EmailWorkerHandlers.AdminEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.AuthEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
@@ -13,18 +14,29 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   # Static dispatch table — keeps `execute_email_action/2` simple and lets
   # adding a new email type be a one-line change. Each entry maps the
   # serialised action name to the function that handles its args.
+  #
+  # The six seat-action keys come from `MeetingScheduler.seat_action/1`
+  # rather than retyped literals, so this table and the scheduling call sites
+  # that produce those same action strings can't drift apart on a typo — see
+  # that function's doc for why `:seat_cancellation` and
+  # `:seat_meeting_cancellation` are named that closely apart on purpose.
   @action_handlers %{
     "send_admin_alert" => {AdminEmails, :handle_admin_alert},
     "send_confirmation_emails" => {MeetingEmails, :handle_confirmation_emails},
-    "send_seat_confirmation_emails" => {GroupMeetingEmails, :handle_seat_confirmation_emails},
+    MeetingScheduler.seat_action(:seat_confirmation) =>
+      {GroupMeetingEmails, :handle_seat_confirmation_emails},
     "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails},
-    "send_seat_cancellation_emails" => {GroupMeetingEmails, :handle_seat_cancellation_emails},
-    "send_seat_meeting_cancellation" =>
+    MeetingScheduler.seat_action(:seat_cancellation) =>
+      {GroupMeetingEmails, :handle_seat_cancellation_emails},
+    MeetingScheduler.seat_action(:seat_meeting_cancellation) =>
       {GroupMeetingEmails, :handle_seat_meeting_cancellation_emails},
-    "send_seat_reschedule_emails" => {GroupMeetingEmails, :handle_seat_reschedule_emails},
-    "send_seat_reschedule_request" => {GroupMeetingEmails, :handle_seat_reschedule_request},
+    MeetingScheduler.seat_action(:seat_reschedule) =>
+      {GroupMeetingEmails, :handle_seat_reschedule_emails},
+    MeetingScheduler.seat_action(:seat_reschedule_request) =>
+      {GroupMeetingEmails, :handle_seat_reschedule_request},
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
-    "send_seat_reminder" => {GroupMeetingEmails, :handle_seat_reminder_emails},
+    MeetingScheduler.seat_action(:seat_reminder) =>
+      {GroupMeetingEmails, :handle_seat_reminder_emails},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
     "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders},
     "send_poll_host_nudge" => {PollEmails, :handle_host_nudge},

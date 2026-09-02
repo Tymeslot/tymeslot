@@ -60,17 +60,44 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     end
   end
 
+  # Canonical seat-email action names, declared once so the same six strings
+  # aren't retyped at each call site here, in `EmailWorkerHandlers`'s
+  # dispatch table, and in `Tymeslot.Emails.EmailScheduler`'s arg-validation
+  # table. `:seat_cancellation` (a seat's own cancellation) and
+  # `:seat_meeting_cancellation` (a live participant's copy of a *whole
+  # meeting's* cancellation) are deliberately similar strings for genuinely
+  # different actions — exactly the kind of near-collision a mistyped copy
+  # could silently miss, so callers key off the atom instead.
+  @spec seat_action(atom()) :: String.t()
+  def seat_action(:seat_confirmation), do: "send_seat_confirmation_emails"
+  def seat_action(:seat_cancellation), do: "send_seat_cancellation_emails"
+  def seat_action(:seat_meeting_cancellation), do: "send_seat_meeting_cancellation"
+  def seat_action(:seat_reschedule), do: "send_seat_reschedule_emails"
+  def seat_action(:seat_reschedule_request), do: "send_seat_reschedule_request"
+  def seat_action(:seat_reminder), do: "send_seat_reminder"
+
   @doc """
   Schedules a single-seat email job.
 
   One job per `(action, meeting_id, participant_id)`, uniqued on that triple
-  within a 5-minute window — the shared shape behind every per-seat email
-  action (confirmation, cancellation, reschedule, and the whole-meeting
+  — the shared shape behind every per-seat email action (confirmation,
+  cancellation, reschedule, and the whole-meeting
   cancellation/reminder/reschedule-request fan-outs), so each recipient
   retries independently of the others and a different action for the same
   participant can never collide with this one. `extra_args` carries whatever
   the action needs beyond the two ids (e.g. `notify_organizer`, the old-event
   snapshot, or the reminder interval).
+
+  The uniqueness window is wider than the usual 5 minutes deliberately: a
+  seat job that hits an open mail circuit breaker snoozes for the breaker's
+  recovery window plus jitter (up to ~330 seconds — see
+  `Tymeslot.Workers.TransactionalEmailDelivery`), and a meeting-level
+  dispatcher retried after its own circuit-open snooze re-runs this function
+  for every participant again. A 5-minute window would have already elapsed
+  by the time either of those wake up, so the just-inserted (or just
+  completed) per-seat job would no longer read as a duplicate and this would
+  insert a second one — re-sending to a participant who already got their
+  email instead of the harmless no-op re-dispatch is meant to be.
   """
   @spec schedule_seat_email(String.t(), term(), term(), map()) :: :ok | {:error, String.t()}
   def schedule_seat_email(action, meeting_id, participant_id, extra_args \\ %{}) do
@@ -85,7 +112,10 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
         queue: :emails,
         priority: 0,
         unique: [
-          period: 300,
+          # 1 hour — comfortably past the ~330s worst-case circuit-open
+          # snooze on either the seat job itself or the meeting-level
+          # dispatcher that re-runs this. See the moduledoc above.
+          period: 3600,
           fields: [:args, :queue],
           keys: [:action, :meeting_id, :participant_id]
         ]
@@ -93,6 +123,15 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       |> Oban.insert()
 
     case result do
+      {:ok, %{conflict?: true}} ->
+        Logger.info("Seat email job already exists, skipping duplicate",
+          action: action,
+          meeting_id: meeting_id,
+          participant_id: participant_id
+        )
+
+        :ok
+
       {:ok, _job} ->
         Logger.info("Seat email job scheduled",
           action: action,
@@ -122,7 +161,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   """
   @spec schedule_seat_confirmation_emails(term(), term()) :: :ok | {:error, String.t()}
   def schedule_seat_confirmation_emails(meeting_id, participant_id),
-    do: schedule_seat_email("send_seat_confirmation_emails", meeting_id, participant_id)
+    do: schedule_seat_email(seat_action(:seat_confirmation), meeting_id, participant_id)
 
   @doc """
   Schedules the cancellation emails for a single group-booking seat.
@@ -130,7 +169,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @spec schedule_seat_cancellation_emails(term(), term(), boolean()) ::
           :ok | {:error, String.t()}
   def schedule_seat_cancellation_emails(meeting_id, participant_id, notify_organizer?) do
-    schedule_seat_email("send_seat_cancellation_emails", meeting_id, participant_id, %{
+    schedule_seat_email(seat_action(:seat_cancellation), meeting_id, participant_id, %{
       "notify_organizer" => notify_organizer?
     })
   end
@@ -144,7 +183,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   """
   @spec schedule_seat_reschedule_emails(term(), term(), map()) :: :ok | {:error, String.t()}
   def schedule_seat_reschedule_emails(meeting_id, participant_id, old_snapshot) do
-    schedule_seat_email("send_seat_reschedule_emails", meeting_id, participant_id, %{
+    schedule_seat_email(seat_action(:seat_reschedule), meeting_id, participant_id, %{
       "old_uid" => old_snapshot.uid,
       "old_ical_sequence" => old_snapshot.ical_sequence,
       "old_start_time" => DateTime.to_iso8601(old_snapshot.start_time),
@@ -161,7 +200,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   """
   @spec schedule_seat_meeting_cancellation_email(term(), term()) :: :ok | {:error, String.t()}
   def schedule_seat_meeting_cancellation_email(meeting_id, participant_id),
-    do: schedule_seat_email("send_seat_meeting_cancellation", meeting_id, participant_id)
+    do: schedule_seat_email(seat_action(:seat_meeting_cancellation), meeting_id, participant_id)
 
   @doc """
   Schedules one live participant's reminder.
@@ -173,7 +212,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @spec schedule_seat_reminder_email(term(), term(), term(), term()) ::
           :ok | {:error, String.t()}
   def schedule_seat_reminder_email(meeting_id, participant_id, reminder_value, reminder_unit) do
-    schedule_seat_email("send_seat_reminder", meeting_id, participant_id, %{
+    schedule_seat_email(seat_action(:seat_reminder), meeting_id, participant_id, %{
       "reminder_value" => reminder_value,
       "reminder_unit" => reminder_unit
     })
@@ -188,7 +227,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   """
   @spec schedule_seat_reschedule_request(term(), term()) :: :ok | {:error, String.t()}
   def schedule_seat_reschedule_request(meeting_id, participant_id),
-    do: schedule_seat_email("send_seat_reschedule_request", meeting_id, participant_id)
+    do: schedule_seat_email(seat_action(:seat_reschedule_request), meeting_id, participant_id)
 
   @doc """
   Schedules cancellation emails to be sent immediately with high priority.
