@@ -7,12 +7,16 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Polls
   alias Tymeslot.Profiles
   alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Dashboard.ProfileSettings.UsernameChangeModal
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+
+  import UsernameChangeModal, only: [username_change_modal: 1]
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -20,6 +24,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
      assign(socket,
        username_check: nil,
        username_available: nil,
+       pending_username: nil,
+       open_poll_count: 0,
        saving: false,
        form_errors: %{}
      )}
@@ -45,9 +51,38 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     end
   end
 
+  # Setting a username for the first time breaks nothing, so it saves straight
+  # away. Replacing one that is already live is irreversible for everybody
+  # holding a link to it, so it stops for a confirmation that says which
+  # surfaces go with it.
   def handle_event("update_username", %{"username" => username}, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
-    perform_username_update(socket, username, metadata)
+    current = socket.assigns.profile && socket.assigns.profile.username
+
+    case InputProcessor.validate_field(username, :username) do
+      {:ok, sanitized} when is_binary(current) and current != "" and sanitized != current ->
+        {:noreply,
+         assign(socket,
+           pending_username: sanitized,
+           open_poll_count: Polls.count_open_polls(socket.assigns.current_user.id)
+         )}
+
+      _first_time_or_invalid ->
+        perform_username_update(socket, username, metadata)
+    end
+  end
+
+  def handle_event("cancel_username_change", _params, socket) do
+    {:noreply, assign(socket, pending_username: nil)}
+  end
+
+  def handle_event("confirm_username_change", _params, socket) do
+    metadata = DashboardHelpers.get_security_metadata(socket)
+    username = socket.assigns.pending_username
+
+    socket
+    |> assign(pending_username: nil)
+    |> perform_username_update(username, metadata)
   end
 
   defp update_username_availability(socket, username, _metadata) do
@@ -254,6 +289,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
           </div>
         </div>
       </form>
+
+      <.username_change_modal
+        pending_username={@pending_username}
+        current_username={(@profile && @profile.username) || ""}
+        display_url={@display_url}
+        open_poll_count={@open_poll_count}
+        myself={@myself}
+      />
     </div>
     """
   end
