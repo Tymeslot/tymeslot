@@ -7,6 +7,7 @@ defmodule TymeslotWeb.SeatHTML do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Shared.TokenPage
   alias TymeslotWeb.Helpers.MeetingTimeFormat
 
   @doc "Landing page shown before the participant confirms the cancellation (GET step)."
@@ -18,7 +19,7 @@ defmodule TymeslotWeb.SeatHTML do
   @spec cancel_confirm(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_confirm(assigns) do
     ~H"""
-    <.seat_shell>
+    <TokenPage.shell>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-amber-100 text-amber-600">
         <.icon name="hero-x-circle" class="h-9 w-9" />
       </div>
@@ -54,7 +55,7 @@ defmodule TymeslotWeb.SeatHTML do
       >
         {dgettext("booking", "Keep my spot")}
       </a>
-    </.seat_shell>
+    </TokenPage.shell>
     """
   end
 
@@ -66,7 +67,7 @@ defmodule TymeslotWeb.SeatHTML do
   @spec cancelled(map()) :: Phoenix.LiveView.Rendered.t()
   def cancelled(assigns) do
     ~H"""
-    <.seat_shell>
+    <TokenPage.shell>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-green-100 text-green-600">
         <.icon name="hero-check-circle" class="h-9 w-9" />
       </div>
@@ -90,7 +91,7 @@ defmodule TymeslotWeb.SeatHTML do
       >
         {dgettext("booking", "Book another time")}
       </a>
-    </.seat_shell>
+    </TokenPage.shell>
     """
   end
 
@@ -98,7 +99,7 @@ defmodule TymeslotWeb.SeatHTML do
   @spec not_allowed(map()) :: Phoenix.LiveView.Rendered.t()
   def not_allowed(assigns) do
     ~H"""
-    <.seat_shell>
+    <TokenPage.shell>
       <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-amber-100 text-amber-600">
         <.icon name="hero-clock" class="h-9 w-9" />
       </div>
@@ -111,48 +112,26 @@ defmodule TymeslotWeb.SeatHTML do
           "The meeting is too close to its start time. Please contact the host directly."
         )}
       </p>
-    </.seat_shell>
+    </TokenPage.shell>
     """
   end
 
-  @doc "Shown when the seat token is missing, invalid, or already used up."
+  @doc "Shown when the token is missing, invalid, or already used up."
   @spec invalid(map()) :: Phoenix.LiveView.Rendered.t()
   def invalid(assigns) do
     ~H"""
-    <.seat_shell>
-      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
-        <.icon name="hero-link-slash" class="h-9 w-9" />
-      </div>
-      <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "This link is no longer valid")}
-      </h1>
-      <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext(
-          "booking",
-          "The link may have expired or already been used. Please contact the meeting host."
-        )}
-      </p>
-    </.seat_shell>
+    <TokenPage.invalid body={
+      dgettext(
+        "booking",
+        "The link may have expired or already been used. Please contact the meeting host."
+      )
+    } />
     """
   end
 
-  @doc "Shown when the participant has made too many requests in a short window."
+  @doc "Shown when the visitor has made too many requests in a short window."
   @spec too_many_requests(map()) :: Phoenix.LiveView.Rendered.t()
-  def too_many_requests(assigns) do
-    ~H"""
-    <.seat_shell>
-      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-amber-100 text-amber-600">
-        <.icon name="hero-clock" class="h-9 w-9" />
-      </div>
-      <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "Too many attempts")}
-      </h1>
-      <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "Please wait a moment and try again.")}
-      </p>
-    </.seat_shell>
-    """
-  end
+  def too_many_requests(assigns), do: TokenPage.too_many_requests(assigns)
 
   attr :meeting, :map, required: true
   attr :timezone, :string, default: nil
@@ -170,19 +149,6 @@ defmodule TymeslotWeb.SeatHTML do
         {dgettext("booking", "Hosted by %{name}", name: @meeting.organizer_name)}
       </p>
     </div>
-    """
-  end
-
-  # Shared centred-card page chrome (same shell as the guest RSVP pages).
-  slot :inner_block, required: true
-
-  defp seat_shell(assigns) do
-    ~H"""
-    <main class="flex min-h-screen items-center justify-center bg-linear-to-br from-turquoise-50 via-white to-cyan-50 p-4">
-      <div class="w-full max-w-md rounded-token-2xl bg-white p-8 text-center shadow-glass-lg">
-        {render_slot(@inner_block)}
-      </div>
-    </main>
     """
   end
 end

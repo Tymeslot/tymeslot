@@ -6,6 +6,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Shared.TokenPage
   alias TymeslotWeb.Helpers.MeetingTimeFormat
 
   @doc "Landing page shown before the guest submits their RSVP (GET step)."
@@ -19,7 +20,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   def confirm(assigns) do
     ~H"""
     <% accepting? = @status == "accepted" %>
-    <.rsvp_shell>
+    <TokenPage.shell>
       <div class={[
         "mx-auto flex h-16 w-16 items-center justify-center rounded-token-full",
         accepting? && "bg-green-100 text-green-600",
@@ -76,7 +77,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
             else: dgettext("booking", "Confirm decline")}
         </button>
       </form>
-    </.rsvp_shell>
+    </TokenPage.shell>
     """
   end
 
@@ -91,7 +92,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   def confirmation(assigns) do
     ~H"""
     <% accepted? = @status == "accepted" %>
-    <.rsvp_shell>
+    <TokenPage.shell>
       <div class={[
         "mx-auto flex h-16 w-16 items-center justify-center rounded-token-full",
         accepted? && "bg-green-100 text-green-600",
@@ -140,61 +141,26 @@ defmodule TymeslotWeb.GuestRsvpHTML do
             else: dgettext("booking", "Accept instead")}
         </.link>
       </p>
-    </.rsvp_shell>
+    </TokenPage.shell>
     """
   end
 
-  @doc "Shown when the RSVP token is missing or invalid."
+  @doc "Shown when the token is missing, invalid, or already used up."
   @spec invalid(map()) :: Phoenix.LiveView.Rendered.t()
   def invalid(assigns) do
     ~H"""
-    <.rsvp_shell>
-      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
-        <.icon name="hero-link-slash" class="h-9 w-9" />
-      </div>
-      <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "This link is no longer valid")}
-      </h1>
-      <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext(
-          "booking",
-          "The invitation link may have expired or already been used. Please contact the meeting host."
-        )}
-      </p>
-    </.rsvp_shell>
+    <TokenPage.invalid body={
+      dgettext(
+        "booking",
+        "The invitation link may have expired or already been used. Please contact the meeting host."
+      )
+    } />
     """
   end
 
-  @doc "Shown when the guest has made too many requests in a short window."
+  @doc "Shown when the visitor has made too many requests in a short window."
   @spec too_many_requests(map()) :: Phoenix.LiveView.Rendered.t()
-  def too_many_requests(assigns) do
-    ~H"""
-    <.rsvp_shell>
-      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-amber-100 text-amber-600">
-        <.icon name="hero-clock" class="h-9 w-9" />
-      </div>
-      <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "Too many attempts")}
-      </h1>
-      <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "Please wait a moment and try again.")}
-      </p>
-    </.rsvp_shell>
-    """
-  end
-
-  # Shared centred-card page chrome.
-  slot :inner_block, required: true
-
-  defp rsvp_shell(assigns) do
-    ~H"""
-    <main class="flex min-h-screen items-center justify-center bg-linear-to-br from-turquoise-50 via-white to-cyan-50 p-4">
-      <div class="w-full max-w-md rounded-token-2xl bg-white p-8 text-center shadow-glass-lg">
-        {render_slot(@inner_block)}
-      </div>
-    </main>
-    """
-  end
+  def too_many_requests(assigns), do: TokenPage.too_many_requests(assigns)
 
   defp format_when(meeting),
     do: MeetingTimeFormat.format_when(meeting, meeting.attendee_timezone)
