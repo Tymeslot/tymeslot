@@ -632,3 +632,33 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Webhook returned status %{status}"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/booking_api_section.ex
+#, elixir-autogen, elixir-format
+msgid "Booking API"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/booking_api_section.ex
+#, elixir-autogen, elixir-format
+msgid "Disable booking API"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/booking_api_section.ex
+#, elixir-autogen, elixir-format
+msgid "Enable booking API"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/booking_api_section.ex
+#, elixir-autogen, elixir-format
+msgid "Let another system create bookings for you — a CRM booking a slot you agreed on a call, for instance. Your attendee is invited as usual, with their own cancel and reschedule links."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/booking_api_section.ex
+#, elixir-autogen, elixir-format
+msgid "Regenerate token"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/booking_api_section.ex
+#, elixir-autogen, elixir-format
+msgid "Send this token as an Authorization: Bearer header. Treat it like a password — anyone holding it can put meetings in your diary."
+msgstr ""

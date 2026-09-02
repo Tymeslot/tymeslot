@@ -81,6 +81,29 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  Gets a user's active, unarchived meeting type by its slug.
+
+  Private types are included: a slug is not a listing, and a caller naming one
+  is already trusted with the organiser's diary.
+  """
+  @spec get_active_by_slug(integer(), String.t()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, :not_found}
+  def get_active_by_slug(user_id, slug) when is_binary(slug) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where:
+          mt.user_id == ^user_id and mt.slug == ^slug and mt.is_active == true and
+            mt.is_archived == false,
+        preload: [:video_integration, :calendar_integration]
+      )
+
+    case Repo.one(query) do
+      nil -> {:error, :not_found}
+      meeting_type -> {:ok, meeting_type}
+    end
+  end
+
+  @doc """
   Creates a new meeting type.
 
   `opts` are forwarded to `MeetingTypeSchema.changeset/3` so callers can

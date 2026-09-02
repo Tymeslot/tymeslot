@@ -49,6 +49,30 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Fetches the profile owning the given booking API token.
+  """
+  @spec get_by_booking_api_token(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
+  def get_by_booking_api_token(token) when is_binary(token) and token != "" do
+    case Repo.get_by(ProfileSchema, booking_api_token: token) do
+      nil -> {:error, :not_found}
+      profile -> {:ok, Repo.preload(profile, :user)}
+    end
+  end
+
+  def get_by_booking_api_token(_other), do: {:error, :not_found}
+
+  @doc """
+  Sets (or clears, with `nil`) the profile's booking API token.
+  """
+  @spec update_booking_api_token(ProfileSchema.t(), String.t() | nil) ::
+          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_booking_api_token(%ProfileSchema{} = profile, token) do
+    profile
+    |> ProfileSchema.booking_api_token_changeset(%{booking_api_token: token})
+    |> Repo.update()
+  end
+
+  @doc """
   Gets a profile by user ID, creating one if it doesn't exist.
   Note: The caller is responsible for any post-creation side effects
   (e.g. creating default weekly schedules).
