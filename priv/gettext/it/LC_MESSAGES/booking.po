@@ -1550,3 +1550,8 @@ msgstr "Impossibile caricare le fasce orarie. Riprova."
 #, elixir-autogen, elixir-format
 msgid "Hi there!"
 msgstr "Ciao!"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule an expired meeting"
+msgstr "Impossibile riprogrammare una riunione scaduta"

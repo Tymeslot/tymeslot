@@ -1550,3 +1550,8 @@ msgstr "Не вдалося завантажити часові слоти. Сп
 #, elixir-autogen, elixir-format
 msgid "Hi there!"
 msgstr "Вітаю!"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule an expired meeting"
+msgstr "Зустріч із вичерпаним терміном не можна перенести"

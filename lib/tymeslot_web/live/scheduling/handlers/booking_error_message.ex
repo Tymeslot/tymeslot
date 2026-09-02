@@ -152,6 +152,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   defp legacy_message("Cannot reschedule a meeting that has already occurred"),
     do: dgettext("booking", "Cannot reschedule a meeting that has already occurred")
 
+  defp legacy_message("Cannot reschedule an expired meeting"),
+    do: dgettext("booking", "Cannot reschedule an expired meeting")
+
   defp legacy_message("Booking time must be in the future"),
     do: dgettext("booking", "Booking time must be in the future")
 

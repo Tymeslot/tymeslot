@@ -370,6 +370,14 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == "completed" ->
         {:error, "Cannot reschedule a completed meeting"}
 
+      # An expired meeting (a lapsed approval request or an abandoned paid
+      # checkout) has already released its slot: `MeetingState`'s
+      # `@occupying_statuses` excludes "expired", so conflict detection ignores
+      # it. Rescheduling would move it to a new time it does not reserve, and
+      # the attendee would be told about a booking anyone else can still take.
+      meeting.status == "expired" ->
+        {:error, "Cannot reschedule an expired meeting"}
+
       meeting_is_current?(meeting) ->
         Logger.info("Blocked reschedule: meeting has already started", meeting_uid: meeting.uid)
         {:error, "Cannot reschedule a meeting that has already started"}

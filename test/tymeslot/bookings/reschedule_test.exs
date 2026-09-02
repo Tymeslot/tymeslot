@@ -329,6 +329,18 @@ defmodule Tymeslot.Bookings.RescheduleTest do
                Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
     end
 
+    test "returns error when meeting has expired" do
+      %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
+
+      # A lapsed approval request or an abandoned paid checkout leaves the
+      # meeting "expired", which releases its slot; rescheduling it would move
+      # a booking that reserves nothing.
+      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "expired"})
+
+      assert {:error, "Cannot reschedule an expired meeting"} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+    end
+
     test "returns error when meeting is completed" do
       %{user: user} = create_always_bookable_profile()
 

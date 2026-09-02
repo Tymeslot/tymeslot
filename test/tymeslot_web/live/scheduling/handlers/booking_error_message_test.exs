@@ -59,6 +59,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
     "Cannot reschedule a completed meeting",
     "Cannot reschedule a meeting that has already started",
     "Cannot reschedule a meeting that has already occurred",
+    "Cannot reschedule an expired meeting",
     "Booking time must be in the future",
     "Attendee email is required",
     "Attendee name is required",
