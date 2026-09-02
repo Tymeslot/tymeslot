@@ -354,3 +354,8 @@ msgstr "Désactivez cette option pour revenir au texte intégré, traduit dans t
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes"
 msgstr "Modifications non enregistrées"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Complete the form to save"
+msgstr "Complétez le formulaire pour enregistrer"

@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   |-------------|---------------------------|-------------------------------------------------|
   | `:idle`     | nothing                   | Nothing has changed yet this session.            |
   | `:saved`    | "All changes saved"       | Persist succeeded.                               |
+  | `:incomplete`| "Complete the form to save" | A required line is blank mid-edit.            |
   | `:unsaved`  | "Unsaved changes"         | Validation rejected the edit, so nothing wrote.  |
   | `:throttled`| "Too many changes…"       | Rate limit hit; the next edit retries.           |
   | `:error`    | "Couldn't save changes"   | Unexpected persistence failure.                  |
@@ -235,6 +236,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
           <span class="text-tymeslot-500">
             {dgettext("dashboard_appearance", "All changes saved")}
           </span>
+        <% :incomplete -> %>
+          <.icon name="hero-information-circle-mini" class="w-4 h-4 text-tymeslot-400" />
+          <span class="text-tymeslot-500">
+            {dgettext("dashboard_appearance", "Complete the form to save")}
+          </span>
         <% :unsaved -> %>
           <.icon name="hero-arrow-path-mini" class="w-4 h-4 text-amber-500" />
           <span class="text-amber-500">{dgettext("dashboard_appearance", "Unsaved changes")}</span>
@@ -351,10 +357,34 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
         |> assign_form(ProfileSchema.booking_text_changeset(profile, %{}))
 
       {:error, changeset} ->
-        socket
-        |> assign_form(Map.put(changeset, :action, :insert))
-        |> assign(:save_status, :unsaved)
+        reject(socket, changeset)
     end
+  end
+
+  # A field emptied on the way to retyping it is work in progress, not a
+  # failure: autosave sees the blank as soon as the debounce fires, and
+  # colouring it red mid-edit reads as though something broke. Leaving the
+  # changeset without an `:action` is what keeps the inline error hidden, and
+  # nothing is written either way. Any other failure (a cap, a rejected
+  # encoding) is a real problem and stays visible.
+  defp reject(socket, changeset) do
+    if blank_required_only?(changeset) do
+      socket
+      |> assign_form(Map.put(changeset, :action, nil))
+      |> assign(:save_status, :incomplete)
+    else
+      socket
+      |> assign_form(Map.put(changeset, :action, :insert))
+      |> assign(:save_status, :unsaved)
+    end
+  end
+
+  defp blank_required_only?(%Changeset{errors: []}), do: false
+
+  defp blank_required_only?(%Changeset{errors: errors}) do
+    Enum.all?(errors, fn {_field, {_message, opts}} ->
+      Keyword.get(opts, :validation) == :required
+    end)
   end
 
   defp assign_form(socket, changeset), do: assign(socket, :form, to_form(changeset))

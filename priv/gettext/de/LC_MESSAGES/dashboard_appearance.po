@@ -354,3 +354,8 @@ msgstr "Schalten Sie dies aus, um zum vorgegebenen Text zurückzukehren, der in 
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes"
 msgstr "Nicht gespeicherte Änderungen"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Complete the form to save"
+msgstr "Formular ausfüllen, um zu speichern"

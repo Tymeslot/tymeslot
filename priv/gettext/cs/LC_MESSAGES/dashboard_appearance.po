@@ -354,3 +354,8 @@ msgstr "Vypnutím se vrátíte k vestavěnému textu, který je přeložen do v�
 #, elixir-autogen, elixir-format
 msgid "Unsaved changes"
 msgstr "Neuložené změny"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Complete the form to save"
+msgstr "Vyplňte formulář, aby se změny uložily"

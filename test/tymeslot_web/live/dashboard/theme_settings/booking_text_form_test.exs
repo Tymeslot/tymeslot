@@ -114,15 +114,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
-      html = edit(view, %{"booking_heading" => ""})
+      edit(view, %{"booking_heading" => ""})
 
-      assert html =~ "can&#39;t be blank"
-      assert html =~ "Unsaved changes"
       # The last good wording stands; a blank must not reach the public page.
       assert Repo.reload!(profile).booking_heading == "Ready to grow your business?"
     end
 
-    test "rejects a heading past the cap even when the browser cap is bypassed", %{
+    test "treats a field emptied mid-edit as in progress, not as an error", %{
       conn: conn,
       profile: profile
     } do
@@ -130,9 +128,30 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
+      # Autosave fires as soon as the debounce elapses, which is while the
+      # organiser is still retyping. Painting the field red at that moment reads
+      # as a fault rather than an unfinished sentence.
+      html = edit(view, %{"booking_heading" => ""})
+
+      assert html =~ "Complete the form to save"
+      refute html =~ "can&#39;t be blank"
+      assert Repo.reload!(profile).booking_heading == "Ready to grow your business?"
+    end
+
+    test "still shows a real validation failure in red, cap bypass included", %{
+      conn: conn,
+      profile: profile
+    } do
+      profile = enable_with_wording(profile)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      # A cap breach is not work in progress, so it must not be softened into
+      # the same quiet "in progress" state as a blank field.
       html = edit(view, %{"booking_heading" => String.duplicate("a", 61)})
 
       assert html =~ "should be at most 60 character"
+      assert html =~ "Unsaved changes"
       assert Repo.reload!(profile).booking_heading == "Ready to grow your business?"
     end
   end
