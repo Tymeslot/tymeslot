@@ -29,6 +29,7 @@ defmodule Tymeslot.ExchangeCase do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
 
   @types_ns "http://schemas.microsoft.com/exchange/services/2006/types"
   @messages_ns "http://schemas.microsoft.com/exchange/services/2006/messages"
@@ -56,7 +57,32 @@ defmodule Tymeslot.ExchangeCase do
       use Tymeslot.HttpTransportCase, async: unquote(async)
 
       import Tymeslot.ExchangeCase
+
+      setup do
+        reset_breaker()
+        :ok
+      end
     end
+  end
+
+  @doc """
+  Clears the circuit breaker `Exchange.Client` keys by `url`'s host.
+
+  Every EWS request runs through it, so a test that stubs a run of transport
+  failures leaves that host's breaker open and the *next* test is answered
+  `{:error, :circuit_open}` instead of whatever it stubbed. Called for the
+  shared config host by this template's own `setup`; a test working against a
+  different base URL calls it again with that URL.
+
+  Scoped to one host rather than `reset_all_hosts/0` so a concurrently running
+  test of another provider is left alone. The provider-level breaker is reset
+  too, since that is the one a base URL with no parseable host falls back to.
+  """
+  @spec reset_breaker(String.t()) :: :ok
+  def reset_breaker(url \\ @config.base_url) do
+    CalendarCircuitBreaker.reset_for_url(:exchange, url)
+    CalendarCircuitBreaker.reset(:exchange)
+    :ok
   end
 
   @doc """
@@ -123,6 +149,28 @@ defmodule Tymeslot.ExchangeCase do
   """
   @spec ok_envelope() :: String.t()
   def ok_envelope, do: response_envelope("FindFolder")
+
+  @doc """
+  The `t:TimeWindow` a `GetUserAvailability` request asked for.
+
+  Shared rather than local to one test because the availability read is sliced
+  into a request per chunk of the window (see `Exchange.Provider`), so a stub
+  answering it has to know which slice it is looking at, and an assertion on
+  the slicing has to read the same bounds.
+
+  The bounds are unqualified local times read in the request's own
+  `t:TimeZone`, which names UTC, so they come back as UTC datetimes.
+  """
+  @spec requested_availability_window(String.t()) :: {DateTime.t(), DateTime.t()}
+  def requested_availability_window(request_body) do
+    {availability_bound(request_body, "StartTime"), availability_bound(request_body, "EndTime")}
+  end
+
+  defp availability_bound(request_body, element) do
+    [_match, value] = Regex.run(~r|<t:#{element}>([^<]+)</t:#{element}>|, request_body)
+
+    value |> NaiveDateTime.from_iso8601!() |> DateTime.from_naive!("Etc/UTC")
+  end
 
   @doc "A SOAP fault carrying `message` as its `faultstring`."
   @spec fault_envelope(String.t()) :: String.t()

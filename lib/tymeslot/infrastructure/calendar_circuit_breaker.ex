@@ -33,6 +33,8 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   # - Self-hosted CalDAV (CalDAV, Radicale, Zimbra): Standard settings for typical self-hosted servers
   # - Nextcloud: Slightly more lenient than basic CalDAV due to heavier server operations
   # - mailbox.org (Open-Xchange): Same conservative defaults as other CalDAV providers
+  # - Exchange (EWS): Self-hosted like the CalDAV family and keyed per host for
+  #   the same reason, so it takes the same conservative settings
   @provider_configs %{
     google: %{
       failure_threshold: 5,
@@ -63,6 +65,10 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
       recovery_timeout: :timer.minutes(2)
     },
     apple: %{
+      failure_threshold: 3,
+      recovery_timeout: :timer.minutes(2)
+    },
+    exchange: %{
       failure_threshold: 3,
       recovery_timeout: :timer.minutes(2)
     }

@@ -18,8 +18,33 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   authorization header is built here and nothing that carries it is logged,
   and the endpoint is logged as scheme and host only, which drops any userinfo
   a base URL might carry.
+
+  ## Every request passes through a circuit breaker
+
+  This is the one place an EWS request is issued, so it is the one place the
+  breaker has to be applied; a seam higher up would leave whichever operation
+  forgot to use it hammering a dead server. The CalDAV family wraps at its
+  operation modules only because it needs an opt-out for the offline queue's
+  replay, and nothing here has an equivalent.
+
+  The breaker is keyed by **host**, not by provider, exactly as the CalDAV
+  family keys its own. Exchange is self-hosted, so one organiser's unreachable
+  server says nothing about anyone else's, and a provider-wide breaker would
+  let a single broken deployment stop every Exchange sync on the node.
+
+  Which failures count is `Tymeslot.Infrastructure.BreakerOutcome`'s decision
+  rather than this module's, and the split falls where the error vocabulary
+  above already puts it: `:timeout`, `:network_error`, `:rate_limited` and
+  `:server_error` say the server is unwell and trip the breaker, while
+  `:unauthorized`, `:forbidden`, `:not_found`, `:tls_error`, a
+  `{:soap_fault, _}` and an `{:unexpected_status, _}` describe one
+  integration's credentials, endpoint or request and leave breaker state
+  untouched. Tripping a shared breaker on those would let one organiser's
+  wrong password stop the syncs of everyone else on the same server.
   """
 
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.CircuitBreakerHelpers
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.Shared.HttpLogging
@@ -49,6 +74,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
           | :network_error
           | :tls_error
           | :malformed_xml
+          | :circuit_open
+          | :circuit_breaker_error
           | {:soap_fault, String.t()}
           | {:unexpected_status, pos_integer()}
 
@@ -73,12 +100,26 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
 
   `body` is the operation element, as `Exchange.Requests` builds it; wrapping
   it in the SOAP envelope is this function's job.
+
+  Answers `{:error, :circuit_open}` without touching the network while the
+  host's breaker is open (see the moduledoc).
   """
   @spec call(config(), String.t()) :: {:ok, Soap.document()} | {:error, error_reason()}
   def call(%{base_url: url} = config, body) when is_binary(url) do
+    # Both are built before the breaker is consulted. `headers/1` raises on an
+    # incomplete credential, and that has to stay a raise: the breaker rescues
+    # an exception out of the protected function and hands back an ordinary
+    # error tuple, which would turn a configuration fault into something the
+    # caller reads as a transport failure.
+    headers = headers(config)
+    options = options(config)
     envelope = Soap.envelope(body)
 
-    case Config.http_client_module().post(url, envelope, headers(config), options(config)) do
+    with_breaker(url, fn -> post(url, envelope, headers, options) end)
+  end
+
+  defp post(url, envelope, headers, options) do
+    case Config.http_client_module().post(url, envelope, headers, options) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         Soap.parse(response_body)
 
@@ -91,6 +132,15 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
       {:error, reason} ->
         transport_error(reason, url)
     end
+  end
+
+  # A base URL with no parseable host resolves to a nil host, which
+  # `CalendarCircuitBreaker.with_breaker/3` answers with the provider-level
+  # breaker rather than by running unprotected.
+  defp with_breaker(url, fun) do
+    host = CircuitBreakerHelpers.host_from_base_url(url)
+
+    CalendarCircuitBreaker.with_breaker(:exchange, [host: host], fun)
   end
 
   # A 500 carrying anything other than a fault is the server failing without

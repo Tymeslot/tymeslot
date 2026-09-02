@@ -112,6 +112,22 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   # split one user's budget across two pools without protecting anything more.
   @connection_test_bucket :caldav
 
+  # The Availability service caps a `GetUserAvailability` `TimeWindow` at its
+  # `MaximumQueryIntervalDays` setting and answers anything longer with an
+  # error response code rather than truncating it, so one request cannot
+  # cover the sync window (`ProviderConfig`, 365 days each way). The default
+  # is 42 days; Exchange 2010 and later default to 62 and an operator may set
+  # either higher. 42 is the conservative floor every supported version
+  # accepts, and asking for the lower bound costs only a few more round trips
+  # a cycle, where guessing the higher one fails the whole read on any server
+  # left at the default.
+  #
+  # grommunio, the server this provider was verified live against, enforces
+  # no cap at all, which is why a single window-wide request passed every
+  # test here and would have been refused by the first real Exchange Server
+  # it met.
+  @availability_chunk_days 42
+
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :exchange
 
@@ -344,6 +360,31 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   answer this provider can give and the one failure it must never degrade
   into; the same reasoning is why an unreadable response is an error inside
   `Exchange.FreeBusy` rather than an empty list.
+
+  ## The window is read in slices
+
+  One request cannot carry the sync window: the Availability service refuses a
+  `TimeWindow` longer than `@availability_chunk_days` (see the attribute for
+  the limit and why it is set where it is). The requested range is therefore
+  sliced into consecutive requests that tile it exactly, from the caller's
+  start to the caller's end, and their intervals are concatenated in order.
+  The window a caller asks for is still the window read, so a caller pairing
+  these bounds with a cache query over the same bounds stays consistent.
+
+  The first slice that fails ends the read with its own error term, exactly as
+  the single request it replaced did. A partial answer is never returned: half
+  a mailbox's busy time is a diary that reads as free for the rest of the
+  year, which is the failure this provider is built around.
+
+  Intervals are handed back as the server sent them, with no merging across
+  slice boundaries. A busy period spanning one is clipped by the server to
+  each side, so it arrives as two adjacent intervals, and two adjacent rows
+  block precisely what one row spanning both would: nothing downstream reasons
+  about an interval's identity, or about how many of them cover a stretch. An
+  exact duplicate, were a server to answer one unclipped on both sides, is
+  collapsed on the way into the cache, since `IntervalNormaliser` derives the
+  uid from the bounds and the busy type and
+  `ProviderCalendarEventQueries.upsert_batch/1` keeps one entry per uid.
   """
   @spec list_busy_intervals(map() | CalendarIntegrationSchema.t(), keyword()) ::
           {:ok, [FreeBusy.interval()]} | {:error, term()}
@@ -352,9 +393,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     from = Keyword.fetch!(opts, :start_time)
     to = Keyword.fetch!(opts, :end_time)
 
-    with {:ok, address} <- mailbox(config),
-         {:ok, doc} <- Client.call(config, Requests.get_user_availability(address, from, to)) do
-      FreeBusy.parse_intervals(doc)
+    with {:ok, address} <- mailbox(config) do
+      fetch_busy_intervals(config, address, availability_slices(from, to))
     end
   end
 
@@ -409,6 +449,47 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     with {:ok, doc} <- Client.call(to_config(client), Requests.find_folder()) do
       Soap.require_success(doc, "FindFolderResponseMessage")
     end
+  end
+
+  # `reduce_while` rather than a `map` and a `find`: the halt is the point.
+  # A slice that fails ends the read where it failed, so a refused window is
+  # never answered as an unusually quiet one, and the slices past it are not
+  # even requested.
+  defp fetch_busy_intervals(config, address, slices) do
+    Enum.reduce_while(slices, {:ok, []}, fn {from, to}, {:ok, acc} ->
+      case fetch_busy_slice(config, address, from, to) do
+        {:ok, intervals} -> {:cont, {:ok, acc ++ intervals}}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp fetch_busy_slice(config, address, from, to) do
+    with {:ok, doc} <- Client.call(config, Requests.get_user_availability(address, from, to)) do
+      FreeBusy.parse_intervals(doc)
+    end
+  end
+
+  # Half-open slices: each one ends where the next begins, so the set tiles
+  # the caller's range exactly, and no stretch of it is asked for twice.
+  #
+  # A range that is empty or inverted is handed on as the single request it
+  # has always been rather than silently answered `{:ok, []}`. Nothing here
+  # asks for one, and a success carrying no intervals is the answer this
+  # provider must never invent; let the server say what it makes of it.
+  defp availability_slices(from, to) do
+    if DateTime.compare(from, to) == :lt do
+      from
+      |> Stream.iterate(&DateTime.add(&1, @availability_chunk_days, :day))
+      |> Stream.take_while(&(DateTime.compare(&1, to) == :lt))
+      |> Enum.map(&{&1, slice_end(&1, to)})
+    else
+      [{from, to}]
+    end
+  end
+
+  defp slice_end(from, to) do
+    Enum.min([DateTime.add(from, @availability_chunk_days, :day), to], DateTime)
   end
 
   defp fetch_items(_config, []), do: {:ok, []}

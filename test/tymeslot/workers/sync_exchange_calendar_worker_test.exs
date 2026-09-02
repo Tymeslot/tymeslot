@@ -23,10 +23,14 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
   @moduletag :calendar
   @moduletag :integrations
 
+  alias Ecto.Changeset
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.ExchangeCase
   alias Tymeslot.ExchangeFixtures
+  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Exchange.IntervalNormaliser
@@ -41,8 +45,19 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
   @other_busy_start "2026-09-04T09:00:00Z"
   @other_busy_end "2026-09-04T10:00:00Z"
 
+  @base_url "https://mail.example.com/EWS/Exchange.asmx"
+
+  # How many failures open the host's breaker, read from the configuration so
+  # a retuned provider retunes the tests below with it.
+  @breaker_threshold CalendarCircuitBreaker.get_config(:exchange).failure_threshold
+
   setup do
     with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
+
+    # Every EWS request runs through a per-host circuit breaker, so a test that
+    # stubs a run of transport failures would otherwise leave the host's
+    # breaker open and have the next test refused before it reached its stub.
+    ExchangeCase.reset_breaker(@base_url)
 
     user = insert(:user)
 
@@ -50,7 +65,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
       insert(:calendar_integration,
         user: user,
         provider: "exchange",
-        base_url: "https://mail.example.com/EWS/Exchange.asmx",
+        base_url: @base_url,
         username_encrypted: Encryption.encrypt("user@example.com"),
         password_encrypted: Encryption.encrypt("secret"),
         provider_account_email: "user@example.com",
@@ -87,6 +102,29 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
 
       assert Enum.any?(sent_requests(), &(&1 =~ "GetUserAvailability")),
              "the sync never asked GetUserAvailability, so availability came from the items"
+    end
+
+    test "keeps every free/busy request inside the window the service will accept", %{
+      integration: integration
+    } do
+      # The sync window is 365 days each way; the Availability service refuses
+      # a `TimeWindow` longer than its `MaximumQueryIntervalDays`, 42 by
+      # default, with an error response code. Asking for the whole window in
+      # one request therefore fails the busy read, and the worker writes
+      # neither half of the cache: a connected mailbox with an empty cache
+      # reads as a free diary. This pins the worker's own window against the
+      # cap, where `Exchange.AvailabilityWindowTest` pins the slicing itself.
+      stub_full_sync()
+
+      assert :ok = run(integration)
+
+      windows =
+        sent_requests()
+        |> Enum.filter(&(&1 =~ "<m:GetUserAvailabilityRequest"))
+        |> Enum.map(&ExchangeCase.requested_availability_window/1)
+
+      assert windows != []
+      assert Enum.reject(windows, fn {from, to} -> DateTime.diff(to, from, :day) <= 42 end) == []
     end
 
     test "shows the items on the grid and keeps the opaque intervals off it", %{
@@ -257,10 +295,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
       stub_full_sync()
       assert :ok = run(integration)
 
-      stub_ews([
-        ExchangeFixtures.availability_response([{@busy_start, @busy_end}]),
-        ExchangeFixtures.empty_find_item_response()
-      ])
+      stub_full_sync(find_item: ExchangeFixtures.empty_find_item_response())
 
       assert {:error, {:empty_result_with_populated_cache, "display_only"}} = run(integration)
 
@@ -272,10 +307,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
     } do
       # Nothing cached yet, so an empty mailbox is believable and both halves
       # are written empty rather than refused.
-      stub_ews([
-        ExchangeFixtures.availability_response([]),
-        ExchangeFixtures.empty_find_item_response()
-      ])
+      stub_full_sync(intervals: [], find_item: ExchangeFixtures.empty_find_item_response())
 
       assert :ok = run(integration)
       assert availability_events(integration) == []
@@ -321,6 +353,71 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
       assert {:discard, _reason} =
                perform_job(SyncExchangeCalendarWorker, %{"calendar_integration_id" => 0})
     end
+
+    test "snoozes rather than calling a server its breaker has already given up on", %{
+      integration: integration
+    } do
+      ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, :econnrefused) end)
+
+      # Each of these reaches the server and fails there, which is what opens
+      # the host's breaker.
+      for _attempt <- 1..@breaker_threshold do
+        assert {:error, :network_error} = run(integration)
+      end
+
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, :request_issued)
+        ReqTest.transport_error(conn, :econnrefused)
+      end)
+
+      assert {:snooze, _seconds} = run(integration)
+      refute_received :request_issued
+
+      # A refusal is not the mailbox's failure, so nothing new is put in front
+      # of its owner.
+      assert %{needs_reauth: false} = Repo.reload!(integration)
+    end
+  end
+
+  describe "a failure between the two halves" do
+    test "keeps the busy rows it wrote but advances neither the stamp nor the cache", %{
+      user: user,
+      integration: integration
+    } do
+      stamped_at = ~U[2026-01-01 00:00:00Z]
+
+      integration =
+        integration
+        |> Changeset.change(last_external_sync_at: stamped_at)
+        |> Repo.update!()
+
+      cache_key = AvailabilityCache.booking_window_events_key(user.id)
+      AvailabilityCache.put(cache_key, {:ok, :seeded})
+
+      stub_busy_read_then_item_fault()
+
+      assert {:error, {:soap_fault, message}} = run(integration)
+      assert message =~ "ErrorInvalidIdMalformed"
+
+      # The availability half really did land: this is the partial success the
+      # worker's moduledoc is about, and without it the rest of the test would
+      # be asserting about a run that wrote nothing.
+      assert [_busy] = availability_events(integration)
+      assert grid_rows(integration) == []
+
+      # The contract: the run short-circuits, so the freshness stamp does not
+      # move and the availability cache is left alone. The cost is a lagging
+      # indicator, not a bookable slot: the booking-time conflict check reads
+      # the busy rows above rather than anything this cache holds.
+      reloaded = Repo.reload!(integration)
+      assert reloaded.last_external_sync_at == stamped_at
+      assert reloaded.sync_error =~ "rejected the request"
+
+      assert AvailabilityCache.get_or_compute(cache_key, fn -> {:ok, :recomputed} end) ==
+               {:ok, :seeded}
+    end
   end
 
   describe "sync state" do
@@ -359,38 +456,76 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
     date |> DateTime.new!(time, "Etc/UTC") |> DateTime.to_iso8601()
   end
 
-  # The three round trips one run makes, in order: `GetUserAvailability`, then
-  # `FindItem`, then the batched `GetItem`.
+  # A response per EWS operation rather than a fixed sequence of round trips.
+  # The free/busy read is sliced into a request per chunk of the sync window
+  # (see `Exchange.Provider`), so one run asks `GetUserAvailability` many
+  # times, and a positional stub would answer the second slice with the
+  # `FindItem` body. `:intervals`, `:find_item` and `:get_item` override what
+  # each operation is answered with.
   defp stub_full_sync(opts \\ []) do
     intervals = Keyword.get(opts, :intervals, [{@busy_start, @busy_end}])
-
-    stub_ews([
-      ExchangeFixtures.availability_response(intervals),
-      ExchangeFixtures.find_item_response(),
-      ExchangeFixtures.get_item_response()
-    ])
-  end
-
-  defp stub_ews(responses) do
+    find_item = Keyword.get(opts, :find_item, ExchangeFixtures.find_item_response())
+    get_item = Keyword.get(opts, :get_item, ExchangeFixtures.get_item_response())
     test_pid = self()
-    counter = :counters.new(1, [])
 
     ReqTest.stub(:tymeslot_http, fn conn ->
       {:ok, request_body, conn} = Conn.read_body(conn)
       send(test_pid, {:ews_request, request_body})
 
-      :counters.add(counter, 1, 1)
-
-      case Enum.at(responses, :counters.get(counter, 1) - 1) do
-        nil ->
-          Conn.resp(conn, 500, "unexpected extra EWS request")
-
-        body ->
-          conn
-          |> Conn.put_resp_content_type("text/xml")
-          |> Conn.resp(200, body)
-      end
+      conn
+      |> Conn.put_resp_content_type("text/xml")
+      |> Conn.resp(200, ews_response(request_body, intervals, find_item, get_item))
     end)
+  end
+
+  # The free/busy read succeeds and its rows are written; the item read that
+  # follows is refused. The fault is deliberately one the breaker ignores, so
+  # what the test observes is the worker's short-circuit rather than a refusal
+  # arriving from somewhere else.
+  defp stub_busy_read_then_item_fault do
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      {:ok, request_body, conn} = Conn.read_body(conn)
+
+      {status, body} =
+        if request_body =~ "<m:GetUserAvailabilityRequest" do
+          {200, availability_response(request_body, [{@busy_start, @busy_end}])}
+        else
+          {500, ExchangeCase.fault_envelope("ErrorInvalidIdMalformed")}
+        end
+
+      conn
+      |> Conn.put_resp_content_type("text/xml")
+      |> Conn.resp(status, body)
+    end)
+  end
+
+  defp ews_response(request_body, intervals, find_item, get_item) do
+    cond do
+      request_body =~ "<m:GetUserAvailabilityRequest" ->
+        availability_response(request_body, intervals)
+
+      request_body =~ "<m:FindItem" ->
+        find_item
+
+      request_body =~ "<m:GetItem" ->
+        get_item
+    end
+  end
+
+  # A server answers a slice with the busy time inside the window that slice
+  # asked for, so the stub clips too. Answering every slice with the whole
+  # fixture would report one meeting once per slice, and hide from these tests
+  # whether the right window was ever asked about.
+  defp availability_response(request_body, intervals) do
+    {from, to} = ExchangeCase.requested_availability_window(request_body)
+
+    ExchangeFixtures.availability_response(
+      Enum.filter(intervals, fn {start_at, _end_at} ->
+        {:ok, start_at, _offset} = DateTime.from_iso8601(start_at)
+
+        DateTime.compare(start_at, from) != :lt and DateTime.compare(start_at, to) == :lt
+      end)
+    )
   end
 
   defp sent_requests(acc \\ []) do

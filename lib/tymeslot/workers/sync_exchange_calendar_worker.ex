@@ -32,10 +32,19 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   The availability read runs first and its failure ends the run without
   writing anything. The item read failing afterwards costs the grid its
   freshness and nothing more, which is the right way round: the busy rows are
-  already written and correct. That partial success is not thrown away —
-  the availability cache is still invalidated and the external-sync stamp
-  still advances, because the diary the booking page serves really is fresh.
-  Only the job's verdict is an error, so Oban retries the item read.
+  already written and correct.
+
+  That later failure still ends the run, though, and deliberately: `sync/1`
+  short-circuits, so the busy rows stay written but the availability cache is
+  *not* invalidated and `last_external_sync_at` does *not* advance. What that
+  costs is a freshness indicator that lags by one cycle, and no more. It
+  cannot cause a double booking: the availability cache has a short TTL, and
+  the conflict check a booking runs reads the cached provider rows the busy
+  write just replaced rather than anything the invalidation controls. Stamping
+  and invalidating on the way out of a failing run would buy that one
+  indicator at the price of an error path that also writes, so the
+  short-circuit stands. The job's verdict is the error, and Oban retries the
+  item read.
 
   ## No incremental mechanism
 
@@ -76,11 +85,17 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
   A 401 or 403 means the stored password no longer works or the account may
   not read the mailbox, which no amount of retrying fixes: the integration is
-  flagged for reconnection and the job discarded. A 5xx is discarded too — the
+  flagged for reconnection and the job discarded. A 5xx is discarded too; the
   retry that matters is the next scheduled cycle, not three attempts inside a
   minute, and exhausting them raises a permanent-failure alert about an outage
   no operator here can fix. The vocabulary is CalDAV's throughout, because
   `Exchange.Client` answers in it.
+
+  `:circuit_open` is that host's breaker refusing the read because the server
+  has already been failing (see `Exchange.Client`). No request was sent, so
+  there is no failure to record against the integration and no new sentence to
+  show its owner; the job snoozes past the breaker's recovery window instead,
+  as the Google and Outlook sync workers do.
 
   The empty-response guard mirrors `SyncIcsCalendarWorker`'s and is applied
   per role. A successful call that returns nothing is far more likely a bad
@@ -116,6 +131,11 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
   @busy_only EventRole.busy_only()
   @display_only EventRole.display_only()
+
+  # Long enough to clear the Exchange breaker's `recovery_timeout` (two
+  # minutes, see `CalendarCircuitBreaker`), so the snoozed job wakes to a
+  # breaker that will at least let it probe rather than to a second refusal.
+  @circuit_open_snooze_seconds 130
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
@@ -263,6 +283,18 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
       ),
       "Exchange integration has no addressable mailbox"
     )
+  end
+
+  # The host's breaker refused the read, so nothing was sent and nothing about
+  # this integration changed. Recording a sync error would put the breaker's
+  # own refusal in front of the owner as though their mailbox had failed, and
+  # retrying immediately would only be refused again.
+  defp handle_result({:error, :circuit_open}, integration) do
+    Logger.warning("Exchange circuit breaker open; snoozing sync",
+      calendar_integration_id: integration.id
+    )
+
+    {:snooze, @circuit_open_snooze_seconds}
   end
 
   # A 5xx is the remote failing, not the request being wrong, but the retry
