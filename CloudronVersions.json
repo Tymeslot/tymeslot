@@ -3176,6 +3176,53 @@
       },
       "publishState": "published",
       "ts": "Tue, 01 Sep 2026 06:54:45 GMT"
+    },
+    "1.14.0": {
+      "creationDate": "Wed, 02 Sep 2026 08:59:13 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Microsoft Exchange calendars can now be connected, and hosts gain finer control over booking times and admin settings.\n* Connect a Microsoft Exchange calendar for free/busy and scheduled sync\n* Set a custom booking interval instead of picking from a fixed list\n* A two-tier hour picker keeps dense slot grids grouped and legible\n* Admin settings are grouped into tabs, with a fallback language per surface\n* Self-hosted SMTP relays now send mail reliably, with clearer TLS errors",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.14.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.14.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Wed, 02 Sep 2026 08:59:13 GMT"
     }
   }
 }
