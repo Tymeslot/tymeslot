@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
           status: String.t(),
           failures: non_neg_integer(),
           consecutive_hard_failures: non_neg_integer(),
+          consecutive_sync_failures: non_neg_integer(),
           successes: non_neg_integer(),
           backoff_ms: pos_integer(),
           last_check_at: DateTime.t() | nil,
@@ -39,6 +40,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
     field(:status, :string, default: "healthy")
     field(:failures, :integer, default: 0)
     field(:consecutive_hard_failures, :integer, default: 0)
+    field(:consecutive_sync_failures, :integer, default: 0)
     field(:successes, :integer, default: 0)
     field(:backoff_ms, :integer, default: 1_800_000)
     field(:last_check_at, :utc_datetime_usec)
@@ -69,6 +71,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :status,
       :failures,
       :consecutive_hard_failures,
+      :consecutive_sync_failures,
       :successes,
       :backoff_ms,
       :last_check_at,
@@ -96,6 +99,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :status,
       :failures,
       :consecutive_hard_failures,
+      :consecutive_sync_failures,
       :successes,
       :backoff_ms,
       :last_check_at,

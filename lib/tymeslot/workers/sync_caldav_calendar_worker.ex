@@ -40,6 +40,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.HealthCheck
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
@@ -52,6 +53,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       {:ok, integration} ->
         integration
         |> Sync.run(force_full_fetch?)
+        |> tap(&record_sync_outcome(integration, &1))
         |> handle_sync_result(integration)
 
       {:error, :not_found} ->
@@ -65,6 +67,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         CalendarManagement.handle_reauth_required(integration)
     end
   end
+
+  # Every clause below that discards is a failure no operator or user would
+  # otherwise hear about: `{:discard, _}` emits `job:stop`, which
+  # `ObanFailureAlerter` deliberately ignores. Recording the failure against
+  # health state is what stops that quietness being permanent — a streak of
+  # them raises the badge. The success side is already covered:
+  # `CalDAV.Sync.State.put/2` calls `HealthCheck.mark_synced_successfully/2`,
+  # which clears the streak.
+  defp record_sync_outcome(_integration, :ok), do: :ok
+
+  defp record_sync_outcome(integration, {:error, _reason}),
+    do: HealthCheck.record_sync_failure(:calendar, integration)
 
   defp handle_sync_result(:ok, _integration), do: :ok
 

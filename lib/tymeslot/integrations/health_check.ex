@@ -211,6 +211,39 @@ defmodule Tymeslot.Integrations.HealthCheck do
     :ok
   end
 
+  @doc """
+  Records that one sync cycle for this integration failed.
+
+  A sync failure is the only evidence some outages produce. The scheduled
+  probe and a sync do not issue the same request — for CalDAV the probe
+  PROPFINDs the calendar collection while sync issues a REPORT against it —
+  and a server can answer one while refusing the other. When that happens the
+  probe is honestly healthy and the integration silently stops syncing:
+  production carried a CalDAV integration that failed 1015 of 1026 sync
+  attempts across eleven days with a green badge and no alert the whole time.
+
+  Feeding the failure into the same pipeline the probe uses means a streak of
+  them raises the badge, the 48-hour notification and the auto-pause sweep,
+  without touching the deliberate decision that a single failed cycle is not
+  worth retrying to exhaustion or paging an operator over. The streak is
+  cleared by the successful sync that follows, via
+  `mark_synced_successfully/2`.
+
+  Safe to call for any failure reason: reasons that already flag the
+  integration for reconnection simply reach the badge by two routes.
+  """
+  @spec record_sync_failure(integration_type(), map()) :: :ok
+  def record_sync_failure(type, integration) do
+    old_health_state = Monitor.get_state(type, integration.id, integration.user_id)
+    new_health_state = Monitor.record_sync_failure(old_health_state)
+    transition = Monitor.detect_transition(old_health_state, new_health_state)
+
+    Monitor.put_sync_state(type, integration.id, new_health_state)
+    ResponseHandler.handle_transition(type, integration, transition, new_health_state)
+
+    :ok
+  end
+
   # Server Callbacks
 
   @impl GenServer

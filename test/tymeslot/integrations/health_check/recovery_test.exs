@@ -112,5 +112,20 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
 
       refute_enqueued(worker: IntegrationHealthWorker)
     end
+
+    test "clears the failed-sync streak that raised the badge", %{user: user} do
+      insert_unhealthy_row(user, "calendar", 301)
+
+      IntegrationHealthStateQueries.update_fields(:calendar, 301, consecutive_sync_failures: 7)
+
+      :ok = HealthCheck.mark_synced_successfully(:calendar, 301)
+
+      # This is the streak's only reset path: nothing else zeroes it, so a
+      # successful sync that left it standing would keep the integration
+      # permanently unhealthy.
+      {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 301)
+      assert row.consecutive_sync_failures == 0
+      assert row.status == "healthy"
+    end
   end
 end

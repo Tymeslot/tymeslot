@@ -52,6 +52,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       status: HealthStatus.to_db_value(:healthy),
       failures: 0,
       consecutive_hard_failures: 0,
+      consecutive_sync_failures: 0,
       successes: 0,
       backoff_ms: 1_800_000
     }
@@ -129,6 +130,11 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   in-app badge can lag the truth by up to an hour while waiting for the next
   scheduled probe.
 
+  A successful sync is also what clears `consecutive_sync_failures`, the
+  streak counter `Monitor.record_sync_failure/1` raises the unhealthy badge
+  from. That is the whole of its reset path: nothing else zeroes it, so this
+  function must keep doing so.
+
   `successes` counts consecutive successful probes, and a reset has run none,
   so it starts at zero like every other counter here. It needs no head start
   towards the recovery threshold: the row is written as healthy, and
@@ -144,6 +150,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       status: HealthStatus.to_db_value(:healthy),
       failures: 0,
       consecutive_hard_failures: 0,
+      consecutive_sync_failures: 0,
       successes: 0,
       backoff_ms: 1_800_000,
       last_check_at: DateTime.utc_now(),
