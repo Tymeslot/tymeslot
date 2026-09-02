@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   @tab_error_fields %{
     "details" => [:name, :duration, :description, :icon],
     "location" => [:video_integration, :calendar_integration, :target_calendar],
-    "booking" => [:payment_required, :price_cents],
+    "booking" => [:payment_required, :price_cents, :max_participants],
     "reminders" => [:reminder_config]
   }
 
@@ -211,6 +211,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             group_bookings_enabled={@group_bookings_enabled}
             max_participants={@max_participants}
             payment_required={@payment_required}
+            payments_charges_enabled={@payments_charges_enabled}
             form_errors={@form_errors}
             myself={@myself}
           />
@@ -324,7 +325,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               </button>
               <button
                 type="submit"
-                disabled={@saving || @refreshing_calendars}
+                disabled={@saving || @refreshing_calendars || @form_errors != %{}}
                 class="btn btn-primary"
               >
                 <%= if @saving do %>

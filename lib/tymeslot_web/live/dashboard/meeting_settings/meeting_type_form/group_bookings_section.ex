@@ -7,7 +7,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   participant-limit number input (2 up to the `Constraints` maximum). Group
   bookings and payments are mutually exclusive: while payment is required
   the toggle renders disabled with an explanatory hint — the parent guards
-  the event server-side and the changeset enforces the rule.
+  the event server-side and the changeset enforces the rule. The toggle
+  stays enabled, though, when the host has since lost charge capability
+  (`payments_charges_enabled: false`): the payments toggle is unreachable
+  in that state, so blocking this one too would leave the organiser with no
+  way to reach group bookings at all. The parent event handler clears
+  `payment_required` as part of enabling the toggle in that case.
 
   The toggle and input dispatch `toggle_group_bookings` and
   `change_max_participants` back to the parent `MeetingTypeForm`
@@ -28,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   attr :group_bookings_enabled, :boolean, required: true
   attr :max_participants, :string, required: true
   attr :payment_required, :boolean, required: true
+  attr :payments_charges_enabled, :boolean, required: true
   attr :form_errors, :map, required: true
   attr :myself, :any, required: true
 
@@ -42,19 +48,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
         </h3>
       </div>
 
-      <.info_box :if={@payment_required} variant={:info}>
+      <.info_box :if={@payment_required and @payments_charges_enabled} variant={:info}>
         {dgettext("dashboard_meeting_form", "Turn off payments to enable group bookings.")}
       </.info_box>
 
       <label class={[
         "flex items-center gap-3",
-        @payment_required && "opacity-60 cursor-not-allowed"
+        @payment_required && @payments_charges_enabled && "opacity-60 cursor-not-allowed"
       ]}>
         <input
           type="checkbox"
           class="checkbox"
           checked={@group_bookings_enabled}
-          disabled={@payment_required}
+          disabled={@payment_required and @payments_charges_enabled}
           phx-click="toggle_group_bookings"
           phx-target={@myself}
         />
@@ -87,6 +93,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
           )}
         </p>
       </div>
+
+      <%!-- The number input above only renders while the toggle is on and
+           payment is not required. A cross-field error can still land on
+           this same field while it's hidden — e.g. the changeset's mutual
+           exclusion check on `:max_participants` when payment becomes
+           required — so mirror the payments section's unconditional error
+           outlet rather than let it go silently invisible. --%>
+      <%= if not (@group_bookings_enabled and not @payment_required) do %>
+        <%= for error <- FormValidationHelpers.field_errors(@form_errors, :max_participants) do %>
+          <p class="form-error">{Helpers.format_errors(error)}</p>
+        <% end %>
+      <% end %>
     </div>
     """
   end

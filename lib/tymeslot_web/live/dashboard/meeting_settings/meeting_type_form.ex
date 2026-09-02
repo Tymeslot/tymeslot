@@ -299,13 +299,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   def handle_event("toggle_group_bookings", _params, socket) do
     # Guard: payments and group bookings are mutually exclusive — the
     # control renders disabled while payment is required, so a stale or
-    # forged event must not flip the toggle.
-    if socket.assigns.payment_required do
+    # forged event must not flip the toggle. Exception: once the host has
+    # lost charge capability, the payments toggle itself is unreachable
+    # (disabled), so this guard alone would strand the organiser with no
+    # way to ever reach group bookings. In that case the toggle stays
+    # enabled and flipping it also clears `payment_required`, keeping the
+    # two mutually exclusive without a dead end.
+    if socket.assigns.payment_required and socket.assigns.payments_charges_enabled do
       {:noreply, socket}
     else
       {:noreply,
        socket
        |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)
+       |> assign(:payment_required, false)
        |> assign(
          :form_errors,
          FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :max_participants)

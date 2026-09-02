@@ -6,6 +6,8 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   meeting type creation/editing and scheduling settings configuration.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
@@ -424,12 +426,37 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
            metadata: metadata
          ) do
       {:ok, validated} -> {:ok, to_string(validated)}
-      {:error, message} -> {:error, %{max_participants: message}}
+      {:error, _message} -> {:error, %{max_participants: participant_limit_message(value, range)}}
     end
   end
 
   defp validate_max_participants(_invalid, _metadata, _range),
-    do: {:error, %{max_participants: "Participant limit must be a number"}}
+    do:
+      {:error,
+       %{
+         max_participants:
+           dgettext("dashboard_meeting_form", "Participant limit must be a valid number")
+       }}
+
+  # Re-derives which bound was violated so the user-facing message is
+  # translated, without changing `validate_numeric_setting/6`'s plain-English
+  # message (shared with schedule-settings validators outside this form).
+  defp participant_limit_message(value, range) do
+    case Integer.parse(value) do
+      {parsed, ""} when parsed < range.first ->
+        dgettext("dashboard_meeting_form", "Participant limit must be at least %{min}",
+          min: range.first
+        )
+
+      {parsed, ""} when parsed > range.last ->
+        dgettext("dashboard_meeting_form", "Participant limit cannot exceed %{max}",
+          max: range.last
+        )
+
+      _invalid ->
+        dgettext("dashboard_meeting_form", "Participant limit must be a valid number")
+    end
+  end
 
   defp validate_numeric_range(value_str, min, max, field_name) do
     case Integer.parse(value_str) do

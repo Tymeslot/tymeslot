@@ -2,12 +2,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
   @moduledoc """
   Event-handling logic for the meeting-type form's reminders section.
 
-  Extracted from `MeetingTypeForm` to keep that module under the project's
-  line-count limit — `MeetingTypeForm.handle_event/3` delegates the
-  `update_reminder_input`, `toggle_custom_reminder`, `add_quick_reminder`,
-  `add_reminder`, and `remove_reminder` events here, each taking the socket
-  and returning the updated socket (auto-saving where the change is
-  persistable).
+  Extracted from `MeetingTypeForm` to keep the reminders section's event
+  handling together as its own cohesive unit — `MeetingTypeForm.handle_event/3`
+  delegates the `update_reminder_input`, `toggle_custom_reminder`,
+  `add_quick_reminder`, `add_reminder`, and `remove_reminder` events here,
+  each taking the socket and returning the updated socket (auto-saving where
+  the change is persistable).
   """
 
   use TymeslotWeb, :html

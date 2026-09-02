@@ -90,6 +90,36 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       assert render(view) =~ "Participant limit cannot exceed 999"
       assert reload_type(user, meeting_type.id).max_participants == 10
     end
+
+    test "an invalid limit left pending does not un-group the type on a later autosave",
+         %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, max_participants: 10)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      # "1" is a valid *solo* value but not a valid *group* value — the
+      # inline validator correctly rejects it and leaves the raw value in
+      # the input for display.
+      view
+      |> element("input[phx-change='change_max_participants']")
+      |> render_change(%{"meeting_type" => %{"max_participants_input" => "1"}})
+
+      assert render(view) =~ "Participant limit must be at least 2"
+      assert reload_type(user, meeting_type.id).max_participants == 10
+
+      # Editing an unrelated field triggers auto-save. Before the fix, this
+      # persisted the pending "1" as a valid *solo* value (1 is inside the
+      # wide 1..999 range) and silently un-grouped the type.
+      view
+      |> element("input[name='meeting_type[name]']")
+      |> render_change(%{"meeting_type" => %{"name" => "Renamed Workshop"}})
+
+      assert reload_type(user, meeting_type.id).max_participants == 10
+    end
   end
 
   describe "Creating" do
@@ -128,6 +158,24 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
         )
 
       assert created.max_participants == 12
+    end
+
+    test "an invalid pending limit disables the submit button", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      view |> element("button", "Add Meeting Type") |> render_click()
+
+      view
+      |> element("input[phx-click='toggle_group_bookings']")
+      |> render_click()
+
+      refute has_element?(view, "button[type='submit'][disabled]")
+
+      view
+      |> element("input[phx-change='change_max_participants']")
+      |> render_change(%{"meeting_type" => %{"max_participants_input" => "1"}})
+
+      assert render(view) =~ "Participant limit must be at least 2"
+      assert has_element?(view, "button[type='submit'][disabled]")
     end
   end
 
@@ -198,6 +246,58 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       |> render_click("toggle_payment_required", %{})
 
       refute render(view) =~ "Price (USD)"
+    end
+  end
+
+  describe "Losing charge capability while payment is required" do
+    setup %{user: user} do
+      previous_checker = Application.get_env(:tymeslot, :feature_access_checker)
+      previous_flag = Application.get_env(:tymeslot, :meeting_payments_enabled)
+
+      Application.put_env(
+        :tymeslot,
+        :feature_access_checker,
+        Tymeslot.Features.DefaultAccessChecker
+      )
+
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      # No charge-ready Connect account: the host has lost (or never
+      # finished setting up) charge capability, so the payments toggle
+      # itself renders disabled and is unreachable from the UI.
+      insert(:meeting_type, user: user, payment_required: true, price_cents: 1000)
+
+      on_exit(fn ->
+        restore_env(:feature_access_checker, previous_checker)
+        restore_env(:meeting_payments_enabled, previous_flag)
+      end)
+
+      :ok
+    end
+
+    test "the group bookings toggle stays reachable and clears payment_required",
+         %{conn: conn, user: user} do
+      meeting_type = Enum.find(MeetingTypes.get_all_meeting_types(user.id), & &1.payment_required)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      # The payments toggle is unreachable (charges not enabled), so unlike
+      # the normal mutual-exclusion case the group toggle must not be
+      # disabled too — otherwise there would be no way out.
+      refute has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
+
+      view
+      |> element("input[phx-click='toggle_group_bookings']")
+      |> render_click()
+
+      assert render(view) =~ "Participant limit"
+
+      updated = reload_type(user, meeting_type.id)
+      refute updated.payment_required
+      assert updated.max_participants == 10
     end
   end
 

@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Validation.Constraints
 
   @doc """
   Builds the `meeting_type` params map from the form's socket assigns.
@@ -45,7 +46,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "availability_schedule_id" =>
         to_param(Map.get(assigns, :selected_availability_schedule_id)),
       "icon" => assigns.selected_icon,
-      "max_participants" => max_participants_param(assigns),
       "allow_guests" => to_string(Map.get(assigns, :allow_guests, false)),
       "show_as_free" => to_string(Map.get(assigns, :show_as_free, false)),
       "max_bookings_per_day" => to_param(booking_limits["max_bookings_per_day"]),
@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     }
     |> maybe_put_custom_fields(assigns)
     |> maybe_put_payment(assigns)
+    |> maybe_put_max_participants(assigns)
   end
 
   @doc """
@@ -108,10 +109,45 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   # Toggle off means a solo type — the canonical param is always "1" then,
   # regardless of what the (hidden) input last held.
-  defp max_participants_param(%{group_bookings_enabled: true, max_participants: value}),
-    do: value
+  #
+  # Toggle on posts the pending limit only when it actually satisfies the
+  # *group* range (2..999). The visible input's own validation
+  # (`InputValidation.validate_field(:group_participants, ...)`) already
+  # rejects out-of-range values inline, but a rejected value is left sitting
+  # in the assign so the input still shows what was typed — a later
+  # auto-save triggered by an unrelated field must forward the *last
+  # persisted* limit instead, not the stale invalid one.
+  #
+  # This can only run from `Autosave` (edit mode — `build_params/1` is never
+  # called while creating), so `assigns.type` is always the meeting type
+  # being edited. Omitting the key entirely would not help here the way it
+  # does for `custom_fields`/`payment`: unlike those, `FormMapper` always
+  # defaults an absent `max_participants` to 1 (the correct behaviour on
+  # create, where there is no existing type to fall back on), so a missing
+  # key would silently downgrade the type exactly like the invalid value
+  # would have.
+  defp maybe_put_max_participants(params, %{group_bookings_enabled: true} = assigns) do
+    value =
+      case group_participants_param(assigns.max_participants) do
+        {:ok, value} -> value
+        :error -> to_string(assigns.type.max_participants)
+      end
 
-  defp max_participants_param(_assigns), do: "1"
+    Map.put(params, "max_participants", value)
+  end
+
+  defp maybe_put_max_participants(params, _assigns), do: Map.put(params, "max_participants", "1")
+
+  defp group_participants_param(value) when is_binary(value) do
+    range = Constraints.group_participants_range()
+
+    case Integer.parse(value) do
+      {parsed, ""} when parsed >= range.first and parsed <= range.last -> {:ok, to_string(parsed)}
+      _invalid -> :error
+    end
+  end
+
+  defp group_participants_param(_value), do: :error
 
   defp reminder_param(%{value: value, unit: unit}),
     do: %{"value" => to_string(value), "unit" => unit}
