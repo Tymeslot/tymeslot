@@ -315,7 +315,19 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     Application.get_env(:tymeslot, :google_calendar_oauth_helper, GoogleOAuthHelper)
   end
 
-  defp ensure_valid_token(config) do
+  @doc """
+  Returns `config` carrying a valid access token, refreshing under a lock and
+  persisting the result when the current one has expired.
+
+  Public because it is the only correct way to obtain a Google token for a
+  stored integration: `OAuthTokenManager.refresh_with_lock/2` stops two callers
+  spending the same refresh token, writes the new credentials back, and honours
+  the injectable `:google_calendar_oauth_helper`. Calling
+  `GoogleOAuthHelper.refresh_access_token/2` directly does none of those.
+  """
+  @spec ensure_valid_token(map()) :: {:ok, map()} | {:error, any()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def ensure_valid_token(config) do
     expires_at =
       case config do
         %{token_expires_at: v} -> v
