@@ -279,7 +279,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
       disabled={@disabled}
       {@rest}
     >
-      <span class="time-slot-button__time">
+      <span>
         {LocalizationHelpers.format_time_by_locale(@slot.start_time)}
       </span>
       <SeatBadge.seat_badge seats_left={@slot[:seats_left]} capacity={@slot[:capacity]} />

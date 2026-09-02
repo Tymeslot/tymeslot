@@ -81,6 +81,39 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
       assert assigns.max_guests == 0
       assert assigns.guest_emails == []
     end
+
+    # A broadcast that doesn't move this booker's own cap (they're nowhere
+    # near it) used to still wipe out whatever error the add form was
+    # showing — e.g. "Enter a valid email address" from a bad keystroke.
+    test "does not clobber an in-flight validation error when the cap is unchanged" do
+      socket =
+        socket_with(
+          group_assigns(4, %{
+            guest_emails: ~w(a@e.com b@e.com),
+            max_guests: 3,
+            guest_error: "Enter a valid email address."
+          })
+        )
+
+      assert %{assigns: assigns} = GuestBooking.assign_seat_cap(socket)
+      assert assigns.max_guests == 3
+      assert assigns.guest_error == "Enter a valid email address."
+    end
+
+    test "clears a stale trim notice once the cap recovers" do
+      socket =
+        socket_with(
+          group_assigns(4, %{
+            guest_emails: [],
+            max_guests: 0,
+            guest_error: "This time only has room for 0 of your guests, so the rest were removed."
+          })
+        )
+
+      assert %{assigns: assigns} = GuestBooking.assign_seat_cap(socket)
+      assert assigns.max_guests == 3
+      assert is_nil(assigns.guest_error)
+    end
   end
 
   describe "guests_allowed?/1" do
@@ -95,6 +128,18 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
       assert GuestBooking.guests_allowed?(%{
                max_guests: 2,
                meeting_type: %{allow_guests: true}
+             })
+    end
+
+    # A visitor who had typed guests in before a seat broadcast drove the cap
+    # to zero must still see the field — now capped at 0/0 — so the trim
+    # notice explaining why their guests vanished stays visible. Otherwise
+    # the whole field, notice included, disappears silently.
+    test "still shown at a zero cap once the field was already open" do
+      assert GuestBooking.guests_allowed?(%{
+               max_guests: 0,
+               meeting_type: %{allow_guests: true},
+               guests_open: true
              })
     end
   end

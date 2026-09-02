@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.Seats
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListPanels
@@ -526,7 +527,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   # the organiser needs to read here — a card saying "1/4" beside a slot
   # advertising "2 seats left" is two answers to the same question.
   defp seats_taken(meeting),
-    do: length(participant_list(meeting)) + length(guest_list(meeting))
+    do: Seats.seats_taken(participant_list(meeting), guest_list(meeting))
 
   # The title of a group card: the shared slot has no single attendee, so it
   # is named after what was booked rather than left blank. `title` is a

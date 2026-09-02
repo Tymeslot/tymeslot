@@ -157,6 +157,14 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   # the one this booker just took — bouncing there would be absurd.
   @seat_update_states [:schedule, :questions, :booking]
 
+  # A burst of seat changes on a popular slot broadcasts one message per
+  # change; without coalescing, every one of them drove its own synchronous,
+  # uncached refetch on every connected page. Trailing-edge debounce: the
+  # first update in a quiet period refreshes immediately, and any further
+  # ones within the window collapse into a single re-check once it elapses,
+  # rather than one full refetch per broadcast per page.
+  @seat_update_debounce_ms 500
+
   @doc """
   Handles a `{:seat_update, meeting_type_id}` broadcast from the domain layer.
 
@@ -174,9 +182,37 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     with %{id: ^meeting_type_id} <- socket.assigns[:meeting_type],
          true <- socket.assigns[:current_state] in @seat_update_states,
          date when is_binary(date) <- socket.assigns[:selected_date] do
-      refresh_seats_for_date(socket, date, transition_fun)
+      debounce_or_refresh_seats(socket, meeting_type_id, date, transition_fun)
     else
       _other -> {:noreply, socket}
+    end
+  end
+
+  defp debounce_or_refresh_seats(socket, meeting_type_id, date, transition_fun) do
+    now = System.monotonic_time(:millisecond)
+    last_refreshed_at = socket.assigns[:seat_update_refreshed_at]
+
+    if is_integer(last_refreshed_at) and now - last_refreshed_at < @seat_update_debounce_ms do
+      schedule_trailing_seat_update(socket, meeting_type_id)
+    else
+      socket =
+        socket
+        |> assign(:seat_update_refreshed_at, now)
+        |> assign(:seat_update_timer_ref, nil)
+
+      refresh_seats_for_date(socket, date, transition_fun)
+    end
+  end
+
+  # At most one trailing refresh is ever pending: a timer already scheduled
+  # means a later broadcast in the same quiet-period window is redundant with
+  # it, so it is dropped rather than stacking another one behind it.
+  defp schedule_trailing_seat_update(socket, meeting_type_id) do
+    if socket.assigns[:seat_update_timer_ref] do
+      {:noreply, socket}
+    else
+      ref = Process.send_after(self(), {:seat_update, meeting_type_id}, @seat_update_debounce_ms)
+      {:noreply, assign(socket, :seat_update_timer_ref, ref)}
     end
   end
 
@@ -185,13 +221,16 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     timezone = socket.assigns[:user_timezone]
 
     case SlotFetchingHandlerComponent.fetch_available_slots(socket, date, duration, timezone) do
-      {:ok, socket} ->
-        apply_refreshed_seats(socket, transition_fun)
+      {:ok, updated_socket} ->
+        apply_refreshed_seats(updated_socket, transition_fun)
 
-      # Transient fetch failure: the error state is already assigned; never
-      # bounce the booker over a hiccup — their selection stands until a
-      # successful refresh (or the submit-time check) says otherwise.
-      {:error, socket} ->
+      # A passive background refresh failing is not something the booker
+      # caused and must not cost them what they already have: restore the
+      # slot list and suppress the error the shared fetch just assigned,
+      # rather than propagating a wiped list and an alarming banner. Their
+      # selection stands until a successful refresh (or the submit-time
+      # check) says otherwise.
+      {:error, _failed_socket} ->
         {:noreply, socket}
     end
   end

@@ -86,10 +86,14 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   Guests are allowed when the meeting type has `allow_guests: true` and the
   current flow is not a reschedule (adding guests to an existing meeting is
   not supported). Hidden outright once the seat cap has been driven to zero
-  (the last seat on a group slot) — there is no room for a guest at all.
+  (the last seat on a group slot) — there is no room for a guest at all —
+  unless the field was already open: a booker who had typed guests in before
+  a seat broadcast dropped the cap to zero must still see the field (now
+  capped at 0/0, with `assign_seat_cap/1`'s trim notice) rather than have it,
+  and the explanation for why their guests vanished, disappear together.
   """
   @spec guests_allowed?(map()) :: boolean()
-  def guests_allowed?(%{max_guests: 0}), do: false
+  def guests_allowed?(%{max_guests: 0} = assigns), do: assigns[:guests_open] == true
 
   def guests_allowed?(assigns) do
     case assigns[:meeting_type] do
@@ -116,13 +120,26 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   """
   @spec assign_seat_cap(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_seat_cap(socket) do
+    prev_cap = socket.assigns[:max_guests]
     cap = seat_cap(socket.assigns)
-    kept = Enum.take(socket.assigns[:guest_emails] || [], cap)
+    before = socket.assigns[:guest_emails] || []
+    kept = Enum.take(before, cap)
+    notice = trim_notice(before, kept)
+
+    # A broadcast that leaves this booker's cap unchanged must not clobber an
+    # in-flight validation error from the add form. One that does change the
+    # cap clears any stale notice unless it produces a fresh one of its own.
+    error =
+      cond do
+        notice -> notice
+        cap == prev_cap -> socket.assigns[:guest_error]
+        true -> nil
+      end
 
     socket
     |> assign(:max_guests, cap)
     |> assign(:guest_emails, kept)
-    |> assign(:guest_error, trim_notice(socket.assigns[:guest_emails] || [], kept))
+    |> assign(:guest_error, error)
   end
 
   defp trim_notice(before, kept) when length(before) > length(kept) do

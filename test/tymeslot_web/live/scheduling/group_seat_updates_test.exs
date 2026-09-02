@@ -88,6 +88,54 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSeatUpdatesTest do
   end
 
   @tag :capture_log
+  test "a burst of seat_update broadcasts coalesces into a single trailing refresh", %{
+    conn: conn,
+    profile: profile,
+    meeting_type: meeting_type
+  } do
+    view = navigate_to_booking_form(conn, profile, nil)
+    # The first broadcast in a quiet period refreshes immediately, so the
+    # burst that follows lands inside its debounce window.
+    send(view.pid, {:seat_update, meeting_type.id})
+    _drain = :sys.get_state(view.pid)
+
+    send(view.pid, {:seat_update, meeting_type.id})
+    send(view.pid, {:seat_update, meeting_type.id})
+    send(view.pid, {:seat_update, meeting_type.id})
+    state = :sys.get_state(view.pid)
+
+    # Exactly one trailing refresh is scheduled behind the burst, not one per
+    # message: three redundant timers would mean three uncached refetches
+    # instead of one once the window elapses.
+    assert Process.read_timer(state.socket.assigns.seat_update_timer_ref)
+  end
+
+  @tag :capture_log
+  test "a passive refresh that fails to fetch leaves the slot list and the page quiet", %{
+    conn: conn,
+    profile: profile,
+    meeting_type: meeting_type
+  } do
+    view = navigate_to_booking_form(conn, profile, nil)
+    before = :sys.get_state(view.pid).socket.assigns
+
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+      {:error, :all_calendars_unavailable}
+    end)
+
+    send(view.pid, {:seat_update, meeting_type.id})
+    _drain = :sys.get_state(view.pid)
+
+    assigns = :sys.get_state(view.pid).socket.assigns
+
+    # The booker did nothing wrong: a background refresh failing must not
+    # cost them the slot list they already had, nor blame them for it.
+    assert assigns.available_slots == before.available_slots
+    assert assigns.calendar_error == before.calendar_error
+    refute render(view) =~ "No time slots could be loaded"
+  end
+
+  @tag :capture_log
   test "seat_update for a different meeting type is a no-op", %{
     conn: conn,
     profile: profile

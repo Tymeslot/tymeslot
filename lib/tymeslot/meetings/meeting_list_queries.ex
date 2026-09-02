@@ -404,5 +404,31 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
       participants: ^live_participants_preload()
     )
     |> Repo.all()
+    |> Enum.map(&scrub_non_organizer_roster(&1, user_email))
+  end
+
+  # A meeting converted from a 1:1 into a group keeps its original attendee
+  # matching `for_user_email/2` even though they are now just one participant
+  # among several. Only the organiser gets the full roster; the original
+  # attendee sees no participant list at all (it is not theirs to see), and
+  # only the guests that are their own (unowned guests of a not-yet-converted
+  # booking, or guests already adopted by their own participant row).
+  defp scrub_non_organizer_roster(%{organizer_email: organizer_email} = meeting, user_email)
+       when organizer_email == user_email,
+       do: meeting
+
+  defp scrub_non_organizer_roster(meeting, user_email) do
+    own_participant_id =
+      case Enum.find(meeting.participants, &(&1.email == user_email)) do
+        nil -> nil
+        participant -> participant.id
+      end
+
+    own_guests =
+      Enum.filter(meeting.guests, fn guest ->
+        is_nil(guest.participant_id) or guest.participant_id == own_participant_id
+      end)
+
+    %{meeting | participants: [], guests: own_guests}
   end
 end

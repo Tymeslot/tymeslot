@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> maybe_assign_from_params(:selected_date, date_param(params))
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
-    |> maybe_assign_from_params(:reschedule_seat_token, seat_token)
+    |> assign(:reschedule_seat_token, seat_token)
     |> assign(
       :is_rescheduling,
       is_binary(params["reschedule_meeting_uid"]) or seat_token != nil
@@ -567,17 +567,22 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   Re-invoked whenever a meeting type is assigned. Switching between group
   types adds a subscription per type without unsubscribing — the
   `{:seat_update, id}` handler matches on the current meeting type's id, so
-  broadcasts for a previously viewed type are no-ops.
+  broadcasts for a previously viewed type are no-ops. Every id subscribed to
+  this session is tracked (not just the most recent one), so returning to a
+  type visited earlier is a no-op rather than a second `PubSub.subscribe/2`
+  to the same topic — which would otherwise double every later broadcast for
+  that type, once per subscription.
   """
   @spec maybe_subscribe_to_group_seats(Phoenix.LiveView.Socket.t()) ::
           Phoenix.LiveView.Socket.t()
   def maybe_subscribe_to_group_seats(socket) do
     meeting_type = socket.assigns[:meeting_type]
+    subscribed_ids = socket.assigns[:group_seats_subscribed_ids] || MapSet.new()
 
     if connected?(socket) && group_type?(meeting_type) &&
-         socket.assigns[:group_seats_subscribed_id] != meeting_type.id do
+         not MapSet.member?(subscribed_ids, meeting_type.id) do
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatBroadcast.topic(meeting_type.id))
-      assign(socket, :group_seats_subscribed_id, meeting_type.id)
+      assign(socket, :group_seats_subscribed_ids, MapSet.put(subscribed_ids, meeting_type.id))
     else
       socket
     end

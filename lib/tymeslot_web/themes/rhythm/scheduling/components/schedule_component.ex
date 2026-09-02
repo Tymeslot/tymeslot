@@ -322,7 +322,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                     phx-target={@myself}
                                     disabled={@loading_slots}
                                   >
-                                    <span class="time-slot__time">
+                                    <span>
                                       {LocalizationHelpers.format_time_by_locale(
                                         CalendarHelpers.parse_slot_time(slot.time)
                                       )}

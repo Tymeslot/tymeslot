@@ -22,6 +22,19 @@ defmodule Tymeslot.Meetings.Seats do
   def seats_taken(meeting_id), do: ParticipantQueries.count_seats_taken(meeting_id)
 
   @doc """
+  Seats taken from already-loaded participant and guest lists: `length(participants)
+  + length(guests)`.
+
+  For callers that already hold a meeting's preloaded associations (the
+  dashboard meeting cards) and would otherwise re-derive this count
+  themselves — which risks drifting from `seats_taken/1`, the query-backed
+  definition, as either one's counting rule changes.
+  """
+  @spec seats_taken(list(), list()) :: non_neg_integer()
+  def seats_taken(participants, guests) when is_list(participants) and is_list(guests),
+    do: length(participants) + length(guests)
+
+  @doc """
   Seats still free on a meeting, never negative. The organiser may lower
   `max_participants` below the seats already booked; existing bookings
   stand and the slot simply reads as full.

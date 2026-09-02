@@ -402,7 +402,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       </div>
 
       <%!-- Repeat --%>
-      <div :if={@editable} class="mb-3">
+      <div :if={@editable and not @time_locked} class="mb-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
           myself={@myself}
@@ -410,7 +410,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         />
       </div>
       <div
-        :if={!@editable and recurrence_summary(@selected_event) != nil}
+        :if={(!@editable or @time_locked) and recurrence_summary(@selected_event) != nil}
         class="flex items-start gap-3 mb-3"
       >
         <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />

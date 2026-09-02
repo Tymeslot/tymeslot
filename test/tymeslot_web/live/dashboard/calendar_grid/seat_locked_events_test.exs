@@ -142,6 +142,32 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
       refute html =~ ~s(id="event-time-form")
       refute html =~ ~s(id="event-all-day")
     end
+
+    test "refuses a recurrence change typed into the detail modal",
+         %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_event_recurrence", %{
+        "freq" => "weekly",
+        "interval" => "1",
+        "by_day" => ["mo"],
+        "end_type" => "never"
+      })
+
+      html = render(lv)
+      assert html =~ "rebook from the meeting instead"
+      refute html =~ "Repeats weekly"
+    end
+
+    test "the detail modal hides the recurrence editor", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      refute html =~ "Does not repeat"
+    end
   end
 
   describe "a booking nobody holds a seat on" do

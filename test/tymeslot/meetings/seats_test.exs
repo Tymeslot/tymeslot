@@ -33,6 +33,13 @@ defmodule Tymeslot.Meetings.SeatsTest do
     end
   end
 
+  describe "seats_taken/2" do
+    test "sums already-loaded participant and guest lists" do
+      assert Seats.seats_taken([%{}, %{}], [%{}]) == 3
+      assert Seats.seats_taken([], []) == 0
+    end
+  end
+
   describe "seats_taken/1 and seats_left/2" do
     test "counts live participants plus their guests and derives seats left" do
       meeting = insert(:meeting)

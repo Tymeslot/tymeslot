@@ -256,10 +256,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
               {:noreply, socket}
             else
               with :ok <- EditWorkflow.assert_owns_event(socket, event),
+                   :ok <- Shared.check_timing_lock(event),
                    :ok <- Shared.check_edit_rate_limit(socket) do
                 push_recurrence_change(socket, event, new_rule)
               else
                 {:error, :unauthorized} = error ->
+                  Shared.flash_guard_error(socket, error)
+
+                {:error, :group_booking} = error ->
                   Shared.flash_guard_error(socket, error)
 
                 {:error, :rate_limited, _message} = error ->
