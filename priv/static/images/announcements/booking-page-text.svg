@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="A custom heading typed in the dashboard appearing on the booking page">
+  <defs>
+    <linearGradient id="bpt-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="bpt-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#bpt-bg)"/>
+
+  <!-- left: the editor, with the heading field being typed into -->
+  <g filter="url(#bpt-shadow)">
+    <rect x="48" y="44" width="248" height="152" rx="18" fill="#ffffff"/>
+  </g>
+
+  <!-- section label -->
+  <rect x="72" y="66" width="78" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <!-- the on/off switch, on -->
+  <rect x="238" y="63" width="34" height="18" rx="9" fill="#14b8a6"/>
+  <circle cx="263" cy="72" r="6.5" fill="#ffffff"/>
+
+  <!-- heading field, focused: teal border, caret at the end of the typed line -->
+  <rect x="72" y="92" width="200" height="30" rx="10" fill="#f8fafc" stroke="#2dd4bf" stroke-width="2"/>
+  <rect x="84" y="103" width="132" height="8" rx="4" fill="#0f766e"/>
+  <rect x="221" y="99" width="2" height="16" rx="1" fill="#14b8a6"/>
+
+  <!-- greeting field -->
+  <rect x="72" y="130" width="200" height="26" rx="9" fill="#f1f5f9"/>
+  <rect x="84" y="139" width="152" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <!-- instruction field -->
+  <rect x="72" y="164" width="200" height="26" rx="9" fill="#f1f5f9"/>
+  <rect x="84" y="173" width="108" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <!-- the wording carries across to the live page -->
+  <path d="M312 120 H352" stroke="#5eead4" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 9"/>
+  <path d="M348 113 L358 120 L348 127 Z" fill="#5eead4"/>
+
+  <!-- right: the booking page, opening with that heading -->
+  <g filter="url(#bpt-shadow)">
+    <rect x="374" y="44" width="218" height="152" rx="18" fill="#ffffff"/>
+  </g>
+
+  <!-- avatar -->
+  <circle cx="410" cy="80" r="16" fill="#99f6e4"/>
+  <circle cx="410" cy="75" r="5.5" fill="#0d9488"/>
+  <path d="M401 90a9 9 0 0 1 18 0z" fill="#0d9488"/>
+
+  <!-- the custom heading, matching the typed line -->
+  <rect x="436" y="70" width="132" height="9" rx="4.5" fill="#0f766e"/>
+  <rect x="436" y="86" width="96" height="6" rx="3" fill="#cbd5e1"/>
+
+  <!-- meeting type options below it -->
+  <rect x="398" y="116" width="170" height="28" rx="10" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
+  <rect x="412" y="127" width="62" height="6" rx="3" fill="#5eead4"/>
+  <rect x="520" y="127" width="34" height="6" rx="3" fill="#ccfbf1"/>
+
+  <rect x="398" y="152" width="170" height="28" rx="10" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
+  <rect x="412" y="163" width="78" height="6" rx="3" fill="#5eead4"/>
+  <rect x="520" y="163" width="34" height="6" rx="3" fill="#ccfbf1"/>
+</svg>

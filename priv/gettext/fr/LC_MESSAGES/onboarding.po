@@ -303,3 +303,13 @@ msgstr "La disponibilité repose désormais sur des plannings nommés - horaires
 #, elixir-autogen, elixir-format
 msgid "Give every meeting type its own hours"
 msgstr "Donnez à chaque type de réunion ses propres horaires"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "The heading, greeting and instruction at the top of your booking page are now yours to write. Say what you actually do, in your own words, and watch it in the live preview as you type - every change saves itself. Switch it off any time to go back to the built-in wording, translated into every language Tymeslot supports."
+msgstr "Le titre, le message d’accueil et la consigne en haut de votre page de réservation sont désormais les vôtres. Dites ce que vous faites, avec vos mots, et voyez le résultat dans l’aperçu en direct pendant que vous écrivez - chaque modification s’enregistre toute seule. Désactivez l’option à tout moment pour revenir au texte intégré, traduit dans toutes les langues prises en charge par Tymeslot."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Write your own booking page welcome"
+msgstr "Rédigez votre propre accueil"

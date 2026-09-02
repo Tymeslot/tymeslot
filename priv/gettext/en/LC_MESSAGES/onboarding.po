@@ -257,3 +257,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Give every meeting type its own hours"
 msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "The heading, greeting and instruction at the top of your booking page are now yours to write. Say what you actually do, in your own words, and watch it in the live preview as you type - every change saves itself. Switch it off any time to go back to the built-in wording, translated into every language Tymeslot supports."
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Write your own booking page welcome"
+msgstr ""

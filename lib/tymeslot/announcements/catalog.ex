@@ -44,6 +44,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @availability_schedules_published_at ~U[2026-08-14 00:00:00Z]
   @availability_schedules_expires_at ~U[2026-09-13 00:00:00Z]
 
+  @booking_page_text_published_at ~U[2026-09-02 00:00:00Z]
+  @booking_page_text_expires_at ~U[2026-10-02 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -51,6 +54,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      booking_page_text(),
       availability_schedules(),
       booking_limits(),
       app_languages(),
@@ -63,6 +67,25 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp booking_page_text do
+    %Announcement{
+      key: "booking_page_text",
+      title: dgettext("onboarding", "Write your own booking page welcome"),
+      body:
+        dgettext(
+          "onboarding",
+          "The heading, greeting and instruction at the top of your booking page are now " <>
+            "yours to write. Say what you actually do, in your own words, and watch it in " <>
+            "the live preview as you type - every change saves itself. Switch it off any " <>
+            "time to go back to the built-in wording, translated into every language " <>
+            "Tymeslot supports."
+        ),
+      image_path: "/images/announcements/booking-page-text.svg",
+      published_at: @booking_page_text_published_at,
+      expires_at: @booking_page_text_expires_at
+    }
   end
 
   defp availability_schedules do

@@ -261,3 +261,13 @@ msgstr "Dostupnost je teď postavená na pojmenovaných rozvrzích – kancelá�
 #, elixir-autogen, elixir-format
 msgid "Give every meeting type its own hours"
 msgstr "Dejte každému typu schůzky vlastní hodiny"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "The heading, greeting and instruction at the top of your booking page are now yours to write. Say what you actually do, in your own words, and watch it in the live preview as you type - every change saves itself. Switch it off any time to go back to the built-in wording, translated into every language Tymeslot supports."
+msgstr "Nadpis, pozdrav i pokyn v horní části vaší rezervační stránky si nyní píšete sami. Řekněte vlastními slovy, co děláte, a sledujte to při psaní v živém náhledu - každá změna se uloží sama. Kdykoli to vypněte a vraťte se k vestavěnému textu, přeloženému do všech jazyků podporovaných Tymeslotem."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Write your own booking page welcome"
+msgstr "Napište si vlastní uvítání"
