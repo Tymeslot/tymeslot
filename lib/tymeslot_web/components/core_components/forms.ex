@@ -97,7 +97,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     assigns =
       assigns
       |> assign(:error_id, error_id)
-      |> assign(:rest, Map.merge(error_aria(assigns.errors, error_id), assigns.rest))
+      |> assign(
+        :rest,
+        assigns.errors
+        |> error_aria(error_id)
+        |> Map.merge(html_constraints(assigns))
+        |> Map.merge(assigns.rest)
+      )
 
     ~H"""
     <div class={["form-field-wrapper", @class]}>
@@ -265,6 +271,20 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       {@rest}
     />
     """
+  end
+
+  # The HTML constraint attributes are *declared*, so `:global` never collects
+  # them and they would otherwise be dropped on the floor: `input_element/1`
+  # spreads `@rest` and nothing else. Folding them into `@rest` here is what
+  # makes `maxlength={60}` reach the rendered input. Unset ones stay out of the
+  # map rather than rendering as empty attributes.
+  @html_constraints [:min, :max, :step, :minlength, :maxlength, :pattern]
+
+  defp html_constraints(assigns) do
+    Map.reject(
+      Map.new(@html_constraints, &{&1, assigns[&1]}),
+      fn {_key, value} -> is_nil(value) end
+    )
   end
 
   # ========== HELPERS ==========
