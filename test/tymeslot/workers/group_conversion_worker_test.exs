@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.GroupConversionWorkerTest do
 
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Profiles
   alias Tymeslot.Workers.GroupConversionWorker
 
   setup do
@@ -56,32 +57,52 @@ defmodule Tymeslot.Workers.GroupConversionWorkerTest do
     assert participant.email == "solo@example.com"
   end
 
-  test "perform/1 returns an error tuple when a batch fails to convert, so Oban retries", %{
-    meeting_type: meeting_type,
-    meeting: meeting
-  } do
+  test "perform/1 still converts a booking with no attendee timezone, via the organiser's own",
+       %{meeting_type: meeting_type, meeting: meeting} do
     # No attendee timezone still passes the convertible-bookings query (which
-    # only checks for an email), but violates the participant changeset's
-    # required field, so the insert fails and the failure must propagate
-    # rather than being swallowed as a silent skip.
+    # only checks for an email); it used to violate the participant
+    # changeset's required field and poison the whole job. It no longer
+    # does: `Tymeslot.Meetings.GroupConversion` falls back to the organiser's
+    # own timezone for exactly this case.
     {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{attendee_timezone: nil})
 
-    assert {:error, _reason} =
+    assert :ok =
              perform_job(GroupConversionWorker, %{
                "meeting_type_id" => meeting_type.id,
                "capacity" => 4
              })
 
-    assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
+    assert [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
+    assert participant.timezone == Profiles.get_user_timezone(meeting.organizer_user_id)
   end
 
-  test "enqueue/2 deduplicates jobs for the same meeting type" do
+  test "enqueue/2 deduplicates a repeated enqueue at the same capacity" do
     assert {:ok, %{conflict?: false}} = GroupConversionWorker.enqueue(123, 4)
     assert {:ok, %{conflict?: true}} = GroupConversionWorker.enqueue(123, 4)
 
     assert_enqueued(
       worker: GroupConversionWorker,
       args: %{"meeting_type_id" => 123, "capacity" => 4}
+    )
+  end
+
+  # An organiser correcting the capacity shortly after the first save must
+  # not have that correction silently dropped by the same uniqueness that
+  # rightly collapses two identical toggles. `Tymeslot.Meetings.GroupConversion`
+  # re-stamps an already-converted meeting's capacity precisely so this
+  # second job is not wasted.
+  test "enqueue/2 does not deduplicate a re-enqueue at a different capacity" do
+    assert {:ok, %{conflict?: false}} = GroupConversionWorker.enqueue(123, 10)
+    assert {:ok, %{conflict?: false}} = GroupConversionWorker.enqueue(123, 3)
+
+    assert_enqueued(
+      worker: GroupConversionWorker,
+      args: %{"meeting_type_id" => 123, "capacity" => 10}
+    )
+
+    assert_enqueued(
+      worker: GroupConversionWorker,
+      args: %{"meeting_type_id" => 123, "capacity" => 3}
     )
   end
 end

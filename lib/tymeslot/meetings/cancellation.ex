@@ -92,7 +92,14 @@ defmodule Tymeslot.Meetings.Cancellation do
   @spec cancel(struct() | String.t(), map() | nil, refund_action()) ::
           {:ok, struct()} | {:error, {:refund_failed, term()}} | {:error, term()}
   def cancel(meeting_or_uid, payment, refund_action) do
-    with {:ok, cancelled} <- Cancel.execute(meeting_or_uid),
+    # `caller: :organizer` is what lets this cancel a group meeting outright.
+    # The public, participant-facing cancel link resolves through
+    # `Meetings.cancel_meeting/1` instead, which passes no opts and is
+    # therefore refused for a group slot: one booker must not be able to
+    # cancel everyone else's seats. This path is only ever reached from the
+    # authenticated dashboard, where cancelling the whole meeting is the
+    # host's own decision.
+    with {:ok, cancelled} <- Cancel.execute(meeting_or_uid, caller: :organizer),
          :ok <- issue_refund(payment, refund_action) do
       {:ok, cancelled}
     end

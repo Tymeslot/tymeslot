@@ -72,6 +72,17 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
 
   @doc """
   Counts the seats taken on a meeting: live participants plus their guests.
+
+  A meeting switched from solo to group bookings keeps its sitting attendee
+  on the meeting row's `attendee_*` columns until
+  `Tymeslot.Meetings.GroupConversion` gives them a participant row; until
+  then this query would otherwise see zero live participants and read their
+  seat as free. So when a meeting carries no live participant at all, its
+  own `attendee_email` is checked: present, it counts for one seat (the
+  unconverted sitting attendee); absent, the meeting is a genuine empty
+  group slot (a fresh group meeting is always created together with its
+  first participant, so a live one with zero participants and no attendee
+  never legitimately has a seat to count).
   """
   @spec count_seats_taken(binary()) :: non_neg_integer()
   def count_seats_taken(meeting_id) do
@@ -83,7 +94,19 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
         select: count(p.id, :distinct) + count(g.id)
       )
 
-    Repo.one(query)
+    case Repo.one(query) do
+      0 -> unconverted_attendee_seat(meeting_id)
+      count -> count
+    end
+  end
+
+  defp unconverted_attendee_seat(meeting_id) do
+    Meeting
+    |> where([m], m.id == ^meeting_id)
+    |> where([m], not is_nil(m.attendee_email) and m.attendee_email != "")
+    |> select([m], 1)
+    |> Repo.one()
+    |> Kernel.||(0)
   end
 
   @doc """

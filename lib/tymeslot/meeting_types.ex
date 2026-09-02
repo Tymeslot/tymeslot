@@ -129,12 +129,20 @@ defmodule Tymeslot.MeetingTypes do
 
   # Switching a type to group bookings leaves its existing solo bookings in
   # the wrong shape for seat maths and notifications; give them participant
-  # rows before anyone can book alongside them. Only the 1 -> many crossing
-  # matters: raising an already-group limit changes nothing structural.
+  # rows before anyone can book alongside them. Every save that lands on a
+  # different `max_participants` while the type is (or becomes) a group type
+  # re-enqueues the conversion, not just the 1 -> many crossing: a meeting
+  # converted from an earlier save but not yet booked into by anyone else
+  # still has its capacity re-stamped to match (see
+  # `Tymeslot.Meetings.GroupConversion`), which is what lets an organiser's
+  # quick correction to the limit land instead of being silently frozen at
+  # whatever value the first save used. The query behind the conversion only
+  # ever touches meetings still carrying their original solo attendee, so
+  # this never reaches into a genuinely-booked group meeting's own capacity.
   # The actual conversion runs off the request path — see
   # `Tymeslot.Meetings.convert_type_to_group/2`.
   defp maybe_convert_to_group(%{max_participants: before}, %{max_participants: now} = updated)
-       when before <= 1 and now > 1 do
+       when now > 1 and before != now do
     case Meetings.convert_type_to_group(updated.id, now) do
       {:ok, _job} -> :ok
       {:error, reason} -> {:error, reason}

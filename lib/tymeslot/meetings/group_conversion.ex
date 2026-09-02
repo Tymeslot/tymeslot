@@ -19,66 +19,105 @@ defmodule Tymeslot.Meetings.GroupConversion do
 
   Runs off the request path, inside `Tymeslot.Workers.GroupConversionWorker`.
   Bookings are processed in batches, each in its own transaction, so a job
-  never holds a single unbounded transaction open; a batch that hits a
-  genuine conversion failure halts there and returns `{:error, _}`, which
-  fails the job so Oban retries it. A retry is safe: a meeting that already
-  converted on an earlier attempt is skipped, not reprocessed. Touches only
-  future, non-cancelled meetings — past bookings are history and need no
-  seat accounting.
+  never holds a single unbounded transaction open. A booking whose stored
+  data cannot satisfy today's participant rules (a pre-migration row with no
+  attendee timezone, say) is logged and left unconverted rather than rolling
+  back everyone else's conversion in the same batch — see `insert_participant/2`.
+  Touches only future, non-cancelled meetings — past bookings are history and
+  need no seat accounting.
+
+  Re-runs safely: a meeting that already carries its converted attendee as a
+  live participant, and nobody else, is left alone unless `capacity` has
+  changed since — in which case it is re-stamped, which is what lets an
+  organiser's capacity correction (edited again shortly after the first
+  save, before anyone else has booked in) land instead of being silently
+  lost. A meeting with more than one live participant has taken real
+  bookings against its snapshotted capacity and is never touched again.
   """
 
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.SeatBroadcast
+  alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Profiles
   alias Tymeslot.Repo
 
   @batch_size 100
 
   @doc """
   Backfills participant rows for the future bookings of `meeting_type_id`,
-  and snapshots `capacity` onto every converted meeting row.
+  and snapshots `capacity` onto every converted (or re-converted, see the
+  module doc) meeting row.
 
-  Returns the number of bookings converted so far. Meetings that already
-  carry a participant are skipped. A booking that fails to convert halts
-  the run and returns `{:error, _}` rather than silently skipping it — the
-  caller (the worker) retries, which resumes from the first unconverted
-  booking since everything before it is now skip-eligible.
+  Returns the number of bookings newly given a participant row. Always
+  succeeds: a booking that cannot convert is logged and skipped rather than
+  failing the run, so one poisoned row cannot strand the rest of the type's
+  bookings.
   """
   @spec backfill(integer(), pos_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
   def backfill(meeting_type_id, capacity)
       when is_integer(meeting_type_id) and is_integer(capacity) do
-    meeting_type_id
-    |> GroupMeetingQueries.list_convertible_solo_bookings(Clock.utc_now())
-    |> Enum.chunk_every(@batch_size)
-    |> Enum.reduce_while({:ok, 0}, fn batch, {:ok, total} ->
-      case convert_batch(batch, capacity) do
-        {:ok, converted} -> {:cont, {:ok, total + converted}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
+    meetings =
+      GroupMeetingQueries.list_convertible_solo_bookings(meeting_type_id, Clock.utc_now())
+
+    result =
+      meetings
+      |> Enum.chunk_every(@batch_size)
+      |> Enum.reduce({:ok, 0}, fn batch, {:ok, total} ->
+        {:ok, converted} = convert_batch(batch, capacity)
+        {:ok, total + converted}
+      end)
+
+    # Capacity and seat counts just moved for every meeting above, live pages
+    # and the availability cache must not keep serving the pre-conversion
+    # answer. `GuestQueries.adopt_unowned_guests/2` (called per booking below)
+    # changes seat counts the same way and shares this same invalidation.
+    invalidate_after_conversion(meetings)
+
+    result
+  end
+
+  defp invalidate_after_conversion([]), do: :ok
+
+  defp invalidate_after_conversion([meeting | _rest]) do
+    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+    SeatBroadcast.broadcast_seat_change(meeting.meeting_type_id)
+    :ok
   end
 
   defp convert_batch(batch, capacity) do
     Repo.transaction(fn ->
-      Enum.reduce_while(batch, 0, fn meeting, converted ->
+      Enum.reduce(batch, 0, fn meeting, converted ->
         case convert(meeting, capacity) do
-          {:ok, :converted} -> {:cont, converted + 1}
-          {:ok, :skipped} -> {:cont, converted}
-          {:error, reason} -> Repo.rollback(reason)
+          {:ok, :converted} -> converted + 1
+          {:ok, _skipped_or_recapacitated} -> converted
         end
       end)
     end)
   end
 
   defp convert(meeting, capacity) do
-    if ParticipantQueries.count_live_for_meeting(meeting.id) > 0 do
-      {:ok, :skipped}
-    else
-      insert_participant(meeting, capacity)
+    case ParticipantQueries.count_live_for_meeting(meeting.id) do
+      0 ->
+        insert_participant(meeting, capacity)
+
+      1 ->
+        # Already converted, and still only the attendee that conversion
+        # itself put there — nobody has booked a real seat against the
+        # snapshotted capacity yet, so a corrected capacity is still safe to
+        # apply. A fresh group meeting never reaches here: it is created
+        # together with its first participant and carries no attendee_email
+        # (see `list_convertible_solo_bookings/2`), so it is never in `batch`.
+        recapacitate(meeting, capacity)
+
+      _more ->
+        {:ok, :skipped}
     end
   end
 
@@ -89,20 +128,54 @@ defmodule Tymeslot.Meetings.GroupConversion do
         # they count for nothing in seat maths until they are adopted.
         GuestQueries.adopt_unowned_guests(meeting.id, participant.id)
         snapshot_capacity(meeting, capacity)
+        deliver_seat_management_link(meeting, participant)
         {:ok, :converted}
 
       {:error, changeset} ->
         # Left unconverted, this booking's attendee columns are still safe —
-        # `Tymeslot.Meetings.Recipient.for_meeting/1` unions both shapes — but
-        # its seat reads as empty until a retry converts it, so the failure
-        # must not be swallowed here.
-        Logger.error("Failed to convert solo booking to a group seat",
+        # `Tymeslot.Meetings.Recipient.for_meeting/1` unions both shapes — so
+        # it stays reachable by hand. What must not happen is this one row's
+        # bad data (a pre-migration NULL, say) rolling back every other
+        # booking converted alongside it in the same batch.
+        Logger.error("Skipping unconvertible solo booking",
           meeting_id: meeting.id,
           errors: inspect(changeset.errors)
         )
 
-        {:error, {:participant_insert_failed, meeting.id}}
+        {:ok, :skipped_poison}
     end
+  end
+
+  # The converted attendee has no management link of their own until this
+  # runs — their old, pre-conversion cancel/reschedule link addresses the
+  # whole meeting row, which `Tymeslot.Bookings.Cancel` and
+  # `Tymeslot.Bookings.Reschedule` now both refuse for a group meeting. The
+  # confirmation email is the existing per-seat job that carries the seat's
+  # `management_token`-based links; it also re-notifies the organiser, which
+  # is accepted here rather than adding a participant-only email path.
+  # Never fails the conversion: an unreachable mailer is a follow-up, not a
+  # reason to leave the booking unconverted.
+  defp deliver_seat_management_link(meeting, participant) do
+    case Orchestrator.schedule_seat_confirmation(meeting, participant) do
+      {:ok, _result} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule the converted seat's management link email",
+          meeting_id: meeting.id,
+          participant_id: participant.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  defp recapacitate(%{capacity: capacity}, capacity), do: {:ok, :skipped}
+
+  defp recapacitate(meeting, capacity) do
+    snapshot_capacity(meeting, capacity)
+    {:ok, :recapacitated}
   end
 
   # The row was created solo (capacity 1); now that it genuinely holds a
@@ -131,9 +204,22 @@ defmodule Tymeslot.Meetings.GroupConversion do
       phone: meeting.attendee_phone,
       company: meeting.attendee_company,
       message: meeting.attendee_message,
-      timezone: meeting.attendee_timezone,
+      timezone: attendee_timezone(meeting),
       locale: meeting.attendee_locale || "en",
       custom_field_answers: meeting.custom_field_answers || %{}
     }
   end
+
+  # A handful of meetings booked before `attendee_timezone` existed
+  # (migration `20250702181205`) carry no default and were never backfilled,
+  # so the column is NULL on them. `ParticipantSchema` requires `:timezone`;
+  # without a fallback these rows fail the changeset on every retry forever
+  # (see `insert_participant/2`). The organiser's own timezone is the same
+  # emergency fallback `Tymeslot.Notifications.Recipients.get_attendee_timezone/1`
+  # already uses for notifications.
+  defp attendee_timezone(%{attendee_timezone: timezone})
+       when is_binary(timezone) and timezone != "",
+       do: timezone
+
+  defp attendee_timezone(meeting), do: Profiles.get_user_timezone(meeting.organizer_user_id)
 end

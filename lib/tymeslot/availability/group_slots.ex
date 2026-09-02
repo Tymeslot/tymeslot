@@ -152,7 +152,26 @@ defmodule Tymeslot.Availability.GroupSlots do
   end
 
   defp with_seats_left(meetings, seat_counts),
-    do: Enum.filter(meetings, &(&1.capacity - Map.get(seat_counts, &1.start_time, 0) > 0))
+    do: Enum.filter(meetings, &(&1.capacity - seats_taken(&1, seat_counts) > 0))
+
+  # `seat_counts` only knows about live participant rows (see
+  # `Tymeslot.Meetings.ParticipantQueries.seat_counts_for_range/3`), so a
+  # meeting still carrying its pre-conversion solo attendee — no
+  # participant row yet, see `Tymeslot.Meetings.GroupConversion` — is absent
+  # from it. Treating that absence as zero seats taken is what let a
+  # stranger join someone else's still-unconverted 1:1: the attendee column
+  # is checked here the same way `ParticipantQueries.count_seats_taken/1`
+  # checks it for the booking-time seat count, so both agree the slot is
+  # occupied until the conversion actually runs.
+  defp seats_taken(meeting, seat_counts) do
+    case Map.get(seat_counts, meeting.start_time) do
+      nil -> unconverted_seat(meeting)
+      count -> count
+    end
+  end
+
+  defp unconverted_seat(%{attendee_email: email}) when is_binary(email) and email != "", do: 1
+  defp unconverted_seat(_meeting), do: 0
 
   # --- Group day enrichment ---
 

@@ -119,9 +119,19 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
       assert ParticipantQueries.count_seats_taken(meeting.id) == 1
     end
 
-    test "returns zero for a meeting without participants" do
-      meeting = insert(:meeting)
+    test "returns zero for a meeting without participants or an attendee" do
+      meeting = insert(:meeting, attendee_email: nil)
       assert ParticipantQueries.count_seats_taken(meeting.id) == 0
+    end
+
+    # A meeting whose type has just switched to group bookings keeps its
+    # sitting solo attendee on the meeting row's `attendee_*` columns until
+    # `Tymeslot.Meetings.GroupConversion` gives them a participant row. Until
+    # then this must still read as one seat taken, or the slot reads as free
+    # and a stranger can join what is still someone else's 1:1.
+    test "counts an unconverted solo attendee as one seat taken" do
+      meeting = insert(:meeting, attendee_email: "solo@example.com")
+      assert ParticipantQueries.count_seats_taken(meeting.id) == 1
     end
   end
 

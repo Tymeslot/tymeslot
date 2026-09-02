@@ -26,17 +26,22 @@ defmodule Tymeslot.Bookings.Cancel do
   4. Sending cancellation emails
 
   Returns {:ok, meeting} or {:error, reason}
+
+  Accepts the same `opts` as `validate_cancellation/2`; see there for
+  `:caller`.
   """
-  @spec execute(String.t()) :: {:ok, Meeting.t()} | {:error, atom() | String.t()}
-  def execute(meeting_id) when is_binary(meeting_id) do
+  @spec execute(String.t() | Meeting.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, atom() | String.t()}
+  def execute(meeting_or_uid, opts \\ [])
+
+  def execute(meeting_id, opts) when is_binary(meeting_id) do
     case MeetingQueries.get_meeting_by_uid(meeting_id) do
-      {:ok, meeting} -> execute(meeting)
+      {:ok, meeting} -> execute(meeting, opts)
       {:error, :not_found} -> {:error, :meeting_not_found}
     end
   end
 
-  @spec execute(Meeting.t()) :: {:ok, Meeting.t()} | {:error, atom() | String.t()}
-  def execute(%Meeting{status: "cancelled"} = meeting) do
+  def execute(%Meeting{status: "cancelled"} = meeting, _opts) do
     Logger.info("Skipping cancellation for already-cancelled meeting",
       meeting_id: meeting.id,
       uid: meeting.uid
@@ -45,9 +50,8 @@ defmodule Tymeslot.Bookings.Cancel do
     {:error, "Meeting is already cancelled"}
   end
 
-  def execute(%Meeting{} = meeting) do
-    # Validate using Policy module (includes time checks)
-    case Policy.can_cancel_meeting?(meeting) do
+  def execute(%Meeting{} = meeting, opts) do
+    case validate_cancellation(meeting, opts) do
       :ok ->
         Logger.info("Cancelling meeting",
           meeting_id: meeting.id,
@@ -139,14 +143,47 @@ defmodule Tymeslot.Bookings.Cancel do
   Validates if a meeting can be cancelled.
   Delegates to Policy module for consistent validation.
 
+  `opts`:
+    * `:caller` — pass `:organizer` for an authenticated organiser cancelling
+      the whole meeting from their own dashboard. Any other value (including
+      the default, no opts) is treated as the public, participant-facing
+      surface and refuses a live group meeting — see `refuse_group_meeting/2`.
+
   Returns :ok or {:error, reason}
   """
-  @spec validate_cancellation(Meeting.t()) :: :ok | {:error, String.t()}
-  def validate_cancellation(meeting) do
-    Policy.can_cancel_meeting?(meeting)
+  @spec validate_cancellation(Meeting.t(), keyword()) :: :ok | {:error, atom() | String.t()}
+  def validate_cancellation(meeting, opts \\ []) do
+    with :ok <- Policy.can_cancel_meeting?(meeting) do
+      refuse_group_meeting(meeting, opts)
+    end
   end
 
   # Private functions
+
+  # A group slot is shared, so flipping the meeting row to "cancelled" here
+  # would cancel every other participant's seat, not just whoever is asking.
+  # That is exactly what a converted booker's old (pre-conversion) cancel
+  # link resolves to: it addresses the meeting by its uid, not by a seat's
+  # `management_token`, and by the time it is followed the meeting may carry
+  # other live participants who never agreed to any of this. That public,
+  # unauthenticated surface (`/:username/meeting/:uid/cancel`) never passes
+  # `caller: :organizer`, so it is refused by default; an authenticated
+  # organiser cancelling the whole meeting from their own dashboard is a
+  # deliberate, distinct action and opts in explicitly.
+  #
+  # Participants cancel their own seat through `Tymeslot.Bookings.CancelSeat`,
+  # which never reaches here. `Tymeslot.Bookings.SeatRelease` legitimately
+  # cancels the meeting itself once its last seat is released, but it flips
+  # the status directly under the meeting row lock and calls
+  # `finalise_cancellation/1` to finish the job — it does not go through
+  # `execute/1`, so it is unaffected by this guard regardless of `opts`.
+  defp refuse_group_meeting(meeting, opts) do
+    if Meetings.group?(meeting) and Keyword.get(opts, :caller) != :organizer do
+      {:error, :group_meeting_not_cancellable}
+    else
+      :ok
+    end
+  end
 
   defp auto_cancel_external(meeting) do
     Logger.info("Auto-cancelling externally deleted meeting",

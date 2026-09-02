@@ -11,9 +11,14 @@ defmodule Tymeslot.Workers.GroupConversionWorker do
   fails this job so Oban retries it, resuming from the first unconverted
   booking (already-converted bookings are skip-eligible on retry).
 
-  Unique on `meeting_type_id`: toggling the group-bookings switch on and off
-  again in quick succession must not queue a second migration on top of one
-  still running.
+  Unique on the full argument set (meeting type and capacity): re-saving the
+  same group-bookings limit in quick succession must not queue a second,
+  redundant migration on top of one still running. A save that lands on a
+  *different* capacity within that window is a distinct job, not a dupe — an
+  organiser correcting the limit right after enabling group bookings must
+  still have that correction applied; `Tymeslot.Meetings.GroupConversion`
+  re-stamps an already-converted meeting's capacity precisely so a second job
+  like this one is not wasted.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 5
@@ -22,7 +27,7 @@ defmodule Tymeslot.Workers.GroupConversionWorker do
 
   require Logger
 
-  @unique [period: 300, fields: [:args, :queue], keys: [:meeting_type_id]]
+  @unique [period: 300, fields: [:args, :queue]]
 
   @doc """
   Enqueues the background conversion of `meeting_type_id`'s existing
