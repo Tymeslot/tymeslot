@@ -69,6 +69,19 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   def default_greeting(name), do: dgettext("booking", "Hi! I'm %{name}.", name: name)
 
   @doc """
+  A greeting to start the organiser off with when they switch the customisation
+  on, which unlike `default_greeting/1` is never `nil`.
+
+  Turning the customisation on requires all three lines to be filled, so a
+  profile with no name still needs something to seed the field with. The public
+  page keeps dropping the line in that case; this is only ever a starting point
+  in the dashboard.
+  """
+  @spec seed_greeting(String.t() | nil) :: String.t()
+  def seed_greeting(nil), do: dgettext("booking", "Hi there!")
+  def seed_greeting(name), do: default_greeting(name)
+
+  @doc """
   The instruction shown when the organiser has not supplied one.
   """
   @spec default_instruction() :: String.t()

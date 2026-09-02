@@ -282,11 +282,6 @@ msgstr "Попередній перегляд сторінки бронюван�
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
-msgid "Booking page text updated"
-msgstr "Текст сторінки бронювання оновлено"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
 msgid "Greeting"
 msgstr "Привітання"
 
@@ -317,21 +312,6 @@ msgstr "Замініть текст, який представляє вас уг
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
-msgid "Save Text"
-msgstr "Зберегти текст"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
-msgid "The preview updates when you save."
-msgstr "Перегляд оновлюється після збереження."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
-msgid "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your wording is kept either way."
-msgstr "Вимкніть це, щоб повернутися до вбудованого тексту, перекладеного всіма мовами, які підтримує Tymeslot. Ваш текст у будь-якому разі збережеться."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
 msgid "Use my own wording"
 msgstr "Використовувати власний текст"
 
@@ -344,3 +324,33 @@ msgstr "Ваш заголовок замінює:"
 #, elixir-autogen, elixir-format
 msgid "Your own wording is shown to everyone, in whatever language they pick. Only the built-in text is translated."
 msgstr "Ваш власний текст бачать усі, незалежно від обраної мови. Перекладається лише вбудований текст."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "All changes saved"
+msgstr "Усі зміни збережено"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save changes"
+msgstr "Не вдалося зберегти зміни"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "The preview updates as your changes are saved."
+msgstr "Перегляд оновлюється в міру збереження ваших змін."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Too many changes - saving shortly…"
+msgstr "Забагато змін - збереження за мить…"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your own wording is discarded."
+msgstr "Вимкніть це, щоб повернутися до вбудованого тексту, перекладеного всіма мовами, які підтримує Tymeslot. Ваш власний текст буде видалено."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Unsaved changes"
+msgstr "Незбережені зміни"

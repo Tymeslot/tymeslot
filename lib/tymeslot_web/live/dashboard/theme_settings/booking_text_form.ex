@@ -8,8 +8,28 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   differently by default, and an organiser editing one field needs to see both
   sentences it displaces.
 
-  Turning the customisation off keeps the stored wording, so the form reflects
-  the last thing the organiser wrote rather than clearing itself.
+  ## Saving
+
+  Every change persists on its own; there is no save button. Text edits autosave
+  on a debounce, and the switch persists immediately. `:save_status` drives the
+  indicator, mirroring the meeting-type editor's vocabulary:
+
+  | Atom        | Indicator copy            | When set                                        |
+  |-------------|---------------------------|-------------------------------------------------|
+  | `:idle`     | nothing                   | Nothing has changed yet this session.            |
+  | `:saved`    | "All changes saved"       | Persist succeeded.                               |
+  | `:unsaved`  | "Unsaved changes"         | Validation rejected the edit, so nothing wrote.  |
+  | `:throttled`| "Too many changes…"       | Rate limit hit; the next edit retries.           |
+  | `:error`    | "Couldn't save changes"   | Unexpected persistence failure.                  |
+
+  ## Turning the customisation off
+
+  Switching off clears the three columns rather than parking them: the booking
+  page goes back to the built-in, translated wording and no stale copy of an old
+  heading survives in the database. Switching back on seeds the fields from the
+  current defaults, which keeps the record valid at every instant. That matters
+  more than it looks: with no save button, an "on but blank" state could never be
+  written, so the switch would silently disagree with what was stored.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -22,10 +42,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Scheduling.PreviewMode
-  alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingText
+
+  @text_fields [:booking_heading, :booking_greeting, :booking_instruction]
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -33,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
       socket
       |> assign(assigns)
       |> assign_new(:preview_token, fn -> System.system_time() end)
+      |> assign_new(:save_status, fn -> :idle end)
       |> assign_form(ProfileSchema.booking_text_changeset(assigns.profile, %{}))
 
     {:ok, socket}
@@ -57,31 +80,58 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <%!-- `phx-submit` exists only so pressing Enter in a field flushes the
+        pending debounce instead of reloading the page; the change handler is
+        what normally saves. --%>
         <.form
           for={@form}
-          phx-change="validate"
+          id={"#{@id}-form"}
+          phx-change="save"
           phx-submit="save"
           phx-target={@myself}
           class="card-glass p-8 space-y-6"
         >
-          <.input
-            field={@form[:booking_text_enabled]}
-            type="checkbox"
-            label={dgettext("dashboard_appearance", "Use my own wording")}
-          >
-            <:description>
-              {dgettext(
-                "dashboard_appearance",
-                "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your wording is kept either way."
-              )}
-            </:description>
-          </.input>
+          <div class="flex items-start justify-between gap-6">
+            <div>
+              <p class="label mb-1">
+                {dgettext("dashboard_appearance", "Use my own wording")}
+              </p>
+              <p class="text-token-xs text-tymeslot-500 font-medium normal-case tracking-normal">
+                {dgettext(
+                  "dashboard_appearance",
+                  "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your own wording is discarded."
+                )}
+              </p>
+            </div>
+            <StatusSwitch.status_switch
+              id={"#{@id}-enabled"}
+              checked={enabled?(@form)}
+              on_change="toggle_enabled"
+              target={@myself}
+              class="shrink-0 mt-1"
+              aria_label={dgettext("dashboard_appearance", "Use my own wording")}
+            />
+          </div>
 
-          <div :if={enabled?(@form)} class="space-y-6">
+          <%!-- The switch is a button, not a form control, so the flag needs a
+          field of its own to travel with the submitted form. --%>
+          <input
+            type="hidden"
+            name={@form[:booking_text_enabled].name}
+            value={to_string(enabled?(@form))}
+          />
+
+          <%!-- Disabled rather than hidden, so the section keeps its shape and
+          the organiser can still read what the switch controls. A disabled input
+          submits nothing, which is what stops the empty fields from being
+          validated as missing while the customisation is off. --%>
+          <div class={["space-y-6", not enabled?(@form) && "opacity-60"]}>
             <.input
               field={@form[:booking_heading]}
               type="text"
-              required
+              required={enabled?(@form)}
+              disabled={not enabled?(@form)}
+              phx-debounce="600"
               maxlength={Constraints.booking_heading_max_length()}
               label={dgettext("dashboard_appearance", "Heading")}
               placeholder={BookingText.default_heading(current_theme_key(@profile), name(@profile))}
@@ -90,7 +140,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             <.input
               field={@form[:booking_greeting]}
               type="text"
-              required
+              required={enabled?(@form)}
+              disabled={not enabled?(@form)}
+              phx-debounce="600"
               maxlength={Constraints.booking_welcome_line_max_length()}
               label={dgettext("dashboard_appearance", "Greeting")}
               placeholder={BookingText.default_greeting(name(@profile))}
@@ -99,7 +151,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             <.input
               field={@form[:booking_instruction]}
               type="text"
-              required
+              required={enabled?(@form)}
+              disabled={not enabled?(@form)}
+              phx-debounce="600"
               maxlength={Constraints.booking_welcome_line_max_length()}
               label={dgettext("dashboard_appearance", "Instruction")}
               placeholder={BookingText.default_instruction()}
@@ -130,10 +184,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             </p>
           </div>
 
-          <div class="flex justify-end pt-2">
-            <.action_button type="submit" variant={:primary}>
-              {dgettext("dashboard_appearance", "Save Text")}
-            </.action_button>
+          <div class="flex justify-end pt-2 min-h-6">
+            <.save_indicator status={@save_status} />
           </div>
         </.form>
 
@@ -149,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
               loading="lazy"
             ></iframe>
             <p class="text-token-sm text-tymeslot-500">
-              {dgettext("dashboard_appearance", "The preview updates when you save.")}
+              {dgettext("dashboard_appearance", "The preview updates as your changes are saved.")}
             </p>
           <% else %>
             <.empty_state
@@ -172,26 +224,88 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
     """
   end
 
-  @impl Phoenix.LiveComponent
-  def handle_event("validate", %{"profile_schema" => params}, socket) do
-    changeset =
-      socket.assigns.profile
-      |> ProfileSchema.booking_text_changeset(params)
-      |> Map.put(:action, :validate)
+  attr :status, :atom, required: true
 
-    {:noreply, assign_form(socket, changeset)}
+  defp save_indicator(assigns) do
+    ~H"""
+    <div class="flex items-center gap-1.5 text-token-sm" aria-live="polite">
+      <%= case @status do %>
+        <% :saved -> %>
+          <.icon name="hero-check-circle-mini" class="w-4 h-4 text-green-500" />
+          <span class="text-tymeslot-500">
+            {dgettext("dashboard_appearance", "All changes saved")}
+          </span>
+        <% :unsaved -> %>
+          <.icon name="hero-arrow-path-mini" class="w-4 h-4 text-amber-500" />
+          <span class="text-amber-500">{dgettext("dashboard_appearance", "Unsaved changes")}</span>
+        <% :throttled -> %>
+          <.icon name="hero-arrow-path-mini" class="w-4 h-4 text-amber-500 animate-spin" />
+          <span class="text-amber-500">
+            {dgettext("dashboard_appearance", "Too many changes - saving shortly…")}
+          </span>
+        <% :error -> %>
+          <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 text-red-500" />
+          <span class="text-red-500">
+            {dgettext("dashboard_appearance", "Couldn't save changes")}
+          </span>
+        <% _idle -> %>
+      <% end %>
+    </div>
+    """
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("save", %{"profile_schema" => params}, socket) do
+    {:noreply, persist(socket, params)}
+  end
+
+  # Off clears the wording, on seeds it from the defaults currently in force.
+  # Both are written straight away rather than staged, because the switch has no
+  # save button behind it: whatever it shows has to be what is stored.
+  def handle_event("toggle_enabled", _params, socket) do
+    turning_on = not enabled?(socket.assigns.form)
+
+    params =
+      socket.assigns.profile
+      |> text_params(turning_on)
+      |> Map.put("booking_text_enabled", turning_on)
+
+    {:noreply, persist(socket, params)}
+  end
+
+  # Clearing is what "reset to default" means at the storage layer: with the
+  # columns null, every theme falls back to its own translated wording.
+  defp text_params(_profile, false), do: Map.new(@text_fields, &{to_string(&1), nil})
+
+  # Seeded from the defaults on the way back on, so the record is valid the
+  # instant the switch flips. Anything already stored wins, which only happens
+  # for a profile whose columns predate the switch.
+  defp text_params(profile, true) do
+    Map.new(@text_fields, fn field ->
+      {to_string(field), Map.get(profile, field) || default_for(field, profile)}
+    end)
+  end
+
+  defp default_for(:booking_heading, profile),
+    do: BookingText.default_heading(current_theme_key(profile), name(profile))
+
+  defp default_for(:booking_greeting, profile),
+    do: BookingText.seed_greeting(name(profile))
+
+  defp default_for(:booking_instruction, _profile), do: BookingText.default_instruction()
+
+  defp persist(socket, params) do
     with :ok <- check_rate_limit(socket),
          {:ok, sanitized} <- sanitize(params, socket) do
       save(socket, sanitized)
     else
-      {:error, :rate_limited, message} ->
-        {:noreply, Flash.put_flash(socket, :error, message)}
+      {:error, :rate_limited, _message} ->
+        assign(socket, :save_status, :throttled)
 
       {:error, field_errors} ->
-        {:noreply, assign_form(socket, invalid_changeset(socket, params, field_errors))}
+        socket
+        |> assign_form(invalid_changeset(socket, params, field_errors))
+        |> assign(:save_status, :unsaved)
     end
   end
 
@@ -228,20 +342,18 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
       {:ok, profile} ->
         send(self(), {:profile_updated, profile})
 
-        {:noreply,
-         socket
-         |> assign(:profile, profile)
-         # A new token reloads the iframe, which renders the saved wording; the
-         # preview reads persisted state, not the form.
-         |> assign(:preview_token, System.system_time())
-         |> assign_form(ProfileSchema.booking_text_changeset(profile, %{}))
-         |> Flash.put_flash(
-           :info,
-           dgettext("dashboard_appearance", "Booking page text updated")
-         )}
+        socket
+        |> assign(:profile, profile)
+        # A new token reloads the iframe, which renders the saved wording; the
+        # preview reads persisted state, not the form.
+        |> assign(:preview_token, System.system_time())
+        |> assign(:save_status, :saved)
+        |> assign_form(ProfileSchema.booking_text_changeset(profile, %{}))
 
       {:error, changeset} ->
-        {:noreply, assign_form(socket, Map.put(changeset, :action, :insert))}
+        socket
+        |> assign_form(Map.put(changeset, :action, :insert))
+        |> assign(:save_status, :unsaved)
     end
   end
 

@@ -282,11 +282,6 @@ msgstr "Náhled rezervační stránky"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
-msgid "Booking page text updated"
-msgstr "Text rezervační stránky byl aktualizován"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
 msgid "Greeting"
 msgstr "Pozdrav"
 
@@ -317,21 +312,6 @@ msgstr "Nahraďte text, který vás představuje v horní části rezervační s
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
-msgid "Save Text"
-msgstr "Uložit text"
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
-msgid "The preview updates when you save."
-msgstr "Náhled se aktualizuje při uložení."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
-msgid "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your wording is kept either way."
-msgstr "Vypnutím se vrátíte k vestavěnému textu, který je přeložen do všech jazyků podporovaných Tymeslotem. Váš text zůstane v každém případě zachován."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
 msgid "Use my own wording"
 msgstr "Použít vlastní text"
 
@@ -344,3 +324,33 @@ msgstr "Váš nadpis nahrazuje:"
 #, elixir-autogen, elixir-format
 msgid "Your own wording is shown to everyone, in whatever language they pick. Only the built-in text is translated."
 msgstr "Váš vlastní text se zobrazí všem bez ohledu na zvolený jazyk. Překládá se pouze vestavěný text."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "All changes saved"
+msgstr "Všechny změny uloženy"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save changes"
+msgstr "Změny se nepodařilo uložit"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "The preview updates as your changes are saved."
+msgstr "Náhled se aktualizuje průběžně, jak se vaše změny ukládají."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Too many changes - saving shortly…"
+msgstr "Příliš mnoho změn – uložíme za okamžik…"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your own wording is discarded."
+msgstr "Vypnutím se vrátíte k vestavěnému textu, který je přeložen do všech jazyků podporovaných Tymeslotem. Váš vlastní text bude odstraněn."
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Unsaved changes"
+msgstr "Neuložené změny"

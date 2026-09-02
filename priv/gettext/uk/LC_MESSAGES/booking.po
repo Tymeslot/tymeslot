@@ -1545,3 +1545,8 @@ msgstr[2] "%{hour}, %{count} доступних часів"
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."
 msgstr "Не вдалося завантажити часові слоти. Спробуйте ще раз."
+
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "Hi there!"
+msgstr "Вітаю!"
