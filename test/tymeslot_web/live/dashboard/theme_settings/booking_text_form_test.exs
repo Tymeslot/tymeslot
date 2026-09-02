@@ -108,6 +108,30 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextFormTest do
     end
   end
 
+  describe "sanitisation at the save boundary" do
+    # Malformed encoding cannot be exercised here: Plug rejects invalid UTF-8 on
+    # urlencoded params before the handler runs. That branch is covered directly
+    # in `Tymeslot.Profiles.BookingTextInputValidationTest`.
+    test "keeps punctuation that a stricter sanitiser would strip", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      toggle_on(view)
+
+      submit(
+        view,
+        Map.merge(complete_text(), %{
+          "booking_text_enabled" => "true",
+          "booking_heading" => "Let's talk -- properly"
+        })
+      )
+
+      assert Repo.reload!(profile).booking_heading == "Let's talk -- properly"
+    end
+  end
+
   describe "the preview" do
     test "frames the organiser's own booking page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/theme")

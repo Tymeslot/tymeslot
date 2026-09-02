@@ -14,11 +14,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.Changeset
   alias Phoenix.HTML.Form
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.InputValidation
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingText
@@ -179,6 +183,47 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   end
 
   def handle_event("save", %{"profile_schema" => params}, socket) do
+    with :ok <- check_rate_limit(socket),
+         {:ok, sanitized} <- sanitize(params, socket) do
+      save(socket, sanitized)
+    else
+      {:error, :rate_limited, message} ->
+        {:noreply, Flash.put_flash(socket, :error, message)}
+
+      {:error, field_errors} ->
+        {:noreply, assign_form(socket, invalid_changeset(socket, params, field_errors))}
+    end
+  end
+
+  # The three lines are organiser-authored prose bound for a public page, so
+  # they go through the shared plain-text sanitiser before the changeset sees
+  # them: encoding integrity, null bytes and security logging are not things a
+  # changeset can check. The cap stays in the changeset, where it has a
+  # translated error.
+  defp sanitize(params, socket) do
+    InputValidation.validate_booking_text(params,
+      metadata: DashboardHelpers.get_security_metadata(socket)
+    )
+  end
+
+  defp check_rate_limit(socket) do
+    case RateLimiter.check_theme_customization_rate_limit(socket.assigns.profile.user_id) do
+      :ok -> :ok
+      {:error, :rate_limited, message} -> {:error, :rate_limited, message}
+    end
+  end
+
+  defp invalid_changeset(socket, params, field_errors) do
+    changeset = ProfileSchema.booking_text_changeset(socket.assigns.profile, params)
+
+    field_errors
+    |> Enum.reduce(changeset, fn {field, message}, acc ->
+      Changeset.add_error(acc, field, message)
+    end)
+    |> Map.put(:action, :insert)
+  end
+
+  defp save(socket, params) do
     case Profiles.update_booking_text(socket.assigns.profile, params) do
       {:ok, profile} ->
         send(self(), {:profile_updated, profile})
