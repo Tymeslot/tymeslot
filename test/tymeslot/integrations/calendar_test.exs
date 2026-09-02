@@ -222,6 +222,30 @@ defmodule Tymeslot.Integrations.CalendarTest do
     end
   end
 
+  describe "read_only_provider?/1" do
+    test "is true for the providers that refuse every write" do
+      assert Calendar.read_only_provider?(:ics_url)
+      assert Calendar.read_only_provider?(:exchange)
+    end
+
+    test "is false for the providers a booking can be written to" do
+      refute Calendar.read_only_provider?(:google)
+      refute Calendar.read_only_provider?(:outlook)
+      refute Calendar.read_only_provider?(:caldav)
+    end
+
+    test "accepts the string form stored on an integration" do
+      assert Calendar.read_only_provider?("exchange")
+      refute Calendar.read_only_provider?("google")
+    end
+
+    test "is false for an unrecognised provider rather than raising" do
+      refute Calendar.read_only_provider?(:nonesuch)
+      refute Calendar.read_only_provider?("nonesuch")
+      refute Calendar.read_only_provider?(nil)
+    end
+  end
+
   describe "default_booking_calendar/2" do
     test "falls back to a selected calendar when none is marked primary" do
       calendars =

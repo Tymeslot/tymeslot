@@ -34,6 +34,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Exchange.Creation, as: ExchangeCreation
+  alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -50,6 +51,12 @@ defmodule Tymeslot.Integrations.Calendar do
   @type integration :: CalendarIntegrationSchema.t()
   @type calendar_selection_params :: %{required(:selected_calendars) => [String.t()]}
   @type colour_target :: {:meeting, Ecto.UUID.t()} | {:external, integration_id(), String.t()}
+
+  @typedoc """
+  One block of busy time read from a provider's free/busy view. It carries no
+  item identity, so a caller correlates blocks by time and never by uid.
+  """
+  @type busy_interval :: FreeBusy.interval()
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
@@ -309,6 +316,17 @@ defmodule Tymeslot.Integrations.Calendar do
   column shape stored in the database.
   """
   defdelegate caldav_based_provider_strings(), to: ProviderConfig
+
+  @doc """
+  Returns `true` when the provider refuses every write, so its calendars can
+  block availability but can never receive an event. Takes the provider atom
+  or the string form stored on an integration.
+
+  For the narrower question of whether a booking may be written to a given
+  integration, see `Tymeslot.Integrations.Calendar.BookingEligibility`.
+  """
+  @spec read_only_provider?(atom() | String.t() | nil) :: boolean()
+  defdelegate read_only_provider?(provider), to: ProviderConfig, as: :read_only?
 
   # ---------------------------
   # Public API: Higher-level wrappers (submodules)
