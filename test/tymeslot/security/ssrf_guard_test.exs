@@ -37,6 +37,39 @@ defmodule Tymeslot.Security.SsrfGuardTest do
   defp restore(key, :unset), do: Application.delete_env(:tymeslot, key)
   defp restore(key, {:set, value}), do: Application.put_env(:tymeslot, key, value)
 
+  describe "validate_pinned/2" do
+    test "returns the addresses it approved so the connect can be pinned to one" do
+      Application.put_env(:tymeslot, :environment, :prod)
+      Application.put_env(:tymeslot, :allow_private_ips_for_calendar, false)
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardResolvingResolver)
+
+      assert {:ok, [{93, 184, 216, 34}]} =
+               SsrfGuard.validate_pinned("https://caldav.example.com/dav/")
+    end
+
+    test "returns no addresses when the request was permitted without resolving" do
+      # Nothing was looked up, so there is nothing to pin to — the caller must
+      # fall back to connecting by hostname rather than inventing an address.
+      Application.put_env(:tymeslot, :environment, :dev)
+
+      assert {:ok, []} = SsrfGuard.validate_pinned("https://caldav.example.com/dav/")
+    end
+
+    test "falls back to a hostname verdict when the resolver cannot return addresses" do
+      # Resolvers predating `resolve_public/2` (test doubles, mostly) still get
+      # to make the verdict; their requests simply go unpinned.
+      Application.put_env(:tymeslot, :environment, :prod)
+      Application.put_env(:tymeslot, :allow_private_ips_for_calendar, false)
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardOkResolver)
+
+      assert {:ok, []} = SsrfGuard.validate_pinned("https://caldav.example.com/dav/")
+
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardPrivateResolver)
+
+      assert {:error, _reason} = SsrfGuard.validate_pinned("https://caldav.example.com/dav/")
+    end
+  end
+
   describe "validate/2 (non-production)" do
     setup do
       Application.put_env(:tymeslot, :environment, :test)
@@ -113,4 +146,15 @@ defmodule SsrfGuardPrivateResolver do
   @impl Tymeslot.Security.DnsResolutionBehaviour
   def check_private_ip(_url, _opts),
     do: {:error, "URL resolves to a private or local network address"}
+end
+
+defmodule SsrfGuardResolvingResolver do
+  @moduledoc false
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def check_private_ip(_url, _opts), do: :ok
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def resolve_public(_url, _opts), do: {:ok, [{93, 184, 216, 34}]}
 end

@@ -33,7 +33,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   require Logger
   alias Req.{Request, Response}
   alias Tymeslot.Infrastructure.{Metrics, ProxyConfig, ResponseTooLargeError}
-  alias Tymeslot.Security.{SsrfBlockedError, SsrfGuard}
+  alias Tymeslot.Security.{ConnectionPinning, SsrfBlockedError, SsrfGuard}
 
   # Generous enough that no legitimate response comes close: the largest bodies
   # the app handles are a full CalDAV REPORT and a 2,500-event Google page, both
@@ -250,9 +250,12 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
   # Request-time SSRF protection for user-supplied hosts (CalDAV, self-hosted
   # video). Validates that the URL does not resolve to a private/local address
-  # *immediately before* connecting (closing the DNS-rebinding gap), and
-  # disables Req's automatic redirect following so a 3xx from a public host
-  # cannot silently bounce the request onto an internal address.
+  # immediately before connecting, then connects to the address that check
+  # approved rather than letting Finch resolve the hostname again — without
+  # that, a short-TTL record could answer public to the check and loopback to
+  # the socket. Req's automatic redirect following is disabled too, so a 3xx
+  # from a public host cannot silently bounce the request onto an internal
+  # address past a check that has already run.
   @spec guarded_request(atom(), String.t(), any(), list(), keyword()) ::
           {:ok, Response.t()} | {:error, Exception.t()}
   defp guarded_request(method, url, body, headers, options) do
@@ -262,14 +265,17 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         :error -> []
       end
 
-    case SsrfGuard.validate(url, guard_opts) do
-      :ok ->
+    case SsrfGuard.validate_pinned(url, guard_opts) do
+      {:ok, addresses} ->
         safe_options =
           options
           |> Keyword.drop([:ssrf_protect, :ssrf_allow_private])
           |> Keyword.put(:redirect, false)
 
-        do_request(method, url, body, headers, safe_options)
+        {pinned_url, pinned_options} =
+          ConnectionPinning.pin_request(url, addresses, safe_options)
+
+        do_request(method, pinned_url, body, headers, pinned_options)
 
       {:error, reason} ->
         Logger.warning("Blocked outbound request by SSRF protection",
