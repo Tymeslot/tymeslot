@@ -17,14 +17,19 @@ defmodule Tymeslot.Emails.BrandingTest do
 
   setup :restore_app_settings_env
 
+  # Cleared before as well as after: another module's logo upload (the admin
+  # branding LiveView test) removes its file but leaves the directory behind,
+  # and the "stores nothing" assertion below reads that leftover as a write.
   setup do
-    on_exit(fn ->
-      upload_dir()
-      |> Path.join("branding")
-      |> File.rm_rf()
-    end)
-
+    clear_branding_dir()
+    on_exit(&clear_branding_dir/0)
     :ok
+  end
+
+  defp clear_branding_dir do
+    upload_dir()
+    |> Path.join("branding")
+    |> File.rm_rf()
   end
 
   # A 1x1 PNG, the smallest thing ExImageInfo will recognise as one.
