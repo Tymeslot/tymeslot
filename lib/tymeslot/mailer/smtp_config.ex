@@ -33,7 +33,8 @@ defmodule Tymeslot.Mailer.SMTPConfig do
       a relay whose certificate is issued by a private CA.
     * `:tls_verify` — `:none` disables certificate verification entirely.
       This removes the protection against an intercepted connection, so it
-      is a last resort for a self-signed relay; prefer `:cacertfile`.
+      is a last resort for a self-signed relay; prefer `:cacertfile`. It also
+      makes `:cacertfile` inert: no trust store is consulted at all.
 
   ## Example
 
@@ -48,6 +49,14 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   """
 
   require Logger
+
+  @verify_disabled_warning "SMTP certificate verification is DISABLED (SMTP_TLS_VERIFY=none). " <>
+                             "The connection is encrypted but the relay's identity is not " <>
+                             "checked, so an intercepted connection cannot be detected. " <>
+                             "Prefer SMTP_CACERTFILE with your relay's CA."
+
+  @cacertfile_ignored_warning " The configured SMTP_CACERTFILE is ignored while verification " <>
+                                "is off: unset SMTP_TLS_VERIFY to verify against that bundle."
 
   @typedoc """
   How far to trust the relay's certificate: `:peer` verifies it against the
@@ -293,12 +302,8 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   # Verification disabled: no trust store is consulted, and none is required.
   # Demanding one here would defeat the point for the operator who turned
   # verification off precisely because they have no usable CA bundle.
-  defp verify_options(:none, _cacertfile) do
-    Logger.warning(
-      "SMTP certificate verification is DISABLED (SMTP_TLS_VERIFY=none). The connection " <>
-        "is encrypted but the relay's identity is not checked, so an intercepted " <>
-        "connection cannot be detected. Prefer SMTP_CACERTFILE with your relay's CA."
-    )
+  defp verify_options(:none, cacertfile) do
+    warn_verification_disabled(cacertfile)
 
     [verify: :verify_none]
   end
@@ -306,6 +311,18 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   defp verify_options(:peer, cacertfile) do
     [verify: :verify_peer] ++
       trust_store(cacertfile) ++ [customize_hostname_check: hostname_check()]
+  end
+
+  # A configured CA bundle is dead weight once verification is off: nothing
+  # reads it, so an operator who left an old SMTP_TLS_VERIFY=none in place
+  # would otherwise see a valid bundle and assume the relay is verified. One
+  # warning covers both, so the two facts cannot be read apart.
+  defp warn_verification_disabled(nil), do: Logger.warning(@verify_disabled_warning)
+
+  defp warn_verification_disabled(cacertfile) do
+    Logger.warning(@verify_disabled_warning <> @cacertfile_ignored_warning,
+      cacertfile: cacertfile
+    )
   end
 
   # A private CA replaces the public store rather than extending it: a relay
@@ -332,15 +349,22 @@ defmodule Tymeslot.Mailer.SMTPConfig do
 
   defp validate_cacertfile!(nil), do: nil
 
+  # Opened rather than stat'ed: a bundle mounted with the wrong ownership is
+  # present but unreadable, and passing it to :ssl then fails at connect time
+  # with an opaque option error rather than at boot with this message.
   defp validate_cacertfile!(path) when is_binary(path) do
     trimmed = String.trim(path)
 
-    if File.regular?(trimmed) do
-      trimmed
-    else
-      raise ArgumentError,
-            "SMTP CA certificate file not found or not readable: #{inspect(trimmed)} " <>
-              "(SMTP_CACERTFILE must point at a PEM bundle inside the container)"
+    case File.open(trimmed, [:read]) do
+      {:ok, file} ->
+        File.close(file)
+        trimmed
+
+      {:error, reason} ->
+        raise ArgumentError,
+              "SMTP CA certificate file not found or not readable: #{inspect(trimmed)} " <>
+                "(#{:file.format_error(reason)}). SMTP_CACERTFILE must point at a PEM " <>
+                "bundle readable inside the container"
     end
   end
 
