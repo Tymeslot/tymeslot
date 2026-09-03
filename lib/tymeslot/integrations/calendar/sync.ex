@@ -180,28 +180,32 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     uids = Enum.map(calendar_events, & &1.uid)
     SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
 
-    provider_event_ids = Enum.map(calendar_events, & &1.provider_event_id)
+    # Match on every identifier the events carry, not `provider_event_id`
+    # alone: a CalDAV event holds its href there while the meeting it mirrors
+    # is only reachable by UID, so an id-only join found no meeting for any
+    # CalDAV integration and silently never reconciled a time change.
+    identifiers =
+      calendar_events
+      |> Meetings.calendar_identifier_set()
+      |> MapSet.to_list()
 
-    meetings_by_id =
-      Meetings.list_meetings_by_provider_event_ids(integration.id, provider_event_ids)
+    meetings_by_identifier =
+      Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
 
-    Enum.each(calendar_events, &maybe_reconcile_time_change(integration, &1, meetings_by_id))
+    Enum.each(
+      calendar_events,
+      &maybe_reconcile_time_change(integration, &1, meetings_by_identifier)
+    )
+
     :ok
   end
 
   defp maybe_reconcile_time_change(
-         _integration,
-         %CalendarEvent{provider_event_id: nil},
-         _meetings_by_id
-       ),
-       do: :ok
-
-  defp maybe_reconcile_time_change(
          integration,
          %CalendarEvent{} = cal_event,
-         meetings_by_id
+         meetings_by_identifier
        ) do
-    case Map.get(meetings_by_id, cal_event.provider_event_id) do
+    case linked_meeting(cal_event, meetings_by_identifier) do
       nil ->
         :ok
 
@@ -212,6 +216,12 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           :ok
         end
     end
+  end
+
+  defp linked_meeting(%CalendarEvent{} = cal_event, meetings_by_identifier) do
+    cal_event
+    |> Meetings.calendar_event_identifiers()
+    |> Enum.find_value(&Map.get(meetings_by_identifier, &1))
   end
 
   # All-day event: compare start_date and end_date only.

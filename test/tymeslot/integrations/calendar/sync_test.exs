@@ -257,6 +257,26 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       assert updated.calendar_sync_status == "externally_deleted"
     end
+
+    test "falls back to uid when the provider_event_id is present but matches nothing" do
+      integration = insert(:calendar_integration)
+      uid = "caldav-uid-#{System.unique_integer([:positive])}"
+
+      meeting =
+        insert(:meeting,
+          uid: uid,
+          calendar_integration_id: integration.id,
+          provider_event_id: nil
+        )
+
+      # A CalDAV cache row offers its href as the provider event id. No
+      # meeting carries that href, so the lookup must fall back to the UID
+      # rather than giving up on the first miss.
+      assert :ok = Sync.reconcile(integration.id, "/cal/primary/#{uid}.ics", uid, :deleted)
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_deleted"
+    end
   end
 
   describe "reconcile/4 not-found behaviour" do
@@ -387,6 +407,64 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       assert updated.calendar_sync_status == "externally_modified"
+    end
+
+    test "time-changed reconcile (CalDAV): matches by uid when the cache row is keyed by href" do
+      integration = insert(:calendar_integration)
+
+      old_start = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+      uid = "caldav-moved-#{System.unique_integer([:positive])}@tymeslot.com"
+
+      # The CalDAV write path leaves provider_event_id unset on the meeting;
+      # the synced copy is keyed by its href. The UID is the only identifier
+      # the two sides share.
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: nil,
+          uid: uid,
+          start_time: old_start
+        )
+
+      new_start = DateTime.add(old_start, 7200, :second)
+
+      event =
+        CalendarEvent.new!(%{
+          uid: uid,
+          calendar_integration_id: integration.id,
+          provider: :caldav,
+          provider_calendar_id: "/cal/primary",
+          provider_event_id: "/cal/primary/#{uid}.ics",
+          all_day: false,
+          start_at: new_start,
+          end_at: DateTime.add(new_start, 3600, :second),
+          synced_at: DateTime.utc_now(:microsecond)
+        })
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_modified"
+    end
+
+    test "leaves an unrelated meeting alone when no identifier matches" do
+      integration = insert(:calendar_integration)
+      start_time = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: nil,
+          uid: "mine-#{System.unique_integer([:positive])}@tymeslot.com",
+          start_time: start_time
+        )
+
+      event = build_timed_event(integration, "/cal/primary/someone-elses.ics")
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert is_nil(updated.calendar_sync_status)
     end
 
     test "upsert error: returns {:error, reason} when upsert raises" do
