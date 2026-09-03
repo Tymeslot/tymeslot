@@ -39,8 +39,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  import ApprovalSection, only: [approval_section: 1]
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+
+  import ApprovalSection, only: [approval_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
   import GuestsSection, only: [guests_section: 1]
   import LimitsSection, only: [limits_section: 1]

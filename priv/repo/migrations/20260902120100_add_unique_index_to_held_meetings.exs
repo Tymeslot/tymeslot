@@ -63,6 +63,12 @@ defmodule Tymeslot.Repo.Migrations.AddUniqueIndexToHeldMeetings do
   @index_name :unique_confirmed_meeting_per_organizer_at_time
 
   def up do
+    # The self-healing dedup described above. It has to be raw SQL: the
+    # window function that picks the earliest row per (organizer, start_time)
+    # has no Ecto equivalent inside a migration, and the statement is a
+    # bounded one-shot UPDATE over rows that can only exist if an older
+    # release wrote them. Migrations run offline with Phoenix stopped.
+    # excellent_migrations:safety-assured-for-next-line raw_sql_executed
     execute("""
     UPDATE meetings m
     SET status = 'cancelled', cancelled_at = COALESCE(m.cancelled_at, NOW())

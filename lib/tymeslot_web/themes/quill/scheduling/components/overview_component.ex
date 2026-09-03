@@ -10,8 +10,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
-  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   import TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers

@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.ApprovalDisplay do
     do: Approval.required?(assigns[:meeting_type])
 
   def awaiting_approval?(%{meeting_status: status}) when is_binary(status),
-    do: MeetingState.awaiting_approval?(%{status: status})
+    do: MeetingState.awaiting_approval_status?(status)
 
   def awaiting_approval?(assigns), do: Approval.required?(assigns[:meeting_type])
 end

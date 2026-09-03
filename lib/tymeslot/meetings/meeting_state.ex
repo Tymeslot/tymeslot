@@ -25,6 +25,8 @@ defmodule Tymeslot.Meetings.MeetingState do
   # holds one of these statuses AND has no pending reschedule request.
   @occupying_statuses ["confirmed", "pending", "awaiting_payment", "awaiting_approval"]
 
+  @awaiting_approval "awaiting_approval"
+
   @doc """
   Whether the meeting still represents a live booking a user should be able
   to interact with (view, cancel, reschedule). Excludes cancelled,
@@ -113,8 +115,20 @@ defmodule Tymeslot.Meetings.MeetingState do
   attendee, here the attendee is waiting on the organizer.
   """
   @spec awaiting_approval?(Meeting.t()) :: boolean()
-  def awaiting_approval?(%{status: "awaiting_approval"}), do: true
+  def awaiting_approval?(%{status: @awaiting_approval}), do: true
   def awaiting_approval?(_meeting), do: false
+
+  @doc """
+  Status-string counterpart of `awaiting_approval?/1`.
+
+  For callers that hold the status alone rather than a meeting — the themes'
+  confirmation screens read it off their assigns — so they need not fabricate
+  a meeting-shaped map to ask the question, and the status literal stays
+  defined once in this module.
+  """
+  @spec awaiting_approval_status?(String.t() | nil) :: boolean()
+  def awaiting_approval_status?(@awaiting_approval), do: true
+  def awaiting_approval_status?(_status), do: false
 
   @doc """
   Query-side counterpart of `awaiting_approval?/1`.
@@ -128,7 +142,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   """
   @spec where_awaiting_approval(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_awaiting_approval(query) do
-    where(query, [m], m.status == "awaiting_approval")
+    where(query, [m], m.status == @awaiting_approval)
   end
 
   @doc """
