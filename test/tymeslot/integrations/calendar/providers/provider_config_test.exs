@@ -315,10 +315,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
 
   describe "read_only?/1" do
     test "names the providers whose module refuses every write" do
-      assert ProviderConfig.read_only?(:exchange)
-      assert ProviderConfig.read_only?("exchange")
       assert ProviderConfig.read_only?(:ics_url)
       assert ProviderConfig.read_only?("ics_url")
+    end
+
+    test "no longer names exchange, whose provider now writes" do
+      # It was on the list for as long as the EWS provider had no write path.
+      # Leaving it there once the path landed would keep every Exchange folder
+      # out of the booking pickers while the provider was perfectly able to
+      # accept one.
+      refute ProviderConfig.read_only?(:exchange)
+      refute ProviderConfig.read_only?("exchange")
     end
 
     test "answers false for every provider that can receive a booking" do
@@ -328,7 +335,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
           {:ok, provider} = ProviderConfig.parse_known(name)
           provider
         end)
-        |> Enum.reject(&(&1 in [:exchange, :ics_url]))
+        |> Enum.reject(&(&1 == :ics_url))
 
       assert writable != []
       assert Enum.filter(writable, &ProviderConfig.read_only?/1) == []
@@ -343,16 +350,30 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
       # The list is hand-maintained, so pin it to the property it claims:
       # every provider it names must actually reject a create.
       assert {:error, :read_only} =
-               Tymeslot.Integrations.Calendar.Exchange.Provider.create_event(%{}, %{})
-
-      assert {:error, :read_only} =
                Tymeslot.Integrations.Calendar.Ics.Provider.create_event(%{}, %{})
-
-      assert ProviderConfig.get_provider_module(:exchange) ==
-               Tymeslot.Integrations.Calendar.Exchange.Provider
 
       assert ProviderConfig.get_provider_module(:ics_url) ==
                Tymeslot.Integrations.Calendar.Ics.Provider
+    end
+
+    test "agrees with the exchange provider, which no longer refuses a create" do
+      # The other direction of the same property, and the one that would have
+      # caught the list and the module disagreeing when the write path landed:
+      # a provider absent from the list must not answer `:read_only`.
+      # Reaching the transport's credential check *is* the assertion: a
+      # provider that still refused writes would answer `{:error, :read_only}`
+      # before any request was built, and this call would return rather than
+      # raise.
+      assert_raise ArgumentError, ~r/credentials/, fn ->
+        Tymeslot.Integrations.Calendar.Exchange.Provider.create_event(
+          %{base_url: "https://mail.example.com/EWS/Exchange.asmx"},
+          %{
+            summary: "x",
+            start_time: ~U[2026-10-05 09:00:00Z],
+            end_time: ~U[2026-10-05 09:30:00Z]
+          }
+        )
+      end
     end
   end
 

@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   @moduledoc """
-  Validates and creates a read-only Exchange (EWS) calendar integration.
+  Validates and creates an Exchange (EWS) calendar integration.
 
   A sibling of `Tymeslot.Integrations.Calendar.Creation` rather than another
   branch inside it, for the same reason the subscription path is separate: an
@@ -10,13 +10,20 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   mailbox `GetUserAvailability` is addressed to, and `verify_ssl`, which an
   on-premises server behind a self-signed certificate needs.
 
-  Every discovered folder is persisted `read_only: true`. The provider refuses
-  writes, and `Exchange.FolderDiscovery` deliberately does not set the flag
-  itself: `FindFolder` reports no rights, so claiming one would assert
-  something the server never said, and the module's doc names *the point where
-  the write path is offered* as where the property belongs. This is that
-  point. Without it an Exchange folder would be eligible as the user's default
-  booking calendar, and every booking written to it would fail.
+  Discovered folders are persisted writable, which is the same thing
+  `Exchange.FolderDiscovery` says by declining to set `read_only` at all:
+  `FindFolder` reports no rights, so a flag either way would assert something
+  the server never said. They were forced `read_only: true` here while the
+  provider refused every write, to keep such a folder out of the booking-target
+  pickers; the write path now exists, so the override is gone and the flag is
+  back to meaning only what a server states.
+
+  What the server does not state is still not known here. A folder the account
+  can read but not write is offered as a booking target like any other, and the
+  refusal arrives when the first booking is written to it. `FindFolder` gives
+  nothing better to go on, and a folder-by-folder rights probe at connection
+  time would cost a round trip each to answer a question that changes without
+  notice anyway.
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -141,7 +148,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
     |> List.wrap()
     |> Enum.map(fn calendar ->
       entry = calendar |> CalendarEntry.normalize() |> CalendarEntry.with_defaults()
-      %{entry | selected: true, read_only: true}
+      %{entry | selected: true}
     end)
   end
 

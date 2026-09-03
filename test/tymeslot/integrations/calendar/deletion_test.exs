@@ -223,47 +223,46 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       assert profile.primary_calendar_integration_id == writable.id
     end
 
-    test "deleting the primary promotes the writable integration over an Exchange mailbox", %{
+    test "deleting the primary can promote an Exchange mailbox, which now takes bookings", %{
       user: user
     } do
-      # The journey: Google is primary, a CalDAV account and a read-only
-      # Exchange mailbox sit beside it, and the user removes Google. Promotion
-      # walks the list in name order, so the Exchange row is named to come
-      # first: whichever way the tie is broken, only the eligibility filter can
-      # keep it from being promoted.
+      # The journey: Google is primary, a CalDAV account and an Exchange
+      # mailbox sit beside it, and the user removes Google. Promotion walks the
+      # list in name order, so the Exchange row is named to come first. It was
+      # skipped here while the EWS provider refused every write; now it wins
+      # the tie like any other writable integration.
       primary = insert(:calendar_integration, user: user, provider: "google", name: "A Google")
       exchange = insert_exchange(user, "B Exchange")
-      caldav = insert(:calendar_integration, user: user, provider: "caldav", name: "C CalDAV")
+      _caldav = insert(:calendar_integration, user: user, provider: "caldav", name: "C CalDAV")
 
       CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
 
       assert {:ok, {:deleted_promoted, promoted_id}} =
                Deletion.delete_with_primary_reassignment(user.id, primary.id)
 
-      assert promoted_id == caldav.id
+      assert promoted_id == exchange.id
 
       assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == caldav.id
-
-      # The mailbox is untouched: it still blocks busy time, it just never
-      # takes a booking.
-      assert {:ok, _still_there} =
-               CalendarManagement.get_calendar_integration(exchange.id, user.id)
+      assert profile.primary_calendar_integration_id == exchange.id
     end
 
-    test "deleting the primary with only an Exchange mailbox remaining clears the primary", %{
+    test "deleting the primary with only an Exchange mailbox remaining promotes it", %{
       user: user
     } do
       primary = insert(:calendar_integration, user: user)
-      _exchange = insert_exchange(user, "Exchange")
+      exchange = insert_exchange(user, "Exchange")
 
       CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
 
-      assert Deletion.delete_with_primary_reassignment(user.id, primary.id) ==
-               {:ok, {:deleted_cleared_primary}}
+      # Previously `{:deleted_cleared_primary}`: the user was left with no
+      # primary at all. A mailbox that accepts a booking is a better answer.
+      assert {:ok, {:deleted_promoted, promoted_id}} =
+               Deletion.delete_with_primary_reassignment(user.id, primary.id)
+
+      assert promoted_id == exchange.id
 
       assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == nil
+      assert profile.primary_calendar_integration_id == exchange.id
     end
 
     test "deleting the primary with only a subscription remaining clears the primary", %{

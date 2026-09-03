@@ -225,18 +225,20 @@ defmodule Tymeslot.Integrations.CalendarTest do
   describe "read_only_provider?/1" do
     test "is true for the providers that refuse every write" do
       assert Calendar.read_only_provider?(:ics_url)
-      assert Calendar.read_only_provider?(:exchange)
     end
 
     test "is false for the providers a booking can be written to" do
       refute Calendar.read_only_provider?(:google)
       refute Calendar.read_only_provider?(:outlook)
       refute Calendar.read_only_provider?(:caldav)
+      # Exchange joined this list when the EWS write path landed.
+      refute Calendar.read_only_provider?(:exchange)
     end
 
     test "accepts the string form stored on an integration" do
-      assert Calendar.read_only_provider?("exchange")
+      assert Calendar.read_only_provider?("ics_url")
       refute Calendar.read_only_provider?("google")
+      refute Calendar.read_only_provider?("exchange")
     end
 
     test "is false for an unrecognised provider rather than raising" do

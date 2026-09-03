@@ -39,22 +39,28 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
     )
   end
 
-  describe "the read-only-never-primary invariant (Exchange)" do
-    test "set_primary_calendar_integration refuses an Exchange mailbox", %{user: user} do
+  describe "an Exchange mailbox as primary" do
+    # This block pinned the opposite until the EWS write path landed: an
+    # Exchange mailbox was read-only, so it was refused as a primary and
+    # skipped by every promotion. It can now receive a booking, so it is an
+    # ordinary candidate, and these are the same five situations read the
+    # other way. The invariant itself has not gone anywhere; the subscription
+    # block below is where it still holds.
+    test "set_primary_calendar_integration accepts an Exchange mailbox", %{user: user} do
       exchange = insert_exchange(user)
 
-      assert {:error, :not_bookable} =
+      assert {:ok, _result} =
                CalendarPrimary.set_primary_calendar_integration(user.id, exchange.id)
 
       {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == nil
+      assert profile.primary_calendar_integration_id == exchange.id
     end
 
-    test "deleting a writable primary promotes the writable integration over an Exchange mailbox",
+    test "deleting the primary promotes the most recent candidate, Exchange included",
          %{user: user} do
-      # Promotion here takes the most recently added candidate, so the Exchange
-      # mailbox is the newest of the three: only the eligibility filter keeps
-      # it from winning.
+      # Promotion takes the most recently added candidate, and the Exchange
+      # mailbox is the newest of the three. Nothing filters it out any more, so
+      # recency alone decides.
       primary =
         insert(:calendar_integration,
           user: user,
@@ -63,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
           inserted_at: ~N[2024-01-01 10:00:00]
         )
 
-      fallback =
+      _older_fallback =
         insert(:calendar_integration,
           user: user,
           provider: "caldav",
@@ -71,7 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
           inserted_at: ~N[2024-01-02 10:00:00]
         )
 
-      _exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
+      exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
 
       assert {:ok, _result} =
                CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
@@ -79,10 +85,10 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
       assert {:ok, _result} = CalendarPrimary.delete_with_primary_handling(primary)
 
       {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == fallback.id
+      assert profile.primary_calendar_integration_id == exchange.id
     end
 
-    test "deactivating a writable primary promotes the writable integration over an Exchange mailbox",
+    test "deactivating the primary promotes the most recent candidate, Exchange included",
          %{user: user} do
       primary =
         insert(:calendar_integration,
@@ -92,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
           inserted_at: ~N[2024-01-01 10:00:00]
         )
 
-      fallback =
+      _older_fallback =
         insert(:calendar_integration,
           user: user,
           provider: "caldav",
@@ -100,7 +106,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
           inserted_at: ~N[2024-01-02 10:00:00]
         )
 
-      _exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
+      exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
 
       assert {:ok, _result} =
                CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
@@ -109,10 +115,10 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
       refute toggled.is_active
 
       {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == fallback.id
+      assert profile.primary_calendar_integration_id == exchange.id
     end
 
-    test "deactivating a writable primary with only an Exchange mailbox remaining clears the primary",
+    test "deactivating a primary with only an Exchange mailbox remaining promotes it",
          %{user: user} do
       primary =
         insert(:calendar_integration,
@@ -121,7 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
           calendar_list: [%{"id" => "primary", "selected" => true}]
         )
 
-      _exchange = insert_exchange(user)
+      exchange = insert_exchange(user)
 
       assert {:ok, _result} =
                CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
@@ -129,11 +135,13 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
       assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(primary)
       refute toggled.is_active
 
+      # The user is left with a primary that works, where before they were
+      # left with none at all.
       {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == nil
+      assert profile.primary_calendar_integration_id == exchange.id
     end
 
-    test "activating an Exchange mailbox does not adopt it as the primary", %{user: user} do
+    test "activating an Exchange mailbox adopts it as the primary", %{user: user} do
       exchange = insert_exchange(user)
 
       assert {:ok, toggled_off} = CalendarManagement.toggle_with_primary_rebalance(exchange)
@@ -143,7 +151,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
       assert toggled_on.is_active
 
       {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
-      assert profile.primary_calendar_integration_id == nil
+      assert profile.primary_calendar_integration_id == exchange.id
     end
   end
 
