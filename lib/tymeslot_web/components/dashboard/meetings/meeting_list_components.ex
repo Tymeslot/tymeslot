@@ -10,10 +10,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge
 
   # Filter Tabs
   attr :active, :string, required: true
   attr :target, :any, required: true
+  attr :awaiting_approval_count, :integer, default: 0
 
   @spec filter_tabs(map()) :: Phoenix.LiveView.Rendered.t()
   def filter_tabs(assigns) do
@@ -40,6 +42,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         icon="hero-x-mark"
         target={@target}
       />
+      <%!-- Only shown once there is something to answer: a host who requires no
+            approvals should never see a tab that is permanently empty. --%>
+      <.filter_tab_button
+        :if={@awaiting_approval_count > 0 or @active == "awaiting_approval"}
+        active={@active == "awaiting_approval"}
+        filter="awaiting_approval"
+        label={dgettext("dashboard_bookings", "Requests")}
+        icon="hero-inbox-arrow-down"
+        count={@awaiting_approval_count}
+        target={@target}
+      />
     </div>
     """
   end
@@ -49,6 +62,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :label, :string, required: true
   attr :icon, :string, required: true
   attr :target, :any, required: true
+  attr :count, :integer, default: 0
 
   defp filter_tab_button(assigns) do
     ~H"""
@@ -67,6 +81,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     >
       <CoreComponents.icon name={@icon} class={if @active, do: "text-white/90", else: ""} />
       <span>{@label}</span>
+      <span
+        :if={@count > 0}
+        class={[
+          "ml-1 inline-flex items-center justify-center min-w-[1.375rem] h-5.5 px-1.5 rounded-full text-token-xs font-black tabular-nums",
+          if(@active, do: "bg-white/25 text-white", else: "bg-amber-100 text-amber-700")
+        ]}
+      >
+        {@count}
+      </span>
     </button>
     """
   end
@@ -79,6 +102,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :time_format, :string, required: true
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
+  attr :answering_request, :any, default: nil
   attr :target, :any, required: true
   attr :meetings_stream, :any, required: true
 
@@ -96,6 +120,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             time_format={@time_format}
             cancelling_meeting={@cancelling_meeting}
             sending_reschedule={@sending_reschedule}
+            answering_request={@answering_request}
             target={@target}
           />
         </div>
@@ -110,6 +135,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :time_format, :string, required: true
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
+  attr :answering_request, :any, default: nil
   attr :target, :any, required: true
 
   @spec meeting_card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -136,7 +162,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             >
               {@meeting.attendee_company}
             </span>
-            <.status_badges meeting={@meeting} />
+            <MeetingStatusBadge.status_badges meeting={@meeting} />
             <span
               :if={@meeting.meeting_url}
               class="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 text-cyan-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-cyan-100 shadow-sm"
@@ -274,8 +300,47 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         </div>
 
         <div class="flex lg:flex-col gap-3 shrink-0 lg:w-[160px]">
+          <%!-- A held request offers exactly two actions. Join, Reschedule and
+                Cancel all presuppose a meeting that is happening, and offering
+                them here is what let a host "reschedule" a booking they had
+                never agreed to. --%>
+          <div :if={MeetingState.awaiting_approval?(@meeting)} class="contents">
+            <button
+              id={"approve-request-#{@meeting.id}"}
+              phx-click="approve_request"
+              phx-value-id={@meeting.id}
+              phx-target={@target}
+              disabled={@answering_request == @meeting.id}
+              data-testid="approve-request"
+              class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap disabled:opacity-50"
+            >
+              <CoreComponents.spinner :if={@answering_request == @meeting.id} class="h-4 w-4 mr-2" />
+              <CoreComponents.icon
+                :if={@answering_request != @meeting.id}
+                name="hero-check"
+                class="w-4 h-4 mr-2 shrink-0"
+              />
+              {dgettext("dashboard_bookings", "Approve")}
+            </button>
+
+            <button
+              phx-click="show_decline_modal"
+              phx-value-id={@meeting.id}
+              phx-target={@target}
+              disabled={@answering_request == @meeting.id}
+              data-testid="decline-request"
+              class="btn-danger py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap disabled:opacity-50"
+            >
+              <CoreComponents.icon name="hero-x-mark" class="w-4 h-4 mr-2 shrink-0" />
+              {dgettext("dashboard_bookings", "Decline")}
+            </button>
+          </div>
+
           <div
-            :if={@meeting.status != "cancelled" && !Helpers.past_meeting?(@meeting)}
+            :if={
+              @meeting.status != "cancelled" && !MeetingState.awaiting_approval?(@meeting) &&
+                !Helpers.past_meeting?(@meeting)
+            }
             class="contents"
           >
             <a
@@ -329,7 +394,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </button>
           </div>
           <div
-            :if={@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)}
+            :if={
+              (@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)) and
+                not MeetingState.awaiting_approval?(@meeting)
+            }
             class="hidden lg:block"
           >
             &nbsp;
@@ -384,53 +452,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     """
   end
 
-  defp status_badges(assigns) do
-    ~H"""
-    <span
-      :if={@meeting.status == "cancelled"}
-      class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-red-100 shadow-sm"
-    >
-      <CoreComponents.icon name="hero-x-mark" class="w-3 h-3" /> {dgettext(
-        "dashboard_bookings",
-        "Cancelled"
-      )}
-    </span>
-    <span
-      :if={@meeting.status != "cancelled" and MeetingState.awaiting_new_time?(@meeting)}
-      class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-amber-100 shadow-sm"
-    >
-      <CoreComponents.icon name="hero-clock" class="w-3 h-3" /> {dgettext(
-        "dashboard_bookings",
-        "Reschedule Requested"
-      )}
-    </span>
-    <span
-      :if={
-        @meeting.status != "cancelled" and !MeetingState.awaiting_new_time?(@meeting) and
-          Helpers.past_meeting?(@meeting)
-      }
-      class="inline-flex items-center gap-1.5 px-3 py-1 bg-tymeslot-100 text-tymeslot-600 text-token-xs font-black uppercase tracking-wider rounded-full border border-tymeslot-200 shadow-sm"
-    >
-      <CoreComponents.icon name="hero-check" class="w-3 h-3" /> {dgettext(
-        "dashboard_bookings",
-        "Completed"
-      )}
-    </span>
-    <span
-      :if={
-        @meeting.status != "cancelled" and !MeetingState.awaiting_new_time?(@meeting) and
-          !Helpers.past_meeting?(@meeting)
-      }
-      class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-emerald-100 shadow-sm"
-    >
-      <CoreComponents.icon name="hero-calendar-days" class="w-3 h-3" /> {dgettext(
-        "dashboard_bookings",
-        "Scheduled"
-      )}
-    </span>
-    """
-  end
-
   attr :filter, :string, required: true
 
   @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
@@ -449,6 +470,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               {dgettext("dashboard_bookings", "No past meetings")}
             <% "cancelled" -> %>
               {dgettext("dashboard_bookings", "No cancelled meetings")}
+            <% "awaiting_approval" -> %>
+              {dgettext("dashboard_bookings", "Nothing waiting on you")}
           <% end %>
         </h3>
         <p class="text-tymeslot-500 font-medium text-lg leading-relaxed">
@@ -464,6 +487,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               {dgettext(
                 "dashboard_bookings",
                 "You don't have any cancelled appointments to show."
+              )}
+            <% "awaiting_approval" -> %>
+              {dgettext(
+                "dashboard_bookings",
+                "Booking requests you haven't answered yet will appear here."
               )}
           <% end %>
         </p>

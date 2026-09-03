@@ -63,6 +63,55 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
+  Handles a booking request being raised on a meeting type requiring approval.
+
+  Fires `meeting.requested` rather than `meeting.created`. Consumers already
+  read `meeting.created` as "a confirmed booking exists", and a held request
+  is not one; it fires later, when the host approves. Meeting types without
+  approval are unaffected and keep firing `meeting.created` on submission.
+  """
+  @spec meeting_requested(term()) :: {:ok, term()} | {:error, term()}
+  def meeting_requested(meeting) do
+    result =
+      send_notifications(:meeting_requested, meeting, fn ->
+        Orchestrator.schedule_request_notifications(meeting)
+      end)
+
+    dispatch_request_channels(:meeting_requested, meeting)
+
+    result
+  end
+
+  @doc """
+  Handles a booking request the host refused.
+
+  Distinct from `meeting_cancelled/1` even though the stored status is the
+  same. A cancellation tells the invitee a confirmed meeting is off; a decline
+  tells them a request was never accepted, and sending the cancellation email
+  here would refer to a booking they were explicitly told was not one.
+  """
+  @spec meeting_declined(term()) :: {:ok, term()} | {:error, term()}
+  def meeting_declined(meeting), do: request_ended(meeting, :meeting_declined, :declined)
+
+  @doc """
+  Handles a booking request nobody answered before its deadline.
+  """
+  @spec meeting_request_expired(term()) :: {:ok, term()} | {:error, term()}
+  def meeting_request_expired(meeting),
+    do: request_ended(meeting, :meeting_request_expired, :expired)
+
+  defp request_ended(meeting, event, variant) do
+    result =
+      send_notifications(event, meeting, fn ->
+        Orchestrator.send_request_outcome_notifications(meeting, variant)
+      end)
+
+    dispatch_request_channels(event, meeting)
+
+    result
+  end
+
+  @doc """
   Handles meeting cancellation event.
   """
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}
@@ -165,6 +214,30 @@ defmodule Tymeslot.Notifications.Events do
   defp dispatch_webhooks(event, meeting), do: dispatch_channel(:webhooks, event, meeting)
   defp dispatch_telegram(event, meeting), do: dispatch_channel(:telegram, event, meeting)
   defp dispatch_slack(event, meeting), do: dispatch_channel(:slack, event, meeting)
+
+  # The three request-lifecycle events (`meeting.requested`,
+  # `meeting.declined`, `meeting.request_expired`) fan out to all three
+  # channels through the same guarded `dispatch_channel/3` as every other
+  # event, so a raising channel cannot abort the fan-out or escape into
+  # callers this module documents as non-failing.
+  #
+  # Telegram finds nothing to notify for now:
+  # `TelegramIntegrationSchema.@valid_events` still hardcodes the
+  # pre-approval three, so no integration can be subscribed to these events
+  # yet. It is dispatched anyway rather than special-cased, so widening that
+  # allowlist is the only change Telegram will need.
+  #
+  # Slack does reach real subscribers today — `SlackIntegrationSchema`'s
+  # `@valid_events` derives from `EventTypes.all/0` and
+  # `Slack.default_events_for_new_integration/0` subscribes fresh
+  # integrations to all of them — and `Slack.MessageBuilder` now has
+  # dedicated rendering for all three, so what a host sees is a real
+  # notification rather than the generic "Meeting update" fallback.
+  defp dispatch_request_channels(event, meeting) do
+    dispatch_webhooks(event, meeting)
+    dispatch_telegram(event, meeting)
+    dispatch_slack(event, meeting)
+  end
 
   defp dispatch_channel(channel, event, meeting) do
     dispatch_fun(channel).(event, meeting)

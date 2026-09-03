@@ -85,6 +85,22 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
   """
   @spec fill_and_submit_booking_flow(term(), String.t(), String.t(), map()) :: :ok
   def fill_and_submit_booking_flow(view, theme_name, theme_id, attendee) do
+    advance_to_booking_form(view, theme_name)
+    submit_booking_form(view, theme_id, attendee)
+
+    :ok
+  end
+
+  @doc """
+  Drives a mounted booking view from overview to the booking form, stopping
+  short of submitting.
+
+  Extracted from `fill_and_submit_booking_flow/4` rather than copied, so a test
+  that only cares about what the form *says* cannot drift from the navigation
+  the end-to-end tests use.
+  """
+  @spec advance_to_booking_form(term(), String.t()) :: :ok
+  def advance_to_booking_form(view, theme_name) do
     view
     |> element("button[data-testid='duration-option'][data-duration='quick-chat']")
     |> render_click()
@@ -126,7 +142,6 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
     view |> element("button[data-testid='next-step']") |> render_click()
 
     eventually(fn -> has_element?(view, "form[data-testid='booking-form']") end, timeout: 5000)
-    submit_booking_form(view, theme_id, attendee)
 
     :ok
   end

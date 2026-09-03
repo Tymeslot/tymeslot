@@ -22,7 +22,14 @@ defmodule Tymeslot.Notifications.EventTypesTest do
   describe "all/0" do
     test "returns every wire name to_event_type/1 can produce" do
       assert Enum.sort(EventTypes.all()) ==
-               Enum.sort(["meeting.created", "meeting.cancelled", "meeting.rescheduled"])
+               Enum.sort([
+                 "meeting.cancelled",
+                 "meeting.created",
+                 "meeting.declined",
+                 "meeting.request_expired",
+                 "meeting.requested",
+                 "meeting.rescheduled"
+               ])
     end
   end
 end

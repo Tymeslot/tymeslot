@@ -17,11 +17,16 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
 
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
   @typedoc "Why form input could not be mapped onto schema attributes."
-  @type error :: :invalid_duration | :invalid_price | :invalid_reminder_config
+  @type error ::
+          :invalid_duration
+          | :invalid_price
+          | :invalid_reminder_config
+          | :invalid_approval_window
 
   @doc """
   Builds schema attributes from raw form params and the form's UI state.
@@ -36,7 +41,8 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
-         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]) do
+         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]),
+         {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
         name: params["name"],
         duration_minutes: duration_minutes,
@@ -46,6 +52,8 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         is_active: params["is_active"] == "true",
         allow_video: ui_state.meeting_mode == "video",
         allow_guests: params["allow_guests"] == "true",
+        requires_approval: params["requires_approval"] == "true",
+        approval_window_hours: approval_window_hours,
         video_integration_id: video_integration_id(ui_state),
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),

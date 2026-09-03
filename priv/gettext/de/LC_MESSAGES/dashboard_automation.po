@@ -632,3 +632,38 @@ msgstr "Die URL löst sich zu einer privaten oder eingeschränkten Adresse auf"
 #, elixir-autogen, elixir-format
 msgid "Webhook returned status %{status}"
 msgstr "Webhook hat den Status %{status} zurückgegeben"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Declined"
+msgstr "Buchung abgelehnt"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Request Expired"
+msgstr "Buchungsanfrage abgelaufen"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Requested"
+msgstr "Buchung angefragt"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when nobody answers a booking request before its deadline"
+msgstr "Wird ausgelöst, wenn niemand innerhalb der Frist auf eine Buchungsanfrage antwortet"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when someone requests a booking on a meeting type that needs your approval"
+msgstr "Wird ausgelöst, wenn jemand eine Buchung für einen Termintyp anfragt, der Ihre Bestätigung erfordert"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when you decline a booking request"
+msgstr "Wird ausgelöst, wenn Sie eine Buchungsanfrage ablehnen"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers on this event"
+msgstr "Wird bei diesem Ereignis ausgelöst"

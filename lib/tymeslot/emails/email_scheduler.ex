@@ -5,7 +5,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   This module is the single point of entry for enqueueing email jobs. Each
   function delegates to a focused category sub-module:
 
-  - `MeetingScheduler` — confirmation, cancellation, reminder, and reschedule emails
+  - `MeetingScheduler` — confirmation, cancellation, reminder, reschedule, and
+    booking-approval emails
   - `AuthScheduler` — email verification and password reset
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
@@ -36,6 +37,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate cancel_reminder_emails(meeting_id), to: MeetingScheduler
 
   defdelegate schedule_reschedule_request(meeting_id), to: MeetingScheduler
+
+  defdelegate schedule_request_emails(meeting_id, opts \\ []), to: MeetingScheduler
+  defdelegate schedule_approval_nudge(meeting_id, send_at), to: MeetingScheduler
+  defdelegate schedule_request_outcome(meeting_id, variant), to: MeetingScheduler
+  defdelegate cancel_approval_emails(meeting_id), to: MeetingScheduler
 
   # Auth emails
 
@@ -75,6 +81,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_cancellation_emails" => ["meeting_id"],
     "send_reminder_emails" => ["meeting_id", "reminder_value", "reminder_unit"],
     "send_reschedule_request" => ["meeting_id"],
+    "send_booking_request_emails" => ["meeting_id"],
+    "send_booking_approval_nudge" => ["meeting_id"],
+    "send_booking_request_outcome" => ["meeting_id", "variant"],
     "send_email_verification" => ["user_id", "verification_url"],
     "send_password_reset" => ["user_id", "reset_url"],
     "send_poll_deadline_reminders" => ["poll_id"],

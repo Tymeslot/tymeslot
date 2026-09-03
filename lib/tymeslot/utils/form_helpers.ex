@@ -94,6 +94,17 @@ defmodule Tymeslot.Utils.FormHelpers do
     %{price_cents: [dgettext("dashboard_meeting_form", "Enter a valid price")]}
   end
 
+  def format_context_error(:invalid_approval_window) do
+    %{
+      approval_window_hours: [
+        dgettext(
+          "dashboard_meeting_form",
+          "Enter a whole number of hours, or leave blank to use the default."
+        )
+      ]
+    }
+  end
+
   def format_context_error(error) when is_atom(error) do
     %{base: [format_generic_error(error)]}
   end

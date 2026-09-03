@@ -55,6 +55,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           cancelled_at: DateTime.t() | nil,
           cancellation_reason: String.t() | nil,
           reschedule_requested_at: DateTime.t() | nil,
+          approval_requested_at: DateTime.t() | nil,
+          approval_deadline_at: DateTime.t() | nil,
+          approval_resolved_at: DateTime.t() | nil,
+          approval_nudge_sent_at: DateTime.t() | nil,
+          decline_reason: String.t() | nil,
           announced_at: DateTime.t() | nil,
           organizer_email_sent: boolean(),
           attendee_email_sent: boolean(),
@@ -165,6 +170,21 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # attendee books a new time.
     field(:reschedule_requested_at, :utc_datetime)
 
+    # The manual-approval clock, set only while the meeting type requires the
+    # host to confirm each booking. `approval_deadline_at` is denormalised
+    # rather than derived: the meeting type's window can be edited, or the type
+    # archived, while a request is still outstanding, and the deadline the
+    # invitee was promised must not move underneath them.
+    field(:approval_requested_at, :utc_datetime)
+    field(:approval_deadline_at, :utc_datetime)
+    field(:approval_resolved_at, :utc_datetime)
+    field(:approval_nudge_sent_at, :utc_datetime)
+    # The host's optional note when declining. What distinguishes a declined
+    # booking from an invitee-cancelled one is `approval_resolved_at`, not
+    # `status`: both land on "cancelled" so the whole cancellation pipeline
+    # (calendar deletion, refund resolution, cache invalidation) applies
+    # unchanged.
+    field(:decline_reason, :string)
     # Notification tracking
     # Stamped when `meeting.created` is raised, so the event is claimed once and
     # cannot fan out twice; see `Tymeslot.Notifications.Events.meeting_created/1`.
@@ -266,6 +286,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :cancelled_at,
     :cancellation_reason,
     :reschedule_requested_at,
+    :approval_requested_at,
+    :approval_deadline_at,
+    :approval_resolved_at,
+    :approval_nudge_sent_at,
+    :decline_reason,
     :announced_at,
     :calendar_sync_status,
     :calendar_sync_status_dismissed_at,
@@ -288,6 +313,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   @valid_statuses [
     "pending",
+    # Held pending the host's manual approval. Occupies its slot like
+    # "pending" does, but is not a booking anyone has agreed to yet.
+    "awaiting_approval",
     "confirmed",
     "cancelled",
     "completed",
@@ -316,6 +344,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_length(:utm_content, max: 255)
     |> validate_length(:utm_term, max: 255)
     |> validate_length(:referrer_host, max: 255)
+    |> validate_length(:decline_reason, max: 500)
     |> validate_length(:visitor_hash, max: 64)
     # Google Calendar's documented maximum event id length.
     |> validate_length(:provider_event_id, max: 1024)

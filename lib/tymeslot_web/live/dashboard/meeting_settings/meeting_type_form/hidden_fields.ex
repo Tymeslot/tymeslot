@@ -27,6 +27,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
   attr :payment_required, :boolean, required: true
   attr :payment_price, :string, required: true
   attr :allow_guests, :boolean, required: true
+  attr :requires_approval, :boolean, default: false
+  attr :approval_window_hours, :any, default: nil
   attr :show_as_free, :boolean, required: true
 
   @spec hidden_fields(map()) :: Phoenix.LiveView.Rendered.t()
@@ -136,6 +138,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
         type="hidden"
         name="meeting_type[allow_guests]"
         value={to_string(@allow_guests)}
+      />
+      <input
+        type="hidden"
+        name="meeting_type[requires_approval]"
+        value={to_string(@requires_approval)}
+      />
+      <%!-- Blank rather than the default: an unset window means "resolve the
+            application default at read time", not "freeze today's value".
+            Only rendered while approval is off: once it's on, ApprovalSection
+            renders the real, editable input under this same name, and a
+            second input sharing that name would let this stale mirror
+            silently overwrite whatever the host just typed there. --%>
+      <input
+        :if={!@requires_approval}
+        type="hidden"
+        name="meeting_type[approval_window_hours]"
+        value={if @approval_window_hours, do: to_string(@approval_window_hours), else: ""}
       />
       <input
         type="hidden"

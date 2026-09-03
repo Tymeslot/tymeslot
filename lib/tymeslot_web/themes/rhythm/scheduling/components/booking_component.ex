@@ -6,10 +6,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
+  alias TymeslotWeb.Themes.Shared.BookingLabels
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -192,6 +195,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
             <SecurityFields.recaptcha_notice_block />
 
+            <ApprovalNotice.block
+              :if={Approval.required?(@meeting_type)}
+              organizer_name={organizer_display_name(@organizer_profile, @username_context)}
+              payment_required={@meeting_type.payment_required}
+              stage={:before}
+            />
+
             <div class="slide-actions horizontal">
               <button
                 type="button"
@@ -235,9 +245,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   </svg>
                   <span>{dgettext("booking", "Verifying...")}</span>
                 <% else %>
-                  {if @is_rescheduling,
-                    do: dgettext("booking", "reschedule_meeting"),
-                    else: dgettext("booking", "submit")}
+                  {submit_label(@is_rescheduling, @meeting_type)}
                 <% end %>
               </button>
             </div>
@@ -249,4 +257,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   end
 
   defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
+
+  # "Submit" is vague enough to survive a gated meeting type, but naming the
+  # action makes the difference visible at the moment of committing —
+  # including on a reschedule, which re-enters the approval gate on a gated
+  # type just as a fresh submission does.
+  defp submit_label(is_rescheduling, meeting_type) do
+    BookingLabels.submit_label(
+      is_rescheduling,
+      meeting_type,
+      dgettext("booking", "submit")
+    )
+  end
+
+  defp organizer_display_name(organizer_profile, username_context) do
+    BookingLabels.organizer_display_name(organizer_profile, username_context)
+  end
 end

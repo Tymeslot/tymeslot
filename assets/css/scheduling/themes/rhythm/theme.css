@@ -68,6 +68,7 @@
 @import "./modules/typography.css";
 @import "./modules/video.css";
 @import "./modules/overview.css";
+@import "./modules/approval-notice.css";
 @import "./modules/schedule-header.css";
 @import "./modules/booking-form.css";
 @import "./modules/custom-questions.css";

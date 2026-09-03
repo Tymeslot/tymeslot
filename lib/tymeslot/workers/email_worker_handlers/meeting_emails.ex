@@ -101,10 +101,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end)
   end
 
+  @doc false
   # Fetches the meeting and runs `fun` with it, or discards the job with a
   # consistent log line when the meeting no longer exists. `action` names the
-  # email action for the warning (e.g. "confirmation emails").
-  defp with_meeting(meeting_id, action, fun) do
+  # email action for the warning (e.g. "confirmation emails"). Public so
+  # `BookingApprovalEmails` can share it rather than duplicating it.
+  @spec with_meeting(String.t(), String.t(), (Tymeslot.Meetings.MeetingSchema.t() -> term())) ::
+          term()
+  def with_meeting(meeting_id, action, fun) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
         fun.(meeting)

@@ -24,9 +24,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.PubSub
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @type ctx :: %{
           meeting: Tymeslot.Meetings.MeetingSchema.t(),
@@ -97,9 +100,15 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   @doc """
   Mounts a per-theme payment-processing LiveView. Authorises the meeting,
-  subscribes to the payment topic on connect, and assigns `:meeting` and
-  `:payment` on success. On failure the socket is redirected to `/` with
-  a generic flash so we never leak the failure mode to the attendee.
+  subscribes to the payment topic, then reads meeting/payment state and
+  assigns `:meeting` and `:payment` on success. On failure the socket is
+  redirected to `/` with a generic flash so we never leak the failure mode
+  to the attendee.
+
+  Subscribes *before* reading state, not after: a `:paid` (or `:expired`)
+  broadcast that lands between the read and the subscribe would otherwise
+  never reach this process, leaving the page showing stale state with no
+  further message to correct it.
   """
   @spec mount_payment_processing(
           params :: map(),
@@ -108,10 +117,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
         ) :: {:ok, LiveView.Socket.t()}
   def mount_payment_processing(%{"meeting_id" => meeting_id} = params, socket, theme_slug) do
     if LiveView.connected?(socket) do
+      PubSub.subscribe(Tymeslot.PubSub, topic(meeting_id))
+
       case authorize(meeting_id, theme_slug, params["session_id"]) do
         {:ok, %{meeting: meeting, payment: payment}} ->
-          PubSub.subscribe(Tymeslot.PubSub, topic(meeting.id))
-
           socket =
             socket
             |> Component.assign(:loading, false)
@@ -132,6 +141,86 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       {:ok, Component.assign(socket, loading: true, meeting: nil, payment: nil)}
     end
   end
+
+  @doc """
+  Handles the `:paid` PubSub message common to every theme's payment
+  processing LiveView.
+
+  Paid does not always mean confirmed: a meeting type can be both paid and
+  approval-gated, in which case the webhook moves the meeting to
+  `"awaiting_approval"` rather than `"confirmed"`
+  (`CheckoutSessionCompleted.post_payment_status/1`). Re-fetches the
+  meeting, not just the payment, so the page reads that status rather than
+  assuming a successful payment finished the booking.
+  """
+  @spec refresh_after_paid(LiveView.Socket.t()) :: LiveView.Socket.t()
+  def refresh_after_paid(socket) do
+    payment = MeetingPayments.payment_for_meeting(socket.assigns.meeting.id)
+
+    socket =
+      case MeetingQueries.get_meeting(socket.assigns.meeting.id) do
+        {:ok, meeting} -> Component.assign(socket, :meeting, meeting)
+        {:error, :not_found} -> socket
+      end
+
+    Component.assign(socket, :payment, payment)
+  end
+
+  @typedoc "What the return page should tell the attendee right now."
+  @type outcome :: :loading | :awaiting_approval | :declined | :expired | :confirmed
+
+  @doc """
+  Classifies the return page's state for a themed `render/1` `case`.
+
+  Order matters, and it is not the render's original `cond` order: a
+  resolved gate outcome (`:declined`, `:expired`) is checked *before* the
+  raw payment status, because `Approval.release/3` refunds the held
+  request in full, which flips `payment.status` away from `"paid"` — a
+  status-first check would send a declined or expired paid booking back
+  through `:loading` instead of telling the attendee what happened.
+  `payment.paid_at` (rather than `payment.status`) is what proves this
+  checkout's payment cycle ever completed, since it survives that same
+  refund; `meeting.approval_resolved_at` is what proves `:declined`/
+  `:expired` specifically came from the approval gate (`Approval.decline/2`,
+  `Approval.expire/1`), as opposed to an ordinary cancellation with no
+  refund guarantee.
+  """
+  @spec outcome(loading :: boolean(), MeetingPayments.booking_payment() | nil, Meeting.t() | nil) ::
+          outcome()
+  def outcome(true, _payment, _meeting), do: :loading
+
+  def outcome(false, %{paid_at: %DateTime{}}, %{
+        status: "expired",
+        approval_resolved_at: %DateTime{}
+      }),
+      do: :expired
+
+  def outcome(false, %{paid_at: %DateTime{}}, %{
+        status: "cancelled",
+        approval_resolved_at: %DateTime{}
+      }),
+      do: :declined
+
+  def outcome(false, %{paid_at: %DateTime{}}, %Meeting{} = meeting) do
+    if MeetingState.awaiting_approval?(meeting), do: :awaiting_approval, else: :confirmed
+  end
+
+  def outcome(false, _payment, _meeting), do: :loading
+
+  @doc """
+  Formats a gated meeting's approval deadline for the return page, or
+  `nil` when there is none to show (an unpaid/ungated meeting, or one
+  where the deadline field has not been backfilled).
+  """
+  @spec approval_deadline_text(Meeting.t()) :: String.t() | nil
+  def approval_deadline_text(%{approval_deadline_at: %DateTime{}} = meeting) do
+    LocalizationHelpers.format_meeting_datetime(
+      meeting.approval_deadline_at,
+      meeting.attendee_timezone
+    )
+  end
+
+  def approval_deadline_text(_meeting), do: nil
 
   defp get_meeting(id) do
     case MeetingQueries.get_meeting(id) do

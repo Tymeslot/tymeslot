@@ -18,16 +18,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   require Logger
 
+  alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.VideoRoomWorker
 
   @event_type "checkout.session.completed"
 
@@ -184,7 +185,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     with {:ok, meeting} <- fetch_meeting(payment.meeting_id),
          {:proceed, transition} <- check_transition(meeting, payment),
          {:ok, paid} <- mark_paid(payment, event_id, object),
-         {:ok, confirmed} <- MeetingQueries.update_meeting(meeting, %{status: "confirmed"}),
+         {:ok, confirmed} <- MeetingQueries.update_meeting(meeting, post_payment_status(meeting)),
          {:ok, _job_status} <- schedule_calendar_creation(confirmed) do
       {transition, paid, confirmed}
     else
@@ -195,6 +196,36 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         Repo.rollback(reason)
     end
   end
+
+  # Payment clearing does not always mean the booking is on. The gate
+  # decision is read from the meeting row rather than re-derived from the
+  # live meeting type: `approval_requested_at` being stamped is the record
+  # of the promise shown to the invitee on the booking form
+  # (`Policy.approval_attributes/2` stamps it at submission, even on the
+  # paid path), and a host toggling `requires_approval` while a Stripe
+  # Checkout session sits open — it can stay open 24h — must not silently
+  # change what that invitee was told. Where the row was gated, the paid
+  # booking moves into the approval gate rather than straight to confirmed,
+  # and the host's clock starts here — they are only asked once the money
+  # has actually cleared. Declining or letting it lapse refunds the full
+  # remaining balance directly (`Meetings.Approval.after_release/1`); there
+  # is no cancellation pipeline involved, because the attendee never got a
+  # confirmed meeting to weigh a partial refund against. The confirm branch
+  # explicitly nulls both approval columns rather than leaving them
+  # untouched, so a row that reaches "confirmed" never carries a stale
+  # approval clock alongside it.
+  defp post_payment_status(%{approval_requested_at: %DateTime{}} = meeting) do
+    requested_at = DateTime.truncate(Clock.utc_now(), :second)
+
+    %{
+      status: "awaiting_approval",
+      approval_requested_at: requested_at,
+      approval_deadline_at: Approval.deadline_for(nil, requested_at, meeting.start_time)
+    }
+  end
+
+  defp post_payment_status(_meeting),
+    do: %{status: "confirmed", approval_requested_at: nil, approval_deadline_at: nil}
 
   # Scheduled inside the same DB transaction as `mark_paid`/the meeting
   # transition: `CalendarJobs.schedule_job/2` inserts through Oban's
@@ -285,37 +316,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # transition. Everything below here is best-effort and does not need to be
   # atomic with that state change.
   #
-  # Unconditional, exactly as on the free path: when a video room follows, its
-  # worker schedules an *update* that adds the join link to the event this
-  # create already put on the calendar. Mirrors `Bookings.Create`'s
-  # `schedule_video_room_with_announcement/1`: if the video room enqueue fails, fall
-  # back to a plain confirmation email rather than leaving a paying attendee
-  # with no confirmation at all.
+  # The video room and the emails are `Bookings.Activation`'s, shared with the
+  # free path so the two cannot drift. It also refuses to confirm a booking
+  # that landed in the approval gate: a paid request is not a booking anyone
+  # has agreed to, so it takes the request fan-out instead, and
+  # `Meetings.Approval` calls back in once the host says yes.
   defp enqueue_post_payment_effects(meeting, _payment) do
     AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-
-    if meeting.video_integration_id do
-      schedule_video_room_with_announcement(meeting)
-    else
-      _result = Events.meeting_created(meeting)
-      :ok
-    end
-  end
-
-  defp schedule_video_room_with_announcement(meeting) do
-    case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error(
-          "checkout.session.completed: failed to schedule video room, falling back to email",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        _result = Events.meeting_created(meeting)
-        :ok
-    end
+    Activation.activate(meeting, with_video_room: true)
   end
 end

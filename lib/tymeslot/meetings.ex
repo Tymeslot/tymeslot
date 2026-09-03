@@ -353,6 +353,23 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
+  Fetches a meeting by ID only if the given `organizer_user_id` owns it.
+
+  Unlike `get_meeting_for_user/2`, this never matches on the attendee side:
+  it is for actions (approving or declining a held request) that only the
+  organiser is allowed to take, where an attendee holding a Tymeslot account
+  under the booking email must not be able to act on their own request.
+
+  Use this instead of `get_meeting_for_user/2` on any organiser-only action
+  that accepts a meeting id from the client.
+  """
+  @spec get_meeting_for_organizer(String.t(), integer()) ::
+          {:ok, MeetingSchema.t()} | {:error, :not_found}
+  def get_meeting_for_organizer(id, organizer_user_id) do
+    MeetingQueries.get_meeting_for_organizer(id, organizer_user_id)
+  end
+
+  @doc """
   Gets a single meeting by its unique identifier (UID).
   """
   @spec get_meeting_by_uid(String.t()) :: {:ok, MeetingSchema.t()} | {:error, :not_found}
@@ -409,6 +426,10 @@ defmodule Tymeslot.Meetings do
   description and custom question answers so the download matches what was
   emailed. The attendee's own video join link is preferred over the generic
   meeting URL, since the attendee is exporting their own event.
+
+  A held request (`MeetingState.awaiting_approval?/1`) is exportable — it
+  occupies its slot — but must not read as a confirmed meeting to whichever
+  calendar it lands on, so it is exported with `STATUS:TENTATIVE`.
   """
   @spec calendar_export(String.t(), integer()) :: {:ok, String.t()} | {:error, :not_found}
   def calendar_export(uid, organizer_user_id) do
@@ -421,13 +442,18 @@ defmodule Tymeslot.Meetings do
           description: meeting.description,
           custom_fields_snapshot: meeting.custom_fields_snapshot,
           custom_field_answers: meeting.custom_field_answers,
-          meeting_url: meeting.attendee_video_url || meeting.meeting_url
+          meeting_url: meeting.attendee_video_url || meeting.meeting_url,
+          status: ics_export_status(meeting)
         })
 
       {:ok, IcsGenerator.generate_ics(details, details.attendee_locale)}
     else
       _not_found_or_inactive -> {:error, :not_found}
     end
+  end
+
+  defp ics_export_status(meeting) do
+    if MeetingState.awaiting_approval?(meeting), do: "TENTATIVE", else: "CONFIRMED"
   end
 
   defp exportable?(meeting), do: MeetingState.expects_calendar_event?(meeting)

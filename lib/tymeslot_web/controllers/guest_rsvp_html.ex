@@ -199,19 +199,11 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   defp format_when(meeting) do
     tz = meeting.attendee_timezone || "Etc/UTC"
 
-    case DateTime.shift_zone(meeting.start_time, tz) do
-      {:ok, dt} -> format_datetime(dt) <> " (#{tz})"
-      _error -> format_datetime(meeting.start_time) <> " UTC"
-    end
-  end
-
-  defp format_datetime(dt) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(dt), locale, :full)
-    month = LocaleFormat.format_month_name(dt.month, locale, :full)
 
-    # A guest is an attendee: the weekday and month already follow their
-    # language, so the clock beside them does too rather than staying 24-hour.
-    "#{weekday}, #{dt.day} #{month} #{dt.year} · #{LocaleFormat.format_time(dt, locale)}"
+    case DateTime.shift_zone(meeting.start_time, tz) do
+      {:ok, dt} -> LocaleFormat.format_weekday_datetime(dt, locale) <> " (#{tz})"
+      _error -> LocaleFormat.format_weekday_datetime(meeting.start_time, locale) <> " UTC"
+    end
   end
 end

@@ -39,6 +39,39 @@ defmodule Tymeslot.Validation.Constraints do
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
 
+  @doc """
+  How long a host may take to answer a booking request, in hours.
+
+  The lower bound is one hour rather than zero: a window a request cannot
+  realistically be answered within is a request that always expires, which is
+  worse for the invitee than not offering approval at all. The upper bound is
+  two weeks, past which the hold on the slot costs more than the vetting is
+  worth.
+  """
+  @spec approval_window_hours_range() :: Range.t()
+  def approval_window_hours_range, do: 1..336
+
+  @doc """
+  How much a host may write when declining a booking request.
+
+  The note is quoted verbatim into the invitee's email, so the cap is a
+  boundary on what reaches a third party, not a storage limit: it is enforced
+  where the reason is written, and mirrored as a `maxlength` on both places a
+  host can type one.
+  """
+  @spec decline_reason_max_length() :: pos_integer()
+  def decline_reason_max_length, do: 500
+
+  @doc """
+  The approval window applied when a meeting type stores none.
+
+  A day is long enough to cover an overnight or a weekend gap on either side of
+  a working day, and short enough that an invitee is not left waiting without
+  resolution.
+  """
+  @spec default_approval_window_hours() :: pos_integer()
+  def default_approval_window_hours, do: 24
+
   @doc "The booking-limit fields, in day/week/month order."
   @spec booking_limit_fields() :: [atom()]
   def booking_limit_fields,
@@ -84,6 +117,12 @@ defmodule Tymeslot.Validation.Constraints do
   @spec duration_minutes_opts() :: keyword()
   def duration_minutes_opts do
     range = duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec approval_window_hours_opts() :: keyword()
+  def approval_window_hours_opts do
+    range = approval_window_hours_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 

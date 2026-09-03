@@ -206,6 +206,15 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_meeting_cancel_rate_limit(client_ip), do: Bookings.check_meeting_cancel(client_ip)
 
   @doc """
+  Rate limit answers to a booking request (approve or decline).
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+  """
+  @spec check_meeting_approval_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_meeting_approval_rate_limit(client_ip),
+    do: Bookings.check_meeting_approval(client_ip)
+
+  @doc """
   Rate limit meeting keep/uncancel attempts.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

@@ -8,19 +8,16 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   optional video room provisioning.
   """
 
-  require Logger
-
   alias Ecto.UUID
+  alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
-  alias Tymeslot.Notifications.Events
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.VideoRoomWorker
   alias TymeslotWeb.Endpoint
 
   @type params :: %{
@@ -138,7 +135,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
         with {:ok, meeting} <- create_meeting(meeting_attrs),
              {:ok, _guests} <- Guests.create_for_meeting(meeting.id, guest_emails),
              {:ok, _job} <- schedule_calendar_job(meeting) do
-          handle_side_effects(meeting, meeting_attrs[:video_integration_id])
+          handle_side_effects(meeting)
           meeting
         else
           {:error, reason} -> Repo.rollback(reason)
@@ -165,49 +162,23 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     end
   end
 
-  defp handle_side_effects(meeting, video_integration_id)
-       when is_integer(video_integration_id) do
-    notify_attendee(meeting)
+  # The video-room-then-emails-then-webhooks sequence itself lives in
+  # `Bookings.Activation`, shared with every other confirmed-booking path so
+  # the ordering (room before emails, so the join link is in the
+  # confirmation) cannot drift between call sites. `with_video_room: true`
+  # matches this flow's own semantics: the organiser picked the video
+  # integration explicitly, so its presence alone decides whether a room is
+  # created, the same as a paid checkout confirming a booking.
+  defp handle_side_effects(meeting) do
+    Activation.activate(meeting, with_video_room: true)
 
-    # `meeting.created` is the one side effect deferred to the worker, so its
-    # payload can carry the join link. It is raised here only when the job never
-    # made it onto the queue and nothing downstream will announce the booking.
-    case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
-      :ok -> :ok
-      {:error, _error} -> announce_meeting(meeting)
-    end
-  end
+    # Route the attendee-facing calendar invitation through
+    # AttendeeNotifications so last_notified_state / ical_sequence are
+    # initialised correctly. Ad-hoc meetings are edited from the same
+    # calendar-grid UI that created them, which is what needs this state.
+    {:ok, _job} = AttendeeNotifications.event_created(meeting, attendees_for(meeting))
 
-  defp handle_side_effects(meeting, _no_video) do
-    notify_attendee(meeting)
-    announce_meeting(meeting)
-  end
-
-  # Routes the attendee-facing calendar invitation through AttendeeNotifications,
-  # so the iCal METHOD and SEQUENCE the attendee first receives are the ones
-  # every later update numbers itself against.
-  #
-  # This never waits on the video room: the invitation carries the event's time
-  # and location, not the join link, so a provider that takes days to answer, or
-  # never answers at all, must not hold the attendee's calendar entry hostage.
-  defp notify_attendee(meeting) do
-    {:ok, _result} = AttendeeNotifications.event_created(meeting, attendees_for(meeting))
     :ok
-  end
-
-  defp announce_meeting(meeting) do
-    case Events.meeting_created(meeting) do
-      {:ok, _result} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule notifications for ad-hoc meeting",
-          meeting_id: meeting.id,
-          error: inspect(reason)
-        )
-
-        :ok
-    end
   end
 
   defp attendees_for(%{attendee_email: email}) when is_binary(email) and email != "" do

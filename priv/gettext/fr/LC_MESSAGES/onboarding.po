@@ -306,10 +306,20 @@ msgstr "Donnez à chaque type de réunion ses propres horaires"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Approve bookings before they're confirmed"
+msgstr "Validez les réservations avant qu'elles ne soient confirmées"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen
 msgid "The heading, greeting and instruction at the top of your booking page are now yours to write. Say what you actually do, in your own words, and watch it in the live preview as you type - every change saves itself. Switch it off any time to go back to the built-in wording, translated into every language Tymeslot supports."
 msgstr "Le titre, le message d’accueil et la consigne en haut de votre page de réservation sont désormais les vôtres. Dites ce que vous faites, avec vos mots, et voyez le résultat dans l’aperçu en direct pendant que vous écrivez - chaque modification s’enregistre toute seule. Désactivez l’option à tout moment pour revenir au texte intégré, traduit dans toutes les langues prises en charge par Tymeslot."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Turn on approval for a meeting type and its bookings wait for you. The slot is held so nobody else can take it, the person booking is told it's a request rather than a confirmed meeting, and your answer is one click from the email. Don't answer in time and the request lapses on its own."
+msgstr "Activez la validation pour un type de rendez-vous et ses réservations vous attendent. Le créneau est réservé pour que personne d'autre ne le prenne, la personne qui réserve sait qu'il s'agit d'une demande et non d'un rendez-vous confirmé, et votre réponse est à un clic depuis l'e-mail. Sans réponse dans les temps, la demande expire d'elle-même."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen
 msgid "Write your own booking page welcome"
 msgstr "Rédigez votre propre accueil"

@@ -20,6 +20,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.Features
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Webhooks
 
   alias Tymeslot.Webhooks.{
@@ -29,14 +30,49 @@ defmodule Tymeslot.Workers.WebhookWorker do
     WebhookSchema
   }
 
+  # The event-defining fields of a meeting, captured at the moment a webhook
+  # fires and replayed at delivery time instead of being re-derived. Without
+  # this, a `meeting.requested` delivery retried after the host has since
+  # approved or declined re-reads the meeting fresh and reports its *current*
+  # state under the original event's envelope — the event says one thing and
+  # the body says another. Kept to the handful of scalar/datetime fields that
+  # actually drive `PayloadBuilder`'s status-dependent sections, rather than
+  # snapshotting the whole meeting into the job args.
+  @snapshot_fields ~w(
+    status cancelled_at cancellation_reason decline_reason
+    approval_requested_at approval_deadline_at approval_resolved_at
+  )a
+
+  @datetime_snapshot_fields ~w(
+    cancelled_at approval_requested_at approval_deadline_at approval_resolved_at
+  )a
+
+  @doc """
+  Captures the event-defining fields of a meeting for `schedule_delivery/4`.
+
+  Called by the trigger site at the moment the event fires, so a retried
+  delivery can replay what that event asserted rather than whatever the
+  meeting looks like by the time the retry runs.
+  """
+  @spec snapshot(MeetingSchema.t()) :: map()
+  def snapshot(%MeetingSchema{} = meeting) do
+    meeting
+    |> Map.take(@snapshot_fields)
+    |> Map.new(fn {field, value} -> {Atom.to_string(field), encode_snapshot_field(value)} end)
+  end
+
+  defp encode_snapshot_field(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+  defp encode_snapshot_field(value), do: value
+
   @impl Oban.Worker
   def perform(
         %Oban.Job{
-          args: %{
-            "webhook_id" => webhook_id,
-            "event_type" => event_type,
-            "meeting_id" => meeting_id
-          },
+          args:
+            %{
+              "webhook_id" => webhook_id,
+              "event_type" => event_type,
+              "meeting_id" => meeting_id
+            } = args,
           attempt: attempt
         } = job
       ) do
@@ -47,7 +83,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
     with {:ok, webhook} <- WebhookQueries.get_webhook(webhook_id),
          :ok = Logger.metadata(user_id: webhook.user_id),
          :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
-         {:ok, meeting} <- MeetingQueries.get_meeting_with_guests(meeting_id),
+         {:ok, meeting} <- fetch_meeting(meeting_id, args["snapshot"]),
          {:ok, _delivery} <- deliver_webhook(webhook, event_type, meeting, attempt) do
       :ok
     else
@@ -171,15 +207,20 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   @doc """
   Schedules a webhook delivery via Oban.
+
+  `snapshot`, from `snapshot/1`, is what a retried delivery replays instead of
+  re-deriving the meeting's current state; omit it (or pass `nil`) only where
+  the event has no status-dependent payload section to protect.
   """
-  @spec schedule_delivery(integer(), String.t(), binary()) :: :ok | {:error, term()}
-  def schedule_delivery(webhook_id, event_type, meeting_id) do
+  @spec schedule_delivery(integer(), String.t(), binary(), map() | nil) :: :ok | {:error, term()}
+  def schedule_delivery(webhook_id, event_type, meeting_id, snapshot \\ nil) do
     result =
       %{
         "webhook_id" => webhook_id,
         "event_type" => event_type,
         "meeting_id" => meeting_id
       }
+      |> maybe_put_snapshot(snapshot)
       |> new(
         queue: :webhooks,
         priority: 2,
@@ -227,6 +268,52 @@ defmodule Tymeslot.Workers.WebhookWorker do
   end
 
   # Private functions
+
+  defp maybe_put_snapshot(args, nil), do: args
+
+  defp maybe_put_snapshot(args, snapshot) when is_map(snapshot),
+    do: Map.put(args, "snapshot", snapshot)
+
+  # Loads the meeting fresh (for the data that legitimately changes between
+  # attempts, like a guest that responded, or attaches a job-arg snapshot the
+  # trigger site captured, so what fired at dispatch time is what gets
+  # delivered on every attempt. `snapshot` is `nil` for jobs enqueued before
+  # this was threaded through — those keep re-deriving from the live meeting,
+  # same as before.
+  defp fetch_meeting(meeting_id, snapshot) do
+    with {:ok, meeting} <- MeetingQueries.get_meeting_with_guests(meeting_id) do
+      {:ok, apply_snapshot(meeting, snapshot)}
+    end
+  end
+
+  defp apply_snapshot(meeting, nil), do: meeting
+
+  defp apply_snapshot(%MeetingSchema{} = meeting, snapshot) when is_map(snapshot) do
+    overrides =
+      Enum.map(@snapshot_fields, fn field ->
+        {field, snapshot_field_value(snapshot, field, Map.get(meeting, field))}
+      end)
+
+    struct(meeting, overrides)
+  end
+
+  defp snapshot_field_value(snapshot, field, default) do
+    case Map.fetch(snapshot, Atom.to_string(field)) do
+      {:ok, value} -> decode_snapshot_field(field, value)
+      :error -> default
+    end
+  end
+
+  defp decode_snapshot_field(_field, nil), do: nil
+
+  defp decode_snapshot_field(field, value) when field in @datetime_snapshot_fields do
+    case DateTime.from_iso8601(value) do
+      {:ok, dt, _offset} -> dt
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp decode_snapshot_field(_field, value), do: value
 
   defp deliver_webhook(%WebhookSchema{} = webhook, event_type, meeting, attempt) do
     if WebhookSchema.should_be_active?(webhook) do

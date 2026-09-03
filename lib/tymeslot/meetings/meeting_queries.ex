@@ -103,6 +103,101 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     end
   end
 
+  @doc """
+  Fetches a meeting by ID only if the given `organizer_user_id` owns it.
+
+  Returns `{:ok, meeting}` when a matching meeting is found.
+  Returns `{:error, :not_found}` when no meeting exists with that ID, or when
+  the meeting exists but belongs to a different organizer.
+  """
+  @spec get_meeting_for_organizer(String.t(), integer()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def get_meeting_for_organizer(id, organizer_user_id) when is_integer(organizer_user_id) do
+    case UUID.cast(id) do
+      {:ok, uuid} ->
+        query =
+          from(m in Meeting,
+            where: m.id == ^uuid and m.organizer_user_id == ^organizer_user_id
+          )
+
+        case Repo.one(query) do
+          nil -> {:error, :not_found}
+          meeting -> {:ok, meeting}
+        end
+
+      :error ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Moves a meeting out of `"awaiting_approval"`, atomically.
+
+  The guard is in the `WHERE` clause rather than read-then-write, because
+  every exit from the approval gate races every other one: the host can
+  approve in the dashboard while the expiry job fires, or click Approve twice,
+  or decline from an email link a colleague already actioned. A changeset
+  update would let the second writer silently overwrite the first, producing a
+  confirmed meeting the host declined.
+
+  Exactly one caller wins and receives the updated meeting; every other gets
+  `{:error, :not_awaiting_approval}` and can say "already answered" rather
+  than acting twice. `Tymeslot.Meetings.Approval` is the only intended caller.
+
+  Bypasses the changeset deliberately — `update_all` takes plain columns — so
+  `updated_at` is set here rather than by `timestamps/1`. Because there is no
+  changeset, a violation of `unique_confirmed_meeting_per_organizer_at_time`
+  (the guarantee that at most one confirmed-or-held meeting occupies an
+  organizer's slot — widened to cover held requests by
+  `20260902120100_add_unique_index_to_held_meetings.exs`) has no
+  `unique_constraint/3` to translate it, so it is caught here directly and
+  turned into `{:error, :slot_taken}` rather than letting the raw
+  `Postgrex.Error` reach the caller.
+  """
+  @spec transition_from_awaiting_approval(String.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :not_awaiting_approval | :slot_taken}
+  def transition_from_awaiting_approval(meeting_id, changes) when is_list(changes) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      from(m in Meeting,
+        where: m.id == ^meeting_id and m.status == "awaiting_approval",
+        select: m
+      )
+
+    case Repo.update_all(query, set: Keyword.put_new(changes, :updated_at, now)) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :not_awaiting_approval}
+    end
+  rescue
+    error in Postgrex.Error ->
+      case error.postgres do
+        %{code: :unique_violation, constraint: "unique_confirmed_meeting_per_organizer_at_time"} ->
+          {:error, :slot_taken}
+
+        _other ->
+          reraise error, __STACKTRACE__
+      end
+  end
+
+  @doc """
+  Held requests whose deadline has passed, oldest first.
+
+  Backs the expiry sweep, which exists because a per-meeting scheduled job can
+  be lost to Oban pruning, a failed insert, or a deploy that straddles the
+  deadline. Ordering is oldest-first so the invitee kept waiting longest is
+  released first when a backlog is being worked through.
+  """
+  @spec list_expired_approval_requests(DateTime.t(), pos_integer()) :: [Meeting.t()]
+  def list_expired_approval_requests(%DateTime{} = now, limit) when is_integer(limit) do
+    Meeting
+    |> MeetingState.where_awaiting_approval()
+    |> where([m], not is_nil(m.approval_deadline_at) and m.approval_deadline_at <= ^now)
+    |> order_by([m], asc: m.approval_deadline_at)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
   @doc "Updates a meeting."
   @spec update_meeting(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def update_meeting(%Meeting{} = meeting, attrs) when is_map(attrs) do
@@ -128,6 +223,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   @spec delete_meeting(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def delete_meeting(%Meeting{} = meeting) do
     Repo.delete(meeting)
+  end
+
+  @doc """
+  Records that the host has been nudged about an unanswered request.
+
+  The durable half of the nudge's idempotency: the Oban unique key stops a
+  second job being enqueued, this stops a retry of the same job sending a
+  second copy after the first send succeeded but the job then failed.
+  """
+  @spec mark_approval_nudge_sent(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def mark_approval_nudge_sent(%Meeting{} = meeting) do
+    meeting
+    |> Changeset.change(approval_nudge_sent_at: DateTime.utc_now(:second))
+    |> Repo.update()
   end
 
   @doc """
@@ -450,6 +559,21 @@ defmodule Tymeslot.Meetings.MeetingQueries do
       converting_visitors: count(m.visitor_hash, :distinct)
     })
     |> Repo.all()
+  end
+
+  @doc """
+  How many booking requests this host has not yet answered.
+
+  Drives the dashboard's count badge, and is backed by the partial index
+  `meetings_pending_approval_by_organizer` so it stays a cheap query on a
+  dashboard that renders it on every load.
+  """
+  @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
+  def count_awaiting_approval_for_organizer(organizer_user_id) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> MeetingState.where_awaiting_approval()
+    |> Repo.aggregate(:count, :id)
   end
 
   @doc """

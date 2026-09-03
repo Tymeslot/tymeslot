@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
+    ApprovalSection,
     Autosave,
     AvailabilitySection,
     CustomQuestionsSection,
@@ -39,6 +40,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+
+  import ApprovalSection, only: [approval_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
   import GuestsSection, only: [guests_section: 1]
   import LimitsSection, only: [limits_section: 1]
@@ -62,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   @tab_error_fields %{
     "details" => [:name, :duration, :slot_interval, :description, :icon],
     "location" => [:video_integration, :calendar_integration, :target_calendar],
-    "booking" => [:payment_required, :price_cents],
+    "booking" => [:payment_required, :price_cents, :approval_window_hours],
     "reminders" => [:reminder_config]
   }
 
@@ -275,6 +278,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             myself={@myself}
           />
 
+          <.approval_section
+            requires_approval={@requires_approval}
+            approval_window_hours={@approval_window_hours}
+            errors={
+              @form_errors
+              |> FormValidationHelpers.field_errors(:approval_window_hours)
+              |> Enum.map(&Helpers.format_errors/1)
+            }
+            myself={@myself}
+          />
+
           <.availability_section
             schedules={@schedules}
             default_schedule_name={@default_schedule_name}
@@ -345,6 +359,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           payment_required={@payment_required}
           payment_price={@payment_price}
           allow_guests={@allow_guests}
+          requires_approval={@requires_approval}
+          approval_window_hours={@approval_window_hours}
           show_as_free={@show_as_free}
         />
 

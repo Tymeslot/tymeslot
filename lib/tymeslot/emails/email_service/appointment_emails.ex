@@ -1,5 +1,5 @@
 defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
-  @moduledoc "Appointment confirmation, reminder, and cancellation emails."
+  @moduledoc "Appointment confirmation, request, reminder, and cancellation emails."
 
   require Logger
 
@@ -9,8 +9,13 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     AppointmentCancellation,
     AppointmentConfirmation,
     AppointmentReminder,
-    AppointmentRescheduled
+    AppointmentRescheduled,
+    BookingApprovalRequest,
+    BookingRequestOutcome,
+    BookingRequestReceived
   }
+
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   @doc """
   Sends an appointment confirmation email to the organizer.
@@ -38,6 +43,46 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     Delivery.deliver(
       AppointmentConfirmation.render(:attendee, attendee_email, appointment_details)
     )
+  end
+
+  @doc """
+  Tells the invitee their booking request has been received and is not yet
+  confirmed. Takes the meeting rather than the built appointment details: the
+  request emails are about a booking that has not happened, so the confirmation
+  vocabulary (video links, calendar files, payment receipts) does not apply.
+  """
+  @spec send_booking_request_received(Meeting.t()) :: {:ok, any()} | {:error, any()}
+  def send_booking_request_received(%Meeting{} = meeting) do
+    Delivery.deliver(BookingRequestReceived.render(meeting))
+  end
+
+  @doc """
+  Tells the invitee a booking request will not happen, and why.
+
+  Closes the loop the acknowledgement opened. `variant` is `:declined` when
+  the host refused and `:expired` when nobody answered; the two are not
+  interchangeable, because only one of them is a decision a person made.
+  """
+  @spec send_booking_request_outcome(BookingRequestOutcome.variant(), Meeting.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_booking_request_outcome(variant, %Meeting{} = meeting) do
+    Delivery.deliver(BookingRequestOutcome.render(variant, meeting))
+  end
+
+  @doc """
+  Asks the host to approve or decline a booking request, or reminds them.
+
+  `locale` is the host's, not the invitee's: this is the one meeting email
+  addressed to the account owner in their own language.
+  """
+  @spec send_booking_approval_request(
+          BookingApprovalRequest.variant(),
+          Meeting.t(),
+          map(),
+          String.t()
+        ) :: {:ok, any()} | {:error, any()}
+  def send_booking_approval_request(variant, %Meeting{} = meeting, urls, locale) do
+    Delivery.deliver(BookingApprovalRequest.render(variant, meeting, urls, locale))
   end
 
   @doc """

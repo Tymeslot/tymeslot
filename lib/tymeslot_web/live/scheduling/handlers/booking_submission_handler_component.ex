@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.Bookings.DemoOrchestrator
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.BookingConfig
@@ -155,6 +156,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       socket
       |> assign(:submitting, false)
       |> assign(:meeting_uid, meeting.uid)
+      |> assign(:meeting_status, meeting.status)
       |> assign(:name, validated_data["name"])
       |> assign(:email, validated_data["email"])
       |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))
@@ -377,6 +379,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       user_timezone: socket.assigns.user_timezone,
       organizer_user_id: socket.assigns.organizer_user_id,
       meeting_type_id: get_meeting_type_id(socket),
+      requires_approval: Approval.required?(socket.assigns[:meeting_type]),
       attendee_locale:
         socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
       # Always true for public booking flow

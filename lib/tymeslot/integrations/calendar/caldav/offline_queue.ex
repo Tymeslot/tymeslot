@@ -167,7 +167,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       end_time: end_time(event),
       all_day: event.all_day,
       timezone: event.timezone,
-      provider_event_id: event.provider_event_id
+      provider_event_id: event.provider_event_id,
+      # A held request is queued as tentative, and a replay has to say so: the
+      # cache row carries the status but the rebuilt payload used to drop it,
+      # so the VEVENT went back out with no STATUS line and the host's calendar
+      # showed a confirmed booking for a request nobody had answered.
+      status: event.status,
+      transparency: event.transparency
     }
   end
 

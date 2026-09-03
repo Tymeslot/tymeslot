@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -69,6 +70,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_required, false)
      |> assign(:payment_price, "")
      |> assign(:allow_guests, false)
+     |> assign(:requires_approval, false)
+     |> assign(:approval_window_hours, nil)
      |> assign(:show_as_free, false)
      |> assign(:booking_limits, Init.get_booking_limits(nil))
      |> assign(:active_tab, "details")
@@ -251,6 +254,57 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        |> Autosave.maybe_run()}
     else
       {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_requires_approval", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:requires_approval, !socket.assigns.requires_approval)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_approval_window", params, socket) do
+    # The input sits inside the meeting-type form, so the event carries the
+    # whole form's params under "meeting_type".
+    raw =
+      params
+      |> Map.get("meeting_type", %{})
+      |> Map.get("approval_window_hours")
+
+    case ApprovalWindow.parse(raw) do
+      {:ok, hours} ->
+        {:noreply,
+         socket
+         |> assign(:approval_window_hours, hours)
+         |> assign(
+           :form_errors,
+           FormValidationHelpers.delete_field_error(
+             socket.assigns.form_errors,
+             :approval_window_hours
+           )
+         )
+         |> Autosave.maybe_run()}
+
+      # Leave the stored value and last successful save untouched: surfacing
+      # the error and stopping here is what stops a half-typed number from
+      # autosaving over a good previously saved window.
+      {:error, :invalid_approval_window} ->
+        {:noreply,
+         assign(
+           socket,
+           :form_errors,
+           Map.put(
+             socket.assigns.form_errors,
+             :approval_window_hours,
+             dgettext(
+               "dashboard_meeting_form",
+               "Enter a whole number of hours, or leave blank to use the default."
+             )
+           )
+         )}
     end
   end
 
@@ -440,6 +494,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Blank clears the limit; anything unparseable is treated as blank (the
   # number input constrains typing, and the changeset enforces the range).
+  # Blank is a real choice here: it means "use the application default", which
+  # the domain resolves at read time. So a cleared field stores nil rather than
+  # reverting to whatever the default happened to be when it was cleared.
   defp parse_booking_limit(nil), do: nil
 
   defp parse_booking_limit(value) when is_binary(value) do

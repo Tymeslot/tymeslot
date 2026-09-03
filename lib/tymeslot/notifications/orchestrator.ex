@@ -6,7 +6,10 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   require Logger
 
+  alias Tymeslot.Clock
+  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Meetings.ApprovalJobs
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
 
@@ -33,6 +36,94 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
         error
     end
+  end
+
+  @doc """
+  Schedules the emails a held booking produces, and the nudge that follows.
+
+  Deliberately not `schedule_meeting_notifications/1`: no reminders are
+  scheduled here. Reminding an invitee about a meeting nobody has agreed to
+  would contradict the acknowledgement they just received, and the reminders
+  are scheduled in full once the host approves.
+
+  The three steps are scheduled independently rather than as a `with` chain:
+  the expiry has a cron backstop but the nudge does not, so a failure in the
+  request email must not leave the nudge (or the expiry) unarmed. Every step
+  always runs and every failure is logged, but only `request_emails` and
+  `approval_nudge` can roll into the overall error returned to the caller:
+  `ApprovalJobs.schedule_expiry/1` always returns `:ok` because the 15-minute
+  expiry sweep is a backstop for a failed insert, so a scheduling failure
+  there degrades punctuality rather than correctness and is deliberately not
+  surfaced as an error.
+  """
+  @spec schedule_request_notifications(%{atom() => term()}) ::
+          {:ok, :notifications_scheduled} | {:error, term()}
+  def schedule_request_notifications(meeting) do
+    Logger.info("Scheduling booking request notifications", meeting_id: meeting.id)
+
+    results = [
+      request_emails: MeetingScheduler.schedule_request_emails(meeting.id),
+      approval_nudge: schedule_approval_nudge(meeting),
+      expiry: ApprovalJobs.schedule_expiry(meeting)
+    ]
+
+    errors =
+      for {step, {:error, reason}} <- results do
+        Logger.error("Failed to schedule booking request notification step",
+          meeting_id: meeting.id,
+          step: step,
+          reason: inspect(reason)
+        )
+
+        {step, reason}
+      end
+
+    if errors == [] do
+      {:ok, :notifications_scheduled}
+    else
+      {:error, errors}
+    end
+  end
+
+  # Halfway through the window, so a host who missed the first email still has
+  # as long again to act. A request whose deadline has already passed, or which
+  # has no deadline recorded, gets no nudge: there is nothing left to save.
+  defp schedule_approval_nudge(%{approval_deadline_at: nil}), do: :ok
+
+  defp schedule_approval_nudge(meeting) do
+    requested_at = meeting.approval_requested_at || Clock.utc_now()
+    seconds_remaining = DateTime.diff(meeting.approval_deadline_at, requested_at)
+
+    if seconds_remaining > 0 do
+      send_at = DateTime.add(requested_at, div(seconds_remaining, 2), :second)
+      MeetingScheduler.schedule_approval_nudge(meeting.id, send_at)
+    else
+      :ok
+    end
+  end
+
+  @doc """
+  Sends the invitee the email closing out a request that will not happen.
+  """
+  @spec send_request_outcome_notifications(%{atom() => term()}, :declined | :expired) ::
+          {:ok, :notifications_scheduled} | {:error, term()}
+  def send_request_outcome_notifications(meeting, variant) do
+    case MeetingScheduler.schedule_request_outcome(meeting.id, variant) do
+      :ok -> {:ok, :notifications_scheduled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Cancels every pending job for a booking request that has been answered.
+
+  Both the nudge and the expiry, together: see `Tymeslot.Meetings.ApprovalJobs`
+  for why they are cancelled as one action rather than two.
+  """
+  @spec cancel_request_notifications(%{atom() => term()}) :: :ok
+  def cancel_request_notifications(meeting) do
+    :ok = MeetingScheduler.cancel_approval_emails(meeting.id)
+    ApprovalJobs.cancel(meeting)
   end
 
   @doc """

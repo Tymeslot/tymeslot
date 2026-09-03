@@ -60,6 +60,16 @@ defmodule Tymeslot.Jobs do
   defdelegate delete_poll_jobs(poll_id, worker_module), to: ObanJobQueries
 
   @doc """
+  Deletes the pending job a meeting holds for one action, on the emails queue.
+  """
+  defdelegate delete_jobs_by_action(worker_module, action, meeting_id), to: ObanJobQueries
+
+  @doc """
+  Deletes every pending job a worker holds for one meeting, on any queue.
+  """
+  defdelegate delete_meeting_jobs(worker_module, meeting_id), to: ObanJobQueries
+
+  @doc """
   Queues holding jobs older than `recent_cutoff`, with their depth.
   """
   defdelegate list_accumulated_jobs(recent_cutoff), to: ObanJobQueries
