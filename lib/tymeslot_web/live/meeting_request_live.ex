@@ -26,9 +26,9 @@ defmodule TymeslotWeb.MeetingRequestLive do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
@@ -38,15 +38,34 @@ defmodule TymeslotWeb.MeetingRequestLive do
   def render(assigns), do: View.page(assigns)
 
   @impl Phoenix.LiveView
-  def mount(%{"token" => token} = params, _session, socket) do
+  def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, dgettext("booking", "Booking request"))
-     |> assign(:token, token)
      |> assign(:decline_reason, "")
-     |> assign(:choosing, intent_from(params))
-     |> load_request(token)}
+     |> assign(:token, nil)
+     |> assign(:choosing, :approve)
+     |> assign(:meeting, nil)
+     |> assign(:state, :invalid)}
   end
+
+  # The token read and the meeting fetch it drives are both database reads
+  # (`ApprovalToken.verify/1`, then `load_request/2`), so they wait for the
+  # connected render rather than running again on the disconnected static one
+  # a plain HTTP GET already triggered.
+  @impl Phoenix.LiveView
+  def handle_params(%{"token" => token} = params, _uri, socket) do
+    socket =
+      socket
+      |> assign(:token, token)
+      |> assign(:choosing, intent_from(params))
+
+    socket = if connected?(socket), do: load_request(socket, token), else: socket
+
+    {:noreply, socket}
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, socket}
 
   # `?intent=decline` opens the page with the decline note already showing, so
   # a host who has decided does not have to hunt for it. It is a starting
@@ -55,24 +74,19 @@ defmodule TymeslotWeb.MeetingRequestLive do
   defp intent_from(_params), do: :approve
 
   defp load_request(socket, token) do
-    with {:ok, {meeting_id, organizer_user_id}} <- ApprovalToken.verify(token),
-         {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
-         :ok <- check_owner(meeting, organizer_user_id) do
-      assign(socket, meeting: meeting, state: state_for(meeting))
-    else
+    case ApprovalToken.verify(token) do
+      {:ok, meeting} ->
+        assign(socket, meeting: meeting, state: state_for(meeting))
+
       {:error, reason} ->
         Logger.info("Rejected booking request link", reason: inspect(reason))
         assign(socket, meeting: nil, state: :invalid)
     end
   end
 
-  # A meeting whose organiser changed since the token was issued is not the
-  # meeting this link was for.
-  defp check_owner(%{organizer_user_id: id}, id), do: :ok
-  defp check_owner(_meeting, _organizer_user_id), do: {:error, :organizer_mismatch}
-
   defp state_for(meeting) do
     cond do
+      MeetingState.awaiting_approval?(meeting) and lapsed?(meeting) -> :lapsed
       MeetingState.awaiting_approval?(meeting) -> :awaiting
       meeting.status == "confirmed" -> :approved
       meeting.status == "expired" -> :expired
@@ -80,6 +94,17 @@ defmodule TymeslotWeb.MeetingRequestLive do
       true -> :invalid
     end
   end
+
+  # True once the answer deadline has passed but the row is still
+  # `"awaiting_approval"` — the window between the deadline and the expiry
+  # sweep (or a losing race against it) actually running. Distinguishing this
+  # from `:awaiting` keeps the page from showing a past deadline as if it
+  # were still ahead, and from offering Approve/Decline on a request that is
+  # already effectively closed.
+  defp lapsed?(%{approval_deadline_at: nil}), do: false
+
+  defp lapsed?(%{approval_deadline_at: deadline}),
+    do: DateTime.compare(deadline, Clock.utc_now()) == :lt
 
   # Only the host's own decision produces the "declined" outcome.
   # `status == "cancelled"` alone does not mean that: the invitee can
@@ -97,19 +122,28 @@ defmodule TymeslotWeb.MeetingRequestLive do
     {:noreply, assign(socket, :choosing, if(intent == "decline", do: :decline, else: :approve))}
   end
 
-  def handle_event("update_reason", %{"reason" => reason}, socket) do
-    {:noreply, assign(socket, :decline_reason, reason)}
-  end
-
   def handle_event("approve", _params, socket) do
     {:noreply, answer(socket, socket.assigns.meeting, &Approval.approve/1, :approved)}
   end
 
-  def handle_event("decline", _params, socket) do
-    reason = socket.assigns.decline_reason
+  # `reason` comes from the submitted form, not a live-tracked assign: the
+  # decline note is only read once, at submission, so there is nothing to
+  # keep in sync on every keystroke.
+  def handle_event("decline", params, socket) do
+    reason = params |> Map.get("reason", "") |> sanitize_reason()
 
     {:noreply, answer(socket, socket.assigns.meeting, &Approval.decline(&1, reason), :declined)}
   end
+
+  # PostgreSQL rejects a null byte even though it is valid UTF-8, and this
+  # reason is free text a host can paste from anywhere. Params are attacker
+  # shaped, not form shaped: `reason[x]=y` arrives as a map, so anything that
+  # is not a binary is treated as no reason at all rather than raising out of
+  # `String.replace/3`.
+  defp sanitize_reason(reason) when is_binary(reason),
+    do: String.replace(reason, "\x00", "")
+
+  defp sanitize_reason(_reason), do: ""
 
   # No held request to act on — a bad token, or the owner check in
   # `load_request/2` failed — so the page is already showing the invalid

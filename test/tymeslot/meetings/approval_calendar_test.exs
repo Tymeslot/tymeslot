@@ -45,14 +45,24 @@ defmodule Tymeslot.Meetings.ApprovalCalendarTest do
     )
   end
 
-  test "a booking with no provider event has nothing to flip" do
+  test "approving a CalDAV booking still schedules the flip" do
+    # CalDAV never stamps `provider_event_id`; it addresses its event by
+    # `uid` alone, and that `uid` is the meeting's own id (a UUID) until the
+    # create job overwrites it. A gate that only recognised a present
+    # `provider_event_id` or a `uid` that didn't look like a plain UUID was
+    # therefore permanently false for every CalDAV host, and their calendars
+    # kept showing TENTATIVE forever regardless of approval — this is the
+    # regression test for that: no gate at all, the update job is scheduled
+    # unconditionally and is itself responsible for falling back to
+    # uid-addressing.
     meeting = held_meeting(%{provider_event_id: nil})
 
     {:ok, _confirmed} = Approval.approve(meeting)
 
-    # No integration wrote an event, so scheduling an update would give the
-    # worker a meeting it can only fail on.
-    refute_enqueued(worker: CalendarEventWorker, args: %{"meeting_id" => meeting.id})
+    assert_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "update", "meeting_id" => meeting.id}
+    )
   end
 
   test "declining removes the hold rather than updating it" do

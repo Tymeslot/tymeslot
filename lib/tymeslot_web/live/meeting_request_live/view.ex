@@ -3,20 +3,20 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   Markup for the page a host answers a booking request on.
 
   Split from the LiveView so the state machine and the markup can each be read
-  without scrolling past the other. Five states: the request is open, or it
-  has already been approved, declined, expired, or the link is not one we can
-  read.
+  without scrolling past the other. The request is either open, or it has
+  already been approved, declined, expired, lapsed (the deadline passed but
+  the expiry sweep has not yet caught up), too late to answer (the meeting's
+  own start time passed), or the link is not one we can read.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Profiles
   alias Tymeslot.Validation.Constraints
-
-  # The host is answering about the invitee's time, so both timestamps render
-  # in the invitee's zone rather than silently in UTC.
-  @displayed_at "%a %d %b %Y, %H:%M"
+  alias TymeslotWeb.Components.CoreComponents.Containers
+  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :state, :atom, required: true
   attr :meeting, :map, default: nil
@@ -86,6 +86,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
         <.action_button
           variant={:primary}
           phx-click="approve"
+          phx-disable-with={dgettext("booking", "Approving...")}
           data-testid="approve-request"
         >
           {dgettext("booking", "Approve booking")}
@@ -102,7 +103,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
       </div>
 
       <div :if={@choosing == :decline} class="mt-6 border-t border-tymeslot-200 pt-6">
-        <form id="decline-request-form" phx-change="update_reason" phx-submit="decline">
+        <form id="decline-request-form" phx-submit="decline">
           <.input
             type="textarea"
             name="reason"
@@ -113,7 +114,12 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
           />
 
           <div class="mt-4 flex flex-wrap gap-3">
-            <.action_button variant={:danger} phx-click="decline" data-testid="decline-request">
+            <.action_button
+              type="submit"
+              variant={:danger}
+              phx-disable-with={dgettext("booking", "Declining...")}
+              data-testid="decline-request"
+            >
               {dgettext("booking", "Decline booking")}
             </.action_button>
 
@@ -138,9 +144,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   defp outcome(assigns) do
     ~H"""
     <div class="text-center">
-      <.icon_badge>
-        <.icon name={outcome_icon(@state)} class="w-7 h-7 text-white" />
-      </.icon_badge>
+      <Containers.icon_badge icon={outcome_icon(@state)} />
 
       <h1 class="display-md mt-6">{outcome_title(@state)}</h1>
 
@@ -154,12 +158,14 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   defp outcome_icon(:approved), do: "hero-check-circle"
   defp outcome_icon(:declined), do: "hero-x-circle"
   defp outcome_icon(:expired), do: "hero-clock"
+  defp outcome_icon(:lapsed), do: "hero-clock"
   defp outcome_icon(:too_late), do: "hero-clock"
   defp outcome_icon(_state), do: "hero-question-mark-circle"
 
   defp outcome_title(:approved), do: dgettext("booking", "Booking confirmed")
   defp outcome_title(:declined), do: dgettext("booking", "Booking declined")
   defp outcome_title(:expired), do: dgettext("booking", "Request expired")
+  defp outcome_title(:lapsed), do: dgettext("booking", "Deadline passed")
   defp outcome_title(:too_late), do: dgettext("booking", "Too late to answer")
   defp outcome_title(_state), do: dgettext("booking", "Link not recognised")
 
@@ -181,6 +187,18 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
     )
   end
 
+  # The deadline has passed but the expiry sweep has not yet run, so the
+  # meeting row still reads "awaiting_approval". Distinct from `:expired`
+  # (the sweep already released it) so the host is never told the slot is
+  # free again before it actually is.
+  defp outcome_body(:lapsed, meeting) do
+    dgettext(
+      "booking",
+      "The deadline to answer this request has passed, so it can no longer be confirmed. The slot will be released shortly; %{name} has not been told yet.",
+      name: attendee_name(meeting)
+    )
+  end
+
   defp outcome_body(:too_late, _meeting) do
     dgettext("booking", "This meeting's start time has passed, so it can no longer be confirmed.")
   end
@@ -196,24 +214,40 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   defp attendee_name(%{attendee_name: nil}), do: dgettext("booking", "the person who booked")
   defp attendee_name(%{attendee_name: name}), do: name
 
-  defp when_line(meeting), do: displayed(meeting.start_time, timezone(meeting))
+  defp when_line(meeting), do: displayed(meeting.start_time, host_timezone(meeting))
 
-  defp deadline_line(meeting), do: displayed(meeting.approval_deadline_at, timezone(meeting))
+  defp deadline_line(meeting), do: displayed(meeting.approval_deadline_at, host_timezone(meeting))
+
+  # The host is the one reading this page, and everywhere else a host looks
+  # at a meeting's time (the dashboard, the approval-request email) it
+  # renders in the host's own zone, never the invitee's. This page follows
+  # that convention for both the meeting time and the answer deadline,
+  # the deadline especially, since it is a promise made to the host on the
+  # host's own clock. Mirrors `host_timezone/1` in
+  # `Tymeslot.Emails.Templates.BookingApprovalRequest`, which resolves the
+  # same way for the equivalent email.
+  defp host_timezone(%{organizer_user_id: nil}), do: Profiles.get_default_timezone()
+  defp host_timezone(%{organizer_user_id: user_id}), do: Profiles.get_user_timezone(user_id)
 
   defp displayed(nil, _timezone), do: dgettext("booking", "Not set")
 
+  # `DateTime.shift_zone/2` is called directly, rather than through
+  # `Tymeslot.Utils.DateTimeUtils.convert_to_timezone/2`, because that helper
+  # swallows a resolution failure by silently returning the unshifted UTC
+  # time, which this call site would then go on to label with the zone name
+  # that failed to resolve. Failing honestly here means falling back to an
+  # explicit "UTC" label instead.
   defp displayed(datetime, timezone) do
-    local = DateTimeUtils.convert_to_timezone(datetime, timezone)
-    "#{Calendar.strftime(local, @displayed_at)} (#{timezone})"
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    case DateTime.shift_zone(datetime, timezone) do
+      {:ok, local} -> "#{LocaleFormat.format_weekday_datetime(local, locale)} (#{timezone})"
+      {:error, _reason} -> "#{LocaleFormat.format_weekday_datetime(datetime, locale)} UTC"
+    end
   end
 
-  defp timezone(%{attendee_timezone: nil}), do: "Etc/UTC"
-  defp timezone(%{attendee_timezone: timezone}), do: timezone
-
   defp duration_line(%{duration: nil}), do: dgettext("booking", "Not set")
-
-  defp duration_line(%{duration: minutes}),
-    do: dgettext("booking", "%{count} minutes", count: minutes)
+  defp duration_line(%{duration: minutes}), do: LocalizationHelpers.format_duration(minutes)
 
   defp from_line(meeting), do: "#{meeting.attendee_name} (#{meeting.attendee_email})"
 end

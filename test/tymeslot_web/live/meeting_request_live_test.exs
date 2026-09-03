@@ -82,6 +82,38 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
 
       assert html =~ "this request lapses"
     end
+
+    test "shows the host's own timezone rather than the invitee's", %{conn: conn} do
+      # No profile is inserted for the host, so `Profiles.get_user_timezone/1`
+      # falls back to "Europe/Tallinn" — distinct from the invitee's
+      # "America/New_York" set by the meeting factory, so the two cannot be
+      # confused for each other in the assertion below.
+      meeting = held_meeting(%{attendee_timezone: "America/New_York"})
+
+      {:ok, _view, html} = live(conn, request_path(meeting))
+
+      assert html =~ "Europe/Tallinn"
+      refute html =~ "America/New_York"
+    end
+  end
+
+  describe "a lapsed but unswept request" do
+    test "is shown as no longer answerable rather than as still open", %{conn: conn} do
+      meeting =
+        held_meeting(%{
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -1, :hour)
+        })
+
+      {:ok, _view, html} = live(conn, request_path(meeting))
+
+      assert html =~ "Deadline passed"
+      refute html =~ "Approve booking"
+      refute html =~ "this request lapses"
+
+      # Purely a rendering fix: the row itself is still whatever the sweep
+      # job left it as.
+      assert reload(meeting).status == "awaiting_approval"
+    end
   end
 
   describe "answering" do
@@ -96,21 +128,46 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       assert reload(meeting).status == "confirmed"
     end
 
+    test "the outcome badge renders the heroicon rather than nesting one svg inside another",
+         %{conn: conn} do
+      meeting = held_meeting()
+
+      {:ok, view, _html} = live(conn, request_path(meeting))
+
+      html = view |> element("[data-testid='approve-request']") |> render_click()
+
+      # `<.icon_badge>` draws its own `<svg>` wrapper around whatever it is
+      # given; passing it an `<.icon>` (which renders a complete `<svg>` of
+      # its own) used to nest one svg inside another instead of drawing the
+      # heroicon's path, so the badge painted empty.
+      refute html =~ ~r/<svg[^>]*><svg/
+      assert html =~ ~r/<svg[^>]*text-white[^>]*><path/
+    end
+
     test "declining releases the slot and keeps the reason", %{conn: conn} do
       meeting = held_meeting()
 
       {:ok, view, _html} = live(conn, request_path(meeting, "?intent=decline"))
 
-      view
-      |> form("form", %{"reason" => "Away that week"})
-      |> render_change()
-
-      assert view |> element("[data-testid='decline-request']") |> render_click() =~
-               "Booking declined"
+      assert view
+             |> form("#decline-request-form", %{"reason" => "Away that week"})
+             |> render_submit() =~ "Booking declined"
 
       stored = reload(meeting)
       assert stored.status == "cancelled"
       assert stored.decline_reason == "Away that week"
+    end
+
+    test "a NUL byte in the decline reason does not crash the page", %{conn: conn} do
+      meeting = held_meeting()
+
+      {:ok, view, _html} = live(conn, request_path(meeting, "?intent=decline"))
+
+      assert view
+             |> form("#decline-request-form", %{"reason" => "Away\x00 that week"})
+             |> render_submit() =~ "Booking declined"
+
+      assert reload(meeting).decline_reason == "Away that week"
     end
 
     test "a request answered elsewhere reports what actually happened", %{conn: conn} do

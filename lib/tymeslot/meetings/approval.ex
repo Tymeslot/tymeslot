@@ -25,14 +25,15 @@ defmodule Tymeslot.Meetings.Approval do
 
   ## What each exit means
 
-    * `approve/2` — the host agrees. The meeting becomes `"confirmed"` and
+    * `approve/1` — the host agrees. The meeting becomes `"confirmed"` and
       joins the ordinary booking pipeline through `Bookings.Activation`: the
       same video room, the same confirmation emails, the same reminders and
       webhooks an ungated booking would have produced. The invitee's second
       email is deliberately the standard confirmation, so it looks like every
-      other Tymeslot booking.
+      other Tymeslot booking. Answering after the request's own
+      `approval_deadline_at` does not confirm it — see "The deadline" below.
 
-    * `decline/3` — the host says no. The meeting becomes `"cancelled"`, which
+    * `decline/2` — the host says no. The meeting becomes `"cancelled"`, which
       is not a compromise but the accurate status: the slot is released, the
       tentative calendar event removed, and the attendee told. A booking that
       was paid for but never approved gave the attendee nothing, so `release/3`
@@ -51,12 +52,15 @@ defmodule Tymeslot.Meetings.Approval do
   `deadline_for/2` is capped at the meeting's own start time. A request for a
   meeting in six hours cannot have a twenty-four hour window; it lapses when
   the meeting would have begun, because approving a booking whose slot has
-  already passed helps nobody.
+  already passed helps nobody. `approve/1` enforces that deadline itself
+  rather than trusting that the expiry sweep gets there first: a host
+  answering after the window the invitee was promised gets the same outcome
+  the sweep would have produced (the request is released as `"expired"`),
+  not a late confirmation.
   """
 
   require Logger
 
-  alias Ecto.UUID
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Clock
@@ -120,15 +124,30 @@ defmodule Tymeslot.Meetings.Approval do
   confirm, and the invitee would receive a confirmation for a meeting that
   already did not happen. Declining is the honest action there, and the expiry
   sweep will take it.
+
+  A request answered after its own `approval_deadline_at` is treated the same
+  way: the host missed the window the invitee was promised, so this releases
+  the request as `"expired"` exactly as the sweep would have, instead of
+  confirming a meeting past its deadline. The caller sees
+  `{:error, :not_awaiting_approval}` either way — the same race-loss outcome
+  shown whenever somebody else answered first — because by the time this
+  returns, the request genuinely is no longer awaiting approval.
   """
   @spec approve(Meeting.t()) :: {:ok, Meeting.t()} | {:error, error()}
   def approve(%Meeting{} = meeting) do
     now = Clock.utc_now()
 
-    if started?(meeting, now) do
-      {:error, :meeting_started}
-    else
-      do_approve(meeting, now)
+    cond do
+      started?(meeting, now) -> {:error, :meeting_started}
+      deadline_passed?(meeting, now) -> approve_after_deadline(meeting)
+      true -> do_approve(meeting, now)
+    end
+  end
+
+  defp approve_after_deadline(meeting) do
+    case expire(meeting) do
+      {:ok, _released} -> {:error, :not_awaiting_approval}
+      {:error, _reason} = error -> error
     end
   end
 
@@ -226,36 +245,25 @@ defmodule Tymeslot.Meetings.Approval do
   # way. The builder derives `status` from the meeting, so re-pushing the event
   # is the whole flip.
   #
+  # Scheduled unconditionally now, the same way `Bookings.Create` schedules
+  # the original "create" job and `Bookings.Reschedule` schedules its own
+  # "update": whether there is anything to flip is `CalendarEventSync`'s call,
+  # not a pre-check made here. There used to be one — "has an event to flip"
+  # tested for a present `provider_event_id` or a `uid` that didn't look like
+  # a plain UUID — but CalDAV addresses its event by `uid` alone, and that
+  # `uid` *is* the meeting's own id until CalDAV's own create job overwrites
+  # it (`CalendarEventSync.put_provider_mapping/2`), so the check passed the
+  # UUID test and the gate was permanently false for every CalDAV host: their
+  # calendars kept showing TENTATIVE forever regardless of approval. The
+  # "update" job this schedules already falls back to uid-addressing, recreates
+  # the event on a missing-event 404, and errors out gracefully when there is
+  # genuinely no calendar integration to update — so there was nothing this
+  # pre-check did that scheduling unconditionally does not already handle.
+  #
   # Best-effort, like every other calendar write: the approval is committed and
   # a failed push is retried by the worker rather than undoing it.
-  #
-  # "Has an event to flip" has to agree with `CalendarEventSync`'s own test
-  # for one (`present_identifier?(provider_event_id) or external_id?(uid)`):
-  # OAuth providers stamp `provider_event_id`, but CalDAV addresses its event
-  # by `uid` alone, so guarding on `provider_event_id` by itself would skip
-  # every CalDAV host and leave their calendar showing TENTATIVE forever.
   defp confirm_calendar_event(meeting) do
-    if addressable_calendar_event?(meeting) do
-      schedule_calendar_confirm(meeting)
-    else
-      :ok
-    end
-  end
-
-  defp addressable_calendar_event?(%Meeting{provider_event_id: provider_event_id, uid: uid}) do
-    present_identifier?(provider_event_id) or external_uid?(uid)
-  end
-
-  defp present_identifier?(identifier) when is_binary(identifier), do: byte_size(identifier) > 0
-  defp present_identifier?(_identifier), do: false
-
-  defp external_uid?(nil), do: false
-
-  defp external_uid?(uid) do
-    case UUID.cast(uid) do
-      {:ok, _uuid} -> false
-      :error -> true
-    end
+    schedule_calendar_confirm(meeting)
   end
 
   defp schedule_calendar_confirm(meeting) do
@@ -352,6 +360,11 @@ defmodule Tymeslot.Meetings.Approval do
 
   defp started?(%Meeting{start_time: start_time}, now),
     do: DateTime.compare(now, start_time) != :lt
+
+  defp deadline_passed?(%Meeting{approval_deadline_at: nil}, _now), do: false
+
+  defp deadline_passed?(%Meeting{approval_deadline_at: deadline}, now),
+    do: DateTime.compare(now, deadline) != :lt
 
   defp earliest(a, b), do: if(DateTime.compare(a, b) == :lt, do: a, else: b)
 
