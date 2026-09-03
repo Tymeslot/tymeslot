@@ -113,7 +113,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             label={dgettext("dashboard_common", "Duration (minutes)")}
             value={@duration}
             min="5"
-            step="5"
             required
             errors={error_list(@errors, :duration_minutes)}
             icon="hero-clock"

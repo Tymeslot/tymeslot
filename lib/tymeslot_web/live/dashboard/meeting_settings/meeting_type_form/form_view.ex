@@ -122,7 +122,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 }
                 min={Constraints.duration_minutes_form_min()}
                 max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
-                step="5"
                 required
                 placeholder="30"
                 phx-change="validate_meeting_type"
