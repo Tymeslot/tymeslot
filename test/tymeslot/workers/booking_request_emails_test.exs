@@ -15,7 +15,9 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
   @moduletag :emails
   @moduletag :bookings
 
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.EmailWorker
 
@@ -80,9 +82,17 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
 
       assert_received {:invitee_email, id} when id == meeting.id
       assert_received {:host_email, :request, host_id, urls} when host_id == meeting.id
-      # The host must receive links that actually resolve to this request.
-      assert urls.approve_url =~ "/meeting-request/"
-      assert urls.decline_url =~ "intent=decline"
+      # The host must receive links that actually resolve to this request —
+      # not merely a URL shaped like one. Pull the token straight out of the
+      # emailed URL and verify it against the module the LiveView route uses,
+      # rather than asserting a substring both sides could drift out of step
+      # under.
+      assert "/meeting-request/" <> token = URI.parse(urls.review_url).path
+      assert {:ok, verified_meeting} = ApprovalToken.verify(token)
+      assert verified_meeting.id == meeting.id
+
+      assert urls.approve_url == urls.review_url <> "?intent=approve"
+      assert urls.decline_url == urls.review_url <> "?intent=decline"
     end
 
     test "sends nothing once the request has been answered" do
@@ -97,6 +107,75 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       Repo.delete!(meeting)
 
       assert {:discard, _reason} = request_job(meeting)
+    end
+
+    test "still sends the host's request when the invitee acknowledgement fails" do
+      # The two legs are independent notifications to different people: a
+      # rejected or misbehaving invitee address must never leave the host
+      # unaware a booking request exists at all.
+      meeting = held_meeting()
+      test_pid = self()
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _sent ->
+        {:error, "recipient_rejected"}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn variant,
+                                                                           sent,
+                                                                           _urls,
+                                                                           _locale ->
+        send(test_pid, {:host_email, variant, sent.id})
+        {:ok, :sent}
+      end)
+
+      assert {:discard, _reason} = request_job(meeting)
+      assert_received {:host_email, :request, host_id} when host_id == meeting.id
+
+      # The invitee leg failed while the host's succeeded, so a plain
+      # whole-job retry would duplicate the host's copy: a single-leg
+      # follow-up is requeued instead, skipping the host leg this time.
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_booking_request_emails",
+          "meeting_id" => meeting.id,
+          "skip_host_request" => true
+        }
+      )
+    end
+
+    test "the single-leg follow-up can insert while its parent job is still executing" do
+      # Regression coverage for the self-conflict bug: the follow-up used to
+      # be inserted with a uniqueness scope that included Oban's :executing
+      # state, so it matched — and was silently swallowed by — the very job
+      # that was inserting it.
+      meeting = held_meeting()
+      now = DateTime.utc_now()
+
+      {:ok, _executing_job} =
+        Repo.insert(%Oban.Job{
+          state: "executing",
+          worker: "Tymeslot.Workers.EmailWorker",
+          queue: "emails",
+          args: %{"action" => "send_booking_request_emails", "meeting_id" => meeting.id},
+          errors: [],
+          inserted_at: now,
+          attempted_at: now
+        })
+
+      assert :ok =
+               EmailScheduler.schedule_request_emails(meeting.id,
+                 skip_host_request: true
+               )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_booking_request_emails",
+          "meeting_id" => meeting.id,
+          "skip_host_request" => true
+        }
+      )
     end
   end
 
