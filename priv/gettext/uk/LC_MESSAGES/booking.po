@@ -1840,3 +1840,9 @@ msgstr "Зустріч із вичерпаним терміном не можн�
 #, elixir-autogen, elixir-format
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
 msgstr "Тим часом цей час забронював хтось інший, тому цей запит більше не можна підтвердити."
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr "Пошук часових поясів"
