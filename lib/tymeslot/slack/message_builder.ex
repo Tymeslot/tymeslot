@@ -3,8 +3,8 @@ defmodule Tymeslot.Slack.MessageBuilder do
   Builds Slack Block Kit JSON payloads for each notification event.
 
   All user-provided strings are escaped for Slack mrkdwn (`&`, `<`, `>`).
-  Cancellation reasons are truncated to a safe length to stay within Slack's
-  3000-char-per-text-block limit.
+  Cancellation and decline reasons are truncated to a safe length to stay
+  within Slack's 3000-char-per-text-block limit.
 
   Block Kit reference: https://api.slack.com/block-kit
   """
@@ -44,6 +44,35 @@ defmodule Tymeslot.Slack.MessageBuilder do
     ]
 
     append_actions(base, meeting)
+  end
+
+  def build_blocks("meeting.requested", meeting) do
+    base = [
+      header("New booking request"),
+      section_summary(meeting),
+      divider(),
+      section_request_details(meeting)
+    ]
+
+    append_actions(base, meeting)
+  end
+
+  def build_blocks("meeting.declined", meeting) do
+    [
+      header("Booking request declined"),
+      section_summary(meeting),
+      divider(),
+      section_decline(meeting)
+    ]
+  end
+
+  def build_blocks("meeting.request_expired", meeting) do
+    [
+      header("Booking request expired"),
+      section_summary(meeting),
+      divider(),
+      section_expired()
+    ]
   end
 
   def build_blocks(event_type, meeting) do
@@ -120,6 +149,45 @@ defmodule Tymeslot.Slack.MessageBuilder do
     section_text("New time: *#{format_time(meeting)}*")
   end
 
+  defp section_request_details(meeting) do
+    base_fields = [
+      mrkdwn_field("*When*", format_time(meeting)),
+      mrkdwn_field("*Duration*", "#{duration_minutes(meeting)} min")
+    ]
+
+    fields =
+      case deadline_text(meeting) do
+        nil -> base_fields
+        text -> base_fields ++ [mrkdwn_field("*Respond by*", text)]
+      end
+
+    %{"type" => "section", "fields" => fields}
+  end
+
+  defp section_decline(meeting) do
+    reason = decline_reason(meeting)
+    section_text("Declined.\n>#{escape(reason)}")
+  end
+
+  defp decline_reason(meeting) do
+    case Map.get(meeting, :decline_reason) do
+      nil -> "No reason given"
+      "" -> "No reason given"
+      text -> truncate(text, @max_reason_length)
+    end
+  end
+
+  defp section_expired do
+    section_text("Nobody responded before the deadline, so the slot was released.")
+  end
+
+  defp deadline_text(meeting) do
+    case Map.get(meeting, :approval_deadline_at) do
+      nil -> nil
+      %DateTime{} = deadline -> format_single_time(meeting, deadline)
+    end
+  end
+
   defp append_actions(blocks, meeting) do
     case meeting_url(meeting) do
       nil ->
@@ -186,6 +254,16 @@ defmodule Tymeslot.Slack.MessageBuilder do
     end_str = Calendar.strftime(end_time, "%H:%M")
 
     "#{date}, #{start_str}–#{end_str} (#{timezone})"
+  end
+
+  defp format_single_time(meeting, datetime) do
+    timezone = Map.get(meeting, :attendee_timezone) || "UTC"
+    shifted = shift_zone(datetime, timezone)
+
+    date = Calendar.strftime(shifted, "%a %d %b %Y")
+    time = Calendar.strftime(shifted, "%H:%M")
+
+    "#{date}, #{time} (#{timezone})"
   end
 
   defp shift_zone(datetime, timezone) do

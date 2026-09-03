@@ -75,6 +75,86 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     end
   end
 
+  describe "build_blocks/2 — meeting.requested" do
+    test "includes the deadline and an action button" do
+      meeting = Map.put(@meeting, :approval_deadline_at, ~U[2026-03-12 14:00:00Z])
+      blocks = MessageBuilder.build_blocks("meeting.requested", meeting)
+
+      assert [
+               %{"type" => "header", "text" => %{"text" => "New booking request"}},
+               %{"type" => "section"},
+               %{"type" => "divider"},
+               %{"type" => "section"},
+               %{"type" => "actions"}
+             ] = Enum.map(blocks, &Map.take(&1, ["type", "text"]))
+
+      json = Jason.encode!(blocks)
+      assert json =~ "John Smith"
+      assert json =~ "Respond by"
+      assert json =~ "12 Mar 2026"
+      assert json =~ "Open in Tymeslot"
+      refute json =~ "Meeting update"
+    end
+
+    test "omits the deadline field when the request has no deadline" do
+      meeting = Map.put(@meeting, :approval_deadline_at, nil)
+      blocks = MessageBuilder.build_blocks("meeting.requested", meeting)
+      refute Jason.encode!(blocks) =~ "Respond by"
+    end
+  end
+
+  describe "build_blocks/2 — meeting.declined" do
+    test "includes the host's decline reason in a quote block" do
+      meeting = Map.put(@meeting, :decline_reason, "Not available that day")
+      blocks = MessageBuilder.build_blocks("meeting.declined", meeting)
+
+      assert [
+               %{"type" => "header", "text" => %{"text" => "Booking request declined"}},
+               %{"type" => "section"},
+               %{"type" => "divider"},
+               %{"type" => "section"}
+             ] = Enum.map(blocks, &Map.take(&1, ["type", "text"]))
+
+      json = Jason.encode!(blocks)
+      assert json =~ "Not available that day"
+      assert json =~ ">Not available that day"
+      refute json =~ "Meeting update"
+    end
+
+    test "falls back to 'No reason given' when decline_reason is missing" do
+      meeting = Map.put(@meeting, :decline_reason, nil)
+      blocks = MessageBuilder.build_blocks("meeting.declined", meeting)
+      assert Jason.encode!(blocks) =~ "No reason given"
+    end
+
+    test "truncates decline reasons longer than 500 chars with ellipsis" do
+      long_reason = String.duplicate("a", 600)
+      meeting = Map.put(@meeting, :decline_reason, long_reason)
+      blocks = MessageBuilder.build_blocks("meeting.declined", meeting)
+      json = Jason.encode!(blocks)
+      assert json =~ "aaa..."
+      refute String.contains?(json, String.duplicate("a", 600))
+    end
+  end
+
+  describe "build_blocks/2 — meeting.request_expired" do
+    test "explains that nobody responded before the deadline" do
+      blocks = MessageBuilder.build_blocks("meeting.request_expired", @meeting)
+
+      assert [
+               %{"type" => "header", "text" => %{"text" => "Booking request expired"}},
+               %{"type" => "section"},
+               %{"type" => "divider"},
+               %{"type" => "section"}
+             ] = Enum.map(blocks, &Map.take(&1, ["type", "text"]))
+
+      json = Jason.encode!(blocks)
+      assert json =~ "Nobody responded"
+      assert json =~ "John Smith"
+      refute json =~ "Meeting update"
+    end
+  end
+
   describe "escaping" do
     test "escapes Slack mrkdwn special characters in attendee_name" do
       meeting = %{@meeting | attendee_name: "<script>alert('xss')</script>"}

@@ -77,16 +77,7 @@ defmodule Tymeslot.Notifications.Events do
         Orchestrator.schedule_request_notifications(meeting)
       end)
 
-    # The host learns about the request through whichever channel they watch,
-    # so dispatch is attempted on all three now rather than at approval. Only
-    # webhooks can actually carry this event today: the Slack and Telegram
-    # integration schemas still cap their selectable `events` at the
-    # pre-approval three (`SlackIntegrationSchema`, `TelegramIntegrationSchema`),
-    # so no integration can be subscribed to it yet and these two calls find
-    # nothing to notify until that allowlist is widened.
-    Dispatcher.dispatch(:meeting_requested, meeting)
-    TelegramDispatcher.dispatch(:meeting_requested, meeting)
-    SlackDispatcher.dispatch(:meeting_requested, meeting)
+    dispatch_request_channels(:meeting_requested, meeting)
 
     result
   end
@@ -115,9 +106,7 @@ defmodule Tymeslot.Notifications.Events do
         Orchestrator.send_request_outcome_notifications(meeting, variant)
       end)
 
-    Dispatcher.dispatch(event, meeting)
-    TelegramDispatcher.dispatch(event, meeting)
-    SlackDispatcher.dispatch(event, meeting)
+    dispatch_request_channels(event, meeting)
 
     result
   end
@@ -225,6 +214,30 @@ defmodule Tymeslot.Notifications.Events do
   defp dispatch_webhooks(event, meeting), do: dispatch_channel(:webhooks, event, meeting)
   defp dispatch_telegram(event, meeting), do: dispatch_channel(:telegram, event, meeting)
   defp dispatch_slack(event, meeting), do: dispatch_channel(:slack, event, meeting)
+
+  # The three request-lifecycle events (`meeting.requested`,
+  # `meeting.declined`, `meeting.request_expired`) fan out to all three
+  # channels through the same guarded `dispatch_channel/3` as every other
+  # event, so a raising channel cannot abort the fan-out or escape into
+  # callers this module documents as non-failing.
+  #
+  # Telegram finds nothing to notify for now:
+  # `TelegramIntegrationSchema.@valid_events` still hardcodes the
+  # pre-approval three, so no integration can be subscribed to these events
+  # yet. It is dispatched anyway rather than special-cased, so widening that
+  # allowlist is the only change Telegram will need.
+  #
+  # Slack does reach real subscribers today — `SlackIntegrationSchema`'s
+  # `@valid_events` derives from `EventTypes.all/0` and
+  # `Slack.default_events_for_new_integration/0` subscribes fresh
+  # integrations to all of them — and `Slack.MessageBuilder` now has
+  # dedicated rendering for all three, so what a host sees is a real
+  # notification rather than the generic "Meeting update" fallback.
+  defp dispatch_request_channels(event, meeting) do
+    dispatch_webhooks(event, meeting)
+    dispatch_telegram(event, meeting)
+    dispatch_slack(event, meeting)
+  end
 
   defp dispatch_channel(channel, event, meeting) do
     dispatch_fun(channel).(event, meeting)

@@ -17,7 +17,9 @@ defmodule Tymeslot.Notifications.OrchestratorRequestNotificationsTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Webhooks.Dispatcher, as: WebhookDispatcher
   alias Tymeslot.Workers.EmailWorker
 
   defp held_meeting(attrs \\ %{}) do
@@ -94,6 +96,42 @@ defmodule Tymeslot.Notifications.OrchestratorRequestNotificationsTest do
       )
 
       assert_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
+    end
+  end
+
+  describe "Events request-lifecycle dispatch survives a raising channel" do
+    # These three events used to call `Webhooks.Dispatcher.dispatch/2` (and
+    # its Telegram/Slack counterparts) bare, unlike every other event, which
+    # routes through `Events.dispatch_channel/3` and its blanket rescue. A
+    # raising dispatcher (a DB blip, a failed Oban insert) would escape
+    # straight out of `Events.meeting_requested/1` — and, worse,
+    # `Bookings.Create.run_meeting_transaction/3` calls it from inside an
+    # open `Repo.transaction/1` for gated bookings, so the raise would fail
+    # the invitee's booking outright rather than just costing a
+    # notification.
+    setup do
+      unload_if_mocked(WebhookDispatcher)
+      :meck.new(WebhookDispatcher, [:passthrough])
+
+      :meck.expect(WebhookDispatcher, :dispatch, fn _event, _meeting ->
+        raise "simulated webhook dispatch failure"
+      end)
+
+      on_exit(fn -> unload_if_mocked(WebhookDispatcher) end)
+
+      %{meeting: held_meeting()}
+    end
+
+    test "meeting_requested/1 does not raise", %{meeting: meeting} do
+      assert {:ok, :notifications_scheduled} = Events.meeting_requested(meeting)
+    end
+
+    test "meeting_declined/1 does not raise", %{meeting: meeting} do
+      assert {:ok, :notifications_scheduled} = Events.meeting_declined(meeting)
+    end
+
+    test "meeting_request_expired/1 does not raise", %{meeting: meeting} do
+      assert {:ok, :notifications_scheduled} = Events.meeting_request_expired(meeting)
     end
   end
 end
