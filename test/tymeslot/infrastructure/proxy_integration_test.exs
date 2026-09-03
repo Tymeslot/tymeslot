@@ -1,3 +1,46 @@
+defmodule Tymeslot.Infrastructure.ProxyIntegrationTest.Availability do
+  @moduledoc false
+
+  @doc """
+  Whether this run has an outbound proxy to exercise.
+  """
+  @spec proxy_configured?() :: boolean()
+  def proxy_configured? do
+    (System.get_env("HTTPS_PROXY") || System.get_env("HTTP_PROXY") ||
+       Application.get_env(:tymeslot, :http_proxy)) != nil
+  end
+
+  @doc """
+  The extra module tag `ProxyIntegrationTest` carries, which is a `:skip` when
+  the suite cannot run.
+
+  `--only <tag>` overrides ExUnit's default exclusions, so naming any other tag
+  this module declares — `--only infrastructure`, which the verification skill
+  documents as a way to run a domain — drags it into a run that never asked for
+  it and where `setup_all` finds no proxy. Skipping is the honest answer there:
+  nothing was checked, and the summary line says so rather than reporting a
+  pass. A run that names `:proxy_integration` itself still reaches the loud
+  failure in `setup_all`, because somebody asking for this check and quietly
+  not getting it is the one outcome worth failing over.
+  """
+  @spec moduletag() :: keyword()
+  def moduletag do
+    if proxy_configured?() or requested?() do
+      []
+    else
+      [skip: "no proxy configured (HTTPS_PROXY/HTTP_PROXY)"]
+    end
+  end
+
+  # `--only proxy_integration` yields a bare atom, `--include proxy_integration`
+  # a `{tag, value}` pair; both mean the run asked for this suite by name.
+  defp requested? do
+    ExUnit.configuration()
+    |> Keyword.get(:include, [])
+    |> Enum.any?(&(&1 == :proxy_integration or match?({:proxy_integration, _value}, &1)))
+  end
+end
+
 defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   @moduledoc """
   Exercises the HTTP client against a **real** outbound proxy and the public
@@ -7,11 +50,17 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   Run it with a proxy configured, otherwise `setup_all` fails loudly:
 
       HTTPS_PROXY=http://user:pass@proxy:port mix test --only proxy_integration
+
+  A run that reaches this module through one of its other tags rather than by
+  naming `:proxy_integration` skips it instead of failing; see
+  `Tymeslot.Infrastructure.ProxyIntegrationTest.Availability`.
   """
   use ExUnit.Case, async: false
 
   alias Tymeslot.Infrastructure.{HTTPClient, ProxyConfig, ProxyVerifier}
+  alias Tymeslot.Infrastructure.ProxyIntegrationTest.Availability
 
+  @moduletag Availability.moduletag()
   @moduletag :proxy_integration
   @moduletag :integration
   @moduletag timeout: 30_000
@@ -22,10 +71,7 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   setup_all do
     original_proxy = Application.get_env(:tymeslot, :http_proxy)
 
-    proxy_configured? =
-      (System.get_env("HTTPS_PROXY") || System.get_env("HTTP_PROXY") || original_proxy) != nil
-
-    unless proxy_configured? do
+    unless Availability.proxy_configured?() do
       raise """
       No proxy configured, so these tests cannot assert anything.
 
