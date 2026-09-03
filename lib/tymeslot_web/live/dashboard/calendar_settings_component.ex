@@ -421,9 +421,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   # sweep uses.
   #
   # This asks about the feed family specifically, not about read-only
-  # providers: an Exchange mailbox is read-only too, but it discovers real
-  # folders and has no feed to re-fetch, so it belongs on the discovery path
-  # with every other credentialed provider.
+  # providers: `ics_url` is the only read-only provider left, and the two
+  # questions have different answers for everything else. An Exchange mailbox
+  # discovers real folders and has no feed to re-fetch, so it belongs on the
+  # discovery path with every other credentialed provider.
   defp refresh_one(%{provider: provider} = integration) do
     if ProviderConfig.subscription?(provider) do
       %{"calendar_integration_id" => integration.id}
