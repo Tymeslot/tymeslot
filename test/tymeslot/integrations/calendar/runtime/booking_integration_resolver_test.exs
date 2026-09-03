@@ -221,41 +221,46 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
     end
   end
 
-  describe "resolve(user_id) — mixed with a read-only Exchange mailbox" do
+  describe "resolve(user_id) — mixed with an Exchange mailbox" do
     setup do
       user = insert(:user)
       %{user: user}
     end
 
-    test "falls back to the writable integration over an Exchange mailbox", %{user: user} do
-      writable =
-        insert(:calendar_integration,
-          user: user,
-          provider: "caldav",
-          is_active: true,
-          calendar_paths: ["/calendars/writable/"],
-          default_booking_calendar_id: nil
-        )
-
-      # Carries a booking calendar, which the first fallback tier looks for, so
-      # an eligible mailbox would win this outright.
+    # This block asserted the opposite while the EWS provider refused every
+    # write: an Exchange mailbox was skipped by every tier, and an
+    # Exchange-only account resolved to nothing at all. It now resolves like
+    # any other writable integration.
+    test "an Exchange mailbox carrying a booking calendar wins the first fallback tier", %{
+      user: user
+    } do
       insert(:calendar_integration,
         user: user,
-        provider: "exchange",
+        provider: "caldav",
         is_active: true,
-        default_booking_calendar_id: "AAMkAG=="
+        calendar_paths: ["/calendars/writable/"],
+        default_booking_calendar_id: nil
       )
 
-      # No primary recorded, so every tier resolves from the bookable list.
+      exchange =
+        insert(:calendar_integration,
+          user: user,
+          provider: "exchange",
+          is_active: true,
+          default_booking_calendar_id: "AAMkAG=="
+        )
+
+      # No primary recorded, so every tier resolves from the bookable list, and
+      # the first of them looks for a nominated booking calendar.
       insert(:profile, user: user)
 
       result = BookingIntegrationResolver.resolve(user.id)
 
       assert %CalendarIntegrationSchema{} = result
-      assert result.id == writable.id
+      assert result.id == exchange.id
     end
 
-    test "returns nil when the primary on record is an Exchange mailbox", %{user: user} do
+    test "returns the primary on record when it is an Exchange mailbox", %{user: user} do
       exchange =
         insert(:calendar_integration,
           user: user,
@@ -266,16 +271,24 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       insert(:profile, user: user, primary_calendar_integration_id: exchange.id)
 
-      # A booking client cannot be built for a read-only provider, so handing
-      # this integration back would fail every write. Nothing is better.
-      assert BookingIntegrationResolver.resolve(user.id) == nil
+      # A booking client can now be built for it, so handing it back is the
+      # right answer rather than a write that would certainly fail.
+      result = BookingIntegrationResolver.resolve(user.id)
+
+      assert %CalendarIntegrationSchema{} = result
+      assert result.id == exchange.id
     end
 
-    test "returns nil when the user only has an Exchange mailbox", %{user: user} do
-      insert(:calendar_integration, user: user, provider: "exchange", is_active: true)
+    test "resolves an account whose only integration is an Exchange mailbox", %{user: user} do
+      exchange =
+        insert(:calendar_integration, user: user, provider: "exchange", is_active: true)
+
       insert(:profile, user: user)
 
-      assert BookingIntegrationResolver.resolve(user.id) == nil
+      result = BookingIntegrationResolver.resolve(user.id)
+
+      assert %CalendarIntegrationSchema{} = result
+      assert result.id == exchange.id
     end
   end
 

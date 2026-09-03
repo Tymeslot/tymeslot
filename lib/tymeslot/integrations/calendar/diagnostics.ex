@@ -7,20 +7,18 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   Application code should call the public `Tymeslot.Integrations.Calendar`
   facade rather than this module directly.
 
-  Three functions here deliberately do something no application path may: they
-  write a payload the provider's own writer would never produce
-  (`put_raw_caldav_ical/3`), or write at all to a provider that refuses every
-  write (`seed_exchange_item/2` and `delete_exchange_item/2`). They exist so a
-  diagnostic can plant the fixture it then reads back, and they are named and
-  documented so that reaching for one from application code reads as the
-  mistake it would be.
+  One function here deliberately does something no application path may:
+  `put_raw_caldav_ical/3` writes a payload the provider's own writer would
+  never produce. It exists so a diagnostic can plant the fixture it then reads
+  back, and it is named and documented so that reaching for it from
+  application code reads as the mistake it would be.
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
   alias Tymeslot.Integrations.Calendar.Exchange.Provider, as: ExchangeProvider
-  alias Tymeslot.Integrations.Calendar.Exchange.Seeding, as: ExchangeSeeding
+  alias Tymeslot.Integrations.Calendar.Exchange.Writes, as: ExchangeWrites
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
@@ -270,36 +268,32 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   end
 
   @doc """
-  Diagnostic-only: plants one calendar item in an Exchange mailbox over EWS.
+  Plants one calendar item in an Exchange mailbox over EWS.
 
-  `Exchange.Provider` refuses every write, so an audit of it has nothing to read
-  unless a fixture is planted out of band. `Exchange.Seeding`'s moduledoc has
-  the reasoning and the boundaries; this is the only entry point to it.
+  The audit's fixture planter, and no longer a side door: it goes through
+  `Exchange.Writes`, the same module `Exchange.Provider.create_event/2` writes
+  bookings through, so the audit exercises the write path it is auditing rather
+  than a private copy of it. What it adds over the provider callback is the
+  fixture shapes a booking never needs — an all-day item given `Date` bounds,
+  and a recurring series — which is why it takes an `item_spec` directly
+  instead of the canonical event data a meeting produces.
 
-  Returns the item id the server assigned, which is what `delete_exchange_item/2`
-  takes and what `Exchange.EventNormaliser` writes into `provider_event_id`. EWS
-  assigns the iCalendar UID itself, so a caller cannot choose one and must
-  correlate by item id. Not intended for application use.
+  Returns the item id the server assigned, which is what
+  `Exchange.Provider.delete_event/3` takes and what `Exchange.EventNormaliser`
+  writes into `provider_event_id`. EWS assigns the iCalendar UID itself, so a
+  caller cannot choose one and must correlate by item id.
+
+  There is no matching remover here: an item planted this way is deleted
+  through the provider callback like any other, since a delete addresses an
+  item by id and so needs nothing this planter knows.
   """
-  @spec seed_exchange_item(integration(), ExchangeSeeding.fixture()) ::
-          {:ok, ExchangeSeeding.item_id()} | {:error, term()}
+  @spec seed_exchange_item(integration(), ExchangeWrites.spec()) ::
+          {:ok, ExchangeWrites.item_id()} | {:error, term()}
   def seed_exchange_item(
         %CalendarIntegrationSchema{provider: "exchange"} = integration,
         fixture
       ) do
-    ExchangeSeeding.create_item(exchange_config(integration), fixture)
-  end
-
-  @doc """
-  Diagnostic-only: removes an item planted by `seed_exchange_item/2`.
-  """
-  @spec delete_exchange_item(integration(), ExchangeSeeding.item_id()) ::
-          :ok | {:error, term()}
-  def delete_exchange_item(
-        %CalendarIntegrationSchema{provider: "exchange"} = integration,
-        item_id
-      ) do
-    ExchangeSeeding.delete_item(exchange_config(integration), item_id)
+    ExchangeWrites.create_item(exchange_config(integration), fixture)
   end
 
   @doc """
@@ -316,7 +310,8 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
 
   `calendar_list` is left empty on purpose. `Exchange.Provider.item_client_configs/1`
   falls back to the mailbox's default calendar when nothing is selected, which
-  is where `seed_exchange_item/2` plants its fixtures.
+  is where `seed_exchange_item/2` plants its fixtures and where
+  `Exchange.Provider.build_booking_client_config/1` would write a booking.
   """
   @spec build_ephemeral_exchange_integration(%{
           required(:url) => String.t(),
@@ -384,7 +379,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
     end
   end
 
-  # `Exchange.Seeding` speaks the transport's config map, not an integration
+  # `Exchange.Writes` speaks the transport's config map, not an integration
   # struct, and the conversion lives on the provider because it is the module
   # that knows the credentials are encrypted and that two fields the CalDAV
   # shape has no room for have to be merged back on top.

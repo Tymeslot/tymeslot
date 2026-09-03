@@ -1,15 +1,16 @@
-defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
+defmodule Tymeslot.Integrations.Calendar.Exchange.WritesTest do
   @moduledoc """
-  Covers the diagnostic EWS writes `mix calendar_audit` plants its Exchange
-  fixtures with.
+  Covers the EWS write operations: the bodies `Exchange.Provider`'s write
+  callbacks send, and the ones `mix calendar_audit` plants its fixtures with.
 
-  The provider under audit is read-only, so nothing else in the codebase sends
-  EWS a write and nothing else would notice these bodies going wrong. Two
-  properties are worth pinning against a server nobody runs in CI: a fixture's
-  text is escaped before it reaches the XML, since a subject carrying `&` or
-  `<` is one of the scenarios the audit deliberately plants; and the audit's
-  own attr shapes — a `Date` pair for all-day, a `DateTime` pair for timed —
-  reach the wire as the bounds EWS expects.
+  These are the only requests in the codebase that change an Exchange mailbox,
+  and no CI job speaks to a server that would notice one going wrong, so the
+  bodies themselves are what is pinned. Three properties matter: text is
+  escaped before it reaches the XML, since a subject carrying `&` or `<` is
+  one of the scenarios the audit deliberately plants; both bound shapes — a
+  `Date` pair for all-day, a `DateTime` pair for timed — reach the wire as the
+  bounds EWS expects; and a refusal the server states in a 200 body is read as
+  a refusal rather than as a write that happened.
   """
 
   use Tymeslot.ExchangeCase, async: false
@@ -19,7 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
-  alias Tymeslot.Integrations.Calendar.Exchange.Seeding
+  alias Tymeslot.Integrations.Calendar.Exchange.Writes
 
   @item_id "AAAAAHWP+wXiGGhNkiDQ+d65ZYgHAAEAAAM="
   @change_key "AQAAAKUYe2+83Ooe0DxWVwAAAAAAIQ=="
@@ -70,13 +71,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
     test "returns the item id the server assigned" do
       capture_body(create_response())
 
-      assert {:ok, @item_id} = Seeding.create_item(config(), timed_fixture())
+      assert {:ok, @item_id} = Writes.create_item(config(), timed_fixture())
     end
 
     test "sends a timed event's bounds as UTC instants" do
       capture_body(create_response())
 
-      assert {:ok, _id} = Seeding.create_item(config(), timed_fixture())
+      assert {:ok, _id} = Writes.create_item(config(), timed_fixture())
 
       body = sent_body()
       assert body =~ "<t:Start>2026-10-06T10:00:00Z</t:Start>"
@@ -93,7 +94,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
       to = DateTime.new!(~D[2026-10-06], ~T[13:00:00], "Europe/Berlin")
 
       assert {:ok, _id} =
-               Seeding.create_item(config(), timed_fixture(%{start_time: from, end_time: to}))
+               Writes.create_item(config(), timed_fixture(%{start_time: from, end_time: to}))
 
       assert sent_body() =~ "<t:Start>2026-10-06T10:00:00Z</t:Start>"
     end
@@ -106,7 +107,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
       # midnight, so a body echoing the caller's date would make the event
       # zero-length and the server would reject or silently widen it.
       assert {:ok, _id} =
-               Seeding.create_item(
+               Writes.create_item(
                  config(),
                  timed_fixture(%{start_time: ~D[2026-10-06], end_time: ~D[2026-10-06]})
                )
@@ -121,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
       capture_body(create_response())
 
       assert {:ok, _id} =
-               Seeding.create_item(
+               Writes.create_item(
                  config(),
                  timed_fixture(%{
                    summary: ~s(Chars & "Quotes" <b> 'x'),
@@ -147,7 +148,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
       capture_body(create_response())
 
       assert {:ok, _id} =
-               Seeding.create_item(config(), timed_fixture(%{transparency: :transparent}))
+               Writes.create_item(config(), timed_fixture(%{transparency: :transparent}))
 
       assert sent_body() =~ "<t:LegacyFreeBusyStatus>Free</t:LegacyFreeBusyStatus>"
     end
@@ -155,7 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
     test "defaults to busy when the fixture says nothing about transparency" do
       capture_body(create_response())
 
-      assert {:ok, _id} = Seeding.create_item(config(), timed_fixture())
+      assert {:ok, _id} = Writes.create_item(config(), timed_fixture())
 
       assert sent_body() =~ "<t:LegacyFreeBusyStatus>Busy</t:LegacyFreeBusyStatus>"
     end
@@ -163,7 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
     test "omits an element for an absent optional field rather than sending it empty" do
       capture_body(create_response())
 
-      assert {:ok, _id} = Seeding.create_item(config(), timed_fixture())
+      assert {:ok, _id} = Writes.create_item(config(), timed_fixture())
 
       body = sent_body()
       refute body =~ "<t:Location>"
@@ -175,7 +176,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
       capture_body(create_response())
 
       assert {:ok, _id} =
-               Seeding.create_item(
+               Writes.create_item(
                  config(),
                  timed_fixture(%{recurrence: %{freq: :daily, interval: 1, count: 3}})
                )
@@ -189,7 +190,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
     test "suppresses meeting invitations" do
       capture_body(create_response())
 
-      assert {:ok, _id} = Seeding.create_item(config(), timed_fixture())
+      assert {:ok, _id} = Writes.create_item(config(), timed_fixture())
 
       # An audit run must never mail anybody. A server that decided to invite
       # on its own would do so silently, so the instruction is asserted here
@@ -212,7 +213,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
       )
 
       assert {:error, {:response_code, "ErrorAccessDenied"}} =
-               Seeding.create_item(config(), timed_fixture())
+               Writes.create_item(config(), timed_fixture())
     end
 
     test "refuses a success carrying no item id" do
@@ -221,7 +222,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
       # surface as a confusing delete failure a scenario later.
       respond_with(200, response_envelope("CreateItem"))
 
-      assert {:error, :no_item_id} = Seeding.create_item(config(), timed_fixture())
+      assert {:error, :no_item_id} = Writes.create_item(config(), timed_fixture())
     end
   end
 
@@ -229,7 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
     test "hard-deletes the item by id" do
       capture_body(response_envelope("DeleteItem"))
 
-      assert :ok = Seeding.delete_item(config(), @item_id)
+      assert :ok = Writes.delete_item(config(), @item_id)
 
       body = sent_body()
       assert body =~ ~s(<t:ItemId Id="#{@item_id}"/>)
@@ -253,8 +254,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SeedingTest do
         """)
       )
 
-      assert {:error, {:response_code, "ErrorItemNotFound"}} =
-               Seeding.delete_item(config(), @item_id)
+      # `ErrorItemNotFound` collapses to `:not_found` rather than travelling as
+      # the server's own code: it is the one refusal a caller acts on, and
+      # `Meetings.CalendarEventSync` reads it as "already deleted".
+      assert {:error, :not_found} = Writes.delete_item(config(), @item_id)
     end
   end
 end

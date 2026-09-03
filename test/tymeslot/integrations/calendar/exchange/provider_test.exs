@@ -52,25 +52,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
     end
   end
 
-  describe "write callbacks" do
-    test "refuse every write while the provider is read-only" do
-      assert {:error, :read_only} = Provider.create_event(config(), %{})
-      assert {:error, :read_only} = Provider.update_event(config(), "uid", %{})
-      assert {:error, :read_only} = Provider.delete_event(config(), "uid", [])
-    end
-
-    test "answer no booking client config, which is what a booking target is built from" do
-      # The guarantee this stands in for — that
-      # `Runtime.ClientManager.booking_client/1` can never resolve an Exchange
-      # integration — cannot be asserted yet: `:exchange` is absent from
-      # `ProviderConfig`'s provider list, so that path answers nil before it
-      # reaches this callback at all, and a test there would pass for the
-      # registry's reason rather than for this one. It belongs with the
-      # registration.
-      assert Provider.build_booking_client_config(integration()) == nil
-    end
-  end
-
   describe "list_calendar_items/2" do
     test "enumerates ids then fetches them in one batch" do
       counter = :counters.new(1, [])

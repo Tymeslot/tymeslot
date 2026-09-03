@@ -84,7 +84,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @family_index Families.build_index(@provider_families, @providers ++ @dev_only_providers)
 
   # Providers whose module refuses every write. See `read_only?/1`.
-  @read_only_providers [:ics_url, :exchange]
+  @read_only_providers [:ics_url]
 
   @oauth_providers Families.members(@provider_families, :oauth)
   @caldav_based_providers Families.members(@provider_families, :caldav)
@@ -338,10 +338,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   such an integration must not be promoted to the user's primary, and its
   calendar entries must not be offered as a default booking target.
 
-  Kept as its own list rather than derived from a family, because it cuts
-  across two of them: a subscribed feed and a read-only Exchange mailbox are
-  read-only for entirely different reasons, and a future writable EWS phase
-  would remove `:exchange` from here without touching the `:ews` family.
+  Kept as its own list rather than derived from a family. It holds one member
+  today, and deriving "cannot be written" from a protocol family would be
+  wrong even so: `:exchange` was on this list while its provider was read-only
+  and came off it when the write path landed, without the `:ews` family
+  changing at all. What belongs here is a statement about a provider module's
+  callbacks, not about the protocol it speaks.
   """
   @spec read_only?(atom() | String.t() | any()) :: boolean()
   def read_only?(provider) do

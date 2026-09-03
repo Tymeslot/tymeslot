@@ -2,11 +2,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CreationTest do
   @moduledoc """
   Covers connecting an Exchange mailbox from the connection form.
 
-  The invariants worth pinning here are the ones that make an Exchange
-  integration *different from every other one the form creates*: it is
-  read-only, so it must never become the calendar a booking is written to, and
-  it addresses a mailbox rather than a folder, so it carries a
-  `provider_account_email` the CalDAV attrs have no place for.
+  The invariant worth pinning here is the one that makes an Exchange
+  integration *different from every other one the form creates*: it addresses
+  a mailbox rather than a folder, so it carries a `provider_account_email` the
+  CalDAV attrs have no place for.
+
+  Its folders were forced `read_only: true` while the provider refused every
+  write; that override is gone now the write path exists, and the two tests
+  below pin what replaced it.
   """
 
   use Tymeslot.DataCase, async: true
@@ -86,7 +89,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CreationTest do
       assert integration.base_url == "https://mail.example.com/EWS/Exchange.asmx"
     end
 
-    test "marks every discovered folder read-only", %{user: user} do
+    test "leaves every discovered folder writable", %{user: user} do
       stub_probe()
 
       assert {:ok, integration} = ExchangeCreation.create_with_validation(user.id, params())
@@ -94,23 +97,25 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.CreationTest do
       assert [%CalendarEntry{} = entry] = integration.calendar_list
       assert entry.id == @folder_id
       assert entry.selected
-      # The provider refuses writes, so no folder of its may be offered as a
-      # booking target. Without this the folder below would be eligible.
-      assert entry.read_only
-      assert integration.default_booking_calendar_id == nil
+      # `read_only` means "the server says this cannot be written". `FindFolder`
+      # says nothing about rights, so nothing here may claim it does, and the
+      # write path means there is no longer a reason to force the flag on
+      # anyway. A folder left writable is one the booking pickers will offer.
+      refute entry.read_only
     end
 
-    test "never becomes the user's primary calendar, even as their first", %{user: user} do
+    test "becomes the user's primary calendar when it is their first", %{user: user} do
       stub_probe()
 
       assert {:ok, integration} = ExchangeCreation.create_with_validation(user.id, params())
 
       assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
 
-      # A read-only integration promoted to primary leaves the user with a
-      # primary that fails every booking write.
-      assert profile.primary_calendar_integration_id == nil
-      refute profile.primary_calendar_integration_id == integration.id
+      # The inverse of what this pinned while the provider was read-only. An
+      # Exchange mailbox now accepts a booking write, so promoting it to
+      # primary leaves the user with a primary that works, and refusing to
+      # would leave someone whose only calendar is Exchange with none.
+      assert profile.primary_calendar_integration_id == integration.id
     end
 
     test "stores verify_ssl false when the form's box is unticked", %{user: user} do

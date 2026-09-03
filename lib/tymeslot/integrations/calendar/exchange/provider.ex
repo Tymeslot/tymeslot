@@ -82,12 +82,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   connection UI's copy, not only here. It is also why the operation needs an
   address where the folder-scoped calls need only a login; see `mailbox/1`.
 
-  ## Read-only
+  ## Writing back is a third operation set
 
-  This phase writes nothing. The three write callbacks return
-  `{:error, :read_only}` and `build_booking_client_config/1` returns `nil`, so
-  an Exchange calendar blocks availability but can never be resolved as a
-  booking target.
+  The three write callbacks issue `CreateItem`, `UpdateItem` and `DeleteItem`
+  through `Exchange.Writes`, which owns the request shapes and the error
+  vocabulary. An Exchange calendar is therefore a booking target like any
+  other: `build_booking_client_config/1` resolves one, and
+  `ProviderConfig.read_only?/1` no longer names this provider.
+
+  A written item is addressed afterwards by the **item id the server assigned**,
+  never by a uid Tymeslot chose: EWS ignores a `t:UID` sent on create. So
+  `create_event/2` answers `%{id: item_id}`, which
+  `Meetings.CalendarEventSync` persists as the meeting's `provider_event_id`
+  and hands back to `update_event/3` and `delete_event/3`.
+
+  Writing does not change where availability comes from. A booking written
+  here is read back by `GetUserAvailability` on the next sync like any other
+  item in the mailbox, so nothing about the busy-time path needs to know a
+  write happened.
   """
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
@@ -103,6 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   alias Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery
   alias Tymeslot.Integrations.Calendar.Exchange.Requests
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Integrations.Calendar.Exchange.Writes
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
@@ -264,11 +277,24 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     end
   end
 
-  # A subscription-shaped provider: nil here means
-  # `Runtime.ClientManager.booking_client/1` cannot resolve a booking target
-  # even if some caller asks it to.
+  @doc """
+  Builds the client a booking is written through.
+
+  Never `nil`, unlike the CalDAV family's, because this provider always has a
+  folder to write to: a mailbox has a default calendar whether or not its owner
+  selected anything, and `booking_folder/1` falls back to it. There is no
+  configuration state in which an Exchange integration exists but cannot
+  receive a booking.
+  """
   @impl Tymeslot.Integrations.Calendar.Provider
-  def build_booking_client_config(_integration), do: nil
+  def build_booking_client_config(integration) do
+    integration
+    |> to_config()
+    |> Map.merge(%{
+      calendar_integration_id: integration_id(integration),
+      booking_folder_id: booking_folder(integration)
+    })
+  end
 
   @doc """
   Lists the integration's cached events for the requested range.
@@ -338,7 +364,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
     with {:ok, doc} <- Client.call(config, Requests.find_item(folder, from, to)),
          {:ok, ids} <- ItemDiscovery.item_ids(doc) do
-      fetch_items(config, ids)
+      ItemDiscovery.fetch_items(config, ids)
     end
   end
 
@@ -411,19 +437,58 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     end
   end
 
-  @impl Tymeslot.Integrations.Calendar.Provider
-  def create_event(_client, _event_data), do: {:error, :read_only}
+  @doc """
+  Writes one booking into the mailbox and answers the id the server gave it.
 
+  `%{id: item_id}` rather than a bare id, because that is the shape
+  `Meetings.CalendarEventSync.put_provider_mapping/2` reads a
+  `provider_event_id` out of. Answering the id alone would be read as a uid
+  instead and persisted in the wrong column, which the next update would then
+  address the item by and fail.
+  """
   @impl Tymeslot.Integrations.Calendar.Provider
-  def update_event(_client, _uid, _event_data), do: {:error, :read_only}
+  def create_event(client, event_data) do
+    config = to_config(client)
+    folder = Map.get(config, :booking_folder_id) || booking_folder(client)
 
+    with {:ok, item_id} <-
+           Writes.create_item(config, Writes.from_event_data(event_data), folder) do
+      {:ok, %{id: item_id}}
+    end
+  end
+
+  @doc """
+  Rewrites a booking already in the mailbox.
+
+  The identifier is the item id `create_event/2` answered, not an iCalendar
+  uid; see the moduledoc. `{:error, :not_found}` when the server no longer has
+  it, which is the signal `CalendarEventSync` recreates on.
+  """
   @impl Tymeslot.Integrations.Calendar.Provider
-  def delete_event(_client, _uid, _opts \\ []), do: {:error, :read_only}
+  def update_event(client, item_id, event_data) do
+    client
+    |> to_config()
+    |> Writes.update_item(item_id, Writes.from_event_data(event_data))
+  end
+
+  @doc """
+  Removes a booking from the mailbox.
+
+  `opts` is accepted for the behaviour's shape and ignored: EWS deletes an item
+  outright, and this provider sends no cancellations (see
+  `Exchange.Requests`), so there is nothing for a caller to vary.
+  """
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def delete_event(client, item_id, _opts \\ []) do
+    client
+    |> to_config()
+    |> Writes.delete_item(item_id)
+  end
 
   @doc """
   Builds the transport config an EWS call is issued with.
 
-  Public for `Calendar.Diagnostics` alone, which reaches `Exchange.Seeding`
+  Public for `Calendar.Diagnostics` alone, which reaches `Exchange.Writes`
   with it to plant and remove audit fixtures. It is the same conversion every
   read in this module performs, and sharing it is the point: a second one would
   be a second place to remember that the credentials arrive encrypted, and that
@@ -492,15 +557,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     Enum.min([DateTime.add(from, @availability_chunk_days, :day), to], DateTime)
   end
 
-  defp fetch_items(_config, []), do: {:ok, []}
-
-  defp fetch_items(config, ids) do
-    with {:ok, doc} <- Client.call(config, Requests.get_item(ids)),
-         :ok <- EventNormaliser.require_readable_batch(doc) do
-      {:ok, EventNormaliser.parse_items(doc)}
-    end
-  end
-
   # `GetUserAvailability` names a mailbox, so it needs an address where every
   # other operation needs only a credential. The two are not the same thing:
   # an on-premises server accepts `DOMAIN\samaccountname` as a login, and that
@@ -533,6 +589,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   defp integration_id(%CalendarIntegrationSchema{id: id}), do: id
   defp integration_id(config) when is_map(config), do: Map.get(config, :calendar_integration_id)
   defp integration_id(_client), do: nil
+
+  # Which folder a booking lands in, in the order the dashboard offers them:
+  # the calendar the owner nominated, then the first one they selected, then
+  # the mailbox's default. The last is what makes this always resolvable, and
+  # it is also the folder the item read falls back to, so a booking cannot be
+  # written somewhere the grid then refuses to show it.
+  defp booking_folder(integration) do
+    case Map.get(integration, :default_booking_calendar_id) do
+      nominated when nominated in [nil, ""] ->
+        List.first(selected_calendar_ids(integration)) || :calendar
+
+      nominated ->
+        nominated
+    end
+  end
 
   defp selected_calendar_ids(integration) do
     integration

@@ -15,12 +15,25 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery do
   for a folder that could not be read at all — which the sync layer cannot tell
   from a genuinely empty window and persists as an emptied calendar.
   `Soap.require_success/2` surfaces the server's own code instead.
+
+  ## Fetching the fields lives here too
+
+  `fetch_items/2` is the second half of the same read: the batched `GetItem`
+  the ids feed. It sits beside them because both callers of the item path need
+  the pair — `Exchange.Provider.list_calendar_items/2` gets its ids from
+  `FindItem` over a window, and `Exchange.ItemSync` gets them from a change
+  feed — and a second copy of the batch-and-guard sequence in either would be
+  a second place to remember that an all-failed batch must not read as an
+  empty calendar.
   """
 
   # Only the sigil: every xpath goes through `Soap.xpath/2,3`, which binds the
   # EWS namespace prefixes onto the spec and onto every subspec.
   import SweetXml, only: [sigil_x: 2]
 
+  alias Tymeslot.Integrations.Calendar.Exchange.Client
+  alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
+  alias Tymeslot.Integrations.Calendar.Exchange.Requests
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
 
   @typedoc """
@@ -36,6 +49,28 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemDiscovery do
   def item_ids(doc) do
     with {:ok, messages} <- Soap.require_success(doc, "FindItemResponseMessage") do
       {:ok, messages |> Enum.flat_map(&ids_in/1) |> Enum.reject(&is_nil/1)}
+    end
+  end
+
+  @doc """
+  Fetches the given items' fields in one batched `GetItem`.
+
+  An empty list is answered `{:ok, []}` without a round trip: `m:ItemIds`
+  demands a child, so an empty batch would be answered with a schema fault
+  rather than an empty list.
+
+  Answers the raw `t:CalendarItem` elements, which
+  `Exchange.EventNormaliser.normalise_events/2` turns into `CalendarEvent`
+  structs. The batch-level guard is applied first, so a response in which
+  every message failed is an error rather than an empty calendar.
+  """
+  @spec fetch_items(Client.config(), [id_pair()]) :: {:ok, [Soap.document()]} | {:error, term()}
+  def fetch_items(_config, []), do: {:ok, []}
+
+  def fetch_items(config, ids) do
+    with {:ok, doc} <- Client.call(config, Requests.get_item(ids)),
+         :ok <- EventNormaliser.require_readable_batch(doc) do
+      {:ok, EventNormaliser.parse_items(doc)}
     end
   end
 

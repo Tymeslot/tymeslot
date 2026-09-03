@@ -31,7 +31,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicyTest do
       assert {:error, :no_calendar} = LinkAccessPolicy.check_public_readiness(profile)
     end
 
-    test "an Exchange-only account is not ready" do
+    test "an Exchange-only account is ready" do
       user = insert(:user)
       profile = insert(:profile, user: user)
 
@@ -41,7 +41,11 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicyTest do
         base_url: "https://exchange.example.com/EWS/Exchange.asmx"
       )
 
-      assert {:error, :no_calendar} = LinkAccessPolicy.check_public_readiness(profile)
+      # The readiness gate asks whether anything here can receive a booking.
+      # An Exchange mailbox could not while the EWS provider refused every
+      # write, which is what made an Exchange-only account unpublishable; the
+      # write path is what changed the answer.
+      assert {:ok, :ready} = LinkAccessPolicy.check_public_readiness(profile)
     end
 
     test "a CalDAV integration alongside the subscription makes the account ready" do

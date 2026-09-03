@@ -58,10 +58,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert Components.calendar_summary(integration) == ""
     end
 
-    # A provider that is read-only by construction never lost an ability, so
-    # it gets the description rather than the "no longer" warning that tells a
-    # user their bookings have started failing.
-    test "describes an Exchange mailbox as read-only rather than reporting a breakage" do
+    # Exchange is a writable provider now, so it gets the same warning every
+    # other writable provider gets when the folder it books into turns out not
+    # to accept writes. It was described as read-only by construction while the
+    # EWS provider refused every write, which was a statement about the
+    # provider rather than about this folder.
+    test "warns when an Exchange mailbox's booking folder cannot be written" do
       integration =
         summary_integration(
           provider: "exchange",
@@ -72,7 +74,23 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         )
 
       assert Components.calendar_summary(integration) ==
-               "read-only, blocks time but takes no bookings"
+               "booking target can no longer accept bookings"
+    end
+
+    test "names the booking folder when an Exchange folder is writable" do
+      integration =
+        summary_integration(
+          provider: "exchange",
+          default_booking_calendar_id: "cal-mailbox",
+          calendar_list: [
+            %CalendarEntry{id: "cal-mailbox", name: "Calendar", read_only: false, primary: true}
+          ]
+        )
+
+      # The same segment every writable provider gets. Exchange reached this
+      # branch for the first time when the write path landed; before that it
+      # was short-circuited into the read-only description.
+      assert Components.calendar_summary(integration) == "books into Calendar"
     end
 
     test "describes a subscribed feed as read-only rather than reporting a breakage" do
@@ -241,11 +259,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
   end
 
   describe "calendar_connection_row read-only badge" do
-    # The badge asks "can this take a booking?", which the Exchange mailbox
-    # answers no to. The two actions beside it ask a narrower question, "is
-    # this a feed?", and a mailbox answers no to that: it has folders to manage
-    # and credentials to re-enter.
-    test "an Exchange mailbox is badged read-only and keeps its manage and reconnect actions" do
+    # The badge asks "can this take a booking?", which an Exchange mailbox now
+    # answers yes to, so it carries no badge. The two actions beside it ask a
+    # narrower question, "is this a feed?", and a mailbox answers no to that:
+    # it has folders to manage and credentials to re-enter, so both survive the
+    # badge going away.
+    test "an Exchange mailbox is not badged read-only and keeps its manage and reconnect actions" do
       integration = %{
         id: 21,
         name: "Work mailbox",
@@ -267,7 +286,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
           myself: "target"
         )
 
-      assert html =~ "Read-only"
+      refute html =~ "Read-only"
       assert html =~ ~s(phx-click="manage_calendars")
       assert html =~ ~s(phx-click="show_reconnect")
     end
