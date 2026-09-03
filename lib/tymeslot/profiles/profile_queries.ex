@@ -49,6 +49,17 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Updates the booking page's introductory text and its on/off switch.
+  """
+  @spec update_booking_text(ProfileSchema.t(), map()) ::
+          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_booking_text(%ProfileSchema{} = profile, attrs) do
+    profile
+    |> ProfileSchema.booking_text_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Gets a profile by user ID, creating one if it doesn't exist.
   Note: The caller is responsible for any post-creation side effects
   (e.g. creating default weekly schedules).

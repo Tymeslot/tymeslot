@@ -1,15 +1,24 @@
-defmodule Tymeslot.CalDAVCase do
+defmodule Tymeslot.HttpTransportCase do
   @moduledoc """
-  Shared ExUnit case template for CalDAV integration tests.
+  Shared ExUnit case template for tests that drive the real HTTP transport.
 
-  Sets up the real HTTPClient so tests exercise the full Req → Req.Test path,
-  and provides a `stub_sequential/2` helper for tests that need to route the
-  first request to one handler and all subsequent requests to another.
+  The global test config points `:http_client_module` at `HTTPClientMock`, so
+  transport-level behaviour (SSRF guards, redirect handling, response caps,
+  header building) is invisible to a test that inherits it. This template
+  overrides it with the real `Tymeslot.Infrastructure.HTTPClient`, so tests
+  exercise the full `Req` → `Req.Test` path.
+
+  It is transport-agnostic: CalDAV, ICS and any other integration that speaks
+  HTTP through `HTTPClient` should use it. Provider-specific fixtures belong in
+  the test file or a provider helper module, not here.
+
+  Also provides `stub_sequential/2` for tests that need to route the first
+  request to one handler and all subsequent requests to another.
 
   ## Usage
 
-      defmodule MyCalDAVTest do
-        use Tymeslot.CalDAVCase
+      defmodule MyTransportTest do
+        use Tymeslot.HttpTransportCase
         ...
       end
   """
@@ -22,12 +31,11 @@ defmodule Tymeslot.CalDAVCase do
     quote do
       use ExUnit.Case, async: unquote(async)
 
-      import Tymeslot.CalDAVCase, only: [stub_sequential: 2]
+      import Tymeslot.HttpTransportCase, only: [stub_sequential: 2]
       import Tymeslot.ConfigTestHelpers
 
       alias Plug.Conn
       alias Req.Test, as: ReqTest
-      alias Tymeslot.Integrations.Calendar.CalDAV.Base
 
       setup do
         with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)

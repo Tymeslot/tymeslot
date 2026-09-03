@@ -25,6 +25,24 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   alias Tymeslot.Security.UniversalSanitizer
   alias Tymeslot.Security.UrlValidation
 
+  @doc """
+  Validates the mailbox address an EWS availability read is addressed to.
+
+  Deliberately **not** validated through
+  `Tymeslot.Security.FieldValidators.EmailValidator`, which checks the domain
+  ending against the public TLD list. This is not an address we ever send mail
+  to: it is an identifier handed to an Exchange server the account owner has
+  already authenticated against, and an on-premises deployment routinely
+  addresses mailboxes in an internal-only domain (`.local`, `.corp`,
+  `.internal`) that is not, and never will be, a public TLD. Rejecting those
+  would refuse exactly the deployments this provider exists for, for the same
+  reason `validate_calendar_url/1` carries the `ALLOW_PRIVATE_IPS_FOR_CALENDAR`
+  opt-out. What is checked is the shape the operation needs: one `@`, with a
+  non-empty local part and a dotless-or-dotted host, and no whitespace.
+  """
+  @spec mailbox(term(), map()) :: {:ok, String.t()} | {:error, map()}
+  def mailbox(value, metadata), do: validate_mailbox(value, metadata)
+
   @doc "Validates a CalDAV server URL. Optional: a blank URL is accepted."
   @spec server_url(term(), map()) :: {:ok, String.t()} | {:error, map()}
   def server_url(value, metadata), do: validate_server_url(value, metadata)
@@ -112,6 +130,54 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
 
   defp validate_username(_value, _metadata) do
     {:error, %{username: dgettext("dashboard_calendar_providers", "Username must be text")}}
+  end
+
+  defp validate_mailbox(nil, _metadata), do: {:error, %{mailbox: mailbox_required_message()}}
+  defp validate_mailbox("", _metadata), do: {:error, %{mailbox: mailbox_required_message()}}
+
+  defp validate_mailbox(mailbox, metadata) when is_binary(mailbox) do
+    case UniversalSanitizer.sanitize_and_validate(mailbox, allow_html: false, metadata: metadata) do
+      {:ok, sanitized} ->
+        trimmed = String.trim(sanitized)
+
+        cond do
+          trimmed == "" -> {:error, %{mailbox: mailbox_required_message()}}
+          String.length(trimmed) > 255 -> {:error, %{mailbox: mailbox_too_long_message()}}
+          not mailbox_shaped?(trimmed) -> {:error, %{mailbox: mailbox_invalid_message()}}
+          true -> {:ok, trimmed}
+        end
+
+      {:error, error} ->
+        {:error, %{mailbox: error}}
+    end
+  end
+
+  defp validate_mailbox(_value, _metadata) do
+    {:error, %{mailbox: mailbox_invalid_message()}}
+  end
+
+  # One `@`, something either side of it, and no whitespace anywhere. Anchored
+  # so a value merely *containing* an address cannot pass.
+  defp mailbox_shaped?(value) do
+    Regex.match?(~r/\A[^\s@]+@[^\s@]+\z/u, value)
+  end
+
+  defp mailbox_required_message do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Enter the mailbox address to check availability for"
+    )
+  end
+
+  defp mailbox_too_long_message do
+    dgettext("dashboard_calendar_providers", "Mailbox address must be 255 characters or less")
+  end
+
+  defp mailbox_invalid_message do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Enter a mailbox address in the form name@example.com"
+    )
   end
 
   defp validate_password(nil, _metadata), do: {:error, %{password: password_required_message()}}

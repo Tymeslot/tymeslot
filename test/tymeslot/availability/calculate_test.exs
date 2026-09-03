@@ -453,6 +453,90 @@ defmodule Tymeslot.Availability.CalculateTest do
     end
   end
 
+  describe "available_slots/6 with a slot interval" do
+    test "offers denser starts when the interval is shorter than the duration" do
+      date = interval_test_date()
+      config = interval_test_config(date, duration_minutes: 30, slot_interval_minutes: 5)
+
+      assert {:ok, slots} =
+               Calculate.available_slots(date, 30, "Europe/London", "Europe/London", [], config)
+
+      assert "9:05 AM" in slots
+      assert "9:10 AM" in slots
+    end
+
+    test "offers only rounder starts when the interval is longer than the duration" do
+      date = interval_test_date()
+      config = interval_test_config(date, duration_minutes: 30, slot_interval_minutes: 60)
+
+      assert {:ok, slots} =
+               Calculate.available_slots(date, 30, "Europe/London", "Europe/London", [], config)
+
+      assert slots != []
+
+      assert Enum.all?(slots, &String.contains?(&1, ":00 ")),
+             "every start should be on the hour, got: #{inspect(slots)}"
+    end
+
+    # The test above starts its window exactly at 9:00, so it passes even
+    # without alignment: the duration-locked grid already lands on the hour
+    # from an on-the-hour start. An off-hour window is the only way to tell
+    # "alignment happened" apart from "the window was already round".
+    test "offers only rounder starts when the interval is longer than the duration, from an off-hour window" do
+      date = interval_test_date()
+      profile = insert(:profile, timezone: "Europe/London")
+      schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
+      insert(:weekly_availability,
+        schedule: schedule,
+        day_of_week: Date.day_of_week(date),
+        start_time: ~T[09:15:00],
+        end_time: ~T[11:15:00],
+        is_available: true
+      )
+
+      config = %{schedule_id: schedule.id, duration_minutes: 30, slot_interval_minutes: 60}
+
+      assert {:ok, slots} =
+               Calculate.available_slots(date, 30, "Europe/London", "Europe/London", [], config)
+
+      assert slots == ["10:00 AM"],
+             "expected alignment to round the 9:15 window forward to the hour, got: #{inspect(slots)}"
+    end
+
+    test "a config without the key behaves exactly as before" do
+      date = interval_test_date()
+      with_key = interval_test_config(date, duration_minutes: 30, slot_interval_minutes: 30)
+
+      without_key =
+        date
+        |> interval_test_config(duration_minutes: 30)
+        |> Map.delete(:slot_interval_minutes)
+
+      assert {:ok, a} =
+               Calculate.available_slots(
+                 date,
+                 30,
+                 "Europe/London",
+                 "Europe/London",
+                 [],
+                 with_key
+               )
+
+      assert {:ok, b} =
+               Calculate.available_slots(
+                 date,
+                 30,
+                 "Europe/London",
+                 "Europe/London",
+                 [],
+                 without_key
+               )
+
+      assert a == b
+    end
+  end
+
   describe "get_calendar_days/5 query cost" do
     # This runs inside the template render of the public booking page, so the
     # per-day business-hours fallback must not be a query per day.
@@ -527,6 +611,35 @@ defmodule Tymeslot.Availability.CalculateTest do
       6 -> Date.add(date, 2)
       7 -> Date.add(date, 1)
       _weekday -> date
+    end
+  end
+
+  # A weekday comfortably inside the default booking window (min_advance_hours
+  # and max_advance_booking_days), so the slot-interval tests below aren't
+  # tripped up by either constraint or by landing on a weekend.
+  defp interval_test_date, do: next_weekday(Date.add(Date.utc_today(), 10))
+
+  # A schedule with a 09:00-11:00 window on `date`'s weekday, wide enough to
+  # tell a 5-minute interval, a 60-minute interval, and the duration-locked
+  # default apart from one another.
+  defp interval_test_config(date, opts) do
+    profile = insert(:profile, timezone: "Europe/London")
+    schedule = insert(:availability_schedule, profile: profile, is_default: true)
+
+    insert(:weekly_availability,
+      schedule: schedule,
+      day_of_week: Date.day_of_week(date),
+      start_time: ~T[09:00:00],
+      end_time: ~T[11:00:00],
+      is_available: true
+    )
+
+    duration_minutes = Keyword.fetch!(opts, :duration_minutes)
+    config = %{schedule_id: schedule.id, duration_minutes: duration_minutes}
+
+    case Keyword.fetch(opts, :slot_interval_minutes) do
+      {:ok, value} -> Map.put(config, :slot_interval_minutes, value)
+      :error -> config
     end
   end
 end

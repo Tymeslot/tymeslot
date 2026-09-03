@@ -157,6 +157,7 @@ msgid "No calendars found. Try refreshing the integration."
 msgstr "Nebyly nalezeny žádné kalendáře. Zkuste integraci obnovit."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "No calendars were discovered. Double-check your credentials or try again."
@@ -287,12 +288,14 @@ msgstr[2] "Synchronizace: %{selected} z %{count} kalendářů"
 msgid "Testing..."
 msgstr "Testování…"
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Unnamed Calendar"
 msgstr "Nepojmenovaný kalendář"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Username"
@@ -308,6 +311,7 @@ msgstr "heslo pro konkrétní aplikaci"
 msgid "My Calendar"
 msgstr "Můj kalendář"
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -329,11 +333,13 @@ msgstr "Tato adresa serveru je pro tohoto poskytovatele pevně daná"
 msgid "%{first} + %{remaining} more"
 msgstr "%{first} + %{remaining} dalších"
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Discover calendars"
 msgstr "Vyhledat kalendáře"
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Discovering..."
@@ -1099,6 +1105,7 @@ msgstr "Kanál kalendáře odkaz odmítl. Mohl být zneplatněn nebo resetován.
 msgid "The calendar feed returned HTTP %{status}."
 msgstr "Kanál kalendáře vrátil HTTP %{status}."
 
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
@@ -1129,6 +1136,51 @@ msgstr "Přejmenovat"
 msgid "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
 msgstr "Rezervační kalendář už v Outlooku neexistuje. Připojte prosím integraci znovu a vyberte jiný kalendář."
 
+#: lib/tymeslot/integrations/calendar/exchange/provider.ex
+#, elixir-autogen, elixir-format
+msgid "EWS endpoint not found. It usually ends in /EWS/Exchange.asmx."
+msgstr "Koncový bod EWS nebyl nalezen. Obvykle končí na /EWS/Exchange.asmx."
+
+#: lib/tymeslot/integrations/calendar/exchange/provider.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange connection successful"
+msgstr "Připojení k serveru Exchange proběhlo úspěšně"
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "On-premises Microsoft Exchange Server, read-only"
+msgstr "Místní server Microsoft Exchange, jen pro čtení"
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange reported no busy time at all, but the cache still holds some. Keeping it in place and retrying rather than treating your diary as free."
+msgstr "Exchange nenahlásil žádnou obsazenou dobu, ale v mezipaměti nějaká zůstává. Mezipaměť zůstane zachována a synchronizace se zopakuje, aby se váš diář nepovažoval za volný."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Exchange returned no calendar events, but the cache still holds some. Keeping them in place and retrying rather than emptying your calendar view."
+msgstr "Exchange nevrátil žádné události kalendáře, ale v mezipaměti nějaké zůstávají. Události zůstanou zachovány a synchronizace se zopakuje, aby se zobrazení kalendáře nevyprázdnilo."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server answered the free/busy request with nothing Tymeslot could read. Retrying rather than treating your diary as free."
+msgstr "Server Exchange odpověděl na dotaz na volno/obsazeno něčím, co Tymeslot nedokáže přečíst. Pokus bude zopakován, aby se váš diář nepovažoval za volný."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the request."
+msgstr "Server Exchange odmítl požadavek."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "The Exchange server rejected the stored credentials. Please reconnect the integration."
+msgstr "Server Exchange odmítl uložené přihlašovací údaje. Připojte prosím integraci znovu."
+
+#: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
+msgstr "Tymeslot potřebuje e-mailovou adresu poštovní schránky, aby mohl číst její volno/obsazeno. Připojte prosím integraci znovu a adresu zadejte."
+
 #: lib/tymeslot/integrations/calendar/shared/error_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings."
@@ -1138,3 +1190,88 @@ msgstr "Připojení k %{url} proběhlo a vaše přihlašovací údaje byly přij
 #, elixir-autogen, elixir-format
 msgid "The calendar server answered this address but does not accept calendar requests there. Please check the server URL."
 msgstr "Kalendářový server na této adrese odpověděl, ale nepřijímá zde kalendářové požadavky. Zkontrolujte prosím URL serveru."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "EWS endpoint URL"
+msgstr "Adresa koncového bodu EWS"
+
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a mailbox address in the form name@example.com"
+msgstr "Zadejte adresu poštovní schránky ve tvaru name@example.com"
+
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the mailbox address to check availability for"
+msgstr "Zadejte adresu poštovní schránky, jejíž dostupnost se má kontrolovat"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your EWS endpoint and credentials to discover the mailbox's calendars."
+msgstr "Zadejte koncový bod EWS a přihlašovací údaje pro vyhledání kalendářů poštovní schránky."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Leave this on unless your server presents a self-signed certificate. Turning it off means the connection can no longer prove which server it reached."
+msgstr "Tuto možnost nechte zapnutou, pokud váš server nepoužívá certifikát podepsaný sám sebou. Po vypnutí už spojení nedokáže prokázat, k jakému serveru se připojilo."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Mailbox address"
+msgstr "Adresa poštovní schránky"
+
+#: lib/tymeslot/integrations/calendar/credential_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Mailbox address must be 255 characters or less"
+msgstr "Adresa poštovní schránky smí mít nejvýše 255 znaků"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Microsoft Exchange"
+msgstr "Microsoft Exchange"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "My Exchange"
+msgstr "Můj Exchange"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "My Exchange Calendar"
+msgstr "Můj kalendář Exchange"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Read busy time from an on-premises Exchange Server"
+msgstr "Načítá obsazený čas z vlastního serveru Exchange"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Select calendars to show on your dashboard:"
+msgstr "Vyberte kalendáře, které se zobrazí na nástěnce:"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "The mailbox address is the one your busy time is read from. It is often the same as your username, but on a server you sign in to with a domain login it is not."
+msgstr "Adresa poštovní schránky je ta, ze které se načítá váš obsazený čas. Často je shodná s vaším uživatelským jménem, ale na serveru, kam se přihlašujete doménovým účtem, shodná není."
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The server's TLS certificate was rejected. If it is self-signed or issued by an internal certificate authority, turn off certificate verification."
+msgstr "Certifikát TLS serveru byl odmítnut. Pokud je podepsaný sám sebou nebo vydaný interní certifikační autoritou, vypněte ověřování certifikátu."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "This choice controls what appears on your dashboard only. Exchange reports busy time for the whole mailbox, so every meeting in it blocks your availability whether or not its calendar is selected here."
+msgstr "Tato volba určuje pouze to, co se zobrazí na nástěnce. Exchange hlásí obsazený čas celé poštovní schránky, takže každá schůzka v ní blokuje vaši dostupnost bez ohledu na to, zda je její kalendář zde vybraný."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Verify the server's TLS certificate"
+msgstr "Ověřovat certifikát TLS serveru"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com or DOMAIN\\user"
+msgstr "name@example.com nebo DOMAIN\\user"

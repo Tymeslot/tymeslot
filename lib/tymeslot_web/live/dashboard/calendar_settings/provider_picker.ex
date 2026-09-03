@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker do
   @family_labels %{
     oauth: nil,
     caldav: dgettext_noop("dashboard_calendar_settings", "CalDAV servers"),
+    ews: dgettext_noop("dashboard_calendar_settings", "Exchange servers"),
     subscription: dgettext_noop("dashboard_calendar_settings", "Calendar subscriptions"),
     other: dgettext_noop("dashboard_calendar_settings", "Other")
   }

@@ -195,24 +195,33 @@ defmodule Tymeslot.Webhooks do
   The URL is validated once, here, and `HttpDelivery.post/4` is told to skip
   its own initial check (`skip_initial_check: true`) since re-running it on
   the same URL would only double the DNS resolution cost without changing the
-  answer. Every redirect hop is still independently re-validated by
-  `HttpDelivery` — a host that resolves publicly at this check must not be
-  able to 302 the probe to a private or loopback address.
+  answer. The addresses that check approved are handed on as `:pin_addresses`,
+  so the probe connects to one of them rather than resolving the hostname
+  again: this path puts a process spawn and a JSON encode between the check and
+  the connect, which is the widest DNS-rebinding window in the codebase and the
+  reason the addresses must travel with the URL rather than being re-derived.
+
+  Every redirect hop is still independently re-validated by `HttpDelivery` — a
+  host that resolves publicly at this check must not be able to 302 the probe
+  to a private or loopback address.
   """
   @spec test_webhook_connection(String.t(), String.t() | nil) :: :ok | {:error, String.t()}
   def test_webhook_connection(url, token \\ nil) do
-    with :ok <- SsrfValidator.check(url) do
+    with {:ok, addresses} <- SsrfValidator.check_pinned(url) do
       payload = PayloadBuilder.build_test_payload()
       headers = build_headers(payload, token)
 
-      run_bounded_test_connection(url, payload, headers)
+      run_bounded_test_connection(url, addresses, payload, headers)
     end
   end
 
-  defp run_bounded_test_connection(url, payload, headers) do
+  defp run_bounded_test_connection(url, addresses, payload, headers) do
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        HttpDelivery.post(url, Jason.encode!(payload), headers, skip_initial_check: true)
+        HttpDelivery.post(url, Jason.encode!(payload), headers,
+          skip_initial_check: true,
+          pin_addresses: addresses
+        )
       end)
 
     case Task.yield(task, @test_connection_deadline_ms) || Task.shutdown(task, :brutal_kill) do

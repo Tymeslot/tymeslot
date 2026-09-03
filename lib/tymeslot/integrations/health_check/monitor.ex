@@ -22,6 +22,12 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   @failure_threshold 3
   @recovery_threshold 2
+  # Consecutive failed sync cycles after which the integration is forced
+  # unhealthy regardless of what the scheduled probe says. CalDAV syncs every
+  # ~15 minutes, so ten of them is roughly two and a half hours of sustained
+  # failure — the same order as the probe's own three-strikes-at-30-to-60-
+  # minutes, and far short of the eleven days integration 97 went unnoticed.
+  @default_sync_failure_threshold 10
   @check_interval :timer.minutes(30)
   @max_backoff_ms :timer.hours(1)
   # On the very first transition into :unhealthy, override the standard 1 h
@@ -39,6 +45,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
           user_id: integer() | nil,
           failures: non_neg_integer(),
           consecutive_hard_failures: non_neg_integer(),
+          consecutive_sync_failures: non_neg_integer(),
           successes: non_neg_integer(),
           last_check_at: DateTime.t() | nil,
           status: health_status(),
@@ -61,6 +68,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       user_id: nil,
       failures: 0,
       consecutive_hard_failures: 0,
+      consecutive_sync_failures: 0,
       successes: 0,
       last_check_at: nil,
       status: :healthy,
@@ -102,10 +110,99 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   @doc """
   Updates health state based on check result and error analysis.
   Returns the new health state.
+
+  The probe's own verdict is never the last word: `apply_sync_failure_floor/1`
+  holds the row at `:unhealthy` while periodic sync is failing in a streak, so
+  a probe that passes cannot clear a badge raised by
+  `record_sync_failure/1`. See that function for why the two signals disagree.
   """
   @spec update_health(health_state(), {:ok, any()} | {:error, any(), :transient | :hard}) ::
           health_state()
-  def update_health(health_state, {:ok, _check_result}) do
+  def update_health(health_state, analyzed_result) do
+    health_state
+    |> apply_probe_result(analyzed_result)
+    |> apply_sync_failure_floor()
+  end
+
+  @doc """
+  Records one failed sync cycle and returns the new health state.
+
+  Sync failures are tracked separately from probe failures because they are
+  evidence the probe cannot produce. The probe PROPFINDs a collection; sync
+  issues a REPORT against it. A server can answer one and refuse the other —
+  Infomaniak did, 500ing every incremental REPORT for a CalDAV integration for
+  eleven days while the collection answered everything else — and in that state
+  the probe is honestly, uselessly healthy. Once the streak reaches
+  `sync_failure_threshold/0` the row is forced `:unhealthy` so the badge, the
+  48-hour notification and the auto-pause sweep all see the outage.
+
+  The streak is cleared by `IntegrationHealthStateQueries.reset/2`, which a
+  successful sync already reaches through
+  `HealthCheck.mark_synced_successfully/2`. Recovery of the *status* is left to
+  the probe rather than done here, so the existing flap protection in
+  `determine_status/3` still governs how quickly a badge clears.
+
+  `consecutive_hard_failures` is deliberately untouched: that counter drives
+  `SyncGating`, and a remote 5xx is exactly the case where pausing sync would
+  stop the integration ever discovering the server had recovered.
+  """
+  @spec record_sync_failure(health_state()) :: health_state()
+  def record_sync_failure(health_state) do
+    apply_sync_failure_floor(%{
+      health_state
+      | consecutive_sync_failures: health_state.consecutive_sync_failures + 1
+    })
+  end
+
+  @doc """
+  Consecutive failed sync cycles after which an integration is forced
+  `:unhealthy`. Configurable via `:sync_failure_unhealthy_threshold` for tests.
+  """
+  @spec sync_failure_threshold() :: pos_integer()
+  def sync_failure_threshold do
+    Application.get_env(
+      :tymeslot,
+      :sync_failure_unhealthy_threshold,
+      @default_sync_failure_threshold
+    )
+  end
+
+  @doc """
+  Persists the sync-failure streak, and the status it may have forced, for an
+  integration.
+
+  Writes only the three fields a sync outcome owns rather than going through
+  `put_state/3`. The probe and a sync run concurrently, and each reads its
+  state before writing it, so a full-row write from either would silently drop
+  the other's update; keeping the two writers to disjoint columns means the
+  worst case is a status write landing twice, not a streak going missing.
+  """
+  @spec put_sync_state(integration_type(), integer(), health_state()) ::
+          {non_neg_integer(), nil}
+  def put_sync_state(type, integration_id, health_state) do
+    IntegrationHealthStateQueries.update_fields(type, integration_id,
+      consecutive_sync_failures: health_state.consecutive_sync_failures,
+      status: HealthStatus.to_db_value(health_state.status),
+      became_unhealthy_at: health_state.became_unhealthy_at
+    )
+  end
+
+  # A streak of failing syncs outranks a passing probe: the probe tests a
+  # request the failing one is not. Nothing here lowers a status — a streak
+  # that has ended simply stops raising one, and the next probe reconciles.
+  defp apply_sync_failure_floor(health_state) do
+    if health_state.consecutive_sync_failures >= sync_failure_threshold() do
+      %{
+        health_state
+        | status: :unhealthy,
+          became_unhealthy_at: health_state.became_unhealthy_at || DateTime.utc_now()
+      }
+    else
+      health_state
+    end
+  end
+
+  defp apply_probe_result(health_state, {:ok, _check_result}) do
     %{
       health_state
       | failures: 0,
@@ -118,7 +215,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     }
   end
 
-  def update_health(health_state, {:error, _error_reason, :transient}) do
+  defp apply_probe_result(health_state, {:error, _error_reason, :transient}) do
     new_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :transient)
 
     # When backoff has reached max, the same transient error has persisted across
@@ -156,7 +253,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     end
   end
 
-  def update_health(health_state, {:error, _error_reason, :hard}) do
+  defp apply_probe_result(health_state, {:error, _error_reason, :hard}) do
     failures = health_state.failures + 1
     consecutive_hard_failures = health_state.consecutive_hard_failures + 1
     new_status = determine_status(failures, 0, health_state.status)
@@ -303,6 +400,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       user_id: record.user_id,
       failures: record.failures,
       consecutive_hard_failures: record.consecutive_hard_failures,
+      consecutive_sync_failures: record.consecutive_sync_failures,
       successes: record.successes,
       last_check_at: record.last_check_at,
       status: safe_to_status(record.status, record),
@@ -315,6 +413,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   # Private Functions
 
+  # `consecutive_sync_failures` is absent by design: the probe never changes it
+  # and this map is written as a whole-row update, so including it would let a
+  # probe that read the row before a sync failure erase that failure's count.
+  # `put_sync_state/3` is the only writer.
   defp to_db_attrs(health_state) do
     base = %{
       status: HealthStatus.to_db_value(health_state.status),

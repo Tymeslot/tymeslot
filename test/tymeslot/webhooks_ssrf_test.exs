@@ -73,11 +73,11 @@ defmodule Tymeslot.WebhooksSsrfTest do
     end
 
     test "blocks a redirect to a hostname that DNS-resolves to a private address" do
-      stub(Tymeslot.DnsResolverMock, :check_private_ip, fn url, _opts ->
+      stub(Tymeslot.DnsResolverMock, :resolve_public, fn url, _opts ->
         if String.contains?(url, "rebinding.example.com") do
           {:error, "URL resolves to a private or local network address"}
         else
-          :ok
+          {:ok, [{93, 184, 216, 34}]}
         end
       end)
 
@@ -106,11 +106,11 @@ defmodule Tymeslot.WebhooksSsrfTest do
     end
 
     test "blocks a redirect to a hostname that DNS-resolves to the cloud metadata address" do
-      stub(Tymeslot.DnsResolverMock, :check_private_ip, fn url, _opts ->
+      stub(Tymeslot.DnsResolverMock, :resolve_public, fn url, _opts ->
         if String.contains?(url, "metadata.example.com") do
           {:error, "URL resolves to a private or local network address"}
         else
-          :ok
+          {:ok, [{93, 184, 216, 34}]}
         end
       end)
 

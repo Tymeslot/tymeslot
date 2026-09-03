@@ -1,4 +1,14 @@
 
+[1.14.0]
+* Trip the calendar circuit breaker on repeated server errors
+* Send mail through self-hosted SMTP relays
+* Keep a switched-off setting's own toggle legible
+* Connect a Microsoft Exchange calendar from the dashboard
+* Let admins set a fallback language per surface
+* Group admin settings into tabs
+* Let hosts set how far apart booking times are offered
+
+
 [1.13.2]
 * Let bookers reach a month whose only free day is the first
 * Tell bookers what to do when slots cannot be loaded

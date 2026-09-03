@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.TokenUtils
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     AppleConfig,
     BaikalConfig,
     CaldavConfig,
+    ExchangeConfig,
     IcsUrlConfig,
     MailboxOrgConfig,
     NextcloudConfig,
@@ -128,6 +130,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             target={@myself}
             form_errors={@form_errors}
             form_values={@form_values}
+            saving={@is_saving}
+          />
+        <% :exchange -> %>
+          <.live_component
+            module={ExchangeConfig}
+            id="exchange-config"
+            target={@myself}
+            form_errors={@form_errors}
+            form_values={@form_values}
+            discovered_calendars={@discovered_calendars}
+            show_calendar_selection={@show_calendar_selection}
+            discovery_credentials={@discovery_credentials}
             saving={@is_saving}
           />
         <% :apple -> %>
@@ -345,7 +359,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     provider_name = Helpers.format_provider_name(integration.provider)
     calendar_list = integration.calendar_list || []
 
+    # Two distinct questions, and they part company on Exchange: a subscribed
+    # feed carries no credentials and exactly one calendar, so it gets neither
+    # the reconnect nor the manage-calendars action, while an Exchange mailbox
+    # has both. Read-only is the wider of the two, and it is what the badge
+    # states.
     subscription? = ProviderConfig.subscription?(integration.provider)
+    read_only? = ProviderConfig.read_only?(integration.provider)
 
     assigns =
       assigns
@@ -353,6 +373,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       |> assign(:status, integration_status(integration, assigns.health_state))
       |> assign(:summary, calendar_summary(integration))
       |> assign(:subscription?, subscription?)
+      |> assign(:read_only?, read_only?)
       |> assign(
         :display_name,
         if(integration.name == provider_name, do: provider_name, else: integration.name)
@@ -364,7 +385,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       icon={@integration.provider}
       icon_type={:calendar}
       title={@display_name}
-      type_tag={if @subscription?, do: dgettext("dashboard_calendar_settings", "Read-only")}
+      type_tag={if @read_only?, do: dgettext("dashboard_calendar_settings", "Read-only")}
       summary={@summary}
       status={@status}
       active?={@integration.is_active}
@@ -496,7 +517,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   email, conflict-check coverage, booking target, and last-sync — dropping
   absent segments gracefully.
   """
-  @spec calendar_summary(map()) :: String.t()
+  @spec calendar_summary(%{:provider => atom() | String.t() | nil, optional(atom()) => term()}) ::
+          String.t()
   def calendar_summary(integration) do
     calendar_list = integration.calendar_list || []
 
@@ -542,7 +564,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp booking_segment(integration) do
     case Calendar.confirmed_booking_calendar(integration) do
       nil ->
-        read_only_booking_target_warning(integration)
+        booking_target_warning(integration)
 
       calendar ->
         dgettext("dashboard_calendar_settings", "books into %{calendar}",
@@ -551,7 +573,23 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     end
   end
 
-  defp read_only_booking_target_warning(integration) do
+  # Two situations, two sentences, and the provider is what tells them apart.
+  # A provider that is read-only by construction gets a plain description: an
+  # Exchange mailbox or a subscribed feed blocks time and never takes
+  # bookings, which is how it has always behaved and is nothing to fix. The
+  # warning below says "no longer", which is the right thing to tell someone
+  # whose writable calendar has become read-only on the server and whose
+  # bookings are now failing; saying it about a feed would report a breakage
+  # where nothing has changed and nothing is wrong.
+  defp booking_target_warning(integration) do
+    if BookingEligibility.bookable?(integration) do
+      writable_provider_warning(integration)
+    else
+      dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
+    end
+  end
+
+  defp writable_provider_warning(integration) do
     calendar_list = integration.calendar_list || []
     booking_id = Map.get(integration, :default_booking_calendar_id)
 

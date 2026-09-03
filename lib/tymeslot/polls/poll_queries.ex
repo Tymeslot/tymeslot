@@ -67,6 +67,21 @@ defmodule Tymeslot.Polls.PollQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Counts the user's polls that are still collecting votes.
+
+  Participants reach a poll by a link built from the host's username, so this
+  is the count of invitations that a username change would strand. Confirmed
+  and cancelled polls are excluded: nobody is being asked to open their link
+  any more.
+  """
+  @spec count_open_for_user(pos_integer()) :: non_neg_integer()
+  def count_open_for_user(user_id) do
+    PollSchema
+    |> where([p], p.user_id == ^user_id and p.status == :open)
+    |> Repo.aggregate(:count)
+  end
+
   @spec insert(Ecto.Changeset.t()) :: {:ok, PollSchema.t()} | {:error, Ecto.Changeset.t()}
   def insert(changeset), do: Repo.insert(changeset)
 

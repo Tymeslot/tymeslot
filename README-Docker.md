@@ -305,7 +305,7 @@ Email configuration is **required for production deployments** to enable:
 
 | `EMAIL_ADAPTER` | Additional variables |
 |---|---|
-| `smtp` | `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME`, `SMTP_PASSWORD` |
+| `smtp` | `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME`, `SMTP_PASSWORD`, and for a self-hosted relay `SMTP_CACERTFILE` or `SMTP_TLS_VERIFY` (see below) |
 | `postmark` | `POSTMARK_API_KEY` |
 | `sendgrid` | `SENDGRID_API_KEY` |
 | `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
@@ -323,6 +323,21 @@ SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USERNAME=your-smtp-username
 SMTP_PASSWORD=your-smtp-password
+```
+
+Port 587 (STARTTLS) and port 465 (implicit TLS) are both supported; any other port negotiates TLS opportunistically. The certificate is verified against the system trust store, which is what you want for a commercial relay but usually fails against your own mail server: Stalwart, Mailcow and Mailu all serve a self-signed certificate until you point them at Let's Encrypt.
+
+Two variables cover that case. Prefer the first, which keeps the connection authenticated:
+
+```bash
+# Trust the CA that issued your relay's certificate (a PEM bundle you mount
+# into the container).
+SMTP_CACERTFILE=/app/data/smtp-ca.pem
+
+# Last resort: accept any certificate. Mail is still encrypted, but the
+# relay's identity is no longer checked, so an intercepted connection cannot
+# be detected.
+SMTP_TLS_VERIFY=none
 ```
 
 **Option 2: a provider API (clearer delivery errors, no SMTP port needed)**

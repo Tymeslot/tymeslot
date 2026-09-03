@@ -362,8 +362,7 @@ msgstr "Accéder au calendrier"
 msgid "Great! Your meeting is still scheduled as planned."
 msgstr "Parfait ! Votre réunion est toujours prévue comme convenu."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Hi! I'm %{name}."
 msgstr "Bonjour ! Je suis %{name}."
@@ -415,7 +414,7 @@ msgstr "Nuit"
 msgid "Let me know what you'd like to discuss..."
 msgstr "Dites-moi de quoi vous souhaitez discuter..."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
 msgstr "Prenons rendez-vous !"
@@ -650,7 +649,7 @@ msgid "Schedule with"
 msgstr "Planifier avec"
 
 #: lib/tymeslot/profiles/organizer_context.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
 msgstr "Prendre rendez-vous avec %{name}"
@@ -1244,8 +1243,7 @@ msgstr "Trop de tentatives de réservation. Veuillez réessayer plus tard."
 msgid "Your booking is already being processed. Please wait..."
 msgstr "Votre réservation est déjà en cours de traitement. Veuillez patienter..."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Choisissez une option ci-dessous."
@@ -1537,6 +1535,14 @@ msgstr "Le titre est obligatoire"
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Vous ne pouvez pas réserver plus de %{days} jours à l’avance"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{hour}, %{count} available time"
+msgid_plural "%{hour}, %{count} available times"
+msgstr[0] "%{hour}, %{count} horaire disponible"
+msgstr[1] "%{hour}, %{count} horaires disponibles"
+
 #: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."
@@ -1819,3 +1825,13 @@ msgstr "Vous avez changé d’avis ? L’e-mail de votre demande contient un lie
 #, elixir-autogen, elixir-format
 msgid "Request new time"
 msgstr "Demander un nouvel horaire"
+
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "Hi there!"
+msgstr "Bonjour !"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule an expired meeting"
+msgstr "Impossible de reporter une réunion expirée"

@@ -21,6 +21,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   Tiers 1 and 2 are scoped to a single collection, so any calendar beyond the
   primary one always goes through the Tier 3 path.
 
+  The tier is chosen from what the server *advertises*, and some servers
+  advertise `sync-collection` and then refuse every REPORT that uses it. A
+  refusal therefore demotes the integration to the best tier that does not need
+  the extension, so a lying server costs one request rather than every sync.
+  The daily forced full fetch clears the stored tier, so detection runs again
+  and a server that refused once because it was genuinely unwell gets its delta
+  sync back within a day.
+
   ## Reporting rather than deciding
 
   Outcomes that need an operator- or owner-facing decision are *reported*, not
@@ -33,6 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Errors
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.State
@@ -239,9 +248,42 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
         {:error, :booking_calendar_missing}
 
       {:error, reason} ->
-        log_unless_actionable(integration, "Tier 1 sync", reason)
-        {:error, reason}
+        if Errors.unsupported_request?(reason) do
+          demote_from_tier1(integration, client, reason)
+        else
+          log_unless_actionable(integration, "Tier 1 sync", reason)
+          {:error, reason}
+        end
     end
+  end
+
+  # The tier is chosen from what the server *advertises*: `TierDetector` reads
+  # the property list and believes it. Some servers advertise `sync-collection`
+  # and then refuse every REPORT that uses it — Infomaniak answers 500 — and
+  # because the stored tier was never revisited, such an integration retried the
+  # same refused request every cycle and synced only on the daily forced full
+  # fetch. Weeks of that look exactly like a calendar that has stopped working,
+  # because it has.
+  #
+  # So fall back to the best tier that does not need it, and record the demotion
+  # so the rest of the day stops asking. The daily forced full fetch clears the
+  # stored tier, so detection runs again tomorrow: a server that refused once
+  # because it was genuinely having a bad minute gets its delta sync back within
+  # a day, at the cost of one wasted request. That is the right way round —
+  # losing delta sync for a day is cheap, and syncing nothing for a fortnight is
+  # not.
+  defp demote_from_tier1(integration, client, reason) do
+    {:ok, tier} = TierDetector.detect_without_sync_collection(integration, client)
+
+    Logger.warning("CalDAV server refused sync-collection it advertised; falling back",
+      calendar_integration_id: integration.id,
+      error: inspect(reason),
+      tier: tier
+    )
+
+    integration
+    |> State.put_tier(tier)
+    |> dispatch(client, tier)
   end
 
   defp apply_tier1_delta(integration, events, deleted_hrefs, new_sync_token) do

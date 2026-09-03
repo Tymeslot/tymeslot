@@ -9,7 +9,7 @@ defmodule Tymeslot.Mailer.Providers do
 
       | `EMAIL_ADAPTER` | Adapter                    | Kind    | Credentials |
       |-----------------|----------------------------|---------|-------------|
-      | `smtp`          | `Swoosh.Adapters.SMTP`     | `:smtp` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` |
+      | `smtp`          | `Swoosh.Adapters.SMTP`     | `:smtp` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_TLS_VERIFY`, `SMTP_CACERTFILE` |
       | `postmark`      | `Swoosh.Adapters.Postmark` | `:api`  | `POSTMARK_API_KEY` |
       | `sendgrid`      | `Swoosh.Adapters.Sendgrid` | `:api`  | `SENDGRID_API_KEY` |
       | `mailgun`       | `Swoosh.Adapters.Mailgun`  | `:api`  | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` |
@@ -90,7 +90,7 @@ defmodule Tymeslot.Mailer.Providers do
         username: "SMTP_USERNAME",
         password: "SMTP_PASSWORD"
       },
-      optional_env_vars: ["SMTP_PORT"],
+      optional_env_vars: ["SMTP_PORT", "SMTP_TLS_VERIFY", "SMTP_CACERTFILE"],
       kind: :smtp,
       probe: :smtp,
       dev_only: false
@@ -158,6 +158,11 @@ defmodule Tymeslot.Mailer.Providers do
   }
 
   @names @providers |> Map.keys() |> Enum.sort()
+
+  # Accepted `SMTP_TLS_VERIFY` values. `none` accepts any certificate the relay
+  # presents; see `Tymeslot.Mailer.SMTPConfig` for why that is a last resort.
+  @tls_verify_modes %{"peer" => :peer, "none" => :none}
+  @tls_verify_mode_names @tls_verify_modes |> Map.keys() |> Enum.sort()
 
   @doc "Every accepted `EMAIL_ADAPTER` value, sorted."
   @spec names() :: [name()]
@@ -339,7 +344,9 @@ defmodule Tymeslot.Mailer.Providers do
          host: host,
          port: env_port!("SMTP_PORT", 587),
          username: username,
-         password: password
+         password: password,
+         tls_verify: env_tls_verify!("SMTP_TLS_VERIFY"),
+         cacertfile: env_optional("SMTP_CACERTFILE")
        )}
     end
   end
@@ -399,6 +406,24 @@ defmodule Tymeslot.Mailer.Providers do
 
   defp env_optional(var) do
     var |> System.get_env() |> blank_to_nil()
+  end
+
+  defp env_tls_verify!(var) do
+    case env_optional(var) do
+      nil ->
+        :peer
+
+      value ->
+        case Map.fetch(@tls_verify_modes, String.downcase(value)) do
+          {:ok, mode} ->
+            mode
+
+          :error ->
+            raise ArgumentError,
+                  "Invalid #{var}: #{inspect(value)} " <>
+                    "(expected one of: #{Enum.join(@tls_verify_mode_names, ", ")})"
+        end
+    end
   end
 
   defp env_port!(var, default) do

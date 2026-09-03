@@ -153,6 +153,69 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       assert config[:tls_options][:server_name_indication] == ~c"smtp.example.com"
     end
 
+    test "port 465 repeats the TLS options as sockopts" do
+      # gen_smtp reads :tls_options only when upgrading with STARTTLS. On the
+      # implicit-TLS path it passes :sockopts straight to :ssl.connect/4, so
+      # without this every port-465 send fails with
+      # {:options, :incompatible, [verify: :verify_peer, cacerts: :undefined]}.
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          port: 465,
+          username: "user",
+          password: "pass"
+        )
+
+      assert config[:sockopts] == config[:tls_options]
+    end
+
+    test "ports that negotiate over plain TCP carry no sockopts" do
+      # TLS options are not valid :gen_tcp options: passing them on the STARTTLS
+      # and opportunistic paths would fail the connection before the upgrade.
+      for port <- [587, 25, 2525] do
+        config =
+          SMTPConfig.build(
+            host: "smtp.example.com",
+            port: port,
+            username: "user",
+            password: "pass"
+          )
+
+        refute Keyword.has_key?(config, :sockopts)
+      end
+    end
+
+    test "a CA bundle replaces the public trust store" do
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          cacertfile: cacertfile_fixture()
+        )
+
+      assert config[:tls_options][:cacertfile] == cacertfile_fixture()
+      refute Keyword.has_key?(config[:tls_options], :cacerts)
+      assert config[:tls_options][:verify] == :verify_peer
+    end
+
+    test "tls_verify: :none disables verification and needs no trust store" do
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          tls_verify: :none
+        )
+
+      tls_opts = config[:tls_options]
+      assert tls_opts[:verify] == :verify_none
+      refute Keyword.has_key?(tls_opts, :cacerts)
+      refute Keyword.has_key?(tls_opts, :cacertfile)
+      # Hostname matching is meaningless once the certificate is not checked.
+      refute Keyword.has_key?(tls_opts, :customize_hostname_check)
+    end
+
     test "CA certificates are loaded from system or castore" do
       config =
         SMTPConfig.build(
@@ -305,6 +368,56 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
     end
   end
 
+  describe "build/1 TLS validation" do
+    test "raises on an unrecognised verification mode" do
+      assert_raise ArgumentError, ~r/SMTP TLS verify must be :peer or :none/, fn ->
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          tls_verify: :maybe
+        )
+      end
+    end
+
+    test "raises when the CA bundle exists but cannot be read" do
+      # A bundle mounted with the wrong ownership passes an existence check and
+      # then fails at connect time with an opaque :ssl option error, long after
+      # the operator has stopped looking at the boot log.
+      path =
+        Path.join(
+          System.tmp_dir!(),
+          "smtp-ca-unreadable-#{System.unique_integer([:positive])}.pem"
+        )
+
+      File.write!(path, "-----BEGIN CERTIFICATE-----\n")
+      File.chmod!(path, 0o000)
+      on_exit(fn -> File.rm(path) end)
+
+      assert_raise ArgumentError, ~r/SMTP CA certificate file not found or not readable/, fn ->
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          cacertfile: path
+        )
+      end
+    end
+
+    test "raises when the CA bundle does not exist" do
+      # Failing at boot beats failing on the first email of the day: a typo in
+      # the mounted path is otherwise invisible until a user waits for mail.
+      assert_raise ArgumentError, ~r/SMTP CA certificate file not found/, fn ->
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass",
+          cacertfile: "/nonexistent/ca-bundle.pem"
+        )
+      end
+    end
+  end
+
   describe "logging" do
     test "logs SMTP configuration at startup, password in neither message nor metadata" do
       LogCapture.attach(level: :info, logger_level: :info)
@@ -329,5 +442,60 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       refute LogCapture.message_text(msg) =~ "secret123"
       refute inspect(meta, limit: :infinity, printable_limit: :infinity) =~ "secret123"
     end
+
+    test "one warning names both the disabled verification and the CA bundle it ignores" do
+      # A CA bundle configured alongside SMTP_TLS_VERIFY=none is never read.
+      # Split across two log lines an operator can act on one and miss the
+      # other, so the pair has to arrive as a single warning.
+      LogCapture.attach(level: :warning)
+
+      SMTPConfig.build(
+        host: "smtp.example.com",
+        username: "user",
+        password: "pass",
+        tls_verify: :none,
+        cacertfile: cacertfile_fixture()
+      )
+
+      assert [event] = verification_disabled_warnings()
+
+      message = LogCapture.message_text(event.msg)
+      assert message =~ "SMTP certificate verification is DISABLED (SMTP_TLS_VERIFY=none)"
+      assert message =~ "The configured SMTP_CACERTFILE is ignored while verification is off"
+      assert LogCapture.user_metadata(event).cacertfile == cacertfile_fixture()
+    end
+
+    test "the warning claims nothing is ignored when no CA bundle is configured" do
+      LogCapture.attach(level: :warning)
+
+      SMTPConfig.build(
+        host: "smtp.example.com",
+        username: "user",
+        password: "pass",
+        tls_verify: :none
+      )
+
+      assert [event] = verification_disabled_warnings()
+
+      assert LogCapture.message_text(event.msg) =~
+               "SMTP certificate verification is DISABLED (SMTP_TLS_VERIFY=none)"
+
+      refute LogCapture.message_text(event.msg) =~ "SMTP_CACERTFILE is ignored"
+      refute Map.has_key?(LogCapture.user_metadata(event), :cacertfile)
+    end
+  end
+
+  # Every captured warning about verification being off, so a test can assert
+  # there is exactly one of them.
+  defp verification_disabled_warnings do
+    Enum.filter(LogCapture.drain(), fn event ->
+      LogCapture.message_text(event.msg) =~ "SMTP certificate verification is DISABLED"
+    end)
+  end
+
+  # A real, readable PEM file: `build/1` rejects a path that is not one, so a
+  # made-up string would exercise the validation rather than the option.
+  defp cacertfile_fixture do
+    CAStore.file_path()
   end
 end

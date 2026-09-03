@@ -6,10 +6,21 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
 
   Application code should call the public `Tymeslot.Integrations.Calendar`
   facade rather than this module directly.
+
+  Three functions here deliberately do something no application path may: they
+  write a payload the provider's own writer would never produce
+  (`put_raw_caldav_ical/3`), or write at all to a provider that refuses every
+  write (`seed_exchange_item/2` and `delete_exchange_item/2`). They exist so a
+  diagnostic can plant the fixture it then reads back, and they are named and
+  documented so that reaching for one from application code reads as the
+  mistake it would be.
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventsRead
+  alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
+  alias Tymeslot.Integrations.Calendar.Exchange.Provider, as: ExchangeProvider
+  alias Tymeslot.Integrations.Calendar.Exchange.Seeding, as: ExchangeSeeding
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
@@ -62,17 +73,37 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   @doc """
   Fetches raw events from the provider and normalises them into `CalendarEvent` structs.
 
-  Only providers whose `list_events_representation/0` is `:raw` can be probed
-  this way: the pairing of `list_events/2` with `normalise_events/2` assumes
-  the first hands back the wire format the second parses. A cache-backed
-  provider returns `{:error, {:no_raw_representation, provider}}` rather than
-  crashing inside a parser; use `fetch_fresh_events/3`, which consumes exactly
-  the shape those providers return.
-
   Returns `{:ok, [CalendarEvent.t()]}` or `{:error, reason}`.
+
+  For the CalDAV and OAuth families this pairs `list_events/2` with
+  `normalise_events/2`, which holds only because their `list_events/2` answers
+  the provider's own raw representation. It does **not** hold for the
+  cache-backed providers, whose `list_events/2` reads the local event cache and
+  hands back plain maps their normaliser was never defined over.
+
+  The two cache-backed providers are handled differently from each other, which
+  is deliberate. `ics_url` has no live read of its own to substitute, so it
+  answers `{:error, {:no_raw_representation, provider}}` rather than crashing
+  inside a parser; probe it through `fetch_fresh_events/3`, which consumes
+  exactly the shape it returns. `exchange` does have one — the item read the
+  sync worker uses — so it is dispatched to `fetch_exchange_items/3` below,
+  which reads the server rather than the cache. That is what the audit wants
+  from it: a cache read would only report what a previous sync happened to
+  write, and an ephemeral integration has no cache at all.
+
+  Connectivity for any provider is `check_provider_connectivity/1`, which asks
+  `check_connectivity/1` rather than inferring reachability from a fetch.
   """
   @spec fetch_and_normalise_provider_events(integration(), DateTime.t(), DateTime.t()) ::
           {:ok, list()} | {:error, any()}
+  def fetch_and_normalise_provider_events(
+        %CalendarIntegrationSchema{provider: "exchange"} = integration,
+        range_start,
+        range_end
+      ) do
+    fetch_exchange_items(integration, range_start, range_end)
+  end
+
   def fetch_and_normalise_provider_events(
         %CalendarIntegrationSchema{} = integration,
         range_start,
@@ -210,6 +241,154 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
       needs_reauth: false
     }
   end
+
+  @doc """
+  Lists an Exchange mailbox's busy intervals over a window, live from the server.
+
+  The counterpart to `fetch_and_normalise_provider_events/3` for this provider,
+  and the more important of the two: `GetUserAvailability` is what decides
+  availability, and it is the only EWS read that expands a recurring series.
+  The item read the other function performs is known to be short — a grommunio
+  mailbox answers one `RecurringMaster` for a whole series — so an audit that
+  looked only at items would report a diary as free on every occurrence after
+  the first.
+
+  Returns intervals in the order the server listed them. They carry no item
+  identity, so a caller correlates them by time, never by uid.
+  """
+  @spec fetch_exchange_busy_intervals(integration(), DateTime.t(), DateTime.t()) ::
+          {:ok, [FreeBusy.interval()]} | {:error, term()}
+  def fetch_exchange_busy_intervals(
+        %CalendarIntegrationSchema{provider: "exchange"} = integration,
+        range_start,
+        range_end
+      ) do
+    ExchangeProvider.list_busy_intervals(integration,
+      start_time: range_start,
+      end_time: range_end
+    )
+  end
+
+  @doc """
+  Diagnostic-only: plants one calendar item in an Exchange mailbox over EWS.
+
+  `Exchange.Provider` refuses every write, so an audit of it has nothing to read
+  unless a fixture is planted out of band. `Exchange.Seeding`'s moduledoc has
+  the reasoning and the boundaries; this is the only entry point to it.
+
+  Returns the item id the server assigned, which is what `delete_exchange_item/2`
+  takes and what `Exchange.EventNormaliser` writes into `provider_event_id`. EWS
+  assigns the iCalendar UID itself, so a caller cannot choose one and must
+  correlate by item id. Not intended for application use.
+  """
+  @spec seed_exchange_item(integration(), ExchangeSeeding.fixture()) ::
+          {:ok, ExchangeSeeding.item_id()} | {:error, term()}
+  def seed_exchange_item(
+        %CalendarIntegrationSchema{provider: "exchange"} = integration,
+        fixture
+      ) do
+    ExchangeSeeding.create_item(exchange_config(integration), fixture)
+  end
+
+  @doc """
+  Diagnostic-only: removes an item planted by `seed_exchange_item/2`.
+  """
+  @spec delete_exchange_item(integration(), ExchangeSeeding.item_id()) ::
+          :ok | {:error, term()}
+  def delete_exchange_item(
+        %CalendarIntegrationSchema{provider: "exchange"} = integration,
+        item_id
+      ) do
+    ExchangeSeeding.delete_item(exchange_config(integration), item_id)
+  end
+
+  @doc """
+  Builds an unpersisted `CalendarIntegrationSchema` struct for an ephemeral
+  Exchange (EWS) audit target — no database row is created or required.
+
+  The Baikal builder's counterpart, and the same contract: callers pass a plain
+  config map and this owns the encryption and virtual-field details.
+
+  `mailbox` is separate from `username` and not optional in practice: an
+  on-premises server accepts `DOMAIN\\samaccountname` as a login and
+  `GetUserAvailability` cannot address that, so without an address the busy
+  read — the one that decides availability — refuses.
+
+  `calendar_list` is left empty on purpose. `Exchange.Provider.item_client_configs/1`
+  falls back to the mailbox's default calendar when nothing is selected, which
+  is where `seed_exchange_item/2` plants its fixtures.
+  """
+  @spec build_ephemeral_exchange_integration(%{
+          required(:url) => String.t(),
+          required(:username) => String.t(),
+          required(:password) => String.t(),
+          required(:mailbox) => String.t(),
+          optional(:verify_ssl) => boolean()
+        }) :: CalendarIntegrationSchema.t()
+  def build_ephemeral_exchange_integration(
+        %{url: url, username: username, password: password, mailbox: mailbox} = config
+      ) do
+    %CalendarIntegrationSchema{
+      id: 0,
+      provider: "exchange",
+      name: "#{ProviderConfig.display_name(:exchange)} (#{URI.parse(url).host})",
+      base_url: url,
+      username_encrypted: Encryption.encrypt(username),
+      password_encrypted: Encryption.encrypt(password),
+      username: username,
+      password: password,
+      provider_account_email: mailbox,
+      # An EWS folder is named by an opaque `FolderId`, never a path.
+      calendar_paths: [],
+      calendar_list: [],
+      # The provider refuses writes, so it has no booking target to name.
+      default_booking_calendar_id: nil,
+      verify_ssl: Map.get(config, :verify_ssl, true),
+      is_active: true,
+      needs_reauth: false
+    }
+  end
+
+  # The live item read, fanned out over the same per-folder clients the sync
+  # worker uses so a folder selection is honoured here exactly as it is there.
+  # A failing folder fails the whole read rather than shrinking the result: a
+  # short list of events is indistinguishable from a quiet calendar, and an
+  # audit that silently lost half a mailbox would report passes it did not earn.
+  defp fetch_exchange_items(integration, range_start, range_end) do
+    integration
+    |> ExchangeProvider.item_client_configs()
+    |> Enum.reduce_while({:ok, []}, fn client, {:ok, acc} ->
+      case fetch_exchange_folder(integration, client, range_start, range_end) do
+        {:ok, events} -> {:cont, {:ok, acc ++ events}}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp fetch_exchange_folder(integration, client, range_start, range_end) do
+    calendar_id = client[:calendar_id]
+
+    context = %{
+      calendar_integration_id: integration.id,
+      provider_calendar_id: to_string(calendar_id),
+      synced_at: DateTime.utc_now(:microsecond)
+    }
+
+    with {:ok, items} <-
+           ExchangeProvider.list_calendar_items(client,
+             start_time: range_start,
+             end_time: range_end,
+             calendar_id: calendar_id
+           ) do
+      ExchangeProvider.normalise_events(items, context)
+    end
+  end
+
+  # `Exchange.Seeding` speaks the transport's config map, not an integration
+  # struct, and the conversion lives on the provider because it is the module
+  # that knows the credentials are encrypted and that two fields the CalDAV
+  # shape has no room for have to be merged back on top.
+  defp exchange_config(integration), do: ExchangeProvider.transport_config(integration)
 
   defp fetch_and_normalise(adapter_client, integration, :raw, opts) do
     context = %{

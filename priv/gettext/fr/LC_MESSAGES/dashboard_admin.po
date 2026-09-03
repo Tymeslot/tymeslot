@@ -69,6 +69,7 @@ msgid "Admins"
 msgstr "Administrateurs"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication"
 msgstr "Authentification"
@@ -166,6 +167,7 @@ msgid "Display name"
 msgstr "Nom affiché"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
@@ -185,11 +187,6 @@ msgstr "Saisissez un nombre entre 0.0 et 1.0."
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Saisissez une adresse e-mail valide."
-
-#: lib/tymeslot_web/live/admin_live/components/settings.ex
-#, elixir-autogen, elixir-format
-msgid "Environment / config"
-msgstr "Environnement / configuration"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -277,15 +274,11 @@ msgstr "Rôle"
 msgid "Save"
 msgstr "Enregistrer"
 
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
 msgid "Set %{name}"
 msgstr "Définir %{name}"
-
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
-#, elixir-autogen, elixir-format
-msgid "Settings"
-msgstr "Paramètres"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -332,7 +325,7 @@ msgstr "Utilisateur introuvable."
 msgid "User promoted to admin."
 msgstr "Utilisateur promu administrateur."
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex
+#: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Utilisateurs"
@@ -606,3 +599,48 @@ msgstr "Le texte blanc des boutons sur cette couleur n’offre qu’un contraste
 #, elixir-autogen, elixir-format
 msgid "That image is too large. Pick one under %{limit}."
 msgstr "Cette image est trop volumineuse. Choisissez-en une de moins de %{limit}."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page fallback language"
+msgstr "Langue de repli de la page de réservation"
+
+#: lib/tymeslot_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose one of the supported languages."
+msgstr "Choisissez l’une des langues prises en charge."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Dashboard fallback language"
+msgstr "Langue de repli du tableau de bord"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Localisation"
+msgstr "Localisation"
+
+#: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
+#, elixir-autogen, elixir-format
+msgid "Default"
+msgstr "Défaut"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Install default (%{language})"
+msgstr "Valeur par défaut de l’installation (%{language})"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language public booking pages fall back to, along with booking emails and calendar invites for an attendee whose language is unknown. Detection still comes first: a visitor whose browser asks for a language this install supports gets that language regardless of this setting. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Langue vers laquelle se replient les pages de réservation publiques, ainsi que les e-mails de réservation et les invitations d’agenda destinés à un participant dont la langue est inconnue. La détection reste prioritaire : un visiteur dont le navigateur demande une langue prise en charge par cette installation obtient cette langue, quel que soit ce paramètre. Sans réglage, la langue utilisée est %{language}, la valeur par défaut configurée pour cette installation."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Language the dashboard, account pages, and account emails fall back to. Detection still comes first: a signed-in user's own language setting and the browser's Accept-Language header both win, and this is only what resolves when neither offers a language this install supports. Left unset it resolves to %{language}, this install's configured default."
+msgstr "Langue vers laquelle se replient le tableau de bord, les pages de compte et les e-mails de compte. La détection reste prioritaire : la langue de l’interface enregistrée par une personne connectée et l’en-tête Accept-Language du navigateur l’emportent toutes deux ; ce paramètre ne s’applique que si aucune des deux ne propose une langue prise en charge par cette installation. Sans réglage, la langue utilisée est %{language}, la valeur par défaut configurée pour cette installation."
+
+#: lib/tymeslot_web/live/admin_live/tabs.ex
+#, elixir-autogen, elixir-format
+msgid "General"
+msgstr "Général"

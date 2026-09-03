@@ -362,8 +362,7 @@ msgstr "Přejít na kalendář"
 msgid "Great! Your meeting is still scheduled as planned."
 msgstr "Výborně! Vaše schůzka se koná podle plánu."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Hi! I'm %{name}."
 msgstr "Dobrý den, jsem %{name}."
@@ -415,7 +414,7 @@ msgstr "Pozdní večer"
 msgid "Let me know what you'd like to discuss..."
 msgstr "Napište, co chcete probrat…"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
 msgstr "Pojďme se sejít!"
@@ -650,7 +649,7 @@ msgid "Schedule with"
 msgstr "Schůzka s hostitelem"
 
 #: lib/tymeslot/profiles/organizer_context.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
 msgstr "Schůzka s hostitelem %{name}"
@@ -1244,8 +1243,7 @@ msgstr "Příliš mnoho pokusů o rezervaci. Zkuste to prosím později."
 msgid "Your booking is already being processed. Please wait..."
 msgstr "Vaše rezervace se už zpracovává. Počkejte prosím…"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Vyberte si níže některou z možností."
@@ -1535,6 +1533,15 @@ msgstr "Název je povinný"
 msgid "You cannot book more than %{days} days in advance"
 msgstr "Rezervaci nelze vytvořit s předstihem více než %{days} dnů"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{hour}, %{count} available time"
+msgid_plural "%{hour}, %{count} available times"
+msgstr[0] "%{hour}, %{count} dostupný čas"
+msgstr[1] "%{hour}, %{count} dostupné časy"
+msgstr[2] "%{hour}, %{count} dostupných časů"
+
 #: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."
@@ -1817,3 +1824,13 @@ msgstr "Změna plánu? E-mail s vaší žádostí obsahuje odkaz k jejímu staž
 #, elixir-autogen, elixir-format
 msgid "Request new time"
 msgstr "Požádat o nový termín"
+
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "Hi there!"
+msgstr "Dobrý den!"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot reschedule an expired meeting"
+msgstr "Schůzku s vypršenou platností nelze přesunout"

@@ -268,6 +268,16 @@ msgid "Approve bookings before they're confirmed"
 msgstr "Schvalte rezervace dřív, než se potvrdí"
 
 #: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen
+msgid "The heading, greeting and instruction at the top of your booking page are now yours to write. Say what you actually do, in your own words, and watch it in the live preview as you type - every change saves itself. Switch it off any time to go back to the built-in wording, translated into every language Tymeslot supports."
+msgstr "Nadpis, pozdrav i pokyn v horní části vaší rezervační stránky si nyní píšete sami. Řekněte vlastními slovy, co děláte, a sledujte to při psaní v živém náhledu - každá změna se uloží sama. Kdykoli to vypněte a vraťte se k vestavěnému textu, přeloženému do všech jazyků podporovaných Tymeslotem."
+
+#: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Turn on approval for a meeting type and its bookings wait for you. The slot is held so nobody else can take it, the person booking is told it's a request rather than a confirmed meeting, and your answer is one click from the email. Don't answer in time and the request lapses on its own."
 msgstr "Zapněte schvalování pro typ schůzky a její rezervace počkají na vás. Termín se zarezervuje, aby ho nikdo jiný nezabral, člověk, který rezervuje, ví, že jde o žádost, nikoli o potvrzenou schůzku, a vaše odpověď je na jeden klik z e-mailu. Pokud neodpovíte včas, žádost propadne sama."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen
+msgid "Write your own booking page welcome"
+msgstr "Napište si vlastní uvítání"

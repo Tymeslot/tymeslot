@@ -28,6 +28,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     validations = [
       {:name, params["name"]},
       {:duration, params["duration"]},
+      {:slot_interval, params["slot_interval"]},
       {:description, params["description"]},
       {:icon, params["icon"]},
       {:meeting_mode, params["meeting_mode"]},
@@ -54,8 +55,8 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   validation in LiveView forms.
 
   ## Parameters
-  - `field` - The field atom (`:name`, `:duration`, `:description`, `:icon`,
-    `:meeting_mode`, `:reminder_config`)
+  - `field` - The field atom (`:name`, `:duration`, `:slot_interval`,
+    `:description`, `:icon`, `:meeting_mode`, `:reminder_config`)
   - `value` - The raw input value
   - `metadata` - Security metadata map (ip, user_agent, user_id)
 
@@ -65,6 +66,9 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   @spec validate_field(atom(), any(), map()) :: {:ok, any()} | {:error, map()}
   def validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
   def validate_field(:duration, value, metadata), do: validate_meeting_duration(value, metadata)
+
+  def validate_field(:slot_interval, value, metadata),
+    do: validate_meeting_slot_interval(value, metadata)
 
   def validate_field(:description, value, metadata),
     do: validate_meeting_description(value, metadata)
@@ -292,6 +296,55 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   defp validate_duration_constraints(duration) do
     {:ok, to_string(duration)}
+  end
+
+  # Blank means "use the meeting type's own duration" — the field is optional,
+  # unlike duration.
+  defp validate_meeting_slot_interval(nil, _metadata), do: {:ok, ""}
+  defp validate_meeting_slot_interval("", _metadata), do: {:ok, ""}
+
+  defp validate_meeting_slot_interval(interval_str, metadata) when is_binary(interval_str) do
+    case UniversalSanitizer.sanitize_and_validate(interval_str,
+           allow_html: false,
+           metadata: metadata
+         ) do
+      {:ok, sanitized_interval} ->
+        validate_slot_interval_value(sanitized_interval)
+
+      {:error, error} ->
+        {:error, %{slot_interval: error}}
+    end
+  end
+
+  defp validate_meeting_slot_interval(_invalid, _metadata) do
+    {:error, %{slot_interval: "Slot interval must be a number"}}
+  end
+
+  defp validate_slot_interval_value(""), do: {:ok, ""}
+
+  defp validate_slot_interval_value(sanitized_interval) do
+    case Integer.parse(sanitized_interval) do
+      {interval, ""} ->
+        validate_slot_interval_constraints(interval)
+
+      _invalid ->
+        {:error, %{slot_interval: "Slot interval must be a valid number of minutes"}}
+    end
+  end
+
+  defp validate_slot_interval_constraints(interval) do
+    range = Constraints.slot_interval_minutes_range()
+
+    cond do
+      interval < range.first ->
+        {:error, %{slot_interval: "Slot interval must be at least #{range.first} minutes"}}
+
+      interval > range.last ->
+        {:error, %{slot_interval: "Slot interval cannot exceed #{range.last} minutes"}}
+
+      true ->
+        {:ok, to_string(interval)}
+    end
   end
 
   defp validate_meeting_description(nil, _metadata), do: {:ok, ""}

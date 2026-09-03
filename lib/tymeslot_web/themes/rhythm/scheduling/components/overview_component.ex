@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.FlagHelpers
@@ -49,7 +50,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
         <div class="slide active">
           <div class="slide-content">
             <h1 class="slide-title">
-              {dgettext("booking", "Schedule with %{name}", name: display_name(@organizer_profile))}
+              {BookingText.heading(@organizer_profile, :rhythm, display_name(@organizer_profile))}
             </h1>
 
             <div class="organizer-profile">
@@ -63,10 +64,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               </div>
               <div class="organizer-info">
                 <p class="organizer-greeting">
-                  {dgettext("booking", "Hi! I'm %{name}.", name: display_name(@organizer_profile))}
+                  {BookingText.greeting(@organizer_profile, display_name(@organizer_profile))}
                 </p>
                 <p class="organizer-instruction">
-                  {dgettext("booking", "Pick an option below.")}
+                  {BookingText.instruction(@organizer_profile)}
                 </p>
               </div>
             </div>

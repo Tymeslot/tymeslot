@@ -52,7 +52,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   defp organizer_time_format(meeting) do
     CalendarGrid.get_user_time_format(
       Map.get(meeting, :organizer_user_id),
-      Locales.default_locale()
+      Locales.admin_default_locale()
     )
   end
 

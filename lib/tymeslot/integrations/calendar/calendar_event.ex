@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   @type t :: %__MODULE__{
           uid: String.t(),
           calendar_integration_id: integer(),
-          provider: :google | :outlook | :caldav | :ics_url | :debug,
+          provider: :google | :outlook | :caldav | :ics_url | :exchange | :debug,
           provider_calendar_id: String.t(),
           provider_event_id: String.t() | nil,
           recurring_event_id: String.t() | nil,

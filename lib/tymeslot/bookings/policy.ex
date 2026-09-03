@@ -40,12 +40,16 @@ defmodule Tymeslot.Bookings.Policy do
           required(:buffer_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
-          required(:owner_timezone) => String.t()
+          required(:owner_timezone) => String.t(),
+          required(:slot_interval_minutes) => pos_integer() | nil
         }
   def scheduling_config(organizer_user_id \\ nil, meeting_type \\ nil)
 
   def scheduling_config(nil, _meeting_type) do
-    Map.put(policy_values(nil), :owner_timezone, Profiles.get_default_timezone())
+    nil
+    |> policy_values()
+    |> Map.put(:owner_timezone, Profiles.get_default_timezone())
+    |> Map.put(:slot_interval_minutes, nil)
   end
 
   def scheduling_config(organizer_user_id, meeting_type) do
@@ -55,7 +59,25 @@ defmodule Tymeslot.Bookings.Policy do
     |> resolve_schedule(meeting_type)
     |> policy_values()
     |> Map.put(:owner_timezone, settings.timezone)
+    |> Map.put(:slot_interval_minutes, slot_interval_minutes(meeting_type))
   end
+
+  @doc """
+  Resolves a meeting type's booking interval, in minutes.
+
+  NULL means "use the meeting type's own duration" — the default for almost
+  every meeting type, since most have not configured an explicit interval.
+  Nil for a nil meeting type and for meeting-type maps (such as the demo
+  provider's) that omit the key entirely, so this never raises regardless of
+  what shape of meeting type it is handed.
+
+  The single resolver for this value, shared by `scheduling_config/2` here and
+  by `TymeslotWeb.Live.Scheduling.AvailabilityHelpers`, so the display path
+  and the submit path cannot disagree about the interval.
+  """
+  @spec slot_interval_minutes(map() | nil) :: pos_integer() | nil
+  def slot_interval_minutes(%{slot_interval_minutes: minutes}), do: minutes
+  def slot_interval_minutes(_meeting_type), do: nil
 
   # `max_advance_booking_days` is this map's name for the schedule's
   # `advance_booking_days`; every other key is carried through unrenamed.
@@ -387,6 +409,14 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == "completed" ->
         {:error, "Cannot reschedule a completed meeting"}
 
+      # An expired meeting (a lapsed approval request or an abandoned paid
+      # checkout) has already released its slot: `MeetingState`'s
+      # `@occupying_statuses` excludes "expired", so conflict detection ignores
+      # it. Rescheduling would move it to a new time it does not reserve, and
+      # the attendee would be told about a booking anyone else can still take.
+      meeting.status == "expired" ->
+        {:error, "Cannot reschedule an expired meeting"}
+
       meeting_is_current?(meeting) ->
         Logger.info("Blocked reschedule: meeting has already started", meeting_uid: meeting.uid)
         {:error, "Cannot reschedule a meeting that has already started"}
@@ -550,5 +580,5 @@ defmodule Tymeslot.Bookings.Policy do
     }
   end
 
-  defp default_locale, do: Locales.default_locale()
+  defp default_locale, do: Locales.booking_default_locale()
 end

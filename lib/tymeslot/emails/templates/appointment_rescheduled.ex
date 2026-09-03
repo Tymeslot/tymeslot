@@ -294,5 +294,5 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
   defp join_url(:attendee, details), do: Map.get(details, :attendee_video_url)
 
-  defp organizer_locale(_appointment_details), do: Locales.default_locale()
+  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
 end

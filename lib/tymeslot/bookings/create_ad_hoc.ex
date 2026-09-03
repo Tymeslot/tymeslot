@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
@@ -116,7 +117,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       attendee_email: params.attendee_email,
       attendee_message: nil,
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
-      attendee_locale: "en",
+      attendee_locale: Locales.booking_default_locale(),
       status: "confirmed",
       view_url: build_meeting_url(uid, "", org_username),
       reschedule_url: build_meeting_url(uid, "/reschedule", org_username),

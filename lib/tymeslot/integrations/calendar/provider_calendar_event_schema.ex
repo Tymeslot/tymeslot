@@ -5,6 +5,16 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
   Events are keyed by (calendar_integration_id, uid) and reflect the state of
   the external calendar at the time of the last sync.
 
+  That key carries an assumption worth stating, because nothing enforces it:
+  each read path an integration performs must produce uids in its own
+  namespace. Exchange is where it bites — one meeting is cached twice, once
+  from the busy-time read under a synthesised uid and once from the item read
+  under the real one, the two rows distinguished by the `role` column added in
+  migration 20260819170109. A path that ever produced the same uid from both
+  reads would collapse them into whichever role was written first, silently and
+  unrecoverably, since `role` is held out of the upsert's replace list. Keep the
+  namespaces disjoint by construction rather than by luck.
+
   Use `to_calendar_event/1` to convert a loaded record into the canonical
   `CalendarEvent` struct, and `from_calendar_event/1` to prepare a struct
   for database upsert.
@@ -15,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
 
@@ -49,6 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           provider: String.t() | nil,
           provider_calendar_id: String.t() | nil,
           provider_event_id: String.t() | nil,
+          role: String.t(),
           summary: String.t() | nil,
           description: String.t() | nil,
           location: String.t() | nil,
@@ -100,6 +112,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     field :provider, :string
     field :provider_calendar_id, :string
     field :provider_event_id, :string
+
+    # Which read path owns the row, and therefore which reads may return it.
+    # Insert-time identity: deliberately absent from
+    # `ProviderCalendarEventQueries.replace_fields/0` and from the changeset's
+    # castable fields, so no partial update can re-file a row. See migration
+    # 20260819170109 for how it composes with `transparency` and `status`.
+    field :role, :string, default: EventRole.both()
 
     # Content
     field :summary, :string
@@ -260,6 +279,50 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
       created_by_tymeslot: record.created_by_tymeslot || false
     }
   end
+
+  @doc """
+  Converts a loaded schema record into the plain map the provider read path
+  hands back from `list_events/2`.
+
+  The counterpart to `to_calendar_event/1`, for the providers whose
+  `list_events/2` reads the local cache rather than the network
+  (`Ics.Provider`, `Exchange.Provider`). Unlike that function this one leaves
+  `status` and `transparency` as the database's own strings: the availability
+  path receives plain maps here, and `CalendarEvent.blocking?/1` matches those
+  two fields as strings on a map and as atoms only on a `CalendarEvent`
+  struct. Converting them would make every transparent or cancelled row block.
+
+  All-day rows carry `start_date`/`end_date` rather than `start_at`/`end_at`,
+  and are handed back as the `Date` values the conflict checker already
+  accepts from the CalDAV path.
+
+  `recurrence_rule` is deliberately dropped: occurrences were expanded before
+  they were cached, so leaving it on would have `EventsRead.expand_event/3`
+  expand every stored occurrence a second time.
+  """
+  @spec to_read_path_map(t()) :: map()
+  def to_read_path_map(%__MODULE__{} = record) do
+    {start_time, end_time} = read_path_times(record)
+
+    %{
+      uid: record.uid,
+      summary: record.summary,
+      description: record.description,
+      location: record.location,
+      start_time: start_time,
+      end_time: end_time,
+      all_day: record.all_day,
+      status: record.status,
+      transparency: record.transparency,
+      recurrence_rule: nil,
+      timezone: record.timezone
+    }
+  end
+
+  defp read_path_times(%__MODULE__{all_day: true} = record),
+    do: {record.start_date, record.end_date}
+
+  defp read_path_times(%__MODULE__{} = record), do: {record.start_at, record.end_at}
 
   @doc """
   Converts a `CalendarEvent` struct into a map suitable for database upsert.

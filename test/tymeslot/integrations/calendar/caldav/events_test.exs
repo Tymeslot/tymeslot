@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
-  use Tymeslot.CalDAVCase, async: false
+  use Tymeslot.HttpTransportCase, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Events

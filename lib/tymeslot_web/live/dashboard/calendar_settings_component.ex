@@ -21,9 +21,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias TymeslotWeb.Live.Shared.Flash
 
   # Providers whose setup happens in an in-app form rather than an OAuth
-  # redirect: the CalDAV family plus feed subscriptions.
+  # redirect: the CalDAV family, feed subscriptions, and Exchange.
   @form_provider_strings ProviderConfig.caldav_based_provider_strings() ++
-                           ProviderConfig.subscription_provider_strings()
+                           ProviderConfig.subscription_provider_strings() ++
+                           ProviderConfig.ews_provider_strings()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -414,10 +415,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   # --- Private Helpers ---
 
-  # A subscription has no discoverable calendar list to refresh — discovery
-  # returns the same synthetic entry every time — so "refresh" means
+  # A subscription has no discoverable calendar list to refresh (discovery
+  # returns the same synthetic entry every time), so "refresh" means
   # re-fetching the feed instead, through the same worker the scheduled sync
   # sweep uses.
+  #
+  # This asks about the feed family specifically, not about read-only
+  # providers: an Exchange mailbox is read-only too, but it discovers real
+  # folders and has no feed to re-fetch, so it belongs on the discovery path
+  # with every other credentialed provider.
   defp refresh_one(%{provider: provider} = integration) do
     if ProviderConfig.subscription?(provider) do
       %{"calendar_integration_id" => integration.id}

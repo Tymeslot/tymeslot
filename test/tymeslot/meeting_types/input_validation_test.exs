@@ -138,6 +138,72 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
     end
   end
 
+  describe "validate_meeting_type_form/2 - slot_interval" do
+    test "accepts a blank slot interval (means: same as meeting length)" do
+      params = %{
+        "name" => "Chat",
+        "duration" => "30",
+        "slot_interval" => "",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["slot_interval"] == ""
+    end
+
+    test "accepts a missing slot interval (means: same as meeting length)" do
+      params = %{
+        "name" => "Chat",
+        "duration" => "30",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["slot_interval"] == ""
+    end
+
+    test "accepts a valid slot interval" do
+      params = %{
+        "name" => "Chat",
+        "duration" => "30",
+        "slot_interval" => "15",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["slot_interval"] == "15"
+    end
+
+    test "rejects a slot interval below 5 minutes" do
+      params = %{
+        "name" => "Chat",
+        "duration" => "30",
+        "slot_interval" => "4",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
+      assert errors[:slot_interval] == "Slot interval must be at least 5 minutes"
+    end
+
+    test "rejects a slot interval above 480 minutes" do
+      params = %{
+        "name" => "Chat",
+        "duration" => "30",
+        "slot_interval" => "481",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
+      assert errors[:slot_interval] == "Slot interval cannot exceed 480 minutes"
+    end
+  end
+
   describe "validate_meeting_type_form/2 - description" do
     test "accepts optional empty description" do
       params = %{

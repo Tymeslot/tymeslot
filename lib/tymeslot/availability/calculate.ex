@@ -14,6 +14,7 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:schedule_id) => pos_integer(),
           optional(:max_advance_booking_days) => pos_integer(),
           optional(:duration_minutes) => pos_integer(),
+          optional(:slot_interval_minutes) => pos_integer() | nil,
           optional(:buffer_minutes) => non_neg_integer(),
           optional(:weekly_schedule) => list(term()),
           optional(:overrides) => list(term()),
@@ -72,6 +73,7 @@ defmodule Tymeslot.Availability.Calculate do
       ) do
     duration_minutes = duration_minutes |> max(1) |> min(1440)
     schedule_id = Map.get(config, :schedule_id)
+    slot_interval_minutes = Map.get(config, :slot_interval_minutes)
 
     # Prefetch schedule data once for all adjacent-day lookups
     config = prefetch_schedule_data(config, schedule_id, Date.add(date, -1), Date.add(date, 1))
@@ -103,7 +105,9 @@ defmodule Tymeslot.Availability.Calculate do
                 window.end_dt,
                 duration_minutes,
                 date,
-                breaks
+                breaks,
+                slot_interval_minutes,
+                owner_timezone
               )
 
             Conflicts.filter_available_slots(

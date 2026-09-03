@@ -121,6 +121,7 @@ msgstr "Immagine del profilo"
 msgid "Profile Settings"
 msgstr "Impostazioni del profilo"
 
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
@@ -230,3 +231,45 @@ msgstr "Formato ora"
 #, elixir-autogen, elixir-format
 msgid "Time format updated"
 msgstr "Formato ora aggiornato"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} poll still waiting on votes"
+msgid_plural "%{count} polls still waiting on votes"
+msgstr[0] "%{count} sondaggio in attesa di voti"
+msgstr[1] "%{count} sondaggi in attesa di voti"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{url} will stop working immediately. Links that already point there cannot be recovered."
+msgstr "%{url} smetterà di funzionare immediatamente. I link che puntano già lì non sono recuperabili."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change URL"
+msgstr "Cambia URL"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Change your URL to %{username}?"
+msgstr "Cambiare il tuo URL in %{username}?"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Once released, %{username} can be claimed by anyone else."
+msgstr "Una volta rilasciato, %{username} può essere richiesto da chiunque altro."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This breaks:"
+msgstr "Questo interrompe:"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "links inside confirmation and reminder emails already sent"
+msgstr "i link nelle email di conferma e promemoria già inviate"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "your booking page and every event link on it"
+msgstr "la tua pagina di prenotazione e ogni link agli eventi che contiene"

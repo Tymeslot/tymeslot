@@ -46,6 +46,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
       attrs = %{
         name: params["name"],
         duration_minutes: duration_minutes,
+        slot_interval_minutes: parse_optional_interval(params["slot_interval"]),
         description: params["description"],
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
@@ -107,6 +108,19 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   end
 
   defp parse_duration(_value), do: {:error, :invalid_duration}
+
+  # Blank means "use the meeting type's own duration"; out-of-range values are
+  # left to the changeset.
+  defp parse_optional_interval(value) when is_integer(value), do: value
+
+  defp parse_optional_interval(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {interval, ""} -> interval
+      _other -> nil
+    end
+  end
+
+  defp parse_optional_interval(_value), do: nil
 
   defp booking_limits(params) do
     Map.new(Constraints.booking_limit_fields(), fn field ->

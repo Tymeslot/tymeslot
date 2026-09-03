@@ -64,6 +64,14 @@ defmodule Mix.Tasks.Precommit do
     {"deps.unlock", ~w[deps.unlock --check-unused], :dev},
     {"compile", ~w[compile --warnings-as-errors], :dev},
     {"compile (test)", ~w[compile --warnings-as-errors], :test},
+    # Catches user-facing copy that was written but never extracted. Nothing
+    # else does: `GettextCompletenessTest` compares the `.po` catalogues
+    # against the `.pot` templates, so a template that is itself stale looks
+    # complete to it, and a whole feature's strings can reach a release
+    # English-only in every other locale. It sits here because it is a compile
+    # (the extractor is a compiler pass), so it belongs behind the two compile
+    # barriers and in front of the steps that only read the build.
+    {"gettext", ~w[gettext.extract --check-up-to-date], :dev},
     {"credo", ~w[credo --strict], :dev},
     {"sobelow", ~w[sobelow], :dev},
     {"deps.audit", ~w[deps.audit], :dev},

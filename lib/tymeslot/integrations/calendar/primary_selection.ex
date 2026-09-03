@@ -30,11 +30,12 @@ defmodule Tymeslot.Integrations.Calendar.PrimarySelection do
     end)
   end
 
-  # A subscription is read-only, so it can never be the calendar bookings are
-  # written to. Promoting one would leave a user whose only calendar is a
-  # subscription with a primary that fails every booking write.
+  # A read-only provider can never be the calendar bookings are written to.
+  # Promoting one would leave a user whose only calendar is a subscribed feed
+  # or a read-only Exchange mailbox with a primary that fails every booking
+  # write.
   defp maybe_set_as_primary(%{provider: provider} = integration) do
-    if ProviderConfig.subscription?(provider) do
+    if ProviderConfig.read_only?(provider) do
       integration
     else
       do_maybe_set_as_primary(integration)

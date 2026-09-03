@@ -43,6 +43,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     :ics_url,
     :google,
     :outlook,
+    :exchange,
     :demo
   ]
   @dev_only_providers [:debug]
@@ -53,6 +54,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   # `@providers` is missing from it, filed twice, or filed under a family
   # outside the shared vocabulary — so adding a provider, or a family, is one
   # edit here.
+  #
+  # EWS providers speak SOAP over HTTPS with credentials. They are deliberately
+  # not CalDAV — no PROPFIND discovery, no href/etag model — and not OAuth,
+  # because on-premises Exchange authenticates with Windows credentials rather
+  # than a token endpoint. Filing one under `:caldav` would have
+  # `ProviderAdapter` and `CaldavCommon` build a CalDAV client for a SOAP
+  # provider.
   #
   # Subscription providers subscribe to a published feed rather than talking a
   # calendar protocol. They are deliberately *not* CalDAV-family: they carry
@@ -65,6 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @provider_families %{
     oauth: [:google, :outlook],
     caldav: [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal],
+    ews: [:exchange],
     subscription: [:ics_url],
     other: [:demo, :debug]
   }
@@ -74,9 +83,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   # predicates below.
   @family_index Families.build_index(@provider_families, @providers ++ @dev_only_providers)
 
+  # Providers whose module refuses every write. See `read_only?/1`.
+  @read_only_providers [:ics_url, :exchange]
+
   @oauth_providers Families.members(@provider_families, :oauth)
   @caldav_based_providers Families.members(@provider_families, :caldav)
   @caldav_based_provider_strings Families.member_strings(@provider_families, :caldav)
+  @ews_providers Families.members(@provider_families, :ews)
+  @ews_provider_strings Families.member_strings(@provider_families, :ews)
   @subscription_provider_strings Families.member_strings(@provider_families, :subscription)
 
   # Compile-time lookup from the provider's string form to its atom, covering
@@ -204,6 +218,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
+    exchange: %{
+      icon: "exchange",
+      description:
+        dgettext_noop(
+          "dashboard_calendar_providers",
+          "On-premises Microsoft Exchange Server, read-only"
+        ),
+      button_text: "Connect Exchange",
+      click_event: "connect_provider",
+      circuit_breaker_enabled: true
+    },
     demo: %{
       icon: "demo",
       description: dgettext_noop("dashboard_calendar_providers", "Homepage demo provider"),
@@ -303,6 +328,48 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @spec subscription?(atom() | String.t() | any()) :: boolean()
   def subscription?(provider), do: in_family?(provider, :subscription)
 
+  @doc """
+  Checks whether a provider can never receive a booking.
+
+  A read-only provider's module refuses every write (`create_event/2` and
+  friends answer `{:error, :read_only}`), so one of its calendars blocks
+  availability but can never be the calendar an accepted booking is written
+  to. Two things follow, and both are enforced by callers rather than here:
+  such an integration must not be promoted to the user's primary, and its
+  calendar entries must not be offered as a default booking target.
+
+  Kept as its own list rather than derived from a family, because it cuts
+  across two of them: a subscribed feed and a read-only Exchange mailbox are
+  read-only for entirely different reasons, and a future writable EWS phase
+  would remove `:exchange` from here without touching the `:ews` family.
+  """
+  @spec read_only?(atom() | String.t() | any()) :: boolean()
+  def read_only?(provider) do
+    case parse_known(provider) do
+      {:ok, atom} -> atom in @read_only_providers
+      {:error, :unknown} -> false
+    end
+  end
+
+  @doc """
+  Returns EWS-based providers.
+  """
+  @spec ews_providers() :: list(atom())
+  def ews_providers, do: @ews_providers
+
+  @doc """
+  Returns EWS-based providers as strings, for matching against database
+  string values such as `integration.provider`.
+  """
+  @spec ews_provider_strings() :: list(String.t())
+  def ews_provider_strings, do: @ews_provider_strings
+
+  @doc """
+  Checks if a provider speaks Exchange Web Services. Accepts atom or string.
+  """
+  @spec ews?(atom() | String.t() | any()) :: boolean()
+  def ews?(provider), do: in_family?(provider, :ews)
+
   # Order follows @providers — the canonical provider list — for deterministic results.
   @providers_with_circuit_breakers for p <- @providers,
                                        get_in(@provider_metadata, [p, :circuit_breaker_enabled]),
@@ -311,8 +378,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @doc """
   Returns providers that have circuit-breaker monitoring enabled.
 
-  Ordered to match `@providers`. Includes both CalDAV-based and OAuth providers;
-  excludes providers whose metadata sets `circuit_breaker_enabled: false`.
+  Ordered to match `@providers`. Spans every provider family — CalDAV-based,
+  OAuth and EWS; excludes providers whose metadata sets
+  `circuit_breaker_enabled: false`.
   """
   @spec providers_with_circuit_breakers() :: list(atom())
   def providers_with_circuit_breakers, do: @providers_with_circuit_breakers
@@ -527,6 +595,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
+  def display_name(:exchange), do: "Microsoft Exchange"
   def display_name(:debug), do: "Debug Provider"
   def display_name(:demo), do: "Demo Provider"
   def display_name(_provider), do: "Unknown Provider"
@@ -551,6 +620,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   def get_provider_module(:google), do: Tymeslot.Integrations.Calendar.Google.Provider
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider
+  def get_provider_module(:exchange), do: Tymeslot.Integrations.Calendar.Exchange.Provider
   def get_provider_module(:debug), do: Tymeslot.Integrations.Calendar.DebugCalendarProvider
   def get_provider_module(:demo), do: Tymeslot.Integrations.Calendar.DemoCalendarProvider
   def get_provider_module(_provider), do: nil

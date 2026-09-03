@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   separated from primary calendar logic and discovery operations.
   """
 
+  alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
@@ -13,7 +14,6 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
@@ -381,11 +381,8 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     :ok
   end
 
-  defp maybe_rebalance_primary(
-         %{is_active: true, id: updated_id, user_id: uid},
-         _current_primary_id
-       ) do
-    ensure_primary_on_activate(uid, updated_id)
+  defp maybe_rebalance_primary(%{is_active: true} = updated, _current_primary_id) do
+    ensure_primary_on_activate(updated)
     :ok
   end
 
@@ -395,7 +392,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     eligible =
       user_id
       |> list_active_calendar_integrations()
-      |> Enum.reject(&ProviderConfig.subscription?(&1.provider))
+      |> BookingEligibility.filter_bookable()
 
     case eligible do
       [] ->
@@ -407,15 +404,24 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     end
   end
 
-  defp ensure_primary_on_activate(user_id, updated_id) do
-    case CalendarPrimary.get_primary_calendar_integration(user_id) do
-      {:ok, primary} ->
-        if primary.is_active == false do
-          CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
-        end
+  # Activating an integration adopts it as the primary when the user has none
+  # or the one they have is inactive. A read-only integration is never adopted:
+  # it blocks time but refuses every write, so promoting it would leave the
+  # user with a primary that fails every booking. Leaving the primary as it
+  # stands is the safe answer here; the user still has a working calendar to
+  # promote, and `set_primary_calendar_integration/2` would refuse this one
+  # anyway.
+  defp ensure_primary_on_activate(%{id: updated_id, user_id: user_id} = updated) do
+    if BookingEligibility.bookable?(updated) do
+      case CalendarPrimary.get_primary_calendar_integration(user_id) do
+        {:ok, primary} ->
+          if primary.is_active == false do
+            CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
+          end
 
-      {:error, _reason} ->
-        CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
+        {:error, _reason} ->
+          CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
+      end
     end
   end
 end

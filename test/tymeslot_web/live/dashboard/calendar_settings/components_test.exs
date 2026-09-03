@@ -9,46 +9,84 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
 
   describe "calendar_summary/1" do
     test "names the booking target when it is confirmed and writable" do
-      integration = %{
-        provider_account_email: nil,
-        is_active: false,
-        last_sync_at: nil,
-        default_booking_calendar_id: "cal-writable",
-        calendar_list: [
-          %CalendarEntry{id: "cal-writable", name: "Work", read_only: false, primary: true}
-        ]
-      }
+      integration =
+        summary_integration(
+          default_booking_calendar_id: "cal-writable",
+          calendar_list: [
+            %CalendarEntry{id: "cal-writable", name: "Work", read_only: false, primary: true}
+          ]
+        )
 
       assert Components.calendar_summary(integration) == "books into Work"
     end
 
-    test "surfaces a warning instead of silently dropping the segment when the configured booking target is read-only" do
-      integration = %{
-        provider_account_email: nil,
-        is_active: false,
-        last_sync_at: nil,
-        default_booking_calendar_id: "cal-readonly",
-        calendar_list: [
-          %CalendarEntry{id: "cal-readonly", name: "Holidays", read_only: true, primary: false}
-        ]
-      }
+    test "warns when a writable provider's configured booking target has turned read-only" do
+      integration =
+        summary_integration(
+          default_booking_calendar_id: "cal-readonly",
+          calendar_list: [
+            %CalendarEntry{id: "cal-readonly", name: "Holidays", read_only: true, primary: false}
+          ]
+        )
+
+      assert Components.calendar_summary(integration) ==
+               "booking target can no longer accept bookings"
+    end
+
+    test "warns when a writable provider's primary calendar has turned read-only" do
+      integration =
+        summary_integration(
+          default_booking_calendar_id: nil,
+          calendar_list: [
+            %CalendarEntry{id: "cal-primary", name: "Work", read_only: true, primary: true}
+          ]
+        )
 
       assert Components.calendar_summary(integration) ==
                "booking target can no longer accept bookings"
     end
 
     test "stays silent (no warning) when no booking target has ever been configured" do
-      integration = %{
-        provider_account_email: nil,
-        is_active: false,
-        last_sync_at: nil,
-        default_booking_calendar_id: nil,
-        calendar_list: [
-          %CalendarEntry{id: "cal-a", name: "A", read_only: false, primary: false}
-        ]
-      }
+      integration =
+        summary_integration(
+          default_booking_calendar_id: nil,
+          calendar_list: [
+            %CalendarEntry{id: "cal-a", name: "A", read_only: false, primary: false}
+          ]
+        )
 
       assert Components.calendar_summary(integration) == ""
+    end
+
+    # A provider that is read-only by construction never lost an ability, so
+    # it gets the description rather than the "no longer" warning that tells a
+    # user their bookings have started failing.
+    test "describes an Exchange mailbox as read-only rather than reporting a breakage" do
+      integration =
+        summary_integration(
+          provider: "exchange",
+          default_booking_calendar_id: "cal-mailbox",
+          calendar_list: [
+            %CalendarEntry{id: "cal-mailbox", name: "Calendar", read_only: true, primary: true}
+          ]
+        )
+
+      assert Components.calendar_summary(integration) ==
+               "read-only, blocks time but takes no bookings"
+    end
+
+    test "describes a subscribed feed as read-only rather than reporting a breakage" do
+      integration =
+        summary_integration(
+          provider: "ics_url",
+          default_booking_calendar_id: nil,
+          calendar_list: [
+            %CalendarEntry{id: "cal-feed", name: "Team feed", read_only: true, primary: true}
+          ]
+        )
+
+      assert Components.calendar_summary(integration) ==
+               "read-only, blocks time but takes no bookings"
     end
   end
 
@@ -202,6 +240,39 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
     end
   end
 
+  describe "calendar_connection_row read-only badge" do
+    # The badge asks "can this take a booking?", which the Exchange mailbox
+    # answers no to. The two actions beside it ask a narrower question, "is
+    # this a feed?", and a mailbox answers no to that: it has folders to manage
+    # and credentials to re-enter.
+    test "an Exchange mailbox is badged read-only and keeps its manage and reconnect actions" do
+      integration = %{
+        id: 21,
+        name: "Work mailbox",
+        provider: "exchange",
+        is_active: true,
+        needs_reauth: false,
+        calendar_list: [],
+        calendar_paths: [],
+        base_url: "https://exchange.example.com/EWS/Exchange.asmx",
+        is_primary: false,
+        default_booking_calendar_id: nil,
+        provider_account_email: nil
+      }
+
+      html =
+        render_component(&Components.calendar_connection_row/1,
+          integration: integration,
+          health_state: nil,
+          myself: "target"
+        )
+
+      assert html =~ "Read-only"
+      assert html =~ ~s(phx-click="manage_calendars")
+      assert html =~ ~s(phx-click="show_reconnect")
+    end
+  end
+
   describe "calendar_connection_row desktop icon-only actions" do
     # On desktop the Manage-calendars and Reconnect actions collapse to
     # icon-only squares; their labels live in an `lg:hidden` span (shown on
@@ -314,5 +385,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       # style — the promoted attention styling is reserved for needs_reauth.
       refute html =~ "bg-amber-50"
     end
+  end
+
+  # Every persisted integration carries a provider, and the summary now
+  # branches on it, so the fixture carries one too: a bare map without
+  # `:provider` would exercise a shape production never produces.
+  defp summary_integration(attrs) do
+    Map.merge(
+      %{
+        provider: "caldav",
+        provider_account_email: nil,
+        is_active: false,
+        last_sync_at: nil,
+        default_booking_calendar_id: nil,
+        calendar_list: []
+      },
+      Map.new(attrs)
+    )
   end
 end

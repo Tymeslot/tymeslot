@@ -230,6 +230,8 @@ cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=smtp EMAIL_FROM_NAM
 
 Any provider without an entry above works over SMTP. An `EMAIL_ADAPTER` value Tymeslot does not recognise stops the app at boot rather than discarding mail silently, so a typo here surfaces immediately in `cloudron logs`.
 
+Ports 587 (STARTTLS) and 465 (implicit TLS) are both supported, and the relay's certificate is verified against the system trust store. Pointing `SMTP_HOST` at your own mail server usually needs one more variable, because a self-hosted relay commonly serves a self-signed certificate: set `SMTP_CACERTFILE` to a PEM bundle containing the CA that issued it, or, as a last resort where there is no CA to trust, `SMTP_TLS_VERIFY=none` to accept any certificate. The second still encrypts the connection but stops checking the relay's identity.
+
 
 ---
 

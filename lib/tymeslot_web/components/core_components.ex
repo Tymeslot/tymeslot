@@ -173,6 +173,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   attr :options, :list
   attr :multiple, :boolean, default: false
   attr :required, :boolean, default: false
+  attr :disabled, :boolean, default: false
   attr :placeholder, :string, default: nil
   attr :rows, :integer, default: 4
   attr :icon, :string, default: nil

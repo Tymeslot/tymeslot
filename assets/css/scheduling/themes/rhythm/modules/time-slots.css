@@ -115,3 +115,38 @@
     max-height: 100%;
   }
 }
+
+/* ===== Two-Tier Hour Picker ===== */
+/* No max-height on the minute grid: .time-slots-grid above it already owns the
+   single scroll region for this panel, and a nested one would produce two
+   scrollbars at short heights. */
+
+.time-slot--hour {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3xs);
+}
+
+/* The open hour has to be unmistakable, and it has to differ from .selected:
+   both can be on screen at once on different hours, and a border colour alone
+   made them identical. The minute drawer renders beneath the whole row, not
+   beneath the button that opened it, so this state is the only thing tying
+   the two together. */
+.time-slot--hour.expanded {
+  background: var(--surface-intense);
+  border-color: var(--theme-primary);
+  color: var(--theme-primary);
+  box-shadow: var(--shadow-primary-sm);
+}
+
+/* A contained drawer rather than a left rule. The rule sat at the row's left
+   edge, which is the first hour in the row and not the open one, so it
+   pointed at the wrong button whenever the open hour was not first. */
+.time-period-slots--minutes {
+  margin-top: var(--space-xs);
+  padding: var(--space-2xs);
+  background: var(--surface-subtle);
+  border: var(--border-width-thin) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}

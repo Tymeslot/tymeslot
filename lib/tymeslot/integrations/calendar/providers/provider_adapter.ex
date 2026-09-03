@@ -44,9 +44,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Creates a new adapter client from a persisted `CalendarIntegrationSchema`.
 
-  Handles the CalDAV-vs-OAuth branching and credential decryption internally.
-  CalDAV providers decrypt credentials and create a real client via `ProviderRegistry`;
-  OAuth providers use the integration struct directly as the client.
+  Handles the CalDAV-vs-everything-else branching and credential decryption
+  internally. CalDAV providers decrypt credentials and create a real client via
+  `ProviderRegistry`; every other provider takes the integration struct itself
+  as the client and reads what it needs from there — OAuth providers because
+  the tokens live on the struct, EWS because a CalDAV-shaped config carries
+  neither `verify_ssl` nor the mailbox address its availability read needs.
 
   Returns `{:ok, adapter_client()}` or `{:error, reason}`.
   """

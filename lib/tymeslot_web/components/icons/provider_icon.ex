@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   @oauth_only_providers ~w(github oauth)
   @calendar_providers ~w(
     google_calendar outlook outlook_calendar nextcloud nextcloud_calendar
-    caldav radicale zimbra mailbox_org apple baikal ics_url
+    caldav radicale zimbra mailbox_org apple baikal ics_url exchange
   )
 
   @doc """
@@ -88,6 +88,12 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   # A subscription has no vendor behind it — the feed can come from anywhere —
   # so there is no logo to size-tier. Point at the bundled generic SVG.
   defp build_icon_path("ics_url", _type, _size), do: "/icons/providers/calendar/ics_url.svg"
+
+  # Exchange is a server product rather than a consumer brand, and reproducing
+  # Microsoft's mark at three resolutions is not something to improvise. Point
+  # at a bundled generic SVG — which scales to any size — instead of a
+  # non-existent exchange.webp.
+  defp build_icon_path("exchange", _type, _size), do: "/icons/providers/calendar/exchange.svg"
 
   defp build_icon_path(provider, type, size) do
     # Determine the type based on provider if not explicitly set

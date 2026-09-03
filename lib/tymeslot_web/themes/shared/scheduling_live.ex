@@ -36,19 +36,25 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       use TymeslotWeb, :live_view
       require Logger
 
-      alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, OrganizerHelpers}
+      alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, CalendarHelpers, OrganizerHelpers}
 
-      alias TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent
+      alias TymeslotWeb.Live.Scheduling.Handlers.{
+        SlotFetchingHandlerComponent,
+        TimezoneHandlerComponent
+      }
 
       alias TymeslotWeb.Themes.Shared.BookingFlow
       alias TymeslotWeb.Themes.Shared.GuestBooking
+
+      alias TymeslotWeb.Components.MeetingUtils
 
       alias TymeslotWeb.Themes.Shared.{
         EventHandlers,
         InfoHandlers,
         LiveHelpers,
         PathHandlers,
-        SchedulingInit
+        SchedulingInit,
+        SlotGrouping
       }
 
       alias TymeslotWeb.Themes.Shared.StateMachineHelpers, as: StateMachine
@@ -213,6 +219,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           event in [:select_date, :select_time] ->
             handle_schedule_selection_events(socket, event, data)
 
+          event == :toggle_hour ->
+            handle_toggle_hour(socket, data)
+
           event in [
             :change_timezone,
             :search_timezone,
@@ -242,6 +251,37 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             {:noreply, assign(socket, :selected_time, new_time)}
         end
       end
+
+      # `expanded_hour` holds three states, not two: nil means "not chosen, so
+      # open the earliest hour", an integer means that hour, and :none means the
+      # booker closed it and it must stay closed until they choose again.
+      #
+      # `hour` is guarded to a binary because event payloads for non-"form"
+      # events reach `handle_event/3` verbatim from client JSON with no type
+      # coercion — a crafted socket push can deliver a list or map here, which
+      # `Integer.parse/1` has no clause for. A non-binary payload is ignored,
+      # leaving state untouched, the same way an unparsable string already is.
+      defp handle_toggle_hour(socket, hour) when is_binary(hour) do
+        grouping =
+          SlotGrouping.group(
+            MeetingUtils.normalize_slot_list(socket.assigns[:available_slots] || []),
+            socket.assigns[:slot_interval_minutes],
+            socket.assigns[:duration_minutes]
+          )
+
+        current = SlotGrouping.effective_expanded_hour(socket.assigns[:expanded_hour], grouping)
+
+        next =
+          case Integer.parse(hour) do
+            {^current, ""} -> :none
+            {requested, ""} -> requested
+            _unparsable -> socket.assigns[:expanded_hour]
+          end
+
+        {:noreply, assign(socket, :expanded_hour, next)}
+      end
+
+      defp handle_toggle_hour(socket, _hour), do: {:noreply, socket}
 
       defp handle_timezone_events(socket, event, data) do
         callbacks = %{
@@ -414,7 +454,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       end
 
       defp handle_state_entry(socket, :schedule, params) do
-        LiveHelpers.handle_schedule_entry(socket, params)
+        socket
+        |> LiveHelpers.handle_schedule_entry(params)
+        |> refresh_stale_slot_snapshot()
       end
 
       defp handle_state_entry(socket, :questions, _params) do
@@ -438,6 +480,42 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       defp handle_state_entry(socket, _state, _params), do: socket
 
+      # `:available_slots`, `:duration_minutes`, `:slot_interval_minutes` and
+      # `:expanded_hour` are snapshotted by `SlotFetchingHandlerComponent` at
+      # fetch time and do not track a meeting-type/duration change made while
+      # away from this step (e.g. back to :overview, pick a different
+      # duration, forward again). Only compare against a snapshot that
+      # actually exists (`:duration_minutes` non-nil) — the very first entry
+      # into :schedule has no snapshot yet and nothing stale to refresh.
+      defp refresh_stale_slot_snapshot(socket) do
+        case socket.assigns[:duration_minutes] do
+          nil ->
+            socket
+
+          snapshot_duration ->
+            current_duration = AvailabilityHelpers.duration_minutes(socket)
+            current_interval = AvailabilityHelpers.slot_interval_minutes(socket)
+
+            if snapshot_duration == current_duration and
+                 socket.assigns[:slot_interval_minutes] == current_interval do
+              socket
+            else
+              socket
+              |> assign(
+                available_slots: [],
+                selected_time: nil,
+                expanded_hour: nil,
+                duration_minutes: nil,
+                slot_interval_minutes: nil
+              )
+              |> then(fn socket ->
+                {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
+                socket
+              end)
+            end
+        end
+      end
+
       defp handle_state_transition(socket, current_state, next_state) do
         callbacks = %{
           validate_state_transition: &validate_state_transition/3,
@@ -460,11 +538,18 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # Defensive on the nil date: neither theme's day button deselects any
       # more, so nothing reaches here with nil today. The guard stays because
       # sending {:load_slots, nil} would fetch slots for no day at all.
+      #
+      # Resets `:expanded_hour` here, at the point the booker actively picks
+      # a date, rather than in the fetch that follows: the fetch also runs
+      # for refetches the booker did not cause a date change with (a
+      # timezone change, a lost-slot retry), which must not spring a
+      # deliberately collapsed `:none` back open.
       defp handle_schedule_date_selection(socket, date) do
         socket =
           assign(socket,
             selected_date: date,
             selected_time: nil,
+            expanded_hour: nil,
             loading_slots: date != nil,
             calendar_error: nil
           )
@@ -476,7 +561,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # Step navigation — shared across all themes.
       # Uses states_for/1 so that the step numbers match the active state map
       # (4 steps without custom fields, 5 steps with).
-      defp handle_theme_event("navigate_to_step", %{"step" => step}, socket) do
+      # `step` is guarded to a binary for the same reason `handle_toggle_hour/2`
+      # above is: a crafted socket push can deliver a non-binary payload, which
+      # `Integer.parse/1` has no clause for.
+      defp handle_theme_event("navigate_to_step", %{"step" => step}, socket)
+           when is_binary(step) do
         states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
 
         target_step =
@@ -498,6 +587,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           {:noreply, socket}
         end
       end
+
+      defp handle_theme_event("navigate_to_step", _params, socket), do: {:noreply, socket}
 
       # Extension point for theme-specific handle_event clauses.
       # Override with multi-clause defp to handle custom events.

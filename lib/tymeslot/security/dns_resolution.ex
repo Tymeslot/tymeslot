@@ -5,6 +5,19 @@ defmodule Tymeslot.Security.DnsResolutionBehaviour do
   """
 
   @callback check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
+
+  @doc """
+  Same check as `check_private_ip/2`, but returns the addresses it approved so
+  the caller can connect to one of them instead of resolving a second time.
+
+  Optional: a resolver that does not implement it simply cannot be pinned to,
+  and its callers fall back to validating by hostname alone. Test doubles are
+  the expected case.
+  """
+  @callback resolve_public(String.t(), keyword()) ::
+              {:ok, [:inet.ip_address()]} | {:error, String.t()}
+
+  @optional_callbacks resolve_public: 2
 end
 
 defmodule Tymeslot.Security.DnsResolution do
@@ -17,10 +30,12 @@ defmodule Tymeslot.Security.DnsResolution do
   closes the multi-record variant of DNS-based SSRF: an attacker cannot hide a
   private address behind a round-robin set that includes a public address.
 
-  Note: a residual TOCTOU window exists between this check and the TCP connect
-  performed by Finch, which re-resolves DNS independently.  This matches the
-  posture of `Tymeslot.Webhooks.SsrfValidator`.  True connection-IP pinning
-  would require a custom Mint/Finch transport and is deferred.
+  `resolve_public/2` returns the approved addresses so a caller can connect to
+  one of them directly rather than letting Finch resolve the hostname a second
+  time. That second resolution is the DNS-rebinding window: a short-TTL record
+  can answer public here and loopback by the time the socket opens.
+  `Tymeslot.Security.ConnectionPinning` turns those addresses into the
+  request options that close it.
 
   For string-based (non-resolving) private IP checks at changeset time,
   use `Tymeslot.Security.UrlValidation` with `block_private_ips: true`.
@@ -35,6 +50,25 @@ defmodule Tymeslot.Security.DnsResolution do
   @impl Tymeslot.Security.DnsResolutionBehaviour
   @spec check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
   def check_private_ip(url, opts \\ []) do
+    case resolve_public(url, opts) do
+      {:ok, _addresses} -> :ok
+      {:error, message} -> {:error, message}
+    end
+  end
+
+  @doc """
+  Resolves `url`'s hostname and returns every approved address, IPv4 first.
+
+  Same verdict as `check_private_ip/2` — any private, loopback, link-local or
+  unspecified address in the answer rejects the whole URL — but the addresses
+  come back so the connection can be pinned to one of them. Resolving here and
+  connecting there is what makes the check binding; resolving twice only makes
+  it advisory.
+  """
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  @spec resolve_public(String.t(), keyword()) ::
+          {:ok, [:inet.ip_address()]} | {:error, String.t()}
+  def resolve_public(url, opts \\ []) do
     error_message = Keyword.get(opts, :error_message, @default_error)
 
     case URI.parse(url).host do
@@ -63,7 +97,7 @@ defmodule Tymeslot.Security.DnsResolution do
         {:error, error_message}
 
       true ->
-        :ok
+        {:ok, ipv4_addrs ++ ipv6_addrs}
     end
   end
 

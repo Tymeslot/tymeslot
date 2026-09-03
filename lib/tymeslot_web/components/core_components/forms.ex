@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
   attr :required, :boolean, default: false
+  attr :disabled, :boolean, default: false
   attr :placeholder, :string, default: nil
   attr :icon, :string, default: nil, doc: "optional hero icon name rendered inside the input"
 
@@ -98,7 +99,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     assigns =
       assigns
       |> assign(:error_id, error_id)
-      |> assign(:rest, Map.merge(error_aria(assigns.errors, error_id), assigns.rest))
+      |> assign(
+        :rest,
+        assigns.errors
+        |> error_aria(error_id)
+        |> Map.merge(html_constraints(assigns))
+        |> disabled_attr(assigns.disabled)
+        |> Map.merge(assigns.rest)
+      )
 
     ~H"""
     <div class={["form-field-wrapper", @class]}>
@@ -269,6 +277,26 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       {@rest}
     />
     """
+  end
+
+  # The HTML constraint attributes are *declared*, so `:global` never collects
+  # them and they would otherwise be dropped on the floor: `input_element/1`
+  # spreads `@rest` and nothing else. Folding them into `@rest` here is what
+  # makes `maxlength={60}` reach the rendered input. Unset ones stay out of the
+  # map rather than rendering as empty attributes.
+  @html_constraints [:min, :max, :step, :minlength, :maxlength, :pattern]
+
+  # `disabled` is a form attribute, not one of Phoenix's HTML globals, so it has
+  # to be declared and threaded through by hand. Only the true case is merged:
+  # `disabled={false}` must leave no attribute behind at all.
+  defp disabled_attr(rest, true), do: Map.put(rest, :disabled, true)
+  defp disabled_attr(rest, _disabled), do: rest
+
+  defp html_constraints(assigns) do
+    Map.reject(
+      Map.new(@html_constraints, &{&1, assigns[&1]}),
+      fn {_key, value} -> is_nil(value) end
+    )
   end
 
   # ========== HELPERS ==========

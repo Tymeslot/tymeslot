@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Components.UITest do
       assigns = %{id: "switch-1", checked: true, on_change: "toggle"}
       html = render_component(&StatusSwitch.status_switch/1, assigns)
 
-      assert html =~ "aria-checked"
+      assert html =~ ~s(aria-checked="true")
       assert html =~ "status-toggle--active"
       assert html =~ "status-toggle-slider--active"
       # Active icon (checkmark) should be visible
@@ -64,10 +64,22 @@ defmodule TymeslotWeb.Components.UITest do
       assigns = %{id: "switch-1", checked: false, on_change: "toggle"}
       html = render_component(&StatusSwitch.status_switch/1, assigns)
 
-      # When false, aria-checked attribute is omitted by Phoenix
-      refute html =~ "aria-checked"
+      # `role="switch"` is only meaningful with an explicit aria-checked, so the
+      # false case has to render the attribute rather than drop it. Interpolating
+      # the boolean directly omits it, which reads to assistive tech as a switch
+      # with no state at all.
+      assert html =~ ~s(aria-checked="false")
       assert html =~ "status-toggle--inactive"
       refute html =~ "status-toggle-slider--active"
+    end
+
+    test "renders an explicit button type so it can sit inside a form" do
+      assigns = %{id: "switch-1", checked: false, on_change: "toggle"}
+      html = render_component(&StatusSwitch.status_switch/1, assigns)
+
+      # A bare <button> in a form defaults to type="submit", so without this the
+      # switch would submit the surrounding form instead of toggling.
+      assert html =~ ~s(type="button")
     end
 
     test "renders in disabled state" do

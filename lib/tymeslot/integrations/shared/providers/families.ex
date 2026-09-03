@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Providers.Families do
 
   # Ordered as the calendar picker renders them. `:other` is the catch-all, so
   # it sorts last rather than above a named group.
-  @families [:oauth, :caldav, :subscription, :other]
+  @families [:oauth, :caldav, :ews, :subscription, :other]
 
   @typedoc """
   How a provider connects, for grouping in the picker. `oauth` alone cannot
@@ -42,7 +42,7 @@ defmodule Tymeslot.Integrations.Providers.Families do
   belong under different headings, and filing a feed under "CalDAV servers"
   tells the user something untrue about what it is.
   """
-  @type t :: :oauth | :caldav | :subscription | :other
+  @type t :: :oauth | :caldav | :ews | :subscription | :other
 
   @typedoc "A domain's declaration of which of its providers belong to which family."
   @type table :: %{t() => [atom()]}

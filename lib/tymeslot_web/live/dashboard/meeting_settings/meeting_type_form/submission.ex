@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     %{
       "name" => Map.get(form_data, "name", ""),
       "duration" => Map.get(form_data, "duration", ""),
+      "slot_interval" => Map.get(form_data, "slot_interval", ""),
       "description" => Map.get(form_data, "description", ""),
       "is_active" => active_param(Map.get(assigns, :type)),
       "meeting_mode" => assigns.meeting_mode,

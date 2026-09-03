@@ -127,7 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         probe_and_cache(cache_key, actor, force_refresh, fn ->
           ErrorHandler.with_classified_error_handling(
             provider_atom,
-            fn -> dispatch_caldav_discovery(provider_atom, config) end,
+            fn -> dispatch_discovery(provider_atom, config) end,
             %{operation: "calendar_discovery"}
           )
         end)
@@ -170,7 +170,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     case resolve_provider_atom(provider) do
       {:ok, provider_atom} ->
         with {:ok, provider_module} <- provider_module_for(provider_atom),
-             client_config <- %{base_url: url, username: username, password: password},
+             client_config <- credentials_config(url, username, password, opts),
              :ok <-
                (case provider_module.validate_config(client_config) do
                   :ok -> :ok
@@ -391,15 +391,42 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   # to implement the optional `discover_calendars/1` callback; the
   # `caldav_based?` gate below filters them out before this is ever called
   # on one.
-  defp dispatch_caldav_discovery(provider_atom, config) do
-    if ProviderConfig.caldav_based?(provider_atom) do
-      {:ok, provider_module} = provider_module_for(provider_atom)
-      config |> provider_module.new() |> provider_module.discover_calendars()
-    else
-      {:error,
-       dgettext("dashboard_calendar_providers", "Unsupported provider: %{provider}",
-         provider: provider_atom
-       )}
+  # `verify_ssl` reaches discovery only when a caller passes it. It is not part
+  # of the CalDAV forms, which have no such control and rely on the schema's
+  # `true` default; the Exchange connection form does offer it, because an
+  # on-premises Exchange behind a self-signed certificate is the ordinary case
+  # rather than the exception, and discovery runs before the integration whose
+  # column would otherwise carry the setting exists.
+  defp credentials_config(url, username, password, opts) do
+    config = %{base_url: url, username: username, password: password}
+
+    case Keyword.fetch(opts, :verify_ssl) do
+      {:ok, verify_ssl} when is_boolean(verify_ssl) -> Map.put(config, :verify_ssl, verify_ssl)
+      _not_given -> config
+    end
+  end
+
+  # The two credentialed families discover through different shapes. A CalDAV
+  # provider's `new/1` answers a client struct the pipe hands straight on; an
+  # EWS provider's answers `{:ok, config}`, and its `discover_calendars/1`
+  # takes the config map itself. Piping an EWS `new/1` into
+  # `discover_calendars/1` would hand it a tuple, so the two are dispatched
+  # apart rather than through one pipeline that happens to fit only one of them.
+  defp dispatch_discovery(provider_atom, config) do
+    cond do
+      ProviderConfig.caldav_based?(provider_atom) ->
+        {:ok, provider_module} = provider_module_for(provider_atom)
+        config |> provider_module.new() |> provider_module.discover_calendars()
+
+      ProviderConfig.ews?(provider_atom) ->
+        {:ok, provider_module} = provider_module_for(provider_atom)
+        provider_module.discover_calendars(config)
+
+      true ->
+        {:error,
+         dgettext("dashboard_calendar_providers", "Unsupported provider: %{provider}",
+           provider: provider_atom
+         )}
     end
   end
 

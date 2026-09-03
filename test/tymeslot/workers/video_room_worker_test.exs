@@ -499,22 +499,6 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       refute_enqueued(worker: WebhookWorker)
     end
 
-    test "announces a job still carrying the legacy send_emails key", %{meeting: meeting} do
-      expect_mirotalk_success()
-
-      # Recovery snoozes span days, so jobs enqueued before `send_emails` was
-      # renamed outlive the deploy that renames it. Reading only the new key
-      # would take the `false` default and lose the very event they were queued
-      # to raise.
-      assert :ok =
-               perform_job(VideoRoomWorker, %{
-                 "meeting_id" => meeting.id,
-                 "send_emails" => true
-               })
-
-      assert_enqueued(worker: WebhookWorker)
-    end
-
     test "a room arriving after recovery announced the booking does not announce it twice" do
       %{meeting: meeting} = setup_future_meeting_scenario()
 

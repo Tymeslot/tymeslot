@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
+  alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
 
   # ---------------------------------------------------------------------------
   # Sync-collection REPORT (Tier 1)
@@ -94,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     """
     <?xml version="1.0" encoding="UTF-8"?>
     <d:sync-collection xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-      <d:sync-token>#{xml_escape(sync_token)}</d:sync-token>
+      <d:sync-token>#{XmlEscape.escape(sync_token)}</d:sync-token>
       <d:sync-level>1</d:sync-level>
       <d:prop>
         <d:getetag/>
@@ -252,22 +253,5 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     :exit, reason ->
       Logger.warning("Failed to parse CTag response", error: inspect(reason))
       {:ok, nil}
-  end
-
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Escapes a string for safe inclusion in XML content.
-  """
-  @spec xml_escape(String.t()) :: String.t()
-  def xml_escape(string) when is_binary(string) do
-    string
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&apos;")
   end
 end

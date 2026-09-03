@@ -146,4 +146,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Errors do
   def terminal_error?(:method_not_allowed), do: true
   def terminal_error?({:unexpected_status, status}) when status in 400..499, do: true
   def terminal_error?(_other), do: false
+
+  @doc """
+  Tells whether the server answered and its answer says it cannot serve a
+  request of this shape, however often it is asked.
+
+  Distinct from `terminal_error?/1`, which asks whether *this* request is worth
+  another attempt. This asks something narrower and longer-lived: whether the
+  feature the request depends on works at all on this server. A CalDAV server
+  may advertise an extension in its property list and then refuse every request
+  that uses it — Infomaniak advertises `sync-collection` and answers 500 to it —
+  and a caller with a working alternative should stop asking rather than retry
+  a capability that is not there.
+
+  A 5xx counts here even though it is retryable in general: it is retryable as
+  *this* request, and the caller is expected to act on a repeated one by
+  choosing a different request, not by giving up. Transport failures do not
+  count. A timeout or a refused connection is the server never answering, which
+  says nothing about which features it supports, and demoting on one would
+  abandon a working capability over a blip of packet loss.
+  """
+  @spec unsupported_request?(Base.error_reason() | term()) :: boolean()
+  def unsupported_request?(:method_not_allowed), do: true
+  def unsupported_request?(:server_error), do: true
+  def unsupported_request?(:invalid_response), do: true
+  def unsupported_request?({:unexpected_status, status}) when status in 400..599, do: true
+  def unsupported_request?(_other), do: false
 end

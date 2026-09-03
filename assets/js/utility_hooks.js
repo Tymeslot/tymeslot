@@ -152,6 +152,14 @@ const FOCUS_SOURCE_SELECTOR = '[data-testid="calendar-day"], .week-day-cell';
 
 export const AutoScrollToSlots = {
   mounted() {
+    // `data-slots-loaded` carries the selected date once slots have
+    // rendered (e.g. `data-slots-loaded="2026-09-01"`). Tracking that value
+    // (rather than just its presence) lets us tell a genuine new slot load
+    // apart from unrelated childList churn under this element — such as the
+    // hour toggle expanding/collapsing its minutes panel — which mutates the
+    // subtree without the loaded date ever changing.
+    this.lastSlotsSignature = this.slotsSignature();
+
     this.handleSlotsUpdate = () => {
       this.manageFocus();
 
@@ -165,7 +173,11 @@ export const AutoScrollToSlots = {
                         this.el.querySelector('.space-y-3') ||
                         this.el.querySelector('.animate-spin');
 
-        if (hasSlots) {
+        const signature = this.slotsSignature();
+        const isNewSlotsView = signature !== this.lastSlotsSignature;
+        this.lastSlotsSignature = signature;
+
+        if (hasSlots && isNewSlotsView) {
           // Small delay to ensure DOM is fully updated
           setTimeout(() => {
             this.el.scrollIntoView({
@@ -184,6 +196,18 @@ export const AutoScrollToSlots = {
       childList: true,
       subtree: true
     });
+  },
+
+  // A cheap fingerprint of "what's currently shown" in the slots region,
+  // used to distinguish a genuinely new slots view (a new date picked, or
+  // slots finishing loading) from DOM churn that leaves the same view in
+  // place (e.g. the hour toggle expanding/collapsing).
+  slotsSignature() {
+    const loaded = this.el.querySelector(SLOTS_LOADED_SELECTOR);
+    if (loaded) return `loaded:${loaded.getAttribute('data-slots-loaded')}`;
+    if (this.el.querySelector('.animate-spin')) return 'loading';
+    if (this.el.querySelector('.space-y-3')) return 'legacy';
+    return null;
   },
 
   // When the loaded slots appear, move focus to the "Available Times" heading —

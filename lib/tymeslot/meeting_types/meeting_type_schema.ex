@@ -16,6 +16,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           name: String.t() | nil,
           description: String.t() | nil,
           duration_minutes: integer() | nil,
+          slot_interval_minutes: integer() | nil,
           icon: String.t() | nil,
           is_active: boolean(),
           is_private: boolean(),
@@ -47,6 +48,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:name, :string)
     field(:description, :string)
     field(:duration_minutes, :integer)
+    field(:slot_interval_minutes, :integer)
     field(:icon, :string)
     field(:is_active, :boolean, default: true)
     field(:is_private, :boolean, default: false)
@@ -133,6 +135,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :name,
       :description,
       :duration_minutes,
+      :slot_interval_minutes,
       :icon,
       :is_active,
       :is_private,
@@ -162,6 +165,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_length(:name, Constraints.name_length_opts())
     |> validate_length(:description, max: Constraints.description_max_length())
     |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
+    |> validate_number(:slot_interval_minutes, Constraints.slot_interval_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
     |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
     |> validate_booking_limits(:meeting_types)
