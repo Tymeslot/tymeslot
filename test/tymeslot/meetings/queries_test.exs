@@ -8,6 +8,9 @@ defmodule Tymeslot.Meetings.QueriesTest do
 
   alias Ecto.UUID
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Repo
 
   describe "get_meeting_for_user/2" do
     test "returns meeting when user is organizer" do
@@ -187,6 +190,86 @@ defmodule Tymeslot.Meetings.QueriesTest do
       assert meeting_needing_reminder.id in meeting_ids
       assert meeting_with_pending_reminder.id in meeting_ids
       assert length(meeting_ids) == 2
+    end
+  end
+
+  describe "unique_confirmed_meeting_per_organizer_at_time index" do
+    test "rejects a second awaiting_approval meeting for the same organizer and start time" do
+      organizer = insert(:user)
+      start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+      insert(:meeting,
+        organizer_user_id: organizer.id,
+        start_time: start_time,
+        status: "awaiting_approval"
+      )
+
+      assert_raise Ecto.ConstraintError, fn ->
+        insert(:meeting,
+          organizer_user_id: organizer.id,
+          start_time: start_time,
+          status: "awaiting_approval"
+        )
+      end
+    end
+
+    test "rejects a confirmed meeting colliding with an existing held request" do
+      organizer = insert(:user)
+      start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+      insert(:meeting,
+        organizer_user_id: organizer.id,
+        start_time: start_time,
+        status: "awaiting_approval"
+      )
+
+      assert_raise Ecto.ConstraintError, fn ->
+        insert(:meeting,
+          organizer_user_id: organizer.id,
+          start_time: start_time,
+          status: "confirmed"
+        )
+      end
+    end
+  end
+
+  describe "transition_from_awaiting_approval/2 unique-violation handling" do
+    test "returns {:error, :slot_taken} instead of raising when the target slot is already occupied" do
+      organizer = insert(:user)
+      taken_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+      insert(:meeting,
+        organizer_user_id: organizer.id,
+        start_time: taken_time,
+        end_time: DateTime.add(taken_time, 3600, :second),
+        status: "confirmed"
+      )
+
+      held_start = DateTime.add(taken_time, 7200, :second)
+
+      held =
+        insert(:meeting,
+          organizer_user_id: organizer.id,
+          start_time: held_start,
+          end_time: DateTime.add(held_start, 3600, :second),
+          status: "awaiting_approval"
+        )
+
+      # `changes` is a plain keyword list — the function's contract allows any
+      # column, not only `status`. Moving this held row's own start_time onto
+      # the already-occupied slot is the most direct way to trigger the same
+      # unique-index collision the raw `Repo.update_all` has no changeset to
+      # translate.
+      assert {:error, :slot_taken} =
+               MeetingQueries.transition_from_awaiting_approval(
+                 held.id,
+                 status: "confirmed",
+                 start_time: taken_time
+               )
+
+      reloaded = Repo.get!(MeetingSchema, held.id)
+      assert reloaded.status == "awaiting_approval"
+      assert reloaded.start_time == held.start_time
     end
   end
 end

@@ -145,10 +145,17 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   than acting twice. `Tymeslot.Meetings.Approval` is the only intended caller.
 
   Bypasses the changeset deliberately — `update_all` takes plain columns — so
-  `updated_at` is set here rather than by `timestamps/1`.
+  `updated_at` is set here rather than by `timestamps/1`. Because there is no
+  changeset, a violation of `unique_confirmed_meeting_per_organizer_at_time`
+  (the guarantee that at most one confirmed-or-held meeting occupies an
+  organizer's slot — widened to cover held requests by
+  `20260902120100_add_unique_index_to_held_meetings.exs`) has no
+  `unique_constraint/3` to translate it, so it is caught here directly and
+  turned into `{:error, :slot_taken}` rather than letting the raw
+  `Postgrex.Error` reach the caller.
   """
   @spec transition_from_awaiting_approval(String.t(), keyword()) ::
-          {:ok, Meeting.t()} | {:error, :not_awaiting_approval}
+          {:ok, Meeting.t()} | {:error, :not_awaiting_approval | :slot_taken}
   def transition_from_awaiting_approval(meeting_id, changes) when is_list(changes) do
     now = DateTime.utc_now(:second)
 
@@ -162,6 +169,15 @@ defmodule Tymeslot.Meetings.MeetingQueries do
       {1, [meeting]} -> {:ok, meeting}
       {0, _none} -> {:error, :not_awaiting_approval}
     end
+  rescue
+    error in Postgrex.Error ->
+      case error.postgres do
+        %{code: :unique_violation, constraint: "unique_confirmed_meeting_per_organizer_at_time"} ->
+          {:error, :slot_taken}
+
+        _other ->
+          reraise error, __STACKTRACE__
+      end
   end
 
   @doc """
@@ -554,13 +570,10 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   """
   @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
   def count_awaiting_approval_for_organizer(organizer_user_id) do
-    Repo.aggregate(
-      from(m in Meeting,
-        where: m.organizer_user_id == ^organizer_user_id and m.status == "awaiting_approval"
-      ),
-      :count,
-      :id
-    )
+    Meeting
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> MeetingState.where_awaiting_approval()
+    |> Repo.aggregate(:count, :id)
   end
 
   @doc """

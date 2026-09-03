@@ -71,7 +71,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Validation.Constraints
 
   @typedoc "Why a transition out of the approval gate did not happen."
-  @type error :: :not_awaiting_approval | :meeting_not_found | :meeting_started
+  @type error :: :not_awaiting_approval | :meeting_started | :slot_taken
 
   @doc """
   Whether bookings on this meeting type are held for the host to approve.
@@ -149,6 +149,19 @@ defmodule Tymeslot.Meetings.Approval do
         Logger.info("Approval skipped: request no longer held",
           meeting_id: meeting.id,
           status: meeting.status
+        )
+
+        error
+
+      # Somebody else's booking took the slot while this request sat held. The
+      # partial unique index spans `confirmed` and `awaiting_approval` together,
+      # so confirming this one would collide with the row that won. The request
+      # stays held rather than being released: the host may still be able to
+      # decline it deliberately, and the expiry sweep will free it otherwise.
+      {:error, :slot_taken} = error ->
+        Logger.info("Approval refused: the slot was taken by another booking",
+          meeting_id: meeting.id,
+          start_time: meeting.start_time
         )
 
         error
