@@ -451,6 +451,130 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
       assert reloaded.status == "awaiting_approval"
     end
+
+    test "refreshes a stale approval deadline instead of carrying the booking-time one" do
+      # A checkout session can sit open for hours (Stripe's default is 24h,
+      # longer for asynchronous methods). If the clock is not re-stamped when
+      # the payment finally clears, the recovered deadline can already be in
+      # the past — the host's answer window would be dead on arrival.
+      user = insert(:user)
+      stale_requested_at = DateTime.add(DateTime.utc_now(:second), -48, :hour)
+
+      meeting =
+        insert(:meeting,
+          status: "awaiting_payment",
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          approval_requested_at: stale_requested_at,
+          approval_deadline_at: DateTime.add(stale_requested_at, 12, :hour)
+        )
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_STALE_DEADLINE"
+        )
+
+      event =
+        completed_event("evt_STALE_DEADLINE", %{
+          "id" => "cs_TEST_STALE_DEADLINE",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_STALE_DEADLINE"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded.status == "awaiting_approval"
+      assert DateTime.compare(reloaded.approval_requested_at, stale_requested_at) == :gt
+      assert DateTime.compare(reloaded.approval_deadline_at, DateTime.utc_now()) == :gt
+
+      job =
+        Repo.get_by!(Oban.Job, worker: "Tymeslot.Meetings.Workers.ApprovalExpiryWorker")
+
+      assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
+    end
+
+    test "the gate follows the row, not a meeting type edited while checkout was open — approval turned off" do
+      # The invitee saw the approval notice and was promised a held request
+      # when they paid. A host disabling approval on the meeting type while
+      # the checkout session is still open must not silently confirm a
+      # booking the invitee was never told would be automatic.
+      user = insert(:user)
+      meeting_type = insert(:meeting_type, user: user, requires_approval: false)
+      requested_at = DateTime.utc_now(:second)
+
+      meeting =
+        insert(:meeting,
+          status: "awaiting_payment",
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          meeting_type_id: meeting_type.id,
+          approval_requested_at: requested_at,
+          approval_deadline_at: DateTime.add(requested_at, 24, :hour)
+        )
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_TOGGLE_OFF"
+        )
+
+      event =
+        completed_event("evt_TOGGLE_OFF", %{
+          "id" => "cs_TEST_TOGGLE_OFF",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_TOGGLE_OFF"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded.status == "awaiting_approval"
+    end
+
+    test "the gate follows the row, not a meeting type edited while checkout was open — approval turned on" do
+      # Symmetric case: the invitee was promised a confirmed booking at
+      # submission time (no approval stamps on the row). A host enabling
+      # approval mid-checkout must not silently gate a booking the invitee
+      # was told was final, and the confirm branch must not leave stale
+      # approval columns behind.
+      user = insert(:user)
+      meeting_type = insert(:meeting_type, user: user, requires_approval: true)
+
+      meeting =
+        insert(:meeting,
+          status: "awaiting_payment",
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          meeting_type_id: meeting_type.id,
+          approval_requested_at: nil,
+          approval_deadline_at: nil
+        )
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_TOGGLE_ON"
+        )
+
+      event =
+        completed_event("evt_TOGGLE_ON", %{
+          "id" => "cs_TEST_TOGGLE_ON",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_TOGGLE_ON"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded.status == "confirmed"
+      assert is_nil(reloaded.approval_requested_at)
+      assert is_nil(reloaded.approval_deadline_at)
+    end
   end
 
   defp completed_event(event_id, object) do

@@ -28,7 +28,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
 
   @event_type "checkout.session.completed"
@@ -198,56 +197,35 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     end
   end
 
-  # Payment clearing does not always mean the booking is on. Where the meeting
-  # type requires manual approval, the paid booking moves into the approval
-  # gate rather than straight to confirmed, and the host's clock starts here —
-  # they are only asked once the money has actually cleared. Declining or
-  # letting it lapse refunds the full remaining balance directly
-  # (`Meetings.Approval.after_release/1`); there is no cancellation pipeline
-  # involved, because the attendee never got a confirmed meeting to weigh a
-  # partial refund against.
-  defp post_payment_status(meeting) do
-    meeting
-    |> meeting_type_for()
-    |> approval_status(meeting)
+  # Payment clearing does not always mean the booking is on. The gate
+  # decision is read from the meeting row rather than re-derived from the
+  # live meeting type: `approval_requested_at` being stamped is the record
+  # of the promise shown to the invitee on the booking form
+  # (`Policy.approval_attributes/2` stamps it at submission, even on the
+  # paid path), and a host toggling `requires_approval` while a Stripe
+  # Checkout session sits open — it can stay open 24h — must not silently
+  # change what that invitee was told. Where the row was gated, the paid
+  # booking moves into the approval gate rather than straight to confirmed,
+  # and the host's clock starts here — they are only asked once the money
+  # has actually cleared. Declining or letting it lapse refunds the full
+  # remaining balance directly (`Meetings.Approval.after_release/1`); there
+  # is no cancellation pipeline involved, because the attendee never got a
+  # confirmed meeting to weigh a partial refund against. The confirm branch
+  # explicitly nulls both approval columns rather than leaving them
+  # untouched, so a row that reaches "confirmed" never carries a stale
+  # approval clock alongside it.
+  defp post_payment_status(%{approval_requested_at: %DateTime{}} = meeting) do
+    requested_at = DateTime.truncate(Clock.utc_now(), :second)
+
+    %{
+      status: "awaiting_approval",
+      approval_requested_at: requested_at,
+      approval_deadline_at: Approval.deadline_for(nil, requested_at, meeting.start_time)
+    }
   end
 
-  defp approval_status(nil, meeting), do: fallback_approval_status(meeting)
-
-  defp approval_status(meeting_type, meeting) do
-    if Approval.required?(meeting_type) do
-      requested_at = DateTime.truncate(Clock.utc_now(), :second)
-
-      %{
-        status: "awaiting_approval",
-        approval_requested_at: requested_at,
-        approval_deadline_at:
-          Approval.deadline_for(meeting_type, requested_at, meeting.start_time)
-      }
-    else
-      %{status: "confirmed"}
-    end
-  end
-
-  # The meeting type can be gone by the time payment clears — deleted or
-  # deactivated mid-checkout — leaving `Approval.required?/1` nothing to ask.
-  # Defaulting to `"confirmed"` there would fail open on an authorisation
-  # decision: it would confirm a booking the invitee was promised would wait
-  # for the host's approval. The meeting row already carries that promise
-  # from booking time (`Policy.approval_attributes/2` stamps
-  # `approval_requested_at` even on the paid path), so recover the answer
-  # from there instead of re-deriving it from a meeting type that may no
-  # longer reflect what the invitee was told.
-  defp fallback_approval_status(%{approval_requested_at: %DateTime{}}),
-    do: %{status: "awaiting_approval"}
-
-  defp fallback_approval_status(_meeting), do: %{status: "confirmed"}
-
-  defp meeting_type_for(%{meeting_type_id: nil}), do: nil
-  defp meeting_type_for(%{organizer_user_id: nil}), do: nil
-
-  defp meeting_type_for(meeting),
-    do: MeetingTypes.get_meeting_type(meeting.meeting_type_id, meeting.organizer_user_id)
+  defp post_payment_status(_meeting),
+    do: %{status: "confirmed", approval_requested_at: nil, approval_deadline_at: nil}
 
   # Scheduled inside the same DB transaction as `mark_paid`/the meeting
   # transition: `CalendarJobs.schedule_job/2` inserts through Oban's
