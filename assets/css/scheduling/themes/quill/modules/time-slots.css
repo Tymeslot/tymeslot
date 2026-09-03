@@ -51,9 +51,9 @@
 }
 
 .time-slot-button--selected {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
-  border-color: var(--theme-primary);
-  color: white;
+  background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
   font-weight: var(--font-weight-semibold);
   box-shadow:
     var(--shadow-primary-sm),

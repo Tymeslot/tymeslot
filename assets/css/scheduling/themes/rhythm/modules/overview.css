@@ -29,12 +29,12 @@
   right: calc(var(--space-2xs) * -1);
   width: var(--icon-md);
   height: var(--icon-md);
-  background: var(--theme-accent);
+  background: var(--theme-accent-solid);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--theme-on-accent);
 }
 
 .organizer-info {

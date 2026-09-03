@@ -92,5 +92,43 @@ defmodule Tymeslot.ThemeCustomizationsCssGenerationTest do
       refute css =~ "</style"
       refute css =~ "<script"
     end
+
+    test "generated CSS carries the filled-control contrast tokens", %{profile: profile} do
+      {:ok, customization} =
+        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+          "color_scheme" => "sunset",
+          "background_type" => "gradient",
+          "background_value" => "gradient_1"
+        })
+
+      css = ThemeCustomizations.generate_theme_css("1", customization)
+
+      # Without these the themes fall back to their static defaults, which are
+      # the *turquoise* ink and surface: a silently wrong pairing on a sunset
+      # button.
+      assert css =~ "--theme-on-primary:"
+      assert css =~ "--theme-primary-solid:"
+      assert css =~ "--theme-primary-solid-hover:"
+      assert css =~ "--theme-on-accent:"
+      assert css =~ "--theme-accent-solid:"
+    end
+
+    test "the palette's own primary is emitted unchanged", %{profile: profile} do
+      {:ok, customization} =
+        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+          "color_scheme" => "turquoise",
+          "background_type" => "gradient",
+          "background_value" => "gradient_1"
+        })
+
+      css = ThemeCustomizations.generate_theme_css("1", customization)
+      %{colors: colors} = ThemeCustomizationSchema.color_scheme_definitions()["turquoise"]
+
+      # Turquoise is one of the palettes whose solid variant *is* nudged, so
+      # this pins the split: borders, focus rings and bright text keep the
+      # organiser's colour; only the filled surface moves.
+      assert css =~ "--theme-primary: #{colors.primary};"
+      refute css =~ "--theme-primary-solid: #{colors.primary};"
+    end
   end
 end

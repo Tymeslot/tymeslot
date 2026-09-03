@@ -55,7 +55,8 @@
 .success-badge-inner {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, var(--theme-accent) 0%, #34d399 100%);
+  background: var(--theme-accent-solid);
+  color: var(--theme-on-accent);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -69,7 +70,8 @@
 }
 
 .success-badge-inner--success {
-  background: linear-gradient(135deg, var(--theme-accent) 0%, var(--theme-accent-dark) 100%);
+  background: var(--theme-accent-solid);
+  color: var(--theme-on-accent);
   box-shadow: var(--shadow-success-lg);
 }
 
@@ -139,8 +141,8 @@
 
 .ticket-badge {
   padding: var(--space-2xs) var(--space-md);
-  background: var(--theme-primary);
-  color: white;
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
   border-radius: 20px;
 }
 
