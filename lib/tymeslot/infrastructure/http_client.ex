@@ -297,7 +297,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     timeout = get_timeout(method, user_options)
 
     # Get proxy configuration for this URL (considers NO_PROXY, HTTP vs HTTPS)
-    proxy_options = get_proxy_options(url)
+    proxy_options = get_proxy_options(url, user_options)
 
     req_method = normalize_method(method)
 
@@ -341,7 +341,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     # Merge with user options (user options take precedence)
     # Strip HTTPoison-style timeout keys that were handled by get_timeout/2,
     # and :max_response_bytes, which Req does not recognise
-    user_opts_clean = Keyword.drop(user_options, [:timeout, :recv_timeout, :max_response_bytes])
+    user_opts_clean =
+      Keyword.drop(user_options, [:timeout, :recv_timeout, :max_response_bytes, :bypass_proxy])
 
     # The proxy's connection options and the caller's are one set: both
     # describe the same socket, so they are merged and handed to the pool
@@ -403,8 +404,23 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     method |> Atom.to_string() |> String.upcase()
   end
 
-  @spec get_proxy_options(String.t()) :: keyword()
-  defp get_proxy_options(url) do
+  # `bypass_proxy: true` sends one request directly while the global proxy
+  # configuration stays in place. `Infrastructure.ProxyVerifier` is what needs
+  # it: the only way to know a proxied request truly traversed the proxy is to
+  # compare the origin it reports against the address this machine leaves from
+  # on its own, and that second request must skip the proxy without disturbing
+  # the configuration every other request is using concurrently.
+  @spec get_proxy_options(String.t(), keyword()) :: keyword()
+  defp get_proxy_options(url, options) do
+    if Keyword.get(options, :bypass_proxy, false) do
+      []
+    else
+      proxy_options_for(url)
+    end
+  end
+
+  @spec proxy_options_for(String.t()) :: keyword()
+  defp proxy_options_for(url) do
     # Get proxy config for this URL (considers NO_PROXY and URL scheme)
     proxy_config = ProxyConfig.get_proxy_for_url(url)
 

@@ -17,6 +17,8 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   @moduletag timeout: 30_000
   @moduletag :infrastructure
 
+  @origin_url "https://httpbin.org/ip"
+
   setup_all do
     original_proxy = Application.get_env(:tymeslot, :http_proxy)
 
@@ -33,9 +35,54 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
       """
     end
 
-    on_exit(fn -> restore_proxy(original_proxy) end)
+    # The suite routes every unproxied request through a `Req.Test` plug, which
+    # opens no socket. A proxied request already sidesteps it, but the direct
+    # request these tests compare against does not, and a plug cannot report
+    # the address this machine leaves from. This module is the one place that
+    # wants the real transport in both directions.
+    original_plug = Application.get_env(:tymeslot, :req_test_plug)
+    Application.delete_env(:tymeslot, :req_test_plug)
 
-    %{original_proxy: original_proxy}
+    on_exit(fn ->
+      restore_proxy(original_proxy)
+      restore_plug(original_plug)
+    end)
+
+    %{original_proxy: original_proxy, direct_origin: direct_origin!()}
+  end
+
+  # The address this machine leaves from with the proxy bypassed. Measuring it
+  # is what separates "the request reached httpbin" from "the request reached
+  # httpbin through the proxy": a direct request returns 200 and an IP-shaped
+  # origin too, so every assertion that stops at the shape of the answer holds
+  # just as well when the proxy is being dropped before the connection. Failing
+  # here rather than skipping is deliberate, for the same reason the missing
+  # proxy above fails: a suite that cannot tell the two apart must not report
+  # that it checked.
+  defp direct_origin! do
+    case HTTPClient.get(@origin_url, [], bypass_proxy: true) do
+      {:ok, %{status: 200, body: body}} ->
+        origin_of!(body)
+
+      other ->
+        raise """
+        Could not reach #{@origin_url} with the proxy bypassed, so there is no
+        direct origin to compare the proxied one against and these tests cannot
+        tell a proxied request from a direct one.
+
+        Got: #{inspect(other)}
+        """
+    end
+  end
+
+  defp origin_of!(body) do
+    case Jason.decode(body) do
+      {:ok, %{"origin" => origin}} when is_binary(origin) ->
+        origin |> String.split(",") |> List.first() |> String.trim()
+
+      _no_origin ->
+        raise "No origin IP in the response from #{@origin_url}: #{inspect(body)}"
+    end
   end
 
   setup %{original_proxy: original_proxy} do
@@ -46,15 +93,19 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   end
 
   describe "proxy integration" do
-    test "makes request through configured proxy" do
-      assert {:ok, response} = HTTPClient.get("https://httpbin.org/ip")
+    test "makes request through configured proxy", %{direct_origin: direct_origin} do
+      assert {:ok, response} = HTTPClient.get(@origin_url)
       assert response.status == 200
 
-      assert {:ok, %{"origin" => origin_ip}} = Jason.decode(response.body)
+      proxied_origin = origin_of!(response.body)
 
-      # The origin is the proxy's external address, not ours.
-      assert String.match?(origin_ip, ~r/^\d+\.\d+\.\d+\.\d+$/),
-             "Expected valid IP address format, got: #{inspect(origin_ip)}"
+      # The destination saw the proxy's address, not this machine's. Asserting
+      # the origin merely looks like an IP address would hold for a request
+      # that never touched the proxy at all.
+      assert proxied_origin != direct_origin,
+             "Request was not proxied: httpbin reports the same origin " <>
+               "(#{proxied_origin}) with the proxy configured as it does with " <>
+               "the proxy bypassed."
     end
 
     test "proxy authentication works with real credentials" do
@@ -130,7 +181,7 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   end
 
   describe "proxy verifier integration" do
-    test "verify command succeeds with real proxy" do
+    test "verify command succeeds with real proxy", %{direct_origin: direct_origin} do
       result = ProxyVerifier.verify(timeout: 10_000)
 
       assert result.proxy_configured == true, "Proxy should be configured"
@@ -142,9 +193,17 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
              "Traffic should flow through proxy. Got errors: #{inspect(result.errors)}"
 
       assert result.errors == [], "Should have no errors, got: #{inspect(result.errors)}"
+
+      # The claim above is only worth anything because the verifier reached
+      # that verdict by comparing the two origins rather than by seeing a 200.
+      assert result.details.direct_origin_ip == direct_origin
+      assert result.details.origin_ip != direct_origin
     end
   end
 
   defp restore_proxy(nil), do: Application.delete_env(:tymeslot, :http_proxy)
   defp restore_proxy(proxy), do: Application.put_env(:tymeslot, :http_proxy, proxy)
+
+  defp restore_plug(nil), do: Application.delete_env(:tymeslot, :req_test_plug)
+  defp restore_plug(plug), do: Application.put_env(:tymeslot, :req_test_plug, plug)
 end

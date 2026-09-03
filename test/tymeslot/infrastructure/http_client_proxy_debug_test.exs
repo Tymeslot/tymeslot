@@ -5,6 +5,7 @@ defmodule Tymeslot.Infrastructure.HTTPClientProxyDebugTest do
 
   @moduletag :infrastructure
 
+  alias Req.Test, as: ReqTest
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Test.LogCapture
 
@@ -56,6 +57,24 @@ defmodule Tymeslot.Infrastructure.HTTPClientProxyDebugTest do
 
       assert [tag] = shared_pool_tags("proxied-pool.example.com")
       assert tag =~ ~r/^[0-9a-f]{32}$/
+    end
+  end
+
+  describe "bypass_proxy: true" do
+    test "sends the request directly while the proxy stays configured" do
+      ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.text(conn, "203.0.113.7") end)
+
+      # Without the bypass the request goes to the configured proxy, which is a
+      # loopback port with nothing listening. With it, the request takes the
+      # ordinary unproxied transport — here the suite's test plug — which is
+      # what makes the two answers distinguishable at all. `ProxyVerifier`
+      # depends on exactly that difference to tell a proxied request apart from
+      # one that only looks proxied.
+      assert {:error, %Req.TransportError{reason: :econnrefused}} =
+               HTTPClient.get("https://bypass.example.com")
+
+      assert {:ok, %{status: 200, body: "203.0.113.7"}} =
+               HTTPClient.get("https://bypass.example.com", [], bypass_proxy: true)
     end
   end
 
