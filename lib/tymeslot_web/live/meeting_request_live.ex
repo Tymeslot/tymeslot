@@ -84,13 +84,23 @@ defmodule TymeslotWeb.MeetingRequestLive do
     end
   end
 
+  # `:declined` is the host's own refusal and nothing else. `Approval.declined?/1`
+  # owns that question: `status == "cancelled"` does not answer it, since the
+  # invitee can withdraw a held request themselves, and neither does
+  # `approval_resolved_at`, which an approval stamps as well — a meeting the
+  # host approved and later cancelled would otherwise be shown to the invitee
+  # as having been refused. A completed meeting or a legacy
+  # `reschedule_requested` row has no accurate message here either, so
+  # everything but a genuine decline falls back to the same "not currently
+  # answerable" wording used for an unrecognised token, rather than borrowing
+  # the decline copy.
   defp state_for(meeting) do
     cond do
       MeetingState.awaiting_approval?(meeting) and lapsed?(meeting) -> :lapsed
       MeetingState.awaiting_approval?(meeting) -> :awaiting
       meeting.status == "confirmed" -> :approved
       meeting.status == "expired" -> :expired
-      host_declined?(meeting) -> :declined
+      Approval.declined?(meeting) -> :declined
       true -> :invalid
     end
   end
@@ -105,17 +115,6 @@ defmodule TymeslotWeb.MeetingRequestLive do
 
   defp lapsed?(%{approval_deadline_at: deadline}),
     do: DateTime.compare(deadline, Clock.utc_now()) == :lt
-
-  # Only the host's own decision produces the "declined" outcome.
-  # `status == "cancelled"` alone does not mean that: the invitee can
-  # withdraw a held request themselves, and that path never sets
-  # `approval_resolved_at` (see `MeetingSchema`'s note on the field). A
-  # completed meeting or a legacy `reschedule_requested` row has no accurate
-  # message here either, so everything but a genuine host decline falls back
-  # to the same "not currently answerable" wording used for an unrecognised
-  # token, rather than borrowing the decline copy.
-  defp host_declined?(%{status: "cancelled", approval_resolved_at: %DateTime{}}), do: true
-  defp host_declined?(_meeting), do: false
 
   @impl Phoenix.LiveView
   def handle_event("choose", %{"intent" => intent}, socket) do

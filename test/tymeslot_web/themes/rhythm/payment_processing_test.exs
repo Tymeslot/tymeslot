@@ -103,6 +103,7 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingTest do
         organizer_user_id: user.id,
         status: "cancelled",
         approval_resolved_at: now,
+        approval_declined_at: now,
         decline_reason: "Can't make this time"
       )
 

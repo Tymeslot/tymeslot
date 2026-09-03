@@ -45,9 +45,9 @@ defmodule Tymeslot.Meetings.Approval do
       cancellation pipeline, which exists for a meeting the attendee actually
       got to have and offers the host no such choice here — unless the request
       already *was* such a meeting before it re-entered the gate (see
-      `refund_unapproved_request/1`). What distinguishes a decline from an
-      invitee's own cancellation is `approval_resolved_at` together with
-      `decline_reason`.
+      `refund_unapproved_request/1`). What distinguishes a decline from every
+      other cancelled meeting is `approval_declined_at`, which only this path
+      stamps; ask `declined?/1` rather than reading it directly.
 
     * `expire/1` — nobody answered in time. Identical to a decline apart from
       the status (`"expired"`) and the wording the invitee receives: the host
@@ -58,9 +58,10 @@ defmodule Tymeslot.Meetings.Approval do
       that as a withdrawal on their behalf. Mechanically identical to
       `decline/2` and `expire/1` — same guard, same refund rule, same video
       and calendar release — but distinct in meaning: nobody refused the
-      request and nobody ran out the clock, so `approval_resolved_at` is left
-      unset and the invitee gets `Bookings.Cancel`'s ordinary cancellation
-      email rather than a decline or expiry notice.
+      request and nobody ran out the clock, so neither
+      `approval_resolved_at` nor `approval_declined_at` is set, and the
+      invitee gets `Bookings.Cancel`'s ordinary cancellation email rather
+      than a decline or expiry notice.
 
   ## The deadline
 
@@ -104,6 +105,22 @@ defmodule Tymeslot.Meetings.Approval do
   def required?(nil), do: false
   def required?(%{requires_approval: true}), do: true
   def required?(_meeting_type), do: false
+
+  @doc """
+  Whether this meeting was refused by its host.
+
+  The one question three call sites need answered — the `meeting.cancelled`
+  webhook body, the invitee's request page and the paid return page — and one
+  they must not answer for themselves. A decline is deliberately stored as
+  `status: "cancelled"` so the ordinary cancellation pipeline applies to it,
+  which leaves `status` unable to tell the two apart, and
+  `approval_resolved_at` cannot either: `approve/1` stamps it too, so an
+  approved booking that is later cancelled normally carries it for the rest of
+  its life. Only `approval_declined_at` is written by `decline/2` alone.
+  """
+  @spec declined?(Meeting.t() | map() | nil) :: boolean()
+  def declined?(%{approval_declined_at: %DateTime{}}), do: true
+  def declined?(_meeting), do: false
 
   @doc """
   How long the host has to answer, in hours.
@@ -222,7 +239,10 @@ defmodule Tymeslot.Meetings.Approval do
   """
   @spec decline(Meeting.t(), String.t() | nil) :: {:ok, Meeting.t()} | {:error, error()}
   def decline(%Meeting{} = meeting, reason \\ nil) do
-    release(meeting, "cancelled", decline_reason: normalise_reason(reason))
+    release(meeting, "cancelled",
+      decline_reason: normalise_reason(reason),
+      approval_declined_at: DateTime.truncate(Clock.utc_now(), :second)
+    )
   end
 
   @doc """
@@ -246,9 +266,11 @@ defmodule Tymeslot.Meetings.Approval do
   `transition_from_awaiting_approval/2` — so a withdrawal cannot race a
   host's answer or the expiry sweep into overwriting `"confirmed"` back to
   `"cancelled"`, and cannot double-refund a request the sweep already
-  released. `approval_resolved_at` is deliberately left unset: that field
-  means "the host decided", which `TymeslotWeb.MeetingRequestLive` depends on
-  to tell a host's decline apart from a withdrawal, and this is neither.
+  released. Neither `approval_resolved_at` nor `approval_declined_at` is set:
+  the first means "the host decided" and the second "the host refused", and a
+  withdrawal is neither. `declined?/1` is what the request page and the
+  webhook payload ask, so leaving both unset is what keeps a withdrawal from
+  being reported as a decline.
 
   `extra_changes` lets `Bookings.Cancel` record why (e.g. an external
   calendar deletion) without this module knowing about that reason itself.

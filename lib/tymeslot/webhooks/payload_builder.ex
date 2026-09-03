@@ -6,6 +6,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   making it easy for users to parse in their automation tools (n8n, Zapier, etc.).
   """
 
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
 
   @doc """
@@ -159,27 +160,27 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   defp maybe_add_approval_data(data, _meeting), do: data
 
   # A decline and an ordinary cancellation share `status: "cancelled"` (see
-  # the comment on `MeetingSchema.approval_resolved_at`), but they mean
+  # the comment on `MeetingSchema.approval_declined_at`), but they mean
   # different things to a consumer: a decline is the host refusing a request
-  # that was never accepted, not the withdrawal of one that was. Distinguish
-  # by `approval_resolved_at`, exactly as the rest of the approval feature
-  # does, and carry the reason under `decline_reason` — the field the host
-  # actually filled in — rather than the unrelated `cancellation_reason`.
-  defp maybe_add_cancellation_data(
-         data,
-         %MeetingSchema{status: "cancelled", approval_resolved_at: %DateTime{}} = meeting
-       ) do
-    Map.put(data, :decline, %{
-      declined_at: format_datetime(meeting.approval_resolved_at),
-      reason: meeting.decline_reason
-    })
-  end
-
+  # that was never accepted, not the withdrawal of one that was. Only
+  # `Approval.declined?/1` separates them; `approval_resolved_at` does not,
+  # because an approval stamps it too, so a booking the host approved and then
+  # cancelled would ship a `decline` block and lose the `cancellation` one
+  # subscribers already parse. The reason comes from `decline_reason` — the
+  # field the host actually filled in — rather than the unrelated
+  # `cancellation_reason`.
   defp maybe_add_cancellation_data(data, %MeetingSchema{status: "cancelled"} = meeting) do
-    Map.put(data, :cancellation, %{
-      cancelled_at: format_datetime(meeting.cancelled_at),
-      reason: meeting.cancellation_reason
-    })
+    if Approval.declined?(meeting) do
+      Map.put(data, :decline, %{
+        declined_at: format_datetime(meeting.approval_declined_at),
+        reason: meeting.decline_reason
+      })
+    else
+      Map.put(data, :cancellation, %{
+        cancelled_at: format_datetime(meeting.cancelled_at),
+        reason: meeting.cancellation_reason
+      })
+    end
   end
 
   defp maybe_add_cancellation_data(data, _meeting), do: data

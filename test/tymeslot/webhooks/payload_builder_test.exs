@@ -142,6 +142,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
           approval_requested_at: ~U[2026-01-14 09:00:00Z],
           approval_deadline_at: ~U[2026-01-15 09:00:00Z],
           approval_resolved_at: resolved_at,
+          approval_declined_at: resolved_at,
           decline_reason: "Not available for this project",
           cancellation_reason: nil
         )
@@ -166,6 +167,30 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
       refute Map.has_key?(payload.data.meeting, :decline)
       assert payload.data.meeting.cancellation.reason == "Schedule conflict"
+    end
+
+    test "reports an approved-then-cancelled meeting as a cancellation, not a decline" do
+      # `approval_resolved_at` is stamped by an approval too, so a booking the
+      # host approved and the attendee later cancelled carries it for the rest
+      # of its life. Reading that field as "declined" would ship a decline
+      # block for an ordinary cancellation and drop the `cancellation` key
+      # subscribers already parse.
+      meeting =
+        build(:meeting,
+          status: "cancelled",
+          approval_requested_at: ~U[2026-01-14 09:00:00Z],
+          approval_deadline_at: ~U[2026-01-15 09:00:00Z],
+          approval_resolved_at: ~U[2026-01-14 10:00:00Z],
+          approval_declined_at: nil,
+          cancelled_at: ~U[2026-01-14 18:00:00Z],
+          cancellation_reason: "Something came up"
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.cancelled", meeting, "1")
+
+      refute Map.has_key?(payload.data.meeting, :decline)
+      assert payload.data.meeting.cancellation.reason == "Something came up"
+      assert payload.data.meeting.cancellation.cancelled_at == "2026-01-14T18:00:00Z"
     end
 
     test "includes the approval deadline on a booking request" do

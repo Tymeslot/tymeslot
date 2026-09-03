@@ -58,6 +58,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           approval_requested_at: DateTime.t() | nil,
           approval_deadline_at: DateTime.t() | nil,
           approval_resolved_at: DateTime.t() | nil,
+          approval_declined_at: DateTime.t() | nil,
           approval_nudge_sent_at: DateTime.t() | nil,
           decline_reason: String.t() | nil,
           announced_at: DateTime.t() | nil,
@@ -177,13 +178,22 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # invitee was promised must not move underneath them.
     field(:approval_requested_at, :utc_datetime)
     field(:approval_deadline_at, :utc_datetime)
+    # Stamped by every host answer, an approval included, so it means "the host
+    # decided" and nothing narrower. It is not the field that identifies a
+    # decline; see `approval_declined_at`.
     field(:approval_resolved_at, :utc_datetime)
+    # Stamped only by `Meetings.Approval.decline/2`, and the single fact that
+    # tells a declined booking apart from every other cancelled one. `status`
+    # cannot: a decline lands on "cancelled" deliberately, so that the whole
+    # cancellation pipeline (calendar deletion, refund resolution, cache
+    # invalidation) applies to it unchanged. Nor can `approval_resolved_at`,
+    # which an approval sets too and which therefore survives on a meeting that
+    # was approved, held, and later cancelled in the ordinary way. Read it
+    # through `Meetings.Approval.declined?/1` rather than matching on it.
+    field(:approval_declined_at, :utc_datetime)
     field(:approval_nudge_sent_at, :utc_datetime)
-    # The host's optional note when declining. What distinguishes a declined
-    # booking from an invitee-cancelled one is `approval_resolved_at`, not
-    # `status`: both land on "cancelled" so the whole cancellation pipeline
-    # (calendar deletion, refund resolution, cache invalidation) applies
-    # unchanged.
+    # The host's optional note when declining. Absent whenever they gave no
+    # reason, so it marks nothing on its own.
     field(:decline_reason, :string)
     # Notification tracking
     # Stamped when `meeting.created` is raised, so the event is claimed once and
@@ -289,6 +299,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :approval_requested_at,
     :approval_deadline_at,
     :approval_resolved_at,
+    :approval_declined_at,
     :approval_nudge_sent_at,
     :decline_reason,
     :announced_at,

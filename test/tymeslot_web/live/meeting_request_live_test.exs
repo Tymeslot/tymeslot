@@ -270,5 +270,24 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
       assert html =~ "Booking declined"
       refute html =~ "Approve booking"
     end
+
+    test "a meeting the host approved and then cancelled is not shown as declined",
+         %{conn: conn} do
+      # Approving stamps `approval_resolved_at`, and an ordinary cancellation
+      # afterwards leaves it in place. Reading that as "the host refused you"
+      # would tell the invitee the opposite of what happened: their meeting was
+      # agreed to and then called off.
+      meeting = held_meeting()
+      {:ok, approved} = Approval.approve(meeting)
+
+      approved
+      |> Changeset.change(status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      {:ok, _view, html} = live(conn, request_path(meeting))
+
+      refute html =~ "Booking declined"
+      assert html =~ "Link not recognised"
+    end
   end
 end

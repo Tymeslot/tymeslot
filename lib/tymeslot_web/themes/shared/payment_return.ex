@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.LiveView
   alias Phoenix.PubSub
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -180,10 +181,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   through `:loading` instead of telling the attendee what happened.
   `payment.paid_at` (rather than `payment.status`) is what proves this
   checkout's payment cycle ever completed, since it survives that same
-  refund; `meeting.approval_resolved_at` is what proves `:declined`/
-  `:expired` specifically came from the approval gate (`Approval.decline/2`,
-  `Approval.expire/1`), as opposed to an ordinary cancellation with no
-  refund guarantee.
+  refund. `Approval.declined?/1` and the `"expired"` status are what prove
+  `:declined`/`:expired` specifically came from the approval gate
+  (`Approval.decline/2`, `Approval.expire/1`), as opposed to an ordinary
+  cancellation with no refund guarantee. `approval_resolved_at` cannot prove
+  it: `Approval.approve/1` stamps that too, so a paid meeting the host
+  approved and then cancelled would have been reported to the attendee as
+  declined.
   """
   @spec outcome(loading :: boolean(), MeetingPayments.booking_payment() | nil, Meeting.t() | nil) ::
           outcome()
@@ -195,14 +199,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       }),
       do: :expired
 
-  def outcome(false, %{paid_at: %DateTime{}}, %{
-        status: "cancelled",
-        approval_resolved_at: %DateTime{}
-      }),
-      do: :declined
-
   def outcome(false, %{paid_at: %DateTime{}}, %Meeting{} = meeting) do
-    if MeetingState.awaiting_approval?(meeting), do: :awaiting_approval, else: :confirmed
+    cond do
+      Approval.declined?(meeting) -> :declined
+      MeetingState.awaiting_approval?(meeting) -> :awaiting_approval
+      true -> :confirmed
+    end
   end
 
   def outcome(false, _payment, _meeting), do: :loading

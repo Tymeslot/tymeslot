@@ -17,6 +17,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   @moduletag :bookings
   @moduletag :meetings
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
@@ -310,6 +311,49 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:error, :not_awaiting_approval} = Approval.decline(meeting, "changed my mind")
 
       assert reload(meeting).status == "confirmed"
+    end
+  end
+
+  describe "declined?/1" do
+    test "a declined request is the only cancelled meeting that answers true" do
+      meeting = held_meeting()
+
+      assert {:ok, declined} = Approval.decline(meeting, "Away that week")
+      assert Approval.declined?(declined)
+      assert %DateTime{} = reload(meeting).approval_declined_at
+    end
+
+    test "a meeting the host approved and then cancelled is not a decline" do
+      # The regression this guards: `approve/1` stamps `approval_resolved_at`
+      # too, so a field that means "the host answered" cannot mean "the host
+      # refused". Reading it that way reported an ordinary cancellation as a
+      # decline on the `meeting.cancelled` webhook and on both invitee-facing
+      # pages.
+      meeting = held_meeting()
+      assert {:ok, approved} = Approval.approve(meeting)
+      assert %DateTime{} = reload(meeting).approval_resolved_at
+
+      cancelled =
+        approved
+        |> Changeset.change(status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+        |> Repo.update!()
+
+      refute Approval.declined?(cancelled)
+      assert is_nil(cancelled.approval_declined_at)
+    end
+
+    test "an expired request is not a decline: nobody refused it" do
+      meeting = held_meeting()
+
+      assert {:ok, expired} = Approval.expire(meeting)
+      refute Approval.declined?(expired)
+    end
+
+    test "a withdrawn request is not a decline" do
+      meeting = held_meeting()
+
+      assert {:ok, withdrawn} = Approval.withdraw(meeting)
+      refute Approval.declined?(withdrawn)
     end
   end
 

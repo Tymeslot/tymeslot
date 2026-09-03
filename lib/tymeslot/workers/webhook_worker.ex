@@ -41,10 +41,12 @@ defmodule Tymeslot.Workers.WebhookWorker do
   @snapshot_fields ~w(
     status cancelled_at cancellation_reason decline_reason
     approval_requested_at approval_deadline_at approval_resolved_at
+    approval_declined_at
   )a
 
   @datetime_snapshot_fields ~w(
     cancelled_at approval_requested_at approval_deadline_at approval_resolved_at
+    approval_declined_at
   )a
 
   @doc """

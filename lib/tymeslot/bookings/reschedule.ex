@@ -180,6 +180,7 @@ defmodule Tymeslot.Bookings.Reschedule do
           approval_requested_at: requested_at,
           approval_deadline_at: Approval.deadline_for(meeting_type, requested_at, start_time),
           approval_resolved_at: nil,
+          approval_declined_at: nil,
           approval_nudge_sent_at: nil,
           decline_reason: nil,
           announced_at: nil
