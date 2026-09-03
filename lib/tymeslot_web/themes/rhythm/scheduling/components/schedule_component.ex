@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     unstyled={true}
                   >
                     <:trigger>
-                      <span class="visually-hidden">
+                      <span class="sr-only">
                         {dgettext("booking", "Your timezone")}:
                       </span>
                       <div class="timezone-display">

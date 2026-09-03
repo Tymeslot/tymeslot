@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
           unstyled={true}
         >
           <:trigger>
-            <span class="visually-hidden">{dgettext("booking", "Your timezone")}:</span>
+            <span class="sr-only">{dgettext("booking", "Your timezone")}:</span>
             <div class="timezone-trigger-row">
               <div class="timezone-trigger-info">
                 <.timezone_flag timezone={@user_timezone} class="timezone-flag" fallback_icon="🌐" />
