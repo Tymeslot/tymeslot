@@ -112,6 +112,54 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     end
   end
 
+  describe "restart_deadline/2" do
+    test "replays the window the row was stamped with, from the new start point" do
+      # The paid path restarts the host's clock when the money clears. The
+      # window's length has to survive that: a 72-hour window must not collapse
+      # to the 24-hour default.
+      requested_at = DateTime.add(DateTime.utc_now(:second), -2, :hour)
+
+      meeting = %{
+        approval_requested_at: requested_at,
+        approval_deadline_at: DateTime.add(requested_at, 72, :hour),
+        start_time: DateTime.add(DateTime.utc_now(:second), 30, :day)
+      }
+
+      restarted_at = DateTime.utc_now(:second)
+      deadline = Approval.restart_deadline(meeting, restarted_at)
+
+      assert DateTime.diff(deadline, restarted_at, :hour) == 72
+    end
+
+    test "never runs past the meeting's own start time" do
+      requested_at = DateTime.add(DateTime.utc_now(:second), -2, :hour)
+      start_time = DateTime.add(DateTime.utc_now(:second), 3, :hour)
+
+      meeting = %{
+        approval_requested_at: requested_at,
+        approval_deadline_at: DateTime.add(requested_at, 72, :hour),
+        start_time: start_time
+      }
+
+      assert Approval.restart_deadline(meeting, DateTime.utc_now(:second)) == start_time
+    end
+
+    test "falls back to the default window when the row carries no stamped span" do
+      restarted_at = DateTime.utc_now(:second)
+
+      meeting = %{
+        approval_requested_at: nil,
+        approval_deadline_at: nil,
+        start_time: DateTime.add(restarted_at, 30, :day)
+      }
+
+      deadline = Approval.restart_deadline(meeting, restarted_at)
+
+      assert DateTime.diff(deadline, restarted_at, :hour) ==
+               Constraints.default_approval_window_hours()
+    end
+  end
+
   describe "approve/1" do
     test "confirms the booking and records when it was answered" do
       meeting = held_meeting()

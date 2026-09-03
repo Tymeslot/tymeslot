@@ -496,6 +496,52 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
     end
 
+    test "restarts the clock without shortening the window the invitee was promised" do
+      # The clock restarting at the webhook is deliberate: the host is only
+      # asked once the money has cleared. Its *length* must not change with it.
+      # A 72-hour window stamped on the row at submission has to survive the
+      # restart, rather than collapsing to the application default.
+      user = insert(:user)
+      requested_at = DateTime.add(DateTime.utc_now(:second), -2, :hour)
+      far_start = DateTime.add(DateTime.utc_now(:second), 30, :day)
+
+      meeting =
+        insert(:meeting,
+          status: "awaiting_payment",
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          # Far enough out that the deadline is never capped at the start time.
+          start_time: far_start,
+          end_time: DateTime.add(far_start, 60, :minute),
+          approval_requested_at: requested_at,
+          approval_deadline_at: DateTime.add(requested_at, 72, :hour)
+        )
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_TEST_WINDOW_KEPT"
+        )
+
+      event =
+        completed_event("evt_WINDOW_KEPT", %{
+          "id" => "cs_TEST_WINDOW_KEPT",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_WINDOW_KEPT"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded.status == "awaiting_approval"
+
+      window_hours =
+        DateTime.diff(reloaded.approval_deadline_at, reloaded.approval_requested_at, :hour)
+
+      assert window_hours == 72
+    end
+
     test "the gate follows the row, not a meeting type edited while checkout was open — approval turned off" do
       # The invitee saw the approval notice and was promised a held request
       # when they paid. A host disabling approval on the meeting type while

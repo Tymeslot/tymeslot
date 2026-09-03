@@ -151,6 +151,42 @@ defmodule Tymeslot.Meetings.Approval do
   end
 
   @doc """
+  Recomputes a held request's deadline for a clock that starts later than the
+  booking did, keeping the window the invitee was already promised.
+
+  The paid path needs this: a booking on a gated type is stamped with its
+  deadline at submission, but the host is only asked once Stripe confirms the
+  money cleared, so the clock restarts at the webhook
+  (`MeetingPayments.Webhooks.CheckoutSessionCompleted`). The window itself
+  must survive that restart, and it is read back off the row rather than from
+  the meeting type for the same reason the gate decision is: the type's
+  `approval_window_hours` can be edited, or the type archived, while a Checkout
+  session sits open for 24 hours, and neither may move a window an invitee has
+  already been shown.
+
+  The stored span carries the original start-time cap, which is harmless: a
+  request capped once is capped again here, since the restart can only move the
+  clock forward. A row with no stored span falls back to the default window.
+  """
+  @spec restart_deadline(Meeting.t() | map(), DateTime.t()) :: DateTime.t()
+  def restart_deadline(meeting, %DateTime{} = restarted_at) do
+    restarted_at
+    |> DateTime.add(promised_window_seconds(meeting), :second)
+    |> earliest(meeting.start_time)
+    |> DateTime.truncate(:second)
+  end
+
+  defp promised_window_seconds(%{
+         approval_requested_at: %DateTime{} = requested_at,
+         approval_deadline_at: %DateTime{} = deadline_at
+       }) do
+    deadline_at |> DateTime.diff(requested_at, :second) |> max(0)
+  end
+
+  defp promised_window_seconds(_meeting),
+    do: Constraints.default_approval_window_hours() * 3600
+
+  @doc """
   Confirms a held booking and hands it to the ordinary booking pipeline.
 
   Refuses a meeting whose start time has passed: there is nothing left to

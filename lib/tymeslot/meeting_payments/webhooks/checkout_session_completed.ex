@@ -207,7 +207,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # change what that invitee was told. Where the row was gated, the paid
   # booking moves into the approval gate rather than straight to confirmed,
   # and the host's clock starts here — they are only asked once the money
-  # has actually cleared. Declining or letting it lapse refunds the full
+  # has actually cleared. Only the clock's *start* moves: its length is the
+  # window stamped on the row at submission, replayed by
+  # `Approval.restart_deadline/2`, so a host who set a 72-hour window still
+  # gets 72 hours on a paid booking. Declining or letting it lapse refunds the full
   # remaining balance directly (`Meetings.Approval.after_release/1`); there
   # is no cancellation pipeline involved, because the attendee never got a
   # confirmed meeting to weigh a partial refund against. The confirm branch
@@ -220,7 +223,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     %{
       status: "awaiting_approval",
       approval_requested_at: requested_at,
-      approval_deadline_at: Approval.deadline_for(nil, requested_at, meeting.start_time)
+      approval_deadline_at: Approval.restart_deadline(meeting, requested_at)
     }
   end
 
