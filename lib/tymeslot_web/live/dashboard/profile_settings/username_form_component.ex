@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Polls
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
@@ -184,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                 label={dgettext("dashboard_profile", "Your Custom URL")}
                 value={if @profile, do: @profile.username || "", else: ""}
                 placeholder={dgettext("dashboard_profile", "yourname")}
-                pattern="[a-z0-9][a-z0-9-]{2,29}"
+                pattern={UsernameValidator.html_pattern()}
                 minlength={Constraints.username_length_range().first}
                 maxlength={Constraints.username_length_range().last}
                 phx-debounce="500"
