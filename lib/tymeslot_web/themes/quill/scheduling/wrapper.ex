@@ -6,6 +6,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
 
   alias Tymeslot.Locales
 
+  import TymeslotWeb.Themes.Shared.BackgroundMotionToggle,
+    only: [background_motion_toggle: 1]
+
   import TymeslotWeb.Themes.Shared.Customization.Helpers
   import TymeslotWeb.Themes.Shared.VideoSources, only: [video_sources: 1]
   import TymeslotWeb.Components.LanguageSwitcher
@@ -62,6 +65,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
             <.video_sources theme_customization={@theme_customization} />
           </video>
         </div>
+        <.background_motion_toggle />
       <% end %>
 
       <div

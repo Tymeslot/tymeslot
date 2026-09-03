@@ -6,6 +6,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
 
   alias Tymeslot.Locales
 
+  import TymeslotWeb.Themes.Shared.BackgroundMotionToggle,
+    only: [background_motion_toggle: 1]
+
   import TymeslotWeb.Themes.Shared.Customization.Helpers
   import TymeslotWeb.Components.LanguageSwitcher
   import TymeslotWeb.Themes.Shared.VideoSources, only: [video_sources: 1]
@@ -64,6 +67,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
               <.video_sources theme_customization={@theme_customization} />
             </video>
           </div>
+          <.background_motion_toggle />
         <% assigns[:theme_customization] && get_background_type(assigns[:theme_customization]) in ["gradient", "color", "image"] -> %>
           <div
             class="video-background-container"

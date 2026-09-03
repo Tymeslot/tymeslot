@@ -1841,6 +1841,16 @@ msgstr "Impossible de reporter une réunion expirée"
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
 msgstr "Ce créneau a entre-temps été réservé par quelqu'un d'autre, cette demande ne peut donc plus être acceptée."
 
+#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Mettre en pause la vidéo d'arrière-plan"
+
+#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Lire la vidéo d'arrière-plan"
+
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format

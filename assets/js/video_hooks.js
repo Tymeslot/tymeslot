@@ -55,6 +55,122 @@ const setupConnectionFallback = (connection, onSlow) => {
   return null;
 };
 
+// ===== Background motion preference (WCAG 2.2.2 Pause, Stop, Hide) =====
+//
+// The booking-page backgrounds are autoplaying, looping videos that run for
+// well over five seconds alongside the booking form, so they need a mechanism
+// to stop them. `prefers-reduced-motion` is honoured below and is the better
+// signal where it is set, but it is an operating-system setting rather than a
+// mechanism on the page, so it does not satisfy the criterion on its own.
+//
+// The choice is per visitor and per browser, so it lives in localStorage rather
+// than on the organiser's profile: it belongs to the person reading the page,
+// not to the person who published it. Storage can throw outright (Safari in
+// private mode, cookies blocked), hence the try/catch on every access — a
+// visitor who cannot persist the choice still gets a working button for the
+// current page.
+const MOTION_STORAGE_KEY = 'tymeslot:background-motion';
+const MOTION_EVENT = 'tymeslot:background-motion';
+const TOGGLE_ID = 'background-motion-toggle';
+
+export const backgroundMotionStopped = () => {
+  try {
+    return window.localStorage.getItem(MOTION_STORAGE_KEY) === 'stopped';
+  } catch (e) {
+    return false;
+  }
+};
+
+const storeBackgroundMotion = (stopped) => {
+  try {
+    window.localStorage.setItem(MOTION_STORAGE_KEY, stopped ? 'stopped' : 'playing');
+  } catch (e) {}
+};
+
+// Subscribes to changes made by the toggle; returns a cleanup function.
+const onBackgroundMotionChange = (handler) => {
+  const listener = (event) => handler(Boolean(event.detail && event.detail.stopped));
+  window.addEventListener(MOTION_EVENT, listener);
+  return () => window.removeEventListener(MOTION_EVENT, listener);
+};
+
+// The control is meaningless once the video is gone — reduced motion, a slow
+// connection, a decode error — so each hook hides it rather than leaving a
+// button that pauses nothing.
+const hideBackgroundMotionToggle = () => {
+  const toggle = document.getElementById(TOGGLE_ID);
+  if (toggle) toggle.hidden = true;
+};
+
+const applyMotionPreference = (videos, stopped) => {
+  videos.filter(Boolean).forEach((video) => {
+    if (stopped) {
+      try { video.pause(); } catch (e) {}
+    } else {
+      try { video.play().catch(() => {}); } catch (e) {}
+    }
+  });
+};
+
+// Wires one hook's videos to the shared preference: applies the stored choice
+// immediately and keeps them in step with later toggles. Returns a cleanup fn.
+const observeBackgroundMotion = (videos, { onStop, onResume } = {}) => {
+  const stop = onStop || (() => applyMotionPreference(videos, true));
+  const resume = onResume || (() => applyMotionPreference(videos, false));
+
+  if (backgroundMotionStopped()) {
+    // The autoplay attribute is server-rendered, so playback may already have
+    // begun by the time the hook mounts; drop it as well as pausing, or the
+    // browser restarts the video on the next source change.
+    videos.filter(Boolean).forEach((video) => {
+      try { video.removeAttribute('autoplay'); } catch (e) {}
+    });
+    stop();
+  }
+
+  return onBackgroundMotionChange((stopped) => (stopped ? stop() : resume()));
+};
+
+// Pause/play control for the background video. Purely client-side: it never
+// round-trips to the server, so the preference survives a LiveView patch and
+// costs the booking flow nothing.
+export const BackgroundMotionToggle = {
+  mounted() {
+    this._sync = () => {
+      const stopped = backgroundMotionStopped();
+      const label = stopped ? this.el.dataset.labelPlay : this.el.dataset.labelPause;
+
+      this.el.setAttribute('aria-label', label);
+      this.el.setAttribute('title', label);
+      this.el.dataset.state = stopped ? 'stopped' : 'playing';
+    };
+
+    this._click = () => {
+      const stopped = !backgroundMotionStopped();
+      storeBackgroundMotion(stopped);
+      window.dispatchEvent(new CustomEvent(MOTION_EVENT, { detail: { stopped } }));
+      this._sync();
+    };
+
+    this._sync();
+    this.el.addEventListener('click', this._click);
+  },
+
+  // A step transition re-renders the wrapper, which would otherwise restore the
+  // server-rendered attributes over the ones the toggle owns.
+  updated() {
+    this._sync();
+  },
+
+  destroyed() {
+    if (this._click) {
+      try { this.el.removeEventListener('click', this._click); } catch (e) {}
+      this._click = null;
+    }
+    this._sync = null;
+  }
+};
+
 const stopVideoPlayback = (video) => {
   if (!video) return;
 
@@ -78,8 +194,11 @@ export const QuillVideo = {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       video.style.display = 'none';
+      hideBackgroundMotionToggle();
       return;
     }
+
+    this._quillMotionCleanup = observeBackgroundMotion([video]);
 
     // Handle video loading
     video.addEventListener('loadedmetadata', function() {
@@ -95,6 +214,7 @@ export const QuillVideo = {
       stopVideoPlayback(video);
       video.style.display = 'none';
       container.classList.add('fallback');
+      hideBackgroundMotionToggle();
     };
 
     // Connection-aware loading
@@ -118,9 +238,11 @@ export const QuillVideo = {
   },
   destroyed() {
     try { this._quillConnectionCleanup && this._quillConnectionCleanup(); } catch (e) {}
+    try { this._quillMotionCleanup && this._quillMotionCleanup(); } catch (e) {}
     try { this._quillVideo && this._quillVideo.pause && this._quillVideo.pause(); } catch (e) {}
     this._quillVideo = null;
     this._quillConnectionCleanup = null;
+    this._quillMotionCleanup = null;
   }
 };
 
@@ -335,6 +457,7 @@ export const RhythmVideo = {
     if (prefersReducedMotion) {
       video1.style.display = 'none';
       video2.style.display = 'none';
+      hideBackgroundMotionToggle();
       return;
     }
 
@@ -345,6 +468,7 @@ export const RhythmVideo = {
       stopVideoPlayback(video2);
       video1.style.display = 'none';
       video2.style.display = 'none';
+      hideBackgroundMotionToggle();
     };
 
     const connection = getConnectionInfo();
@@ -369,6 +493,7 @@ export const RhythmVideo = {
     // Video crossfade logic
     let currentVideo = video1;
     let isTransitioning = false;
+    let motionStopped = backgroundMotionStopped();
 
     // Tracks the video currently being monitored so listeners can be removed
     // before new ones are added on each crossfade cycle.
@@ -383,7 +508,7 @@ export const RhythmVideo = {
 
     // Crossfade function
     const startCrossfade = () => {
-      if (isTransitioning) return;
+      if (isTransitioning || motionStopped) return;
       isTransitioning = true;
 
       const nextVideo = currentVideo === video1 ? video2 : video1;
@@ -439,15 +564,28 @@ export const RhythmVideo = {
       currentVideo.addEventListener('ended', m.ended);
     };
 
-    // Start first video
-    video1.play().catch(function(error) {
-      // Try to play on first user interaction (autoplay policy)
-      const clickHandler = function() {
-        video1.play().catch(() => {});
-      };
-      document.addEventListener('click', clickHandler, { once: true });
-      this._rhythmClickHandler = clickHandler;
-    }.bind(this));
+    this._rhythmMotionCleanup = observeBackgroundMotion([video1, video2], {
+      onStop: () => {
+        motionStopped = true;
+        applyMotionPreference([currentVideo], true);
+      },
+      onResume: () => {
+        motionStopped = false;
+        applyMotionPreference([currentVideo], false);
+      }
+    });
+
+    // Start first video, unless the visitor has stopped the background
+    if (!motionStopped) {
+      video1.play().catch(function(error) {
+        // Try to play on first user interaction (autoplay policy)
+        const clickHandler = function() {
+          if (!motionStopped) video1.play().catch(() => {});
+        };
+        document.addEventListener('click', clickHandler, { once: true });
+        this._rhythmClickHandler = clickHandler;
+      }.bind(this));
+    }
 
     setupVideoMonitoring();
 
@@ -457,7 +595,7 @@ export const RhythmVideo = {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
-            if (currentVideo.paused) currentVideo.play().catch(() => {});
+            if (currentVideo.paused && !motionStopped) currentVideo.play().catch(() => {});
           } else {
             if (!currentVideo.paused) currentVideo.pause();
           }
@@ -488,6 +626,8 @@ export const RhythmVideo = {
       this._rhythmVideoElements = null;
     }
     try { this._rhythmConnectionCleanup && this._rhythmConnectionCleanup(); } catch (e) {}
+    try { this._rhythmMotionCleanup && this._rhythmMotionCleanup(); } catch (e) {}
+    this._rhythmMotionCleanup = null;
     this._rhythmObserver = null;
     this._rhythmMonitor = null;
     this._rhythmConnectionCleanup = null;

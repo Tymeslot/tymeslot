@@ -1841,6 +1841,16 @@ msgstr "Impossibile riprogrammare una riunione scaduta"
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
 msgstr "Nel frattempo questo orario è stato prenotato da qualcun altro, quindi la richiesta non può più essere approvata."
 
+#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Metti in pausa il video di sfondo"
+
+#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Riproduci il video di sfondo"
+
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
