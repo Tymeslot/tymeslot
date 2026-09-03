@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -264,7 +265,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       |> Map.get("meeting_type", %{})
       |> Map.get("approval_window_hours")
 
-    case parse_approval_window(raw) do
+    case ApprovalWindow.parse(raw) do
       {:ok, hours} ->
         {:noreply,
          socket
@@ -281,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       # Leave the stored value and last successful save untouched: surfacing
       # the error and stopping here is what stops a half-typed number from
       # autosaving over a good previously saved window.
-      :error ->
+      {:error, :invalid_approval_window} ->
         {:noreply,
          assign(
            socket,
@@ -487,29 +488,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # Blank is a real choice here: it means "use the application default", which
   # the domain resolves at read time. So a cleared field stores nil rather than
   # reverting to whatever the default happened to be when it was cleared.
-  #
-  # Blank is a real choice ({:ok, nil}, "use the application default"), but
-  # anything else unparseable is an actual mistake, not a second way to spell
-  # blank: coercing "abc", "-1" or "2.5" to nil would silently replace
-  # whatever window was previously saved with the default the moment the host
-  # mistypes. The caller surfaces `:error` instead of assigning it.
-  defp parse_approval_window(nil), do: {:ok, nil}
-
-  defp parse_approval_window(value) when is_binary(value) do
-    case String.trim(value) do
-      "" ->
-        {:ok, nil}
-
-      trimmed ->
-        case Integer.parse(trimmed) do
-          {hours, ""} when hours > 0 -> {:ok, hours}
-          _other -> :error
-        end
-    end
-  end
-
-  defp parse_approval_window(_value), do: :error
-
   defp parse_booking_limit(nil), do: nil
 
   defp parse_booking_limit(value) when is_binary(value) do

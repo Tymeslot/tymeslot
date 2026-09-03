@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
 
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
@@ -41,7 +42,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
          {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]),
-         {:ok, approval_window_hours} <- parse_approval_window(params["approval_window_hours"]) do
+         {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
         name: params["name"],
         duration_minutes: duration_minutes,
@@ -106,34 +107,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   end
 
   defp parse_duration(_value), do: {:error, :invalid_duration}
-
-  # Blank means "use the application default", which the domain resolves at
-  # read time rather than freezing today's value into every row, so it maps
-  # to `{:ok, nil}` rather than an error. Anything else unparseable ("abc",
-  # "-1", "2.5") is a genuine mistake, not a second spelling of blank: this
-  # field reaches here straight from the raw form post (`ApprovalSection`'s
-  # input posts under this same key), so a value the live component never got
-  # to sanitise can arrive as-is. Coercing it to nil would silently overwrite
-  # a previously saved window with the default the moment the host mistypes,
-  # so it is surfaced as `:invalid_approval_window` instead.
-  defp parse_approval_window(value) when is_integer(value) and value > 0, do: {:ok, value}
-  defp parse_approval_window(value) when is_integer(value), do: {:error, :invalid_approval_window}
-  defp parse_approval_window(nil), do: {:ok, nil}
-
-  defp parse_approval_window(value) when is_binary(value) do
-    case String.trim(value) do
-      "" ->
-        {:ok, nil}
-
-      trimmed ->
-        case Integer.parse(trimmed) do
-          {hours, ""} when hours > 0 -> {:ok, hours}
-          _other -> {:error, :invalid_approval_window}
-        end
-    end
-  end
-
-  defp parse_approval_window(_value), do: {:error, :invalid_approval_window}
 
   defp booking_limits(params) do
     Map.new(Constraints.booking_limit_fields(), fn field ->

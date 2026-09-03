@@ -71,6 +71,15 @@ defmodule Tymeslot.Utils.FormHelpersTest do
       assert message =~ "None of the calendars you selected for this account can accept bookings"
     end
 
+    test "formats invalid approval window against its own field, not base" do
+      assert FormHelpers.format_context_error(:invalid_approval_window) ==
+               %{
+                 approval_window_hours: [
+                   "Enter a whole number of hours, or leave blank to use the default."
+                 ]
+               }
+    end
+
     test "formats generic atoms to capitalized base error" do
       assert FormHelpers.format_context_error(:something_went_wrong) ==
                %{base: ["Something went wrong"]}

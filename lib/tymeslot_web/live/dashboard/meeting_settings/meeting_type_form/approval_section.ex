@@ -83,7 +83,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
             data-testid="approval-window-hours"
           />
           <span class="text-token-sm text-tymeslot-600">
-            {dgettext("dashboard_meeting_form", "hours")}
+            {dngettext(
+              "dashboard_meeting_form",
+              "hour",
+              "hours",
+              @approval_window_hours || Constraints.default_approval_window_hours()
+            )}
           </span>
         </div>
 
