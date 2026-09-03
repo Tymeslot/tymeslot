@@ -178,6 +178,52 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     end
   end
 
+  describe "rescheduling a booking that was made under no meeting type" do
+    test "does not gate it on a meeting type that merely shares its duration" do
+      # An ad-hoc booking — dragged onto the dashboard calendar, or produced by
+      # confirming a poll — has no `meeting_type_id`, and creation gates it on
+      # nothing for exactly that reason. The reschedule path still has to
+      # resolve *some* meeting type to enforce the right availability schedule,
+      # and with no id it falls back to matching one by duration slug. Every
+      # account is seeded with types named after their durations, so that
+      # fallback reliably lands on one; reading `requires_approval` off it
+      # would hold a booking the host never asked to approve, and the expiry
+      # sweep would eventually cancel it.
+      %{user: user} = create_always_bookable_profile()
+
+      insert(:meeting_type,
+        user: user,
+        user_id: user.id,
+        name: "60 Minutes",
+        requires_approval: true,
+        approval_window_hours: 12
+      )
+
+      ad_hoc =
+        insert_meeting_for_user(user, %{
+          meeting_type_id: nil,
+          duration: 60,
+          status: "confirmed"
+        })
+
+      new_date = Date.add(Date.utc_today(), 2)
+
+      params = %{
+        date: Date.to_string(new_date),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(ad_hoc.uid, params, %{}, ad_hoc.organizer_user_id)
+
+      assert rescheduled.status == "confirmed"
+      assert is_nil(rescheduled.approval_requested_at)
+      assert is_nil(rescheduled.approval_deadline_at)
+    end
+  end
+
   describe "rescheduling a held request" do
     test "re-enters the gate with a fresh window rather than being left alone" do
       %{meeting: meeting, params: params} =
