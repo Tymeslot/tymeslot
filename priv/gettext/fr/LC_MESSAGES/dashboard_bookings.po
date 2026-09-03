@@ -113,7 +113,7 @@ msgstr "Date et heure"
 msgid "Dismiss"
 msgstr "Ignorer"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
 msgstr "Saisissez un montant de remboursement partiel valide."
@@ -188,7 +188,7 @@ msgstr "Gestion des réunions"
 msgid "Meeting Notes"
 msgstr "Notes de réunion"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled and refund issued."
 msgstr "Réunion annulée et remboursement effectué."
@@ -198,7 +198,7 @@ msgstr "Réunion annulée et remboursement effectué."
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Réunion annulée, mais le remboursement n’a pas pu être effectué. Veuillez effectuer le remboursement manuellement depuis votre tableau de bord Stripe."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Réunion annulée avec succès"
@@ -253,7 +253,7 @@ msgstr "Accès rapide aux réunions"
 msgid "Real-time updates"
 msgstr "Mises à jour en temps réel"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
 msgstr "Le montant du remboursement dépasse le solde remboursable restant."
@@ -333,7 +333,7 @@ msgstr "L’événement de cette réunion a été supprimé de votre calendrier 
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "L’événement de cette réunion a été reporté dans votre calendrier externe."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the attendee."
 msgstr "Cochez la case de confirmation pour annuler sans rembourser le participant."
@@ -504,3 +504,13 @@ msgstr "Le créneau est libéré immédiatement et %{name} est informé qu'il n'
 #, elixir-autogen, elixir-format
 msgid "Expired"
 msgstr "Expirée"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting payment"
+msgstr "En attente de paiement"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That request could not be answered."
+msgstr "Cette demande n'a pas pu être acceptée."

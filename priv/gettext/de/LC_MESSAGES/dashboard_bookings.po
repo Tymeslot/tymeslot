@@ -113,7 +113,7 @@ msgstr "Datum & Uhrzeit"
 msgid "Dismiss"
 msgstr "Ausblenden"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
 msgstr "Bitte geben Sie einen gültigen Teilrückerstattungsbetrag ein."
@@ -188,7 +188,7 @@ msgstr "Terminverwaltung"
 msgid "Meeting Notes"
 msgstr "Terminnotizen"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled and refund issued."
 msgstr "Termin abgesagt und Rückerstattung veranlasst."
@@ -198,7 +198,7 @@ msgstr "Termin abgesagt und Rückerstattung veranlasst."
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Termin abgesagt, aber die Rückerstattung konnte nicht veranlasst werden. Bitte veranlassen Sie die Rückerstattung manuell in Ihrem Stripe-Dashboard."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Termin erfolgreich abgesagt"
@@ -253,7 +253,7 @@ msgstr "Schneller Zugriff auf den Termin"
 msgid "Real-time updates"
 msgstr "Echtzeit-Aktualisierungen"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
 msgstr "Der Rückerstattungsbetrag übersteigt den verbleibenden erstattungsfähigen Betrag."
@@ -333,7 +333,7 @@ msgstr "Das Ereignis dieses Termins wurde aus Ihrem externen Kalender gelöscht.
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Das Ereignis dieses Termins wurde in Ihrem externen Kalender verschoben."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the attendee."
 msgstr "Aktivieren Sie das Kontrollkästchen, um ohne Rückerstattung an den Teilnehmer abzusagen."
@@ -504,3 +504,13 @@ msgstr "Der Termin wird sofort freigegeben und %{name} erfährt, dass er nicht b
 #, elixir-autogen, elixir-format
 msgid "Expired"
 msgstr "Abgelaufen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting payment"
+msgstr "Wartet auf Zahlung"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That request could not be answered."
+msgstr "Diese Anfrage konnte nicht angenommen werden."

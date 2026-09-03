@@ -662,3 +662,8 @@ msgstr "Wird ausgelöst, wenn jemand eine Buchung für einen Termintyp anfragt, 
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr "Wird ausgelöst, wenn Sie eine Buchungsanfrage ablehnen"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers on this event"
+msgstr "Wird bei diesem Ereignis ausgelöst"

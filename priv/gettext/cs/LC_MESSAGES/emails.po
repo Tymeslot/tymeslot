@@ -363,6 +363,7 @@ msgid "This time slot is now available for booking again."
 msgstr "Tento termín je nyní opět k dispozici pro rezervaci."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -2136,11 +2137,6 @@ msgstr "Obě tlačítka otevřou žádost k potvrzení. Nic se nerozhodne, dokud
 msgid "Both links open the request for you to confirm. Nothing is decided until you choose there."
 msgstr "Oba odkazy otevřou žádost k potvrzení. Nic se nerozhodne, dokud tam nezvolíte."
 
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Changed your mind? You can <a href=\"%{url}\" style=\"color:%{colour}\">withdraw your request</a> at any time."
-msgstr "Rozmysleli jste si to? Svou <a href=\"%{url}\" style=\"color:%{colour}\">žádost můžete kdykoli stáhnout</a>."
-
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Decline"
@@ -2314,3 +2310,13 @@ msgstr "%{organizer} nestihl(a) na váš požadavek odpovědět včas, proto byl
 #, elixir-autogen, elixir-format
 msgid "For %{name}, that's %{time}."
 msgstr "Pro %{name} je to %{time}."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format
+msgid "Changed your mind? You can %{link} at any time."
+msgstr "Změna plánu? Můžete %{link} kdykoli."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format
+msgid "withdraw your request"
+msgstr "stáhnout žádost"

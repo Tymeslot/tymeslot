@@ -662,3 +662,8 @@ msgstr "Se déclenche lorsque quelqu’un demande une réservation pour un type 
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr "Se déclenche lorsque vous refusez une demande de réservation"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers on this event"
+msgstr "Se déclenche pour cet événement"

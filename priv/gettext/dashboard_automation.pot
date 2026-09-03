@@ -662,3 +662,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr ""
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers on this event"
+msgstr ""

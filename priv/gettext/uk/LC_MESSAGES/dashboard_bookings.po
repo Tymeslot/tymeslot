@@ -113,7 +113,7 @@ msgstr "Дата й час"
 msgid "Dismiss"
 msgstr "Закрити"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
 msgstr "Вкажіть коректну суму часткового повернення."
@@ -188,7 +188,7 @@ msgstr "Керування зустрічами"
 msgid "Meeting Notes"
 msgstr "Нотатки до зустрічі"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled and refund issued."
 msgstr "Зустріч скасовано, а кошти повернено."
@@ -198,7 +198,7 @@ msgstr "Зустріч скасовано, а кошти повернено."
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Зустріч скасовано, але не вдалося повернути кошти. Будь ласка, зробіть це вручну на панелі керування Stripe."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Зустріч успішно скасовано"
@@ -253,7 +253,7 @@ msgstr "Швидкий доступ до зустрічей"
 msgid "Real-time updates"
 msgstr "Оновлення в реальному часі"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
 msgstr "Сума повернення перевищує залишок, доступний для повернення."
@@ -333,7 +333,7 @@ msgstr "Цю подію було видалено з вашого зовнішн
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Цю подію було перенесено у вашому зовнішньому календарі."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the attendee."
 msgstr "Поставте прапорець для підтвердження, щоб скасувати зустріч без повернення коштів учаснику."
@@ -505,3 +505,13 @@ msgstr "Час буде звільнено одразу, і %{name} дізнає
 #, elixir-autogen, elixir-format
 msgid "Expired"
 msgstr "Протерміновано"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting payment"
+msgstr "Очікує оплати"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That request could not be answered."
+msgstr "Не вдалося прийняти цей запит."

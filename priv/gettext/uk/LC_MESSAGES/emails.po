@@ -363,6 +363,7 @@ msgid "This time slot is now available for booking again."
 msgstr "Цей час знову доступний для бронювання."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
@@ -2136,11 +2137,6 @@ msgstr "Обидві кнопки відкривають запит для пі�
 msgid "Both links open the request for you to confirm. Nothing is decided until you choose there."
 msgstr "Обидва посилання відкривають запит для підтвердження. Нічого не вирішується, доки ви не оберете там."
 
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Changed your mind? You can <a href=\"%{url}\" style=\"color:%{colour}\">withdraw your request</a> at any time."
-msgstr "Передумали? Ви можете <a href=\"%{url}\" style=\"color:%{colour}\">відкликати запит</a> будь-коли."
-
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
 msgid "Decline"
@@ -2314,3 +2310,13 @@ msgstr "%{organizer} не відповів(ла) на ваш запит вчас
 #, elixir-autogen, elixir-format
 msgid "For %{name}, that's %{time}."
 msgstr "Для %{name} це %{time}."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format
+msgid "Changed your mind? You can %{link} at any time."
+msgstr "Передумали? Ви можете %{link} у будь-який час."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format
+msgid "withdraw your request"
+msgstr "відкликати запит"

@@ -805,12 +805,15 @@ msgstr "Si vous ne répondez pas à temps, la demande expire, le créneau est li
 msgid "Invitees get a \"request received\" email instead of a confirmation, and the slot is held so nobody else can take it. They get the confirmation and the calendar invite once you accept."
 msgstr "Les invités reçoivent un e-mail « demande reçue » au lieu d'une confirmation, et le créneau est réservé pour que personne d'autre ne le prenne. Ils reçoivent la confirmation et l'invitation au calendrier dès que vous acceptez."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
-#, elixir-autogen, elixir-format
-msgid "hours"
-msgstr "heures"
-
+#: lib/tymeslot/utils/form_helpers.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a whole number of hours, or leave blank to use the default."
 msgstr "Saisissez un nombre entier d’heures, ou laissez le champ vide pour utiliser la valeur par défaut."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "hours"
+msgstr[0] "heure"
+msgstr[1] "heures"

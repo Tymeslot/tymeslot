@@ -663,3 +663,8 @@ msgstr "Спрацьовує, коли хтось надсилає запит н
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr "Спрацьовує, коли ви відхиляєте запит на бронювання"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers on this event"
+msgstr "Спрацьовує для цієї події"

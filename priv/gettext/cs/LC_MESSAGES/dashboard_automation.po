@@ -663,3 +663,8 @@ msgstr "Spustí se, když někdo požádá o rezervaci u typu schůzky, který v
 #, elixir-autogen, elixir-format
 msgid "Triggers when you decline a booking request"
 msgstr "Spustí se, když zamítnete žádost o rezervaci"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers on this event"
+msgstr "Spustí se při této události"

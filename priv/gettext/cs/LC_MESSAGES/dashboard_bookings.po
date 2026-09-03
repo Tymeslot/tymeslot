@@ -113,7 +113,7 @@ msgstr "Datum a čas"
 msgid "Dismiss"
 msgstr "Skrýt"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid partial refund amount."
 msgstr "Zadejte platnou částku částečného vrácení platby."
@@ -188,7 +188,7 @@ msgstr "Správa schůzek"
 msgid "Meeting Notes"
 msgstr "Poznámky ke schůzce"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled and refund issued."
 msgstr "Schůzka byla zrušena a platba byla vrácena."
@@ -198,7 +198,7 @@ msgstr "Schůzka byla zrušena a platba byla vrácena."
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
 msgstr "Schůzka byla zrušena, ale platbu se nepodařilo vrátit. Vraťte ji prosím ručně ve svém účtu Stripe."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Schůzka byla zrušena."
@@ -253,7 +253,7 @@ msgstr "Rychlý přístup ke schůzce"
 msgid "Real-time updates"
 msgstr "Aktualizace v reálném čase"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Refund amount exceeds the remaining refundable balance."
 msgstr "Částka k vrácení převyšuje zbývající vratný zůstatek."
@@ -333,7 +333,7 @@ msgstr "Událost této schůzky byla smazána z vašeho externího kalendáře.
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Událost této schůzky byla přesunuta ve vašem externím kalendáři."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the attendee."
 msgstr "Chcete-li zrušit schůzku bez vrácení platby účastníkovi, zaškrtněte potvrzení."
@@ -505,3 +505,13 @@ msgstr "Termín se okamžitě uvolní a %{name} se dozví, že nebyl potvrzen."
 #, elixir-autogen, elixir-format
 msgid "Expired"
 msgstr "Vypršeno"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting payment"
+msgstr "Čeká na platbu"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That request could not be answered."
+msgstr "Tuto žádost se nepodařilo přijmout."
