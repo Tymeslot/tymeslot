@@ -512,6 +512,6 @@ msgid "Awaiting payment"
 msgstr "Čeká na platbu"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That request could not be answered."
-msgstr "Tuto žádost se nepodařilo přijmout."
+msgstr "Na tuto žádost se nepodařilo odpovědět."

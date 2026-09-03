@@ -511,6 +511,6 @@ msgid "Awaiting payment"
 msgstr "En attente de paiement"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That request could not be answered."
-msgstr "Cette demande n'a pas pu être acceptée."
+msgstr "Cette demande n'a pas pu recevoir de réponse."
