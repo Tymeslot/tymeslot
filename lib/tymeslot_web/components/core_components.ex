@@ -117,11 +117,16 @@ defmodule TymeslotWeb.Components.CoreComponents do
 
   @doc """
   Renders an icon badge with gradient background.
+
+  Accepts either a `hero-…` icon name via `icon`, or raw SVG children via the
+  default slot. See `TymeslotWeb.Components.CoreComponents.Containers.icon_badge/1`,
+  which this delegates to; these declarations must stay in step with it, since a
+  wrapper that declares less than its delegate silently rejects the difference.
   """
-  attr :color_from, :string, default: "#10b981"
-  attr :color_to, :string, default: "#059669"
   attr :size, :atom, default: :medium, values: [:small, :medium, :large]
-  slot :inner_block, required: true
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon name, rendered via `<.icon>`"
+  attr :class, :string, default: ""
+  slot :inner_block, doc: "Raw SVG children (e.g. `<path>`), used when `icon` is not given"
   @spec icon_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def icon_badge(assigns), do: Containers.icon_badge(assigns)
 

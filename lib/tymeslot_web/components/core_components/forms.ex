@@ -91,6 +91,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       |> assign_new(:name, fn -> nil end)
       |> assign_new(:checked, fn -> nil end)
       |> assign_new(:value, fn -> nil end)
+      |> assign_new(:maxlength, fn -> nil end)
 
     error_id = assigns.id && assigns.errors != [] && "#{assigns.id}-error"
 
@@ -143,6 +144,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           prompt={@prompt}
           multiple={@multiple}
           hidden_input={@hidden_input}
+          maxlength={@maxlength}
           rest={@rest}
         />
 
@@ -205,6 +207,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       name={@name}
       rows={@rows}
       placeholder={@placeholder}
+      maxlength={@maxlength}
       class={[
         "input min-h-[120px] py-3",
         @has_leading_icon && "input-with-icon",
@@ -256,6 +259,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       name={@name}
       value={Phoenix.HTML.Form.normalize_value(@type, @value)}
       placeholder={@placeholder}
+      maxlength={@maxlength}
       class={[
         "input",
         @has_leading_icon && "input-with-icon",
