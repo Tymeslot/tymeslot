@@ -48,11 +48,11 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
       #{MeetingComponents.meeting_details_table(details, locale)}
 
       <mj-text font-size="16px" color="#{Styles.ink_soft()}" line-height="24px" padding="16px 0">
-        #{waiting_sentence(meeting, locale)}
+        #{Sanitise.sanitize_for_email(waiting_sentence(meeting, locale))}
       </mj-text>
 
       <mj-text font-size="14px" color="#{Styles.ink_muted()}" line-height="20px" padding="8px 0 0 0">
-        #{dgettext("emails", "This time is held for you in the meantime, so nobody else can take it. You'll get a confirmation with the calendar invite as soon as %{organizer} accepts.", organizer: meeting.organizer_name)}
+        #{Sanitise.sanitize_for_email(dgettext("emails", "This time is held for you in the meantime, so nobody else can take it. You'll get a confirmation with the calendar invite as soon as %{organizer} accepts.", organizer: meeting.organizer_name))}
       </mj-text>
 
       #{cancel_line(meeting)}
@@ -131,10 +131,20 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
 
   defp cancel_line(%Meeting{cancel_url: nil}), do: ""
 
+  # The msgid carries no markup — the `<a>` is built here and passed in as
+  # %{link}, so translators only ever see plain text and a placeholder, and
+  # the href goes through the same URL validation every other link in these
+  # templates gets before it reaches the sink.
   defp cancel_line(%Meeting{cancel_url: url}) do
+    safe_url = Sanitise.sanitize_url(url)
+    link_text = Sanitise.sanitize_for_email(dgettext("emails", "withdraw your request"))
+
+    link_html =
+      ~s(<a href="#{safe_url}" style="color:#{Styles.component_color(:link)}">#{link_text}</a>)
+
     """
     <mj-text font-size="14px" color="#{Styles.ink_muted()}" line-height="20px" padding="16px 0 0 0">
-      #{dgettext("emails", "Changed your mind? You can <a href=\"%{url}\" style=\"color:%{colour}\">withdraw your request</a> at any time.", url: url, colour: Styles.component_color(:link))}
+      #{dgettext("emails", "Changed your mind? You can %{link} at any time.", link: link_html)}
     </mj-text>
     """
   end

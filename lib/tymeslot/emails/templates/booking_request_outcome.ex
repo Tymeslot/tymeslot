@@ -52,7 +52,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
       #{MeetingComponents.meeting_details_table(details, locale)}
 
       <mj-text font-size="16px" color="#{Styles.ink_soft()}" line-height="24px" padding="16px 0">
-        #{explanation(variant, meeting)}
+        #{Sanitise.sanitize_for_email(explanation(variant, meeting))}
       </mj-text>
 
       #{reason_block(variant, meeting)}
@@ -131,14 +131,18 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   # A decline with a note reads as a person answering; without one it reads as
   # a machine. Where the host wrote nothing we say nothing rather than
-  # inventing a reason on their behalf.
-  defp reason_block(:declined, %Meeting{decline_reason: reason}) when is_binary(reason) do
+  # inventing a reason on their behalf. `is_binary(reason)` alone accepts
+  # `""`, which would print the "They added:" label with nothing under it, so
+  # the empty string is excluded here rather than relied upon to have already
+  # been normalised to `nil` upstream.
+  defp reason_block(:declined, %Meeting{decline_reason: reason})
+       when is_binary(reason) and reason != "" do
     """
     <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="22px" padding="8px 0 0 0">
       #{dgettext("emails", "They added:")}
     </mj-text>
     <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="22px" font-style="italic" padding="4px 0 0 16px">
-      #{Sanitise.sanitize_for_email(reason)}
+      #{reason |> Sanitise.sanitize_for_email() |> String.replace("\n", "<br/>")}
     </mj-text>
     """
   end
@@ -179,7 +183,8 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     """
   end
 
-  defp text_reason(:declined, %Meeting{decline_reason: reason}) when is_binary(reason) do
+  defp text_reason(:declined, %Meeting{decline_reason: reason})
+       when is_binary(reason) and reason != "" do
     "\n" <> dgettext("emails", "They added:") <> "\n" <> reason <> "\n"
   end
 

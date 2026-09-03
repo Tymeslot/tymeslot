@@ -44,9 +44,11 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
   @spec render(variant(), Meeting.t(), map(), String.t()) :: Swoosh.Email.t()
   def render(variant, %Meeting{} = meeting, urls, locale) when variant in [:request, :nudge] do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      host_time = TimezoneHelper.convert_to_timezone(meeting.start_time, host_timezone(meeting))
+      host_tz = host_timezone(meeting)
+      host_time = TimezoneHelper.convert_to_timezone(meeting.start_time, host_tz)
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
-      details = meeting_details(meeting, host_time)
+      details = meeting_details(meeting, host_time, host_tz)
+      deadline_text = deadline_sentence(meeting, host_tz, locale)
 
       mjml_content = """
       #{MeetingComponents.attendee_info_section(@intent, %{name: meeting.attendee_name, email: meeting.attendee_email})}
@@ -57,13 +59,13 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       #{MeetingComponents.meeting_details_table(details, locale)}
 
       <mj-text font-size="14px" color="#{Styles.ink_muted()}" line-height="20px" padding="6px 0 0 0">
-        #{attendee_time_sentence(meeting, attendee_time, locale)}
+        #{Sanitise.sanitize_for_email(attendee_time_sentence(meeting, attendee_time, locale))}
       </mj-text>
 
       #{MeetingComponents.custom_answers_section(meeting)}
 
       <mj-text font-size="14px" color="#{Styles.ink_muted()}" line-height="20px" padding="8px 0 16px 0">
-        #{deadline_sentence(meeting, locale)}
+        #{Sanitise.sanitize_for_email(deadline_text)}
       </mj-text>
 
       #{Buttons.action_button(:confirmed, dgettext("emails", "Approve"), urls.approve_url, full_width: true, size: :large)}
@@ -97,7 +99,9 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
         )
       )
       |> html_body(html_body)
-      |> text_body(text_body_for(variant, meeting, details, attendee_time, urls, locale))
+      |> text_body(
+        text_body_for(variant, meeting, details, attendee_time, deadline_text, urls, locale)
+      )
     end)
   end
 
@@ -140,7 +144,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
   defp host_timezone(%Meeting{organizer_user_id: user_id}),
     do: Profiles.get_user_timezone(user_id)
 
-  defp meeting_details(meeting, host_time) do
+  defp meeting_details(meeting, host_time, host_tz) do
     %{
       date: host_time,
       start_time: host_time,
@@ -148,7 +152,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
       meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
-      timezone: host_timezone(meeting)
+      timezone: host_tz
     }
   end
 
@@ -163,16 +167,16 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     )
   end
 
-  defp deadline_sentence(%Meeting{approval_deadline_at: nil} = meeting, _locale) do
+  defp deadline_sentence(%Meeting{approval_deadline_at: nil} = meeting, _host_tz, _locale) do
     dgettext("emails", "The slot stays held for %{name} until you answer.",
       name: meeting.attendee_name
     )
   end
 
-  defp deadline_sentence(%Meeting{} = meeting, locale) do
+  defp deadline_sentence(%Meeting{} = meeting, host_tz, locale) do
     deadline =
       meeting.approval_deadline_at
-      |> TimezoneHelper.convert_to_timezone(host_timezone(meeting))
+      |> TimezoneHelper.convert_to_timezone(host_tz)
       |> Formatting.format_datetime(locale)
 
     dgettext(
@@ -183,7 +187,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     )
   end
 
-  defp text_body_for(variant, meeting, details, attendee_time, urls, locale) do
+  defp text_body_for(variant, meeting, details, attendee_time, deadline_text, urls, locale) do
     """
     #{title(variant)}
 
@@ -194,13 +198,14 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
 
     #{dgettext("emails", "REQUESTED TIME:")}
     #{dgettext("emails", "Date:")} #{Formatting.format_date_short(details.date, locale)}
+    #{dgettext("emails", "Time:")} #{Formatting.format_time(details.start_time, locale)}
     #{dgettext("emails", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
     #{dgettext("emails", "Location:")} #{Formatting.format_location(details)}
     #{dgettext("emails", "Timezone:")} #{details.timezone}
 
     #{attendee_time_sentence(meeting, attendee_time, locale)}
     #{TextBodyHelper.format_custom_answers(meeting, locale)}
-    #{deadline_sentence(meeting, locale)}
+    #{deadline_text}
 
     #{dgettext("emails", "Approve:")}
     #{urls.approve_url}

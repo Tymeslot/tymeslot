@@ -167,7 +167,11 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     test "a decline with no reason invents none" do
       email = BookingRequestOutcome.render(:declined, meeting(%{decline_reason: nil}))
 
-      assert email.html_body =~ "wasn't able to take this booking"
+      # Substring without the apostrophe: the sentence is HTML-escaped as a
+      # whole (it also carries the organiser's name), so a plain `'` in the
+      # static copy renders as `&#39;` in the markup even though it displays
+      # correctly.
+      assert email.html_body =~ "able to take this booking"
       refute email.html_body =~ "They added:"
       refute email.text_body =~ "They added:"
     end
@@ -176,7 +180,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       email = BookingRequestOutcome.render(:expired, meeting())
 
       assert email.subject =~ "Request expired"
-      assert email.html_body =~ "didn't get to your request in time"
+      assert email.html_body =~ "get to your request in time"
       refute email.html_body =~ "wasn't able to take this booking"
     end
 
@@ -205,6 +209,90 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
         |> Enum.filter(&calendar_attachment?/1)
 
       assert calendar_parts == []
+    end
+
+    test "an empty decline reason does not print a dangling label" do
+      # `Approval.normalise_reason/1` maps `""` to `nil` upstream, but the
+      # template must not depend on that being the only writer of the field.
+      email = BookingRequestOutcome.render(:declined, meeting(%{decline_reason: ""}))
+
+      refute email.html_body =~ "They added:"
+      refute email.text_body =~ "They added:"
+    end
+
+    test "preserves newlines a host typed into a decline reason" do
+      email =
+        BookingRequestOutcome.render(:declined, meeting(%{decline_reason: "Line one\nLine two"}))
+
+      # mrml re-serialises the self-closing tag as `<br />`.
+      assert email.html_body =~ "Line one<br />Line two"
+      assert email.text_body =~ "Line one\nLine two"
+    end
+  end
+
+  describe "held-request location classification" do
+    test "a held video request shows Video Call rather than TBD" do
+      # `location` and `meeting_url` are both nil on a held request — the
+      # video room isn't created until the host approves — so the honest
+      # signal that this is a video meeting is `video_integration_id`, set at
+      # booking time.
+      html =
+        meeting(%{location: nil, meeting_url: nil, video_integration_id: 42})
+        |> BookingRequestReceived.render()
+        |> Map.fetch!(:html_body)
+
+      assert html =~ "Video Call"
+      refute html =~ "TBD"
+    end
+  end
+
+  describe "escaping of user-controlled text spliced into HTML" do
+    @malicious "<script>alert(1)</script> & \"quoted\" 'single'"
+    @escaped "&lt;script&gt;alert(1)&lt;/script&gt;"
+
+    test "BookingApprovalRequest escapes the attendee name" do
+      html =
+        BookingApprovalRequest.render(
+          :request,
+          meeting(%{attendee_name: @malicious}),
+          @urls,
+          "en"
+        ).html_body
+
+      refute html =~ "<script>alert(1)</script>"
+      assert html =~ @escaped
+    end
+
+    test "BookingRequestReceived escapes the organizer name" do
+      html = BookingRequestReceived.render(meeting(%{organizer_name: @malicious})).html_body
+
+      refute html =~ "<script>alert(1)</script>"
+      assert html =~ @escaped
+    end
+
+    test "BookingRequestOutcome escapes the organizer name" do
+      email =
+        BookingRequestOutcome.render(:declined, meeting(%{organizer_name: @malicious}))
+
+      refute email.html_body =~ "<script>alert(1)</script>"
+      assert email.html_body =~ @escaped
+    end
+
+    test "BookingRequestOutcome escapes a host-typed decline reason quoted back to the invitee" do
+      email =
+        BookingRequestOutcome.render(:declined, meeting(%{decline_reason: @malicious}))
+
+      refute email.html_body =~ "<script>alert(1)</script>"
+      assert email.html_body =~ @escaped
+    end
+
+    test "BookingRequestReceived validates the withdraw link's href and keeps markup out of the msgid" do
+      html =
+        BookingRequestReceived.render(meeting(%{cancel_url: "javascript:alert(1)"})).html_body
+
+      assert html =~ "withdraw your request"
+      refute html =~ "javascript:alert(1)"
+      assert html =~ ~s(href="#")
     end
   end
 end
