@@ -278,10 +278,14 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   and a recurring series — which is why it takes an `item_spec` directly
   instead of the canonical event data a meeting produces.
 
-  Returns the item id the server assigned, which is what `delete_exchange_item/2`
-  takes and what `Exchange.EventNormaliser` writes into `provider_event_id`. EWS
-  assigns the iCalendar UID itself, so a caller cannot choose one and must
-  correlate by item id.
+  Returns the item id the server assigned, which is what
+  `Exchange.Provider.delete_event/3` takes and what `Exchange.EventNormaliser`
+  writes into `provider_event_id`. EWS assigns the iCalendar UID itself, so a
+  caller cannot choose one and must correlate by item id.
+
+  There is no matching remover here: an item planted this way is deleted
+  through the provider callback like any other, since a delete addresses an
+  item by id and so needs nothing this planter knows.
   """
   @spec seed_exchange_item(integration(), ExchangeWrites.spec()) ::
           {:ok, ExchangeWrites.item_id()} | {:error, term()}
@@ -290,22 +294,6 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
         fixture
       ) do
     ExchangeWrites.create_item(exchange_config(integration), fixture)
-  end
-
-  @doc """
-  Removes an item planted by `seed_exchange_item/2`.
-
-  `HardDelete`, as every EWS delete here is: a fixture moved to Deleted Items
-  is still in the mailbox, and the next audit run reading the whole mailbox
-  would find the leftovers of every earlier one.
-  """
-  @spec delete_exchange_item(integration(), ExchangeWrites.item_id()) ::
-          :ok | {:error, term()}
-  def delete_exchange_item(
-        %CalendarIntegrationSchema{provider: "exchange"} = integration,
-        item_id
-      ) do
-    ExchangeWrites.delete_item(exchange_config(integration), item_id)
   end
 
   @doc """
