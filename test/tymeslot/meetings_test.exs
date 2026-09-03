@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingsTest do
 
   use Tymeslot.DataCase, async: true
   @moduletag :utils
+  @moduletag :meetings
 
   import Mox
 
