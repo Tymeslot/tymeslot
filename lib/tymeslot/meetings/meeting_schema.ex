@@ -62,6 +62,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           approval_nudge_sent_at: DateTime.t() | nil,
           decline_reason: String.t() | nil,
           announced_at: DateTime.t() | nil,
+          first_announced_at: DateTime.t() | nil,
           organizer_email_sent: boolean(),
           attendee_email_sent: boolean(),
           reminder_email_sent: boolean(),
@@ -198,7 +199,16 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Notification tracking
     # Stamped when `meeting.created` is raised, so the event is claimed once and
     # cannot fan out twice; see `Tymeslot.Notifications.Events.meeting_created/1`.
+    # This is the live claim, not a history: a reschedule that sends a confirmed
+    # booking back into the approval gate clears it, so the host's second
+    # approval can claim the fan-out for the new time.
     field(:announced_at, :utc_datetime)
+    # The permanent counterpart, stamped beside the first claim and cleared by
+    # nothing. It answers "was this booking ever a live meeting the attendee
+    # was told about?", which `announced_at` stops being able to answer the
+    # moment a reschedule re-opens the gate, and which decides whether a
+    # released request is refunded automatically or left to the host.
+    field(:first_announced_at, :utc_datetime)
 
     # Email tracking
     field(:organizer_email_sent, :boolean, default: false)
@@ -303,6 +313,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :approval_nudge_sent_at,
     :decline_reason,
     :announced_at,
+    :first_announced_at,
     :calendar_sync_status,
     :calendar_sync_status_dismissed_at,
     :provider_event_id,

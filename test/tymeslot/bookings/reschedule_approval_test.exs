@@ -176,6 +176,24 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         args: %{"action" => "send_reminder_emails", "meeting_id" => confirmed.id}
       )
     end
+
+    test "the record that the booking was once a live meeting survives the re-gate" do
+      # Clearing `announced_at` frees the fan-out claim, and would otherwise
+      # erase the only fact saying this booking had already happened. That
+      # fact is what decides whether declining the new request refunds the
+      # attendee automatically or leaves the choice to the host, so it has to
+      # outlive the reset.
+      announced_at = DateTime.utc_now(:second)
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert is_nil(rescheduled.announced_at)
+      assert rescheduled.first_announced_at == announced_at
+    end
   end
 
   describe "rescheduling a booking that was made under no meeting type" do

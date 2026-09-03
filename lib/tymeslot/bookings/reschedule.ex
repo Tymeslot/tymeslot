@@ -159,8 +159,12 @@ defmodule Tymeslot.Bookings.Reschedule do
   # claim (`MeetingQueries.claim_announcement/1`) already spent — the host's
   # second approval would then win the DB transition but lose the fan-out,
   # so the invitee gets no confirmation email, no reminders and no
-  # `meeting.created` webhook for the new time. The deadline is computed from
-  # now and capped at the new start time, exactly as an original booking's is.
+  # `meeting.created` webhook for the new time. Clearing it costs nothing that
+  # is needed later: `first_announced_at` keeps the permanent record that this
+  # booking was once a live meeting, which is what `Approval` reads when it
+  # decides whether releasing the request refunds it. The deadline is computed
+  # from now and capped at the new start time, exactly as an original
+  # booking's is.
   #
   # A meeting type can also stop requiring approval while one of its bookings
   # is still held. Moving that booking must not leave it stranded in the

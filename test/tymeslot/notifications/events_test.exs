@@ -11,6 +11,7 @@ defmodule Tymeslot.Notifications.EventsTest do
 
   alias Oban.Job
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.{SlackWorker, TelegramWorker}
 
@@ -263,6 +264,36 @@ defmodule Tymeslot.Notifications.EventsTest do
 
       assert {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
       assert %DateTime{} = reloaded.announced_at
+    end
+
+    test "meeting_created/1 also records the announcement where a re-gate cannot clear it", %{
+      meeting: meeting
+    } do
+      # `announced_at` is the once-only claim, and a reschedule that sends a
+      # confirmed booking back for approval clears it so the second approval
+      # can claim the fan-out again. `first_announced_at` is the permanent
+      # counterpart, and is the fact the refund rule reads when such a request
+      # is later declined.
+      assert is_nil(meeting.first_announced_at)
+
+      assert {:ok, _result} = Events.meeting_created(meeting)
+      assert {:ok, announced} = MeetingQueries.get_meeting(meeting.id)
+      assert announced.first_announced_at == announced.announced_at
+
+      # Free the claim, as the re-gating reschedule does, and announce again.
+      # The first stamp must not move.
+      {1, _rows} =
+        Repo.update_all(
+          from(m in MeetingSchema, where: m.id == ^meeting.id),
+          set: [announced_at: nil]
+        )
+
+      assert {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert {:ok, _again} = Events.meeting_created(reloaded)
+      assert {:ok, reannounced} = MeetingQueries.get_meeting(meeting.id)
+
+      assert reannounced.first_announced_at == announced.first_announced_at
+      assert %DateTime{} = reannounced.announced_at
     end
   end
 

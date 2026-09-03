@@ -476,12 +476,16 @@ defmodule Tymeslot.Meetings.Approval do
   re-request is then declined or expires, there genuinely *is* a confirmed
   meeting to weigh against a partial refund — the one the attendee already
   had, activated, and were told about. Auto-refunding it in full would make
-  that choice for the host silently, so this checks `announced_at`
-  (`Notifications.Events.meeting_created/1`'s idempotency claim, permanent
-  and never reset by a reschedule) and skips the automatic refund when it is
-  set, leaving the payment refundable from the dashboard's payments screen
-  instead. A payment row that was never actually paid is quietly skipped,
-  since it has nothing to refund.
+  that choice for the host silently, so this checks `first_announced_at` and
+  skips the automatic refund when it is set, leaving the payment refundable
+  from the dashboard's payments screen instead. A payment row that was never
+  actually paid is quietly skipped, since it has nothing to refund.
+
+  It has to be `first_announced_at` and not `announced_at`: the re-gating
+  reschedule clears `announced_at` on purpose, so that the host's second
+  approval can claim the `meeting.created` fan-out for the new time
+  (`Bookings.Reschedule`), and reading the claim here would therefore find it
+  empty on exactly the meetings this rule is about.
 
   Public because this rule applies to every way a held request stops being
   held, not only the two this module resolves itself (`decline/2`,
@@ -512,7 +516,7 @@ defmodule Tymeslot.Meetings.Approval do
     end
   end
 
-  defp previously_confirmed?(%Meeting{announced_at: %DateTime{}}), do: true
+  defp previously_confirmed?(%Meeting{first_announced_at: %DateTime{}}), do: true
   defp previously_confirmed?(_meeting), do: false
 
   defp refund_remaining(payment, meeting) do
