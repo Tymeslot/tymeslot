@@ -23,14 +23,19 @@ defmodule Tymeslot.Notifications.EventTypes do
   existing consumers see no change.
   """
 
-  @events %{
+  # A keyword list, not a map: dashboards (`Webhooks.available_events/0` and
+  # its Slack/Telegram counterparts) list events in this exact order, and a
+  # map's enumeration order is an implementation detail, not a guarantee.
+  @events [
     meeting_created: "meeting.created",
     meeting_requested: "meeting.requested",
     meeting_declined: "meeting.declined",
     meeting_request_expired: "meeting.request_expired",
     meeting_cancelled: "meeting.cancelled",
     meeting_rescheduled: "meeting.rescheduled"
-  }
+  ]
+
+  @events_by_atom Map.new(@events)
 
   @doc """
   Converts an internal event atom to the event-type string channels store and
@@ -41,7 +46,8 @@ defmodule Tymeslot.Notifications.EventTypes do
   unsubscribable wire name is a worse failure than a crash at the call site.
   """
   @spec to_event_type(atom()) :: String.t()
-  def to_event_type(atom) when is_map_key(@events, atom), do: Map.fetch!(@events, atom)
+  def to_event_type(atom) when is_map_key(@events_by_atom, atom),
+    do: Map.fetch!(@events_by_atom, atom)
 
   def to_event_type(atom) when is_atom(atom) do
     raise ArgumentError, "unknown event type: #{inspect(atom)}"
@@ -49,9 +55,10 @@ defmodule Tymeslot.Notifications.EventTypes do
 
   @doc """
   The wire names every channel may subscribe to, i.e. the values of
-  `to_event_type/1`. Channels derive their `@valid_events` list from this so
-  adding an event here is what makes it subscribable everywhere.
+  `to_event_type/1`, in the authored order above. Channels derive their
+  `@valid_events` list from this so adding an event here is what makes it
+  subscribable everywhere.
   """
   @spec all() :: [String.t()]
-  def all, do: Map.values(@events)
+  def all, do: Enum.map(@events, fn {_atom, wire_name} -> wire_name end)
 end

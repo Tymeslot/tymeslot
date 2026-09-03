@@ -382,6 +382,11 @@ defmodule Tymeslot.Webhooks do
   defp event_label("meeting.rescheduled"),
     do: dgettext("dashboard_automation", "Meeting Rescheduled")
 
+  # Catch-all so a future `EventTypes` entry with no dedicated copy yet
+  # renders something readable on the automation dashboard instead of
+  # crashing `available_events/0` (and the page that calls it).
+  defp event_label(value), do: value
+
   defp event_description("meeting.created"),
     do: dgettext("dashboard_automation", "Triggers when a new booking is successfully created")
 
@@ -407,6 +412,9 @@ defmodule Tymeslot.Webhooks do
 
   defp event_description("meeting.rescheduled"),
     do: dgettext("dashboard_automation", "Triggers when a booking time is changed")
+
+  defp event_description(_value),
+    do: dgettext("dashboard_automation", "Triggers on this event")
 
   # ============================================================================
   # Private Helpers

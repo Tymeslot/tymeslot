@@ -53,29 +53,28 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   # Private functions
 
   defp build_meeting_data(%MeetingSchema{} = meeting) do
-    maybe_add_cancellation_data(
-      %{
-        id: meeting.id,
-        uid: meeting.uid,
-        title: meeting.title,
-        summary: meeting.summary,
-        description: meeting.description,
-        start_time: format_datetime(meeting.start_time),
-        end_time: format_datetime(meeting.end_time),
-        duration: meeting.duration,
-        status: meeting.status,
-        meeting_type: meeting.meeting_type,
-        location: meeting.location,
-        organizer: build_organizer_data(meeting),
-        attendee: build_attendee_data(meeting),
-        guests: build_guests_data(meeting),
-        urls: build_urls(meeting),
-        video: build_video_data(meeting),
-        created_at: format_datetime(meeting.inserted_at),
-        updated_at: format_datetime(meeting.updated_at)
-      },
-      meeting
-    )
+    %{
+      id: meeting.id,
+      uid: meeting.uid,
+      title: meeting.title,
+      summary: meeting.summary,
+      description: meeting.description,
+      start_time: format_datetime(meeting.start_time),
+      end_time: format_datetime(meeting.end_time),
+      duration: meeting.duration,
+      status: meeting.status,
+      meeting_type: meeting.meeting_type,
+      location: meeting.location,
+      organizer: build_organizer_data(meeting),
+      attendee: build_attendee_data(meeting),
+      guests: build_guests_data(meeting),
+      urls: build_urls(meeting),
+      video: build_video_data(meeting),
+      created_at: format_datetime(meeting.inserted_at),
+      updated_at: format_datetime(meeting.updated_at)
+    }
+    |> maybe_add_approval_data(meeting)
+    |> maybe_add_cancellation_data(meeting)
   end
 
   defp build_organizer_data(meeting) do
@@ -138,6 +137,42 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
     else
       %{enabled: false}
     end
+  end
+
+  # Present whenever a booking has passed through the approval gate
+  # (`Tymeslot.Meetings.Approval`): `meeting.requested`, `meeting.declined`,
+  # `meeting.request_expired`, and a `meeting.created` fired by the host's
+  # approval all set `approval_requested_at`. An ordinary booking that never
+  # needed approval leaves it nil, so this key is simply absent from those
+  # payloads rather than shipping as null noise, keeping them byte-compatible.
+  defp maybe_add_approval_data(
+         data,
+         %MeetingSchema{approval_requested_at: %DateTime{}} = meeting
+       ) do
+    Map.put(data, :approval, %{
+      requested_at: format_datetime(meeting.approval_requested_at),
+      deadline_at: format_datetime(meeting.approval_deadline_at),
+      resolved_at: format_datetime(meeting.approval_resolved_at)
+    })
+  end
+
+  defp maybe_add_approval_data(data, _meeting), do: data
+
+  # A decline and an ordinary cancellation share `status: "cancelled"` (see
+  # the comment on `MeetingSchema.approval_resolved_at`), but they mean
+  # different things to a consumer: a decline is the host refusing a request
+  # that was never accepted, not the withdrawal of one that was. Distinguish
+  # by `approval_resolved_at`, exactly as the rest of the approval feature
+  # does, and carry the reason under `decline_reason` — the field the host
+  # actually filled in — rather than the unrelated `cancellation_reason`.
+  defp maybe_add_cancellation_data(
+         data,
+         %MeetingSchema{status: "cancelled", approval_resolved_at: %DateTime{}} = meeting
+       ) do
+    Map.put(data, :decline, %{
+      declined_at: format_datetime(meeting.approval_resolved_at),
+      reason: meeting.decline_reason
+    })
   end
 
   defp maybe_add_cancellation_data(data, %MeetingSchema{status: "cancelled"} = meeting) do
