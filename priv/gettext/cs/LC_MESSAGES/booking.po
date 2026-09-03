@@ -1834,3 +1834,8 @@ msgstr "Dobrý den!"
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule an expired meeting"
 msgstr "Schůzku s vypršenou platností nelze přesunout"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked by somebody else, so this request can no longer be approved."
+msgstr "Tento termín si mezitím rezervoval někdo jiný, takže tuto žádost už nelze schválit."

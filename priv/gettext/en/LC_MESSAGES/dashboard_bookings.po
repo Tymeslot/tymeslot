@@ -514,3 +514,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "That request could not be answered."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked, so the request can no longer be approved."
+msgstr ""

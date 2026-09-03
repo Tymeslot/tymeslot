@@ -1835,3 +1835,8 @@ msgstr "Вітаю!"
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule an expired meeting"
 msgstr "Зустріч із вичерпаним терміном не можна перенести"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked by somebody else, so this request can no longer be approved."
+msgstr "Тим часом цей час забронював хтось інший, тому цей запит більше не можна підтвердити."

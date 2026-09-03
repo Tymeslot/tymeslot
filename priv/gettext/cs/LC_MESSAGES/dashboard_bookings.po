@@ -515,3 +515,8 @@ msgstr "Čeká na platbu"
 #, elixir-autogen, elixir-format
 msgid "That request could not be answered."
 msgstr "Na tuto žádost se nepodařilo odpovědět."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked, so the request can no longer be approved."
+msgstr "Tento termín byl mezitím rezervován, takže žádost už nelze schválit."

@@ -109,6 +109,21 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     socket
   end
 
+  # Approving would have put two confirmed meetings in one slot, and the
+  # partial unique index refused it. The request is still held and still
+  # declinable, so this says what actually happened rather than the generic
+  # failure.
+  defp apply_answer_result(socket, _meeting_id, {:ok, {:error, :slot_taken}}, _opts) do
+    Flash.error(
+      dgettext(
+        "dashboard_bookings",
+        "That time has since been booked, so the request can no longer be approved."
+      )
+    )
+
+    socket
+  end
+
   defp apply_answer_result(socket, meeting_id, {:ok, {:error, reason}}, opts) do
     Logger.error("Failed to answer booking request from dashboard",
       meeting_id: meeting_id,

@@ -1835,3 +1835,8 @@ msgstr "Bonjour !"
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule an expired meeting"
 msgstr "Impossible de reporter une réunion expirée"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked by somebody else, so this request can no longer be approved."
+msgstr "Ce créneau a entre-temps été réservé par quelqu'un d'autre, cette demande ne peut donc plus être acceptée."

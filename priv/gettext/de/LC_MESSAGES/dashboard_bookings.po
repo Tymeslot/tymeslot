@@ -514,3 +514,8 @@ msgstr "Wartet auf Zahlung"
 #, elixir-autogen, elixir-format
 msgid "That request could not be answered."
 msgstr "Diese Anfrage konnte nicht beantwortet werden."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked, so the request can no longer be approved."
+msgstr "Dieser Termin wurde inzwischen gebucht, daher kann die Anfrage nicht mehr bestätigt werden."

@@ -1835,3 +1835,8 @@ msgstr "Hallo!"
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule an expired meeting"
 msgstr "Ein abgelaufener Termin kann nicht verschoben werden"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked by somebody else, so this request can no longer be approved."
+msgstr "Dieser Termin wurde inzwischen von jemand anderem gebucht, daher kann diese Anfrage nicht mehr bestätigt werden."

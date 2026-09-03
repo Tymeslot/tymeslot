@@ -179,6 +179,23 @@ defmodule TymeslotWeb.MeetingRequestLive do
         socket
         |> assign(:state, :too_late)
         |> put_flash(:error, dgettext("booking", "This meeting's start time has already passed."))
+
+      # Another booking took the slot while this request was held, and the
+      # partial unique index refused the confirmation
+      # (`MeetingQueries.transition_from_awaiting_approval/2`). The request is
+      # still awaiting an answer, so it is reloaded rather than resolved: the
+      # host can still decline it, and approving is what has become
+      # impossible.
+      {:error, :slot_taken} ->
+        socket
+        |> load_request(socket.assigns.token)
+        |> put_flash(
+          :error,
+          dgettext(
+            "booking",
+            "That time has since been booked by somebody else, so this request can no longer be approved."
+          )
+        )
     end
   end
 end

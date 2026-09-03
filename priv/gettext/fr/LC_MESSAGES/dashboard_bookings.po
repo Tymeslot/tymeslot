@@ -514,3 +514,8 @@ msgstr "En attente de paiement"
 #, elixir-autogen, elixir-format
 msgid "That request could not be answered."
 msgstr "Cette demande n'a pas pu recevoir de réponse."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "That time has since been booked, so the request can no longer be approved."
+msgstr "Ce créneau a entre-temps été réservé, la demande ne peut donc plus être acceptée."
