@@ -269,7 +269,18 @@ defmodule Tymeslot.Webhooks do
   def trigger_webhook(webhook, event_type, meeting) do
     if WebhookSchema.should_be_active?(webhook) and
          WebhookSchema.subscribed_to?(webhook, event_type) do
-      WebhookWorker.schedule_delivery(webhook.id, event_type, meeting.id)
+      # The snapshot pins the status and approval fields as they stand *now*, so
+      # a retried delivery replays what this event asserted rather than whatever
+      # the meeting has become since. Without it a retried `meeting.requested`
+      # would report `status: "confirmed"` under a request envelope once the
+      # host had answered. Everything not snapshotted (guests, join links) is
+      # still read fresh at delivery, which is what you want for those.
+      WebhookWorker.schedule_delivery(
+        webhook.id,
+        event_type,
+        meeting.id,
+        WebhookWorker.snapshot(meeting)
+      )
     else
       {:error, :webhook_not_active}
     end
