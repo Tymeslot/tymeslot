@@ -238,3 +238,13 @@ msgstr "Jeden speciální znak"
 #, elixir-autogen, elixir-format
 msgid "This tab contains errors"
 msgstr "Tato karta obsahuje chyby"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Pozastavit video na pozadí"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Přehrát video na pozadí"

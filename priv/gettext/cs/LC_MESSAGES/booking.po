@@ -1840,16 +1840,6 @@ msgstr "Schůzku s vypršenou platností nelze přesunout"
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
 msgstr "Tento termín si mezitím rezervoval někdo jiný, takže tuto žádost už nelze schválit."
 
-#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
-#, elixir-autogen, elixir-format
-msgid "Pause background video"
-msgstr "Pozastavit video na pozadí"
-
-#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
-#, elixir-autogen, elixir-format
-msgid "Play background video"
-msgstr "Přehrát video na pozadí"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format

@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
 
   alias Tymeslot.Locales
 
-  import TymeslotWeb.Themes.Shared.BackgroundMotionToggle,
+  import TymeslotWeb.Components.BackgroundMotionToggle,
     only: [background_motion_toggle: 1]
 
   import TymeslotWeb.Themes.Shared.Customization.Helpers

@@ -1841,16 +1841,6 @@ msgstr "Зустріч із вичерпаним терміном не можн�
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
 msgstr "Тим часом цей час забронював хтось інший, тому цей запит більше не можна підтвердити."
 
-#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
-#, elixir-autogen, elixir-format
-msgid "Pause background video"
-msgstr "Призупинити фонове відео"
-
-#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
-#, elixir-autogen, elixir-format
-msgid "Play background video"
-msgstr "Відтворити фонове відео"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format

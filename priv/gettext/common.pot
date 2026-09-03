@@ -238,3 +238,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This tab contains errors"
 msgstr ""
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr ""
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr ""

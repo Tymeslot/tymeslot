@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Themes.Shared.BackgroundMotionToggle do
+defmodule TymeslotWeb.Components.BackgroundMotionToggle do
   @moduledoc """
   Pause/play control for a theme's background video.
 
@@ -15,6 +15,13 @@ defmodule TymeslotWeb.Themes.Shared.BackgroundMotionToggle do
   `BackgroundMotionToggle` JavaScript hook, which also hides the button when the
   video is dropped for another reason (reduced motion, a slow connection, a
   decode error).
+
+  Shared by the booking themes and the auth pages, which is why it sits here
+  rather than under `Themes.Shared` and why its strings live in the `common`
+  gettext domain. The two contexts style `.background-motion-toggle` from their
+  own token systems: `assets/css/scheduling/shared/background-motion.css` for the
+  self-contained themes, `assets/css/components/background-motion.css` for
+  everything served from `app.css`.
   """
 
   use Phoenix.Component
@@ -37,10 +44,10 @@ defmodule TymeslotWeb.Themes.Shared.BackgroundMotionToggle do
       type="button"
       class="background-motion-toggle"
       data-state="playing"
-      data-label-pause={dgettext("booking", "Pause background video")}
-      data-label-play={dgettext("booking", "Play background video")}
-      aria-label={dgettext("booking", "Pause background video")}
-      title={dgettext("booking", "Pause background video")}
+      data-label-pause={dgettext("common", "Pause background video")}
+      data-label-play={dgettext("common", "Play background video")}
+      aria-label={dgettext("common", "Pause background video")}
+      title={dgettext("common", "Pause background video")}
       phx-hook="BackgroundMotionToggle"
     >
       <%!-- Both icons ship; theme CSS shows the one matching data-state, so the

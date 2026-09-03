@@ -1839,16 +1839,6 @@ msgstr ""
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
-#, elixir-autogen, elixir-format
-msgid "Pause background video"
-msgstr ""
-
-#: lib/tymeslot_web/themes/shared/background_motion_toggle.ex
-#, elixir-autogen, elixir-format
-msgid "Play background video"
-msgstr ""
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format

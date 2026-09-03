@@ -238,3 +238,13 @@ msgstr "Un carattere speciale"
 #, elixir-autogen, elixir-format
 msgid "This tab contains errors"
 msgstr "Questa scheda contiene errori"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Metti in pausa il video di sfondo"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Riproduci il video di sfondo"
