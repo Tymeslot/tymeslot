@@ -49,8 +49,12 @@ defmodule Tymeslot.Notifications.Orchestrator do
   The three steps are scheduled independently rather than as a `with` chain:
   the expiry has a cron backstop but the nudge does not, so a failure in the
   request email must not leave the nudge (or the expiry) unarmed. Every step
-  always runs; a failure in any of them is logged and rolled into an overall
-  error for the caller.
+  always runs and every failure is logged, but only `request_emails` and
+  `approval_nudge` can roll into the overall error returned to the caller:
+  `ApprovalJobs.schedule_expiry/1` always returns `:ok` because the 15-minute
+  expiry sweep is a backstop for a failed insert, so a scheduling failure
+  there degrades punctuality rather than correctness and is deliberately not
+  surfaced as an error.
   """
   @spec schedule_request_notifications(%{atom() => term()}) ::
           {:ok, :notifications_scheduled} | {:error, term()}

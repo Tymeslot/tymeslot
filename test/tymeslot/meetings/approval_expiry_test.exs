@@ -299,13 +299,17 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
       assert Enum.map(overdue, &reload(&1).status) == ["expired", "expired", "expired"]
     end
 
+    # Answered by declining rather than approving: the sweep only ever sees
+    # overdue requests, and `approve/1` refuses one whose deadline has already
+    # passed. What this test is really about is the sweep's query, which
+    # selects on "awaiting_approval" — any answer takes the row out of reach.
     test "an answered request is out of the sweep's reach entirely" do
       answered = overdue_meeting()
-      {:ok, _confirmed} = Approval.approve(answered)
+      {:ok, _declined} = Approval.decline(answered)
 
       assert {:ok, %{expired: 0, skipped: 0}} = perform_job(ApprovalSweepWorker, %{})
 
-      assert reload(answered).status == "confirmed"
+      assert reload(answered).status == "cancelled"
     end
   end
 end

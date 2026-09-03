@@ -274,6 +274,87 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert reloaded.refunded_amount_cents == 0
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
+
+    # A request that was already a confirmed, paid meeting before it
+    # re-entered the gate (a reschedule of a confirmed booking resets it to
+    # "awaiting_approval") is not the same case as one that never got
+    # approved: there IS a confirmed meeting to weigh a refund choice
+    # against, so the automatic full refund must not run. `announced_at` is
+    # the durable marker of that history (set once, by activation, and never
+    # reset by a reschedule).
+    test "does not auto-refund a request that was a confirmed meeting before re-entering the gate" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_held_paid_request(user, "awaiting_approval", %{
+          announced_at: DateTime.utc_now(:second)
+        })
+
+      # No `expect/3` is set on StripeAdapterMock, so Mox raises if the
+      # withdrawal reaches Stripe at all.
+      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert cancelled.status == "cancelled"
+
+      reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
+      assert reloaded.status == "paid"
+      assert reloaded.refunded_amount_cents == 0
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    # The single-writer invariant this whole gate exists for: withdrawing
+    # must go through the same guarded `UPDATE ... WHERE status =
+    # 'awaiting_approval'` every other exit uses, not a plain changeset
+    # write keyed on a struct that can go stale. Simulates the race by
+    # flipping the row to "confirmed" behind the caller's back (as a
+    # concurrent host approval or the expiry sweep would) before it acts on
+    # its stale, still-"awaiting_approval" copy.
+    test "does not overwrite a meeting a concurrent approval already confirmed" do
+      %{user: user} = create_user_with_profile()
+      stale_meeting = insert_held_paid_request(user)
+
+      {:ok, _confirmed} =
+        MeetingQueries.update_meeting(stale_meeting, %{status: "confirmed"})
+
+      assert {:error, :not_awaiting_approval} = Cancel.execute(stale_meeting)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(stale_meeting.uid)
+      assert reloaded.status == "confirmed"
+
+      reloaded_payment = BookingPaymentQueries.by_meeting_id(stale_meeting.id)
+      assert reloaded_payment.status == "paid"
+      assert reloaded_payment.refunded_amount_cents == 0
+    end
+  end
+
+  describe "the external auto-cancel path releases a held request properly" do
+    # `execute_external/1` is what fires when the host deletes the tentative
+    # hold from their own calendar. For a held request this used to leave
+    # the approval clock running entirely: no refund, no outcome email, and
+    # the nudge/expiry jobs still armed against a meeting already gone.
+    test "refunds a paid held request and records why it was cancelled" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_held_paid_request(user)
+      payment = BookingPaymentQueries.by_meeting_id(meeting.id)
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        assert params.charge == payment.stripe_charge_id
+        assert params.amount == 5000
+        {:ok, %{id: "re_external"}}
+      end)
+
+      assert {:ok, cancelled} = Cancel.execute_external(meeting)
+      assert cancelled.status == "cancelled"
+      assert cancelled.cancellation_reason == "Cancelled externally via calendar sync"
+
+      reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
+      assert reloaded.status == "refunded"
+      assert reloaded.refunded_amount_cents == 5000
+
+      assert_enqueued(
+        worker: SendBookingPaymentRefunded,
+        args: %{booking_payment_id: payment.id}
+      )
+    end
   end
 
   describe "status update side effects" do
@@ -475,13 +556,19 @@ defmodule Tymeslot.Bookings.CancelTest do
     )
   end
 
-  defp insert_held_paid_request(user, status \\ "awaiting_approval") do
+  defp insert_held_paid_request(user, status \\ "awaiting_approval", extra_attrs \\ %{}) do
     meeting =
-      insert_meeting_for_user(user, %{
-        start_offset: 86_400,
-        duration: 3600,
-        status: status
-      })
+      insert_meeting_for_user(
+        user,
+        Map.merge(
+          %{
+            start_offset: 86_400,
+            duration: 3600,
+            status: status
+          },
+          extra_attrs
+        )
+      )
 
     insert(:booking_payment, %{
       meeting_id: meeting.id,

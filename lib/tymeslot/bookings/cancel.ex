@@ -15,7 +15,6 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Events
-  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Workers.VideoSyncWorker
 
   @doc """
@@ -50,35 +49,75 @@ defmodule Tymeslot.Bookings.Cancel do
   def execute(%Meeting{} = meeting) do
     # Validate using Policy module (includes time checks)
     case Policy.can_cancel_meeting?(meeting) do
-      :ok ->
-        Logger.info("Cancelling meeting",
-          meeting_id: meeting.id,
-          uid: meeting.uid
-        )
-
-        with {:ok, updated_meeting} <- update_meeting_status(meeting),
-             :ok <- Meetings.cancel_calendar_event(updated_meeting),
-             :ok <- delete_provider_video_room(updated_meeting),
-             :ok <- send_cancellation_notifications(updated_meeting) do
-          {:ok, updated_meeting}
-        else
-          {:error, reason} = error ->
-            Logger.error("Failed to cancel meeting",
-              meeting_id: meeting.id,
-              reason: inspect(reason)
-            )
-
-            error
-        end
-
-      {:error, reason} ->
-        Logger.warning("Meeting cancellation blocked by policy",
-          meeting_id: meeting.id,
-          reason: reason
-        )
-
-        {:error, reason}
+      :ok -> execute_permitted(meeting)
+      {:error, reason} -> policy_blocked(meeting, reason)
     end
+  end
+
+  # A held request is not a confirmed booking being called off — it is the
+  # invitee withdrawing before the host ever agreed to it. That transition
+  # belongs to `Approval`, which guards it against the same race an approval,
+  # a decline or the expiry sweep can win, and which owns the refund rule for
+  # a request that never became a meeting. Only the notification stays here:
+  # `Approval.withdraw/2` does not send one, since decline and expire each
+  # need their own wording and withdrawal needs neither.
+  defp execute_permitted(meeting) do
+    if MeetingState.awaiting_approval?(meeting) do
+      withdraw_held_request(meeting)
+    else
+      cancel_confirmed_meeting(meeting)
+    end
+  end
+
+  defp withdraw_held_request(meeting) do
+    Logger.info("Withdrawing held booking request",
+      meeting_id: meeting.id,
+      uid: meeting.uid
+    )
+
+    with {:ok, released} <- Approval.withdraw(meeting),
+         :ok <- send_cancellation_notifications(released) do
+      {:ok, released}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to withdraw booking request",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        error
+    end
+  end
+
+  defp cancel_confirmed_meeting(meeting) do
+    Logger.info("Cancelling meeting",
+      meeting_id: meeting.id,
+      uid: meeting.uid
+    )
+
+    with {:ok, updated_meeting} <- update_meeting_status(meeting),
+         :ok <- Meetings.cancel_calendar_event(updated_meeting),
+         :ok <- delete_provider_video_room(updated_meeting),
+         :ok <- send_cancellation_notifications(updated_meeting) do
+      {:ok, updated_meeting}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to cancel meeting",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        error
+    end
+  end
+
+  defp policy_blocked(meeting, reason) do
+    Logger.warning("Meeting cancellation blocked by policy",
+      meeting_id: meeting.id,
+      reason: reason
+    )
+
+    {:error, reason}
   end
 
   @doc """
@@ -120,7 +159,46 @@ defmodule Tymeslot.Bookings.Cancel do
 
   # Private functions
 
+  # Same split as `execute_permitted/1`: the host deleting the tentative hold
+  # from their own calendar is, for a held request, indistinguishable from
+  # the invitee withdrawing it — nobody answered, the slot is simply free
+  # again — so it goes through the same guarded `Approval.withdraw/2` rather
+  # than the plain changeset write, and for the same reason: without it this
+  # auto-cancel skipped the approval clock entirely, leaving the nudge and
+  # the expiry sweep armed against a meeting already gone, and refunding
+  # nothing for a request that was paid for.
   defp auto_cancel_external(meeting) do
+    if MeetingState.awaiting_approval?(meeting) do
+      withdraw_held_request_external(meeting)
+    else
+      cancel_confirmed_meeting_external(meeting)
+    end
+  end
+
+  defp withdraw_held_request_external(meeting) do
+    Logger.info("Auto-withdrawing externally deleted booking request",
+      meeting_id: meeting.id,
+      uid: meeting.uid
+    )
+
+    with {:ok, released} <-
+           Approval.withdraw(meeting,
+             cancellation_reason: "Cancelled externally via calendar sync"
+           ),
+         :ok <- send_cancellation_notifications(released) do
+      {:ok, released}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to auto-withdraw externally deleted booking request",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        error
+    end
+  end
+
+  defp cancel_confirmed_meeting_external(meeting) do
     Logger.info("Auto-cancelling externally deleted meeting",
       meeting_id: meeting.id,
       uid: meeting.uid
@@ -154,7 +232,6 @@ defmodule Tymeslot.Bookings.Cancel do
         )
 
         AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
-        stop_approval_clock(meeting)
         {:ok, updated_meeting}
 
       {:error, changeset} ->
@@ -165,28 +242,6 @@ defmodule Tymeslot.Bookings.Cancel do
 
         {:error, "Failed to update meeting status"}
     end
-  end
-
-  # An invitee who withdraws a request they are still waiting on leaves things
-  # behind that must not survive it: a nudge asking the host to answer and an
-  # expiry to release a slot already released (neither harmless — the nudge
-  # asks a real person to decide something that no longer exists), and, if
-  # the request was paid for, money for a booking that never got approved.
-  # This pipeline has no refund logic of its own for that money: the rule
-  # ("a held request that ended without becoming a meeting is refunded in
-  # full") belongs to `Approval.refund_unapproved_request/1`, which every
-  # other exit from the gate already goes through, and this is simply the one
-  # exit that does not arrive there on its own.
-  #
-  # Keyed on the status the meeting had *before* cancelling, because after it
-  # the meeting no longer looks like a held request.
-  defp stop_approval_clock(meeting) do
-    if MeetingState.awaiting_approval?(meeting) do
-      Orchestrator.cancel_request_notifications(meeting)
-      Approval.refund_unapproved_request(meeting)
-    end
-
-    :ok
   end
 
   defp update_meeting_status_external(meeting) do

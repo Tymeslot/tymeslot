@@ -24,8 +24,9 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
 
   A request with no deadline recorded gets no expiry job; it is then held
   until a host answers, which is the honest reading of "no deadline". A
-  deadline already in the past schedules for now rather than in the past, so
-  Oban runs it on the next tick instead of treating it as overdue.
+  deadline already in the past is inserted as-is: Oban's stager promotes any
+  `scheduled` job whose `scheduled_at` has passed on its next tick, so it
+  still runs promptly rather than being treated as overdue.
 
   Deletes any expiry already scheduled for this meeting first. A request that
   re-enters the gate (e.g. an invitee reschedules a held request, which

@@ -30,14 +30,18 @@ defmodule Tymeslot.Meetings.Workers.ApprovalSweepWorker do
 
   @batch_limit 200
 
-  @type sweep_result :: %{expired: non_neg_integer(), skipped: non_neg_integer()}
+  @type sweep_result :: %{
+          expired: non_neg_integer(),
+          skipped: non_neg_integer(),
+          failed: non_neg_integer()
+        }
 
   @impl Oban.Worker
   def perform(_job) do
     result =
       Clock.utc_now()
       |> MeetingQueries.list_expired_approval_requests(@batch_limit)
-      |> Enum.reduce(%{expired: 0, skipped: 0}, &tally(expire_one(&1), &2))
+      |> Enum.reduce(%{expired: 0, skipped: 0, failed: 0}, &tally(expire_one(&1), &2))
 
     log(result)
 
@@ -61,19 +65,20 @@ defmodule Tymeslot.Meetings.Workers.ApprovalSweepWorker do
         error: Exception.format(:error, exception, __STACKTRACE__)
       )
 
-      :skipped
+      :failed
   end
 
   defp tally(outcome, acc), do: Map.update!(acc, outcome, &(&1 + 1))
 
   # Silence when there is nothing to do: this runs 96 times a day on an
   # instance where most hosts require no approval at all.
-  defp log(%{expired: 0, skipped: 0}), do: :ok
+  defp log(%{expired: 0, skipped: 0, failed: 0}), do: :ok
 
   defp log(result) do
     Logger.info("Approval sweep complete",
       expired: result.expired,
-      skipped: result.skipped
+      skipped: result.skipped,
+      failed: result.failed
     )
   end
 end

@@ -85,5 +85,19 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
       {:error, :not_awaiting_approval} ->
         {:discard, "Request answered while expiring"}
     end
+  rescue
+    # Unlike `ApprovalSweepWorker`, this job has no rescue of its own to fall
+    # back on: `max_attempts: 1` means an unrescued raise here is discarded
+    # by Oban with no further attempt and no domain-specific log line, and
+    # the sweep will not revisit a row that never changed status. Catching it
+    # here at least surfaces the meeting it happened to, the same way the
+    # sweep already does for its own batch.
+    exception ->
+      Logger.error("Approval expiry could not release a request",
+        meeting_id: meeting.id,
+        error: Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, exception}
   end
 end

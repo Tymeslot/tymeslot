@@ -18,6 +18,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   @moduletag :meetings
 
   alias Ecto.UUID
+  alias Tymeslot.Bookings.Cancel
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Approval
@@ -133,13 +134,51 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       )
     end
 
+    test "a held request with a video integration hands off to the video-room worker" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user, provider: "mirotalk")
+
+      meeting =
+        held_meeting(%{
+          organizer_user: user,
+          organizer_user_id: user.id,
+          video_integration_id: video_integration.id
+        })
+
+      assert {:ok, confirmed} = Approval.approve(meeting)
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.VideoRoomWorker,
+        args: %{"meeting_id" => confirmed.id, "announce" => true}
+      )
+    end
+
+    test "schedules the reminder email for the newly confirmed meeting" do
+      meeting = held_meeting()
+
+      assert {:ok, confirmed} = Approval.approve(meeting)
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => confirmed.id}
+      )
+    end
+
     test "a second approval loses to the first rather than re-confirming" do
       meeting = held_meeting()
 
-      assert {:ok, _confirmed} = Approval.approve(meeting)
+      assert {:ok, confirmed} = Approval.approve(meeting)
       # The caller still holds the stale struct, exactly as a double-clicked
       # button or a second browser tab would.
       assert {:error, :not_awaiting_approval} = Approval.approve(meeting)
+
+      # The loser must not have fanned out a second confirmation email: only
+      # the winning call's job is on the queue.
+      assert [_job] =
+               all_enqueued(
+                 worker: Tymeslot.Workers.EmailWorker,
+                 args: %{"action" => "send_confirmation_emails", "meeting_id" => confirmed.id}
+               )
     end
 
     test "loses to an expiry that already released the slot" do
@@ -149,6 +188,44 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       assert {:error, :not_awaiting_approval} = Approval.approve(meeting)
 
       assert reload(meeting).status == "expired"
+
+      # The losing approval must not have sent a confirmation email for a
+      # request that already lapsed.
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "loses to a decline that already released the slot" do
+      meeting = held_meeting()
+
+      assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+      assert {:error, :not_awaiting_approval} = Approval.approve(meeting)
+
+      assert reload(meeting).status == "cancelled"
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "loses to the invitee withdrawing the request first" do
+      meeting = held_meeting()
+
+      assert {:ok, withdrawn} = Cancel.execute(meeting)
+      assert withdrawn.status == "cancelled"
+
+      # The caller still holds the pre-withdrawal struct — the host approving
+      # a request the invitee already pulled must not resurrect it.
+      assert {:error, :not_awaiting_approval} = Approval.approve(meeting)
+      assert reload(meeting).status == "cancelled"
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
     end
 
     test "refuses a request whose meeting has already started" do
@@ -175,12 +252,17 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       )
     end
 
-    test "a meeting with no provider event id and no external uid schedules nothing" do
+    # A CalDAV booking has no `provider_event_id` and its `uid` is still the
+    # meeting's own UUID until the create job overwrites it. The flip must be
+    # scheduled anyway: `CalendarEventSync` addresses the event by uid when
+    # there is no provider id, so refusing to schedule here was what left
+    # every CalDAV host's calendar showing TENTATIVE for an approved booking.
+    test "a meeting with no provider event id and no external uid still schedules the flip" do
       meeting = held_meeting(%{provider_event_id: nil, uid: UUID.generate()})
 
       assert {:ok, confirmed} = Approval.approve(meeting)
 
-      refute_enqueued(
+      assert_enqueued(
         worker: Tymeslot.Workers.CalendarEventWorker,
         args: %{"action" => "update", "meeting_id" => confirmed.id}
       )
@@ -205,6 +287,20 @@ defmodule Tymeslot.Meetings.ApprovalTest do
 
       assert {:ok, _declined} = Approval.decline(meeting, "   ")
       assert reload(meeting).decline_reason == nil
+    end
+
+    test "a reason near the documented cap is stored, not raised" do
+      meeting = held_meeting()
+      # Longer than the varchar(255) the column shipped with, so this proves
+      # the column was actually widened to hold what
+      # `Constraints.decline_reason_max_length/0` promises rather than just
+      # that the changeset accepts it — `transition_from_awaiting_approval/2`
+      # writes via `Repo.update_all`, which never runs the changeset.
+      reason = String.duplicate("a", Constraints.decline_reason_max_length())
+
+      assert {:ok, declined} = Approval.decline(meeting, reason)
+      assert reload(meeting).decline_reason == reason
+      assert String.length(declined.decline_reason) == Constraints.decline_reason_max_length()
     end
 
     test "cannot decline a booking that was already approved" do
@@ -251,6 +347,28 @@ defmodule Tymeslot.Meetings.ApprovalTest do
         worker: SendBookingPaymentRefunded,
         args: %{booking_payment_id: payment.id}
       )
+    end
+
+    test "a second decline on a paid request loses without refunding twice" do
+      meeting = paid_held_meeting()
+      payment = BookingPaymentQueries.by_meeting_id(meeting.id)
+
+      # Exactly one call expected: if the guard let a second decline reach
+      # `release/3`, this would raise `Mox.UnexpectedCallError` instead of
+      # quietly double-refunding the invitee.
+      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
+        assert params.charge == payment.stripe_charge_id
+        {:ok, %{id: "re_declined_once"}}
+      end)
+
+      assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+      assert {:error, :not_awaiting_approval} = Approval.decline(meeting, "changed my mind too")
+
+      assert [_job] =
+               all_enqueued(
+                 worker: SendBookingPaymentRefunded,
+                 args: %{booking_payment_id: payment.id}
+               )
     end
 
     test "an expiry refunds the full remaining balance too" do
@@ -337,8 +455,12 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       long_overdue = held_meeting(%{approval_deadline_at: DateTime.add(now, -3, :hour)})
       just_overdue = held_meeting(%{approval_deadline_at: DateTime.add(now, -1, :hour)})
       still_running = held_meeting(%{approval_deadline_at: DateTime.add(now, 1, :hour)})
+      # Answered by declining rather than approving: `approve/1` now refuses a
+      # request whose own deadline has passed, and this one is deliberately
+      # five hours overdue. Either answer takes it out of "awaiting_approval",
+      # which is what this query filters on.
       already_answered = held_meeting(%{approval_deadline_at: DateTime.add(now, -5, :hour)})
-      {:ok, _approved} = Approval.approve(already_answered)
+      {:ok, _declined} = Approval.decline(already_answered)
 
       ids = now |> MeetingQueries.list_expired_approval_requests(10) |> Enum.map(& &1.id)
 

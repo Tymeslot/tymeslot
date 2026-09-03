@@ -5,7 +5,7 @@ defmodule Tymeslot.Meetings.Approval do
   A meeting type with `requires_approval` set does not confirm its bookings on
   submission. The meeting is inserted as `"awaiting_approval"`, which occupies
   its slot exactly as a confirmed booking does, and waits for the host to
-  answer. Three things can end that wait, and this module owns all three.
+  answer. Four things can end that wait, and this module owns all four.
 
   ## Why the transitions live in one module
 
@@ -18,10 +18,14 @@ defmodule Tymeslot.Meetings.Approval do
   host accepted.
 
   So the status change is a single guarded `UPDATE ... WHERE status =
-  'awaiting_approval'` (`MeetingQueries.transition_from_awaiting_approval/2`),
-  and nothing else in the codebase writes that status. Exactly one caller wins;
-  the rest get `{:error, :not_awaiting_approval}`, which surfaces as "this
-  request was already answered" rather than as a failure.
+  'awaiting_approval'` (`MeetingQueries.transition_from_awaiting_approval/2`).
+  Every exit from the gate goes through it — including the invitee's own
+  withdrawal and an external actor (the host deleting the tentative hold from
+  their own calendar), both reached through `Bookings.Cancel`, which
+  delegates back into `withdraw/2` rather than writing the status itself — so
+  exactly one caller wins; the rest get `{:error, :not_awaiting_approval}`,
+  which surfaces as "this request was already answered" rather than as a
+  failure.
 
   ## What each exit means
 
@@ -46,6 +50,15 @@ defmodule Tymeslot.Meetings.Approval do
     * `expire/1` — nobody answered in time. Identical to a decline apart from
       the status (`"expired"`) and the wording the invitee receives: the host
       did not refuse, the window simply lapsed. Silence never means yes.
+
+    * `withdraw/2` — the invitee changes their mind, or the host deletes the
+      tentative hold from their own calendar and `Bookings.Cancel` treats
+      that as a withdrawal on their behalf. Mechanically identical to
+      `decline/2` and `expire/1` — same guard, same refund rule, same video
+      and calendar release — but distinct in meaning: nobody refused the
+      request and nobody ran out the clock, so `approval_resolved_at` is left
+      unset and the invitee gets `Bookings.Cancel`'s ordinary cancellation
+      email rather than a decline or expiry notice.
 
   ## The deadline
 
@@ -73,6 +86,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Validation.Constraints
+  alias Tymeslot.Workers.VideoSyncWorker
 
   @typedoc "Why a transition out of the approval gate did not happen."
   @type error :: :not_awaiting_approval | :meeting_started | :slot_taken
@@ -159,9 +173,19 @@ defmodule Tymeslot.Meetings.Approval do
       {:ok, confirmed} ->
         Logger.info("Booking request approved", meeting_id: confirmed.id, uid: confirmed.uid)
         AvailabilityCache.invalidate_for_user(confirmed.organizer_user_id)
-        Orchestrator.cancel_request_notifications(confirmed)
-        confirm_calendar_event(confirmed)
-        Activation.activate(confirmed, with_video_room: true)
+
+        best_effort(confirmed, "cancel request notifications", fn ->
+          Orchestrator.cancel_request_notifications(confirmed)
+        end)
+
+        best_effort(confirmed, "confirm calendar event", fn ->
+          confirm_calendar_event(confirmed)
+        end)
+
+        best_effort(confirmed, "activate booking", fn ->
+          Activation.activate(confirmed, with_video_room: true)
+        end)
+
         {:ok, confirmed}
 
       {:error, :not_awaiting_approval} = error ->
@@ -210,22 +234,66 @@ defmodule Tymeslot.Meetings.Approval do
     release(meeting, "expired", [])
   end
 
+  @doc """
+  Withdraws a held request outside of the host's own decision: the invitee
+  changed their mind, or an external actor (the host deleting the tentative
+  hold from their own calendar) is treated as having withdrawn it on their
+  behalf. `Bookings.Cancel` is the only caller.
+
+  Guarded exactly like `decline/2` and `expire/1` — the same
+  `transition_from_awaiting_approval/2` — so a withdrawal cannot race a
+  host's answer or the expiry sweep into overwriting `"confirmed"` back to
+  `"cancelled"`, and cannot double-refund a request the sweep already
+  released. `approval_resolved_at` is deliberately left unset: that field
+  means "the host decided", which `TymeslotWeb.MeetingRequestLive` depends on
+  to tell a host's decline apart from a withdrawal, and this is neither.
+
+  `extra_changes` lets `Bookings.Cancel` record why (e.g. an external
+  calendar deletion) without this module knowing about that reason itself.
+  Notification is deliberately not sent from here: `Bookings.Cancel` sends
+  its own ordinary cancellation email for every exit it owns, and decline/
+  expire's host-facing wording would be wrong for a withdrawal.
+  """
+  @spec withdraw(Meeting.t(), keyword()) :: {:ok, Meeting.t()} | {:error, error()}
+  def withdraw(%Meeting{} = meeting, extra_changes \\ []) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+    changes = [status: "cancelled", cancelled_at: now] ++ extra_changes
+
+    with_released_meeting(meeting, changes, fn released ->
+      best_effort(released, "cancel request notifications", fn ->
+        Orchestrator.cancel_request_notifications(released)
+      end)
+
+      best_effort(released, "cancel calendar event", fn ->
+        Meetings.cancel_calendar_event(released)
+      end)
+
+      best_effort(released, "release video room", fn -> release_video_room(released) end)
+
+      best_effort(released, "refund unapproved request", fn ->
+        refund_unapproved_request(released)
+      end)
+    end)
+  end
+
   defp release(meeting, status, extra_changes) do
     now = DateTime.truncate(Clock.utc_now(), :second)
+    changes = [status: status, approval_resolved_at: now, cancelled_at: now] ++ extra_changes
 
-    changes =
-      [status: status, approval_resolved_at: now, cancelled_at: now] ++ extra_changes
+    with_released_meeting(meeting, changes, fn released -> after_release(released) end)
+  end
 
+  defp with_released_meeting(meeting, changes, after_fun) do
     case MeetingQueries.transition_from_awaiting_approval(meeting.id, changes) do
       {:ok, released} ->
         Logger.info("Booking request released",
           meeting_id: released.id,
           uid: released.uid,
-          status: status
+          status: released.status
         )
 
         AvailabilityCache.invalidate_for_user(released.organizer_user_id)
-        after_release(released)
+        after_fun.(released)
         {:ok, released}
 
       {:error, :not_awaiting_approval} = error ->
@@ -283,20 +351,55 @@ defmodule Tymeslot.Meetings.Approval do
 
   # Everything that must happen once the slot is genuinely free again, in the
   # order that matters: stop the jobs that would contradict the outcome, take
-  # the hold off the host's calendar, refund whatever the attendee paid for a
-  # booking that never got approved, then tell the invitee. Each step is
-  # best-effort and logged by its own module; none of them may fail the
-  # transition, which has already been committed and cannot be undone.
+  # the hold off the host's calendar, take the video room off the provider,
+  # refund whatever the attendee paid for a booking that never got approved,
+  # then tell the invitee. Each step runs through `best_effort/3` so a crash
+  # in one cannot stop the next; none of them may fail the transition, which
+  # has already been committed and cannot be undone.
   defp after_release(%Meeting{status: status} = meeting) do
-    Orchestrator.cancel_request_notifications(meeting)
-    Meetings.cancel_calendar_event(meeting)
-    refund_unapproved_request(meeting)
-    announce_release(meeting, status)
+    best_effort(meeting, "cancel request notifications", fn ->
+      Orchestrator.cancel_request_notifications(meeting)
+    end)
+
+    best_effort(meeting, "cancel calendar event", fn ->
+      Meetings.cancel_calendar_event(meeting)
+    end)
+
+    best_effort(meeting, "release video room", fn -> release_video_room(meeting) end)
+
+    best_effort(meeting, "refund unapproved request", fn -> refund_unapproved_request(meeting) end)
+
+    best_effort(meeting, "announce release", fn -> announce_release(meeting, status) end)
     :ok
   end
 
   defp announce_release(meeting, "expired"), do: Events.meeting_request_expired(meeting)
   defp announce_release(meeting, _declined), do: Events.meeting_declined(meeting)
+
+  # Mirrors `Bookings.Cancel`'s own video cleanup. A held request's video
+  # room used to depend entirely on the daily orphan sweep
+  # (`OrphanedVideoRoomScanWorker`, via `MeetingListQueries.list_cancelled_with_video_room/2`),
+  # which only looks at `status == "cancelled"` — so a request released as
+  # `"expired"` left its room behind forever. Enqueuing the delete directly
+  # here, for every release regardless of status, means the room's fate no
+  # longer depends on which of the two statuses this happened to end in.
+  defp release_video_room(%Meeting{video_room_id: nil}), do: :ok
+  defp release_video_room(%Meeting{organizer_user_id: nil}), do: :ok
+
+  defp release_video_room(%Meeting{} = meeting) do
+    case VideoSyncWorker.enqueue(meeting.id, "delete") do
+      {:ok, _status} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue provider video deletion on request release",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
 
   @doc """
   Refunds in full a held request that ended without becoming a meeting.
@@ -310,10 +413,10 @@ defmodule Tymeslot.Meetings.Approval do
 
   Public because this rule applies to every way a held request stops being
   held, not only the two this module resolves itself (`decline/2`,
-  `expire/1`, via `after_release/1`): an invitee who withdraws the request
-  reaches `Bookings.Cancel` instead, and that module calls this directly
-  rather than re-deciding the same rule. A failed refund is logged and never
-  fails the caller's transition, which is already committed.
+  `expire/1`, via `after_release/1`): `withdraw/2` reaches it too, for an
+  invitee's own withdrawal and for an externally-deleted hold. A failed
+  refund is logged and never fails the caller's transition, which is already
+  committed.
   """
   @spec refund_unapproved_request(Meeting.t()) :: :ok
   def refund_unapproved_request(meeting) do
@@ -378,5 +481,26 @@ defmodule Tymeslot.Meetings.Approval do
       "" -> nil
       trimmed -> String.slice(trimmed, 0, Constraints.decline_reason_max_length())
     end
+  end
+
+  # Every step wrapped in this runs against a meeting whose row is already
+  # committed — confirmed by `do_approve/2`, released by `release/3` and
+  # `withdraw/2` — and cannot be undone by a caller retrying. A crash in one
+  # step must not stop the next, nor turn a real approval or release into an
+  # `{:error, ...}` the caller has to explain: the transition already
+  # succeeded, and each of these is independently retried or logged by its
+  # own module on an ordinary `{:error, _}`. This only guards against the
+  # unexpected raise; `{:error, _}` returns are each module's own job to log.
+  defp best_effort(meeting, step, fun) do
+    fun.()
+  rescue
+    exception ->
+      Logger.error("Post-transition step failed",
+        step: step,
+        meeting_id: meeting.id,
+        error: Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      :ok
   end
 end
