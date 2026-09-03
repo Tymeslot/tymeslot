@@ -263,6 +263,7 @@ export const AuthVideo = {
       if (video1) video1.style.display = 'none';
       if (video2) video2.style.display = 'none';
       container.classList.add('fallback');
+      hideBackgroundMotionToggle();
       return;
     }
 
@@ -274,6 +275,7 @@ export const AuthVideo = {
       if (video1) video1.style.display = 'none';
       if (video2) video2.style.display = 'none';
       container.classList.add('fallback');
+      hideBackgroundMotionToggle();
     };
 
     // Connection-aware loading
@@ -286,6 +288,7 @@ export const AuthVideo = {
     // Handle single video case
     if (singleVideo && !video1 && !video2) {
       this._authConnectionCleanup = setupConnectionFallback(connection, applyFallback);
+      this._authMotionCleanup = observeBackgroundMotion([singleVideo]);
       singleVideo.addEventListener('loadedmetadata', function() {
         singleVideo.style.opacity = '1';
       });
@@ -305,6 +308,7 @@ export const AuthVideo = {
     let currentVideo = video1;
     let nextVideo = video2;
     let isTransitioning = false;
+    let motionStopped = backgroundMotionStopped();
 
     // Tracks the video currently being monitored so listeners can be removed
     // before new ones are added on each crossfade cycle.
@@ -318,9 +322,21 @@ export const AuthVideo = {
       video1.style.display = 'none';
       video2.style.display = 'none';
       container.classList.add('fallback');
+      hideBackgroundMotionToggle();
     };
 
     this._authConnectionCleanup = setupConnectionFallback(connection, applyFallback);
+
+    this._authMotionCleanup = observeBackgroundMotion([video1, video2], {
+      onStop: () => {
+        motionStopped = true;
+        applyMotionPreference([currentVideo], true);
+      },
+      onResume: () => {
+        motionStopped = false;
+        applyMotionPreference([currentVideo], false);
+      }
+    });
 
     // Select appropriate video quality based on screen size
     if (isSmallScreen) {
@@ -352,7 +368,7 @@ export const AuthVideo = {
 
     // Crossfade functionality
     const startCrossfade = () => {
-      if (isTransitioning) return;
+      if (isTransitioning || motionStopped) return;
 
       isTransitioning = true;
 
@@ -411,7 +427,7 @@ export const AuthVideo = {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          if (currentVideo.paused) currentVideo.play().catch(() => {});
+          if (currentVideo.paused && !motionStopped) currentVideo.play().catch(() => {});
         } else {
           if (!currentVideo.paused) currentVideo.pause();
           if (!nextVideo.paused && !nextVideo.classList.contains('inactive')) nextVideo.pause();
@@ -435,6 +451,8 @@ export const AuthVideo = {
       try { v && v.pause && v.pause(); } catch (e) {}
     });
     try { this._authConnectionCleanup && this._authConnectionCleanup(); } catch (e) {}
+    try { this._authMotionCleanup && this._authMotionCleanup(); } catch (e) {}
+    this._authMotionCleanup = null;
     this._observer = null;
     this._authMonitor = null;
     this._authConnectionCleanup = null;

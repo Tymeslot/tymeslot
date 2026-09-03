@@ -18,6 +18,10 @@ const AuthHooks = {
   // Lazy-load auth video - only load when video element is mounted
   AuthVideo: lazyHook("AuthVideo", () =>
     import("../video_hooks").then(m => m.AuthVideo)
+  ),
+  // Only rendered alongside the video background, so it lazy-loads with it.
+  BackgroundMotionToggle: lazyHook("BackgroundMotionToggle", () =>
+    import("../video_hooks").then(m => m.BackgroundMotionToggle)
   )
 };
 

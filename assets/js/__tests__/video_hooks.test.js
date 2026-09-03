@@ -8,6 +8,7 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
+  AuthVideo,
   BackgroundMotionToggle,
   QuillVideo,
   RhythmVideo,
@@ -334,6 +335,41 @@ describe('video hooks honour a stopped background', () => {
     mount(RhythmVideo, document.getElementById('rhythm'));
 
     expect(video1.play).toHaveBeenCalled();
+  });
+
+  const authMarkup = `
+    <div class="video-background-container" id="auth-video-container">
+      <video id="auth-background-video-1"></video>
+      <video id="auth-background-video-2"></video>
+    </div>
+  `;
+
+  test('Auth never starts its crossfade when the visitor has stopped it', () => {
+    window.localStorage.setItem('tymeslot:background-motion', 'stopped');
+    document.body.innerHTML = authMarkup;
+
+    const video1 = stubVideo(document.getElementById('auth-background-video-1'));
+    const video2 = stubVideo(document.getElementById('auth-background-video-2'));
+
+    mount(AuthVideo, document.getElementById('auth-video-container'));
+
+    expect(video1.play).not.toHaveBeenCalled();
+    expect(video2.play).not.toHaveBeenCalled();
+  });
+
+  test('Auth pauses the running video when the preference flips mid-visit', () => {
+    document.body.innerHTML = authMarkup;
+
+    const video1 = stubVideo(document.getElementById('auth-background-video-1'));
+    stubVideo(document.getElementById('auth-background-video-2'));
+
+    mount(AuthVideo, document.getElementById('auth-video-container'));
+
+    window.dispatchEvent(
+      new CustomEvent('tymeslot:background-motion', { detail: { stopped: true } })
+    );
+
+    expect(video1.pause).toHaveBeenCalled();
   });
 
   test('reduced motion hides the control, which would otherwise pause nothing', () => {

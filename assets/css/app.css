@@ -29,6 +29,7 @@
 
 /* Import glass morphism components */
 @import "./components/glass-morphism.css";
+@import "./components/background-motion.css";
 
 /* Import auth-specific styles */
 @import "./auth/auth-video.css";

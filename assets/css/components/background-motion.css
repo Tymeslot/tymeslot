@@ -1,0 +1,60 @@
+/* ============================================================================
+   BACKGROUND MOTION TOGGLE
+   ----------------------------------------------------------------------------
+   Pause/play control for a background video (WCAG 2.2.2 Pause, Stop, Hide),
+   rendered by TymeslotWeb.Components.BackgroundMotionToggle on the auth pages.
+
+   The booking themes carry the same class in
+   `assets/css/scheduling/shared/background-motion.css`, because they are
+   self-contained and share no tokens with this stylesheet. The two are
+   deliberate twins, not an accident: change one and check the other.
+   ============================================================================ */
+
+.background-motion-toggle {
+  position: fixed;
+  bottom: var(--spacing-6);
+  left: var(--spacing-6);
+  z-index: var(--z-index-50);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition-glass);
+}
+
+.background-motion-toggle:hover {
+  background: rgba(0, 0, 0, 0.65);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.background-motion-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.background-motion-toggle__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* One icon per state. The hook owns data-state; the server renders "playing"
+   so the button is correct before JavaScript runs. */
+.background-motion-toggle[data-state="playing"] .background-motion-toggle__icon--play,
+.background-motion-toggle[data-state="stopped"] .background-motion-toggle__icon--pause {
+  display: none;
+}
+
+@media print {
+  .background-motion-toggle {
+    display: none;
+  }
+}
