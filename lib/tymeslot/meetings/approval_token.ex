@@ -66,9 +66,10 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   end
 
   @doc """
-  Verifies a token, returning the meeting and organiser ids it was issued for.
+  Verifies a token, returning the meeting it was issued for.
 
-  Also refuses a token whose `approval_requested_at` no longer matches the
+  Refuses a token whose organiser no longer matches the meeting's current
+  one, and a token whose `approval_requested_at` no longer matches the
   meeting's current one, so a token from a previous request cannot answer a
   new one issued after a re-entry into the approval gate.
 
@@ -76,7 +77,7 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   caller's next question and `Tymeslot.Meetings.Approval` is where it is
   settled.
   """
-  @spec verify(String.t()) :: {:ok, {String.t(), integer()}} | {:error, atom()}
+  @spec verify(String.t()) :: {:ok, Meeting.t()} | {:error, atom()}
   def verify(token) when is_binary(token) do
     SignedToken.verify(token, @salt, @max_age_seconds, &validate/1)
   end
@@ -86,12 +87,15 @@ defmodule Tymeslot.Meetings.ApprovalToken do
   defp validate({meeting_id, organizer_user_id, requested_at})
        when is_binary(meeting_id) and is_integer(organizer_user_id) do
     case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} ->
+      {:ok, %{organizer_user_id: ^organizer_user_id} = meeting} ->
         if same_request?(meeting.approval_requested_at, requested_at) do
-          {:ok, {meeting_id, organizer_user_id}}
+          {:ok, meeting}
         else
           {:error, :stale}
         end
+
+      {:ok, _meeting} ->
+        {:error, :organizer_mismatch}
 
       {:error, :not_found} ->
         {:error, :not_found}
