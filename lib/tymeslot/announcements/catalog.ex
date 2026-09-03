@@ -44,8 +44,8 @@ defmodule Tymeslot.Announcements.Catalog do
   @availability_schedules_published_at ~U[2026-08-14 00:00:00Z]
   @availability_schedules_expires_at ~U[2026-09-13 00:00:00Z]
 
-  @booking_approval_published_at ~U[2026-08-19 00:00:00Z]
-  @booking_approval_expires_at ~U[2026-09-18 00:00:00Z]
+  @booking_approval_published_at ~U[2026-09-02 00:00:00Z]
+  @booking_approval_expires_at ~U[2026-10-02 00:00:00Z]
 
   @spec list() :: [Announcement.t()]
   def list do
