@@ -211,7 +211,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       refute_enqueued(worker: ApprovalExpiryWorker)
     end
 
-    test "expired: leaves the status untouched instead of reviving a refunded request" do
+    test "expired: is refused outright rather than reviving a refunded request" do
       %{meeting: meeting, params: params} =
         gated_booking(true, %{
           status: "expired",
@@ -219,13 +219,14 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
           cancelled_at: DateTime.utc_now(:second)
         })
 
-      assert {:ok, rescheduled} =
+      # An expired request was already released and refunded, and its slot is
+      # absent from the occupying statuses, so it reserves nothing. `Policy`
+      # refuses the reschedule before the gate is consulted at all, which is
+      # a stronger guarantee than leaving the status untouched: there is no
+      # new time for the invitee to be told about either.
+      assert {:error, "Cannot reschedule an expired meeting"} =
                Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
 
-      # An expired request was already released and refunded; reviving it
-      # into the gate would let the host approve a meeting the invitee has
-      # already been paid back for.
-      assert rescheduled.status == "expired"
       refute_enqueued(worker: ApprovalExpiryWorker)
     end
   end
