@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.Polls.PollsComponent
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -112,7 +113,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             name="poll[duration]"
             label={dgettext("dashboard_common", "Duration (minutes)")}
             value={@duration}
-            min="5"
+            min={Constraints.poll_duration_minutes_opts()[:greater_than_or_equal_to]}
+            max={Constraints.poll_duration_minutes_opts()[:less_than_or_equal_to]}
             required
             errors={error_list(@errors, :duration_minutes)}
             icon="hero-clock"

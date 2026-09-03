@@ -29,17 +29,30 @@ defmodule Tymeslot.Polls.PollSchemasTest do
                errors_on(changeset)
     end
 
-    test "rejects non-positive durations" do
-      changeset =
-        PollSchema.creation_changeset(%PollSchema{}, %{
-          user_id: 1,
-          title: "x",
-          duration_minutes: 0,
-          timezone: "Etc/UTC"
-        })
+    test "holds a poll's proposed meeting to the same five-minute floor as a meeting type" do
+      # Below five minutes is under the smallest slot interval the grid can be
+      # drawn at, so it cannot be offered however it was created. A poll's
+      # ceiling is higher than a meeting type's — a whole-day workshop is
+      # exactly what a poll is for — but the floor is the same.
+      for duration <- [0, 1, 4, 1441] do
+        assert %{duration_minutes: _errors} = errors_on(poll_changeset(duration)),
+               "accepted a #{duration}-minute poll"
+      end
 
-      assert %{duration_minutes: _duration_minutes} = errors_on(changeset)
+      for duration <- [5, 60, 1440] do
+        refute Map.has_key?(errors_on(poll_changeset(duration)), :duration_minutes),
+               "rejected a #{duration}-minute poll"
+      end
     end
+  end
+
+  defp poll_changeset(duration_minutes) do
+    PollSchema.creation_changeset(%PollSchema{}, %{
+      user_id: 1,
+      title: "x",
+      duration_minutes: duration_minutes,
+      timezone: "Etc/UTC"
+    })
   end
 
   describe "PollTimeSlotSchema.changeset/2" do

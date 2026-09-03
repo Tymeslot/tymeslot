@@ -232,14 +232,14 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
       attrs = %{
         # Invalid: empty name
         name: "",
-        # Invalid: duration must be > 0
+        # Invalid: below the five-minute floor
         duration_minutes: 0
       }
 
       assert {:error, changeset} = MeetingTypeQueries.update_meeting_type(meeting_type, attrs)
       refute changeset.valid?
       assert "can't be blank" in errors_on(changeset).name
-      assert "must be greater than or equal to 1" in errors_on(changeset).duration_minutes
+      assert "must be greater than or equal to 5" in errors_on(changeset).duration_minutes
     end
 
     test "returns error when updating to duplicate name" do
