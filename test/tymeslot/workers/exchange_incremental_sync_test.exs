@@ -24,6 +24,7 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
   @moduletag :calendar
   @moduletag :integrations
 
+  alias Ecto.Changeset
   alias Tymeslot.ExchangeCase
   alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Repo
@@ -220,5 +221,73 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
     # The window slides daily, so an item can enter it without changing and
     # therefore without appearing in any feed. Only the full read finds those.
     assert Enum.any?(sent_requests(), &(&1 =~ "<m:FindItem"))
+  end
+
+  test "an incremental cycle does not push the full re-read out of reach", %{
+    integration: integration
+  } do
+    # `last_full_sync_at` is the clock the daily full re-read is measured
+    # against. Stamping it on every successful cycle kept it permanently
+    # fresh, so the re-read never came due again and items sliding into the
+    # window were never picked up.
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    # Recent enough that no full read is due, so the next cycle is genuinely
+    # incremental, and distinctive enough that overwriting it is visible.
+    stamped = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+
+    integration
+    |> Changeset.change(%{last_full_sync_at: stamped})
+    |> Repo.update!()
+
+    sent_requests()
+
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    # No windowed read this cycle, and the full-read clock is untouched.
+    refute Enum.any?(sent_requests(), &(&1 =~ "<m:FindItem"))
+    assert Repo.reload!(integration).last_full_sync_at == stamped
+  end
+
+  test "a full re-read does move the clock it is measured against", %{
+    integration: integration
+  } do
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    aged = age_last_full_sync(integration)
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    assert DateTime.compare(
+             Repo.reload!(integration).last_full_sync_at,
+             aged.last_full_sync_at
+           ) == :gt
+  end
+
+  test "an incremental cycle still records that the integration synced", %{
+    integration: integration
+  } do
+    # Holding `last_full_sync_at` back must not make an incremental cycle look
+    # like a failure: the sweep schedules Exchange off `last_external_sync_at`,
+    # and the health row is cleared on every successful run.
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    stale = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+
+    integration
+    |> Changeset.change(%{last_external_sync_at: stale, last_sync_at: stale})
+    |> Repo.update!()
+
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    reloaded = Repo.reload!(integration)
+    assert DateTime.compare(reloaded.last_external_sync_at, stale) == :gt
+    assert DateTime.compare(reloaded.last_sync_at, stale) == :gt
+    assert is_nil(reloaded.sync_error)
   end
 end

@@ -203,8 +203,8 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
     {from, to} = window()
 
     with {:ok, busy_uids} <- refresh_busy_intervals(integration, from, to),
-         {:ok, item_uids} <- refresh_items(integration, from, to) do
-      {:ok, busy_uids ++ item_uids}
+         {:ok, item_uids, item_read} <- refresh_items(integration, from, to) do
+      {:ok, busy_uids ++ item_uids, item_read}
     end
   end
 
@@ -231,11 +231,19 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   # edits, never a mix. A mix would have `full_refresh_for_role/3` delete the
   # rows the incremental folders had just written: that call is scoped to the
   # role across the whole integration, not to one folder.
+  #
+  # Which of the two ran is reported alongside the uids, because
+  # `last_full_sync_at` is the input `ItemCache.full_sync_due?/1` reads back to
+  # schedule the next full read. Stamping it after an incremental cycle would
+  # hold it permanently fresh and the daily full re-read would never come due
+  # again, so items sliding into the window would never be picked up.
   defp refresh_items(integration, from, to) do
     if ItemCache.full_sync_due?(integration) do
       full_refresh_items(integration, from, to)
     else
-      ItemCache.incremental_refresh(integration, from, to)
+      with {:ok, uids} <- ItemCache.incremental_refresh(integration, from, to) do
+        {:ok, uids, :incremental}
+      end
     end
   end
 
@@ -243,7 +251,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
     with {:ok, events} <- fetch_all_calendars(integration, from, to),
          {:ok, uids} <- write(integration, @display_only, events, from, to) do
       ItemCache.bootstrap_sync_states(integration)
-      {:ok, uids}
+      {:ok, uids, :full}
     end
   end
 
@@ -294,11 +302,11 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
   # --- Outcomes ---
 
-  defp handle_result({:ok, uids}, integration) do
+  defp handle_result({:ok, uids, item_read}, integration) do
     Sync.invalidate_cache_for_user(integration)
     SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
 
-    mark_synced(integration, length(uids))
+    mark_synced(integration, length(uids), item_read)
     SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
     :ok
   end
@@ -370,16 +378,26 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
     end
   end
 
-  defp mark_synced(integration, count) do
+  # `last_full_sync_at` moves only when the item half actually re-read its
+  # whole window. It is not a general "this sync succeeded" marker here:
+  # `ItemCache.full_sync_stale?/1` reads it back to decide when the next full
+  # read is due, so an incremental cycle that stamped it would keep resetting
+  # the very clock it is measured against. `last_sync_at` and
+  # `last_external_sync_at` are the per-cycle markers, and the sweep's own
+  # Exchange cadence reads the latter.
+  defp mark_synced(integration, count, item_read) do
     now = DateTime.utc_now(:second)
 
-    attrs = %{
-      last_sync_at: now,
-      last_external_sync_at: now,
-      last_full_sync_at: now,
-      sync_error: nil,
-      needs_reauth: false
-    }
+    attrs =
+      Map.merge(
+        %{
+          last_sync_at: now,
+          last_external_sync_at: now,
+          sync_error: nil,
+          needs_reauth: false
+        },
+        full_read_stamp(item_read, now)
+      )
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
@@ -401,6 +419,9 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
         :ok
     end
   end
+
+  defp full_read_stamp(:full, now), do: %{last_full_sync_at: now}
+  defp full_read_stamp(:incremental, _now), do: %{}
 
   defp record_failure(integration, reason) do
     Logger.error("Exchange calendar sync failed",
