@@ -52,6 +52,12 @@ defmodule Tymeslot.Infrastructure.FinchPool do
   end
 
   @doc """
+  The Finch instance every outbound request is served by.
+  """
+  @spec instance() :: atom()
+  def instance, do: @finch
+
+  @doc """
   Returns the Req `:finch` option to reach `url` with `connect_options`.
 
   With no connection options the shared pool serves the request as it always

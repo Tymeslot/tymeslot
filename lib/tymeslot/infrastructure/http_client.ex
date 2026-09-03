@@ -315,17 +315,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
       decode_body: false
     ]
 
-    # A proxied request opens its socket to the proxy, which then resolves the
-    # destination itself, so it is left on the transport Req picks for it
-    # rather than being routed onto a pool named after a host it never
-    # connects to. Pinning declines a proxied URL for the same reason.
-    base_options =
-      if proxy_options == [] do
-        {transport_key, transport_val} = req_transport_option()
-        Keyword.put(base_options, transport_key, transport_val)
-      else
-        base_options
-      end
+    {transport_key, transport_val} = req_transport_option(proxy_options)
+    base_options = Keyword.put(base_options, transport_key, transport_val)
 
     # Add body if present (and not empty)
     options_with_body =
@@ -347,28 +338,23 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         Keyword.put(options_with_body, :into, capped_collector(max_response_bytes(user_options)))
       end
 
-    # Add proxy options if configured
-    options_with_proxy = Keyword.merge(options_with_cap, proxy_options)
-
     # Merge with user options (user options take precedence)
-    # Special handling for connect_options to deep merge with proxy config
     # Strip HTTPoison-style timeout keys that were handled by get_timeout/2,
     # and :max_response_bytes, which Req does not recognise
     user_opts_clean = Keyword.drop(user_options, [:timeout, :recv_timeout, :max_response_bytes])
 
-    case Keyword.get(user_opts_clean, :connect_options) do
-      nil ->
-        Keyword.merge(options_with_proxy, user_opts_clean)
+    # The proxy's connection options and the caller's are one set: both
+    # describe the same socket, so they are merged and handed to the pool
+    # together rather than one being a special case of the other.
+    connect_options =
+      Keyword.merge(
+        Keyword.get(proxy_options, :connect_options, []),
+        Keyword.get(user_opts_clean, :connect_options, [])
+      )
 
-      user_connect_opts ->
-        proxy_connect_opts = Keyword.get(options_with_proxy, :connect_options, [])
-        merged_connect_opts = Keyword.merge(proxy_connect_opts, user_connect_opts)
-
-        options_with_proxy
-        |> Keyword.delete(:connect_options)
-        |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
-        |> apply_connect_options(url, merged_connect_opts)
-    end
+    options_with_cap
+    |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
+    |> apply_connect_options(url, connect_options)
   end
 
   # Req refuses `:finch` and `:connect_options` on the same request: hand it
@@ -382,6 +368,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   # The fallback is the behaviour that preceded it, and runs whenever the
   # request is not going through Finch at all — the suite routes Req through a
   # test plug, which opens no socket and has no pool to register.
+  defp apply_connect_options(options, _url, []), do: options
+
   defp apply_connect_options(options, url, connect_options) do
     with {:ok, finch_options} <- Keyword.fetch(options, :finch),
          {:ok, pooled_options} <- FinchPool.request_option(url, connect_options) do
@@ -393,6 +381,12 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         |> Keyword.put(:connect_options, connect_options)
     end
   end
+
+  # A proxied request never goes through the test plug. The proxy is the thing
+  # being exercised on those paths, and a plug opens no socket for it to
+  # traverse, so there would be nothing left to observe.
+  defp req_transport_option([]), do: req_transport_option()
+  defp req_transport_option(_proxy_options), do: {:finch, [name: FinchPool.instance()]}
 
   # Req 0.7 moved the Finch adapter's settings under a keyword list; the bare
   # `finch: name` form still works but is deprecated and goes away in 0.8.
