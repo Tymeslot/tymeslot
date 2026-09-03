@@ -28,7 +28,9 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
   def timezone_dropdown(assigns) do
     ~H"""
     <div class={["relative", @class]}>
-      <label class="label text-tymeslot-700 mb-3 block">
+      <%!-- Visual label only: it names no control (the trigger below carries its
+           own accessible name), so it must not be a <label> element. --%>
+      <div class="label text-tymeslot-700 mb-3 block">
         <div class="flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -40,7 +42,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
           </svg>
           {dgettext("common", "Your Timezone")}
         </div>
-      </label>
+      </div>
 
       <.dropdown
         id="timezone-dropdown"
@@ -53,9 +55,9 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         panel_label={dgettext("common", "Select timezone")}
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
         class="right-0 max-h-64 brand-card rounded-xl shadow-lg border border-white/30 overflow-hidden"
-        aria-label={dgettext("common", "Select timezone")}
       >
         <:trigger>
+          <span class="sr-only">{dgettext("common", "Your Timezone")}:</span>
           <div class="input p-4 hover:bg-white transition-all duration-200">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -110,6 +112,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                 name="value"
                 value={@timezone_search || ""}
                 placeholder={dgettext("common", "Search cities, countries, or timezones...")}
+                aria-label={dgettext("common", "Search timezones")}
                 class="w-full px-4 py-2 rounded-token-lg text-token-sm border-0 pr-10 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400/30 bg-white/90 text-tymeslot-800"
                 autocomplete="off"
                 phx-hook="AutoFocus"

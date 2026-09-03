@@ -248,3 +248,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Play background video"
 msgstr ""
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr ""

@@ -248,3 +248,8 @@ msgstr "Mettre en pause la vidéo d'arrière-plan"
 #, elixir-autogen, elixir-format
 msgid "Play background video"
 msgstr "Lire la vidéo d'arrière-plan"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr "Rechercher des fuseaux horaires"
