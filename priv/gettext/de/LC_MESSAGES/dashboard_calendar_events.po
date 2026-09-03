@@ -863,7 +863,6 @@ msgstr "Ja, senden"
 msgid "You don't have permission to delete this event"
 msgstr "Sie haben keine Berechtigung, dieses Ereignis zu löschen"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
@@ -1018,3 +1017,8 @@ msgstr "Sie können sich nicht selbst als Gast hinzufügen. Verwenden Sie eine "
 #, elixir-autogen, elixir-format
 msgid "before the event"
 msgstr "vor dem Termin"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
+msgstr "Dieser Kalender ist schreibgeschützt. Ereignisse darin können nicht über Tymeslot geändert werden."

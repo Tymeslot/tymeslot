@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
 
   use TymeslotWeb, :html
 
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
   alias TymeslotWeb.Dashboard.CalendarGrid.Header
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -156,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           user_timezone={@user_timezone}
           time_format={Helpers.time_format(assigns)}
           myself={@myself}
-          editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
+          editable={EditWorkflow.event_editable?(assigns, @selected_event)}
           attendee_input={@attendee_input}
           pending_attendees={@pending_attendees}
           video_integrations={@video_integrations}

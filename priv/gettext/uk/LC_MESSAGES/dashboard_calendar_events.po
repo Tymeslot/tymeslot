@@ -874,7 +874,6 @@ msgstr "Так, надіслати"
 msgid "You don't have permission to delete this event"
 msgstr "У вас немає дозволу на видалення цієї події"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
@@ -1031,3 +1030,8 @@ msgstr "Ви не можете додати себе як гостя. Викор
 #, elixir-autogen, elixir-format
 msgid "before the event"
 msgstr "перед подією"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
+msgstr "Цей календар доступний лише для перегляду. Події в ньому не можна змінювати з Tymeslot."

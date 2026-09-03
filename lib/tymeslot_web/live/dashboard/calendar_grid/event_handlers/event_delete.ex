@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
         {:noreply, socket}
 
       event ->
-        case EditWorkflow.assert_owns_event(socket, event) do
+        case EditWorkflow.assert_event_writable(socket, event) do
           :ok ->
             linked_to_booking =
               EventOperations.event_linked_to_booking?(
@@ -38,6 +38,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
               |> assign(:confirm_delete_linked_to_booking, linked_to_booking)
 
             {:noreply, socket}
+
+          {:error, :read_only} = error ->
+            Shared.flash_guard_error(socket, error)
 
           {:error, :unauthorized} ->
             send(

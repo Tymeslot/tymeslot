@@ -874,7 +874,6 @@ msgstr "Ano, odeslat"
 msgid "You don't have permission to delete this event"
 msgstr "Nemáte oprávnění tuto událost smazat"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
@@ -1030,3 +1029,8 @@ msgstr "Nemůžete přidat sami sebe jako hosta. Použijte jinou e-mailovou adre
 #, elixir-autogen, elixir-format
 msgid "before the event"
 msgstr "před událostí"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
+msgstr "Tento kalendář je jen pro čtení. Události v něm nelze měnit z Tymeslotu."

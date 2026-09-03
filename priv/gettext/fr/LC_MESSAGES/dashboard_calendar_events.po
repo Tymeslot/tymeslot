@@ -863,7 +863,6 @@ msgstr "Oui, envoyer"
 msgid "You don't have permission to delete this event"
 msgstr "Vous n’avez pas la permission de supprimer cet événement"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
@@ -1018,3 +1017,8 @@ msgstr "Vous ne pouvez pas vous ajouter comme invité. Utilisez une autre adress
 #, elixir-autogen, elixir-format
 msgid "before the event"
 msgstr "avant l'événement"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
+#, elixir-autogen, elixir-format
+msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
+msgstr "Ce calendrier est en lecture seule. Les événements qu’il contient ne peuvent pas être modifiés depuis Tymeslot."

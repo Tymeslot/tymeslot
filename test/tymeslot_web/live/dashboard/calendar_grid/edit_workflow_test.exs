@@ -174,6 +174,46 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
     end
   end
 
+  describe "assert_event_writable/2 and event_editable?/2" do
+    test "allows an event on a writable calendar" do
+      socket = socket_with_integration(google_integration())
+      event = event_on("own@example.com")
+
+      assert EditWorkflow.assert_event_writable(socket, event) == :ok
+      assert EditWorkflow.event_editable?(socket.assigns, event)
+    end
+
+    test "refuses an event on a read-only calendar of a writable provider" do
+      socket = socket_with_integration(google_integration())
+      event = event_on("shared@example.com")
+
+      assert EditWorkflow.assert_event_writable(socket, event) == {:error, :read_only}
+      refute EditWorkflow.event_editable?(socket.assigns, event)
+    end
+
+    test "refuses every event on a read-only provider" do
+      integration = %{
+        id: 7,
+        provider: "ics_url",
+        calendar_list: [%CalendarEntry{id: "feed", selected: true, read_only: true}]
+      }
+
+      socket = socket_with_integration(integration)
+      event = event_on("feed")
+
+      assert EditWorkflow.assert_event_writable(socket, event) == {:error, :read_only}
+      refute EditWorkflow.event_editable?(socket.assigns, event)
+    end
+
+    test "reports an unowned event as unauthorized rather than read-only" do
+      socket = socket_with_integration(google_integration())
+      event = %{event_on("own@example.com") | calendar_integration_id: 13}
+
+      assert EditWorkflow.assert_event_writable(socket, event) == {:error, :unauthorized}
+      refute EditWorkflow.event_editable?(socket.assigns, event)
+    end
+  end
+
   describe "sync_video_integration_async/3" do
     setup do
       original = Application.get_env(:tymeslot, :video_rooms_module)
@@ -303,6 +343,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   end
 
   # Helpers
+
+  defp google_integration do
+    %{
+      id: 7,
+      provider: "google",
+      calendar_list: [
+        %CalendarEntry{id: "own@example.com", selected: true, read_only: false},
+        %CalendarEntry{id: "shared@example.com", selected: true, read_only: true}
+      ]
+    }
+  end
+
+  defp event_on(provider_calendar_id) do
+    %{
+      calendar_integration_id: 7,
+      provider_calendar_id: provider_calendar_id,
+      provider_event_id: "evt-1"
+    }
+  end
+
+  defp socket_with_integration(integration) do
+    [integration.id]
+    |> socket_owning()
+    |> Component.assign(:integrations, [integration])
+  end
 
   defp socket_owning(integration_ids) do
     Component.assign(
