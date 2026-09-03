@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Req.Test, only: [set_req_test_to_shared: 1]
+  import Tymeslot.CalDAVSyncTestFixtures
   import Tymeslot.ConfigTestHelpers
 
   alias Plug.Conn
@@ -105,6 +106,75 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
       # integration ever discovering the server had recovered.
       assert state.consecutive_hard_failures == 0
       assert state.failures == 0
+    end
+
+    test "a cycle that completes clears the streak again", %{integration: integration} do
+      run_failing_sync(integration)
+      assert health(integration).consecutive_sync_failures == 1
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, caldav_report_xml("/calendars/alice/default/e.ics", ical_path1()))
+      end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert health(integration).consecutive_sync_failures == 0
+    end
+  end
+
+  describe "perform/1 on an integration with more than one calendar" do
+    setup do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          base_url: "http://localhost:65432",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("s3cret"),
+          calendar_paths: [path1(), path2()],
+          provider_account_id: "http://localhost:65432||alice-multi",
+          is_active: true,
+          needs_reauth: false,
+          caldav_sync_tier: 3
+        )
+
+      %{multi: integration}
+    end
+
+    test "one calendar syncing does not clear the streak another is building", %{multi: multi} do
+      # The failure signal is recorded once per job, but the success signal
+      # used to be recorded once per calendar path, deep inside the sync. On an
+      # integration with two calendars the first one's success therefore wiped
+      # the streak the second one's failure had just added, and the counter
+      # oscillated between 0 and 1 for as long as the outage lasted — so the
+      # badge could never reach the threshold that raises it, however long a
+      # calendar had been failing to sync.
+      healthy_path = path1()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        case conn.request_path do
+          ^healthy_path ->
+            conn
+            |> Conn.put_resp_header("content-type", "application/xml")
+            |> Conn.send_resp(207, caldav_report_xml("#{healthy_path}e.ics", ical_path1()))
+
+          _broken_path ->
+            Conn.send_resp(conn, 500, "Internal Server Error")
+        end
+      end)
+
+      for expected <- 1..3 do
+        assert {:discard, _reason} =
+                 perform_job(SyncCalDavCalendarWorker, %{"calendar_integration_id" => multi.id})
+
+        assert health(multi).consecutive_sync_failures == expected
+      end
+
+      assert health(multi).status == :unhealthy
     end
   end
 end

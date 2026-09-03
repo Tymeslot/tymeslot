@@ -72,10 +72,16 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # otherwise hear about: `{:discard, _}` emits `job:stop`, which
   # `ObanFailureAlerter` deliberately ignores. Recording the failure against
   # health state is what stops that quietness being permanent — a streak of
-  # them raises the badge. The success side is already covered:
-  # `CalDAV.Sync.State.put/2` calls `HealthCheck.mark_synced_successfully/2`,
-  # which clears the streak.
-  defp record_sync_outcome(_integration, :ok), do: :ok
+  # them raises the badge.
+  #
+  # Both halves belong here, at the job boundary, so that they measure the same
+  # thing: one whole sync cycle, succeeded or failed. Clearing the streak used
+  # to live in `CalDAV.Sync.State.put/2` instead, which runs once per calendar
+  # path and per tier step, so a healthy first calendar wiped the streak a
+  # failing second calendar was accumulating and the badge stayed green through
+  # an indefinite outage.
+  defp record_sync_outcome(integration, :ok),
+    do: HealthCheck.mark_synced_successfully(:calendar, integration.id)
 
   defp record_sync_outcome(integration, {:error, _reason}),
     do: HealthCheck.record_sync_failure(:calendar, integration)
