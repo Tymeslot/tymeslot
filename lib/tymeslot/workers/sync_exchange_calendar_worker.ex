@@ -46,12 +46,43 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   short-circuit stands. The job's verdict is the error, and Oban retries the
   item read.
 
-  ## No incremental mechanism
+  ## The item half syncs incrementally, and re-reads in full once a day
 
-  EWS offers `SyncFolderItems` with a state token; wiring it up is deferred,
-  so every run re-reads the whole sync window. Full replacement is also what
-  makes deletions visible, exactly as it is for `SyncIcsCalendarWorker`: an
-  event that has vanished simply is not in the replacement set.
+  `SyncFolderItems` gives each folder a change feed behind a state token, so an
+  ordinary cycle asks what changed rather than re-reading the window. A folder
+  the feed reports nothing for is skipped entirely: no `FindItem`, no
+  `GetItem`. One that reports changes costs a batched `GetItem` for the
+  changed ids alone, and the deletions the feed states are applied by
+  `provider_event_id`.
+
+  Three things make that safe rather than merely cheaper, and all three matter.
+
+  **The feed has no time window.** `SyncFolderItems` answers for the whole
+  folder, so a change ten years out arrives like one next week. Changed items
+  are fetched and then filtered to the sync window here; one that falls outside
+  it is deleted from the cache rather than ignored, because an item *moved* out
+  of the window has to stop being cached and the feed cannot say which of the
+  two happened.
+
+  **A moving window is not a change.** The window is ±`ProviderConfig`'s day
+  counts from *now*, so it slides daily, and an item that slides into it never
+  appears in the feed: nothing about it changed. Only the full re-read can pick
+  those up, which is why one runs when `last_full_sync_at` is older than
+  `@full_item_sync_after_seconds` — and why that interval must stay well under
+  the window's own width, so an item cannot cross the whole edge unseen.
+
+  **A token is bootstrapped once, never refreshed by a full read.** The first
+  cycle for a folder does the full windowed read *and* drains the feed to
+  establish a token, discarding the changes the full read already covered.
+  Later full re-reads leave the token alone, so the next incremental cycle
+  replays changes the full read has already applied. That replay is harmless
+  because both halves are idempotent: an upsert rewrites a row that is already
+  right, and a delete of a row that is already gone is a no-op. Re-bootstrapping
+  on every full read would instead cost a whole-folder enumeration each time.
+
+  The busy half has no incremental form — `GetUserAvailability` takes a window
+  and answers intervals, with no token and no change feed — so it re-reads and
+  replaces wholesale on every cycle, exactly as before.
 
   ## What this worker deliberately does not do
 
@@ -63,12 +94,18 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   `Meetings.ExternalCalendarChanges.find_linked_meeting/3` and can mark a
   real confirmed booking `"externally_deleted"`, notifying both parties.
   Every busy row written here carries a synthesised uid and no provider event
-  id, which is exactly the shape that fallback resolves. Nothing in this
-  worker computes a vanished set to hand it: `full_refresh_for_role/3`
-  replaces a role's rows wholesale, so a disappeared interval is a silent
-  cache deletion. Not calling it is the structural half of the defence; the
-  other half is the namespace `Exchange.IntervalNormaliser` puts on those
-  uids.
+  id, which is exactly the shape that fallback resolves. The busy half never
+  computes a vanished set to hand it: `full_refresh_for_role/3` replaces a
+  role's rows wholesale, so a disappeared interval is a silent cache deletion.
+  Not calling it is the structural half of the defence; the other half is the
+  namespace `Exchange.IntervalNormaliser` puts on those uids.
+
+  The incremental item half *does* now know which items vanished, and still
+  does not call it. Those deletions are applied straight to the cache by
+  `provider_event_id`. Cancelling a Tymeslot booking because its mirror row
+  left an external calendar is a decision for the providers that own the
+  booking, and this one does not: a `display_only` row blocks nothing, so
+  removing it costs the grid an entry and no more.
 
   `Calendar.Sync.post_commit_reconciliation/2` could not cancel anything even
   if it ran. It walks the events *present* in the sync rather than vanished
@@ -122,6 +159,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Exchange.IntervalNormaliser
+  alias Tymeslot.Integrations.Calendar.Exchange.ItemCache
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
@@ -187,9 +225,25 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   # One client config per selected calendar. A failure on any one of them
   # fails the item read rather than caching a partial view: half a mailbox on
   # the grid is a grid nobody can trust.
+  #
+  # Which of the two reads runs is decided per integration rather than per
+  # folder, so a run is either a full replacement or a set of incremental
+  # edits, never a mix. A mix would have `full_refresh_for_role/3` delete the
+  # rows the incremental folders had just written: that call is scoped to the
+  # role across the whole integration, not to one folder.
   defp refresh_items(integration, from, to) do
-    with {:ok, events} <- fetch_all_calendars(integration, from, to) do
-      write(integration, @display_only, events, from, to)
+    if ItemCache.full_sync_due?(integration) do
+      full_refresh_items(integration, from, to)
+    else
+      ItemCache.incremental_refresh(integration, from, to)
+    end
+  end
+
+  defp full_refresh_items(integration, from, to) do
+    with {:ok, events} <- fetch_all_calendars(integration, from, to),
+         {:ok, uids} <- write(integration, @display_only, events, from, to) do
+      ItemCache.bootstrap_sync_states(integration)
+      {:ok, uids}
     end
   end
 
@@ -206,12 +260,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
   defp fetch_one_calendar(integration, client, from, to) do
     calendar_id = client[:calendar_id]
-
-    context = %{
-      calendar_integration_id: integration.id,
-      provider_calendar_id: to_string(calendar_id),
-      synced_at: DateTime.utc_now()
-    }
+    context = ItemCache.item_context(integration, client)
 
     with {:ok, items} <-
            Provider.list_calendar_items(client,

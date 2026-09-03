@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
 
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.ExchangeSyncStubs
   import Tymeslot.Factory
 
   @moduletag :workers
@@ -34,7 +35,6 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Exchange.IntervalNormaliser
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
@@ -295,6 +295,11 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
       stub_full_sync()
       assert :ok = run(integration)
 
+      # The guard lives on the full windowed read, which replaces the role's
+      # rows wholesale; the incremental read never replaces anything, so it has
+      # nothing to empty. Ageing the integration is what forces the full read
+      # the guard belongs to.
+      age_last_full_sync(integration)
       stub_full_sync(find_item: ExchangeFixtures.empty_find_item_response())
 
       assert {:error, {:empty_result_with_populated_cache, "display_only"}} = run(integration)
@@ -437,45 +442,12 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
 
   # --- Helpers ---
 
-  defp run(integration) do
-    perform_job(SyncExchangeCalendarWorker, %{"calendar_integration_id" => integration.id})
-  end
-
   defp availability_events(integration) do
     CalendarEventQueries.in_range([integration.id], {window_start(), window_end()})
   end
 
-  defp grid_rows(integration) do
-    ProviderCalendarEventQueries.list_for_range([integration.id], window_start(), window_end())
-  end
-
-  defp window_start, do: DateTime.add(DateTime.utc_now(), -365, :day)
-  defp window_end, do: DateTime.add(DateTime.utc_now(), 365, :day)
-
   defp iso(date, time) do
     date |> DateTime.new!(time, "Etc/UTC") |> DateTime.to_iso8601()
-  end
-
-  # A response per EWS operation rather than a fixed sequence of round trips.
-  # The free/busy read is sliced into a request per chunk of the sync window
-  # (see `Exchange.Provider`), so one run asks `GetUserAvailability` many
-  # times, and a positional stub would answer the second slice with the
-  # `FindItem` body. `:intervals`, `:find_item` and `:get_item` override what
-  # each operation is answered with.
-  defp stub_full_sync(opts \\ []) do
-    intervals = Keyword.get(opts, :intervals, [{@busy_start, @busy_end}])
-    find_item = Keyword.get(opts, :find_item, ExchangeFixtures.find_item_response())
-    get_item = Keyword.get(opts, :get_item, ExchangeFixtures.get_item_response())
-    test_pid = self()
-
-    ReqTest.stub(:tymeslot_http, fn conn ->
-      {:ok, request_body, conn} = Conn.read_body(conn)
-      send(test_pid, {:ews_request, request_body})
-
-      conn
-      |> Conn.put_resp_content_type("text/xml")
-      |> Conn.resp(200, ews_response(request_body, intervals, find_item, get_item))
-    end)
   end
 
   # The free/busy read succeeds and its rows are written; the item read that
@@ -497,42 +469,5 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
       |> Conn.put_resp_content_type("text/xml")
       |> Conn.resp(status, body)
     end)
-  end
-
-  defp ews_response(request_body, intervals, find_item, get_item) do
-    cond do
-      request_body =~ "<m:GetUserAvailabilityRequest" ->
-        availability_response(request_body, intervals)
-
-      request_body =~ "<m:FindItem" ->
-        find_item
-
-      request_body =~ "<m:GetItem" ->
-        get_item
-    end
-  end
-
-  # A server answers a slice with the busy time inside the window that slice
-  # asked for, so the stub clips too. Answering every slice with the whole
-  # fixture would report one meeting once per slice, and hide from these tests
-  # whether the right window was ever asked about.
-  defp availability_response(request_body, intervals) do
-    {from, to} = ExchangeCase.requested_availability_window(request_body)
-
-    ExchangeFixtures.availability_response(
-      Enum.filter(intervals, fn {start_at, _end_at} ->
-        {:ok, start_at, _offset} = DateTime.from_iso8601(start_at)
-
-        DateTime.compare(start_at, from) != :lt and DateTime.compare(start_at, to) == :lt
-      end)
-    )
-  end
-
-  defp sent_requests(acc \\ []) do
-    receive do
-      {:ews_request, body} -> sent_requests([body | acc])
-    after
-      0 -> Enum.reverse(acc)
-    end
   end
 end

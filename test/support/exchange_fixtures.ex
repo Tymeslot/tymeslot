@@ -17,6 +17,7 @@ defmodule Tymeslot.ExchangeFixtures do
 
   @item_id "item-1"
   @change_key "ck-1"
+  @sync_state "sync-state-1"
 
   @doc """
   A `FindItem` response listing the given `{item_id, change_key}` pairs.
@@ -104,6 +105,35 @@ defmodule Tymeslot.ExchangeFixtures do
   end
 
   @doc """
+  A `SyncFolderItems` response carrying one change per entry.
+
+  An entry is `{:create, id}`, `{:update, id}` or `{:delete, id}`. `sync_state`
+  is the token the response hands back, and `last?` its
+  `IncludesLastItemInRange`, which is what tells a caller whether another page
+  is waiting.
+
+  `IdOnly` is what the operation is asked for, so an id (and a change key on a
+  create or update) is genuinely all a real response carries here; a delete
+  carries no change key at all.
+  """
+  @spec sync_folder_items_response([{:create | :update | :delete, String.t()}], keyword()) ::
+          String.t()
+  def sync_folder_items_response(entries \\ [], opts \\ []) do
+    sync_state = Keyword.get(opts, :sync_state, @sync_state)
+    last? = Keyword.get(opts, :last?, true)
+
+    response_envelope("SyncFolderItems", """
+    <m:SyncState>#{sync_state}</m:SyncState>
+    <m:IncludesLastItemInRange>#{last?}</m:IncludesLastItemInRange>
+    <m:Changes>#{Enum.map_join(entries, "\n", &sync_change/1)}</m:Changes>
+    """)
+  end
+
+  @doc "The token `sync_folder_items_response/2` hands back by default."
+  @spec sync_state() :: String.t()
+  def sync_state, do: @sync_state
+
+  @doc """
   A `GetUserAvailability` response carrying one busy interval per
   `{start_time, end_time}` pair.
 
@@ -146,6 +176,14 @@ defmodule Tymeslot.ExchangeFixtures do
   """
   @spec empty_availability_response() :: String.t()
   def empty_availability_response, do: availability_envelope("")
+
+  defp sync_change({:delete, id}), do: ~s(<t:Delete><t:ItemId Id="#{id}"/></t:Delete>)
+
+  defp sync_change({kind, id}) when kind in [:create, :update] do
+    tag = kind |> Atom.to_string() |> String.capitalize()
+
+    ~s(<t:#{tag}><t:CalendarItem><t:ItemId Id="#{id}" ChangeKey="#{@change_key}"/></t:CalendarItem></t:#{tag}>)
+  end
 
   defp availability_envelope(body) do
     soap_envelope("<m:GetUserAvailabilityResponse>#{body}</m:GetUserAvailabilityResponse>")
