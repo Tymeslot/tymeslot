@@ -4,23 +4,25 @@ defmodule TymeslotWeb.Themes.Shared.Components.ApprovalNotice do
 
   Two variants of one fact, sized for where they appear:
 
-    * `pill/1` — a small marker beside a meeting type in a list, or beside the
-      time being picked. Answers "is there a catch?" at a glance.
-    * `block/1` — a fuller sentence on the booking form and the thank-you
-      screen, where the visitor is deciding or has just committed and deserves
-      the whole rule rather than a hint of it.
+    * `pill/1` — a small marker beside a meeting type in the overview list.
+      Answers "is there a catch?" at a glance.
+    * `block/1` — a fuller sentence on the booking form, the post-payment
+      wait screen, and the thank-you screen, where the visitor is deciding
+      or has just committed and deserves the whole rule rather than a hint
+      of it.
 
   ## Why this exists at all
 
   A visitor who picks a time expects to have booked it. On a gated meeting
   type they have not, and the moment they find that out should be *before*
-  they submit, not in an email afterwards. Three stages carry the notice,
-  escalating in detail as the commitment grows: the overview (`pill/1`,
-  beside the gated type), the booking form (`block/1`, `stage: :before`),
-  and the confirmation screen (`block/1`, `stage: :after`). The schedule and
-  questions steps in between carry none — the visitor has already seen the
-  pill by then, and repeating the notice on every intermediate step would be
-  noise rather than disclosure.
+  they submit, not in an email afterwards. Four call sites carry the
+  notice, escalating in detail as the commitment grows: the overview
+  (`pill/1`, beside the gated type), the booking form (`block/1`,
+  `stage: :before`), the post-checkout wait screen for a paid gated type
+  (`block/1`, `stage: :after`), and the confirmation screen (`block/1`,
+  `stage: :after`). The schedule and questions steps in between carry none
+  — the visitor has already seen the pill by then, and repeating the
+  notice on every intermediate step would be noise rather than disclosure.
 
   Follows the shared-component pattern of `MeetingDetails`: neutral class
   names here, visual treatment in each theme's own CSS, because the themes are
@@ -51,13 +53,17 @@ defmodule TymeslotWeb.Themes.Shared.Components.ApprovalNotice do
 
   attr :organizer_name, :string, default: nil
   attr :stage, :atom, default: :before, values: [:before, :after]
+  attr :payment_required, :boolean, default: false
   attr :class, :string, default: nil
 
   @doc """
   The fuller notice, for the booking form and the thank-you screen.
 
   `stage` decides the tense: `:before` warns what will happen, `:after`
-  describes what just did.
+  describes what just did. `payment_required` only changes the `:before`
+  text, for a meeting type that is both paid and gated: the visitor is
+  told they are charged now, ahead of the host's decision, and refunded
+  in full if the request is declined or lapses.
   """
   @spec block(map()) :: Phoenix.LiveView.Rendered.t()
   def block(assigns) do
@@ -84,6 +90,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.ApprovalNotice do
     dgettext(
       "booking",
       "%{organizer} still has to accept this time. We'll email you either way, and the slot is held for you until then.",
+      organizer: host(assigns)
+    )
+  end
+
+  defp text(%{stage: :before, payment_required: true} = assigns) do
+    dgettext(
+      "booking",
+      "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. You'll pay now to hold the slot; if %{organizer} declines or doesn't answer in time, you're refunded in full.",
       organizer: host(assigns)
     )
   end

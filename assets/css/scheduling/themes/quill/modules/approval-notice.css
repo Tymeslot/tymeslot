@@ -24,7 +24,7 @@
   color: var(--theme-warning);
   font-size: var(--theme-font-size-xs);
   font-weight: var(--font-weight-semibold);
-  line-height: 1.2;
+  line-height: var(--theme-line-height-snug);
   white-space: nowrap;
   vertical-align: middle;
 }
@@ -44,6 +44,7 @@
   border: var(--border-width-thin) solid rgba(251, 191, 36, 0.35);
   border-radius: var(--radius-lg);
   background: rgba(251, 191, 36, 0.1);
+  text-align: left;
 }
 
 .approval-notice-icon-wrapper {
@@ -82,21 +83,36 @@
   line-height: var(--theme-line-height-relaxed);
 }
 
-/* The confirmation screen is centred; the notice reads better left-aligned
-   under it than inheriting the centring. */
+/* Centred horizontally within the confirmation screen via margin-inline:
+   auto; the notice's own text stays left-aligned above rather than
+   inheriting a centred layout. */
 .approval-notice-after {
-  text-align: left;
   margin-inline: auto;
   max-width: 32rem;
 }
 
+/* Held state for the confirmation-screen success badge (the tick circle
+   and its small dot): this is the strongest visual signal on the screen,
+   so it must not still read as "done" while the request is pending.
+   Compound selectors so the override wins over confirmation.css's badge
+   rules regardless of import order. */
+.confirmation-badge.confirmation-badge--pending {
+  background: var(--theme-warning);
+  box-shadow: 0 12px 32px rgba(251, 191, 36, 0.3);
+}
+
+.confirmation-badge-dot.confirmation-badge-dot--pending {
+  background: var(--theme-warning);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+}
+
 /* Embeds are height-constrained, so the block drops to the essentials rather
    than pushing the action button out of the visible area. */
-[data-embedded] .approval-notice {
+html.quill-theme[data-embedded] .approval-notice {
   padding: var(--space-xs);
   margin-bottom: var(--space-sm);
 }
 
-[data-embedded] .approval-notice-icon-wrapper {
+html.quill-theme[data-embedded] .approval-notice-icon-wrapper {
   display: none;
 }

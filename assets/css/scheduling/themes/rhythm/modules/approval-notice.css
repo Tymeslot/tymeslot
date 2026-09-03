@@ -88,13 +88,20 @@
   max-width: 30rem;
 }
 
+/* Held state for the confirmation-screen success badge — see the Quill
+   module for why this must override rather than restyle from scratch. */
+.success-badge-inner.success-badge-inner--pending {
+  background: var(--theme-warning);
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.3);
+}
+
 /* Embeds are height-constrained, so drop the icon rather than push the
    action button below the fold. */
-[data-embedded] .approval-notice {
+html.rhythm-theme[data-embedded] .approval-notice {
   padding: var(--space-xs);
   margin-bottom: var(--space-sm);
 }
 
-[data-embedded] .approval-notice-icon-wrapper {
+html.rhythm-theme[data-embedded] .approval-notice-icon-wrapper {
   display: none;
 }
