@@ -32,7 +32,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
   require Logger
   alias Req.{Request, Response}
-  alias Tymeslot.Infrastructure.{Metrics, ProxyConfig, ResponseTooLargeError}
+  alias Tymeslot.Infrastructure.{FinchPool, Metrics, ProxyConfig, ResponseTooLargeError}
   alias Tymeslot.Security.{ConnectionPinning, SsrfBlockedError, SsrfGuard}
 
   # Generous enough that no legitimate response comes close: the largest bodies
@@ -301,37 +301,30 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
     req_method = normalize_method(method)
 
-    # Build base request options
-    # NOTE: Cannot set both :finch and :connect_options (Req limitation)
-    # When proxy is configured, connect_options will be set, so don't set finch
+    base_options = [
+      method: req_method,
+      url: url,
+      headers: headers,
+      receive_timeout: timeout,
+      # Disable Req's default retry: :safe_transient which silently retries
+      # GET/HEAD/OPTIONS on 5xx and transient errors. Retries are handled
+      # explicitly at the CalDAV layer (RetryLogic) and Oban layer.
+      retry: false,
+      # Disable automatic JSON decoding to match HTTPoison behavior
+      # Callers handle JSON parsing explicitly with Jason.decode!
+      decode_body: false
+    ]
+
+    # A proxied request opens its socket to the proxy, which then resolves the
+    # destination itself, so it is left on the transport Req picks for it
+    # rather than being routed onto a pool named after a host it never
+    # connects to. Pinning declines a proxied URL for the same reason.
     base_options =
       if proxy_options == [] do
         {transport_key, transport_val} = req_transport_option()
-
-        base = [
-          method: req_method,
-          url: url,
-          headers: headers,
-          receive_timeout: timeout,
-          # Disable Req's default retry: :safe_transient which silently retries
-          # GET/HEAD/OPTIONS on 5xx and transient errors. Retries are handled
-          # explicitly at the CalDAV layer (RetryLogic) and Oban layer.
-          retry: false,
-          # Disable automatic JSON decoding to match HTTPoison behavior
-          # Callers handle JSON parsing explicitly with Jason.decode!
-          decode_body: false
-        ]
-
-        Keyword.put(base, transport_key, transport_val)
+        Keyword.put(base_options, transport_key, transport_val)
       else
-        [
-          method: req_method,
-          url: url,
-          headers: headers,
-          receive_timeout: timeout,
-          retry: false,
-          decode_body: false
-        ]
+        base_options
       end
 
     # Add body if present (and not empty)
@@ -371,12 +364,33 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         proxy_connect_opts = Keyword.get(options_with_proxy, :connect_options, [])
         merged_connect_opts = Keyword.merge(proxy_connect_opts, user_connect_opts)
 
-        # Cannot use both :finch and :connect_options (Req limitation)
         options_with_proxy
         |> Keyword.delete(:connect_options)
-        |> Keyword.delete(:finch)
         |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
-        |> Keyword.put(:connect_options, merged_connect_opts)
+        |> apply_connect_options(url, merged_connect_opts)
+    end
+  end
+
+  # Req refuses `:finch` and `:connect_options` on the same request: hand it
+  # connection options and it serves them from a Finch instance it starts and
+  # names itself, one per distinct set of options, kept forever. Connection
+  # pinning passes the target's hostname that way on every SSRF-guarded
+  # request, so that used to mean a permanent extra instance per destination.
+  # `FinchPool` says the same thing as a tagged pool on `Tymeslot.Finch`, and
+  # the request then carries `:finch` alone.
+  #
+  # The fallback is the behaviour that preceded it, and runs whenever the
+  # request is not going through Finch at all — the suite routes Req through a
+  # test plug, which opens no socket and has no pool to register.
+  defp apply_connect_options(options, url, connect_options) do
+    with {:ok, finch_options} <- Keyword.fetch(options, :finch),
+         {:ok, pooled_options} <- FinchPool.request_option(url, connect_options) do
+      Keyword.put(options, :finch, Keyword.merge(finch_options, pooled_options))
+    else
+      _no_finch_instance ->
+        options
+        |> Keyword.delete(:finch)
+        |> Keyword.put(:connect_options, connect_options)
     end
   end
 
