@@ -31,7 +31,10 @@ defmodule Tymeslot.Repo.Migrations.AddApprovalFieldsToMeetings do
       )
     )
 
-    # Drives the dashboard's awaiting-approval section and its count badge.
+    # Drives the awaiting-approval count badge. The dashboard's
+    # awaiting-approval section itself is keyed by email, not
+    # organizer_user_id, and is served by the pre-existing
+    # (organizer_email, status) / (attendee_email, status) indexes.
     create(
       index(:meetings, [:organizer_user_id],
         where: "status = 'awaiting_approval'",
