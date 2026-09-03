@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   }
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
 
@@ -352,6 +353,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     socket
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
+    |> BookingLocation.assign_for_meeting_type(meeting_type)
     |> OrganizerHelpers.assign_booking_window()
   end
 

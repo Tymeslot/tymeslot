@@ -31,6 +31,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     GuestsSection,
     HiddenFields,
     LimitsSection,
+    LocationEditorComponent,
+    LocationsSection,
     PaymentsSection,
     QuestionEditorComponent,
     ShowAsFreeSection,
@@ -64,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   # fields absent here (e.g. :base) render below the panels and need no dot.
   @tab_error_fields %{
     "details" => [:name, :duration, :slot_interval, :description, :icon],
-    "location" => [:video_integration, :calendar_integration, :target_calendar],
+    "location" => [:locations, :video_integration, :calendar_integration, :target_calendar],
     "booking" => [:payment_required, :price_cents, :approval_window_hours],
     "reminders" => [:reminder_config]
   }
@@ -231,12 +233,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           hidden={@is_edit && @active_tab != "location"}
           class={panel_class(@is_edit, @active_tab, "location")}
         >
-          <.meeting_mode_section
-            meeting_mode={@meeting_mode}
+          <.live_component
+            module={LocationsSection}
+            id={"locations-section-#{@id}"}
+            locations={@locations}
             video_integrations={@video_integrations}
-            selected_video_integration_id={@selected_video_integration_id}
-            form_errors={@form_errors}
-            myself={@myself}
+            form_id={@id}
           />
 
           <.booking_destination_section
@@ -345,9 +347,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         <.hidden_fields
           :if={!@is_edit}
           type={@type}
-          meeting_mode={@meeting_mode}
           selected_icon={@selected_icon}
-          selected_video_integration_id={@selected_video_integration_id}
+          locations={@locations}
           selected_calendar_integration_id={@selected_calendar_integration_id}
           selected_target_calendar_id={@selected_target_calendar_id}
           selected_availability_schedule_id={@selected_availability_schedule_id}
@@ -408,6 +409,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <% end %>
         </div>
       </form>
+
+      <%!-- Location editor modal — rendered outside <form> to avoid nested forms --%>
+      <%= if @editing_location do %>
+        <.live_component
+          module={LocationEditorComponent}
+          id={"location-editor-#{@id}"}
+          location={@editing_location}
+          existing_locations={@locations}
+          video_integrations={@video_integrations}
+          form_id={@id}
+          mode={@editing_location_mode}
+        />
+      <% end %>
 
       <%!-- Question editor modal — rendered outside <form> to avoid nested forms --%>
       <%= if @editing_question do %>

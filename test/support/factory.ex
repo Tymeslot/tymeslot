@@ -17,6 +17,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Polls.PollParticipantSchema
@@ -162,6 +163,29 @@ defmodule Tymeslot.Factory do
       sort_order: 0,
       user: build(:user)
     }
+  end
+
+  @doc """
+  A video location for a meeting type, bound to `integration`.
+
+  A booking's video room follows the location the booker chose, not the
+  request, so a test that expects a room has to give the meeting type
+  somewhere video to be held:
+
+      insert(:meeting_type, user: user, locations: [video_location(integration)])
+  """
+  @spec video_location(map(), keyword()) :: LocationOption.t()
+  def video_location(integration, attrs \\ []) do
+    struct!(
+      %LocationOption{
+        id: UUID.generate(),
+        kind: "video",
+        label: "Video call",
+        video_integration_id: integration.id,
+        position: 0
+      },
+      attrs
+    )
   end
 
   @spec calendar_integration_factory() ::

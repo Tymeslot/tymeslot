@@ -567,3 +567,116 @@
     margin-top: var(--space-xs);
   }
 }
+
+/* ===== Location picker ===== */
+/* The radio group the booker chooses a location from, shown only when the
+   meeting type offers more than one. Scoped to the Quill wrapper so it
+   inherits the theme's glass surfaces, radii and accent, exactly as the
+   guest field does. */
+
+.quill-theme-wrapper .location-field {
+  margin: 0 0 var(--space-sm);
+  padding: 0;
+  border: none;
+}
+
+.quill-theme-wrapper .location-field__label {
+  padding: 0;
+  margin-bottom: var(--space-xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .location-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quill-theme-wrapper .location-option__label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--input-border-radius);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.quill-theme-wrapper .location-option__label:hover {
+  border-color: var(--theme-primary);
+}
+
+.quill-theme-wrapper .location-option__label--selected {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 1px var(--theme-primary);
+}
+
+.quill-theme-wrapper .location-option__radio {
+  flex: none;
+  margin-top: 0.125rem;
+  accent-color: var(--theme-primary);
+}
+
+.quill-theme-wrapper .location-option__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.quill-theme-wrapper .location-option__title {
+  font-size: var(--theme-font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-high);
+}
+
+.quill-theme-wrapper .location-option__detail {
+  font-size: var(--theme-font-size-sm);
+  color: var(--text-opacity-subtle);
+}
+
+.quill-theme-wrapper .location-phone {
+  margin-top: var(--space-xs);
+}
+
+.quill-theme-wrapper .location-phone__label {
+  display: block;
+  margin-bottom: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .location-phone__input {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--input-padding);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--input-border-radius);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgb(15, 23, 42);
+  font-size: var(--theme-font-size-base);
+  transition: var(--transition-normal);
+  box-sizing: border-box;
+}
+
+.quill-theme-wrapper .location-phone__input:focus {
+  outline: none;
+  background: white;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+
+.quill-theme-wrapper .location-field__error {
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-error-light);
+}

@@ -22,6 +22,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           end_time: DateTime.t() | nil,
           duration: integer() | nil,
           location: String.t() | nil,
+          location_kind: String.t() | nil,
+          location_option_id: String.t() | nil,
           meeting_type: String.t() | nil,
           organizer_name: String.t() | nil,
           organizer_email: String.t() | nil,
@@ -103,6 +105,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:end_time, :utc_datetime)
     field(:duration, :integer)
     field(:location, :string)
+    # What kind of place `location` names, and which of the meeting type's
+    # location options produced it. Stated rather than inferred from the
+    # string, which stops carrying meaning the moment a host writes their own
+    # label; the option id pins the choice so a later edit to the meeting type
+    # cannot rewrite what this booking agreed to.
+    field(:location_kind, :string)
+    field(:location_option_id, :string)
     field(:meeting_type, :string)
 
     # Organizer details
@@ -262,6 +271,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :description,
     :duration,
     :location,
+    :location_kind,
+    :location_option_id,
     :meeting_type,
     :meeting_type_id,
     :organizer_title,

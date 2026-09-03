@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
@@ -35,6 +36,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           max_bookings_per_week: pos_integer() | nil,
           max_bookings_per_month: pos_integer() | nil,
           custom_fields: [FieldDefinition.t()],
+          locations: [LocationOption.t()],
           attachments: [MeetingTypeAttachment.t()],
           user_id: integer() | nil,
           video_integration_id: integer() | nil,
@@ -83,6 +85,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
     embeds_many(:custom_fields, FieldDefinition, on_replace: :delete)
     embeds_many(:attachments, MeetingTypeAttachment, on_replace: :delete)
+
+    # Where this meeting type can be held. One entry states the location;
+    # two or more make the booker choose. `allow_video` and
+    # `video_integration_id` above are kept as a projection of this list
+    # (see `project_video_fields/1`), so the many readers that only ask
+    # "does this type do video, and on which integration" keep working.
+    embeds_many(:locations, LocationOption, on_replace: :delete)
 
     timestamps(type: :utc_datetime)
   end
@@ -161,6 +170,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
     |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
+    |> cast_embed(:locations, with: &LocationOption.changeset/2)
+    |> validate_locations()
+    |> project_video_fields()
     |> validate_required([:name, :duration_minutes, :user_id])
     |> validate_length(:name, Constraints.name_length_opts())
     |> validate_length(:description, max: Constraints.description_max_length())
@@ -261,6 +273,53 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
             changeset
         end
     end
+  end
+
+  # A meeting type has to be held somewhere. Only checked when the caller
+  # actually supplied a list: a changeset that never casts `locations`
+  # (toggling `is_active`, renaming, the attachment paths) must not fail on a
+  # list it was not asked to touch.
+  #
+  # The presence of the key is read from `params` rather than from `changes`,
+  # because casting an empty list over an already-empty embed produces no
+  # change at all, and "the caller sent nothing" and "the caller sent
+  # nothing *left*" are exactly the two cases that have to be told apart.
+  defp validate_locations(changeset) do
+    supplied? = Map.has_key?(changeset.params || %{}, "locations")
+
+    if supplied? and get_field(changeset, :locations) == [] do
+      add_error(changeset, :locations, "must include at least one location")
+    else
+      changeset
+    end
+  end
+
+  # `allow_video` / `video_integration_id` are derived, never independently
+  # authored: they answer "can this type produce a video room, and on which
+  # integration" for every caller that predates the list. The first video
+  # option wins, matching the room a single-option type would have created.
+  #
+  # Only applied when `locations` is part of the changeset, so a changeset
+  # that does not touch the list leaves the pair exactly as it found it.
+  defp project_video_fields(%{changes: %{locations: _locations}} = changeset) do
+    changeset
+    |> get_field(:locations)
+    |> Enum.find(&(&1.kind == "video"))
+    |> apply_video_projection(changeset)
+  end
+
+  defp project_video_fields(changeset), do: changeset
+
+  defp apply_video_projection(%LocationOption{video_integration_id: id}, changeset) do
+    changeset
+    |> put_change(:allow_video, true)
+    |> put_change(:video_integration_id, id)
+  end
+
+  defp apply_video_projection(nil, changeset) do
+    changeset
+    |> put_change(:allow_video, false)
+    |> put_change(:video_integration_id, nil)
   end
 
   # Validate that video integration is set when allow_video is true

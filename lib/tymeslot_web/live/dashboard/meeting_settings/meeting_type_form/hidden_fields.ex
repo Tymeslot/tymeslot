@@ -13,9 +13,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
   use TymeslotWeb, :html
 
   attr :type, :any, default: nil
-  attr :meeting_mode, :string, required: true
   attr :selected_icon, :string, required: true
-  attr :selected_video_integration_id, :any, default: nil
+  attr :locations, :list, required: true
   attr :selected_calendar_integration_id, :any, default: nil
   attr :selected_target_calendar_id, :any, default: nil
   attr :selected_availability_schedule_id, :any, default: nil
@@ -112,12 +111,39 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
         name="meeting_type[is_active]"
         value={if @type, do: to_string(@type.is_active), else: "true"}
       />
-      <input type="hidden" name="meeting_type[meeting_mode]" value={@meeting_mode} />
-      <input
-        type="hidden"
-        name="meeting_type[video_integration_id]"
-        value={@selected_video_integration_id}
-      />
+      <%!-- `allow_video` and `video_integration_id` are deliberately absent:
+           the schema projects them from `locations`, so posting them here
+           would give the same two columns two authors. --%>
+      <%= for {location, li} <- Enum.with_index(@locations) do %>
+        <input type="hidden" name={"meeting_type[locations][#{li}][id]"} value={location.id} />
+        <input type="hidden" name={"meeting_type[locations][#{li}][kind]"} value={location.kind} />
+        <input
+          type="hidden"
+          name={"meeting_type[locations][#{li}][label]"}
+          value={location.label}
+        />
+        <input
+          type="hidden"
+          name={"meeting_type[locations][#{li}][details]"}
+          value={location.details || ""}
+        />
+        <input
+          type="hidden"
+          name={"meeting_type[locations][#{li}][collect_from_guest]"}
+          value={to_string(location.collect_from_guest)}
+        />
+        <input
+          :if={location.video_integration_id}
+          type="hidden"
+          name={"meeting_type[locations][#{li}][video_integration_id]"}
+          value={location.video_integration_id}
+        />
+        <input
+          type="hidden"
+          name={"meeting_type[locations][#{li}][position]"}
+          value={location.position}
+        />
+      <% end %>
       <input
         type="hidden"
         name="meeting_type[calendar_integration_id]"

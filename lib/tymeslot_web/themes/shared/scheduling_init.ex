@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
+  alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.GuestBooking
 
@@ -94,5 +95,6 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:custom_fields_snapshot, [])
     |> assign(:custom_field_answers, %{})
     |> GuestBooking.assign_defaults()
+    |> BookingLocation.assign_defaults()
   end
 end

@@ -88,19 +88,26 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
       # test in `meeting_settings_test.exs` uses the same workaround.
       view |> element("button[aria-label='Remove reminder']") |> render_click()
 
-      # Switch to video mode so the hidden `meeting_type[meeting_mode]`
-      # input renders as "video" for the subsequent submit.
-      view
-      |> element("button[phx-click*='toggle_meeting_mode'][phx-click*='video']")
-      |> render_click()
+      # Add a video location on the chosen integration. The editor's save
+      # pushes the new list into the form component, so the hidden
+      # `meeting_type[locations][…]` inputs render with it for the submit.
+      view |> element("button[data-testid='add-location']") |> render_click()
 
-      # Pick the video integration. The click fires
-      # `select_video_integration` on the form component, which sets
-      # `selected_video_integration_id` in the socket so the hidden
-      # input will render with the integration's id.
+      # Choosing the kind is what reveals the provider picker, so the change
+      # has to land before the form carries a `video_integration_id` at all.
       view
-      |> element("button[phx-click*='select_video_integration'][phx-click*='#{video.id}']")
-      |> render_click()
+      |> form("#location-editor-form", %{"location" => %{"kind" => "video"}})
+      |> render_change()
+
+      view
+      |> form("#location-editor-form", %{
+        "location" => %{
+          "kind" => "video",
+          "label" => "Team Room",
+          "video_integration_id" => to_string(video.id)
+        }
+      })
+      |> render_submit()
 
       # Organiser turns off the provider from another tab between the
       # click above and the save below.

@@ -103,8 +103,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
         |> assign(:show_edit_overlay, true)
         |> assign(:form_errors, %{})
         |> assign(:selected_icon, type.icon || "none")
-        |> assign(:meeting_mode, if(type.allow_video, do: "video", else: "personal"))
-        |> assign(:selected_video_integration_id, Map.get(type, :video_integration_id))
         |> assign(:form_data, form_data)
 
       {:noreply, socket}

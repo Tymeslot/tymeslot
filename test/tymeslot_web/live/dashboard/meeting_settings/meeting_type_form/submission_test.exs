@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
 
   @moduletag :meeting_types
 
+  alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
 
   defp base_assigns(overrides) do
@@ -15,9 +16,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
           "description" => "Hi"
         },
         type: %{is_active: true},
-        meeting_mode: "personal",
         selected_icon: "hero-bolt",
-        selected_video_integration_id: nil,
+        locations: [
+          %LocationOption{
+            id: "loc-1",
+            kind: "in_person",
+            label: "The office",
+            details: "12 High Street",
+            position: 0
+          }
+        ],
         selected_calendar_integration_id: 7,
         selected_target_calendar_id: "cal-1",
         reminders: [%{value: 30, unit: "minutes"}],
@@ -42,7 +50,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
       assert params["description"] == "Hi"
       assert params["icon"] == "hero-bolt"
       assert params["is_active"] == "true"
-      assert params["meeting_mode"] == "personal"
       assert params["calendar_integration_id"] == "7"
       assert params["target_calendar_id"] == "cal-1"
       assert params["reminder_config"] == [%{"value" => "30", "unit" => "minutes"}]
@@ -61,9 +68,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
     end
 
     test "represents an unset integration id as an empty string" do
-      params = Submission.build_params(base_assigns(%{selected_video_integration_id: nil}))
+      params = Submission.build_params(base_assigns(%{selected_calendar_integration_id: nil}))
 
-      assert params["video_integration_id"] == ""
+      assert params["calendar_integration_id"] == ""
+    end
+
+    test "serialises locations, omitting the integration id a non-video one has not got" do
+      params = Submission.build_params(base_assigns(%{}))
+
+      assert [location] = params["locations"]
+      assert location["id"] == "loc-1"
+      assert location["kind"] == "in_person"
+      assert location["label"] == "The office"
+      assert location["details"] == "12 High Street"
+      assert location["collect_from_guest"] == "false"
+      assert location["position"] == "0"
+      refute Map.has_key?(location, "video_integration_id")
+    end
+
+    test "carries a video location's integration id" do
+      params =
+        Submission.build_params(
+          base_assigns(%{
+            locations: [
+              %LocationOption{
+                id: "loc-2",
+                kind: "video",
+                label: "Zoom",
+                video_integration_id: 9,
+                position: 0
+              }
+            ]
+          })
+        )
+
+      assert [%{"kind" => "video", "video_integration_id" => "9"}] = params["locations"]
     end
 
     test "omits custom_fields entirely when custom questions are not allowed" do

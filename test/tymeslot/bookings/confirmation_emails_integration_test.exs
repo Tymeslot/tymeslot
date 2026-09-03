@@ -288,10 +288,18 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
           custom_meeting_url: "https://meet.example.com/room/123456789"
         )
 
-      meeting_params =
-        Map.merge(meeting_params, %{
-          video_integration_id: video_integration.id
-        })
+      # A video room follows the location the booker chose, so the meeting
+      # type has to offer a video location for one to be created at all.
+      video_type =
+        insert(:meeting_type,
+          user: user,
+          name: "Custom Video Meeting",
+          duration_minutes: 30,
+          is_active: true,
+          locations: [video_location(video_integration)]
+        )
+
+      meeting_params = Map.put(meeting_params, :meeting_type_id, video_type.id)
 
       TestMocks.setup_all_mocks()
 

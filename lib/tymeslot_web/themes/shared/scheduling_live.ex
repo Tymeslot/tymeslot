@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       }
 
       alias TymeslotWeb.Themes.Shared.BookingFlow
+      alias TymeslotWeb.Themes.Shared.BookingLocation
       alias TymeslotWeb.Themes.Shared.GuestBooking
 
       alias TymeslotWeb.Components.MeetingUtils
@@ -329,6 +330,12 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
           :field_blur ->
             {:noreply, OrganizerHelpers.mark_field_touched(socket, data)}
+
+          :select_location ->
+            {:noreply, BookingLocation.choose(socket, data)}
+
+          :location_phone ->
+            {:noreply, BookingLocation.set_phone(socket, data)}
 
           :toggle_guests ->
             {:noreply, GuestBooking.open(socket)}
