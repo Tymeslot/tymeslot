@@ -269,17 +269,24 @@ defmodule TymeslotWeb.Layouts do
 
   Pass `live_module` (`assigns[:live_module]`, set automatically by
   `Phoenix.LiveView.Controller.live_render/3` on every LiveView page) so this
-  renders nothing on `TymeslotWeb.MeetingRequestLive`: its URL carries a
-  long-lived `Phoenix.Token` that authorises approving or declining a booking
-  on the host's behalf, and the analytics vendor's script reports the page
-  path, which would ship that live credential to the analytics store and every
-  intermediate proxy.
+  renders nothing for any module in `@credential_bearing_views`: their URLs
+  carry a long-lived credential (a signed token, a magic link) that
+  authorises an action on someone's behalf, and the analytics vendor's script
+  reports the page path, which would ship that credential to the analytics
+  store and every intermediate proxy.
   """
   attr :nonce, :string, default: nil
   attr :live_module, :atom, default: nil
 
+  # LiveViews whose URL itself is a credential (e.g. a signed
+  # `Phoenix.Token`), so the analytics vendor must never see the path.
+  # Add a module here the moment such a page is introduced; do not rely on
+  # its author remembering to edit this unrelated module.
+  @credential_bearing_views [MeetingRequestLive]
+
   @spec analytics_scripts(map()) :: Phoenix.LiveView.Rendered.t()
-  def analytics_scripts(%{live_module: MeetingRequestLive} = assigns) do
+  def analytics_scripts(%{live_module: live_module} = assigns)
+      when live_module in @credential_bearing_views do
     ~H""
   end
 
