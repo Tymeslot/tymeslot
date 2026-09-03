@@ -23,6 +23,7 @@ defmodule Tymeslot.Availability.Audit do
   alias Tymeslot.Availability.AvailabilityScheduleQueries
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
@@ -138,7 +139,7 @@ defmodule Tymeslot.Availability.Audit do
   end
 
   # Preloaded so the per-date walk below does not re-query. Left out entirely
-  # when there is no schedule: the engine reads both keys only after a non-nil
+  # when there is no schedule: the engine reads these keys only after a non-nil
   # schedule id, and seeding them empty would claim a closed week rather than
   # let the fallback hours apply.
   defp prefetched(nil, _start_date, _end_date), do: %{}
@@ -151,7 +152,8 @@ defmodule Tymeslot.Availability.Audit do
           schedule_id,
           start_date,
           end_date
-        )
+        ),
+      time_off: TimeOffPeriodQueries.list_for_schedule_in_range(schedule_id, start_date, end_date)
     }
   end
 

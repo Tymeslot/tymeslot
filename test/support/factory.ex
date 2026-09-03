@@ -10,6 +10,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.TimeOffPeriodSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -267,6 +268,20 @@ defmodule Tymeslot.Factory do
       override_type: "unavailable",
       reason: "Out of office",
       schedule: build(:availability_schedule)
+    }
+  end
+
+  @spec time_off_period_factory() :: Tymeslot.Availability.TimeOffPeriodSchema.t()
+  def time_off_period_factory do
+    starts_on = Date.add(Date.utc_today(), 7)
+
+    %TimeOffPeriodSchema{
+      starts_on: starts_on,
+      ends_on: Date.add(starts_on, 6),
+      start_time: nil,
+      end_time: nil,
+      label: "Holiday",
+      profile: build(:profile)
     }
   end
 

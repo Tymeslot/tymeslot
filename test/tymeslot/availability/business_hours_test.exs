@@ -59,7 +59,9 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
       #
       # We inject the schedule via config to avoid database access, and pass a
       # non-nil profile_id so the schedule branch (not the nil fallback) is taken.
-      # The overrides list is empty so no override can interfere.
+      # The overrides and time-off lists are empty so neither can interfere;
+      # both keys must be present, since a missing one sends the lookup to the
+      # database.
       fake_profile_id = 1
 
       schedule = [
@@ -84,7 +86,7 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         }
       ]
 
-      config = %{weekly_schedule: schedule, overrides: []}
+      config = %{weekly_schedule: schedule, overrides: [], time_off: []}
 
       windows =
         BusinessHours.windows_for_target_date(
@@ -150,7 +152,8 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         }
       ]
 
-      result = BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule})
+      result =
+        BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule, time_off: []})
 
       assert result == [{~T[12:00:00], ~T[13:00:00]}, {~T[15:00:00], ~T[15:15:00]}]
     end
@@ -167,7 +170,8 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         }
       ]
 
-      assert BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule}) == []
+      assert BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule, time_off: []}) ==
+               []
     end
   end
 end

@@ -26,7 +26,12 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   alias TymeslotWeb.Components.Dashboard.Availability.{DeleteScheduleModal, ScheduleFormModal}
   alias TymeslotWeb.CustomInputModeHelper
 
-  alias TymeslotWeb.Dashboard.Availability.{ListComponent, PolicyCard, ScheduleSwitcher}
+  alias TymeslotWeb.Dashboard.Availability.{
+    ListComponent,
+    PolicyCard,
+    ScheduleSwitcher,
+    TimeOffCard
+  }
 
   # The policy settings differ only in which schedule field they write, so the
   # handlers below route through one pair of helpers driven by these tables.
@@ -532,6 +537,16 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
           custom_input_mode={@custom_input_mode}
         />
       </ScheduleSwitcher.schedule_panel>
+
+      <%!-- Outside the panel on purpose: a period is the profile's, not the
+      selected schedule's, and inside the frame it would read as switching with
+      the tabs. --%>
+      <.live_component
+        module={TimeOffCard}
+        id="availability-time-off"
+        profile={@profile}
+        time_format={@time_format}
+      />
 
       <ScheduleFormModal.schedule_form_modal
         id="schedule-form-modal"

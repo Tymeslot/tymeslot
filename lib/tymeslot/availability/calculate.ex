@@ -6,6 +6,7 @@ defmodule Tymeslot.Availability.Calculate do
 
   alias Tymeslot.Availability.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
   alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots}
+  alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Validation.Constraints
@@ -18,6 +19,7 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:buffer_minutes) => non_neg_integer(),
           optional(:weekly_schedule) => list(term()),
           optional(:overrides) => list(term()),
+          optional(:time_off) => list(term()),
           optional(:fallback_availability_fn) => (Date.t() -> term()) | nil,
           optional(:owner_timezone) => String.t(),
           optional(:min_advance_hours) => non_neg_integer(),
@@ -402,8 +404,9 @@ defmodule Tymeslot.Availability.Calculate do
   # Private functions
 
   @doc """
-  Loads the schedule's weekly days and date overrides into `config` once, so
-  that per-date lookups read them from memory instead of the database.
+  Loads the schedule's weekly days, date overrides and time-off periods into
+  `config` once, so that per-date lookups read them from memory instead of the
+  database.
 
   `BusinessHours` falls back to a query per date whenever the key is absent, so
   any caller iterating dates has to prefetch or pay a round trip per day.
@@ -424,6 +427,9 @@ defmodule Tymeslot.Availability.Calculate do
         start_date,
         end_date
       )
+    end)
+    |> Map.put_new_lazy(:time_off, fn ->
+      TimeOffPeriodQueries.list_for_schedule_in_range(schedule_id, start_date, end_date)
     end)
   end
 
