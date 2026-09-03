@@ -22,10 +22,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [start_async: 3]
 
   require Logger
 
-  alias Ecto.UUID
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Live.Shared.Flash
@@ -33,48 +33,100 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   @type socket :: Phoenix.LiveView.Socket.t()
 
   @doc """
-  Runs one approval action against a held request and reports the outcome.
+  Starts one approval action against a held request off the socket's process.
 
   `opts` carries the `:success` and `:failure` flash messages and the `:reload`
-  function to refresh the list with.
+  function to refresh the list with. The transition itself, and its
+  calendar/video/notification fan-out, runs inside `start_async/3` so
+  `:answering_request` stays set across a render and the row's spinner and
+  disabled state actually paint; `handle_answer/3` reports the outcome once
+  the task completes.
   """
   @spec answer(socket(), map(), (map() -> {:ok, map()} | {:error, atom()}), keyword()) ::
           {:noreply, socket()}
   def answer(socket, params, action, opts) do
     case fetch_held_request(socket, params) do
-      {:ok, meeting} -> apply_answer(socket, meeting, action, opts)
-      {:error, message} -> {:noreply, flash_and_stay(socket, message)}
+      {:ok, meeting} -> {:noreply, start_answer(socket, meeting, action, opts)}
+      {:error, message} -> {:noreply, finish(flash_and_stay(socket, message), opts)}
     end
   end
 
-  defp apply_answer(socket, meeting, action, opts) do
-    socket = assign(socket, :answering_request, meeting.id)
+  # Keyed on the meeting id, never a bare atom: `start_async/3` called again
+  # with a name already in flight silently drops the earlier task's result,
+  # so two rows answered in overlapping windows would otherwise lose one
+  # outcome. `opts` is stashed on the socket rather than threaded through the
+  # async closure's return value, so a crash inside `action.(meeting)` still
+  # leaves `handle_answer/3` able to report a proper failure and reload
+  # instead of losing the reload function along with the crash.
+  defp start_answer(socket, meeting, action, opts) do
+    socket
+    |> assign(:answering_request, meeting.id)
+    |> assign(:answering_opts, Map.put(socket.assigns.answering_opts, meeting.id, opts))
+    |> start_async({:answer_request, meeting.id}, fn -> action.(meeting) end)
+  end
 
-    case action.(meeting) do
-      {:ok, _answered} ->
-        Flash.info(Keyword.fetch!(opts, :success))
-        {:noreply, finish(socket, opts)}
+  @doc """
+  Handles the result of the async task `answer/4` starts.
 
-      {:error, :not_awaiting_approval} ->
-        Flash.info(dgettext("dashboard_bookings", "That request had already been answered."))
-        {:noreply, finish(socket, opts)}
+  `key` is the `{:answer_request, meeting_id}` name `start_async/3` was
+  keyed on; `result` is the `handle_async/3` payload Phoenix wraps around the
+  action's return value (`{:ok, action_result}` on completion, `{:exit,
+  reason}` if the task itself crashed).
 
-      {:error, :meeting_started} ->
-        Flash.error(
-          dgettext("dashboard_bookings", "That meeting's start time has already passed.")
-        )
+  The row on screen is reloaded on every outcome, including the failures and
+  the crash, because it is stale either way — matching `answer/4`'s
+  synchronous not-found/already-answered path.
+  """
+  @spec handle_answer(socket(), {:answer_request, Ecto.UUID.t()}, {:ok, term()} | {:exit, term()}) ::
+          {:noreply, socket()}
+  def handle_answer(socket, {:answer_request, meeting_id}, result) do
+    {opts, socket} = pop_answer_opts(socket, meeting_id)
 
-        {:noreply, finish(socket, opts)}
+    {:noreply,
+     socket
+     |> apply_answer_result(meeting_id, result, opts)
+     |> finish(opts)}
+  end
 
-      {:error, reason} ->
-        Logger.error("Failed to answer booking request from dashboard",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
+  defp pop_answer_opts(socket, meeting_id) do
+    {opts, remaining} = Map.pop(socket.assigns.answering_opts, meeting_id)
+    {opts, assign(socket, :answering_opts, remaining)}
+  end
 
-        Flash.error(Keyword.fetch!(opts, :failure))
-        {:noreply, finish(socket, opts)}
-    end
+  defp apply_answer_result(socket, _meeting_id, {:ok, {:ok, _answered}}, opts) do
+    Flash.info(Keyword.fetch!(opts, :success))
+    socket
+  end
+
+  defp apply_answer_result(socket, _meeting_id, {:ok, {:error, :not_awaiting_approval}}, _opts) do
+    Flash.info(dgettext("dashboard_bookings", "That request had already been answered."))
+    socket
+  end
+
+  defp apply_answer_result(socket, _meeting_id, {:ok, {:error, :meeting_started}}, _opts) do
+    Flash.error(dgettext("dashboard_bookings", "That meeting's start time has already passed."))
+
+    socket
+  end
+
+  defp apply_answer_result(socket, meeting_id, {:ok, {:error, reason}}, opts) do
+    Logger.error("Failed to answer booking request from dashboard",
+      meeting_id: meeting_id,
+      reason: inspect(reason)
+    )
+
+    Flash.error(Keyword.fetch!(opts, :failure))
+    socket
+  end
+
+  defp apply_answer_result(socket, meeting_id, {:exit, reason}, _opts) do
+    Logger.error("Booking request answer task crashed",
+      meeting_id: meeting_id,
+      reason: inspect(reason)
+    )
+
+    Flash.error(dgettext("dashboard_bookings", "That request could not be answered."))
+    socket
   end
 
   defp finish(socket, opts) do
@@ -91,15 +143,23 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   Deliberately not routed through the component's cancel/reschedule policy
   helper: those policies both accept a held request, so reusing them here would
   let a stale click answer a request that has already been resolved.
+
+  The id is handed to `Meetings.get_meeting_for_organizer/2` unvalidated: it
+  already casts and reports `{:error, :not_found}` on anything that is not a
+  UUID, including a non-binary payload, so re-casting it here first would
+  only be a second copy of that same check.
   """
   @spec fetch_held_request(socket(), map()) :: {:ok, map()} | {:error, String.t()}
   def fetch_held_request(socket, params) do
-    with {:ok, validated_id} <- validate_meeting_id(params),
-         {:ok, meeting} <-
-           Meetings.get_meeting_for_organizer(validated_id, socket.assigns.current_user.id) do
-      held_or_answered(meeting)
-    else
-      _not_found -> {:error, dgettext("dashboard_bookings", "That request could not be found.")}
+    case Meetings.get_meeting_for_organizer(
+           Map.get(params, "id"),
+           socket.assigns.current_user.id
+         ) do
+      {:ok, meeting} ->
+        held_or_answered(meeting)
+
+      _not_found ->
+        {:error, dgettext("dashboard_bookings", "That request could not be found.")}
     end
   end
 
@@ -116,12 +176,5 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   def flash_and_stay(socket, message) do
     Flash.error(message)
     socket
-  end
-
-  defp validate_meeting_id(params) do
-    case Map.get(params, "id") do
-      id when is_binary(id) -> UUID.cast(String.trim(id))
-      _id -> :error
-    end
   end
 end

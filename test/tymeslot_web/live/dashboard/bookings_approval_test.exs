@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
 
   setup :verify_on_exit!
 
@@ -163,6 +164,27 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     end
   end
 
+  describe "an unpaid checkout is never shown as agreed" do
+    test "an awaiting_payment booking is badged honestly, not as Scheduled",
+         %{conn: conn, user: user} do
+      insert(:meeting,
+        status: "awaiting_payment",
+        organizer_user: user,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        attendee_name: "Unpaid Guest",
+        start_time: DateTime.add(DateTime.utc_now(:second), 2, :day),
+        end_time: DateTime.add(DateTime.utc_now(:second), 2 * 24 * 60 + 30, :minute)
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings")
+
+      assert html =~ "Unpaid Guest"
+      assert html =~ "Awaiting payment"
+      refute html =~ "Scheduled"
+    end
+  end
+
   describe "the actions a held request offers" do
     test "approve and decline, not join, reschedule or cancel", %{conn: conn, user: user} do
       held_meeting(user)
@@ -180,13 +202,39 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
   end
 
   describe "answering" do
+    # `answer/4` runs the transition off the socket's process
+    # (`start_async/3`), so every outcome here is only visible after
+    # `render_async/2` observes the task finish. The default
+    # `assert_receive_timeout` (100ms) is too tight for a cold DB
+    # connection plus the calendar/video/notification fan-out the first
+    # time this process touches them, so every call here is given an
+    # explicit, more generous budget rather than relying on the default.
     test "approving confirms the booking", %{conn: conn, user: user} do
       meeting = held_meeting(user)
       view = open_requests(conn)
 
       view |> element("[data-testid='approve-request']") |> render_click()
+      render_async(view, 1000)
 
       assert reload(meeting).status == "confirmed"
+    end
+
+    # The transition and its calendar/video/notification fan-out run off the
+    # socket's process, so the click's own render (captured before that task
+    # completes) must show the row mid-flight, not skip straight to the
+    # answered state. `:answering_request` set-then-cleared inside a single
+    # synchronous handler can never be observed here.
+    test "the approve button disables and shows a spinner while the answer is in flight",
+         %{conn: conn, user: user} do
+      meeting = held_meeting(user)
+      view = open_requests(conn)
+
+      html = view |> element("[data-testid='approve-request']") |> render_click()
+
+      assert html =~ ~s(id="approve-request-#{meeting.id}")
+      assert html =~ "disabled"
+
+      render_async(view, 1000)
     end
 
     test "declining releases the slot and keeps the note", %{conn: conn, user: user} do
@@ -199,9 +247,48 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       |> form("#decline-request-form", %{"reason" => "Away that week"})
       |> render_submit()
 
+      render_async(view, 1000)
+
       stored = reload(meeting)
       assert stored.status == "cancelled"
       assert stored.decline_reason == "Away that week"
+    end
+
+    test "a decline reason that is not plain text does not crash the dashboard",
+         %{conn: conn, user: user} do
+      meeting = held_meeting(user)
+      view = open_requests(conn)
+
+      view |> element("[data-testid='decline-request']") |> render_click()
+
+      # A crafted `reason[x]=y` field arrives as a map, not a string — no
+      # ordinary textarea submission can produce this, only a forged frame.
+      push_to_component(view, "confirm_decline_request", %{"reason" => %{"x" => "y"}})
+      render_async(view, 1000)
+
+      assert Process.alive?(view.pid)
+      stored = reload(meeting)
+      assert stored.status == "cancelled"
+      assert stored.decline_reason == nil
+    end
+
+    test "a null byte in the decline reason is stripped rather than crashing the write",
+         %{conn: conn, user: user} do
+      meeting = held_meeting(user)
+      view = open_requests(conn)
+
+      view |> element("[data-testid='decline-request']") |> render_click()
+
+      view
+      |> form("#decline-request-form", %{"reason" => "Away\x00 that week"})
+      |> render_submit()
+
+      render_async(view, 1000)
+
+      assert Process.alive?(view.pid)
+      stored = reload(meeting)
+      assert stored.status == "cancelled"
+      refute stored.decline_reason =~ "\x00"
     end
 
     test "a request answered elsewhere is reported, not re-answered", %{conn: conn, user: user} do
@@ -211,9 +298,82 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       {:ok, _declined} = Approval.decline(meeting, "Already handled")
 
       view |> element("[data-testid='approve-request']") |> render_click()
+      render_async(view, 1000)
 
       # The decline stands; approving after it must not overwrite the answer.
       assert reload(meeting).status == "cancelled"
+    end
+
+    test "a request that lapsed while the page was open is reloaded, not left stale",
+         %{conn: conn, user: user} do
+      meeting = held_meeting(user)
+      view = open_requests(conn)
+
+      # The expiry sweep (or the emailed link) got there first, out of band —
+      # the view still thinks the row is answerable.
+      {:ok, _expired} = Approval.expire(meeting)
+
+      push_to_component(view, "approve_request", %{"id" => meeting.id})
+      render_async(view, 1000)
+
+      # The flash is delivered to the parent LiveView via `send/2`, a
+      # separate round trip from the click's own render.
+      assert render(view) =~ "already been answered"
+      # The row is stale either way: it must not keep offering an action on a
+      # request that is no longer awaiting anything. The reload leaves no
+      # meeting in the "awaiting_approval" filter at all, so the assertion is
+      # against the whole page rather than `card_html/1`, which assumes
+      # exactly one row is present.
+      refute render(view) =~ "data-testid=\"approve-request\""
+    end
+
+    test "an id that is not a UUID is refused, not cast a second time",
+         %{conn: conn, user: user} do
+      held_meeting(user)
+      view = open_requests(conn)
+
+      push_to_component(view, "approve_request", %{"id" => "not-a-uuid"})
+
+      assert render(view) =~ "could not be found"
+    end
+  end
+
+  describe "rate limiting" do
+    setup do
+      RateLimiter.clear_all()
+      :ok
+    end
+
+    test "approving is refused once the per-host limit is exhausted", %{conn: conn, user: user} do
+      meeting = held_meeting(user)
+      view = open_requests(conn)
+
+      for _i <- 1..20 do
+        assert :ok = RateLimiter.check_meeting_approval_rate_limit("dashboard:#{user.id}")
+      end
+
+      view |> element("[data-testid='approve-request']") |> render_click()
+
+      assert render(view) =~ "reached the limit"
+      assert reload(meeting).status == "awaiting_approval"
+    end
+
+    test "declining is refused once the per-host limit is exhausted", %{conn: conn, user: user} do
+      meeting = held_meeting(user)
+      view = open_requests(conn)
+
+      view |> element("[data-testid='decline-request']") |> render_click()
+
+      for _i <- 1..20 do
+        assert :ok = RateLimiter.check_meeting_approval_rate_limit("dashboard:#{user.id}")
+      end
+
+      view
+      |> form("#decline-request-form", %{"reason" => "Away that week"})
+      |> render_submit()
+
+      assert render(view) =~ "reached the limit"
+      assert reload(meeting).status == "awaiting_approval"
     end
   end
 

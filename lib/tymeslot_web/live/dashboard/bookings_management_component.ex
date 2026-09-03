@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Phoenix.LiveView
 
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
+  alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.Modals
 
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
@@ -35,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:cancel_booking_payment, nil)
      |> assign(:sending_reschedule, nil)
      |> assign(:answering_request, nil)
+     |> assign(:answering_opts, %{})
      |> assign(:awaiting_approval_count, 0)
      |> assign(:per_page, 20)
      |> assign(:next_cursor, nil)
@@ -119,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket) do
     case fetch_meeting_for_modal(socket, params, policy_fun: &Policy.can_cancel_meeting?/1) do
       {:ok, meeting} ->
-        emit_cancel_open_telemetry(socket.assigns.current_user.id, meeting.id)
+        Cancellation.emit_open(socket.assigns.current_user.id, meeting.id)
         booking_payment = MeetingPayments.payment_for_meeting(meeting.id)
 
         {:noreply,
@@ -128,11 +130,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
          |> ModalHook.show_modal(:cancel_meeting, meeting)}
 
       {:error, :validation_failed, reason} ->
-        emit_cancel_error_telemetry(socket.assigns.current_user.id, reason, :validation_failed)
+        Cancellation.emit_error(socket.assigns.current_user.id, reason, :validation_failed)
         {:noreply, socket}
 
       {:error, :policy_blocked, reason} ->
-        emit_cancel_error_telemetry(socket.assigns.current_user.id, reason, :blocked)
+        Cancellation.emit_error(socket.assigns.current_user.id, reason, :blocked)
         Flash.error(reason)
         {:noreply, socket}
 
@@ -278,18 +280,35 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   # between them in the database. The only thing this layer adds is the
   # ownership check: the lookup is scoped to the signed-in host, so an id
   # belonging to somebody else is not found rather than answered.
+  #
+  # Gated on the same per-answer limiter the emailed link uses, so this is
+  # not the one write handler in the module a click loop can drive unbounded.
   def handle_event("approve_request", %{"id" => _id} = params, socket) do
-    RequestActions.answer(socket, params, &Approval.approve/1,
-      success: dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
-      failure: dgettext("dashboard_bookings", "That request could not be approved."),
-      reload: &load_meetings/1
-    )
+    case RateLimiter.check_meeting_approval_rate_limit(dashboard_approval_key(socket)) do
+      :ok ->
+        RequestActions.answer(socket, params, &Approval.approve/1,
+          success:
+            dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
+          failure: dgettext("dashboard_bookings", "That request could not be approved."),
+          reload: &load_meetings/1
+        )
+
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+    end
   end
 
   def handle_event("show_decline_modal", %{"id" => _id} = params, socket) do
     case RequestActions.fetch_held_request(socket, params) do
-      {:ok, meeting} -> {:noreply, ModalHook.show_modal(socket, :decline_request, meeting)}
-      {:error, message} -> {:noreply, RequestActions.flash_and_stay(socket, message)}
+      {:ok, meeting} ->
+        {:noreply, ModalHook.show_modal(socket, :decline_request, meeting)}
+
+      {:error, message} ->
+        # The row that could not be opened (already answered elsewhere, or
+        # lapsed) is stale either way, so it is reloaded here exactly as
+        # `RequestActions.answer/4` reloads after its own failures.
+        {:noreply, socket |> RequestActions.flash_and_stay(message) |> load_meetings()}
     end
   end
 
@@ -298,17 +317,32 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("confirm_decline_request", params, socket) do
-    reason = Map.get(params, "reason")
+    case RateLimiter.check_meeting_approval_rate_limit(dashboard_approval_key(socket)) do
+      :ok ->
+        reason = sanitize_decline_reason(Map.get(params, "reason"))
 
-    ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
-      socket
-      |> ModalHook.hide_modal(:decline_request)
-      |> RequestActions.answer(%{"id" => meeting.id}, &Approval.decline(&1, reason),
-        success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
-        failure: dgettext("dashboard_bookings", "That request could not be declined."),
-        reload: &load_meetings/1
-      )
-    end)
+        ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
+          socket
+          |> ModalHook.hide_modal(:decline_request)
+          |> RequestActions.answer(%{"id" => meeting.id}, &Approval.decline(&1, reason),
+            success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
+            failure: dgettext("dashboard_bookings", "That request could not be declined."),
+            reload: &load_meetings/1
+          )
+        end)
+
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+    end
+  end
+
+  # The other half of `RequestActions.answer/4`'s `start_async/3` call: the
+  # transition itself, and its calendar/video/notification fan-out, ran off
+  # this process, and its result lands here.
+  @impl Phoenix.LiveComponent
+  def handle_async({:answer_request, _meeting_id} = key, result, socket) do
+    RequestActions.handle_answer(socket, key, result)
   end
 
   @impl Phoenix.LiveComponent
@@ -395,7 +429,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         |> run_cancellation(meeting, booking_payment, refund_action)
 
       {:error, reason} ->
-        Flash.error(refund_error_flash(reason))
+        Flash.error(Cancellation.refund_error_message(reason))
         {:noreply, socket}
     end
   end
@@ -403,12 +437,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   defp run_cancellation(socket, meeting, booking_payment, refund_action) do
     result = Meetings.cancel_meeting_with_refund(meeting, booking_payment, refund_action)
 
-    emit_cancel_telemetry(socket, meeting, result)
+    Cancellation.emit_confirm(socket.assigns.current_user.id, meeting.id, result)
     handle_cancellation(socket, meeting, refund_action, result)
   end
 
   defp handle_cancellation(socket, _meeting, refund_action, {:ok, _cancelled}) do
-    Flash.info(cancel_success_flash(refund_action))
+    Flash.info(Cancellation.success_message(refund_action))
     {:noreply, close_cancel_modal(socket)}
   end
 
@@ -439,37 +473,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     |> load_meetings()
     |> ModalHook.hide_modal(:cancel_meeting)
   end
-
-  defp emit_cancel_telemetry(socket, meeting, result) do
-    measurements = %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id}
-
-    metadata =
-      case result do
-        {:ok, _cancelled} -> Map.put(measurements, :result, :ok)
-        {:error, reason} -> Map.merge(measurements, %{result: :error, reason: inspect(reason)})
-      end
-
-    :telemetry.execute([:tymeslot, :dashboard, :meetings, :cancel, :confirm], %{}, metadata)
-  end
-
-  defp refund_error_flash(:acknowledgement_required),
-    do:
-      dgettext(
-        "dashboard_bookings",
-        "Tick the acknowledgement to cancel without refunding the attendee."
-      )
-
-  defp refund_error_flash(:exceeds_remaining),
-    do: dgettext("dashboard_bookings", "Refund amount exceeds the remaining refundable balance.")
-
-  defp refund_error_flash(_reason),
-    do: dgettext("dashboard_bookings", "Enter a valid partial refund amount.")
-
-  defp cancel_success_flash({:refund, _cents}),
-    do: dgettext("dashboard_bookings", "Meeting cancelled and refund issued.")
-
-  defp cancel_success_flash(:none),
-    do: dgettext("dashboard_bookings", "Meeting cancelled successfully")
 
   defp do_send_reschedule_request(socket, meeting) do
     socket = assign(socket, :sending_reschedule, meeting.id)
@@ -524,24 +527,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       socket,
       :awaiting_approval_count,
       MeetingQueries.count_awaiting_approval_for_organizer(socket.assigns.current_user.id)
-    )
-  end
-
-  defp emit_cancel_open_telemetry(user_id, meeting_id) do
-    :telemetry.execute(
-      [:tymeslot, :dashboard, :meetings, :cancel, :open],
-      %{},
-      %{user_id: user_id, meeting_id: meeting_id}
-    )
-  end
-
-  defp emit_cancel_error_telemetry(user_id, reason, tag) do
-    event = if tag == :validation_failed, do: :validation_failed, else: :blocked
-
-    :telemetry.execute(
-      [:tymeslot, :dashboard, :meetings, :cancel, event],
-      %{},
-      %{user_id: user_id, reason: inspect(reason)}
     )
   end
 
@@ -626,4 +611,20 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         {:error, %{id: "Meeting ID is required"}}
     end
   end
+
+  # Shares the emailed link's per-answer limiter (`meeting_approval:...`) but
+  # under a `"dashboard:"`-prefixed identifier keyed on the host, since the
+  # dashboard has an authenticated user and no client IP: the two surfaces
+  # cannot exhaust each other's budget.
+  defp dashboard_approval_key(socket), do: "dashboard:#{socket.assigns.current_user.id}"
+
+  # A crafted socket frame can send a non-binary `reason` (e.g. a
+  # `reason[x]=y` payload arrives as a map, not a string) or one containing a
+  # null byte, which PostgreSQL rejects even though it is valid UTF-8.
+  # Anything but a clean string is treated as no reason given rather than
+  # reaching `Approval.decline/2` and crashing the LiveView.
+  defp sanitize_decline_reason(reason) when is_binary(reason),
+    do: String.replace(reason, "\x00", "")
+
+  defp sanitize_decline_reason(_reason), do: nil
 end
