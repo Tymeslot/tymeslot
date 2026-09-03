@@ -104,5 +104,34 @@ defmodule Tymeslot.Security.ConnectionPinningTest do
       assert ConnectionPinning.pin_request("https://hooks.example.com/notify", [], a: 1) ==
                {"https://hooks.example.com/notify", [a: 1]}
     end
+
+    test "keeps the caller's own connect options alongside the pinned hostname" do
+      # The Exchange client turns certificate verification off for the
+      # self-signed certificates on-premises deployments carry, and the custom
+      # video probe budgets a connect timeout. A flat merge would replace both
+      # with the pin's lone :hostname, quietly reinstating verification the
+      # operator switched off.
+      assert {_url, opts} =
+               ConnectionPinning.pin_request(
+                 "https://exchange.example.com/EWS/Exchange.asmx",
+                 [{93, 184, 216, 34}],
+                 connect_options: [transport_opts: [verify: :verify_none], timeout: 3_000]
+               )
+
+      assert opts[:connect_options][:transport_opts] == [verify: :verify_none]
+      assert opts[:connect_options][:timeout] == 3_000
+      assert opts[:connect_options][:hostname] == "exchange.example.com"
+    end
+
+    test "lets the pinned hostname win a collision with the caller's" do
+      assert {_url, opts} =
+               ConnectionPinning.pin_request(
+                 "https://hooks.example.com/notify",
+                 [{93, 184, 216, 34}],
+                 connect_options: [hostname: "stale.example.com"]
+               )
+
+      assert opts[:connect_options][:hostname] == "hooks.example.com"
+    end
   end
 end

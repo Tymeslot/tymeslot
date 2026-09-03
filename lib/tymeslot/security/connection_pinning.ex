@@ -65,13 +65,29 @@ defmodule Tymeslot.Security.ConnectionPinning do
 
   Convenience for the two call sites that already hold the caller's option
   list: an unpinnable request comes back unchanged, so neither has to branch.
+
+  `:connect_options` is merged one level deeper than the rest. It is a keyword
+  list several callers already populate for reasons of their own — the
+  Exchange client's `verify: :verify_none` for the self-signed certificates
+  on-premises deployments carry, the custom video provider's connect timeout —
+  and a flat merge would replace the caller's list with the pin's lone
+  `:hostname`, silently reinstating certificate verification the operator
+  turned off and dropping timeouts the caller budgeted for. The pin's own keys
+  still win a collision: they are what makes the SSRF verdict binding.
   """
   @spec pin_request(String.t(), [address()], keyword()) :: {String.t(), keyword()}
   def pin_request(url, addresses, options) do
     case pin(url, addresses) do
-      {:ok, pinned_url, pin_options} -> {pinned_url, Keyword.merge(options, pin_options)}
+      {:ok, pinned_url, pin_options} -> {pinned_url, merge_options(options, pin_options)}
       :unpinned -> {url, options}
     end
+  end
+
+  defp merge_options(options, pin_options) do
+    Keyword.merge(options, pin_options, fn
+      :connect_options, caller_connect, pin_connect -> Keyword.merge(caller_connect, pin_connect)
+      _key, _caller, pinned -> pinned
+    end)
   end
 
   @doc """
