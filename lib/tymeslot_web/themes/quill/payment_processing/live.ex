@@ -10,17 +10,18 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
 
   Paid does not always mean confirmed: a meeting type can be both paid and
   approval-gated, in which case the webhook moves the meeting to
-  `"awaiting_approval"` rather than `"confirmed"` (`CheckoutSessionCompleted.
-  approval_status/2`). `handle_info(:paid, _)` delegates to
-  `PaymentReturn.refresh_after_paid/1`, which re-fetches the meeting, not
-  just the payment, so this page reads that status rather than assuming a
-  successful payment finished the booking.
+  `"awaiting_approval"` rather than `"confirmed"`
+  (`CheckoutSessionCompleted.post_payment_status/1`).
+  `handle_info(:paid, _)` delegates to `PaymentReturn.refresh_after_paid/1`,
+  which re-fetches the meeting, not just the payment, so this page reads
+  that status rather than assuming a successful payment finished the
+  booking. `PaymentReturn.outcome/3` then turns that state (and a resolved
+  approval gate outcome — declined, expired) into what `render/1` shows.
   """
 
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PaymentReturn
@@ -43,15 +44,15 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
         <div class="payment-page-inner">
           <div class="payment-page-card">
             <div class="payment-page-card-body">
-              <%= cond do %>
-                <% @loading || @payment.status != "paid" -> %>
+              <%= case PaymentReturn.outcome(@loading, @payment, @meeting) do %>
+                <% :loading -> %>
                   <h1 class="payment-page-heading">
                     {dgettext("booking", "Confirming your payment…")}
                   </h1>
                   <p class="payment-page-body">
                     {dgettext("booking", "Please wait while we confirm your booking.")}
                   </p>
-                <% MeetingState.awaiting_approval?(@meeting) -> %>
+                <% :awaiting_approval -> %>
                   <h1 class="payment-page-heading">
                     {dgettext("booking", "Payment received")}
                   </h1>
@@ -66,7 +67,34 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
                     stage={:after}
                     class="mt-4"
                   />
-                <% true -> %>
+                  <p :if={PaymentReturn.approval_deadline_text(@meeting)} class="payment-page-body">
+                    {dgettext(
+                      "booking",
+                      "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
+                      deadline: PaymentReturn.approval_deadline_text(@meeting)
+                    )}
+                  </p>
+                <% :declined -> %>
+                  <h1 class="payment-page-heading">
+                    {dgettext("booking", "Booking not accepted")}
+                  </h1>
+                  <p class="payment-page-body">
+                    {dgettext(
+                      "booking",
+                      "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
+                    )}
+                  </p>
+                <% :expired -> %>
+                  <h1 class="payment-page-heading">
+                    {dgettext("booking", "Booking request expired")}
+                  </h1>
+                  <p class="payment-page-body">
+                    {dgettext(
+                      "booking",
+                      "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
+                    )}
+                  </p>
+                <% :confirmed -> %>
                   <h1 class="payment-page-heading">
                     {dgettext("booking", "Booking confirmed")}
                   </h1>
