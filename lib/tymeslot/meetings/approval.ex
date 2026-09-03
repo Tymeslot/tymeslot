@@ -43,9 +43,11 @@ defmodule Tymeslot.Meetings.Approval do
       was paid for but never approved gave the attendee nothing, so `release/3`
       refunds the full remaining balance itself rather than deferring to the
       cancellation pipeline, which exists for a meeting the attendee actually
-      got to have and offers the host no such choice here. What distinguishes
-      a decline from an invitee's own cancellation is `approval_resolved_at`
-      together with `decline_reason`.
+      got to have and offers the host no such choice here — unless the request
+      already *was* such a meeting before it re-entered the gate (see
+      `refund_unapproved_request/1`). What distinguishes a decline from an
+      invitee's own cancellation is `approval_resolved_at` together with
+      `decline_reason`.
 
     * `expire/1` — nobody answered in time. Identical to a decline apart from
       the status (`"expired"`) and the wording the invitee receives: the host
@@ -402,14 +404,26 @@ defmodule Tymeslot.Meetings.Approval do
   end
 
   @doc """
-  Refunds in full a held request that ended without becoming a meeting.
+  Refunds in full a held request that ended without becoming a meeting —
+  unless it was one already.
 
   A booking that was paid for but never approved gave the attendee nothing,
   so the full remaining balance goes back automatically: there is no
   confirmed meeting to weigh against a partial refund, and so no host-facing
   choice to offer (contrast `Meetings.Cancellation`, which cancels a meeting
-  the attendee did get to have). A payment row that was never actually paid
-  is quietly skipped, since it has nothing to refund.
+  the attendee did get to have and lets the host choose none, partial, or
+  full). That contrast breaks for a request that re-entered the gate: a
+  reschedule of an already-`"confirmed"`, paid meeting resets it to
+  `"awaiting_approval"` (`Bookings.Reschedule.reenters_gate?/1`), and if that
+  re-request is then declined or expires, there genuinely *is* a confirmed
+  meeting to weigh against a partial refund — the one the attendee already
+  had, activated, and were told about. Auto-refunding it in full would make
+  that choice for the host silently, so this checks `announced_at`
+  (`Notifications.Events.meeting_created/1`'s idempotency claim, permanent
+  and never reset by a reschedule) and skips the automatic refund when it is
+  set, leaving the payment refundable from the dashboard's payments screen
+  instead. A payment row that was never actually paid is quietly skipped,
+  since it has nothing to refund.
 
   Public because this rule applies to every way a held request stops being
   held, not only the two this module resolves itself (`decline/2`,
@@ -421,10 +435,27 @@ defmodule Tymeslot.Meetings.Approval do
   @spec refund_unapproved_request(Meeting.t()) :: :ok
   def refund_unapproved_request(meeting) do
     case MeetingPayments.payment_for_meeting(meeting.id) do
-      %{paid_at: %DateTime{}} = payment -> refund_remaining(payment, meeting)
+      %{paid_at: %DateTime{}} = payment -> refund_or_defer(payment, meeting)
       _unpaid_or_missing -> :ok
     end
   end
+
+  defp refund_or_defer(payment, meeting) do
+    if previously_confirmed?(meeting) do
+      Logger.info(
+        "Skipping automatic refund: request was a confirmed meeting before re-entering the approval gate",
+        meeting_id: meeting.id,
+        payment_id: payment.id
+      )
+
+      :ok
+    else
+      refund_remaining(payment, meeting)
+    end
+  end
+
+  defp previously_confirmed?(%Meeting{announced_at: %DateTime{}}), do: true
+  defp previously_confirmed?(_meeting), do: false
 
   defp refund_remaining(payment, meeting) do
     case MeetingPayments.refundable_remaining_cents(payment) do

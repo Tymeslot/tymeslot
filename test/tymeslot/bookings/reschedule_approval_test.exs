@@ -21,6 +21,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalJobs
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
@@ -146,6 +147,35 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
         args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
       )
     end
+
+    test "re-approving after a re-gating reschedule still announces the booking" do
+      # `announced_at` is stamped the first time the booking is confirmed
+      # (simulating that a prior `meeting.created` announcement has already
+      # claimed it), exactly as it would be after the meeting's first pass
+      # through confirmation.
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: DateTime.utc_now(:second)})
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert rescheduled.status == "awaiting_approval"
+      # The claim must be free again so the second approval's announcement
+      # is not silently lost to the first one.
+      assert is_nil(rescheduled.announced_at)
+
+      assert {:ok, confirmed} = Approval.approve(reload(meeting))
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => confirmed.id}
+      )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => confirmed.id}
+      )
+    end
   end
 
   describe "rescheduling a held request" do
@@ -209,6 +239,32 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
 
       assert rescheduled.status == "confirmed"
       refute_enqueued(worker: ApprovalExpiryWorker)
+    end
+
+    test "confirms a held request outright rather than stranding it in the gate" do
+      # The type used to require approval — the booking is still held from
+      # back then — but no longer does by the time it is rescheduled.
+      %{meeting: meeting, params: params} =
+        gated_booking(false, %{
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          # A deadline already in the past: nothing recaps it against the new
+          # start time, so leaving the booking held here would make it
+          # unapprovable forever (`Approval.approve/1` refuses a started
+          # meeting, and this deadline already looks started).
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -1, :minute)
+        })
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert rescheduled.status == "confirmed"
+      assert %DateTime{} = rescheduled.approval_resolved_at
+      assert reload(meeting).status == "confirmed"
+
+      # There is no gate left to hold it in, so nothing should still be
+      # waiting to nudge or expire it.
+      refute_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
     end
   end
 
