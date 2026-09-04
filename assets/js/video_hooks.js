@@ -94,10 +94,29 @@ const onBackgroundMotionChange = (handler) => {
   return () => window.removeEventListener(MOTION_EVENT, listener);
 };
 
+// Whether the page still carries a background video worth pausing. A hook drops
+// its video for good on reduced motion, a slow connection, or a decode error,
+// and the control is meaningless from then on.
+//
+// The verdict lives here rather than only as `hidden` on the element, because
+// `hidden` is set by the client and the server markup never carries it: the
+// wrapper re-renders on a step transition and the patch would strip the
+// attribute, putting a button that pauses nothing back on the page. The toggle
+// re-applies this on every `updated()`.
+let backgroundMotionAvailable = true;
+
+// Called by each video hook as it starts setting a video up, so a live
+// navigation onto a page whose video is healthy does not inherit the previous
+// page's verdict.
+const resetBackgroundMotionToggle = () => {
+  backgroundMotionAvailable = true;
+};
+
 // The control is meaningless once the video is gone — reduced motion, a slow
 // connection, a decode error — so each hook hides it rather than leaving a
 // button that pauses nothing.
 const hideBackgroundMotionToggle = () => {
+  backgroundMotionAvailable = false;
   const toggle = document.getElementById(TOGGLE_ID);
   if (toggle) toggle.hidden = true;
 };
@@ -140,6 +159,7 @@ export const BackgroundMotionToggle = {
       const stopped = backgroundMotionStopped();
       const label = stopped ? this.el.dataset.labelPlay : this.el.dataset.labelPause;
 
+      this.el.hidden = !backgroundMotionAvailable;
       this.el.setAttribute('aria-label', label);
       this.el.setAttribute('title', label);
       this.el.dataset.state = stopped ? 'stopped' : 'playing';
@@ -157,7 +177,8 @@ export const BackgroundMotionToggle = {
   },
 
   // A step transition re-renders the wrapper, which would otherwise restore the
-  // server-rendered attributes over the ones the toggle owns.
+  // server-rendered attributes over the ones the toggle owns, and strip the
+  // `hidden` a video hook set when it gave up on the video.
   updated() {
     this._sync();
   },
@@ -185,10 +206,15 @@ export const QuillVideo = {
     // CSS already hides video in embedded context; skip JS overhead entirely.
     if (document.documentElement.hasAttribute('data-embedded')) return;
 
+    resetBackgroundMotionToggle();
+
     const container = this.el;
     const video = container.querySelector('video');
 
-    if (!video) return;
+    if (!video) {
+      hideBackgroundMotionToggle();
+      return;
+    }
 
     // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -249,6 +275,8 @@ export const QuillVideo = {
 // Auth video optimization hook - handles both single video and dual video crossfade
 export const AuthVideo = {
   mounted() {
+    resetBackgroundMotionToggle();
+
     const container = document.getElementById('auth-video-container');
     const singleVideo = document.getElementById('auth-background-video');
     const video1 = document.getElementById('auth-background-video-1');
@@ -301,6 +329,10 @@ export const AuthVideo = {
     // Handle dual video crossfade case — pass connection so it isn't re-fetched
     if (video1 && video2) {
       this.initAuthVideoCrossfade(container, video1, video2, connection);
+    } else {
+      // Neither a pair nor a lone video: no playback is set up here, so the
+      // control would pause nothing.
+      hideBackgroundMotionToggle();
     }
   },
 
@@ -465,10 +497,15 @@ export const RhythmVideo = {
     // CSS already hides video in embedded context; skip JS overhead entirely.
     if (document.documentElement.hasAttribute('data-embedded')) return;
 
+    resetBackgroundMotionToggle();
+
     const video1 = document.getElementById('rhythm-background-video-1');
     const video2 = document.getElementById('rhythm-background-video-2');
 
-    if (!video1 || !video2) return;
+    if (!video1 || !video2) {
+      hideBackgroundMotionToggle();
+      return;
+    }
 
     // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

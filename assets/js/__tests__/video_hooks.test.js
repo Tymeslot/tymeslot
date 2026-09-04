@@ -391,4 +391,86 @@ describe('video hooks honour a stopped background', () => {
 
     expect(document.getElementById('background-motion-toggle').hidden).toBe(true);
   });
+
+  test('Auth hides the control when the page carries no video to pause', () => {
+    document.body.innerHTML = `
+      <div class="video-background-container" id="auth-video-container"></div>
+      <button id="background-motion-toggle"></button>
+    `;
+
+    mount(AuthVideo, document.getElementById('auth-video-container'));
+
+    expect(document.getElementById('background-motion-toggle').hidden).toBe(true);
+  });
+
+  test('Rhythm hides the control when its video pair is missing', () => {
+    document.body.innerHTML = `
+      <div class="video-background-container" id="rhythm"></div>
+      <button id="background-motion-toggle"></button>
+    `;
+
+    mount(RhythmVideo, document.getElementById('rhythm'));
+
+    expect(document.getElementById('background-motion-toggle').hidden).toBe(true);
+  });
+
+  // The verdict is module state, so a healthy page mounted after a broken one
+  // must not inherit "no video here".
+  test('a later healthy mount restores the control', () => {
+    document.body.innerHTML = `
+      <div class="video-background-container" id="rhythm"></div>
+      <button id="background-motion-toggle"></button>
+    `;
+
+    mount(RhythmVideo, document.getElementById('rhythm'));
+    expect(document.getElementById('background-motion-toggle').hidden).toBe(true);
+
+    document.body.innerHTML = `
+      <div id="quill"><video></video></div>
+      <button id="background-motion-toggle"
+              data-state="playing"
+              data-label-pause="Pause background video"
+              data-label-play="Play background video"></button>
+    `;
+
+    const container = document.getElementById('quill');
+    stubVideo(container.querySelector('video'));
+    mount(QuillVideo, container);
+
+    const toggle = document.getElementById('background-motion-toggle');
+    mount(BackgroundMotionToggle, toggle);
+
+    expect(toggle.hidden).toBe(false);
+  });
+
+  // LiveView re-renders the wrapper on a step transition, and the server markup
+  // carries no `hidden` — so the patch strips what the video hook set.
+  test('the control stays hidden across a LiveView patch', () => {
+    window.matchMedia = vi.fn(() => ({
+      matches: true,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+
+    document.body.innerHTML = `
+      <div id="quill"><video></video></div>
+      <button id="background-motion-toggle"
+              data-state="playing"
+              data-label-pause="Pause background video"
+              data-label-play="Play background video"></button>
+    `;
+
+    const container = document.getElementById('quill');
+    stubVideo(container.querySelector('video'));
+    mount(QuillVideo, container);
+
+    const toggle = document.getElementById('background-motion-toggle');
+    const hook = mount(BackgroundMotionToggle, toggle);
+
+    // What morphdom does with an attribute the server never rendered.
+    toggle.hidden = false;
+    hook.updated();
+
+    expect(toggle.hidden).toBe(true);
+  });
 });
