@@ -136,11 +136,13 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   `sync_failure_threshold/0` the row is forced `:unhealthy` so the badge, the
   48-hour notification and the auto-pause sweep all see the outage.
 
-  The streak is cleared by `IntegrationHealthStateQueries.reset/2`, which a
-  successful sync already reaches through
-  `HealthCheck.mark_synced_successfully/2`. Recovery of the *status* is left to
-  the probe rather than done here, so the existing flap protection in
-  `determine_status/3` still governs how quickly a badge clears.
+  The streak is cleared by `IntegrationHealthStateQueries.clear_sync_failures/2`,
+  which a successful sync reaches through
+  `HealthCheck.mark_synced_successfully/2`. That clears the counter and nothing
+  else: recovery of the *status*, and of `became_unhealthy_at` with it, is left
+  to the probe, so the existing flap protection in `determine_status/3` still
+  governs how quickly a badge clears and one lucky sync a day cannot keep
+  restarting the 48-hour notification clock.
 
   `consecutive_hard_failures` is deliberately untouched: that counter drives
   `SyncGating`, and a remote 5xx is exactly the case where pausing sync would

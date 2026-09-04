@@ -124,16 +124,14 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @doc """
   Resets the health state row to a known-healthy baseline.
 
-  Used when the user has produced an unambiguous success signal — a successful
-  sync, a credentials update, or a reactivation — that proves the integration
-  works regardless of what the last scheduled probe said. Without this, the
-  in-app badge can lag the truth by up to an hour while waiting for the next
-  scheduled probe.
+  Used when the user has produced an unambiguous success signal — a credentials
+  update or a reactivation — that proves the integration works regardless of
+  what the last scheduled probe said. Without this, the in-app badge can lag the
+  truth by up to an hour while waiting for the next scheduled probe.
 
-  A successful sync is also what clears `consecutive_sync_failures`, the
-  streak counter `Monitor.record_sync_failure/1` raises the unhealthy badge
-  from. That is the whole of its reset path: nothing else zeroes it, so this
-  function must keep doing so.
+  A successful *sync* is deliberately not one of those signals: it calls
+  `clear_sync_failures/2` instead, which zeroes the streak and leaves the
+  unhealthy episode standing. See that function for why.
 
   `successes` counts consecutive successful probes, and a reset has run none,
   so it starts at zero like every other counter here. It needs no head start
@@ -158,6 +156,34 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       became_unhealthy_at: nil,
       notification_sent_at: nil
     )
+  end
+
+  @doc """
+  Clears the failed-sync streak after a sync cycle completes.
+
+  This is the whole reset path for `consecutive_sync_failures`, the counter
+  `Monitor.record_sync_failure/1` raises the unhealthy badge from: nothing else
+  zeroes it.
+
+  It writes that one column and nothing else, and the omissions are the point.
+  `status`, `became_unhealthy_at` and `notification_sent_at` describe an
+  unhealthy *episode*, and a single successful sync is not evidence the episode
+  has ended — a server that refuses most syncs while succeeding about once a day
+  is exactly the case the streak exists to catch. Clearing them here would
+  restart the 48-hour notification clock on every one of those successes, so the
+  badge would flap daily and the owner's email would never fire.
+
+  Ending the episode is the probe's job: two consecutive successful probes take
+  the row back to `:healthy` through the flap protection in
+  `Monitor.determine_status/3`, and the resulting `:became_healthy` transition
+  is where `ResponseHandler` clears the timestamps. Keeping recovery in that one
+  place is why this function does not attempt its own.
+
+  Safe to call when no row exists (no-op).
+  """
+  @spec clear_sync_failures(String.t() | atom(), integer()) :: {non_neg_integer(), nil}
+  def clear_sync_failures(type, integration_id) do
+    update_fields(type, integration_id, consecutive_sync_failures: 0)
   end
 
   @doc """

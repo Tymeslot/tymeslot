@@ -197,10 +197,10 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @doc """
   Updates the last sync timestamp for an integration.
 
-  A successful sync is the strongest possible signal that the integration
-  works, so the health state row is reset on every success. Without this, a
-  flaky probe can leave the badge stuck on `:unhealthy` even while real syncs
-  succeed every few minutes.
+  A completed sync also ends whatever streak of failed sync cycles the health
+  state was accumulating, so the success is recorded there too. It clears that
+  streak only — see `HealthCheck.mark_synced_successfully/2` for why one
+  successful cycle is not enough to declare the integration recovered.
   """
   @spec mark_sync_success(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}

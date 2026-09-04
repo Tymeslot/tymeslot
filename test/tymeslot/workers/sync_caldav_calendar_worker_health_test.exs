@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
@@ -124,6 +125,41 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
                })
 
       assert health(integration).consecutive_sync_failures == 0
+    end
+
+    test "a cycle that completes does not lower a badge the streak already raised",
+         %{integration: integration} do
+      for _cycle <- 1..3, do: run_failing_sync(integration)
+
+      raised = health(integration)
+      assert raised.status == :unhealthy
+      assert %DateTime{} = raised.became_unhealthy_at
+
+      # Three refusals in a row is also the host breaker's threshold, and an
+      # open breaker would refuse the recovering cycle before it reached the
+      # server. The breaker is not what this test is about; a real server
+      # answering a day later meets a closed one.
+      CalendarCircuitBreaker.reset_for_url(:caldav, integration.base_url)
+      CalendarCircuitBreaker.reset(:caldav)
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, caldav_report_xml("/calendars/alice/default/e.ics", ical_path1()))
+      end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      # Infomaniak answered roughly one sync a day for eleven days. If that
+      # success cleared the episode, the 48-hour notification clock restarted
+      # daily and the owner was never told; the streak is all it may clear.
+      state = health(integration)
+      assert state.consecutive_sync_failures == 0
+      assert state.status == :unhealthy
+      assert state.became_unhealthy_at == raised.became_unhealthy_at
     end
   end
 
