@@ -163,7 +163,54 @@ defmodule TymeslotWeb.MeetingRequestLive do
     end
   end
 
+  # The meeting in the assigns was read once, when the page connected, and the
+  # click can arrive hours later. The invitee can move a held request in the
+  # meantime (`Tymeslot.Bookings.Reschedule` returns it to the gate with a
+  # fresh `approval_requested_at`, start time and deadline), and the guarded
+  # transition only tests the status — so answering the stale struct would
+  # confirm a time the host never saw, or, when the request they *did* see has
+  # since had its deadline pass, expire the new live request through
+  # `Approval.approve/1`'s own deadline check.
+  #
+  # Re-verifying the token is what settles it: the token is bound to the
+  # `approval_requested_at` it was issued against
+  # (`Tymeslot.Meetings.ApprovalToken`), so a re-requested booking fails
+  # verification as `:stale` exactly as a link from the previous request
+  # would, and the answer runs against the row as it stands now rather than
+  # against the copy on screen.
   defp apply_answer(socket, meeting, action, success_state) do
+    case current_request(socket.assigns.token, meeting) do
+      {:ok, current} -> run_answer(socket, current, action, success_state)
+      {:error, _reason} -> stale_request(socket)
+    end
+  end
+
+  defp current_request(token, %{id: meeting_id}) do
+    case ApprovalToken.verify(token) do
+      {:ok, %{id: ^meeting_id} = current} -> {:ok, current}
+      {:ok, _other_meeting} -> {:error, :meeting_mismatch}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  # The link no longer answers anything, so the page shows what an
+  # unrecognised link shows. The flash says why this one stopped working,
+  # which "link not recognised" alone would not: the request the host is
+  # looking at has been replaced by a newer one, and their inbox holds the
+  # link that answers it.
+  defp stale_request(socket) do
+    socket
+    |> assign(meeting: nil, state: :invalid)
+    |> put_flash(
+      :error,
+      dgettext(
+        "booking",
+        "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
+      )
+    )
+  end
+
+  defp run_answer(socket, meeting, action, success_state) do
     case action.(meeting) do
       {:ok, updated} ->
         assign(socket, meeting: updated, state: success_state)

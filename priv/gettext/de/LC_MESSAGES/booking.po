@@ -1846,3 +1846,8 @@ msgstr "Dieser Termin wurde inzwischen von jemand anderem gebucht, daher kann di
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Zeitzonen suchen"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
+msgstr "Diese Anfrage hat sich geändert, seit diese Seite geöffnet wurde, und kann hier nicht mehr beantwortet werden. Öffnen Sie die neueste Anfrage-E-Mail, um sie zu beantworten."

@@ -1844,3 +1844,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr ""
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
+msgstr ""

@@ -1845,3 +1845,8 @@ msgstr "Tento termín si mezitím rezervoval někdo jiný, takže tuto žádost 
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Hledat časová pásma"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
+msgstr "Tato žádost se od otevření této stránky změnila, takže ji zde už nelze vyřídit. Otevřete nejnovější e-mail se žádostí a odpovězte na něj."

@@ -1846,3 +1846,8 @@ msgstr "Nel frattempo questo orario è stato prenotato da qualcun altro, quindi 
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Cerca fusi orari"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
+msgstr "Questa richiesta è cambiata da quando la pagina è stata aperta, quindi non può più essere gestita qui. Apri l'email di richiesta più recente per rispondere."

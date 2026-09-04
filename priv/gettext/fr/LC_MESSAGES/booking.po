@@ -1846,3 +1846,8 @@ msgstr "Ce créneau a entre-temps été réservé par quelqu'un d'autre, cette d
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Rechercher des fuseaux horaires"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
+msgstr "Cette demande a changé depuis l'ouverture de cette page et ne peut plus être traitée ici. Ouvrez le dernier e-mail de demande pour y répondre."

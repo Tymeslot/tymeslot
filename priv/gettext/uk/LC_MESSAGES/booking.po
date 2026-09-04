@@ -1846,3 +1846,8 @@ msgstr "Тим часом цей час забронював хтось інши
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Пошук часових поясів"
+
+#: lib/tymeslot_web/live/meeting_request_live.ex
+#, elixir-autogen, elixir-format
+msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
+msgstr "Цей запит змінився відтоді, як цю сторінку було відкрито, тож відповісти на нього тут уже не можна. Відкрийте найновіший лист із запитом, щоб відповісти на нього."
