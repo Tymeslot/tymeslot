@@ -313,7 +313,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         # identity all year and the cache updates its row instead of growing a
         # second one. Rows are keyed on `(calendar_integration_id, uid)`, so
         # changing this format changes identity for every occurrence already
-        # cached and needs a migration to rewrite them.
+        # cached and needs a migration to rewrite them, in
+        # `event_colour_overrides.provider_uid` as well as in the cache itself.
+        # `20260904094944_strip_utc_label_from_occurrence_uids` is the one that
+        # accompanied the last such change, and the pattern to follow.
         %DateTime{} = dt ->
           Calendar.strftime(dt, "%Y%m%dT%H%M%S")
 
