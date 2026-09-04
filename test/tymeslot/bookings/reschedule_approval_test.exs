@@ -18,6 +18,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
   @moduletag :bookings
   @moduletag :meetings
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Emails.EmailScheduler
@@ -28,6 +29,7 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.VideoRoomWorker
 
   setup :verify_on_exit!
 
@@ -63,6 +65,23 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
     }
 
     %{user: user, meeting: meeting, params: params}
+  end
+
+  # A request still held from back when its meeting type required approval,
+  # on a type that no longer does. The reschedule has no gate left to return
+  # it to, so it confirms the booking outright.
+  defp stranded_request(meeting_attrs \\ %{}) do
+    gated_booking(
+      false,
+      Map.merge(
+        %{
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
+        },
+        meeting_attrs
+      )
+    )
   end
 
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
@@ -329,6 +348,68 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
 
       # There is no gate left to hold it in, so nothing should still be
       # waiting to nudge or expire it.
+      refute_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
+    end
+
+    test "gives the invitee the confirmation for a booking they were never told about" do
+      %{meeting: meeting, params: params} = stranded_request()
+
+      assert {:ok, _rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # This booking was held from the moment it was created: the invitee has
+      # only ever had the "we have passed this to the host" email. Confirming
+      # it and then telling them their meeting "has been rescheduled" would be
+      # the only thing they ever heard about a meeting that is now on.
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
+
+      # `Events.meeting_created/1` claims `announced_at` once per booking, so
+      # a nil claim here is the same thing as "the `meeting.created` fan-out
+      # never ran".
+      assert %DateTime{} = reload(meeting).announced_at
+    end
+
+    test "creates the video room the confirmation email has to carry a link to" do
+      %{user: user, meeting: meeting, params: params} = stranded_request()
+
+      video_integration = insert(:video_integration, user: user, provider: "mirotalk")
+
+      meeting =
+        meeting
+        |> Changeset.change(video_integration_id: video_integration.id)
+        |> Repo.update!()
+
+      assert {:ok, _rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # `announce: true` is what makes the worker send the confirmation itself
+      # once the room exists, so the join link is in the invitee's first email
+      # rather than in a later correction.
+      assert_enqueued(
+        worker: VideoRoomWorker,
+        args: %{"meeting_id" => meeting.id, "announce" => true}
+      )
+    end
+
+    test "stops the expiry clock armed against the request it just confirmed" do
+      %{meeting: meeting, params: params} = stranded_request()
+
+      :ok = ApprovalJobs.schedule_expiry(meeting)
+      assert_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
+
+      assert {:ok, _rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # A sweep that still fires would release the slot of a booking the
+      # invitee has just been sent a confirmation for.
       refute_enqueued(worker: ApprovalExpiryWorker, args: %{"meeting_id" => meeting.id})
     end
   end

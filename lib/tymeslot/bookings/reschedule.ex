@@ -269,13 +269,26 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   # `gate_attributes/3` confirms a held request outright when its meeting
   # type stopped requiring approval since the request was made — see the
-  # comment there. The nudge and expiry jobs armed for that request no longer
-  # apply to a confirmed booking, so they are cleared here exactly as
-  # `Approval.approve/1` clears them on an ordinary approval, and the invitee
-  # is told the same way any other reschedule tells them.
-  defp announce(%{status: "confirmed"} = updated, %{status: "awaiting_approval"} = original) do
-    Orchestrator.cancel_request_notifications(updated)
-    send_reschedule_notifications(updated, original)
+  # comment there. That booking is a new confirmed meeting nobody has ever
+  # been told about: it was held from the moment it was created, so it has no
+  # confirmation email, no ICS, no video room, no reminders and an unclaimed
+  # `announced_at`. Telling the invitee their meeting "has been rescheduled"
+  # would be the only thing they ever heard about it.
+  #
+  # So this takes the approval side effects rather than the reschedule ones,
+  # through the very function `Approval.approve/1` uses
+  # (`Approval.activate_confirmed/1`): the request notifications are cancelled,
+  # the tentative calendar hold is flipped to a real event, and the meeting is
+  # activated with its video room. Sharing that function rather than repeating
+  # its three steps here is what keeps this path from drifting away from the
+  # approval it is standing in for.
+  #
+  # The duplicate calendar "update" job this schedules on top of
+  # `apply_time_update_and_schedule_job/3`'s own is harmless:
+  # `CalendarJobs.schedule_job/2` is uniqueness-guarded and reports the second
+  # insert as `:already_scheduled`.
+  defp announce(%{status: "confirmed"} = updated, %{status: "awaiting_approval"}) do
+    Approval.activate_confirmed(updated)
   end
 
   defp announce(updated, original), do: send_reschedule_notifications(updated, original)
