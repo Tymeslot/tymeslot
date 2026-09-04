@@ -9,6 +9,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Shared.ApprovalDisplay
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @impl Phoenix.LiveComponent
@@ -34,9 +36,21 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
             <div class="confirmation-container">
               <div class="confirmation-header-section">
                 <div class="confirmation-title-row">
-                  <div class="success-badge">
-                    <div class="success-badge-inner">
-                      <svg class="success-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div class={[
+                    "success-badge",
+                    ApprovalDisplay.awaiting_approval?(assigns) && "success-badge--pending"
+                  ]}>
+                    <div class={[
+                      "success-badge-inner",
+                      ApprovalDisplay.awaiting_approval?(assigns) && "success-badge-inner--pending"
+                    ]}>
+                      <svg
+                        :if={!ApprovalDisplay.awaiting_approval?(assigns)}
+                        class="success-icon"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           stroke-linecap="round"
                           stroke-linejoin="round"
@@ -44,24 +58,37 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
+                      <svg
+                        :if={ApprovalDisplay.awaiting_approval?(assigns)}
+                        class="success-icon"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="3"
+                          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
                     </div>
                   </div>
 
                   <h1 class="confirmation-headline" data-testid="confirmation-heading">
-                    <%= if @is_rescheduling do %>
-                      {dgettext("booking", "Successfully Rescheduled!")}
-                    <% else %>
-                      {dgettext("booking", "You're All Set!")}
-                    <% end %>
+                    {headline(assigns)}
                   </h1>
                 </div>
 
                 <p class="confirmation-message">
-                  {dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
-                    name: @name,
-                    organizer: get_organizer_text(@organizer_profile)
-                  )}
+                  {confirmation_message(assigns)}
                 </p>
+
+                <ApprovalNotice.block
+                  :if={ApprovalDisplay.awaiting_approval?(assigns)}
+                  organizer_name={Profiles.display_name(@organizer_profile)}
+                  stage={:after}
+                />
               </div>
 
               <div class="meeting-ticket">
@@ -158,7 +185,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   data-testid="add-to-calendar"
                 >
                   <.icon name="hero-calendar-days" class="calendar-download-icon" />
-                  {dgettext("booking", "Add to calendar")}
+                  {if ApprovalDisplay.awaiting_approval?(assigns),
+                    do: dgettext("booking", "Add tentative hold to calendar"),
+                    else: dgettext("booking", "Add to calendar")}
                 </a>
                 <button
                   phx-click="schedule_another"
@@ -170,10 +199,17 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 </button>
 
                 <p class="help-text">
-                  {dgettext(
-                    "booking",
-                    "Need to make changes? Check your email for reschedule options"
-                  )}
+                  {if ApprovalDisplay.awaiting_approval?(assigns),
+                    do:
+                      dgettext(
+                        "booking",
+                        "Changed your mind? Your request email has a link to withdraw it."
+                      ),
+                    else:
+                      dgettext(
+                        "booking",
+                        "Need to make changes? Check your email for reschedule options"
+                      )}
                 </p>
               </div>
             </div>
@@ -191,6 +227,45 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
     case Profiles.display_name(organizer_profile) do
       nil -> ""
       name -> dgettext("booking", "with %{name}", name: name)
+    end
+  end
+
+  # See the Quill component: a held request must not be announced as a
+  # confirmed meeting, heading included. The approval check runs first: a
+  # gated reschedule re-enters the hold (see `Tymeslot.Bookings.Reschedule`),
+  # so `is_rescheduling` must not short-circuit it.
+  defp headline(assigns) do
+    cond do
+      ApprovalDisplay.awaiting_approval?(assigns) -> dgettext("booking", "Request sent!")
+      assigns[:is_rescheduling] -> dgettext("booking", "Successfully Rescheduled!")
+      true -> dgettext("booking", "You're All Set!")
+    end
+  end
+
+  defp confirmation_message(assigns) do
+    if ApprovalDisplay.awaiting_approval?(assigns) do
+      held_confirmation_message(assigns[:name], assigns[:organizer_profile])
+    else
+      dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
+        name: assigns[:name],
+        organizer: get_organizer_text(assigns[:organizer_profile])
+      )
+    end
+  end
+
+  # See the Quill component for why this cannot reuse the "with %{name}"
+  # fragment: "your request with Jane" is the wrong preposition, and the
+  # fragment's fixed preposition mistranslates in every non-English locale.
+  defp held_confirmation_message(name, organizer_profile) do
+    case Profiles.display_name(organizer_profile) do
+      organizer_name when is_binary(organizer_name) and organizer_name != "" ->
+        dgettext("booking", "%{name}, your request to %{organizer_name} has been sent.",
+          name: name,
+          organizer_name: organizer_name
+        )
+
+      _no_organizer_name ->
+        dgettext("booking", "%{name}, your request has been sent.", name: name)
     end
   end
 end

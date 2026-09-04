@@ -77,4 +77,40 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidatorTest do
                UsernameValidator.validate("toolong", max_length: 5)
     end
   end
+
+  describe "html_pattern/0" do
+    # The profile form puts this on the input as a `pattern` attribute, and the
+    # browser refuses to fire the submit event when it does not match — the
+    # LiveView never hears about the change at all. So a pattern stricter than
+    # this module is not a cosmetic mismatch: it locks the field.
+    @accepted ["john_doe", "jane-doe", "user123", "a1-b2_c3", "user_42", "0abc"]
+    @rejected ["John", "-johndoe", "john.doe", "john doe", "jöhn", "_john"]
+
+    test "accepts exactly what the validator accepts" do
+      for username <- @accepted do
+        assert :ok = UsernameValidator.validate(username)
+        assert browser_accepts?(username), "browser pattern rejected #{username}"
+      end
+    end
+
+    test "rejects exactly what the validator rejects" do
+      for username <- @rejected do
+        assert {:error, _message} = UsernameValidator.validate(username)
+        refute browser_accepts?(username), "browser pattern accepted #{username}"
+      end
+    end
+
+    test "accepts the username every account starts with" do
+      # `Profiles.Usernames.generate_default_username/1` builds "user_<id>",
+      # so an underscore is not an edge case: it is what every account that has
+      # never customised its URL is called.
+      assert browser_accepts?("user_7")
+      assert browser_accepts?("user_7_a1b2")
+    end
+
+    defp browser_accepts?(username) do
+      # `pattern` is implicitly anchored at both ends by the HTML spec.
+      Regex.match?(~r/^(?:#{UsernameValidator.html_pattern()})$/, username)
+    end
+  end
 end

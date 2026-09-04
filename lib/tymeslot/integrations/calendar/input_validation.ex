@@ -64,6 +64,59 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   end
 
   @doc """
+  Validates the Exchange connection form (name, url, username, password,
+  mailbox).
+
+  Shares the first four fields with `validate_calendar_integration_form/2`
+  and adds the one an EWS integration cannot work without: the mailbox the
+  availability read is addressed to. `GetUserAvailability` names a mailbox,
+  not a folder, and an on-premises server accepts a login
+  (`DOMAIN\\samaccountname`) that is not itself addressable, so the address
+  is collected as its own field rather than inferred from the username.
+
+  No `calendar_paths`: an EWS folder is named by the opaque `FolderId` the
+  server issues, and the form has no path input to validate.
+  """
+  @spec validate_exchange_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
+  def validate_exchange_form(params, opts \\ []) do
+    metadata = Keyword.get(opts, :metadata, %{})
+
+    with {:ok, sanitized_name} <-
+           InputValidators.validate_integration_name(params["name"], metadata),
+         {:ok, sanitized_url} <- CredentialFields.server_url(params["url"], metadata),
+         {:ok, sanitized_username} <- CredentialFields.username(params["username"], metadata),
+         {:ok, sanitized_password} <- CredentialFields.password(params["password"], metadata),
+         {:ok, sanitized_mailbox} <- CredentialFields.mailbox(params["mailbox"], metadata) do
+      SecurityLogger.log_security_event("exchange_integration_form_validation_success", %{
+        ip_address: metadata[:ip],
+        user_agent: metadata[:user_agent],
+        user_id: metadata[:user_id],
+        provider: "exchange"
+      })
+
+      {:ok,
+       %{
+         "name" => sanitized_name,
+         "url" => sanitized_url,
+         "username" => sanitized_username,
+         "password" => sanitized_password,
+         "mailbox" => sanitized_mailbox
+       }}
+    else
+      {:error, errors} when is_map(errors) ->
+        SecurityLogger.log_security_event("exchange_integration_form_validation_failure", %{
+          ip_address: metadata[:ip],
+          user_agent: metadata[:user_agent],
+          user_id: metadata[:user_id],
+          provider: "exchange",
+          errors: Map.keys(errors)
+        })
+
+        {:error, errors}
+    end
+  end
+
+  @doc """
   Validates a single field for calendar integration form.
 
   ## Parameters
@@ -111,6 +164,15 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
     case CredentialFields.password(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{password: error}} -> {:error, error}
+    end
+  end
+
+  def validate_single_field(:mailbox, value, opts) do
+    metadata = Keyword.get(opts, :metadata, %{})
+
+    case CredentialFields.mailbox(value, metadata) do
+      {:ok, sanitized} -> {:ok, sanitized}
+      {:error, %{mailbox: error}} -> {:error, error}
     end
   end
 

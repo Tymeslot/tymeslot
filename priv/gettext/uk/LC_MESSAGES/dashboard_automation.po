@@ -633,3 +633,38 @@ msgstr "URL-адреса вказує на приватну або обмеже�
 #, elixir-autogen, elixir-format
 msgid "Webhook returned status %{status}"
 msgstr "Вебхук повернув статус %{status}"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Declined"
+msgstr "Бронювання відхилено"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Request Expired"
+msgstr "Термін запиту на бронювання минув"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Requested"
+msgstr "Бронювання запитано"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when nobody answers a booking request before its deadline"
+msgstr "Спрацьовує, коли на запит на бронювання ніхто не відповідає до завершення строку"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when someone requests a booking on a meeting type that needs your approval"
+msgstr "Спрацьовує, коли хтось надсилає запит на бронювання типу зустрічі, що потребує вашого підтвердження"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers when you decline a booking request"
+msgstr "Спрацьовує, коли ви відхиляєте запит на бронювання"
+
+#: lib/tymeslot/webhooks.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers on this event"
+msgstr "Спрацьовує для цієї події"

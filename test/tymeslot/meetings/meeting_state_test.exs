@@ -30,6 +30,34 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
     end
   end
 
+  describe "awaiting_approval?/1" do
+    test "true only for the held status" do
+      assert MeetingState.awaiting_approval?(%{status: "awaiting_approval"})
+
+      refute MeetingState.awaiting_approval?(%{status: "confirmed"})
+      refute MeetingState.awaiting_approval?(%{status: "pending"})
+      refute MeetingState.awaiting_approval?(%{status: "awaiting_payment"})
+    end
+
+    test "a held request is active, so the invitee may still cancel or move it" do
+      assert MeetingState.active?(%{status: "awaiting_approval"})
+    end
+
+    test "a held request expects a calendar event, because a tentative one is written" do
+      assert MeetingState.expects_calendar_event?(%{
+               status: "awaiting_approval",
+               reschedule_requested_at: nil
+             })
+    end
+
+    test "a held request is not awaiting a new time from the attendee" do
+      refute MeetingState.awaiting_new_time?(%{
+               status: "awaiting_approval",
+               reschedule_requested_at: nil
+             })
+    end
+  end
+
   describe "slot_void?/1" do
     test "true when cancelled, regardless of reschedule_requested_at" do
       assert MeetingState.slot_void?(%{status: "cancelled", reschedule_requested_at: nil})

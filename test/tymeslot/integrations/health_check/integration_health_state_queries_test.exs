@@ -67,6 +67,45 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
     end
   end
 
+  describe "clear_sync_failures/2" do
+    test "zeroes the streak and leaves the unhealthy episode standing", %{user: user} do
+      insert_unhealthy_row(user, 51)
+      IntegrationHealthStateQueries.update_fields(:calendar, 51, consecutive_sync_failures: 12)
+
+      {:ok, before} = IntegrationHealthStateQueries.get(:calendar, 51)
+
+      {1, nil} = IntegrationHealthStateQueries.clear_sync_failures(:calendar, 51)
+
+      {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 51)
+
+      assert row.consecutive_sync_failures == 0
+
+      # Everything else is the episode, not the streak. Clearing it here would
+      # restart the 48-hour notification clock on every intermittent success.
+      assert row.status == "unhealthy"
+      assert row.became_unhealthy_at == before.became_unhealthy_at
+      assert row.notification_sent_at == before.notification_sent_at
+      assert row.failures == before.failures
+      assert row.consecutive_hard_failures == before.consecutive_hard_failures
+      assert row.backoff_ms == before.backoff_ms
+      assert row.last_error_class == before.last_error_class
+    end
+
+    test "is a no-op when no row exists" do
+      assert {0, nil} = IntegrationHealthStateQueries.clear_sync_failures(:calendar, 9998)
+    end
+
+    test "scopes by integration_type", %{user: user} do
+      insert_unhealthy_row(user, 52)
+      IntegrationHealthStateQueries.update_fields(:calendar, 52, consecutive_sync_failures: 4)
+
+      {0, nil} = IntegrationHealthStateQueries.clear_sync_failures(:video, 52)
+
+      {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 52)
+      assert row.consecutive_sync_failures == 4
+    end
+  end
+
   describe "list_unhealthy_for_user/1" do
     defp insert_health_row(user, integration_id, type, status) do
       %IntegrationHealthStateSchema{}

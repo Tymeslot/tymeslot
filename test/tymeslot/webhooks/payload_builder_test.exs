@@ -133,6 +133,90 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       assert is_nil(cancellation.reason)
     end
 
+    test "carries the host's decline reason under decline, not the unrelated cancellation_reason" do
+      resolved_at = ~U[2026-01-15 10:00:00Z]
+
+      meeting =
+        build(:meeting,
+          status: "cancelled",
+          approval_requested_at: ~U[2026-01-14 09:00:00Z],
+          approval_deadline_at: ~U[2026-01-15 09:00:00Z],
+          approval_resolved_at: resolved_at,
+          approval_declined_at: resolved_at,
+          decline_reason: "Not available for this project",
+          cancellation_reason: nil
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.declined", meeting, "1")
+
+      refute Map.has_key?(payload.data.meeting, :cancellation)
+      decline = payload.data.meeting.decline
+      assert decline.reason == "Not available for this project"
+      assert decline.declined_at == "2026-01-15T10:00:00Z"
+    end
+
+    test "reports an ordinary cancellation as cancellation, not decline, when the host never held it for approval" do
+      meeting =
+        build(:meeting,
+          status: "cancelled",
+          approval_resolved_at: nil,
+          cancellation_reason: "Schedule conflict"
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.cancelled", meeting, "1")
+
+      refute Map.has_key?(payload.data.meeting, :decline)
+      assert payload.data.meeting.cancellation.reason == "Schedule conflict"
+    end
+
+    test "reports an approved-then-cancelled meeting as a cancellation, not a decline" do
+      # `approval_resolved_at` is stamped by an approval too, so a booking the
+      # host approved and the attendee later cancelled carries it for the rest
+      # of its life. Reading that field as "declined" would ship a decline
+      # block for an ordinary cancellation and drop the `cancellation` key
+      # subscribers already parse.
+      meeting =
+        build(:meeting,
+          status: "cancelled",
+          approval_requested_at: ~U[2026-01-14 09:00:00Z],
+          approval_deadline_at: ~U[2026-01-15 09:00:00Z],
+          approval_resolved_at: ~U[2026-01-14 10:00:00Z],
+          approval_declined_at: nil,
+          cancelled_at: ~U[2026-01-14 18:00:00Z],
+          cancellation_reason: "Something came up"
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.cancelled", meeting, "1")
+
+      refute Map.has_key?(payload.data.meeting, :decline)
+      assert payload.data.meeting.cancellation.reason == "Something came up"
+      assert payload.data.meeting.cancellation.cancelled_at == "2026-01-14T18:00:00Z"
+    end
+
+    test "includes the approval deadline on a booking request" do
+      meeting =
+        build(:meeting,
+          status: "awaiting_approval",
+          approval_requested_at: ~U[2026-01-14 09:00:00Z],
+          approval_deadline_at: ~U[2026-01-15 09:00:00Z]
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.requested", meeting, "1")
+
+      approval = payload.data.meeting.approval
+      assert approval.requested_at == "2026-01-14T09:00:00Z"
+      assert approval.deadline_at == "2026-01-15T09:00:00Z"
+      assert is_nil(approval.resolved_at)
+    end
+
+    test "omits approval data for an ordinary booking that never needed approval" do
+      meeting = build(:meeting, status: "confirmed", approval_requested_at: nil)
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      refute Map.has_key?(payload.data.meeting, :approval)
+    end
+
     test "handles nil video URLs when video room is enabled without crashing" do
       meeting =
         build(:meeting,

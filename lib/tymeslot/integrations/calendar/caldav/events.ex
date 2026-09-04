@@ -225,6 +225,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
         :ok
 
+      # With no ETag all we sent was `If-Match: *`, which asserts nothing but
+      # that the resource exists (RFC 7232 §3.1). A 412 against it therefore
+      # means the event is absent from the server, not that someone else
+      # changed it — so report it as such. `CalendarEventSync` recreates a
+      # missing event on `:not_found`, whereas none of the conflict policies
+      # can: each assumes a server copy to reconcile against. Without this a
+      # booking whose event never landed (or was deleted in the organiser's
+      # client) could never be restored — every later update re-sent the same
+      # doomed conditional PUT and the calendar stayed empty.
+      {:error, :precondition_failed} when is_nil(etag) ->
+        Logger.info("CalDAV event absent on conditional update, reporting as not found")
+        {:error, :not_found}
+
       {:error, :precondition_failed} ->
         handle_precondition_failed(client, url, ical_data, policy, opts)
 

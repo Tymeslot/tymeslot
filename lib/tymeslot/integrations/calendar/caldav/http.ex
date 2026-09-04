@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   # which is referenced by name in build_headers/3 for Base64 encoding.
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
+  alias Tymeslot.Integrations.Calendar.Shared.HttpLogging
 
   require Logger
 
@@ -42,11 +43,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     408 => :timeout,
     429 => :rate_limited
   }
-
-  # Enough of an unmodelled error body to carry the server's explanation (they
-  # answer 4xx with a short XML or plain-text sentence) without pouring a whole
-  # response into the logs.
-  @body_excerpt_chars 500
 
   @doc """
   Performs a PROPFIND request with configurable retry logic.
@@ -253,39 +249,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   defp unexpected_status(%Req.Response{status: status, body: body}, method, url) do
     Logger.warning("CalDAV request returned an unhandled status",
       method: method,
-      url: loggable_url(url),
+      url: HttpLogging.loggable_url(url, include_path: true),
       status: status,
-      body: body_excerpt(body)
+      body: HttpLogging.body_excerpt(body)
     )
 
     {:unexpected_status, status}
   end
-
-  # Origin and path only: a CalDAV URL should carry no credentials, but a
-  # server-supplied href reaching here could, and a log line is the wrong place
-  # to find out.
-  defp loggable_url(url) do
-    case URI.parse(url) do
-      %URI{scheme: scheme, host: host} = uri when is_binary(scheme) and is_binary(host) ->
-        "#{scheme}://#{host}#{uri.path}"
-
-      _unparseable ->
-        "(unparseable url)"
-    end
-  end
-
-  defp body_excerpt(body) when is_binary(body) do
-    if String.valid?(body) do
-      body
-      |> String.slice(0, @body_excerpt_chars)
-      |> String.replace(~r/\s+/, " ")
-      |> String.trim()
-    else
-      "(non-text body)"
-    end
-  end
-
-  defp body_excerpt(_other), do: ""
 
   defp build_headers(username, password, additional_headers)
        when is_binary(username) and is_binary(password) do

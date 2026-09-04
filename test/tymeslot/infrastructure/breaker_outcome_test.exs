@@ -101,6 +101,17 @@ defmodule Tymeslot.Infrastructure.BreakerOutcomeTest do
       assert BreakerOutcome.classify({:error, :rate_limited}) == :failure
       assert BreakerOutcome.classify({:error, :service_unavailable}) == :failure
     end
+
+    test "classifies :server_error as :failure, matching the 5xx status form" do
+      # The name the calendar clients (`CalDAV.Http`, `Exchange.Client`) give a
+      # 5xx once they have classified it, so it has to score the same as the
+      # raw status the line below scores.
+      assert BreakerOutcome.classify({:error, :server_error}) == :failure
+      assert BreakerOutcome.classify({:error, {:http_error, 500, "body"}}) == :failure
+
+      assert BreakerOutcome.classify({:error, :server_error, "The server reported an error"}) ==
+               :failure
+    end
   end
 
   describe "permanent_credential_error?/1" do

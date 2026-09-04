@@ -21,6 +21,36 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
     attendee_message: nil
   }
 
+  describe "build_event_data/1 event status" do
+    test "a booking held for manual approval is written as tentative" do
+      event = CalendarEventBuilder.build_event_data(held_meeting())
+
+      assert event.status == :tentative
+      # A tentative event must still occupy the slot, or the availability grid
+      # would keep offering a time the host is deciding on.
+      assert event.transparency == :opaque
+    end
+
+    test "any other booking is written as confirmed" do
+      for status <- ["confirmed", "pending", nil] do
+        event =
+          CalendarEventBuilder.build_event_data(Map.put(@base_meeting, :status, status))
+
+        assert event.status == :confirmed, "expected :confirmed for status #{inspect(status)}"
+      end
+    end
+
+    test "a held booking on a show-as-free meeting type stays transparent" do
+      event =
+        CalendarEventBuilder.build_event_data(Map.put(held_meeting(), :show_as_free, true))
+
+      assert event.status == :tentative
+      assert event.transparency == :transparent
+    end
+  end
+
+  defp held_meeting, do: Map.put(@base_meeting, :status, "awaiting_approval")
+
   describe "build_event_data/1" do
     test "maps all standard fields from the meeting" do
       meeting = @base_meeting

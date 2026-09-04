@@ -16,6 +16,11 @@ msgstr ""
 msgid "%{label} before"
 msgstr "за %{label} до"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} хв"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "1 hour before"
@@ -35,11 +40,6 @@ msgstr "2. Виберіть конкретний календар"
 #, elixir-autogen, elixir-format
 msgid "30 min. before"
 msgstr "за 30 хв до"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Add"
-msgstr "Додати"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
@@ -67,6 +67,11 @@ msgstr "Додати запитання"
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
 msgstr "Додайте до трьох електронних листів із нагадуванням для цього типу зустрічі. Рекомендуємо використовувати лише один."
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Додати"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/reminder_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
@@ -82,10 +87,30 @@ msgstr "Усі зміни збережено"
 msgid "An error occurred"
 msgstr "Сталася помилка"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Answer within"
+msgstr "Відповісти протягом"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Approval"
+msgstr "Підтвердження"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
 msgid "Ask bookers extra questions during the booking flow."
 msgstr "Ставте додаткові запитання під час процесу бронювання."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Availability"
+msgstr "Доступність"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Between %{min} and %{max} participants per slot."
+msgstr "Від %{min} до %{max} учасників на слот."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -99,6 +124,21 @@ msgstr "Місце збереження бронювань"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
+msgid "Booking Rules"
+msgstr "Правила бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
+#, elixir-autogen, elixir-format
+msgid "Booking limits"
+msgstr "Ліміти бронювань"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking slot interval"
+msgstr "Інтервал між слотами"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
 msgid "Brief description of this meeting type"
 msgstr "Короткий опис цього типу зустрічі"
 
@@ -107,16 +147,21 @@ msgstr "Короткий опис цього типу зустрічі"
 msgid "Calendar availability"
 msgstr "Доступність у календарі"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Custom"
+msgstr "Скасувати свій варіант"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
 #, elixir-autogen, elixir-format
-msgid "Cancel Custom"
-msgstr "Скасувати свій варіант"
+msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
+msgstr "Обмежте, скільки бронювань цього типу ви приймаєте. Залиште поле порожнім, щоб не встановлювати ліміт."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -128,6 +173,11 @@ msgstr "Зміна типу призведе до видалення ваших 
 msgid "Choose an icon to represent this meeting type, or select \"No Icon\" for no visual indicator."
 msgstr "Виберіть піктограму для цього типу зустрічі або натисніть «Без піктограми», щоб не використовувати візуальних індикаторів."
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Choose the hours this meeting type can be booked in. The default schedule applies unless you pick another one."
+msgstr "Виберіть години, у які можна бронювати цей тип зустрічі. Типовий розклад застосовується, якщо ви не виберете інший."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose where new bookings for this meeting type should be created."
@@ -137,6 +187,16 @@ msgstr "Виберіть, де створюватимуться нові бро�
 #, elixir-autogen, elixir-format
 msgid "Complete the form to save"
 msgstr "Заповніть форму, щоб зберегти"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm each booking myself"
+msgstr "Підтверджувати кожне бронювання особисто"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
+msgstr "Підключіть Stripe на сторінці %{payments_link}, щоб стягувати плату за цей тип зустрічі."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -168,10 +228,20 @@ msgstr "Власні запитання для бронювання доступ
 msgid "Custom booking questions are not available on your current plan."
 msgstr "Власні запитання для бронювання недоступні у вашому поточному тарифі."
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom interval (minutes)"
+msgstr "Власний інтервал (хвилини)"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
 msgid "Custom questions"
 msgstr "Власні запитання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom…"
+msgstr "Власний…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -184,6 +254,11 @@ msgstr "Дата"
 msgid "Days"
 msgstr "Дні"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Default (%{name})"
+msgstr "Типовий (%{name})"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -193,6 +268,11 @@ msgstr "Видалити"
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Опис (необов’язково)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Деталі"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -230,15 +310,15 @@ msgstr "Перша доступна дата для бронювання."
 msgid "Earliest time the booker may choose."
 msgstr "Перший доступний час для бронювання."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
-#, elixir-autogen, elixir-format
-msgid "Edit"
-msgstr "Редагувати"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Edit question"
 msgstr "Редагувати запитання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr "Редагувати"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
@@ -250,10 +330,26 @@ msgstr "Введіть тривалість від %{min} до %{max} хвили
 msgid "Enter a valid price for this meeting type"
 msgstr "Введіть коректну ціну для цього типу зустрічі"
 
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a valid price"
+msgstr "Введіть коректну ціну"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a whole number of hours, or leave blank to use the default."
+msgstr "Введіть ціле число годин або залиште порожнім, щоб використати типове значення."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to save meeting type"
 msgstr "Не вдалося зберегти тип зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Group bookings"
+msgstr "Групові бронювання"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex
 #, elixir-autogen, elixir-format
@@ -265,6 +361,11 @@ msgstr "Гості"
 msgid "Help text (optional)"
 msgstr "Текст підказки (необов’язково)"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hide from public booking page"
+msgstr "Приховати з публічної сторінки бронювання"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Highest value the booker may enter."
@@ -275,15 +376,30 @@ msgstr "Максимальне значення, яке можна ввести 
 msgid "Hours"
 msgstr "Години"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "How far apart booking start times are offered. Leave as default to match the meeting length."
+msgstr "Наскільки далеко один від одного пропонуються часи початку. За замовчуванням — як тривалість зустрічі."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Icon"
 msgstr "Піктограма"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer in time the request lapses, the slot is released, and the invitee is told. Silence never confirms a booking. Leave blank to use %{default} hours."
+msgstr "Якщо ви не відповісте вчасно, запит втратить силу, час буде звільнено, а гостя повідомлено. Мовчання ніколи не підтверджує бронювання. Залиште порожнім для %{default} годин."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "In-Person"
 msgstr "Особиста зустріч"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
+#, elixir-autogen, elixir-format
+msgid "Invitees get a \"request received\" email instead of a confirmation, and the slot is held so nobody else can take it. They get the confirmation and the calendar invite once you accept."
+msgstr "Замість підтвердження гості отримують лист «запит отримано», а час резервується, щоб його ніхто інший не зайняв. Підтвердження та запрошення в календар надходять, щойно ви погодитесь."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -305,10 +421,30 @@ msgstr "Останній доступний час для бронювання."
 msgid "Let invitees add up to %{max_guests} guests to this meeting"
 msgstr "Дозволити запрошеним додавати до %{max_guests} гостей на цю зустріч"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Let multiple people book the same time slot"
+msgstr "Дозвольте кільком людям бронювати той самий часовий слот"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Location & Calendar"
+msgstr "Місце та календар"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Місце"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Lowest value the booker may enter."
 msgstr "Мінімальне значення, яке можна ввести під час бронювання."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Matching the meeting length, times will be offered every %{minutes} minutes: %{examples}…"
+msgstr "Відповідно до тривалості зустрічі час початку пропонуватиметься кожні %{minutes} хв: %{examples}…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -371,6 +507,11 @@ msgstr "Для цього облікового запису не знайден�
 msgid "No custom questions yet"
 msgstr "Поки немає власних запитань"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Без обмежень"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "No reminders configured."
@@ -381,15 +522,25 @@ msgstr "Нагадування не налаштовано."
 msgid "No video integrations configured."
 msgstr "Інтеграції з відеосервісами не налаштовано."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot/utils/form_helpers.ex
 #, elixir-autogen, elixir-format
-msgid "Note"
-msgstr "Примітка"
+msgid "None of the calendars you selected for this account can accept bookings. Update your calendar selection in Integration settings, or choose a different account."
+msgstr "Жоден із календарів, вибраних для цього облікового запису, не може приймати бронювання. Змініть вибір календарів у налаштуваннях інтеграцій або виберіть інший обліковий запис."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "None of the calendars you selected for this account can accept bookings."
+msgstr "Жоден із календарів, вибраних для цього облікового запису, не може приймати бронювання."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Note for acknowledgement"
 msgstr "Примітка для підтвердження"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#, elixir-autogen, elixir-format
+msgid "Note"
+msgstr "Примітка"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -407,16 +558,61 @@ msgstr "Варіант %{number}"
 msgid "Options"
 msgstr "Варіанти"
 
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit cannot exceed %{max}"
+msgstr "Ліміт учасників не може перевищувати %{max}"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be a valid number"
+msgstr "Ліміт учасників має бути дійсним числом"
+
+#: lib/tymeslot/meeting_types/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit must be at least %{min}"
+msgstr "Ліміт учасників має бути щонайменше %{min}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Participant limit"
+msgstr "Ліміт учасників"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Платежі"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "На день"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "На місяць"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "На тиждень"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Phone"
 msgstr "Телефон"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Please select a calendar account"
+msgstr "Виберіть обліковий запис календаря"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Please select a target calendar"
+msgstr "Виберіть цільовий календар"
 
 #: lib/tymeslot/utils/form_helpers.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
@@ -428,6 +624,11 @@ msgstr "Виберіть відеосервіс для відеозустріч�
 #, elixir-autogen, elixir-format
 msgid "Price (%{currency})"
 msgstr "Ціна (%{currency})"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Questions"
+msgstr "Запитання"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -475,6 +676,11 @@ msgstr "Вимагати оплату за цей тип зустрічі"
 msgid "Required"
 msgstr "Обов’язково"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Same as meeting length"
+msgstr "Як тривалість зустрічі"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Save question"
@@ -485,6 +691,16 @@ msgstr "Зберегти запитання"
 msgid "Saving..."
 msgstr "Збереження..."
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule updated and saved"
+msgstr "Розклад оновлено та збережено"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule"
+msgstr "Розклад"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Select Video Provider"
@@ -494,6 +710,26 @@ msgstr "Вибрати відеосервіс"
 #, elixir-autogen, elixir-format
 msgid "Select a valid reminder unit"
 msgstr "Виберіть коректну одиницю часу для нагадування"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Selected calendar account is invalid"
+msgstr "Вибраний обліковий запис календаря недійсний"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Selected calendar is not available for this account"
+msgstr "Вибраний календар недоступний для цього облікового запису"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Selected schedule is not one of yours"
+msgstr "Обраний розклад вам не належить"
+
+#: lib/tymeslot/utils/form_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Selected video provider is invalid or inactive"
+msgstr "Вибраний провайдер відеозв'язку недійсний або неактивний"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -510,6 +746,11 @@ msgstr "Короткий текст"
 #, elixir-autogen, elixir-format
 msgid "Show these bookings as free on my calendar"
 msgstr "Показувати ці бронювання як вільний час у моєму календарі"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown below the question - use it to clarify what you're asking or give an example."
+msgstr "Відображається під запитанням - використовуйте це поле, щоб уточнити запитання або навести приклад."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -553,6 +794,26 @@ msgstr "Таке нагадування вже існує"
 msgid "Time"
 msgstr "Час"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Times will be offered every %{minutes} minutes: %{examples}…"
+msgstr "Час початку пропонуватиметься кожні %{minutes} хв: %{examples}…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
+#, elixir-autogen, elixir-format
+msgid "Too many changes - saving shortly…"
+msgstr "Забагато змін - збереження за мить…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require payment."
+msgstr "Вимкніть групові бронювання, щоб вимагати оплату."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to enable group bookings."
+msgstr "Вимкніть оплату, щоб увімкнути групові бронювання."
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Type"
@@ -576,8 +837,23 @@ msgstr "Незбережені зміни"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
+msgid "Update your calendar selection"
+msgstr "Змініть вибір календарів"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
 msgid "Video Meeting"
 msgstr "Відеозустріч"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Visibility"
+msgstr "Видимість"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "When on, this meeting type is reachable only through its direct link."
+msgstr "Якщо ввімкнено, цей тип зустрічі буде доступний лише за прямим посиланням."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -610,217 +886,20 @@ msgstr "Напр., введіть офіційну назву вашої ком�
 msgid "e.g., Quick Chat"
 msgstr "Напр., коротка розмова"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
 #, elixir-autogen, elixir-format
-msgid "required"
-msgstr "обов'язково"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
-msgstr "Підключіть Stripe на сторінці %{payments_link}, щоб стягувати плату за цей тип зустрічі."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Shown below the question - use it to clarify what you're asking or give an example."
-msgstr "Відображається під запитанням - використовуйте це поле, щоб уточнити запитання або навести приклад."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
-#, elixir-autogen, elixir-format
-msgid "Too many changes - saving shortly…"
-msgstr "Забагато змін - збереження за мить…"
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Enter a valid price"
-msgstr "Введіть коректну ціну"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "None of the calendars you selected for this account can accept bookings."
-msgstr "Жоден із календарів, вибраних для цього облікового запису, не може приймати бронювання."
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "None of the calendars you selected for this account can accept bookings. Update your calendar selection in Integration settings, or choose a different account."
-msgstr "Жоден із календарів, вибраних для цього облікового запису, не може приймати бронювання. Змініть вибір календарів у налаштуваннях інтеграцій або виберіть інший обліковий запис."
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Please select a calendar account"
-msgstr "Виберіть обліковий запис календаря"
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Please select a target calendar"
-msgstr "Виберіть цільовий календар"
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Selected calendar account is invalid"
-msgstr "Вибраний обліковий запис календаря недійсний"
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Selected calendar is not available for this account"
-msgstr "Вибраний календар недоступний для цього облікового запису"
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Selected video provider is invalid or inactive"
-msgstr "Вибраний провайдер відеозв'язку недійсний або неактивний"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Update your calendar selection"
-msgstr "Змініть вибір календарів"
+msgid "hour"
+msgid_plural "hours"
+msgstr[0] "година"
+msgstr[1] "години"
+msgstr[2] "годин"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "or choose a different account."
 msgstr "або виберіть інший обліковий запис."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
-msgid "Group bookings"
-msgstr "Групові бронювання"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Let multiple people book the same time slot"
-msgstr "Дозвольте кільком людям бронювати той самий часовий слот"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Participant limit"
-msgstr "Ліміт учасників"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Вимкніть групові бронювання, щоб вимагати оплату."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Вимкніть оплату, щоб увімкнути групові бронювання."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
-#, elixir-autogen, elixir-format
-msgid "Booking limits"
-msgstr "Ліміти бронювань"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
-#, elixir-autogen, elixir-format
-msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
-msgstr "Обмежте, скільки бронювань цього типу ви приймаєте. Залиште поле порожнім, щоб не встановлювати ліміт."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
-#, elixir-autogen, elixir-format
-msgid "No limit"
-msgstr "Без обмежень"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
-#, elixir-autogen, elixir-format
-msgid "Per day"
-msgstr "На день"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
-#, elixir-autogen, elixir-format
-msgid "Per month"
-msgstr "На місяць"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex
-#, elixir-autogen, elixir-format
-msgid "Per week"
-msgstr "На тиждень"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Between %{min} and %{max} participants per slot."
-msgstr "Від %{min} до %{max} учасників на слот."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#, elixir-autogen, elixir-format
-msgid "Booking Rules"
-msgstr "Правила бронювання"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#, elixir-autogen, elixir-format
-msgid "Details"
-msgstr "Деталі"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "Hide from public booking page"
-msgstr "Приховати з публічної сторінки бронювання"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
-#, elixir-autogen, elixir-format
-msgid "Location"
-msgstr "Місце"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#, elixir-autogen, elixir-format
-msgid "Location & Calendar"
-msgstr "Місце та календар"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
-#, elixir-autogen, elixir-format
-msgid "Questions"
-msgstr "Запитання"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "Visibility"
-msgstr "Видимість"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
-#, elixir-autogen, elixir-format
-msgid "When on, this meeting type is reachable only through its direct link."
-msgstr "Якщо ввімкнено, цей тип зустрічі буде доступний лише за прямим посиланням."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
-#, elixir-autogen, elixir-format
-msgid "Availability"
-msgstr "Доступність"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
-#, elixir-autogen, elixir-format
-msgid "Choose the hours this meeting type can be booked in. The default schedule applies unless you pick another one."
-msgstr "Виберіть години, у які можна бронювати цей тип зустрічі. Типовий розклад застосовується, якщо ви не виберете інший."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
-#, elixir-autogen, elixir-format
-msgid "Default (%{name})"
-msgstr "Типовий (%{name})"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/availability_section.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule"
-msgstr "Розклад"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule updated and saved"
-msgstr "Розклад оновлено та збережено"
-
-#: lib/tymeslot/utils/form_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "Selected schedule is not one of yours"
-msgstr "Обраний розклад вам не належить"
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Participant limit cannot exceed %{max}"
-msgstr "Ліміт учасників не може перевищувати %{max}"
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Participant limit must be a valid number"
-msgstr "Ліміт учасників має бути дійсним числом"
-
-#: lib/tymeslot/meeting_types/input_validation.ex
-#, elixir-autogen, elixir-format
-msgid "Participant limit must be at least %{min}"
-msgstr "Ліміт учасників має бути щонайменше %{min}"
+msgid "required"
+msgstr "обов'язково"

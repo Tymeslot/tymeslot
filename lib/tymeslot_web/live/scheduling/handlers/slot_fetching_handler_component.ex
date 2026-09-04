@@ -77,6 +77,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
     # drift from the duration the domain will validate against.
     duration_to_fetch = AvailabilityHelpers.duration_minutes(socket)
 
+    # `:expanded_hour` is deliberately left untouched here. Resetting it on
+    # every fetch would spring a deliberately collapsed `:none` back open on
+    # a refetch the booker did not ask for (a timezone change, a lost-slot
+    # retry): those call this function for the *same* date, and it has
+    # nothing to do with the booker's previous hour selection. An explicit
+    # date pick — the one case that must reset it, since the open hour would
+    # describe a grid that no longer applies — resets it at the point the
+    # booker makes that choice, in `handle_schedule_date_selection/2`.
     case AvailabilityHelpers.get_available_slots(
            date,
            duration_to_fetch,
@@ -89,6 +97,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
         socket =
           socket
           |> assign(:available_slots, slots)
+          |> assign(:slot_interval_minutes, AvailabilityHelpers.slot_interval_minutes(socket))
+          |> assign(:duration_minutes, duration_to_fetch)
           |> assign(:loading_slots, false)
           |> assign(:calendar_error, nil)
 
@@ -101,6 +111,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
         socket =
           socket
           |> assign(:available_slots, [])
+          |> assign(:slot_interval_minutes, AvailabilityHelpers.slot_interval_minutes(socket))
+          |> assign(:duration_minutes, duration_to_fetch)
           |> assign(:loading_slots, false)
           # Deliberately says nothing about *why*. This is the most
           # conversion-critical screen in the product, and a booker who has

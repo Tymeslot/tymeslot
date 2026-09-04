@@ -7,8 +7,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Demo
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Themes.Shared.BookingText
+  alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.FlagHelpers
@@ -47,7 +50,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
         <div class="slide active">
           <div class="slide-content">
             <h1 class="slide-title">
-              {dgettext("booking", "Schedule with %{name}", name: display_name(@organizer_profile))}
+              {BookingText.heading(@organizer_profile, :rhythm, display_name(@organizer_profile))}
             </h1>
 
             <div class="organizer-profile">
@@ -61,10 +64,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               </div>
               <div class="organizer-info">
                 <p class="organizer-greeting">
-                  {dgettext("booking", "Hi! I'm %{name}.", name: display_name(@organizer_profile))}
+                  {BookingText.greeting(@organizer_profile, display_name(@organizer_profile))}
                 </p>
                 <p class="organizer-instruction">
-                  {dgettext("booking", "Pick an option below.")}
+                  {BookingText.instruction(@organizer_profile)}
                 </p>
               </div>
             </div>
@@ -97,6 +100,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                       <div class="duration-info">
                         <div class="duration-name">
                           {meeting_type.name}
+                          <ApprovalNotice.pill :if={Approval.required?(meeting_type)} />
                         </div>
                         <div class="duration-time">
                           {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}

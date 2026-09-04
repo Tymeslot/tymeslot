@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
+  alias TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemePreview
   alias TymeslotWeb.Live.Scheduling.PreviewMode
@@ -212,6 +213,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
             </div>
           <% end %>
         </div>
+
+        <.live_component
+          module={BookingTextForm}
+          id="booking-text-form"
+          profile={@profile}
+        />
 
         <div class="mt-16 bg-tymeslot-50 border-2 border-dashed border-tymeslot-200 rounded-token-3xl p-8 relative overflow-hidden group">
           <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-700">

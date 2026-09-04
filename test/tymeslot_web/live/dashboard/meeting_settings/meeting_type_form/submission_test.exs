@@ -8,7 +8,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
   defp base_assigns(overrides) do
     Map.merge(
       %{
-        form_data: %{"name" => "Quick Chat", "duration" => "30", "description" => "Hi"},
+        form_data: %{
+          "name" => "Quick Chat",
+          "duration" => "30",
+          "slot_interval" => "15",
+          "description" => "Hi"
+        },
         type: %{is_active: true},
         meeting_mode: "personal",
         selected_icon: "hero-bolt",
@@ -33,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
 
       assert params["name"] == "Quick Chat"
       assert params["duration"] == "30"
+      assert params["slot_interval"] == "15"
       assert params["description"] == "Hi"
       assert params["icon"] == "hero-bolt"
       assert params["is_active"] == "true"
@@ -41,6 +47,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
       assert params["target_calendar_id"] == "cal-1"
       assert params["reminder_config"] == [%{"value" => "30", "unit" => "minutes"}]
       assert params["custom_fields"] == []
+    end
+
+    test "represents a missing slot_interval as an empty string" do
+      params =
+        Submission.build_params(
+          base_assigns(%{
+            form_data: %{"name" => "Quick Chat", "duration" => "30", "description" => "Hi"}
+          })
+        )
+
+      assert params["slot_interval"] == ""
     end
 
     test "represents an unset integration id as an empty string" do

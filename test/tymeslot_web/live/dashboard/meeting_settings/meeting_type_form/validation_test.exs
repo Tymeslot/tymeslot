@@ -158,6 +158,48 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ValidationTest d
       assert errors[:duration] == "Duration must be at least 5 minutes"
     end
 
+    test "validates slot_interval field and stores sanitised value on success" do
+      {data, errors} =
+        Validation.validate_and_update_field(
+          "slot_interval",
+          "15",
+          @metadata,
+          %{},
+          %{}
+        )
+
+      assert data["slot_interval"] == "15"
+      assert errors == %{}
+    end
+
+    test "validates slot_interval field and accepts a blank value" do
+      {data, errors} =
+        Validation.validate_and_update_field(
+          "slot_interval",
+          "",
+          @metadata,
+          %{},
+          %{}
+        )
+
+      assert data["slot_interval"] == ""
+      assert errors == %{}
+    end
+
+    test "validates slot_interval field and stores error on failure" do
+      {data, errors} =
+        Validation.validate_and_update_field(
+          "slot_interval",
+          "4",
+          @metadata,
+          %{},
+          %{}
+        )
+
+      assert data == %{}
+      assert errors[:slot_interval] == "Slot interval must be at least 5 minutes"
+    end
+
     test "validates description field on success" do
       {data, errors} =
         Validation.validate_and_update_field(

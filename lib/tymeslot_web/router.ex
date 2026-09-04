@@ -119,6 +119,18 @@ defmodule TymeslotWeb.Router do
     get "/", RootRedirectController, :index
   end
 
+  # Answering a booking request from the link in the host's email. No session
+  # is required — the signed token in the path is the authorisation — but
+  # nothing is decided by loading the page; see `TymeslotWeb.MeetingRequestLive`.
+  scope "/", TymeslotWeb do
+    pipe_through :browser
+
+    live_session :meeting_request,
+      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
+      live "/meeting-request/:token", MeetingRequestLive, :show
+    end
+  end
+
   # =============================================================================
   # Authentication Routes
   # =============================================================================
@@ -298,8 +310,14 @@ defmodule TymeslotWeb.Router do
         TymeslotWeb.Hooks.AppLocaleHook,
         TymeslotWeb.Hooks.EnsureAdminHook
       ] do
-      live "/", AdminLive, :settings
-      live "/settings", AdminLive, :settings
+      # One route per tab; `TymeslotWeb.AdminLive.Tabs` is the list these must
+      # match. `/settings` is kept as an alias for the old single-tab URL so
+      # existing bookmarks still land somewhere sensible.
+      live "/", AdminLive, :authentication
+      live "/settings", AdminLive, :authentication
+      live "/authentication", AdminLive, :authentication
+      live "/email", AdminLive, :email
+      live "/general", AdminLive, :general
       live "/users", AdminLive, :users
     end
   end

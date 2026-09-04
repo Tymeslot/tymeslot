@@ -14,8 +14,14 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
   2. Traffic actually flows through the proxy
   3. Authentication (if configured) works correctly
 
-  The service returns the origin IP address of the request. When using a proxy,
-  this will be the proxy's external IP, not your direct IP.
+  The service returns the origin IP address the request arrived from. That
+  address is the whole verification: a request that reaches the destination
+  proves only that the destination is reachable, since a configuration bug that
+  drops the proxy connects directly and returns the same 200. So the test URL
+  is fetched twice, once through the proxy and once with it deliberately
+  bypassed, and traffic is reported as flowing through the proxy only when the
+  two origins differ. On a deployment whose firewall permits nothing but the
+  proxy the direct fetch fails outright, which is proof of the same thing.
 
   ## Security Considerations
 
@@ -58,7 +64,8 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
   Tests:
   1. Proxy configuration is loaded
   2. Proxy is reachable
-  3. Traffic actually flows through the proxy (using httpbin or similar)
+  3. Traffic actually flows through the proxy, by comparing the origin the test
+     URL reports through the proxy against the one it reports directly
 
   Options:
   - `:test_url` - URL to test proxy with (default: httpbin.org/ip, must be HTTPS)
@@ -181,7 +188,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
     # Make request through HTTPClient which will use the proxy
     case test_request(test_url, timeout: timeout) do
       {:ok, response} ->
-        handle_successful_response(response, proxy_config, test_url, result)
+        handle_successful_response(response, proxy_config, test_url, timeout, result)
 
       {:error, error} ->
         error_msg = format_error_message(error)
@@ -201,14 +208,13 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
     end
   end
 
-  defp handle_successful_response(response, proxy_config, test_url, result) do
+  defp handle_successful_response(response, proxy_config, test_url, timeout, result) do
     if response.status in 200..299 do
       Logger.info("Proxy connectivity verified", status: response.status)
 
       result = %{
         result
         | proxy_reachable: true,
-          traffic_flows_through_proxy: true,
           details:
             Map.merge(result.details, %{
               status: response.status,
@@ -217,12 +223,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
             })
       }
 
-      # Try to parse response body to confirm proxy usage (if using httpbin)
-      if String.contains?(test_url, "httpbin") do
-        verify_httpbin_response(response, result)
-      else
-        result
-      end
+      confirm_traffic_flows(response, test_url, timeout, result)
     else
       error = "Proxy reachable but returned status #{response.status}"
       Logger.warning(error)
@@ -240,22 +241,115 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
     end
   end
 
-  defp verify_httpbin_response(response, result) do
-    case Jason.decode(response.body) do
-      {:ok, %{"origin" => origin}} ->
-        Logger.info("Request origin IP verified", origin_ip: origin)
-        %{result | details: Map.put(result.details, :origin_ip, origin)}
+  # Reaching the destination is not evidence that the proxy carried the
+  # request. A bug that drops the proxy options connects directly and still
+  # returns 200, so a check that stopped at the status would report a green
+  # `traffic_flows_through_proxy` for exactly the misconfiguration it exists to
+  # find. The one thing that separates the two cases is the address the
+  # destination saw the request arrive from, so the same URL is fetched again
+  # with the proxy deliberately bypassed and the two origins compared.
+  defp confirm_traffic_flows(response, test_url, timeout, result) do
+    case read_origin(response.body) do
+      {:ok, proxied_origin} ->
+        Logger.info("Request origin IP verified", origin_ip: proxied_origin)
 
-      _result ->
-        result
+        result = %{result | details: Map.put(result.details, :origin_ip, proxied_origin)}
+        compare_against_direct(proxied_origin, test_url, timeout, result)
+
+      :error ->
+        add_error(
+          result,
+          "Reached #{test_url} through the proxy, but its response carries no origin " <>
+            "IP address, so there is no way to tell the request apart from a direct one. " <>
+            "Point :proxy_verification_url at an endpoint that echoes the caller's address."
+        )
     end
-  rescue
-    exception ->
-      Logger.warning("Failed to read origin IP from proxy verification response",
-        error: Exception.message(exception)
-      )
+  end
 
-      result
+  defp compare_against_direct(proxied_origin, test_url, timeout, result) do
+    case direct_origin(test_url, timeout) do
+      {:ok, ^proxied_origin} ->
+        add_error(
+          result,
+          "Traffic is NOT flowing through the proxy: #{test_url} reports the same origin " <>
+            "(#{proxied_origin}) with the proxy configured as it does with the proxy " <>
+            "bypassed, so the proxy settings are being dropped before the connection."
+        )
+
+      {:ok, direct_origin} ->
+        %{
+          result
+          | traffic_flows_through_proxy: true,
+            details: Map.put(result.details, :direct_origin_ip, direct_origin)
+        }
+
+      # Nothing left this machine directly, so the proxy is the only route out
+      # and the successful proxied request is itself the proof. This is the
+      # normal answer on a deployment whose egress firewall permits the proxy
+      # and nothing else.
+      :unreachable ->
+        %{
+          result
+          | traffic_flows_through_proxy: true,
+            details: Map.put(result.details, :direct_egress, :unreachable)
+        }
+
+      :error ->
+        add_error(
+          result,
+          "Reached #{test_url} through the proxy, but the direct request used to compare " <>
+            "against carries no origin IP address, so the comparison proves nothing."
+        )
+    end
+  end
+
+  # Only a transport error counts as "this machine has no direct route out".
+  # A non-2xx does not: the destination answering us directly at all means the
+  # request left, and it may simply be rate-limiting or blocking this address
+  # while serving the proxy's. Confirming the proxy on that basis would be the
+  # false green this whole comparison exists to remove.
+  defp direct_origin(test_url, timeout) do
+    case test_request(test_url, timeout: timeout, bypass_proxy: true) do
+      {:ok, %{status: status} = response} when status in 200..299 -> read_origin(response.body)
+      {:ok, _non_success} -> :error
+      {:error, _reason} -> :unreachable
+    end
+  end
+
+  # Two shapes of "which address did this arrive from" endpoint: httpbin's
+  # `{"origin": "…"}` JSON, and the bare single-line address that icanhazip and
+  # most internal equivalents return.
+  # The size bound comes first: a body larger than this is not an origin
+  # endpoint's answer whatever else it is, and neither `Jason.decode/1` nor
+  # `String.split/2` should be handed a response that could be tens of
+  # megabytes just to discover that.
+  defp read_origin(body) when is_binary(body) and byte_size(body) <= 4096 do
+    case Jason.decode(body) do
+      {:ok, %{"origin" => origin}} when is_binary(origin) -> parse_origin(origin)
+      _no_origin_field -> parse_origin(body)
+    end
+  end
+
+  defp read_origin(_body), do: :error
+
+  # httpbin reports a comma-separated chain when the request passed through
+  # more than one hop; the first entry is where the chain started. The length
+  # bound is what keeps an arbitrary response body out of `parse_address/1`:
+  # 45 characters is the longest an IPv6 address can be.
+  defp parse_origin(origin) do
+    candidate = origin |> String.split(",") |> List.first() |> String.trim()
+
+    with true <- byte_size(candidate) <= 45,
+         {:ok, _address} <- :inet.parse_address(String.to_charlist(candidate)) do
+      {:ok, candidate}
+    else
+      _not_an_address -> :error
+    end
+  end
+
+  defp add_error(result, error) do
+    Logger.warning(error)
+    %{result | errors: [error | result.errors]}
   end
 
   defp test_request(url, opts) do

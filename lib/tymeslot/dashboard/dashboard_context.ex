@@ -8,7 +8,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   alias Tymeslot.Agenda
   alias Tymeslot.Infrastructure.DashboardCache
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.MeetingTypes
@@ -163,7 +163,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
       end)
 
     bookable_calendar_integrations =
-      Enum.reject(calendar_integrations, &ProviderConfig.subscription?(&1.provider))
+      BookingEligibility.filter_bookable(calendar_integrations)
 
     %{
       has_calendar: bookable_calendar_integrations != [],

@@ -15,28 +15,59 @@ defmodule Tymeslot.Webhooks.SsrfValidator do
   hosts. When set, the guard falls back to syntax/scheme-only validation, the
   same posture used outside production.
 
-  Note: a residual DNS-rebinding TOCTOU window exists between `check/1`
-  (and each redirect-hop check in `Tymeslot.Webhooks.HttpDelivery`) and the
-  TCP connect Finch performs afterwards, which re-resolves DNS independently.
-  A short-TTL record can answer public here and private by the time Finch
-  connects. See `deferred/2026-08-30-webhook-ssrf-dns-rebinding-toctou.md` for
-  the tracked fix (connection-IP pinning).
+  `check_pinned/1` returns the addresses it approved so that
+  `Tymeslot.Webhooks.HttpDelivery` can connect to one of them directly rather
+  than letting Finch resolve the hostname a second time. That second resolution
+  was the DNS-rebinding window: a short-TTL record could answer public here and
+  loopback by the time the socket opened. See
+  `Tymeslot.Security.ConnectionPinning` for the cases where pinning does not
+  apply and the request still travels by hostname.
   """
 
   alias Tymeslot.Security.{DnsResolution, UrlValidation}
 
   @spec check(String.t()) :: :ok | {:error, atom() | String.t()}
   def check(url) do
+    case check_pinned(url) do
+      {:ok, _addresses} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Same verdict as `check/1`, but returns the addresses the check approved so
+  the delivery can be pinned to one of them.
+
+  `Tymeslot.Webhooks.HttpDelivery` uses this for both the initial URL and every
+  redirect hop. An empty list means the URL was permitted on syntax alone
+  (non-production, or the operator opt-out) and there is nothing to pin to.
+  """
+  @spec check_pinned(String.t()) :: {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+  def check_pinned(url) do
     if enforce?() do
       with :ok <-
              UrlValidation.validate_http_url(url,
                block_private_ips: true,
                enforce_https: true
              ) do
-        dns_resolver().check_private_ip(url, [])
+        resolve_public(dns_resolver(), url)
       end
     else
-      UrlValidation.validate_http_url(url)
+      with :ok <- UrlValidation.validate_http_url(url), do: {:ok, []}
+    end
+  end
+
+  # A resolver that cannot hand back its addresses (a test double, typically)
+  # still gets to make the verdict; the delivery simply goes unpinned.
+  # `Code.ensure_loaded?/1` first: `function_exported?/3` answers false for a
+  # module the VM has not loaded yet, which in dev and test is most of them.
+  @spec resolve_public(module(), String.t()) ::
+          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+  defp resolve_public(resolver, url) do
+    if Code.ensure_loaded?(resolver) and function_exported?(resolver, :resolve_public, 2) do
+      resolver.resolve_public(url, [])
+    else
+      with :ok <- resolver.check_private_ip(url, []), do: {:ok, []}
     end
   end
 

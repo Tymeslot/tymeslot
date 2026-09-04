@@ -31,6 +31,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListPanels do
               {dgettext("dashboard_bookings", "No past meetings")}
             <% "cancelled" -> %>
               {dgettext("dashboard_bookings", "No cancelled meetings")}
+            <% "awaiting_approval" -> %>
+              {dgettext("dashboard_bookings", "Nothing waiting on you")}
           <% end %>
         </h3>
         <p class="text-tymeslot-500 font-medium text-lg leading-relaxed">
@@ -46,6 +48,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListPanels do
               {dgettext(
                 "dashboard_bookings",
                 "You don't have any cancelled appointments to show."
+              )}
+            <% "awaiting_approval" -> %>
+              {dgettext(
+                "dashboard_bookings",
+                "Booking requests you haven't answered yet will appear here."
               )}
           <% end %>
         </p>

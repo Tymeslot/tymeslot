@@ -99,6 +99,35 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       when reason in [:network_error, :server_error, :server_unresponsive],
       do: :network
 
+  # Not `:network`, though it is a transport failure: the category decides what
+  # the reader is told to do next, and nothing about the network or the URL is
+  # wrong here. It is a configuration problem, and on a provider whose form
+  # offers a verification toggle it is one the reader can fix without leaving
+  # the page.
+  def categorize_error(:tls_error), do: :config
+
+  # EWS names its failures in its own vocabulary rather than through an HTTP
+  # status, so an Exchange failure arrives as `{:response_code, code}`. Only
+  # the two an operator actually hits are named: a mailbox the account cannot
+  # read, and one that is not there. Everything else falls through to
+  # `:unknown` deliberately — a category is a promise about what to do next,
+  # and there is nothing to say about a code we have no advice for.
+  def categorize_error({:response_code, "ErrorAccessDenied"}), do: :permission
+  def categorize_error({:response_code, "ErrorNonExistentMailbox"}), do: :config
+
+  # The one Exchange failure the provider states itself rather than relaying:
+  # the integration names no address `GetUserAvailability` can be addressed to,
+  # which is a setting the account owner can fill in and so the same category
+  # the mailbox that is not there gets.
+  #
+  # Its two siblings, `:no_response_messages` and `:no_response_code`, stay
+  # `:unknown` on purpose. Both mean a well-formed response stated no outcome
+  # at all — a reverse proxy answering for EWS, or a server that could not use
+  # the time-zone block — so there is no setting to point at and nothing to say
+  # beyond that something unexpected happened and the read was refused rather
+  # than answered empty.
+  def categorize_error(:no_mailbox_address), do: :config
+
   def categorize_error(_error), do: :unknown
 
   @doc """
@@ -126,6 +155,18 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       "dashboard_calendar_providers",
       "Connected to %{url} and your credentials were accepted, but no calendar collection was found. Enter the full URL of your calendar collection, as shown in your calendar server's settings.",
       url: url
+    )
+  end
+
+  # The sentence a refused TLS certificate gets, written once here. Both
+  # surfaces that report a connection failure read it from this function —
+  # `classify_and_format/3` on the discovery path and
+  # `ErrorHandler.sanitize_error_message/2` on the creation probe — so the two
+  # cannot describe the same failure differently.
+  def specific_message(:tls_error, _provider) do
+    dgettext(
+      "dashboard_calendar_providers",
+      "The server's TLS certificate was rejected. If it is self-signed or issued by an internal certificate authority, turn off certificate verification."
     )
   end
 

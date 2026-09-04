@@ -16,8 +16,8 @@ defmodule Tymeslot.Bookings.Policy do
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
@@ -40,12 +40,16 @@ defmodule Tymeslot.Bookings.Policy do
           required(:buffer_minutes) => integer(),
           required(:min_advance_hours) => integer(),
           required(:max_advance_booking_days) => integer(),
-          required(:owner_timezone) => String.t()
+          required(:owner_timezone) => String.t(),
+          required(:slot_interval_minutes) => pos_integer() | nil
         }
   def scheduling_config(organizer_user_id \\ nil, meeting_type \\ nil)
 
   def scheduling_config(nil, _meeting_type) do
-    Map.put(policy_values(nil), :owner_timezone, Profiles.get_default_timezone())
+    nil
+    |> policy_values()
+    |> Map.put(:owner_timezone, Profiles.get_default_timezone())
+    |> Map.put(:slot_interval_minutes, nil)
   end
 
   def scheduling_config(organizer_user_id, meeting_type) do
@@ -55,7 +59,25 @@ defmodule Tymeslot.Bookings.Policy do
     |> resolve_schedule(meeting_type)
     |> policy_values()
     |> Map.put(:owner_timezone, settings.timezone)
+    |> Map.put(:slot_interval_minutes, slot_interval_minutes(meeting_type))
   end
+
+  @doc """
+  Resolves a meeting type's booking interval, in minutes.
+
+  NULL means "use the meeting type's own duration" — the default for almost
+  every meeting type, since most have not configured an explicit interval.
+  Nil for a nil meeting type and for meeting-type maps (such as the demo
+  provider's) that omit the key entirely, so this never raises regardless of
+  what shape of meeting type it is handed.
+
+  The single resolver for this value, shared by `scheduling_config/2` here and
+  by `TymeslotWeb.Live.Scheduling.AvailabilityHelpers`, so the display path
+  and the submit path cannot disagree about the interval.
+  """
+  @spec slot_interval_minutes(map() | nil) :: pos_integer() | nil
+  def slot_interval_minutes(%{slot_interval_minutes: minutes}), do: minutes
+  def slot_interval_minutes(_meeting_type), do: nil
 
   # `max_advance_booking_days` is this map's name for the schedule's
   # `advance_booking_days`; every other key is carried through unrenamed.
@@ -117,6 +139,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:attendee_timezone) => String.t(),
           required(:attendee_locale) => String.t(),
           required(:status) => String.t(),
+          required(:approval_requested_at) => DateTime.t() | nil,
+          required(:approval_deadline_at) => DateTime.t() | nil,
           required(:reminders) => [reminder()],
           required(:show_as_free) => boolean(),
           required(:attachments_snapshot) => [map()],
@@ -179,50 +203,86 @@ defmodule Tymeslot.Bookings.Policy do
     # Get reminder configuration
     reminders = get_meeting_reminders(meeting_type_record)
 
+    # A meeting type requiring manual approval holds its bookings instead of
+    # confirming them. The deadline is stamped here, at request time, rather
+    # than derived later: the meeting type's window can be edited — or the type
+    # archived — while a request is outstanding, and the deadline promised to
+    # the invitee must not move underneath them.
+    %{status: status, approval_requested_at: requested_at, approval_deadline_at: deadline_at} =
+      approval_attributes(meeting_type_record, params.start_datetime)
+
     # Build complete meeting attributes map
-    Map.merge(
+    %{
+      uid: meeting_uid,
+      title: "#{meeting_type_name} with #{form_data["name"]}",
+      summary: "#{meeting_type_name} with #{form_data["name"]}",
+      description: (meeting_type_record && meeting_type_record.description) || "",
+      start_time: params.start_datetime,
+      end_time: params.end_datetime,
+      duration: params.duration_minutes,
+      location: nil,
+      meeting_type: meeting_type_name,
+      meeting_type_id: resolved_meeting_type_id,
+      organizer_name: org_name,
+      organizer_email: org_email,
+      organizer_title: nil,
+      organizer_user_id: organizer_user_id,
+      calendar_integration_id: calendar_integration_id,
+      calendar_path: calendar_path,
+      video_integration_id: video_integration_id,
+      attendee_name: form_data["name"],
+      attendee_email: form_data["email"],
+      attendee_message: form_data["message"],
+      attendee_phone: nil,
+      attendee_company: nil,
+      attendee_timezone: Timezones.normalize(user_timezone),
+      attendee_locale: params.attendee_locale || default_locale(),
+      status: status,
+      approval_requested_at: requested_at,
+      approval_deadline_at: deadline_at,
+      reminders: reminders,
+      show_as_free: (meeting_type_record && meeting_type_record.show_as_free) || false,
+      attachments_snapshot: attachments_snapshot(meeting_type_record),
+      custom_fields_snapshot: params.custom_fields_snapshot,
+      custom_field_answers: params.custom_field_answers
+    }
+    |> Map.merge(source_attribution(params))
+    |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
+  end
+
+  # Where the booking came from: the UTM parameters and referrer captured on
+  # the booking page, plus the cookieless key joining this meeting to that
+  # page view in analytics. Grouped so the attributes map states the booking
+  # itself rather than burying it under eight tracking keys.
+  defp source_attribution(%BuildParams{} = params) do
+    %{
+      utm_source: params.utm_source,
+      utm_medium: params.utm_medium,
+      utm_campaign: params.utm_campaign,
+      utm_content: params.utm_content,
+      utm_term: params.utm_term,
+      referrer_host: params.referrer_host,
+      tracking_params: params.tracking_params,
+      visitor_hash: params.visitor_hash
+    }
+  end
+
+  # A booking on a meeting type requiring manual approval is held rather than
+  # confirmed, and carries the clock the host is answering against. Everything
+  # else confirms on submission exactly as before, with all three keys nil.
+  defp approval_attributes(meeting_type_record, start_datetime) do
+    if Approval.required?(meeting_type_record) and not is_nil(start_datetime) do
+      requested_at = DateTime.truncate(Clock.utc_now(), :second)
+
       %{
-        uid: meeting_uid,
-        title: "#{meeting_type_name} with #{form_data["name"]}",
-        summary: "#{meeting_type_name} with #{form_data["name"]}",
-        description: (meeting_type_record && meeting_type_record.description) || "",
-        start_time: params.start_datetime,
-        end_time: params.end_datetime,
-        duration: params.duration_minutes,
-        location: nil,
-        meeting_type: meeting_type_name,
-        meeting_type_id: resolved_meeting_type_id,
-        organizer_name: org_name,
-        organizer_email: org_email,
-        organizer_title: nil,
-        organizer_user_id: organizer_user_id,
-        calendar_integration_id: calendar_integration_id,
-        calendar_path: calendar_path,
-        video_integration_id: video_integration_id,
-        attendee_name: form_data["name"],
-        attendee_email: form_data["email"],
-        attendee_message: form_data["message"],
-        attendee_phone: nil,
-        attendee_company: nil,
-        attendee_timezone: Timezones.normalize(user_timezone),
-        attendee_locale: params.attendee_locale || default_locale(),
-        status: "confirmed",
-        reminders: reminders,
-        show_as_free: (meeting_type_record && meeting_type_record.show_as_free) || false,
-        attachments_snapshot: attachments_snapshot(meeting_type_record),
-        custom_fields_snapshot: params.custom_fields_snapshot,
-        custom_field_answers: params.custom_field_answers,
-        utm_source: params.utm_source,
-        utm_medium: params.utm_medium,
-        utm_campaign: params.utm_campaign,
-        utm_content: params.utm_content,
-        utm_term: params.utm_term,
-        referrer_host: params.referrer_host,
-        tracking_params: params.tracking_params,
-        visitor_hash: params.visitor_hash
-      },
-      build_meeting_action_urls(meeting_uid, org_username)
-    )
+        status: "awaiting_approval",
+        approval_requested_at: requested_at,
+        approval_deadline_at:
+          Approval.deadline_for(meeting_type_record, requested_at, start_datetime)
+      }
+    else
+      %{status: "confirmed", approval_requested_at: nil, approval_deadline_at: nil}
+    end
   end
 
   # Snapshots host-uploaded meeting-type attachments as plain maps so the
@@ -300,53 +360,6 @@ defmodule Tymeslot.Bookings.Policy do
   def guests_allowed?(_booking_data), do: false
 
   @doc """
-  True when the meeting's video provider creates its room through an API, so
-  the confirmation emails are worth holding until the join link exists.
-
-  Shared by the solo/paid booking path (`Tymeslot.Bookings.Create`) and the
-  group-booking path (`Tymeslot.Bookings.CreateGroup`), which faces the same
-  question for the first seat on a slot.
-  """
-  @spec auto_creates_video_room?(map()) :: boolean()
-  def auto_creates_video_room?(meeting) do
-    case video_provider_for(meeting) do
-      {:ok, provider} -> provider in [:mirotalk, :google_meet, :teams, :custom]
-      _other -> false
-    end
-  end
-
-  defp video_provider_for(meeting) do
-    integration_result =
-      case meeting.video_integration_id do
-        nil -> {:error, :not_found}
-        id -> Video.fetch_integration_for_user(id, meeting.organizer_user_id)
-      end
-
-    case integration_result do
-      {:ok, integration} ->
-        # Convert stored provider string (e.g., "google_meet") to atom if known
-        provider =
-          case VideoProviderConfig.parse_known(integration.provider) do
-            {:ok, provider} ->
-              provider
-
-            {:error, :unknown} ->
-              Logger.warning("Video integration has an unrecognised provider",
-                video_integration_id: meeting.video_integration_id,
-                provider: integration.provider
-              )
-
-              :none
-          end
-
-        {:ok, provider}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-    end
-  end
-
-  @doc """
   Gets the organizer name from configuration.
   """
   @spec organizer_name() :: String.t()
@@ -374,6 +387,19 @@ defmodule Tymeslot.Bookings.Policy do
 
       meeting.status == "completed" ->
         {:error, "Cannot cancel a completed meeting"}
+
+      # An expired meeting (a lapsed approval request or an abandoned paid
+      # checkout) has already been released: its slot was freed, the attendee
+      # was told the request lapsed, and `Meetings.Approval` has already
+      # refunded whatever was paid for it. Cancelling would overwrite that
+      # outcome with `"cancelled"` and run the whole cancellation pipeline
+      # over it — a second pair of emails contradicting the expiry notice, a
+      # `meeting.cancelled` webhook for a meeting that never happened, and a
+      # calendar delete for an event already removed. The request-received
+      # email's withdraw link stays live in the invitee's inbox after the
+      # deadline, so this is a reachable click, not a theoretical one.
+      meeting.status == "expired" ->
+        {:error, "Cannot cancel an expired meeting"}
 
       meeting_is_current?(meeting) ->
         Logger.info("Blocked cancellation: meeting has already started",
@@ -407,6 +433,14 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == "completed" ->
         {:error, "Cannot reschedule a completed meeting"}
 
+      # An expired meeting (a lapsed approval request or an abandoned paid
+      # checkout) has already released its slot: `MeetingState`'s
+      # `@occupying_statuses` excludes "expired", so conflict detection ignores
+      # it. Rescheduling would move it to a new time it does not reserve, and
+      # the attendee would be told about a booking anyone else can still take.
+      meeting.status == "expired" ->
+        {:error, "Cannot reschedule an expired meeting"}
+
       meeting_is_current?(meeting) ->
         Logger.info("Blocked reschedule: meeting has already started", meeting_uid: meeting.uid)
         {:error, "Cannot reschedule a meeting that has already started"}
@@ -419,6 +453,25 @@ defmodule Tymeslot.Bookings.Policy do
         :ok
     end
   end
+
+  @doc """
+  Determines if the organiser may ask the attendee to pick a new time
+  (`Tymeslot.Bookings.RescheduleRequest`, the host-initiated flow that voids
+  the current slot and waits on the attendee).
+
+  Distinct from `can_reschedule_meeting?/1`: that one also gates the
+  attendee moving their own booking, including a still-held request, which
+  is allowed. This one refuses a held request outright, because the host
+  has no reschedule action until they have approved it — voiding the slot
+  here would leave a request that still reads as approvable pointing at
+  time that no longer holds.
+  """
+  @spec can_request_reschedule?(meeting_record()) :: :ok | {:error, String.t()}
+  def can_request_reschedule?(%{status: "awaiting_approval"}) do
+    {:error, "Cannot request a reschedule while the booking awaits approval"}
+  end
+
+  def can_request_reschedule?(meeting), do: can_reschedule_meeting?(meeting)
 
   @doc """
   Checks if a meeting is currently happening.
@@ -540,5 +593,28 @@ defmodule Tymeslot.Bookings.Policy do
     }
   end
 
-  defp default_locale, do: Locales.default_locale()
+  @doc """
+  Where a host answers a booking request from their email.
+
+  Both actions point at the same review page. The `intent` parameter only
+  preselects a choice for the host to confirm — it never acts on its own,
+  because mail security scanners and link preview crawlers fetch every URL in
+  an inbound message and would otherwise answer the request for them.
+  """
+  @spec approval_urls(String.t()) :: %{
+          review_url: String.t(),
+          approve_url: String.t(),
+          decline_url: String.t()
+        }
+  def approval_urls(token) when is_binary(token) do
+    review_url = app_url() <> "/meeting-request/#{token}"
+
+    %{
+      review_url: review_url,
+      approve_url: review_url <> "?intent=approve",
+      decline_url: review_url <> "?intent=decline"
+    }
+  end
+
+  defp default_locale, do: Locales.booking_default_locale()
 end

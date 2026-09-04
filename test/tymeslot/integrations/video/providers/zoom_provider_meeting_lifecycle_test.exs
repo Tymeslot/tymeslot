@@ -113,14 +113,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
           refresh_token: "valid_refresh",
           # Comfortably valid by the buffer's reckoning — the bug's trigger.
           token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-          oauth_scope: "meeting:write:meeting"
+          oauth_scope: "meeting:write:meeting meeting:update:meeting"
         })
 
       config = %{
         access_token: "server-side-revoked-token",
         refresh_token: "valid_refresh",
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-        oauth_scope: "meeting:write:meeting",
+        oauth_scope: "meeting:write:meeting meeting:update:meeting",
         integration_id: integration.id,
         user_id: user.id,
         meeting_topic: "Test Meeting",
@@ -148,7 +148,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
            access_token: "genuinely_new_token",
            refresh_token: "new_refresh",
            expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-           scope: "meeting:write:meeting"
+           scope: "meeting:write:meeting meeting:update:meeting"
          }}
       end)
 
@@ -235,14 +235,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
           access_token: "expired_token",
           refresh_token: "valid_refresh",
           token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-          oauth_scope: "meeting:write:meeting"
+          oauth_scope: "meeting:write:meeting meeting:update:meeting"
         })
 
       config = %{
         access_token: "expired_token",
         refresh_token: "valid_refresh",
         token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-        oauth_scope: "meeting:write:meeting",
+        oauth_scope: "meeting:write:meeting meeting:update:meeting",
         integration_id: integration.id,
         user_id: user.id,
         meeting_topic: "Test Meeting",
@@ -258,7 +258,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
            access_token: "new_token",
            refresh_token: "new_refresh",
            expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-           scope: "meeting:write:meeting"
+           scope: "meeting:write:meeting meeting:update:meeting"
          }}
       end)
 
@@ -284,6 +284,105 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       assert {:error, message} = ZoomProvider.update_meeting_room("123456789", config)
       assert String.contains?(message, "Token validation failed")
       assert String.contains?(message, "expired")
+    end
+
+    test "refuses a grant lacking the update scope without calling Zoom" do
+      # Zoom's granular model separates creating a meeting from changing one:
+      # `meeting:write:meeting` does not authorise a PATCH. The gap must be
+      # caught here, not sent to Zoom to come back as a 4711.
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "valid_refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          oauth_scope: "meeting:write:meeting meeting:read:meeting meeting:delete:meeting"
+        })
+
+      config =
+        Map.merge(valid_config(), %{
+          oauth_scope: "meeting:write:meeting meeting:read:meeting meeting:delete:meeting",
+          integration_id: integration.id,
+          user_id: user.id
+        })
+
+      # No HTTPClientMock expectation: Mox fails the test if a request is made,
+      # which is the assertion that the pre-flight short-circuits.
+      assert {:error, :insufficient_scope} =
+               ZoomProvider.update_meeting_room("123456789", config)
+
+      # Tymeslot does not request `meeting:update:meeting` today, so no grant
+      # holds it and reconnecting would produce the same scopes. Putting
+      # "Reconnect required" on the dashboard would be an errand with no end.
+      {:ok, reloaded} = VideoIntegrationQueries.get(integration.id)
+      refute reloaded.needs_reauth
+    end
+
+    test "accepts a classic meeting:write grant for the update" do
+      # Classic apps hold one coarse scope covering create, update and delete
+      # alike, so a classic grant must not be held to the granular update scope.
+      config = %{valid_config() | oauth_scope: "meeting:write meeting:read user:read"}
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = ZoomProvider.update_meeting_room("123456789", config)
+    end
+
+    test "maps a 4711 on the first PATCH to :insufficient_scope without retrying" do
+      # The stored scope satisfies the pre-flight, so the request goes out and
+      # Zoom rejects the *grant*. Recognising 4711 on the first attempt is what
+      # stops a permanent authorisation gap being retried as though it were a
+      # transient failure, and is what silenced the admin alerts.
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "valid_refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          oauth_scope: "meeting:write:meeting meeting:update:meeting"
+        })
+
+      config =
+        Map.merge(valid_config(), %{
+          integration_id: integration.id,
+          user_id: user.id
+        })
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "code" => 4711,
+               "message" =>
+                 "Invalid access token, does not contain scopes:" <>
+                   "[meeting:update:meeting:admin, meeting:update:meeting]."
+             })
+         }}
+      end)
+
+      assert {:error, :insufficient_scope} =
+               ZoomProvider.update_meeting_room("123456789", config)
+
+      # Same reasoning as the pre-flight case: an update scope Tymeslot never
+      # asks for is not something the account owner can grant.
+      {:ok, reloaded} = VideoIntegrationQueries.get(integration.id)
+      refute reloaded.needs_reauth
     end
   end
 
@@ -451,7 +550,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
            access_token: "new_token",
            refresh_token: "new_refresh",
            expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-           scope: "meeting:write:meeting"
+           scope: "meeting:write:meeting meeting:update:meeting"
          }}
       end)
 
@@ -488,7 +587,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       refresh_token: "valid_refresh",
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
       oauth_scope:
-        "meeting:write:meeting meeting:read:meeting meeting:delete:meeting user:read:user",
+        "meeting:write:meeting meeting:update:meeting meeting:read:meeting meeting:delete:meeting user:read:user",
       meeting_topic: "Test Meeting",
       meeting_start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
       meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)

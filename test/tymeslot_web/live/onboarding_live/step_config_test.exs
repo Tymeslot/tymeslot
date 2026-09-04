@@ -8,6 +8,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
   @moduletag :utils
 
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -127,9 +128,23 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
     # every new user, with no tag highlighted. That is how the card's
     # minimum-notice list was found to be missing 3, the schema's own default.
 
+    # The custom-input fields whose default lives on the availability schedule.
+    # `:slot_interval_minutes` is deliberately absent: it sits on the meeting
+    # type, and its default is NULL, which the form offers as "Same as meeting
+    # length" rather than as a preset integer.
+    @schedule_policy_fields [:buffer_minutes, :advance_booking_days, :min_advance_hours]
+
+    test "every custom-input field is accounted for by one of the two defaults rules" do
+      # Without this, adding a field to the preset table would silently drop out
+      # of the coverage below instead of failing until someone decides which
+      # rule it falls under.
+      assert Enum.sort(CustomInputModeHelper.fields()) ==
+               Enum.sort([:slot_interval_minutes | @schedule_policy_fields])
+    end
+
     test "every scheduling policy default is offered as a preset" do
       schedule = %AvailabilityScheduleSchema{}
-      defaults = Enum.map(CustomInputModeHelper.fields(), &{&1, Map.fetch!(schedule, &1)})
+      defaults = Enum.map(@schedule_policy_fields, &{&1, Map.fetch!(schedule, &1)})
 
       # Anchor: no fields would make the rejection below vacuous.
       refute Enum.empty?(defaults)
@@ -137,6 +152,11 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
       assert Enum.reject(defaults, fn {field, value} ->
                CustomInputModeHelper.preset_value?(field, value)
              end) == []
+    end
+
+    test "the interval's NULL default is not a preset, and needs no tag" do
+      assert %MeetingTypeSchema{}.slot_interval_minutes == nil
+      refute CustomInputModeHelper.preset_value?(:slot_interval_minutes, nil)
     end
   end
 

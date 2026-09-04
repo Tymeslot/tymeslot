@@ -62,6 +62,28 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
     end
   end
 
+  describe "delete_meeting_jobs/2" do
+    test "deletes a pending job for the meeting" do
+      insert_job(%{
+        worker: @worker,
+        state: "scheduled",
+        args: %{"meeting_id" => "meeting-1"}
+      })
+
+      assert {1, nil} = ObanJobQueries.delete_meeting_jobs(@worker, "meeting-1")
+    end
+
+    test "ignores a job in a terminal state" do
+      insert_job(%{
+        worker: @worker,
+        state: "completed",
+        args: %{"meeting_id" => "meeting-1"}
+      })
+
+      assert {0, nil} = ObanJobQueries.delete_meeting_jobs(@worker, "meeting-1")
+    end
+  end
+
   defp insert_job(attrs) do
     default_attrs = %{
       worker: "DefaultWorker",

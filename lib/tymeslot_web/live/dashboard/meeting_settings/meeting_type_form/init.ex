@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
+  alias TymeslotWeb.CustomInputModeHelper
 
   @doc """
   Initialises the socket from the assigned meeting type on first render.
@@ -32,6 +33,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> Component.assign(:allow_guests, get_allow_guests(type))
+    |> Component.assign(:requires_approval, get_requires_approval(type))
+    |> Component.assign(:approval_window_hours, get_approval_window_hours(type))
     |> Component.assign(:show_as_free, get_show_as_free(type))
     |> assign_group_bookings_state(type)
     |> Component.assign(:booking_limits, get_booking_limits(type))
@@ -57,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       end
     end)
     |> Component.assign(:form_data, build_form_data(type))
+    |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
     |> Component.assign(:__initialized__, true)
   end
 
@@ -196,17 +200,59 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @doc "Builds the initial form data map from an existing meeting type or nil."
   @spec build_form_data(Ecto.Schema.t() | nil) :: map()
   def build_form_data(nil) do
-    %{"name" => "", "duration" => "30", "description" => "", "icon" => "none"}
+    %{
+      "name" => "",
+      "duration" => "30",
+      "slot_interval" => "",
+      "description" => "",
+      "icon" => "none"
+    }
   end
 
   def build_form_data(type) do
     %{
       "name" => type.name || "",
       "duration" => to_string(type.duration_minutes || 30),
+      "slot_interval" => slot_interval_form_value(type.slot_interval_minutes),
       "description" => type.description || "",
       "icon" => type.icon || "none"
     }
   end
+
+  @doc "Whether this meeting type holds its bookings for the host to answer."
+  @spec get_requires_approval(Ecto.Schema.t() | nil) :: boolean()
+  def get_requires_approval(%{requires_approval: true}), do: true
+  def get_requires_approval(_type), do: false
+
+  @doc """
+  The saved approval window, or nil.
+
+  Nil is meaningful and is not replaced with the default here: the form shows
+  the default as a placeholder so a host can see what blank means without the
+  value being written into their meeting type.
+  """
+  @spec get_approval_window_hours(Ecto.Schema.t() | nil) :: pos_integer() | nil
+  def get_approval_window_hours(%{approval_window_hours: hours}) when is_integer(hours), do: hours
+  def get_approval_window_hours(_type), do: nil
+
+  # nil means "use the meeting type's own duration"; represented as a blank
+  # string so the form's "same as meeting length" option is selected.
+  defp slot_interval_form_value(nil), do: ""
+  defp slot_interval_form_value(minutes), do: to_string(minutes)
+
+  # An interval the dropdown does not offer — written by a seed, an import or a
+  # support fix — opens the custom input straight away, so the organiser can
+  # see and edit the value that is actually in force rather than a nearest
+  # offered approximation of it.
+  defp initial_custom_input_mode(%{slot_interval_minutes: minutes}) when is_integer(minutes) do
+    Map.put(
+      CustomInputModeHelper.default_custom_mode(),
+      :slot_interval_minutes,
+      not CustomInputModeHelper.preset_value?(:slot_interval_minutes, minutes)
+    )
+  end
+
+  defp initial_custom_input_mode(_type), do: CustomInputModeHelper.default_custom_mode()
 
   @doc "Returns whether guests are allowed for an existing meeting type."
   @spec get_allow_guests(Ecto.Schema.t() | nil) :: boolean()

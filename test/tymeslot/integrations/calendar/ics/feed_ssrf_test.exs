@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.FeedSsrfTest do
   are exercised without any disallowed network access.
   """
 
-  use Tymeslot.CalDAVCase, async: false
+  use Tymeslot.HttpTransportCase, async: false
 
   @moduletag :integrations
   @moduletag :security

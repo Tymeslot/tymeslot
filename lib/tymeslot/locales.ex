@@ -14,10 +14,52 @@ defmodule Tymeslot.Locales do
 
   @doc """
   Returns the configured default locale code, falling back to "en".
+
+  This is the instance-wide default: the source language translations are
+  written against, and the locale the URL structure treats as unprefixed. Use
+  `admin_default_locale/0` or `booking_default_locale/0` at request- and
+  recipient-facing resolution points instead, so an admin can set a fallback
+  per surface without moving the structural default.
   """
   @spec default_locale() :: String.t()
   def default_locale do
     Application.get_env(:tymeslot, :locales, [])[:default] || "en"
+  end
+
+  @doc """
+  The locale the authenticated app falls back to: dashboard, account,
+  onboarding, admin, and the account mail addressed to a registered user.
+
+  Only the *fallback*: detection still wins. A signed-in user's saved
+  language, a locale-prefixed path, and the browser's `Accept-Language` all
+  outrank this; it is what resolves when none of them yield a supported
+  locale. Unset (the default) means the instance-wide `default_locale/0`.
+  """
+  @spec admin_default_locale() :: String.t()
+  def admin_default_locale, do: surface_default(:admin_default_locale)
+
+  @doc """
+  The locale public booking pages fall back to, along with the booking mail and
+  calendar invites addressed to an attendee whose language is unknown.
+
+  Only the *fallback*: a visitor's `Accept-Language` and an explicit
+  `?locale=` still win. Unset (the default) means the instance-wide
+  `default_locale/0`.
+  """
+  @spec booking_default_locale() :: String.t()
+  def booking_default_locale, do: surface_default(:booking_default_locale)
+
+  # A surface default is admin-editable (`Tymeslot.AppSettings` projects the DB
+  # override onto this key), so it can outlive the locale it names: dropping a
+  # language from `:supported` leaves any install that had selected it holding
+  # a code nothing can render. Validate on read rather than trusting the stored
+  # value, so a stale override degrades to the instance default instead of
+  # rendering untranslated msgids.
+  defp surface_default(key) do
+    case Application.get_env(:tymeslot, key) do
+      code when is_binary(code) -> if acceptable?(code), do: code, else: default_locale()
+      _unset -> default_locale()
+    end
   end
 
   @doc """

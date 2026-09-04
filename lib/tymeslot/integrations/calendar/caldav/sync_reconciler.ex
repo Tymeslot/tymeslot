@@ -124,52 +124,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
       {:error, Exception.message(e)}
   end
 
-  @doc """
-  Detects events that have been deleted from the server by comparing
-  fetched UIDs against the local cache.
-
-  Used after a full fetch (Tier 2 CTag change or Tier 3) to find events
-  present in the cache but absent from the server response within the
-  sync time window.
-  """
-  @spec detect_deletions(map(), list(map()), DateTime.t(), DateTime.t(), DateTime.t(), String.t()) ::
-          :ok
-  def detect_deletions(
-        integration,
-        fetched_events,
-        start_time,
-        end_time,
-        sync_started_at,
-        calendar_path
-      ) do
-    fetched_uids = MapSet.new(fetched_events, &Map.get(&1, :uid))
-
-    cached_uids =
-      ProviderCalendarEventQueries.list_uids_in_range(
-        integration.id,
-        start_time,
-        end_time,
-        sync_started_at,
-        calendar_path
-      )
-
-    missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
-
-    case deletion_verdict(integration, cached_uids, missing_uids, fetched_uids, sync_started_at) do
-      :nothing_to_delete ->
-        :ok
-
-      :refuse ->
-        log_suspicious_deletion(integration, cached_uids, missing_uids, calendar_path)
-
-      verdict ->
-        log_deletions_proceeding(verdict, integration, missing_uids, calendar_path)
-        Sync.reconcile_deletions(integration, uid_refs(missing_uids))
-    end
-
-    :ok
-  end
-
   # ---------------------------------------------------------------------------
   # Deletion circuit breaker
   # ---------------------------------------------------------------------------

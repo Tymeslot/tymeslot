@@ -12,30 +12,56 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
       assert Init.build_form_data(nil) == %{
                "name" => "",
                "duration" => "30",
+               "slot_interval" => "",
                "description" => "",
                "icon" => "none"
              }
     end
 
     test "extracts values from a meeting type struct" do
-      type = %{name: "Standup", duration_minutes: 15, description: "Daily sync", icon: "calendar"}
+      type = %{
+        name: "Standup",
+        duration_minutes: 15,
+        slot_interval_minutes: 5,
+        description: "Daily sync",
+        icon: "calendar"
+      }
 
       assert Init.build_form_data(type) == %{
                "name" => "Standup",
                "duration" => "15",
+               "slot_interval" => "5",
                "description" => "Daily sync",
                "icon" => "calendar"
              }
     end
 
     test "falls back to defaults for nil fields in struct" do
-      type = %{name: nil, duration_minutes: nil, description: nil, icon: nil}
+      type = %{
+        name: nil,
+        duration_minutes: nil,
+        slot_interval_minutes: nil,
+        description: nil,
+        icon: nil
+      }
 
       result = Init.build_form_data(type)
       assert result["name"] == ""
       assert result["duration"] == "30"
       assert result["description"] == ""
       assert result["icon"] == "none"
+    end
+
+    test "represents a nil slot_interval_minutes as blank, not the duration" do
+      type = %{
+        name: "Standup",
+        duration_minutes: 15,
+        slot_interval_minutes: nil,
+        description: nil,
+        icon: nil
+      }
+
+      assert Init.build_form_data(type)["slot_interval"] == ""
     end
   end
 

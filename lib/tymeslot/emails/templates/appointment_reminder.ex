@@ -219,5 +219,5 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     """
   end
 
-  defp organizer_locale(_appointment_details), do: Locales.default_locale()
+  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
 end

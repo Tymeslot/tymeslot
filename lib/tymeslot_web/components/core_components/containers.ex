@@ -45,10 +45,17 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
 
   @doc """
   Renders an icon badge with gradient background.
+
+  Accepts either a `hero-…` icon name via the `icon` attribute, rendered
+  through `<.icon>`, or raw SVG child markup (e.g. `<path>`) via the default
+  slot, drawn inside the badge's own `<svg>` wrapper. `<.icon>` renders a
+  complete `<svg>` of its own, so it must never be passed as slot content —
+  that nests one `<svg>` inside another.
   """
   attr :size, :atom, default: :medium, values: [:small, :medium, :large]
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon name, rendered via `<.icon>`"
   attr :class, :string, default: ""
-  slot :inner_block, required: true
+  slot :inner_block, doc: "Raw SVG children (e.g. `<path>`), used when `icon` is not given"
 
   @spec icon_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def icon_badge(assigns) do
@@ -73,7 +80,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
       "mx-auto flex items-center justify-center #{@size_classes} rounded-3xl mb-6 bg-linear-to-br from-turquoise-600 to-cyan-600 shadow-xl shadow-turquoise-500/20 border-4 border-white transform transition-transform hover:scale-110",
       @class
     ]}>
+      <Icons.icon :if={@icon} name={@icon} class={"#{@icon_size} text-white"} />
       <svg
+        :if={!@icon}
         class={"#{@icon_size} text-white"}
         fill="none"
         stroke="currentColor"

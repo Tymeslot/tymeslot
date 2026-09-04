@@ -164,8 +164,9 @@ defmodule Tymeslot.Integrations.HealthCheck do
   Resets the health row to a healthy baseline and enqueues an immediate
   verification probe with no jitter so the state is reconciled with reality
   within seconds. Use `mark_synced_successfully/2` instead when the signal is
-  a successful sync — that already proves health, so the extra probe is
-  wasted work.
+  a successful sync: a sync is the integration's own periodic work rather than
+  a deliberate act by its owner, so it clears the failed-sync streak without
+  declaring the integration recovered.
 
   Idempotent and safe to call when no row exists.
   """
@@ -194,20 +195,61 @@ defmodule Tymeslot.Integrations.HealthCheck do
   end
 
   @doc """
-  Resets the health state row after a successful sync.
+  Records that one sync cycle for this integration completed, ending whatever
+  streak of failed cycles `record_sync_failure/2` had been building.
 
-  A real sync is the strongest possible health signal — it actually exercised
-  the credentials end-to-end. Without this, the badge can stay stuck on
-  `:unhealthy` for up to an hour while syncs are happily working in parallel.
+  It clears the streak counter and nothing else. One successful cycle says the
+  streak has ended; it does not say the outage has, and the two are different
+  claims for a server that refuses most syncs while answering the occasional
+  one. Resetting the whole row here would restart the 48-hour notification
+  clock on every such success, so the badge would flap and the owner would
+  never be told. Declaring the integration healthy again is left to the probe's
+  flap-protected recovery path, which is also what clears
+  `became_unhealthy_at`; see
+  `IntegrationHealthStateQueries.clear_sync_failures/2`.
 
-  Unlike `mark_user_recovered/2`, this does not enqueue a probe — sync just
-  proved everything works, so re-probing is wasted work.
+  Unlike `mark_user_recovered/2`, this does not enqueue a probe: the scheduled
+  one will arrive on its own, and a sync cycle is not the owner waiting on an
+  answer.
 
   Idempotent and safe to call when no row exists.
   """
   @spec mark_synced_successfully(integration_type(), integer()) :: :ok
   def mark_synced_successfully(type, integration_id) do
-    IntegrationHealthStateQueries.reset(type, integration_id)
+    IntegrationHealthStateQueries.clear_sync_failures(type, integration_id)
+    :ok
+  end
+
+  @doc """
+  Records that one sync cycle for this integration failed.
+
+  A sync failure is the only evidence some outages produce. The scheduled
+  probe and a sync do not issue the same request — for CalDAV the probe
+  PROPFINDs the calendar collection while sync issues a REPORT against it —
+  and a server can answer one while refusing the other. When that happens the
+  probe is honestly healthy and the integration silently stops syncing:
+  production carried a CalDAV integration that failed 1015 of 1026 sync
+  attempts across eleven days with a green badge and no alert the whole time.
+
+  Feeding the failure into the same pipeline the probe uses means a streak of
+  them raises the badge, the 48-hour notification and the auto-pause sweep,
+  without touching the deliberate decision that a single failed cycle is not
+  worth retrying to exhaustion or paging an operator over. The streak is
+  cleared by the successful sync that follows, via
+  `mark_synced_successfully/2`.
+
+  Safe to call for any failure reason: reasons that already flag the
+  integration for reconnection simply reach the badge by two routes.
+  """
+  @spec record_sync_failure(integration_type(), map()) :: :ok
+  def record_sync_failure(type, integration) do
+    old_health_state = Monitor.get_state(type, integration.id, integration.user_id)
+    new_health_state = Monitor.record_sync_failure(old_health_state)
+    transition = Monitor.detect_transition(old_health_state, new_health_state)
+
+    Monitor.put_sync_state(type, integration.id, new_health_state)
+    ResponseHandler.handle_transition(type, integration, transition, new_health_state)
+
     :ok
   end
 

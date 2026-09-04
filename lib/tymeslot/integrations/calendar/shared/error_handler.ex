@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
           | :mailbox_org
           | :apple
           | :baikal
+          | :exchange
           | :generic
 
   @doc """
@@ -101,6 +102,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     )
   end
 
+  # Reached only from a provider that tells a refused certificate apart from a
+  # generic transport failure. The sentence lives in `ErrorMessages` so this
+  # surface and the discovery path, which classifies rather than sanitises,
+  # cannot describe the same failure differently.
+  def sanitize_error_message(:tls_error, provider) do
+    ErrorMessages.specific_message(:tls_error, provider)
+  end
+
   def sanitize_error_message(:forbidden, :mailbox_org) do
     dgettext(
       "dashboard_calendar_providers",
@@ -119,6 +128,28 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     dgettext(
       "dashboard_calendar_providers",
       "Access denied. You do not have permission to access this calendar resource."
+    )
+  end
+
+  # EWS states its own failures as response codes rather than as an HTTP
+  # status, so they arrive as a tuple. `ErrorAccessDenied` is the one an
+  # account owner hits and can act on: the credentials were accepted, but the
+  # account cannot read the mailbox — which is what `:forbidden` already says.
+  def sanitize_error_message({:response_code, "ErrorAccessDenied"}, provider) do
+    sanitize_error_message(:forbidden, provider)
+  end
+
+  # Every other code is a server-side name with no advice attached to it, so it
+  # keeps the generic sentence rather than being given an invented one. It is
+  # still logged under the code the server sent, which is what distinguishes it
+  # from the unknown-error catch-all below and is the only record of what the
+  # server actually said.
+  def sanitize_error_message({:response_code, code}, provider) when is_binary(code) do
+    Logger.error("Calendar provider error", provider: provider, error: code)
+
+    dgettext(
+      "dashboard_calendar_providers",
+      "An error occurred while communicating with the calendar service."
     )
   end
 

@@ -237,11 +237,11 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
 
       # The redirect target looks public at URL-parse time but "resolves" to
       # a private address according to our stubbed DNS resolver.
-      stub(Tymeslot.DnsResolverMock, :check_private_ip, fn url, _opts ->
+      stub(Tymeslot.DnsResolverMock, :resolve_public, fn url, _opts ->
         if String.contains?(url, "rebinding.example.com") do
           {:error, "URL resolves to a private or local network address"}
         else
-          :ok
+          {:ok, [{93, 184, 216, 34}]}
         end
       end)
 

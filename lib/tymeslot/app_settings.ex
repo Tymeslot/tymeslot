@@ -60,6 +60,8 @@ defmodule Tymeslot.AppSettings do
           | :email_brand_name
           | :email_brand_accent
           | :email_logo_path
+          | :admin_default_locale
+          | :booking_default_locale
 
   @type effective_source :: :db | :config | :default
   @type effective_value :: %{

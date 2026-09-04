@@ -123,28 +123,45 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     :ok
   end
 
+  # Mirrors the send path in `SMTPConfig` so the probe accepts exactly the
+  # certificates a real send accepts. A probe that verified more strictly than
+  # the sender would refuse to boot a working relay; one that verified less
+  # strictly would report a relay healthy that cannot deliver a single email.
   defp ssl_options(host, config) do
     tls = config[:tls_options] || []
-    versions = tls[:versions] || [:"tlsv1.2", :"tlsv1.3"]
-    depth = tls[:depth] || 5
 
     base = [
       :binary,
       active: false,
-      verify: :verify_peer,
       server_name_indication: host,
-      # RFC 6125 hostname matching, including wildcard certificates — mirrors the
-      # send path in SMTPConfig so the probe accepts the same certs a real send does.
-      customize_hostname_check: [
-        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-      ],
-      versions: versions,
-      depth: depth
+      versions: tls[:versions] || [:"tlsv1.2", :"tlsv1.3"],
+      depth: tls[:depth] || 5
     ]
 
-    case tls[:cacerts] do
-      nil -> base ++ [cacertfile: load_fallback_cacertfile()]
-      cacerts -> base ++ [cacerts: cacerts]
+    base ++ verify_options(tls)
+  end
+
+  defp verify_options(tls) do
+    case tls[:verify] do
+      :verify_none ->
+        [verify: :verify_none]
+
+      _peer ->
+        [
+          verify: :verify_peer,
+          # RFC 6125 hostname matching, including wildcard certificates.
+          customize_hostname_check: [
+            match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+          ]
+        ] ++ trust_store(tls)
+    end
+  end
+
+  defp trust_store(tls) do
+    case {tls[:cacertfile], tls[:cacerts]} do
+      {nil, nil} -> [cacertfile: load_fallback_cacertfile()]
+      {nil, cacerts} -> [cacerts: cacerts]
+      {cacertfile, _cacerts} -> [cacertfile: cacertfile]
     end
   end
 

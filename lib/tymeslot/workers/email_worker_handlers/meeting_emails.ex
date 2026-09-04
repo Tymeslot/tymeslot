@@ -109,9 +109,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   consistent log line when the meeting no longer exists. `action` names the
   email action for the warning (e.g. "confirmation emails").
 
-  Public so `GroupMeetingEmails`'s per-seat handlers share this instead of
-  carrying their own copy — the meeting-lookup contract is identical for
-  both, only what runs on success differs.
+  Public so `GroupMeetingEmails`'s per-seat handlers and
+  `BookingApprovalEmails` share this instead of carrying their own copy — the
+  meeting-lookup contract is identical for all of them, only what runs on
+  success differs.
   """
   @spec with_meeting(term(), String.t(), (MeetingSchema.t() -> term())) :: term()
   def with_meeting(meeting_id, action, fun) do

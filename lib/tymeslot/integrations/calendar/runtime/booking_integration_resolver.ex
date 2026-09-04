@@ -13,12 +13,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
      integration with a booking calendar is used.
   4. Finally, any integration is used.
 
-  Read-only subscriptions (`ics_url`) are excluded from every fallback tier:
-  they can block availability but can never receive a booking, so resolving
-  one would hand the booking flow an integration that builds no client.
+  Read-only integrations (a subscribed feed, an Exchange mailbox) are excluded
+  from every fallback tier: they can block availability but can never receive a
+  booking, so resolving one would hand the booking flow an integration that
+  builds no client. See `Tymeslot.Integrations.Calendar.BookingEligibility`.
   """
 
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Meetings.MeetingSchema
@@ -97,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   def resolve(user_id) when is_integer(user_id) do
     case CalendarPrimary.get_primary_calendar_integration(user_id) do
       {:ok, integration} when is_binary(integration.default_booking_calendar_id) ->
-        if bookable?(integration),
+        if BookingEligibility.bookable?(integration),
           do: integration,
           else: fallback_integration(bookable_integrations(user_id))
 
@@ -105,7 +106,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
         integrations = bookable_integrations(user_id)
 
         find_integration_with_booking_calendar(integrations) ||
-          if bookable?(integration), do: integration, else: fallback_integration(integrations)
+          if BookingEligibility.bookable?(integration),
+            do: integration,
+            else: fallback_integration(integrations)
 
       {:error, _reason} ->
         fallback_integration(bookable_integrations(user_id))
@@ -122,14 +125,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
     Enum.find(integrations, & &1.default_booking_calendar_id)
   end
 
-  # Subscriptions are read-only, so they must never be picked up by any of the
-  # fallback tiers: resolving one would hand the booking flow an integration
-  # that cannot build a client at all.
+  # Read-only providers must never be picked up by any of the fallback tiers:
+  # resolving one would hand the booking flow an integration that cannot build
+  # a client at all.
   defp bookable_integrations(user_id) do
     user_id
     |> CalendarManagement.list_active_calendar_integrations()
-    |> Enum.filter(&bookable?/1)
+    |> BookingEligibility.filter_bookable()
   end
-
-  defp bookable?(%{provider: provider}), do: not ProviderConfig.subscription?(provider)
 end

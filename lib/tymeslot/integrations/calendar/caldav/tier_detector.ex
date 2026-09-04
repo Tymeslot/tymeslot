@@ -54,6 +54,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDetector do
 
   def xml_contains_ctag?(_other), do: false
 
+  @doc """
+  Picks the best tier for a server that cannot serve `sync-collection`, even
+  though its property list said it could.
+
+  Costs the one CTag PROPFIND that `detect/2` would have made anyway had the
+  advertisement been absent, and answers 2 when the server supports `getctag`
+  and 3 otherwise. Worth asking rather than dropping straight to 3: tier 2
+  skips the event fetch entirely while the calendar is unchanged, and a server
+  being demoted here is one already struggling to answer.
+  """
+  @spec detect_without_sync_collection(struct(), map()) :: {:ok, 2 | 3}
+  def detect_without_sync_collection(_integration, client) do
+    case client |> Map.get(:calendar_paths, []) |> List.first() do
+      nil -> {:ok, 3}
+      path -> probe_ctag(UrlBuilder.build_calendar_url(client.base_url, path), client)
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------

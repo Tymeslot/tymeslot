@@ -8,6 +8,8 @@ defmodule TymeslotWeb.AdminLive.Formatters do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Locales
+
   @doc "Human-readable label for an `AppSettings` key."
   @spec humanise(atom()) :: String.t()
   def humanise(:registration_enabled), do: dgettext("dashboard_admin", "Registration enabled")
@@ -29,6 +31,12 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def humanise(:email_brand_accent), do: dgettext("dashboard_admin", "Email accent colour")
   def humanise(:email_brand_name), do: dgettext("dashboard_admin", "Email brand name")
   def humanise(:email_logo_path), do: dgettext("dashboard_admin", "Email logo")
+
+  def humanise(:admin_default_locale),
+    do: dgettext("dashboard_admin", "Dashboard fallback language")
+
+  def humanise(:booking_default_locale),
+    do: dgettext("dashboard_admin", "Booking page fallback language")
 
   def humanise(key),
     do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -153,6 +161,22 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     )
   end
 
+  def describe(:admin_default_locale) do
+    dgettext(
+      "dashboard_admin",
+      "Language the dashboard, account pages, and account emails fall back to. Detection still comes first: a signed-in user's own language setting and the browser's Accept-Language header both win, and this is only what resolves when neither offers a language this install supports. Left unset it resolves to %{language}, this install's configured default.",
+      language: default_locale_name()
+    )
+  end
+
+  def describe(:booking_default_locale) do
+    dgettext(
+      "dashboard_admin",
+      "Language public booking pages fall back to, along with booking emails and calendar invites for an attendee whose language is unknown. Detection still comes first: a visitor whose browser asks for a language this install supports gets that language regardless of this setting. Left unset it resolves to %{language}, this install's configured default.",
+      language: default_locale_name()
+    )
+  end
+
   def describe(_other), do: ""
 
   @doc """
@@ -170,6 +194,30 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def recommended_label(false), do: dgettext("dashboard_admin", "Disabled")
 
   @doc """
+  Label for the "no override" option: the locale a cleared setting actually
+  falls back to, named rather than described.
+
+  Not called "Automatic", because detection runs either way - that word would
+  describe the whole resolution chain rather than this one option in it. And
+  not left as a bare "instance default": that value comes from `:locales` in
+  the application config, so it is neither visible nor changeable from this
+  page, and naming it is the only way the option means anything to an admin.
+  """
+  @spec unset_locale_label() :: String.t()
+  def unset_locale_label do
+    dgettext("dashboard_admin", "Install default (%{language})", language: default_locale_name())
+  end
+
+  defp default_locale_name do
+    code = Locales.default_locale()
+
+    case Enum.find(Locales.supported(), &(&1.code == code)) do
+      %{name: name} -> name
+      nil -> code
+    end
+  end
+
+  @doc """
   Categorises a setting key so the UI knows which control to render.
 
     * `:boolean` — two-state Enabled/Disabled toggle (existing pattern).
@@ -178,14 +226,18 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     * `:colour` — hex colour input with a native swatch picker.
     * `:text` — free-text input.
     * `:logo` — image upload with a preview and a remove action.
+    * `:locale` — select over the supported languages, with a blank option
+      meaning "no override".
   """
-  @spec kind(atom()) :: :boolean | :score | :email | :colour | :text | :logo
+  @spec kind(atom()) :: :boolean | :score | :email | :colour | :text | :logo | :locale
   def kind(:recaptcha_signup_min_score), do: :score
   def kind(:recaptcha_booking_min_score), do: :score
   def kind(:admin_alert_email), do: :email
   def kind(:email_brand_accent), do: :colour
   def kind(:email_brand_name), do: :text
   def kind(:email_logo_path), do: :logo
+  def kind(:admin_default_locale), do: :locale
+  def kind(:booking_default_locale), do: :locale
   def kind(_other), do: :boolean
 
   @doc """
@@ -199,6 +251,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
           | :analytics
           | :admin_alerts
           | :email_branding
+          | :localisation
   def section(:registration_enabled), do: :authentication
   def section(:password_auth_enabled), do: :authentication
   def section(:google_auth_enabled), do: :authentication
@@ -215,6 +268,8 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def section(:email_brand_accent), do: :email_branding
   def section(:email_brand_name), do: :email_branding
   def section(:email_logo_path), do: :email_branding
+  def section(:admin_default_locale), do: :localisation
+  def section(:booking_default_locale), do: :localisation
 
   @doc "Human-readable label for a section."
   @spec section_label(atom()) :: String.t()
@@ -224,6 +279,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def section_label(:analytics), do: dgettext("dashboard_admin", "Analytics")
   def section_label(:admin_alerts), do: dgettext("dashboard_admin", "Admin alerts")
   def section_label(:email_branding), do: dgettext("dashboard_admin", "Email branding")
+  def section_label(:localisation), do: dgettext("dashboard_admin", "Localisation")
 
   @doc """
   When a setting is only meaningful while another setting is enabled, this

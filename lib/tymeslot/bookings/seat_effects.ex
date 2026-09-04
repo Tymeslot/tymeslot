@@ -20,8 +20,8 @@ defmodule Tymeslot.Bookings.SeatEffects do
   is busy cancelling the old seat).
   """
 
+  alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Notifications.Orchestrator
@@ -125,7 +125,7 @@ defmodule Tymeslot.Bookings.SeatEffects do
     if Keyword.get(opts, :with_video_room, false) do
       not is_nil(meeting.video_integration_id)
     else
-      Policy.auto_creates_video_room?(meeting)
+      Activation.api_created_video_room?(meeting)
     end
   end
 

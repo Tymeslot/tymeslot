@@ -435,5 +435,5 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   defp join_url(:guest, details), do: Map.get(details, :meeting_url)
 
-  defp organizer_locale(_appointment_details), do: Locales.default_locale()
+  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
 end

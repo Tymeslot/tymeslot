@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     %{
       "name" => Map.get(form_data, "name", ""),
       "duration" => Map.get(form_data, "duration", ""),
+      "slot_interval" => Map.get(form_data, "slot_interval", ""),
       "description" => Map.get(form_data, "description", ""),
       "is_active" => active_param(Map.get(assigns, :type)),
       "meeting_mode" => assigns.meeting_mode,
@@ -47,6 +48,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
         to_param(Map.get(assigns, :selected_availability_schedule_id)),
       "icon" => assigns.selected_icon,
       "allow_guests" => to_string(Map.get(assigns, :allow_guests, false)),
+      "requires_approval" => to_string(Map.get(assigns, :requires_approval, false)),
+      "approval_window_hours" => to_param(Map.get(assigns, :approval_window_hours)),
       "show_as_free" => to_string(Map.get(assigns, :show_as_free, false)),
       "max_bookings_per_day" => to_param(booking_limits["max_bookings_per_day"]),
       "max_bookings_per_week" => to_param(booking_limits["max_bookings_per_week"]),

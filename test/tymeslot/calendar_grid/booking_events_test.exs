@@ -20,6 +20,10 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
     {start_dt, DateTime.add(start_dt, 7 * 86_400, :second)}
   end
 
+  defp cached_event(attrs) do
+    Enum.into(attrs, %{provider_event_id: nil, uid: nil})
+  end
+
   defp insert_meeting(user, attrs) do
     # Distinct start times per insert: the schema enforces one confirmed
     # meeting per organiser per start time.
@@ -109,12 +113,48 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
     unsynced = insert_meeting(user, %{title: "Unsynced"})
 
     {start_dt, end_dt} = window()
-    synced_ids = MapSet.new(["prov-event-1"])
+    cached = [cached_event(provider_event_id: "prov-event-1", uid: "prov-event-1@google.com")]
 
-    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, synced_ids)
+    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
 
     assert Enum.map(events, & &1.meeting_id) == [unsynced.id]
     refute Enum.any?(events, &(&1.meeting_id == synced.id))
+  end
+
+  test "drops a CalDAV booking whose synced copy is keyed by href, not provider event id" do
+    user = insert(:user)
+
+    # The CalDAV write path persists its caller-supplied UID and never sets
+    # provider_event_id, while the synced copy carries the server's href
+    # there. The only identifier the two sides share is the UID.
+    synced = insert_meeting(user, %{uid: "abc123@tymeslot.com", provider_event_id: nil})
+    unsynced = insert_meeting(user, %{title: "Unsynced", uid: "def456@tymeslot.com"})
+
+    {start_dt, end_dt} = window()
+
+    cached = [
+      cached_event(
+        provider_event_id: "/calendars/sander/default/abc123@tymeslot.com.ics",
+        uid: "abc123@tymeslot.com"
+      )
+    ]
+
+    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
+
+    assert Enum.map(events, & &1.meeting_id) == [unsynced.id]
+    refute Enum.any?(events, &(&1.meeting_id == synced.id))
+  end
+
+  test "keeps a booking whose UID merely resembles an unrelated cached event" do
+    user = insert(:user)
+    booking = insert_meeting(user, %{uid: "abc123@tymeslot.com", provider_event_id: nil})
+
+    {start_dt, end_dt} = window()
+    cached = [cached_event(provider_event_id: "/calendars/x/other.ics", uid: "other@example.com")]
+
+    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
+
+    assert Enum.map(events, & &1.meeting_id) == [booking.id]
   end
 
   test "does not return other organisers' bookings" do

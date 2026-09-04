@@ -48,6 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
   alias Tymeslot.Utils.MapKeys
 
@@ -192,9 +193,8 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   Lists cached events for the subscription within the requested range.
 
   Reads the rows `SyncIcsCalendarWorker` last wrote, mapped back to the shape
-  the availability path consumes. All-day rows carry `start_date`/`end_date`
-  rather than `start_at`/`end_at`, and are returned as the `Date` values the
-  conflict checker already accepts from the CalDAV path.
+  the availability path consumes by
+  `ProviderCalendarEventSchema.to_read_path_map/1`.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(client, opts) do
@@ -209,7 +209,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
         events =
           [integration_id]
           |> ProviderCalendarEventQueries.list_for_range(start_time, end_time)
-          |> Enum.map(&cached_event_to_map/1)
+          |> Enum.map(&ProviderCalendarEventSchema.to_read_path_map/1)
 
         {:ok, events}
     end
@@ -265,28 +265,4 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
 
   defp normalise(nil), do: nil
   defp normalise(url), do: Feed.normalise_url(url)
-
-  defp cached_event_to_map(event) do
-    {start_time, end_time} = cached_event_times(event)
-
-    %{
-      uid: event.uid,
-      summary: event.summary,
-      description: event.description,
-      location: event.location,
-      start_time: start_time,
-      end_time: end_time,
-      all_day: event.all_day,
-      status: event.status,
-      transparency: event.transparency,
-      recurrence_rule: nil,
-      timezone: event.timezone
-    }
-  end
-
-  # Occurrences were already expanded before they were cached, so the
-  # recurrence rule is deliberately dropped: leaving it on would make
-  # `EventsRead.expand_event/3` expand every stored occurrence a second time.
-  defp cached_event_times(%{all_day: true} = event), do: {event.start_date, event.end_date}
-  defp cached_event_times(event), do: {event.start_at, event.end_at}
 end

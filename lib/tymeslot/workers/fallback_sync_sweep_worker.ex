@@ -22,6 +22,12 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     no delta mechanism, so every run is a full fetch, and the publisher
     regenerates the file on its own schedule anyway. Polling harder would cost
     a third party bandwidth for data that has not changed.
+  - **Exchange (`exchange`)** — enqueues a `SyncExchangeCalendarWorker` job
+    every 30 minutes. EWS offers a delta mechanism (`SyncFolderItems`) that
+    this phase does not use, so each run re-reads the whole window through
+    both of the provider's reads. This branch is what makes Exchange sync at
+    all on a schedule: manual refresh goes through `CalendarGrid` and would
+    keep working without it, so its absence shows up only as staleness.
 
   Jobs are enqueued in batches of 50, each batch scheduled one second after
   the previous via `scheduled_at`, to avoid thundering-herd load on provider
@@ -40,6 +46,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   alias Tymeslot.Integrations.HealthCheck.SyncGating
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncExchangeCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
@@ -58,6 +65,10 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   # Subscribed feeds have no tier: every run is a full fetch of a file the
   # publisher regenerates on its own schedule.
   @subscription_interval 1_800
+
+  # Exchange has no tier either: this phase reads the whole window every run,
+  # twice over (free/busy for availability, items for the grid).
+  @exchange_interval 1_800
 
   # Forced full fetch: every 24 hours to recover events missed by Tier 1/2
   # delta-based optimisations. Was 12 hours before the reconcile transaction
@@ -98,6 +109,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     caldav_skipped = length(caldav_integrations) - length(due_integrations)
 
     subscription_count = enqueue_due_subscriptions(by_provider)
+    exchange_count = enqueue_due_exchange(by_provider)
 
     Logger.info("FallbackSyncSweep complete",
       google_scheduled: google_count,
@@ -106,7 +118,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       caldav_skipped: caldav_skipped,
       caldav_forced_full_scheduled: forced_full_count,
       caldav_forced_full_conflicts: forced_full_conflicts,
-      subscription_scheduled: subscription_count
+      subscription_scheduled: subscription_count,
+      exchange_scheduled: exchange_count
     )
 
     :ok
@@ -221,6 +234,24 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
   defp subscription_due?(integration) do
     cutoff = DateTime.add(DateTime.utc_now(), -@subscription_interval, :second)
+    DateTime.before?(integration.last_external_sync_at, cutoff)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Exchange scheduling
+  # ---------------------------------------------------------------------------
+
+  defp enqueue_due_exchange(by_provider) do
+    ProviderConfig.ews_provider_strings()
+    |> Enum.flat_map(&Map.get(by_provider, &1, []))
+    |> Enum.filter(&exchange_due?/1)
+    |> enqueue_batched(SyncExchangeCalendarWorker)
+  end
+
+  defp exchange_due?(%{last_external_sync_at: nil}), do: true
+
+  defp exchange_due?(integration) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@exchange_interval, :second)
     DateTime.before?(integration.last_external_sync_at, cutoff)
   end
 

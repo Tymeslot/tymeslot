@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   """
 
   alias Tymeslot.Integrations.Calendar, as: CalendarContext
+  alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
@@ -178,16 +179,16 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
     end
   end
 
-  # A subscription is read-only, so it can never be the calendar bookings are
-  # written to. This is the single choke point every caller of
+  # A read-only provider can never be the calendar bookings are written to.
+  # This is the single choke point every caller of
   # `set_primary_calendar_integration/2` goes through, so the invariant holds
   # regardless of whether the caller reached here from creation, a toggle, or
   # a deletion promotion.
-  defp verify_bookable(%CalendarIntegrationSchema{provider: provider}) do
-    if ProviderConfig.subscription?(provider) do
-      {:error, :not_bookable}
-    else
+  defp verify_bookable(%CalendarIntegrationSchema{} = integration) do
+    if BookingEligibility.bookable?(integration) do
       :ok
+    else
+      {:error, :not_bookable}
     end
   end
 
@@ -221,7 +222,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
     eligible_integrations =
       user_id
       |> CalendarManagement.list_calendar_integrations()
-      |> Enum.reject(&ProviderConfig.subscription?(&1.provider))
+      |> BookingEligibility.filter_bookable()
 
     case eligible_integrations do
       [] ->

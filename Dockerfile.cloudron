@@ -82,6 +82,17 @@ RUN mkdir -p /data/logs /app/data/uploads && \
 COPY start.sh ./
 RUN chmod +x start.sh
 
+# The annotated variable reference. start.sh seeds /app/data/.env from it on
+# first boot, so operators can configure the app by editing a file instead of
+# running one `cloudron env set` per key.
+COPY .env.example ./.env.example
+
+# Generates that template for /app/data/.env, and imports variables already set
+# in the environment into it. start.sh runs it when it seeds the file; an
+# operator whose file predates seeding runs it themselves.
+COPY scripts/cloudron-env-template.sh ./env-template.sh
+RUN chmod +x env-template.sh
+
 EXPOSE 4000
 
 CMD ["./start.sh"]

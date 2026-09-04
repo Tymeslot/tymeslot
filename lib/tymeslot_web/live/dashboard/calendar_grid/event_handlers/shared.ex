@@ -319,6 +319,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   Handled errors:
 
     * `{:error, :unauthorized}` — "You don't have permission to modify this event"
+    * `{:error, :read_only}` — "This calendar is read-only..."
     * `{:error, :rate_limited, _message}` — "Too many edits. Please wait a moment."
 
   Flash messages are sent via `send(self(), {:flash, ...})` (the LiveComponent
@@ -339,6 +340,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
       {:flash,
        {:error,
         dgettext("dashboard_calendar_events", "You don't have permission to modify this event")}}
+    )
+
+    socket
+  end
+
+  def flash_guard(socket, {:error, :read_only}) do
+    send(
+      self(),
+      {:flash,
+       {:error,
+        dgettext(
+          "dashboard_calendar_events",
+          "This calendar is read-only. Events on it can't be changed from Tymeslot."
+        )}}
     )
 
     socket

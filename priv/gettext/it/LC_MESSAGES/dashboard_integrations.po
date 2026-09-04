@@ -1175,12 +1175,12 @@ msgstr "Provider video sconosciuto"
 msgid "You authenticated with a different account than the one linked to this integration. Please use the correct account."
 msgstr "Hai effettuato l'accesso con un account diverso da quello collegato a questa integrazione. Usa l'account corretto."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider.ex
+#: lib/tymeslot/integrations/video/providers/zoom_provider/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr "L'accesso a Zoom è stato revocato. Ricollega il tuo account Zoom."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider.ex
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
 msgstr "A Zoom manca il permesso necessario per %{action}. Ricollega il tuo account Zoom."
@@ -1194,11 +1194,6 @@ msgstr "Aggiornamento del token Zoom non riuscito dopo un errore 401. Ricollega 
 #, elixir-autogen, elixir-format
 msgid "cancel meetings"
 msgstr "annullare le riunioni"
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "create and update meetings"
-msgstr "creare e aggiornare le riunioni"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1246,3 +1241,13 @@ msgstr "Elimina anche le loro stanze riunioni. Chi ha già il link di partecipaz
 #, elixir-autogen, elixir-format
 msgid "URL redirects too many times"
 msgstr "L’URL reindirizza troppe volte"
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "create meetings"
+msgstr "creare le riunioni"
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "reschedule meetings"
+msgstr "riprogrammare le riunioni"

@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
 
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
@@ -26,6 +27,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
           | :invalid_max_participants
           | :invalid_price
           | :invalid_reminder_config
+          | :invalid_approval_window
 
   @doc """
   Builds schema attributes from raw form params and the form's UI state.
@@ -41,15 +43,19 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
          {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]),
-         {:ok, max_participants} <- parse_max_participants(params["max_participants"]) do
+         {:ok, max_participants} <- parse_max_participants(params["max_participants"]),
+         {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
         name: params["name"],
         duration_minutes: duration_minutes,
+        slot_interval_minutes: parse_optional_interval(params["slot_interval"]),
         description: params["description"],
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
         allow_video: ui_state.meeting_mode == "video",
         allow_guests: params["allow_guests"] == "true",
+        requires_approval: params["requires_approval"] == "true",
+        approval_window_hours: approval_window_hours,
         video_integration_id: video_integration_id(ui_state),
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
@@ -105,6 +111,19 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   end
 
   defp parse_duration(_value), do: {:error, :invalid_duration}
+
+  # Blank means "use the meeting type's own duration"; out-of-range values are
+  # left to the changeset.
+  defp parse_optional_interval(value) when is_integer(value), do: value
+
+  defp parse_optional_interval(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {interval, ""} -> interval
+      _other -> nil
+    end
+  end
+
+  defp parse_optional_interval(_value), do: nil
 
   defp booking_limits(params) do
     Map.new(Constraints.booking_limit_fields(), fn field ->

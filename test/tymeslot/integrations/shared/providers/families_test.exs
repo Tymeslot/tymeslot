@@ -8,7 +8,7 @@ defmodule Tymeslot.Integrations.Providers.FamiliesTest do
 
   describe "all/0" do
     test "is the vocabulary every domain and the picker share" do
-      assert Families.all() == [:oauth, :caldav, :subscription, :other]
+      assert Families.all() == [:oauth, :caldav, :ews, :subscription, :other]
     end
 
     test "puts the catch-all last so nothing sorts above a named group" do
@@ -27,8 +27,8 @@ defmodule Tymeslot.Integrations.Providers.FamiliesTest do
     end
 
     test "rejects a family outside the vocabulary" do
-      assert_raise ArgumentError, ~r/unknown provider families \[:ews\]/, fn ->
-        Families.build_index(%{ews: [:exchange]}, [:exchange])
+      assert_raise ArgumentError, ~r/unknown provider families \[:carrier_pigeon\]/, fn ->
+        Families.build_index(%{carrier_pigeon: [:google]}, [:google])
       end
     end
 

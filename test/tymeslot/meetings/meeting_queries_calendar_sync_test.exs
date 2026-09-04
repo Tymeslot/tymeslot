@@ -85,44 +85,62 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
     end
   end
 
-  describe "list_by_provider_event_ids/2" do
-    test "returns a map from provider_event_id to meeting" do
+  describe "list_by_calendar_identifiers/2" do
+    test "keys a matched meeting under every identifier it carries" do
       {_user, integration, meeting} = create_meeting_with_calendar()
 
       result =
-        MeetingQueries.list_by_provider_event_ids(
+        MeetingQueries.list_by_calendar_identifiers(
           integration.id,
           [meeting.provider_event_id]
         )
 
-      assert %{^result => _value} = %{result => :ok}
       assert Map.get(result, meeting.provider_event_id).id == meeting.id
+      assert Map.get(result, meeting.uid).id == meeting.id
+    end
+
+    test "matches a CalDAV meeting by UID when it carries no provider event id" do
+      {_user, integration, meeting} =
+        create_meeting_with_calendar(%{
+          provider_event_id: nil,
+          uid: "abc123@tymeslot.com"
+        })
+
+      # The cached CalDAV row offers its href alongside the shared UID; only
+      # the UID can find the meeting.
+      result =
+        MeetingQueries.list_by_calendar_identifiers(
+          integration.id,
+          ["/calendars/sander/default/abc123@tymeslot.com.ics", "abc123@tymeslot.com"]
+        )
+
+      assert Map.get(result, "abc123@tymeslot.com").id == meeting.id
+      refute Map.has_key?(result, "/calendars/sander/default/abc123@tymeslot.com.ics")
     end
 
     test "returns empty map for empty list" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      assert MeetingQueries.list_by_provider_event_ids(integration.id, []) == %{}
+      assert MeetingQueries.list_by_calendar_identifiers(integration.id, []) == %{}
     end
 
-    test "returns empty map for list containing only nil values" do
+    test "returns empty map for list containing only blank values" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      assert MeetingQueries.list_by_provider_event_ids(integration.id, [nil, nil]) == %{}
+      assert MeetingQueries.list_by_calendar_identifiers(integration.id, [nil, "", "  "]) == %{}
     end
 
     test "excludes nil values from lookup but returns matches for non-nil ids" do
       {_user, integration, meeting} = create_meeting_with_calendar()
 
       result =
-        MeetingQueries.list_by_provider_event_ids(
+        MeetingQueries.list_by_calendar_identifiers(
           integration.id,
           [nil, meeting.provider_event_id, nil]
         )
 
-      assert map_size(result) == 1
       assert Map.get(result, meeting.provider_event_id).id == meeting.id
     end
 
@@ -132,7 +150,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
       int2 = insert(:calendar_integration, user: user2)
 
       result =
-        MeetingQueries.list_by_provider_event_ids(int2.id, [meeting.provider_event_id])
+        MeetingQueries.list_by_calendar_identifiers(int2.id, [meeting.provider_event_id])
 
       assert result == %{}
     end

@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Components.ContainersTest do
 
   @moduletag :utils
 
+  import Phoenix.Component, only: [sigil_H: 2]
   import Phoenix.LiveViewTest
   alias Floki
   alias TymeslotWeb.Components.CoreComponents
@@ -64,5 +65,42 @@ defmodule TymeslotWeb.Components.ContainersTest do
     assert class =~ "h-8"
     assert class =~ "w-8"
     refute class =~ "h-5"
+  end
+
+  describe "icon_badge/1 through the CoreComponents facade" do
+    # The facade re-declares each delegate's attrs, and a wrapper that declares
+    # fewer than its delegate silently rejects the difference: `icon` reached
+    # `Containers.icon_badge/1` but `<CoreComponents.icon_badge>` would not
+    # accept it, so the two entry points disagreed about what the component
+    # could do. Rendering both branches through the facade pins them level.
+    # Called through `~H`, not `render_component/2`: only a HEEx call site runs
+    # Phoenix's attr validation, which is the thing that was broken. A function
+    # capture bypasses it and would have passed against the stale declarations.
+    test "accepts an icon and renders it without nesting one svg inside another" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.icon_badge icon="hero-check-circle" />
+        """)
+
+      refute html =~ ~r/<svg[^>]*><svg/
+      assert length(String.split(html, "<svg")) == 2
+      assert html =~ "text-white"
+    end
+
+    test "still draws raw svg children when no icon is given" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <CoreComponents.icon_badge>
+          <path d="M0 0" />
+        </CoreComponents.icon_badge>
+        """)
+
+      assert html =~ "<svg"
+      assert html =~ "<path"
+    end
   end
 end

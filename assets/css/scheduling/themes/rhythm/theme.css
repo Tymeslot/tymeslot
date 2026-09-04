@@ -9,6 +9,7 @@
 @import "../../shared/layout.css";
 @import "../../shared/utilities.css";
 @import "../../shared/brand-tokens.css";
+@import "../../shared/background-motion.css";
 
 /* ===========================================================================
    Tailwind v4 CSS-first configuration
@@ -68,6 +69,7 @@
 @import "./modules/typography.css";
 @import "./modules/video.css";
 @import "./modules/overview.css";
+@import "./modules/approval-notice.css";
 @import "./modules/schedule-header.css";
 @import "./modules/booking-form.css";
 @import "./modules/custom-questions.css";

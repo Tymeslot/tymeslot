@@ -76,10 +76,29 @@ defmodule Tymeslot.Meetings.Listing do
 
     query_opts =
       case filter do
-        "upcoming" -> [time_filter: :upcoming, exclude_status: "cancelled"]
-        "past" -> [time_filter: :past, exclude_status: "cancelled"]
-        "cancelled" -> [status: "cancelled"]
-        _other -> []
+        # Held requests are deliberately kept out of "upcoming": they are not
+        # upcoming meetings, they are decisions the host still owes somebody,
+        # and listing them beside confirmed bookings is what made an
+        # unanswered request look agreed to. A lapsed request is excluded for
+        # the same reason: `expired` is a resolved outcome, not a booking
+        # still to happen, even though its start time (and so `end_time`, the
+        # column "past" filters on) is often still ahead of it. It falls into
+        # "past" honestly once `end_time` catches up, same as any other
+        # meeting that has run its course.
+        "upcoming" ->
+          [time_filter: :upcoming, exclude_status: ["cancelled", "awaiting_approval", "expired"]]
+
+        "past" ->
+          [time_filter: :past, exclude_status: "cancelled"]
+
+        "cancelled" ->
+          [status: "cancelled"]
+
+        "awaiting_approval" ->
+          [status: "awaiting_approval"]
+
+        _other ->
+          []
       end
 
     query_opts = Keyword.merge(query_opts, per_page: per_page)

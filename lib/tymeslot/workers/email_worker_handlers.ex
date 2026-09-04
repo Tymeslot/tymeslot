@@ -6,6 +6,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Workers.EmailWorkerHandlers.AdminEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.AuthEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
@@ -38,6 +39,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     MeetingScheduler.seat_action(:seat_reminder) =>
       {GroupMeetingEmails, :handle_seat_reminder_emails},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
+    "send_booking_request_emails" => {BookingApprovalEmails, :handle_booking_request_emails},
+    "send_booking_approval_nudge" => {BookingApprovalEmails, :handle_booking_approval_nudge},
+    "send_booking_request_outcome" => {BookingApprovalEmails, :handle_booking_request_outcome},
     "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders},
     "send_poll_host_nudge" => {PollEmails, :handle_host_nudge},
     "send_email_change_confirmations" => {AuthEmails, :handle_email_change_confirmations},
@@ -47,6 +51,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_email_change_notification" => {AuthEmails, :handle_email_change_notification},
     "send_integration_unhealthy_notification" =>
       {IntegrationEmails, :handle_integration_unhealthy_notification},
+    "send_integration_reauth_notification" =>
+      {IntegrationEmails, :handle_integration_reauth_notification},
     "send_integration_paused_notification" =>
       {IntegrationEmails, :handle_integration_paused_notification},
     "send_calendar_invitation" => {IntegrationEmails, :handle_calendar_invitation},

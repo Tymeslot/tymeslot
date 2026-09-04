@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Webhooks.WebhookDeliverySchema
@@ -413,6 +414,107 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       respond_with(503)
 
       assert {:error, {:http_error, 503}} = deliver(webhook, meeting)
+    end
+  end
+
+  describe "snapshot/1" do
+    test "captures the event-defining fields as JSON-safe values" do
+      meeting =
+        insert(:meeting,
+          status: "awaiting_approval",
+          approval_requested_at: ~U[2026-01-14 09:00:00Z],
+          approval_deadline_at: ~U[2026-01-15 09:00:00Z]
+        )
+
+      snapshot = WebhookWorker.snapshot(meeting)
+
+      assert snapshot["status"] == "awaiting_approval"
+      assert snapshot["approval_requested_at"] == "2026-01-14T09:00:00Z"
+      assert snapshot["approval_deadline_at"] == "2026-01-15T09:00:00Z"
+      assert is_nil(snapshot["decline_reason"])
+    end
+  end
+
+  describe "schedule_delivery/4" do
+    test "carries the snapshot through to the enqueued job's args" do
+      meeting_id = UUID.generate()
+      snapshot = %{"status" => "awaiting_approval"}
+
+      assert :ok =
+               WebhookWorker.schedule_delivery(123, "meeting.requested", meeting_id, snapshot)
+
+      assert_enqueued(
+        worker: WebhookWorker,
+        args: %{
+          "webhook_id" => 123,
+          "event_type" => "meeting.requested",
+          "meeting_id" => meeting_id,
+          "snapshot" => snapshot
+        }
+      )
+    end
+
+    test "omits the snapshot key entirely when none is given, same as schedule_delivery/3" do
+      meeting_id = UUID.generate()
+
+      assert :ok = WebhookWorker.schedule_delivery(123, "meeting.created", meeting_id)
+
+      assert_enqueued(
+        worker: WebhookWorker,
+        args: %{
+          "webhook_id" => 123,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting_id
+        }
+      )
+
+      [job] = all_enqueued(worker: WebhookWorker)
+      refute Map.has_key?(job.args, "snapshot")
+    end
+  end
+
+  describe "perform/1 - replays the dispatch-time snapshot on retry" do
+    test "reports the status the event asserted, not the meeting's current status" do
+      meeting = insert(:meeting, status: "awaiting_approval")
+      webhook = insert(:webhook)
+      snapshot = WebhookWorker.snapshot(meeting)
+
+      # Simulates the host declining the request before a retried delivery of
+      # the original meeting.requested job runs.
+      meeting
+      |> Changeset.change(status: "cancelled", decline_reason: "Not a fit")
+      |> Repo.update!()
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
+        meeting_data = body |> Jason.decode!() |> get_in(["data", "meeting"])
+
+        assert meeting_data["status"] == "awaiting_approval"
+        refute Map.has_key?(meeting_data, "decline")
+
+        {:ok, %{status: 200, body: "ok"}}
+      end)
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.requested",
+                 "meeting_id" => meeting.id,
+                 "snapshot" => snapshot
+               })
+    end
+
+    test "falls back to the live meeting for a job enqueued before snapshots existed" do
+      meeting = insert(:meeting, status: "confirmed")
+      webhook = insert(:webhook)
+
+      expect_http_success()
+
+      assert :ok =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
     end
   end
 end

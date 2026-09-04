@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.MeetingTypes.InputValidation
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -23,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Validation
   }
 
+  alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -69,6 +71,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_required, false)
      |> assign(:payment_price, "")
      |> assign(:allow_guests, false)
+     |> assign(:requires_approval, false)
+     |> assign(:approval_window_hours, nil)
      |> assign(:show_as_free, false)
      |> assign(:group_bookings_enabled, false)
      |> assign(:max_participants, to_string(Init.default_group_limit()))
@@ -111,6 +115,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   @impl Phoenix.LiveComponent
   def handle_event("validate_meeting_type", %{"meeting_type" => params}, socket) do
     metadata = Helpers.get_security_metadata(socket)
+
+    # The interval dropdown's "Custom…" entry names a mode, not a duration, so
+    # it is read for the mode and then dropped: the number input it reveals is
+    # what posts the value. Left in, it would reach the validator as a
+    # non-numeric interval and raise an error against a choice that never
+    # claimed to be one.
+    socket = sync_slot_interval_mode(socket, params)
+    params = drop_interval_mode_sentinel(params)
 
     # Merge incoming params into existing form data to prevent wiping other fields
     new_data = Map.merge(socket.assigns.form_data || %{}, params)
@@ -247,6 +259,57 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        |> Autosave.maybe_run()}
     else
       {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_requires_approval", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:requires_approval, !socket.assigns.requires_approval)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_approval_window", params, socket) do
+    # The input sits inside the meeting-type form, so the event carries the
+    # whole form's params under "meeting_type".
+    raw =
+      params
+      |> Map.get("meeting_type", %{})
+      |> Map.get("approval_window_hours")
+
+    case ApprovalWindow.parse(raw) do
+      {:ok, hours} ->
+        {:noreply,
+         socket
+         |> assign(:approval_window_hours, hours)
+         |> assign(
+           :form_errors,
+           FormValidationHelpers.delete_field_error(
+             socket.assigns.form_errors,
+             :approval_window_hours
+           )
+         )
+         |> Autosave.maybe_run()}
+
+      # Leave the stored value and last successful save untouched: surfacing
+      # the error and stopping here is what stops a half-typed number from
+      # autosaving over a good previously saved window.
+      {:error, :invalid_approval_window} ->
+        {:noreply,
+         assign(
+           socket,
+           :form_errors,
+           Map.put(
+             socket.assigns.form_errors,
+             :approval_window_hours,
+             dgettext(
+               "dashboard_meeting_form",
+               "Enter a whole number of hours, or leave blank to use the default."
+             )
+           )
+         )}
     end
   end
 
@@ -415,6 +478,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Blank clears the limit; anything unparseable is treated as blank (the
   # number input constrains typing, and the changeset enforces the range).
+  # Blank is a real choice here: it means "use the application default", which
+  # the domain resolves at read time. So a cleared field stores nil rather than
+  # reverting to whatever the default happened to be when it was cleared.
   defp parse_booking_limit(nil), do: nil
 
   defp parse_booking_limit(value) when is_binary(value) do
@@ -423,4 +489,35 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       _other -> nil
     end
   end
+
+  # Picking anything other than "Custom…" from the dropdown closes the number
+  # input, which is the only way back out of custom mode. A value the dropdown
+  # does not offer keeps it open, since that value has nowhere else to be
+  # edited.
+  #
+  # Only fires when the interval was the field that changed: the form posts one
+  # field at a time, so every other change must leave the mode alone.
+  defp sync_slot_interval_mode(socket, %{"slot_interval" => value}) do
+    custom? = custom_interval_sentinel?(value) or off_preset_interval?(value)
+    CustomInputModeHelper.set_custom_mode(socket, :slot_interval_minutes, custom?)
+  end
+
+  defp sync_slot_interval_mode(socket, _params), do: socket
+
+  defp drop_interval_mode_sentinel(%{"slot_interval" => value} = params) do
+    if custom_interval_sentinel?(value), do: Map.delete(params, "slot_interval"), else: params
+  end
+
+  defp drop_interval_mode_sentinel(params), do: params
+
+  defp custom_interval_sentinel?(value), do: value == FormView.custom_interval_option()
+
+  defp off_preset_interval?(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {interval, ""} -> not CustomInputModeHelper.preset_value?(:slot_interval_minutes, interval)
+      _not_an_integer -> false
+    end
+  end
+
+  defp off_preset_interval?(_value), do: false
 end

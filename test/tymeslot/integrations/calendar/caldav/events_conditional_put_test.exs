@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsConditionalPutTest do
   transient failures are retried; this module covers only what the caller
   gets back once the server has refused the conditional write.
   """
-  use Tymeslot.CalDAVCase, async: false
+  use Tymeslot.HttpTransportCase, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Events

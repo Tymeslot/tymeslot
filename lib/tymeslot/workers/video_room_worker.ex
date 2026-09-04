@@ -107,13 +107,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           :ok | {:error, String.t()}
   def schedule_video_room_creation_with_announcement(meeting_id), do: schedule(meeting_id, true)
 
-  # `announce` was spelled `send_emails` while this job scheduled only the
-  # emails. Recovery snoozes span days, so jobs enqueued under the old spelling
-  # outlive the deploy that renames it; reading both keeps them announcing
-  # rather than silently falling back to the `false` default. Drop the second
-  # clause one release after this ships.
   defp announce?(%{"announce" => announce}), do: announce
-  defp announce?(%{"send_emails" => send_emails}), do: send_emails
   defp announce?(_args), do: false
 
   defp schedule(meeting_id, announce) do

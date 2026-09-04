@@ -2,17 +2,42 @@ defmodule Tymeslot.Bookings.Reschedule do
   @moduledoc """
   Orchestrates the booking rescheduling process.
   Handles meeting time updates, calendar event migration, and notifications.
+
+  ## Rescheduling does not bypass the approval gate
+
+  On a meeting type requiring the host's approval, moving a booking to a new
+  time returns it to the gate rather than carrying the old answer across. The
+  host agreed to a specific time, not to the invitee's standing right to pick
+  another one, and a confirmed booking that can be silently moved anywhere is
+  the gate with an obvious hole in it.
+
+  That only applies, though, when the booking's current status is one the
+  gate is meaningful for: `"confirmed"` (the host answered, and the reschedule
+  asks them again) or `"awaiting_approval"` (a held request being moved before
+  anyone has answered). A booking that never paid (`"awaiting_payment"`) or
+  one whose window already lapsed (`"expired"`, already released and
+  refunded) has nothing to gate; forcing either into `"awaiting_approval"`
+  would let the host approve a booking nobody paid for, or one the invitee
+  has already been refunded for. Their status is left untouched instead,
+  exactly as an ungated meeting type's is.
+
+  So a reschedule on such a meeting type, from one of those two statuses,
+  re-enters `"awaiting_approval"` with a fresh window, the provider event
+  goes back to tentative, and the invitee is told a request was made rather
+  than that their meeting has moved.
   """
 
   require Logger
 
   alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.{Events, Orchestrator}
   alias Tymeslot.Repo
   alias Tymeslot.Utils.DateTimeUtils.Duration, as: UrlDuration
   alias Tymeslot.Workers.VideoSyncWorker
@@ -22,7 +47,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   `duration` is accepted for shape-compatibility with the booking form but is
   never used: the rescheduled meeting keeps the original meeting's persisted
-  duration (see `prepare_new_times/2`), never the request's.
+  duration (see `prepare_new_times/3`), never the request's.
   """
   @type reschedule_params :: %{
           required(:date) => String.t(),
@@ -60,11 +85,18 @@ defmodule Tymeslot.Bookings.Reschedule do
     with {:ok, original_meeting} <-
            MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
          :ok <- validate_can_reschedule(original_meeting),
-         {:ok, new_times} <- prepare_new_times(new_params, original_meeting),
-         {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do
+         meeting_type <-
+           fetch_meeting_type(
+             original_meeting.meeting_type_id,
+             organizer_user_id,
+             original_meeting.duration
+           ),
+         {:ok, new_times} <- prepare_new_times(new_params, original_meeting, meeting_type),
+         {:ok, updated_meeting} <-
+           apply_time_update_and_schedule_job(original_meeting, new_times, meeting_type) do
       AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
       sync_provider_video_room(updated_meeting)
-      send_reschedule_notifications(updated_meeting, original_meeting)
+      announce(updated_meeting, original_meeting)
       {:ok, updated_meeting}
     else
       {:error, :not_found} -> {:error, :meeting_not_found}
@@ -74,26 +106,28 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   # Private functions
 
-  defp apply_time_update_and_schedule_job(meeting, %{
-         start_time: start_dt,
-         end_time: end_dt,
-         duration_minutes: _dur
-       }) do
+  defp apply_time_update_and_schedule_job(
+         meeting,
+         %{start_time: start_dt, end_time: end_dt, duration_minutes: _dur},
+         meeting_type
+       ) do
     # Booking a new time settles any pending organizer reschedule request, so
-    # the slot becomes live again — clear the timestamp. `status` is left
-    # untouched: it tracks the booking lifecycle (pending, awaiting_payment,
-    # confirmed, ...), which a reschedule never changes.
+    # the slot becomes live again — clear the timestamp.
     #
     # Reminder sent-tracking is reset too: the reminder(s) already sent were
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
-    attrs = %{
-      start_time: start_dt,
-      end_time: end_dt,
-      reschedule_requested_at: nil,
-      reminders_sent: [],
-      reminder_email_sent: false
-    }
+    attrs =
+      Map.merge(
+        %{
+          start_time: start_dt,
+          end_time: end_dt,
+          reschedule_requested_at: nil,
+          reminders_sent: [],
+          reminder_email_sent: false
+        },
+        gate_attributes(meeting_type, start_dt, meeting)
+      )
 
     case Repo.transaction(fn ->
            with {:ok, updated} <- update_meeting(meeting, attrs),
@@ -109,6 +143,175 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, :booking_limit_reached} -> {:error, :booking_limit_reached}
       {:error, :failed_to_update_meeting} -> {:error, :failed_to_update_meeting}
       {:error, _reason} -> {:error, :failed_to_update_meeting}
+    end
+  end
+
+  # On an ungated meeting type, or on a gated one whose current status the
+  # gate is not meaningful for (see the module doc), `status` is left
+  # untouched: it tracks the booking lifecycle (pending, awaiting_payment,
+  # confirmed, ...), which a reschedule never changes there.
+  #
+  # On a gated one being moved from `"confirmed"` or `"awaiting_approval"`,
+  # the reschedule *is* a new request, so the whole approval record is reset
+  # rather than partially updated: a stale `approval_resolved_at` would make
+  # the new request look answered, a stale `approval_nudge_sent_at` would
+  # suppress the nudge for a window that has not been nudged, and a stale
+  # `announced_at` would leave `Events.meeting_created/1`'s once-per-meeting
+  # claim (`MeetingQueries.claim_announcement/1`) already spent — the host's
+  # second approval would then win the DB transition but lose the fan-out,
+  # so the invitee gets no confirmation email, no reminders and no
+  # `meeting.created` webhook for the new time. Clearing it costs nothing that
+  # is needed later: `first_announced_at` keeps the permanent record that this
+  # booking was once a live meeting, which is what `Approval` reads when it
+  # decides whether releasing the request refunds it. The deadline is computed
+  # from now and capped at the new start time, exactly as an original
+  # booking's is.
+  #
+  # A meeting type can also stop requiring approval while one of its bookings
+  # is still held. Moving that booking must not leave it stranded in the
+  # gate with a deadline computed against its old start time: nothing recaps
+  # it, and `Approval.approve/1` refuses a meeting whose slot has passed, so
+  # it would sit held until the expiry sweep with no way to be approved.
+  # There is no gate left to hold it in, so the reschedule confirms it
+  # outright instead, exactly as a fresh booking against the now-ungated type
+  # would be.
+  defp gate_attributes(meeting_type, start_time, meeting) do
+    gate_type = gate_meeting_type(meeting_type, meeting)
+
+    cond do
+      Approval.required?(gate_type) and reenters_gate?(meeting) ->
+        requested_at = DateTime.truncate(Clock.utc_now(), :second)
+
+        %{
+          status: "awaiting_approval",
+          approval_requested_at: requested_at,
+          approval_deadline_at: Approval.deadline_for(gate_type, requested_at, start_time),
+          approval_resolved_at: nil,
+          approval_declined_at: nil,
+          approval_nudge_sent_at: nil,
+          decline_reason: nil,
+          announced_at: nil
+        }
+
+      not Approval.required?(gate_type) and meeting.status == "awaiting_approval" ->
+        %{status: "confirmed", approval_resolved_at: DateTime.truncate(Clock.utc_now(), :second)}
+
+      true ->
+        %{}
+    end
+  end
+
+  # An ad-hoc booking — dragged onto the dashboard calendar, or produced by
+  # confirming a poll — carries no `meeting_type_id`, and `Approval.required?/1`
+  # already states the rule for it: no meeting type means no gate. Creation
+  # honours that (`Bookings.Policy` resolves the type by id and gets `nil`), so
+  # a reschedule must too.
+  #
+  # It does not fall out of `fetch_meeting_type/3`, which answers a different
+  # question: with no id to look up, it matches a type by duration slug so that
+  # the reschedule enforces the same *schedule* the grid the invitee saw was
+  # drawn from. Every account is seeded with types named "15 Minutes" and
+  # "30 Minutes", whose slugs are exactly what that lookup builds, so a
+  # 30-minute ad-hoc booking reliably resolves the host's stock 30-minute type.
+  # Reading `requires_approval` off it would send a booking made under no
+  # meeting type into a gate on the strength of a setting the host ticked
+  # somewhere else entirely, where it could then sit unanswered and be expired
+  # by the sweep.
+  defp gate_meeting_type(_meeting_type, %{meeting_type_id: nil}), do: nil
+  defp gate_meeting_type(meeting_type, _meeting), do: meeting_type
+
+  # Only these two statuses mean the invitee is expecting a decision from the
+  # host: `"confirmed"` (the host already agreed, and the reschedule asks
+  # again) or `"awaiting_approval"` (a held request being moved before anyone
+  # has answered). `"awaiting_payment"` never reached the host in the first
+  # place, and `"expired"` already lapsed and was refunded by
+  # `Meetings.Approval` — reviving either into the gate would let the host
+  # approve a booking nobody paid for, or one the invitee was already given
+  # their money back for.
+  defp reenters_gate?(%{status: status}), do: status in ["confirmed", "awaiting_approval"]
+
+  # A booking back in the gate has not been rescheduled from the invitee's
+  # point of view — it has been re-requested. Sending the reschedule email
+  # would tell them their meeting has moved to a time nobody has agreed to,
+  # which is the confusion the whole feature exists to remove.
+  #
+  # Known gap: when the booking being re-gated came from `"confirmed"`, the
+  # invitee's calendar client may already hold an event from the original
+  # confirmation's ICS attachment (`AppointmentConfirmation`'s
+  # `IcsGenerator.generate_ics_attachment/2`). The request email sent below
+  # (`BookingRequestReceived`) carries no calendar attachment, so that entry
+  # is left showing the old, no-longer-accurate confirmed time until the host
+  # answers again — approval re-sends a fresh confirmation ICS for the new
+  # time (self-healing), but a decline or expiry's outcome email does not
+  # correct it either. Fixing this needs a calendar-only correction path
+  # analogous to `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling,
+  # which lives outside this module's booking-email templates and is left
+  # for that work rather than bolted on here.
+  defp announce(%{status: "awaiting_approval"} = updated, _original) do
+    cancel_stale_reminders(updated)
+
+    case Events.meeting_requested(updated) do
+      {:ok, _result} ->
+        Logger.info("Reschedule returned the booking to the approval gate",
+          meeting_id: updated.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to send booking request notifications on reschedule",
+          meeting_id: updated.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  # `gate_attributes/3` confirms a held request outright when its meeting
+  # type stopped requiring approval since the request was made — see the
+  # comment there. That booking is a new confirmed meeting nobody has ever
+  # been told about: it was held from the moment it was created, so it has no
+  # confirmation email, no ICS, no video room, no reminders and an unclaimed
+  # `announced_at`. Telling the invitee their meeting "has been rescheduled"
+  # would be the only thing they ever heard about it.
+  #
+  # So this takes the approval side effects rather than the reschedule ones,
+  # through the very function `Approval.approve/1` uses
+  # (`Approval.activate_confirmed/1`): the request notifications are cancelled,
+  # the tentative calendar hold is flipped to a real event, and the meeting is
+  # activated with its video room. Sharing that function rather than repeating
+  # its three steps here is what keeps this path from drifting away from the
+  # approval it is standing in for.
+  #
+  # The duplicate calendar "update" job this schedules on top of
+  # `apply_time_update_and_schedule_job/3`'s own is harmless:
+  # `CalendarJobs.schedule_job/2` is uniqueness-guarded and reports the second
+  # insert as `:already_scheduled`.
+  defp announce(%{status: "confirmed"} = updated, %{status: "awaiting_approval"}) do
+    Approval.activate_confirmed(updated)
+  end
+
+  defp announce(updated, original), do: send_reschedule_notifications(updated, original)
+
+  # A booking re-entering the gate must not carry reminders pinned to the
+  # time it was confirmed for before: left alone, they would fire and remind
+  # the attendee about a meeting nobody has agreed to yet. `Approval.approve/1`
+  # re-schedules them in full, through the same pipeline an ordinary
+  # confirmation uses, once the host answers — so this only ever needs to
+  # clear, never to re-pin.
+  defp cancel_stale_reminders(meeting) do
+    case Orchestrator.cancel_reminder_notifications(meeting) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to cancel stale reminder jobs on reschedule",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
     end
   end
 
@@ -155,11 +358,12 @@ defmodule Tymeslot.Bookings.Reschedule do
   # stale duration after a host edits the type would refuse slots the page
   # just offered. Only the check's step size changes; the meeting's own
   # duration, computed below via `duration_minutes`, never does.
-  defp prepare_new_times(params, meeting) do
+  #
+  # `meeting_type` is resolved once by the caller and threaded through here
+  # rather than re-fetched: two reads of the same row leave a window in which
+  # a host edit between them could be answered differently by each call.
+  defp prepare_new_times(params, meeting, meeting_type) do
     organizer_user_id = meeting.organizer_user_id
-
-    meeting_type =
-      fetch_meeting_type(meeting.meeting_type_id, organizer_user_id, meeting.duration)
 
     duration_minutes = meeting.duration
 

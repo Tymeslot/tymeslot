@@ -65,6 +65,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           last_outlook_notification_at: DateTime.t() | nil,
           caldav_sync_tier: integer() | nil,
           caldav_sync_token: String.t() | nil,
+          exchange_sync_states: %{optional(String.t()) => String.t()},
           last_external_sync_at: DateTime.t() | nil,
           last_full_sync_at: DateTime.t() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
@@ -127,6 +128,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     # CalDAV sync fields
     field(:caldav_sync_tier, :integer)
     field(:caldav_sync_token, :string)
+
+    # Exchange (EWS) sync fields. A map rather than a single token because
+    # `SyncFolderItems` is folder-scoped: an Exchange mailbox syncs each
+    # selected calendar folder separately and each keeps its own state, where
+    # Google and Graph hand out one token per account. Keyed by folder id, with
+    # the mailbox's default calendar under `"calendar"`.
+    field(:exchange_sync_states, :map, default: %{})
 
     # Integration sync health
     field(:last_external_sync_at, :utc_datetime)

@@ -221,9 +221,11 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
     # Build proxy tuple WITHOUT headers (they go at connect_options level)
     proxy_tuple = {scheme, proxy_config.host, proxy_config.port, []}
 
-    # Build connect_options with proxy_headers at the correct level.
-    # Explicit 10s connect timeout since proxy paths bypass the Finch pool-level
-    # conn_opts and create dynamic connections via Req.
+    # Build connect_options with proxy_headers at the correct level. These are
+    # the connection options `Infrastructure.FinchPool` builds the request's
+    # pool from, so the connect timeout named here is the pool's; it is stated
+    # rather than inherited because a proxy is the one hop where a stall is
+    # somebody else's infrastructure and not the destination's.
     connect_opts =
       case proxy_config.auth do
         {user, password} when is_binary(user) and user != "" ->

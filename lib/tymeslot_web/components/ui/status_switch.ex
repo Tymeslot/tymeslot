@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
   def status_switch(assigns) do
     ~H"""
     <button
+      type="button"
       phx-click={@on_change}
       phx-target={@target}
       phx-value-id={@phx_value_id}
@@ -38,7 +39,7 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
         @class
       ]}
       role="switch"
-      aria-checked={@checked}
+      aria-checked={to_string(@checked)}
       aria-label={@aria_label}
       id={@id}
     >

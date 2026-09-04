@@ -12,6 +12,7 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Locales
   alias Tymeslot.Utils.Colour
 
   @type t :: %__MODULE__{
@@ -32,6 +33,8 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
           email_brand_accent: String.t() | nil,
           email_brand_name: String.t() | nil,
           email_logo_path: String.t() | nil,
+          admin_default_locale: String.t() | nil,
+          booking_default_locale: String.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -52,8 +55,12 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     :booking_analytics_enabled,
     :email_brand_accent,
     :email_brand_name,
-    :email_logo_path
+    :email_logo_path,
+    :admin_default_locale,
+    :booking_default_locale
   ]
+
+  @locale_fields [:admin_default_locale, :booking_default_locale]
 
   @score_fields [:recaptcha_signup_min_score, :recaptcha_booking_min_score]
 
@@ -64,7 +71,9 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     :admin_alert_email,
     :email_brand_accent,
     :email_brand_name,
-    :email_logo_path
+    :email_logo_path,
+    :admin_default_locale,
+    :booking_default_locale
   ]
 
   # Pragmatic email pattern — same shape as the user-facing validation in
@@ -101,6 +110,8 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     field(:email_brand_accent, :string)
     field(:email_brand_name, :string)
     field(:email_logo_path, :string)
+    field(:admin_default_locale, :string)
+    field(:booking_default_locale, :string)
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -125,6 +136,7 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     |> validate_brand_accent()
     |> validate_brand_name()
     |> validate_logo_path()
+    |> validate_locales()
   end
 
   # Trim every free-text override, treating a blank result as "clear the
@@ -212,6 +224,18 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
       :error ->
         changeset
     end
+  end
+
+  # The supported set is configuration, so it is read at validation time
+  # rather than baked into the module: an install that has removed a language
+  # must not be able to select it. Nil is the cleared override and passes
+  # untouched: `validate_inclusion/3` only sees a change that is present.
+  defp validate_locales(changeset) do
+    Enum.reduce(@locale_fields, changeset, fn field, acc ->
+      validate_inclusion(acc, field, Locales.supported_codes(),
+        message: "is not a supported language"
+      )
+    end)
   end
 
   defp traversal?(path), do: ".." in Path.split(path)

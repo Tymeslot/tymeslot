@@ -7,6 +7,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   alias Tymeslot.Emails.Shared.{
+    BookingRequestLocation,
     Buttons,
     Formatting,
     MeetingComponents,
@@ -37,13 +38,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
         start_time_attendee_tz: attendee_time,
         duration: meeting.duration,
         location: meeting.location,
-        location_type:
-          cond do
-            meeting.meeting_url -> :video
-            meeting.location == "Phone Call" -> :phone
-            meeting.location == "In Person" -> :in_person
-            true -> :custom
-          end,
+        location_type: BookingRequestLocation.type(meeting),
         meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
         timezone: meeting.attendee_timezone || "UTC"
       }

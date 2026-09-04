@@ -42,9 +42,17 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
       assert query["redirect_uri"] == "https://example.com/cb"
       assert query["response_type"] == "code"
       assert query["scope"] =~ "meeting:write:meeting"
-      # Cancelling a booking needs its own granular scope; without it Zoom
-      # rejects every delete with code 4711.
+      # Cancelling needs its own granular scope; without it Zoom rejects every
+      # delete with code 4711.
       assert query["scope"] =~ "meeting:delete:meeting"
+
+      # Rescheduling needs `meeting:update:meeting`, which the Marketplace app
+      # is not configured for. Zoom does not reject a request naming it — the
+      # scope is dropped and the rest consented to — so asking would be
+      # silently useless, while telling the rest of the system the scope is
+      # obtainable and switching on "reconnect to fix this" prompts that cannot
+      # fix it. This assertion keeps it out until the app is configured.
+      refute query["scope"] =~ "meeting:update:meeting"
 
       # Signed state: base64url payload and HMAC, separated by a dot.
       assert [_payload, _signature] = String.split(query["state"], ".")

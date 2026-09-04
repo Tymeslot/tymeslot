@@ -61,5 +61,53 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsSubscriptionRefreshTest do
         args: %{"calendar_integration_id" => subscription.id}
       )
     end
+
+    @tag :capture_log
+    test "an Exchange mailbox takes the discovery path, not the feed worker",
+         %{conn: conn, user: user} do
+      # Read-only and "is a feed" are not the same question. An Exchange
+      # mailbox is read-only too, but it discovers real folders and has no feed
+      # to re-fetch, so it must never be handed to the ICS worker. The
+      # subscription refreshed alongside it is the anchor: it proves the sweep
+      # ran and reached the worker, so the refutation cannot pass vacuously.
+      subscription =
+        insert(:calendar_integration,
+          user: user,
+          provider: "ics_url",
+          name: "Feed",
+          is_active: true,
+          base_url: "https://feeds.example.com",
+          username_encrypted: nil,
+          password_encrypted: nil,
+          subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+        )
+
+      exchange =
+        insert(:calendar_integration,
+          user: user,
+          provider: "exchange",
+          name: "Mailbox",
+          is_active: true,
+          base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-click='refresh_all_calendars']")
+      |> render_click()
+
+      eventually(fn ->
+        assert_enqueued(
+          worker: SyncIcsCalendarWorker,
+          args: %{"calendar_integration_id" => subscription.id}
+        )
+      end)
+
+      refute_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => exchange.id}
+      )
+    end
   end
 end

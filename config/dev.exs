@@ -122,12 +122,17 @@ config :tymeslot, Oban,
       {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
       # Run daily at 03:30 UTC to prune old/inactive calendar event cache
       {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
+      # Run daily at 05:30 UTC to flag Zoom grants missing a scope Tymeslot needs
+      {"30 5 * * *", Tymeslot.Workers.ZoomScopeAuditWorker},
       # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
       {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
       # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
       {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
       # Run daily at 04:30 UTC to cross-check booking analytics against bookings
-      {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker}
+      {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
+      # Run every 15 min to release approval requests whose deadline passed
+      # and whose per-meeting expiry job never fired
+      {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker}
     ]
   ]
 

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SlotGrouping
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -47,6 +48,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
     new_time = if socket.assigns[:selected_time] == time, do: nil, else: time
     send(self(), {:step_event, :schedule, :select_time, new_time})
     {:noreply, assign(socket, :selected_time, new_time)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_hour", %{"hour" => hour}, socket) do
+    send(self(), {:step_event, :schedule, :toggle_hour, hour})
+    {:noreply, socket}
   end
 
   @impl Phoenix.LiveComponent
@@ -115,7 +122,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 selected_duration={@selected_duration}
               />
               <div class="timezone-selector-container">
-                <label class="timezone-label">{dgettext("booking", "Your timezone")}:</label>
+                <%!-- Visual label only: it names no control (the trigger below carries
+                     its own accessible name), so it must not be a <label> element. --%>
+                <div class="timezone-label">{dgettext("booking", "Your timezone")}:</div>
                 <div class="timezone-dropdown-wrapper">
                   <.dropdown
                     id="rhythm-timezone-dropdown"
@@ -128,9 +137,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     trigger_class="timezone-trigger"
                     class="timezone-dropdown"
                     unstyled={true}
-                    aria-label={dgettext("booking", "Select timezone")}
                   >
                     <:trigger>
+                      <span class="sr-only">
+                        {dgettext("booking", "Your timezone")}:
+                      </span>
                       <div class="timezone-display">
                         <%= if country_code = Timezones.country_code(@user_timezone || "America/New_York") do %>
                           <%= if Timezones.flag_exists?(country_code) do %>
@@ -154,6 +165,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                             dgettext("booking", "Search cities, countries, or timezones...")
                           }
                           class="timezone-search"
+                          aria-label={dgettext("booking", "Search timezones")}
                           phx-keyup="search_timezone"
                           phx-target={@myself}
                           name="search"
@@ -288,7 +300,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       {dgettext("booking", "This date is fully booked")}
                   <% end %>
                 </div>
-                <div class="time-slots-grid scroll-y" data-slots-loaded={slots_loaded?}>
+                <div
+                  class="time-slots-grid scroll-y"
+                  data-slots-loaded={slots_loaded? && @selected_date}
+                >
                   <%= if @selected_date do %>
                     <%= if @loading_slots do %>
                       <div class="loading-slots">
@@ -301,41 +316,94 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         </div>
                       <% end %>
                       <%= if !@calendar_error && length(normalized_slots) > 0 do %>
-                        <%= for {period, slots} <- LocalizationHelpers.group_slots_by_period(normalized_slots) do %>
-                          <%= if length(slots) > 0 do %>
-                            <div class="time-period-section">
-                              <h4 class="time-period-header">
-                                {period}
-                              </h4>
-                              <div class="time-period-slots">
-                                <%= for slot <- slots do %>
-                                  <button
-                                    class={[
-                                      "time-slot",
-                                      slot.seats_left && "has-seats",
-                                      @selected_time == slot.time && "selected"
-                                    ]}
-                                    data-testid="time-slot"
-                                    data-time={slot.time}
-                                    phx-click="select_time"
-                                    phx-value-time={slot.time}
-                                    phx-target={@myself}
-                                    disabled={@loading_slots}
-                                  >
-                                    <span>
-                                      {LocalizationHelpers.format_time_by_locale(
-                                        CalendarHelpers.parse_slot_time(slot.time)
-                                      )}
-                                    </span>
-                                    <SeatBadge.seat_badge
-                                      seats_left={slot.seats_left}
-                                      capacity={slot.capacity}
+                        <% grouping =
+                          SlotGrouping.group(
+                            normalized_slots,
+                            @slot_interval_minutes,
+                            @duration_minutes
+                          ) %>
+                        <%= case grouping do %>
+                          <% {:flat, periods} -> %>
+                            <%= for {period, slots} <- periods, slots != [] do %>
+                              <div class="time-period-section">
+                                <h4 class="time-period-header">
+                                  {period}
+                                </h4>
+                                <div class="time-period-slots">
+                                  <%= for slot <- slots do %>
+                                    <.slot_button
+                                      slot={slot}
+                                      selected={@selected_time == slot.time}
+                                      loading={@loading_slots}
+                                      target={@myself}
                                     />
-                                  </button>
+                                  <% end %>
+                                </div>
+                              </div>
+                            <% end %>
+                          <% {:hours, periods} -> %>
+                            <% open =
+                              SlotGrouping.effective_expanded_hour(@expanded_hour, grouping) %>
+                            <% selected_hour = SlotGrouping.selected_hour(grouping, @selected_time) %>
+                            <%= for {period, hours} <- periods, hours != [] do %>
+                              <div class="time-period-section">
+                                <h4 class="time-period-header">
+                                  {period}
+                                </h4>
+                                <div class="time-period-slots">
+                                  <%= for {hour, hour_slots} <- hours do %>
+                                    <button
+                                      type="button"
+                                      class={[
+                                        "time-slot time-slot--hour",
+                                        open == hour && "expanded",
+                                        open != hour && selected_hour == hour && "selected"
+                                      ]}
+                                      data-testid="slot-hour"
+                                      phx-click="toggle_hour"
+                                      phx-value-hour={hour}
+                                      phx-target={@myself}
+                                      aria-expanded={to_string(open == hour)}
+                                      aria-controls={open == hour && "slot-hour-panel-#{hour}"}
+                                      aria-label={
+                                        dngettext(
+                                          "booking",
+                                          "%{hour}, %{count} available time",
+                                          "%{hour}, %{count} available times",
+                                          length(hour_slots),
+                                          hour: SlotGrouping.hour_label(hour),
+                                          count: length(hour_slots)
+                                        )
+                                      }
+                                    >
+                                      <span class="slot-hour-label" aria-hidden="true">
+                                        {SlotGrouping.hour_label(hour)}
+                                      </span>
+                                      <span class="slot-hour-count" aria-hidden="true">
+                                        {length(hour_slots)}
+                                      </span>
+                                    </button>
+                                  <% end %>
+                                </div>
+                                <%= for {hour, hour_slots} <- hours, hour == open do %>
+                                  <div
+                                    class="time-period-slots time-period-slots--minutes"
+                                    id={"slot-hour-panel-#{hour}"}
+                                    role="group"
+                                    aria-label={SlotGrouping.hour_label(hour)}
+                                  >
+                                    <%= for slot <- hour_slots do %>
+                                      <.slot_button
+                                        slot={slot}
+                                        selected={@selected_time == slot.time}
+                                        loading={@loading_slots}
+                                        target={@myself}
+                                      />
+                                    <% end %>
+                                  </div>
                                 <% end %>
                               </div>
-                            </div>
-                          <% end %>
+                            <% end %>
                         <% end %>
                       <% else %>
                         <%= if !@calendar_error do %>
@@ -381,6 +449,39 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
         </div>
       </div>
     </div>
+    """
+  end
+
+  # One definition of the slot button, so the flat grid and the minutes nested
+  # under an expanded hour cannot drift apart in markup — and so the seat
+  # badge cannot be dropped from one of the two.
+  attr :slot, :map, required: true
+  attr :selected, :boolean, default: false
+  attr :loading, :boolean, default: false
+  attr :target, :any, required: true
+
+  @spec slot_button(map()) :: Phoenix.LiveView.Rendered.t()
+  defp slot_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class={[
+        "time-slot",
+        @slot[:seats_left] && "has-seats",
+        @selected && "selected"
+      ]}
+      data-testid="time-slot"
+      data-time={@slot.time}
+      phx-click="select_time"
+      phx-value-time={@slot.time}
+      phx-target={@target}
+      disabled={@loading}
+    >
+      <span>
+        {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(@slot.time))}
+      </span>
+      <SeatBadge.seat_badge seats_left={@slot[:seats_left]} capacity={@slot[:capacity]} />
+    </button>
     """
   end
 end

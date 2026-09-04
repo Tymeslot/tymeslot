@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Bookings.{Cancel, CancelSeat, Create, Errors, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
+    CalendarEventLink,
     CalendarEvents,
     Cancellation,
     ExternalCalendarChanges,
@@ -413,6 +414,23 @@ defmodule Tymeslot.Meetings do
   defdelegate get_meeting_for_user(id, user_email), to: MeetingAccess
 
   @doc """
+  Fetches a meeting by ID only if the given `organizer_user_id` owns it.
+
+  Unlike `get_meeting_for_user/2`, this never matches on the attendee side:
+  it is for actions (approving or declining a held request) that only the
+  organiser is allowed to take, where an attendee holding a Tymeslot account
+  under the booking email must not be able to act on their own request.
+
+  Use this instead of `get_meeting_for_user/2` on any organiser-only action
+  that accepts a meeting id from the client.
+  """
+  @spec get_meeting_for_organizer(String.t(), integer()) ::
+          {:ok, MeetingSchema.t()} | {:error, :not_found}
+  def get_meeting_for_organizer(id, organizer_user_id) do
+    MeetingQueries.get_meeting_for_organizer(id, organizer_user_id)
+  end
+
+  @doc """
   Gets a single meeting by its unique identifier (UID).
   """
   @spec get_meeting_by_uid(String.t()) :: {:ok, MeetingSchema.t()} | {:error, :not_found}
@@ -458,6 +476,10 @@ defmodule Tymeslot.Meetings do
   description and custom question answers so the download matches what was
   emailed. The attendee's own video join link is preferred over the generic
   meeting URL, since the attendee is exporting their own event.
+
+  A held request (`MeetingState.awaiting_approval?/1`) is exportable — it
+  occupies its slot — but must not read as a confirmed meeting to whichever
+  calendar it lands on, so it is exported with `STATUS:TENTATIVE`.
   """
   @spec calendar_export(String.t(), integer()) :: {:ok, String.t()} | {:error, :not_found}
   def calendar_export(uid, organizer_user_id) do
@@ -470,13 +492,18 @@ defmodule Tymeslot.Meetings do
           description: meeting.description,
           custom_fields_snapshot: meeting.custom_fields_snapshot,
           custom_field_answers: meeting.custom_field_answers,
-          meeting_url: meeting.attendee_video_url || meeting.meeting_url
+          meeting_url: meeting.attendee_video_url || meeting.meeting_url,
+          status: ics_export_status(meeting)
         })
 
       {:ok, IcsGenerator.generate_ics(details, details.attendee_locale)}
     else
       _not_found_or_inactive -> {:error, :not_found}
     end
+  end
+
+  defp ics_export_status(meeting) do
+    if MeetingState.awaiting_approval?(meeting), do: "TENTATIVE", else: "CONFIRMED"
   end
 
   defp exportable?(meeting), do: MeetingState.expects_calendar_event?(meeting)
@@ -546,12 +573,32 @@ defmodule Tymeslot.Meetings do
     as: :find_linked_meeting
 
   @doc """
-  Returns a map from `provider_event_id` to meeting for all meetings linked
-  to the given integration whose `provider_event_id` is in the supplied list.
+  Returns the meetings linked to the given integration that share any of
+  `identifiers`, keyed by every identifier each matched meeting carries.
   """
-  defdelegate list_meetings_by_provider_event_ids(calendar_integration_id, provider_event_ids),
+  defdelegate list_meetings_by_calendar_identifiers(calendar_integration_id, identifiers),
     to: MeetingCalendarQueries,
-    as: :list_by_provider_event_ids
+    as: :list_by_calendar_identifiers
+
+  @doc """
+  Returns the non-blank identifiers by which `record` — a meeting or a cached
+  provider calendar event — is matched to its counterpart on the other side.
+  """
+  defdelegate calendar_event_identifiers(record), to: CalendarEventLink, as: :identifiers
+
+  @doc """
+  Collects every calendar-event identifier across `records` into one set, for
+  matching many records against many.
+  """
+  defdelegate calendar_identifier_set(records), to: CalendarEventLink, as: :identifier_set
+
+  @doc """
+  Whether `record` shares a calendar-event identifier with `identifier_set`,
+  i.e. whether a meeting and a cached provider event describe the same event.
+  """
+  defdelegate linked_to_calendar_event?(record, identifier_set),
+    to: CalendarEventLink,
+    as: :linked?
 
   # =====================================
   # Analytics Query Functions

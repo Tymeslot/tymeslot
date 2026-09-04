@@ -10,6 +10,7 @@ defmodule Tymeslot.ThemeCustomizations.Css do
   """
 
   alias Tymeslot.ThemeCustomizations.Capability
+  alias Tymeslot.ThemeCustomizations.ContrastTokens
   alias Tymeslot.ThemeCustomizations.PaletteDerivation
   alias Tymeslot.ThemeCustomizations.Presets
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
@@ -135,8 +136,17 @@ defmodule Tymeslot.ThemeCustomizations.Css do
   end
 
   defp format_palette_css(colors) do
-    Enum.map_join(colors, "\n", fn {key, value} ->
+    colors
+    |> Map.merge(contrast_tokens(colors))
+    |> Enum.map_join("\n", fn {key, value} ->
       "--theme-#{String.replace(to_string(key), "_", "-")}: #{value};"
     end)
+  end
+
+  # Filled controls put text on top of the palette rather than beside it, so
+  # they need an ink and a surface that pass AA together. See
+  # `ContrastTokens` for why the palette's own colours are left alone.
+  defp contrast_tokens(colors) do
+    ContrastTokens.derive(colors) || %{}
   end
 end

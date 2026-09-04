@@ -185,5 +185,32 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       assert html =~ "Discovery call (synced)"
       refute html =~ ~s(data-event-id="booking-#{meeting.id}")
     end
+
+    test "shows a CalDAV booking once, though its synced copy is keyed by href",
+         %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      uid = "abc123@tymeslot.com"
+
+      # The CalDAV write path stores its caller-supplied UID on the meeting and
+      # leaves provider_event_id unset, while the synced copy carries the
+      # server's href there. Matching on provider_event_id alone drew both.
+      meeting = insert_booking(user, %{uid: uid, provider_event_id: nil})
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        summary: "Discovery call (synced)",
+        uid: uid,
+        provider_event_id: "/calendars/sander/default/#{uid}.ics",
+        created_by_tymeslot: true,
+        start_at: meeting.start_time,
+        end_at: meeting.end_time,
+        all_day: false
+      )
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Discovery call (synced)"
+      refute html =~ ~s(data-event-id="booking-#{meeting.id}")
+    end
   end
 end

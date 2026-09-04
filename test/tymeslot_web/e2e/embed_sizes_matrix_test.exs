@@ -19,8 +19,10 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   """
   use TymeslotWeb.BrowserCase, async: false
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
   alias Wallaby.Element
 
   @moduletag :e2e
@@ -72,6 +74,27 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> assert_no_horizontal_overflow("#{theme_name} overview width=#{width}px")
         |> advance_to_schedule()
         |> assert_no_horizontal_overflow("#{theme_name} schedule width=#{width}px")
+    end
+  end
+
+  feature "overview stays operable with introductory text at its length caps (both themes)",
+          %{session: session} do
+    # An organiser may fill the heading and both welcome lines to the character
+    # limit the changeset allows. The caps were chosen so that the tallest legal
+    # introduction still leaves the primary action reachable on the shortest
+    # viewport the booker supports; this is what holds them to that.
+    {profile, _slug} = create_user_with_max_length_booking_text()
+
+    for {theme_id, theme_name} <- @themes, {width, height} <- @short_sizes, reduce: session do
+      acc ->
+        context = "#{theme_name} overview max text #{width}x#{height}"
+
+        acc
+        |> resize_window(width, height)
+        |> visit("/#{profile.username}?theme=#{theme_id}")
+        |> wait_for_live()
+        |> assert_no_horizontal_overflow(context)
+        |> assert_cta_reachable(context)
     end
   end
 
@@ -182,6 +205,22 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   end
 
   # ── Setup helpers ──────────────────────────────────────────────────────
+
+  defp create_user_with_max_length_booking_text do
+    {profile, slug} = create_user_with_meeting_type()
+
+    profile =
+      profile
+      |> Changeset.change(%{
+        booking_text_enabled: true,
+        booking_heading: String.duplicate("Wo", 30),
+        booking_greeting: String.duplicate("Wo", 40),
+        booking_instruction: String.duplicate("Wo", 40)
+      })
+      |> Repo.update!()
+
+    {profile, slug}
+  end
 
   defp create_user_with_meeting_type do
     user = create_onboarded_user()

@@ -16,7 +16,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.HealthCheck
 
   @doc """
   Records the detected sync tier and returns the updated integration.
@@ -49,6 +48,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
   `:sync_token`, `:last_full_sync_at` and `:sync_tier`; an option that is
   absent leaves its column untouched, which is how a Tier 1 failure keeps the
   previous sync token rather than advancing past changes it never applied.
+
+  This records bookkeeping and nothing else. It used to clear the integration's
+  health streak too, which looked equivalent and was not: it runs per path and
+  per tier step rather than once per job, so on a multi-calendar integration a
+  first calendar syncing normally cleared the streak that a second calendar's
+  repeated failure had just added, and the badge could never reach the
+  threshold that raises it. `SyncCalDavCalendarWorker` owns that signal now,
+  at the job boundary, where every other provider's worker already puts it.
   """
   @spec put(struct(), keyword()) :: :ok
   def put(integration, opts) do
@@ -58,10 +65,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
       |> maybe_put(opts, :last_full_sync_at, :last_full_sync_at)
       |> maybe_put(opts, :sync_tier, :caldav_sync_tier)
 
-    result = CalendarIntegrationQueries.update_sync_state(integration, attrs)
-    HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
         :ok
 

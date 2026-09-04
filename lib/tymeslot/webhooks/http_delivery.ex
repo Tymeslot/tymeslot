@@ -14,6 +14,7 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.RedirectLocation
+  alias Tymeslot.Security.ConnectionPinning
   alias Tymeslot.Webhooks.SsrfValidator
 
   @delivery_timeout_ms 10_000
@@ -27,18 +28,29 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
   SSRF-validated. 301/302/303 redirects switch to GET (RFC 9110 §15.4);
   307/308 preserve the original method and body.
 
+  Every hop connects to the address its own check approved, rather than letting
+  the HTTP client resolve the hostname again — see
+  `Tymeslot.Security.ConnectionPinning`.
+
   Pass `skip_initial_check: true` when the caller has already validated `url`
   with `SsrfValidator` immediately before this call, to avoid resolving DNS
-  for the same host twice. Redirect hops are always re-validated regardless.
+  for the same host twice; pass the addresses that check approved as
+  `:pin_addresses` alongside it, or the saved resolution is exactly the one the
+  connect would otherwise have to redo. Redirect hops are always re-validated
+  regardless.
   """
   @spec post(String.t(), binary(), list() | map(), keyword()) :: response()
   def post(url, body, headers, opts \\ []) do
     if Keyword.get(opts, :skip_initial_check, false) do
-      deliver_with_redirects(url, :post, body, headers, @max_redirects)
+      addresses = Keyword.get(opts, :pin_addresses, [])
+      deliver_with_redirects(url, addresses, :post, body, headers, @max_redirects)
     else
-      case SsrfValidator.check(url) do
-        :ok -> deliver_with_redirects(url, :post, body, headers, @max_redirects)
-        {:error, _reason} -> {:error, :blocked_by_ssrf}
+      case SsrfValidator.check_pinned(url) do
+        {:ok, addresses} ->
+          deliver_with_redirects(url, addresses, :post, body, headers, @max_redirects)
+
+        {:error, _reason} ->
+          {:error, :blocked_by_ssrf}
       end
     end
   end
@@ -48,14 +60,14 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
   # module is allowed to make. See the hop-accounting note in
   # `Tymeslot.Infrastructure.RedirectLocation`, which the ICS feed fetcher and
   # the video reachability probe follow too.
-  defp deliver_with_redirects(_url, _method, _body, _headers, redirects_remaining)
+  defp deliver_with_redirects(_url, _addresses, _method, _body, _headers, redirects_remaining)
        when redirects_remaining < 0 do
     Logger.warning("Webhook delivery exceeded max redirects")
     {:error, :too_many_redirects}
   end
 
-  defp deliver_with_redirects(url, method, body, headers, redirects_remaining) do
-    case perform_http_request(url, method, body, headers) do
+  defp deliver_with_redirects(url, addresses, method, body, headers, redirects_remaining) do
+    case perform_http_request(url, addresses, method, body, headers) do
       {:ok, status, _body, response_headers} when status in 300..399 ->
         follow_redirect(url, method, body, headers, response_headers, redirects_remaining, status)
 
@@ -71,10 +83,18 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
   # browsers do); 307/308 preserve the original method and body.
   defp follow_redirect(from_url, method, body, headers, response_headers, hops_left, status) do
     with {:ok, next_url} <- RedirectLocation.next_url(response_headers, from_url),
-         :ok <- SsrfValidator.check(next_url) do
+         {:ok, next_addresses} <- SsrfValidator.check_pinned(next_url) do
       {next_method, next_body} = redirect_method(method, body, status)
       safe_headers = sanitise_headers_for_redirect(headers, from_url, next_url)
-      deliver_with_redirects(next_url, next_method, next_body, safe_headers, hops_left - 1)
+
+      deliver_with_redirects(
+        next_url,
+        next_addresses,
+        next_method,
+        next_body,
+        safe_headers,
+        hops_left - 1
+      )
     else
       {:error, :missing_location} ->
         Logger.warning("Webhook redirect missing Location header", from_url: from_url)
@@ -120,24 +140,27 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
   defp normalise_port("http", nil), do: 80
   defp normalise_port(_scheme, port), do: port
 
-  defp perform_http_request(url, :post, body, headers) do
-    result =
-      Config.http_client_module().post(url, body, headers,
-        receive_timeout: @delivery_timeout_ms,
-        redirect: false
-      )
+  defp perform_http_request(url, addresses, :post, body, headers) do
+    {pinned_url, opts} = pin(url, addresses)
 
-    normalise_http_result(result)
+    pinned_url
+    |> Config.http_client_module().post(body, headers, opts)
+    |> normalise_http_result()
   end
 
-  defp perform_http_request(url, :get, _body, headers) do
-    result =
-      Config.http_client_module().get(url, headers,
-        receive_timeout: @delivery_timeout_ms,
-        redirect: false
-      )
+  defp perform_http_request(url, addresses, :get, _body, headers) do
+    {pinned_url, opts} = pin(url, addresses)
 
-    normalise_http_result(result)
+    pinned_url
+    |> Config.http_client_module().get(headers, opts)
+    |> normalise_http_result()
+  end
+
+  defp pin(url, addresses) do
+    ConnectionPinning.pin_request(url, addresses,
+      receive_timeout: @delivery_timeout_ms,
+      redirect: false
+    )
   end
 
   defp normalise_http_result({:ok, response}) do

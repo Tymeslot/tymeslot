@@ -9,6 +9,7 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.AdminLive.Tabs
   alias TymeslotWeb.Components.UserDropdownComponent
 
   attr :live_action, :atom, required: true
@@ -52,16 +53,20 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
               {dgettext("dashboard_admin", "Manage this self-hosted Tymeslot install.")}
             </p>
 
-            <%!-- Pill-style tab bar --%>
+            <%!-- Pill-style tab bar. Wraps rather than overflowing: the tab
+                 list grows with the settings, and a bar that scrolls
+                 sideways hides tabs on exactly the narrow screens where
+                 they are hardest to find. --%>
             <nav
-              class="mb-8 inline-flex p-1 bg-white border-2 border-tymeslot-100 rounded-token-2xl shadow-sm gap-1"
+              class="mb-8 inline-flex flex-wrap p-1 bg-white border-2 border-tymeslot-100 rounded-token-2xl shadow-sm gap-1"
               aria-label={dgettext("dashboard_admin", "Admin sections")}
             >
-              <.tab_link to={~p"/admin/settings"} active={@live_action == :settings}>
-                {dgettext("dashboard_admin", "Settings")}
-              </.tab_link>
-              <.tab_link to={~p"/admin/users"} active={@live_action == :users}>
-                {dgettext("dashboard_admin", "Users")}
+              <.tab_link
+                :for={tab <- Tabs.all()}
+                to={tab_path(tab)}
+                active={@live_action == tab}
+              >
+                {Tabs.name(tab)}
               </.tab_link>
             </nav>
 
@@ -72,6 +77,13 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
     </div>
     """
   end
+
+  # Verified routes need a literal path, so each tab names its own rather than
+  # being interpolated into ~p.
+  defp tab_path(:authentication), do: ~p"/admin/authentication"
+  defp tab_path(:email), do: ~p"/admin/email"
+  defp tab_path(:general), do: ~p"/admin/general"
+  defp tab_path(:users), do: ~p"/admin/users"
 
   attr :to, :string, required: true
   attr :active, :boolean, required: true

@@ -28,7 +28,8 @@
     "lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex$",
     "lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex$",
     "lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex$",
-    "lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex$"
+    "lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex$",
+    "lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex$"
   ],
   "terminal_options": {
     "file_column_width": 125

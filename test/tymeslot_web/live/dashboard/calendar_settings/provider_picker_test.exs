@@ -78,19 +78,21 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ProviderPickerTest do
       assert [%{providers: [%{provider: "caldav", connected?: true}]}] = groups
     end
 
-    test "groups the real calendar directory into OAuth, CalDAV then subscriptions" do
+    test "groups the real calendar directory into OAuth, CalDAV, Exchange then subscriptions" do
       groups = ProviderPicker.groups(Directory.list(:calendar), [])
 
       assert Enum.map(groups, & &1.label) == [
                nil,
                "CalDAV servers",
+               "Exchange servers",
                "Calendar subscriptions"
              ]
 
-      [oauth_group, caldav_group, subscription_group] = groups
+      [oauth_group, caldav_group, ews_group, subscription_group] = groups
 
       assert Enum.map(oauth_group.providers, & &1.provider) == ["google", "outlook"]
       assert "caldav" in Enum.map(caldav_group.providers, & &1.provider)
+      assert Enum.map(ews_group.providers, & &1.provider) == ["exchange"]
       assert Enum.map(subscription_group.providers, & &1.provider) == ["ics_url"]
     end
   end

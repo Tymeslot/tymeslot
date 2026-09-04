@@ -72,6 +72,67 @@ defmodule Tymeslot.Emails.EmailScheduler.IntegrationScheduler do
   end
 
   @doc """
+  Schedules a "reconnect required" notification email.
+
+  Sent when an integration is flagged `needs_reauth`. The 30-day uniqueness
+  window matches the unhealthy notification's: an integration that is flagged,
+  reconnected and flagged again inside a month is a user already aware of the
+  problem, and a second email would not tell them anything new.
+  """
+  @spec schedule_integration_reauth_notification(
+          entity_with_id(),
+          entity_with_id(),
+          atom() | String.t()
+        ) :: :ok | {:error, String.t()}
+  def schedule_integration_reauth_notification(user, integration, type) do
+    result =
+      %{
+        "action" => "send_integration_reauth_notification",
+        "user_id" => user.id,
+        "integration_id" => integration.id,
+        "integration_type" => to_string(type)
+      }
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 2,
+        unique: [
+          period: 30 * 24 * 60 * 60,
+          fields: [:args, :queue],
+          keys: [:action, :user_id, :integration_id, :integration_type]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Integration reauth notification job scheduled",
+          user_id: user.id,
+          integration_id: integration.id,
+          type: type
+        )
+
+        :ok
+
+      {:error, %Changeset{errors: [unique: _details]}} ->
+        Logger.info("Integration reauth notification job already exists, skipping duplicate",
+          user_id: user.id,
+          integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule integration reauth notification",
+          user_id: user.id,
+          integration_id: integration.id,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
   Schedules an integration paused notification email.
 
   Sent once when the auto-pause worker deactivates an integration after the

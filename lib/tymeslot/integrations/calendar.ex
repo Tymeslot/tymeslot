@@ -6,11 +6,17 @@ defmodule Tymeslot.Integrations.Calendar do
   and the higher-level orchestration wrappers used by LiveViews and
   controllers.
 
-  Related sibling modules:
+  Related sibling modules — public surface of the calendar domain, not detail
+  behind this facade. Each is a sanctioned entry point covered by Core's own
+  tests, so a rename goes red here before it breaks a downstream build.
 
     * `Tymeslot.Integrations.Calendar.Diagnostics` — direct provider-event
       operations and ephemeral integration builders used by `mix calendar_audit`
       and other diagnostic tooling.
+    * `Tymeslot.Integrations.Calendar.EventColour` — the palette: which colour
+      keys exist and what each maps to per provider. A pure lookup table.
+    * `Tymeslot.Integrations.Calendar.Recurrence.RRule` — RFC 5545 recurrence
+      parsing. Also pure, and already called directly from the calendar grid.
     * `Tymeslot.Integrations.Calendar.DisplayHelpers` — user-facing string
       helpers (provider display names, calendar name extraction, error
       message normalisation).
@@ -33,6 +39,8 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Exchange.Creation, as: ExchangeCreation
+  alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -49,6 +57,12 @@ defmodule Tymeslot.Integrations.Calendar do
   @type integration :: CalendarIntegrationSchema.t()
   @type calendar_selection_params :: %{required(:selected_calendars) => [String.t()]}
   @type colour_target :: {:meeting, Ecto.UUID.t()} | {:external, integration_id(), String.t()}
+
+  @typedoc """
+  One block of busy time read from a provider's free/busy view. It carries no
+  item identity, so a caller correlates blocks by time and never by uid.
+  """
+  @type busy_interval :: FreeBusy.interval()
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
@@ -309,6 +323,17 @@ defmodule Tymeslot.Integrations.Calendar do
   """
   defdelegate caldav_based_provider_strings(), to: ProviderConfig
 
+  @doc """
+  Returns `true` when the provider refuses every write, so its calendars can
+  block availability but can never receive an event. Takes the provider atom
+  or the string form stored on an integration.
+
+  For the narrower question of whether a booking may be written to a given
+  integration, see `Tymeslot.Integrations.Calendar.BookingEligibility`.
+  """
+  @spec read_only_provider?(atom() | String.t() | nil) :: boolean()
+  defdelegate read_only_provider?(provider), to: ProviderConfig, as: :read_only?
+
   # ---------------------------
   # Public API: Higher-level wrappers (submodules)
   # ---------------------------
@@ -336,6 +361,21 @@ defmodule Tymeslot.Integrations.Calendar do
              | :unattributable}
   def create_subscription_with_validation(user_id, params, opts \\ []) do
     Creation.create_subscription_with_validation(user_id, params, opts)
+  end
+
+  @doc """
+  Validates and creates a read-only Exchange (EWS) integration.
+  """
+  @spec create_exchange_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
+          {:ok, integration()}
+          | {:error,
+             {:form_errors, %{String.t() => term()}}
+             | {:changeset, Ecto.Changeset.t()}
+             | {:rate_limited, String.t()}
+             | :unattributable
+             | :duplicate_integration}
+  def create_exchange_with_validation(user_id, params, opts \\ []) do
+    ExchangeCreation.create_with_validation(user_id, params, opts)
   end
 
   @doc """
@@ -492,12 +532,13 @@ defmodule Tymeslot.Integrations.Calendar do
           String.t(),
           String.t(),
           String.t(),
-          user_id()
+          user_id(),
+          keyword()
         ) ::
           {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
           | {:error, any()}
-  def discover_and_filter_calendars(provider, url, username, password, user_id) do
-    Workflows.discover_and_filter_calendars(provider, url, username, password, user_id)
+  def discover_and_filter_calendars(provider, url, username, password, user_id, opts \\ []) do
+    Workflows.discover_and_filter_calendars(provider, url, username, password, user_id, opts)
   end
 
   # ---------------------------

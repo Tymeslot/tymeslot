@@ -7,6 +7,7 @@ defmodule Tymeslot.AppSettingsTest do
   import Tymeslot.Factory
   import Tymeslot.AppSettingsEnvHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
@@ -14,8 +15,49 @@ defmodule Tymeslot.AppSettingsTest do
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
   alias Tymeslot.Infrastructure.Config, as: InfraConfig
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
+  alias Tymeslot.Locales
 
   setup :restore_app_settings_env
+
+  describe "per-surface locale defaults" do
+    test "a DB override reaches Tymeslot.Locales for that surface only" do
+      assert {:ok, _updated} = AppSettings.update(%{booking_default_locale: "de"})
+
+      assert Locales.booking_default_locale() == "de"
+      assert Locales.admin_default_locale() == Locales.default_locale()
+    end
+
+    test "the two surfaces hold independent values" do
+      assert {:ok, _updated} =
+               AppSettings.update(%{admin_default_locale: "fr", booking_default_locale: "de"})
+
+      assert Locales.admin_default_locale() == "fr"
+      assert Locales.booking_default_locale() == "de"
+    end
+
+    test "clearing an override falls back to the instance default again" do
+      {:ok, _set} = AppSettings.update(%{admin_default_locale: "de"})
+      assert Locales.admin_default_locale() == "de"
+
+      {:ok, _cleared} = AppSettings.reset(:admin_default_locale)
+
+      assert Locales.admin_default_locale() == Locales.default_locale()
+    end
+
+    test "an unsupported code is rejected rather than stored" do
+      assert {:error, %Changeset{}} = AppSettings.update(%{booking_default_locale: "zz"})
+
+      assert %{booking_default_locale: nil} = AppSettings.get!()
+      assert Locales.booking_default_locale() == Locales.default_locale()
+    end
+
+    test "both surfaces start unset, so an untouched install behaves as it did before" do
+      assert %{admin_default_locale: nil, booking_default_locale: nil} = AppSettings.get!()
+
+      assert Locales.admin_default_locale() == Locales.default_locale()
+      assert Locales.booking_default_locale() == Locales.default_locale()
+    end
+  end
 
   describe "update/1 + load!/0" do
     test "applying a DB override flows through Application.get_env" do

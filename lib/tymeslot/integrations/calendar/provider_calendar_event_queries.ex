@@ -9,8 +9,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   import Ecto.Query, warn: false
 
   alias Ecto.Changeset
+  alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
+
+  # Bound at compile time from the module that owns the column's vocabulary, so
+  # a rename cannot leave a stale literal behind in a `where` clause that would
+  # then silently match nothing.
+  @role_busy_only EventRole.busy_only()
 
   @doc """
   Returns all cached events for the given integration IDs within a time range.
@@ -18,6 +24,15 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   Events are included if they overlap with the [range_start, range_end] window.
   Both timed events (start_at/end_at) and all-day events (start_date/end_date)
   are checked for overlap. Results are ordered by start time ascending.
+
+  This is the **display** read: it feeds the dashboard grid, the reminder
+  scan and the cache-population guards, so `busy_only` rows are excluded.
+  Those rows are opaque busy time carrying no identity — no subject, no
+  location, no provider event id — and rendering one would put a nameless
+  block on the grid next to the item row describing the very same meeting.
+  Availability reads `CalendarEventQueries.in_range/2` instead, which excludes
+  the other side. Every provider but Exchange writes only `both` rows, so
+  neither filter changes what they return.
 
   ## Options
 
@@ -37,6 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
+    |> where([e], e.role != ^@role_busy_only)
     |> where_overlapping_range(range_start, range_end)
     |> order_by([e], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
     |> maybe_limit(limit)
@@ -561,6 +577,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # (:sync_state, :sync_attempts, :sync_last_attempt_at, :sync_last_error) which
   # must survive a server-sourced upsert so OfflineQueue can still replay the
   # local change after the cache row has been refreshed.
+  #
+  # :role is excluded for the same reason as :provider — it is insert-time
+  # identity. A row does not change from a busy interval into a calendar item,
+  # and a partial cache update that omits it must not silently re-file the row
+  # as the default. Its absence here is a decision, not an oversight.
+  #
+  # The field now exists on the schema and `full_refresh_for_role/3` writes it,
+  # so its absence from this list is what keeps it insert-time identity: a
+  # server-sourced upsert that omits `:role` (every provider but Exchange does)
+  # cannot re-file an existing row, and one that supplies it cannot move a row
+  # from one read path to the other.
   defp replace_fields do
     [
       :provider_event_id,

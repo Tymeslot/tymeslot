@@ -24,10 +24,12 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
   import Tymeslot.AvailabilityTestHelpers
 
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.Create
   alias Tymeslot.CalendarMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.TestMocks
+  alias Tymeslot.Utils.DateTimeUtils
 
   setup :verify_on_exit!
 
@@ -141,6 +143,187 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
         # display text.
         assert {:error, :slot_taken} = Create.execute(meeting_params, form_data)
       end)
+    end
+  end
+
+  # A slot_interval_minutes narrower than the meeting's duration puts starts on
+  # the offered grid that the duration-locked grid alone would never produce.
+  # The invariant above only ever exercised the duration-locked grid; this
+  # pins the same display↔booking agreement for the interval-only case.
+  describe "availability-display ↔ booking-validation invariant, with a slot interval" do
+    test "a start the interval makes legal is offered and can be booked, and an off-grid start is refused" do
+      timezone = "Etc/UTC"
+
+      # 09:00-10:15: a 60-minute meeting fits only one duration-locked start
+      # (9:00). A 15-minute interval additionally legalises 9:15, which is
+      # the case under test.
+      %{user: user, schedule_id: schedule_id} =
+        create_bookable_profile(
+          timezone: timezone,
+          hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[10:15:00]}
+        )
+
+      target_date = next_bookable_weekday()
+
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 60, slot_interval_minutes: 15)
+
+      TestMocks.stub_no_calendar_events()
+
+      {:ok, duration_locked_slots} =
+        Calculate.available_slots(target_date, 60, timezone, timezone, [], %{
+          schedule_id: schedule_id
+        })
+
+      {:ok, interval_slots} =
+        Calculate.available_slots(target_date, 60, timezone, timezone, [], %{
+          schedule_id: schedule_id,
+          slot_interval_minutes: 15
+        })
+
+      # The 9:15 start exists only because the interval was set — proving the
+      # test actually exercises the interval path rather than a start the
+      # duration-locked grid would have offered anyway.
+      refute "9:15 AM" in duration_locked_slots
+      assert "9:15 AM" in interval_slots
+
+      form_data = %{
+        "name" => "Interval Attendee",
+        "email" => "interval-attendee@example.com",
+        "message" => "Booking a time only the interval grid offers"
+      }
+
+      # 9:05 sits between two interval-grid starts (9:00 and 9:15) and is not
+      # itself offered on either grid. Attempted BEFORE any booking exists, so
+      # the refusal can only be grid-driven — after the 9:15 booking below it
+      # would also overlap, and the assertion could not tell the two apart.
+      refute "9:05 AM" in interval_slots
+
+      assert {:error, :slot_taken} =
+               Create.execute(
+                 %{
+                   date: target_date,
+                   time: "9:05 AM",
+                   duration: "60min",
+                   user_timezone: timezone,
+                   organizer_user_id: user.id,
+                   meeting_type_id: meeting_type.id
+                 },
+                 form_data
+               )
+
+      assert {:ok, meeting} =
+               Create.execute(
+                 %{
+                   date: target_date,
+                   time: "9:15 AM",
+                   duration: "60min",
+                   user_timezone: timezone,
+                   organizer_user_id: user.id,
+                   meeting_type_id: meeting_type.id
+                 },
+                 form_data
+               )
+
+      assert meeting.status == "confirmed"
+    end
+  end
+
+  # The interval is the host's setting, and it means "this far apart, on my
+  # clock". A booker half an hour off the host's clock is the case that tells
+  # that apart from "this far apart, on the booker's clock": the two anchor the
+  # same window to different phases, and only one of them is the host's.
+  describe "a slot interval anchors to the host's clock, not the booker's" do
+    setup do
+      TestMocks.stub_no_calendar_events()
+      :ok
+    end
+
+    test "an offset booker is offered the host's boundaries, and only those can be booked" do
+      host_timezone = "Europe/Berlin"
+      # Kolkata is a permanent half hour off Berlin, on either side of either
+      # zone's DST changeover, so the phase asserted below never moves.
+      booker_timezone = "Asia/Kolkata"
+
+      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: host_timezone)
+
+      target_date = next_bookable_weekday()
+
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 60, slot_interval_minutes: 60)
+
+      config = %{schedule_id: schedule_id, slot_interval_minutes: 60}
+
+      {:ok, host_slots} =
+        Calculate.available_slots(target_date, 60, host_timezone, host_timezone, [], config)
+
+      {:ok, booker_slots} =
+        Calculate.available_slots(target_date, 60, booker_timezone, host_timezone, [], config)
+
+      # The helper's window is 11:00-17:00, and the host's own grid sits on the
+      # hour inside it.
+      assert host_slots == [
+               "11:00 AM",
+               "12:00 PM",
+               "1:00 PM",
+               "2:00 PM",
+               "3:00 PM",
+               "4:00 PM"
+             ]
+
+      # Every start the booker is offered is half past the hour on their clock,
+      # because it is on the hour on the host's.
+      assert booker_slots != []
+
+      assert Enum.reject(booker_slots, &String.contains?(&1, ":30 ")) == [],
+             "expected every start to keep the host's phase, got: #{inspect(booker_slots)}"
+
+      # Rounding forward on the booker's clock would also have discarded the
+      # host's first hour.
+      assert length(booker_slots) == length(host_slots)
+
+      on_host_clock =
+        Enum.map(booker_slots, fn slot ->
+          target_date
+          |> DateTime.new!(TimeSlots.parse_time_slot(slot), booker_timezone)
+          |> DateTimeUtils.convert_to_timezone(host_timezone)
+          |> DateTime.to_time()
+        end)
+
+      assert on_host_clock == Enum.map(host_slots, &TimeSlots.parse_time_slot/1)
+
+      book = fn time ->
+        Create.execute(
+          %{
+            date: target_date,
+            time: time,
+            duration: "60min",
+            user_timezone: booker_timezone,
+            organizer_user_id: user.id,
+            meeting_type_id: meeting_type.id
+          },
+          %{
+            "name" => "Offset Attendee",
+            "email" => "offset-attendee@example.com",
+            "message" => "Booking across a half-hour offset"
+          }
+        )
+      end
+
+      # The start the booker-anchored grid used to offer: the next whole hour
+      # on their clock, which is half past on the host's.
+      %Time{hour: first_hour, minute: 30} = TimeSlots.parse_time_slot(List.first(booker_slots))
+
+      old_grid_start =
+        TimeSlots.format_datetime_slot(
+          DateTime.new!(target_date, Time.new!(first_hour + 1, 0, 0), booker_timezone)
+        )
+
+      refute old_grid_start in booker_slots
+      assert {:error, :slot_taken} = book.(old_grid_start)
+
+      assert {:ok, meeting} = book.(List.first(booker_slots))
+      assert meeting.status == "confirmed"
     end
   end
 

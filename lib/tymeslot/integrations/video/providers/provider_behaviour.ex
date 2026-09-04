@@ -249,9 +249,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @callback finish_create_meeting_room(token :: term(), config :: map()) ::
               {:ok, RoomData.t()} | {:error, term()}
 
+  @doc """
+  Returns `config` with a usable access token, refreshing it first if the one
+  it carries has expired.
+
+  Optional, and only meaningful for providers that hold an OAuth grant. A
+  provider implementing this owns the whole refresh: taking the lock that stops
+  two callers spending the same refresh token, and writing the new credentials
+  back. Callers must never reproduce that themselves from a raw OAuth helper.
+  """
+  @callback ensure_valid_token(config :: map()) :: {:ok, map()} | {:error, any()}
+
   @optional_callbacks update_meeting_room: 2,
                       delete_meeting_room: 2,
                       url_patterns: 0,
                       precheck_create_meeting_room: 1,
-                      finish_create_meeting_room: 2
+                      finish_create_meeting_room: 2,
+                      ensure_valid_token: 1
 end

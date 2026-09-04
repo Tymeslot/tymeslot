@@ -23,14 +23,16 @@ defmodule Tymeslot.Security.SsrfGuard do
   records), rejecting it when any resolved address falls in a private, loopback,
   or link-local range (including the 169.254.169.254 cloud-metadata endpoint).
 
-  **Residual TOCTOU window:** this guard validates DNS before handing the URL
-  to Req/Finch, but Finch performs its own independent DNS resolution at connect
-  time.  A sufficiently fast DNS-rebinding attack could still swap the address
-  between the two lookups.  True connection-IP pinning (resolve once, pin the IP
-  for the actual TCP connect) would require a custom Finch transport and is not
-  currently implemented — this matches the posture of
-  `Tymeslot.Webhooks.SsrfValidator`.  The multi-record variant of DNS-based SSRF
-  is fully closed by checking all returned records.
+  **Connection pinning:** validating a hostname and then handing the URL string
+  to Req/Finch would let Finch resolve that name a second time when it opens the
+  socket, and a short-TTL record can answer public to the check and loopback to
+  the connect. `validate_pinned/2` therefore returns the addresses it approved,
+  and `Tymeslot.Infrastructure.HTTPClient` connects to one of them with the
+  original hostname preserved for TLS and routing — see
+  `Tymeslot.Security.ConnectionPinning`, which also documents the cases where
+  pinning cannot apply and the request still travels by hostname. The
+  multi-record variant of DNS-based SSRF is closed by checking every returned
+  record before any of them is used.
 
   Enforcement is gated to `:prod` — the environment in which the managed SaaS
   and self-hosted deployments run — so that local development and tests can
@@ -61,17 +63,52 @@ defmodule Tymeslot.Security.SsrfGuard do
   """
   @spec validate(String.t(), keyword()) :: :ok | {:error, atom() | String.t()}
   def validate(url, opts \\ []) do
+    case validate_pinned(url, opts) do
+      {:ok, _addresses} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Same verdict as `validate/2`, but returns the addresses the check approved.
+
+  Callers that open the connection themselves should use this and pin to one of
+  the returned addresses via `Tymeslot.Security.ConnectionPinning`: validating a
+  hostname and then letting Finch resolve it again leaves the DNS-rebinding
+  window this module's moduledoc describes.
+
+  An empty list means no address was resolved because none needed to be — the
+  environment or an operator opt-out permitted the request on syntax alone —
+  and there is correspondingly nothing to pin to.
+  """
+  @spec validate_pinned(String.t(), keyword()) ::
+          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+  def validate_pinned(url, opts \\ []) do
     cond do
       Keyword.get(opts, :allow_private, allow_private_for_calendar?()) ->
-        :ok
+        {:ok, []}
 
       not production?() ->
-        :ok
+        {:ok, []}
 
       true ->
         with :ok <- UrlValidation.validate_http_url(url, block_private_ips: true) do
-          dns_resolver().check_private_ip(url, [])
+          resolve_public(dns_resolver(), url)
         end
+    end
+  end
+
+  # A resolver that cannot hand back its addresses (a test double, typically)
+  # still gets to make the verdict; the request simply goes unpinned.
+  # `Code.ensure_loaded?/1` first: `function_exported?/3` answers false for a
+  # module the VM has not loaded yet, which in dev and test is most of them.
+  @spec resolve_public(module(), String.t()) ::
+          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+  defp resolve_public(resolver, url) do
+    if Code.ensure_loaded?(resolver) and function_exported?(resolver, :resolve_public, 2) do
+      resolver.resolve_public(url, [])
+    else
+      with :ok <- resolver.check_private_ip(url, []), do: {:ok, []}
     end
   end
 

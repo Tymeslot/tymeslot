@@ -90,10 +90,17 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   # the structured "provider cannot serve this right now" reasons a client can
   # report directly instead of a raw HTTP status (rate limiting, an explicit
   # outage signal).
+  #
+  # `server_error` belongs here for the same reason `classify_status/1` treats
+  # a 5xx as a failure: it is the name the calendar clients
+  # (`CalDAV.Http`, `Exchange.Client`) give a 5xx once they have classified it,
+  # so a status that would trip the breaker as `{:http_error, 500}` has to trip
+  # it in atom form too. Without it every calendar 5xx was scored `:ignore` and
+  # a server answering nothing but 500s could never open its breaker.
   @transport_reasons ~w(
     timeout network_error closed econnrefused econnreset ehostunreach
     enetunreach etimedout nxdomain closed_by_peer socket_closed_remotely
-    rate_limited service_unavailable
+    rate_limited service_unavailable server_error
   )a
 
   # Transport-level exception structs, matched by name so that neither Req nor

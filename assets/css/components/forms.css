@@ -31,6 +31,21 @@
   @apply text-slate-400 font-medium;
 }
 
+/* Disabled: visible but inert. The hover and focus rules above match at the
+   same specificity, so these have to come after them to win, and the explicit
+   :disabled:hover keeps a greyed-out field from lighting up under the pointer. */
+.input:disabled {
+  @apply text-slate-400 bg-slate-100/60 border-slate-100 shadow-none cursor-not-allowed;
+}
+
+.input:disabled:hover {
+  @apply border-slate-100 bg-slate-100/60;
+}
+
+.input:disabled::placeholder {
+  @apply text-slate-300;
+}
+
 /* Input Variants */
 .input-error {
   @apply border-red-200 bg-red-50 text-red-900;

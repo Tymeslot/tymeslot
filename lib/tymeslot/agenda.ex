@@ -73,17 +73,13 @@ defmodule Tymeslot.Agenda do
     meetings = Meetings.list_upcoming_meetings_for_user(user.email, @meeting_limit)
 
     # Bookings synced to the calendar reappear as provider events; dedup on the
-    # provider event id so the (richer) Tymeslot copy is the one we keep.
-    booked_event_ids =
-      meetings
-      |> Enum.map(& &1.provider_event_id)
-      |> Enum.reject(&is_nil/1)
-      |> MapSet.new()
+    # shared identifier so the (richer) Tymeslot copy is the one we keep.
+    booked_identifiers = Meetings.calendar_identifier_set(meetings)
 
     external =
       integration_ids
       |> CalendarGrid.list_events_for_range(now, window_end, limit: @external_event_limit)
-      |> Enum.reject(&drop_external?(&1, booked_event_ids))
+      |> Enum.reject(&drop_external?(&1, booked_identifiers))
 
     Enum.map(meetings, &entry_from_meeting(&1, tz, overrides)) ++
       Enum.map(external, &entry_from_event(&1, tz, calendar_names, overrides))
@@ -91,13 +87,12 @@ defmodule Tymeslot.Agenda do
 
   # An external event is dropped when it is one of our own synced bookings, a
   # cancellation, a free/transparent block, or a timed event missing its start.
-  defp drop_external?(event, booked_event_ids) do
+  defp drop_external?(event, booked_identifiers) do
     event.created_by_tymeslot or
       event.status == "cancelled" or
       event.transparency == "transparent" or
       (not event.all_day and is_nil(event.start_at)) or
-      (not is_nil(event.provider_event_id) and
-         MapSet.member?(booked_event_ids, event.provider_event_id))
+      Meetings.linked_to_calendar_event?(event, booked_identifiers)
   end
 
   # The hero is the next *timed* entry; all-day entries stay in their day group.

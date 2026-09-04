@@ -65,7 +65,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   @spec send_reschedule_request(MeetingSchema.t()) :: :ok | {:error, String.t() | atom()}
   def send_reschedule_request(meeting) do
     with :ok <- check_not_already_requested(meeting),
-         :ok <- Policy.can_reschedule_meeting?(meeting) do
+         :ok <- Policy.can_request_reschedule?(meeting) do
       update_and_send_reschedule_request(meeting)
     else
       {:error, reason} ->

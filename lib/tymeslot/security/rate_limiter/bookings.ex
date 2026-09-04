@@ -47,6 +47,24 @@ defmodule Tymeslot.Security.RateLimiter.Bookings do
     )
   end
 
+  @doc """
+  Limits how often booking requests can be answered from one address.
+
+  Keyed on the client rather than the meeting: the token already binds a link
+  to one request, so what is worth bounding is somebody working through
+  guessed or harvested links, not a host who changes their mind twice.
+  """
+  @spec check_meeting_approval(String.t()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_meeting_approval(client_ip) do
+    Helpers.check_with_logging(
+      "meeting_approval:#{client_ip}",
+      20,
+      600_000,
+      "booking request answer",
+      client_ip
+    )
+  end
+
   @spec check_meeting_keep(String.t()) :: :ok | {:error, :rate_limited, String.t()}
   def check_meeting_keep(client_ip) do
     Helpers.check_with_logging(

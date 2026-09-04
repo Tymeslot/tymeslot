@@ -3,7 +3,8 @@
 /* Confirmation Component Glassmorphism Styles
    (dissolved from glass-components.css) */
 .confirmation-badge {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
+  color: var(--theme-on-primary);
   box-shadow: var(--shadow-primary-lg);
 }
 

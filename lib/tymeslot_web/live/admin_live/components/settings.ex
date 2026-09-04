@@ -1,13 +1,13 @@
 defmodule TymeslotWeb.AdminLive.Components.Settings do
   @moduledoc """
-  Settings tab. Settings are grouped into sections (Authentication,
-  reCAPTCHA, Payments, Analytics, Admin alerts, Email branding); each section
-  is a single grouped card and each row shows the setting name, a short
-  description, and a control on the right.
+  The settings tabs. Each tab renders the sections
+  `TymeslotWeb.AdminLive.Tabs` assigns it, in the order declared there; each
+  section is a single grouped card and each row shows the setting name, a
+  short description, and a control on the right.
 
   Boolean settings use the two-tag Enabled/Disabled control with the active
-  tag rendered as disabled. Score, email, text, and colour settings use a
-  small inline form so admins save one value at a time.
+  tag rendered as disabled. Score, email, text, colour, and locale settings
+  use a small inline form so admins save one value at a time.
 
   Email branding is rendered by its own `email_branding_section/1` rather than
   through the generic loop. Its logo row takes an upload instead of a form
@@ -22,10 +22,11 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.AppSettings
+  alias TymeslotWeb.AdminLive.Components.LocaleSetting
   alias TymeslotWeb.AdminLive.Formatters
+  alias TymeslotWeb.AdminLive.Tabs
 
-  @sections [:authentication, :recaptcha, :payments, :analytics, :admin_alerts, :email_branding]
-
+  attr :tab, :atom, required: true
   attr :effective_values, :map, required: true
   attr :email_logo_url, :string, default: nil
   attr :upload, :map, required: true
@@ -43,9 +44,10 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
 
     ~H"""
     <div>
-      <h2 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-4">
-        {dgettext("dashboard_admin", "Environment / config")}
-      </h2>
+      <%!-- The tab bar already names this page on screen, so a visible heading
+           would just repeat the active pill. Screen readers still need
+           something to land on. --%>
+      <h2 class="sr-only">{Tabs.name(@tab)}</h2>
 
       <.info_box variant={:info}>
         {dgettext(
@@ -54,29 +56,30 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         )}
       </.info_box>
 
+      <%!-- Branding is still rendered by its own component rather than the
+           generic loop, so its upload and preview state reaches only the
+           section that uses it. --%>
       <div class="space-y-8 mt-6">
-        <.settings_section
-          :for={
-            section <-
-              @grouped
-              |> Map.keys()
-              |> Enum.reject(&(&1 == :email_branding))
-              |> Enum.sort_by(&section_order/1)
-          }
-          section={section}
-          keys={Map.fetch!(@grouped, section)}
-          effective_values={@effective_values}
-        />
-        <.email_branding_section
-          effective_values={@effective_values}
-          email_logo_url={@email_logo_url}
-          upload={@upload}
-          logo_errors={@logo_errors}
-          stock_accent={@stock_accent}
-          accent_preview={@accent_preview}
-          accent_draft={@accent_draft}
-          max_logo_bytes={@max_logo_bytes}
-        />
+        <%= for section <- Tabs.sections(@tab) do %>
+          <%= if section == :email_branding do %>
+            <.email_branding_section
+              effective_values={@effective_values}
+              email_logo_url={@email_logo_url}
+              upload={@upload}
+              logo_errors={@logo_errors}
+              stock_accent={@stock_accent}
+              accent_preview={@accent_preview}
+              accent_draft={@accent_draft}
+              max_logo_bytes={@max_logo_bytes}
+            />
+          <% else %>
+            <.settings_section
+              section={section}
+              keys={Map.fetch!(@grouped, section)}
+              effective_values={@effective_values}
+            />
+          <% end %>
+        <% end %>
       </div>
     </div>
     """
@@ -147,22 +150,28 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     effective = Map.fetch!(assigns.effective_values, assigns.key)
     kind = Formatters.kind(assigns.key)
 
-    disabled =
-      parent_disabled?(assigns.key, assigns.effective_values) or
-        own_value_off?(kind, effective)
+    # Two states that used to share one flag, which made every switched-off
+    # boolean render its own toggle at 60% opacity - reading as "you cannot
+    # click this" on the one control that is the only way back on.
+    #
+    # `disabled` is genuine inertness: a dependent setting whose parent is off
+    # has a control that really is unusable until the parent is switched on.
+    # `muted` is merely "this setting is not doing anything at the moment",
+    # which is worth saying in the description but must never be said about a
+    # live control.
+    disabled = parent_disabled?(assigns.key, assigns.effective_values)
+    muted = disabled or own_value_off?(kind, effective)
 
     assigns =
       assigns
       |> assign(:effective, effective)
       |> assign(:kind, kind)
       |> assign(:disabled, disabled)
+      |> assign(:muted, muted)
 
     ~H"""
-    <div class={[
-      "px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap transition-opacity",
-      @disabled && "opacity-60"
-    ]}>
-      <.row_header key={@key} />
+    <div class="px-8 py-6 flex items-start justify-between gap-6 flex-wrap sm:flex-nowrap">
+      <.row_header key={@key} muted={@muted} />
 
       <.setting_control kind={@kind} key={@key} effective={@effective} disabled={@disabled} />
     </div>
@@ -174,10 +183,11 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   # which render their own controls, stay visually identical to the generic
   # ones.
   attr :key, :atom, required: true
+  attr :muted, :boolean, default: false
 
   defp row_header(assigns) do
     ~H"""
-    <div class="flex-1 min-w-0">
+    <div class={["flex-1 min-w-0 transition-opacity", @muted && "opacity-60"]}>
       <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">
         {Formatters.humanise(@key)}
       </h4>
@@ -320,6 +330,12 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         {dgettext("dashboard_admin", "Save")}
       </.action_button>
     </form>
+    """
+  end
+
+  defp setting_control(%{kind: :locale} = assigns) do
+    ~H"""
+    <LocaleSetting.locale_control key={@key} effective={@effective} disabled={@disabled} />
     """
   end
 
@@ -557,7 +573,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       phx-value-key={@key}
       phx-value-state={@state}
       disabled={@active or @locked}
-      aria-pressed={@active}
+      aria-pressed={to_string(@active)}
       aria-disabled={@locked}
       title={@lock_reason}
       class={[
@@ -581,6 +597,4 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   end
 
   defp format_score(nil), do: ""
-
-  defp section_order(section), do: Enum.find_index(@sections, &(&1 == section)) || 99
 end

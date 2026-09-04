@@ -53,7 +53,7 @@
       </script>
     <% end %>
     <.nomodule_fallback nonce={assigns[:csp_nonce]} />
-    <.analytics_scripts nonce={assigns[:csp_nonce]} />
+    <.analytics_scripts nonce={assigns[:csp_nonce]} live_module={assigns[:live_module]} />
   </head>
   <body>
     <.noscript_warning message={

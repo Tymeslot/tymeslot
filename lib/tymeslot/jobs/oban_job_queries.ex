@@ -106,6 +106,40 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     |> Repo.update()
   end
 
+  # The state list every "still pending" delete below matches against. Kept
+  # in one place because it has to stay in step with the `unique: [states:
+  # ...]` guard on whichever worker is being cleared.
+  @pending_states ~w(available scheduled retryable)
+
+  @doc """
+  Deletes any pending job for one meeting and one action.
+
+  Generalises the reminder deletion below for the approval jobs, which key on
+  the meeting alone. Worker names are normalised through `normalize_worker_name/1`
+  for the same reason: Oban stores them without the `Elixir.` prefix, so a raw
+  module name would silently match nothing and leave the job to fire.
+  """
+  @spec delete_jobs_by_action(module(), String.t(), term()) :: {non_neg_integer(), nil}
+  def delete_jobs_by_action(worker_module, action, meeting_id) do
+    args_match = %{"action" => action, "meeting_id" => meeting_id}
+    delete_pending_jobs(worker_module, args_match, queue: "emails")
+  end
+
+  @doc """
+  Deletes every pending job a worker holds for one meeting, on any queue.
+
+  `delete_jobs_by_action/3` above is scoped to the `emails` queue, which is
+  correct for the email jobs it was written for but silently matches nothing
+  for a worker that runs anywhere else. The approval expiry job is one of
+  those, and a missed deletion there is not cosmetic: it fires after the host
+  has already answered and tries to expire a request that is no longer open.
+  """
+  @spec delete_meeting_jobs(module(), term()) :: {non_neg_integer(), nil}
+  def delete_meeting_jobs(worker_module, meeting_id) do
+    args_match = %{"meeting_id" => meeting_id}
+    delete_pending_jobs(worker_module, args_match)
+  end
+
   @doc """
   Deletes existing reminder email jobs for a meeting to avoid duplicates
   when rescheduling.
@@ -113,22 +147,13 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   @spec delete_reminder_jobs_for_meeting(term(), module(), map()) ::
           {non_neg_integer(), nil}
   def delete_reminder_jobs_for_meeting(meeting_id, worker_module, reminder_params) do
-    worker_name = normalize_worker_name(worker_module)
-
     args_match =
       Map.merge(
         %{"action" => "send_reminder_emails", "meeting_id" => meeting_id},
         reminder_params
       )
 
-    Repo.delete_all(
-      from(j in Job,
-        where: j.queue == "emails",
-        where: j.worker == ^worker_name,
-        where: j.state in ["available", "scheduled", "retryable"],
-        where: fragment("? @> ?::jsonb", j.args, type(^args_match, :map))
-      )
-    )
+    delete_pending_jobs(worker_module, args_match, queue: "emails")
   end
 
   @doc """
@@ -140,18 +165,24 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   """
   @spec delete_poll_jobs(term(), module()) :: {non_neg_integer(), nil}
   def delete_poll_jobs(poll_id, worker_module) do
-    worker_name = normalize_worker_name(worker_module)
     args_match = %{"poll_id" => poll_id}
-
-    Repo.delete_all(
-      from(j in Job,
-        where: j.queue == "emails",
-        where: j.worker == ^worker_name,
-        where: j.state in ["available", "scheduled", "retryable"],
-        where: fragment("? @> ?::jsonb", j.args, type(^args_match, :map))
-      )
-    )
+    delete_pending_jobs(worker_module, args_match, queue: "emails")
   end
+
+  defp delete_pending_jobs(worker_module, args_match, opts \\ []) do
+    worker_name = normalize_worker_name(worker_module)
+    queue = Keyword.get(opts, :queue)
+
+    Job
+    |> where([j], j.worker == ^worker_name)
+    |> where([j], j.state in @pending_states)
+    |> where([j], fragment("? @> ?::jsonb", j.args, type(^args_match, :map)))
+    |> queue_filter(queue)
+    |> Repo.delete_all()
+  end
+
+  defp queue_filter(query, nil), do: query
+  defp queue_filter(query, queue), do: where(query, [j], j.queue == ^queue)
 
   @doc """
   Lists queues with accumulated available jobs exceeding the threshold.

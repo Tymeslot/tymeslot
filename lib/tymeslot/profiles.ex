@@ -172,6 +172,13 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
+  Updates the booking page's introductory text and its on/off switch.
+  """
+  @spec update_booking_text(profile, map()) :: result(profile)
+  def update_booking_text(%ProfileSchema{} = profile, attrs),
+    do: ProfileQueries.update_booking_text(profile, attrs)
+
+  @doc """
   Updates a specific field in the profile.
   """
   @spec update_profile_field(profile, atom(), term()) :: result(profile)

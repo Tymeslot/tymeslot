@@ -73,7 +73,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
   @spec render(RefundContext.t()) :: Swoosh.Email.t()
   def render(%RefundContext{} = context) do
-    locale = context.locale || Locales.default_locale()
+    locale = context.locale || Locales.booking_default_locale()
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       has_name? = is_binary(context.attendee_name) and context.attendee_name != ""

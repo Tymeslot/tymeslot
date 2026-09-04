@@ -2,6 +2,8 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
   use ExUnit.Case, async: false
   @moduletag :infrastructure
 
+  import ExUnit.CaptureLog, only: [capture_log: 1]
+
   alias Tymeslot.Infrastructure.DotenvLoader
 
   setup do
@@ -11,7 +13,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     File.mkdir_p!(tmp_dir)
 
     keys =
-      ~w(TYMESLOT_DOTENV_TEST_A TYMESLOT_DOTENV_TEST_B TYMESLOT_DOTENV_TEST_SHELL TYMESLOT_DOTENV_TEST_MALFORMED)
+      ~w(TYMESLOT_DOTENV_TEST_A TYMESLOT_DOTENV_TEST_B TYMESLOT_DOTENV_TEST_SHELL TYMESLOT_DOTENV_TEST_MALFORMED TYMESLOT_DOTENV_TEST_ASCII)
 
     Enum.each(keys, &System.delete_env/1)
 
@@ -48,6 +50,21 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
 
     assert :ok = DotenvLoader.load([primary, secondary])
     assert System.get_env("TYMESLOT_DOTENV_TEST_B") == "primary"
+  end
+
+  test "a value the parser mangles is skipped without taking the rest of the file with it",
+       %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, ".env")
+    File.write!(path, "TYMESLOT_DOTENV_TEST_A=Müller\nTYMESLOT_DOTENV_TEST_ASCII=plain\n")
+
+    log =
+      capture_log(fn ->
+        assert :ok = DotenvLoader.load([path])
+      end)
+
+    assert System.get_env("TYMESLOT_DOTENV_TEST_A") == nil
+    assert System.get_env("TYMESLOT_DOTENV_TEST_ASCII") == "plain"
+    assert log =~ "TYMESLOT_DOTENV_TEST_A"
   end
 
   test "missing files are silently skipped" do

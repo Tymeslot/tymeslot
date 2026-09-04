@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   """
   @spec assign_locale(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_locale(socket) do
-    locale = socket.assigns[:locale] || Locales.default_locale()
+    locale = socket.assigns[:locale] || Locales.booking_default_locale()
     Gettext.put_locale(locale)
     Component.assign(socket, :locale, locale)
   end

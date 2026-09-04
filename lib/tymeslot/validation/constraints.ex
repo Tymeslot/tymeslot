@@ -30,8 +30,30 @@ defmodule Tymeslot.Validation.Constraints do
   @spec min_advance_hours_range() :: Range.t()
   def min_advance_hours_range, do: 0..168
 
+  @doc """
+  How long a meeting may be, in minutes.
+
+  The floor is five rather than one because a booking shorter than that is a
+  typo, not a product: it is below the smallest slot interval the grid can be
+  drawn at (`slot_interval_minutes_range/0` starts at five too), so a
+  three-minute meeting type has no honest way to be offered. The form has
+  always shown five as its minimum; this is the rule behind it.
+  """
   @spec duration_minutes_range() :: Range.t()
-  def duration_minutes_range, do: 1..480
+  def duration_minutes_range, do: 5..480
+
+  @doc """
+  How long a poll's proposed meeting may be, in minutes.
+
+  Same floor as `duration_minutes_range/0`, and for the same reason. The
+  ceiling is higher: a poll is how a whole-day workshop gets scheduled, which
+  is not something a meeting type is asked to express.
+  """
+  @spec poll_duration_minutes_range() :: Range.t()
+  def poll_duration_minutes_range, do: 5..1440
+
+  @spec slot_interval_minutes_range() :: Range.t()
+  def slot_interval_minutes_range, do: 5..480
 
   @spec max_participants_range() :: Range.t()
   def max_participants_range, do: 1..999
@@ -50,6 +72,39 @@ defmodule Tymeslot.Validation.Constraints do
 
   @spec booking_limit_range() :: Range.t()
   def booking_limit_range, do: 1..500
+
+  @doc """
+  How long a host may take to answer a booking request, in hours.
+
+  The lower bound is one hour rather than zero: a window a request cannot
+  realistically be answered within is a request that always expires, which is
+  worse for the invitee than not offering approval at all. The upper bound is
+  two weeks, past which the hold on the slot costs more than the vetting is
+  worth.
+  """
+  @spec approval_window_hours_range() :: Range.t()
+  def approval_window_hours_range, do: 1..336
+
+  @doc """
+  How much a host may write when declining a booking request.
+
+  The note is quoted verbatim into the invitee's email, so the cap is a
+  boundary on what reaches a third party, not a storage limit: it is enforced
+  where the reason is written, and mirrored as a `maxlength` on both places a
+  host can type one.
+  """
+  @spec decline_reason_max_length() :: pos_integer()
+  def decline_reason_max_length, do: 500
+
+  @doc """
+  The approval window applied when a meeting type stores none.
+
+  A day is long enough to cover an overnight or a weekend gap on either side of
+  a working day, and short enough that an invitee is not left waiting without
+  resolution.
+  """
+  @spec default_approval_window_hours() :: pos_integer()
+  def default_approval_window_hours, do: 24
 
   @doc "The booking-limit fields, in day/week/month order."
   @spec booking_limit_fields() :: [atom()]
@@ -105,15 +160,29 @@ defmodule Tymeslot.Validation.Constraints do
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 
+  @spec poll_duration_minutes_opts() :: keyword()
+  def poll_duration_minutes_opts do
+    range = poll_duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec approval_window_hours_opts() :: keyword()
+  def approval_window_hours_opts do
+    range = approval_window_hours_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @spec slot_interval_minutes_opts() :: keyword()
+  def slot_interval_minutes_opts do
+    range = slot_interval_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
   @spec booking_limit_opts() :: keyword()
   def booking_limit_opts do
     range = booking_limit_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
-
-  @doc "Minimum duration exposed in the meeting type form (step=5, so 1-4 min is impractical)."
-  @spec duration_minutes_form_min() :: pos_integer()
-  def duration_minutes_form_min, do: 5
 
   # Field lengths
 
@@ -158,4 +227,17 @@ defmodule Tymeslot.Validation.Constraints do
 
   @spec override_reason_max_length() :: pos_integer()
   def override_reason_max_length, do: 100
+
+  # Booking-page introductory text. The caps are the point at which the copy
+  # stops behaving on the tightest viewport the booker supports: at 80
+  # characters a Rhythm heading pushes the primary action to the bottom edge of
+  # an 812x375 landscape phone, so 60 keeps roughly 30px of headroom. The
+  # greeting and instruction render smaller and sit above the action, so they
+  # take the looser cap.
+
+  @spec booking_heading_max_length() :: pos_integer()
+  def booking_heading_max_length, do: 60
+
+  @spec booking_welcome_line_max_length() :: pos_integer()
+  def booking_welcome_line_max_length, do: 80
 end

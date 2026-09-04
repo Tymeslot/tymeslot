@@ -7,6 +7,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   require Logger
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Recipient
@@ -75,7 +76,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   defp organizer_time_format(meeting) do
     CalendarGrid.get_user_time_format(
       Map.get(meeting, :organizer_user_id),
-      Locales.default_locale()
+      Locales.admin_default_locale()
     )
   end
 
@@ -136,14 +137,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  defp determine_location_type(meeting) do
-    cond do
-      meeting.meeting_url -> :video
-      meeting.location == "Phone Call" -> :phone
-      meeting.location == "In Person" -> :in_person
-      true -> :custom
-    end
-  end
+  defp determine_location_type(meeting), do: BookingRequestLocation.type(meeting)
 
   defp timezone_details(meeting, owner_timezone, attendee_timezone) do
     %{

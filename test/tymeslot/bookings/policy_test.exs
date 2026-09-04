@@ -90,6 +90,22 @@ defmodule Tymeslot.Bookings.PolicyTest do
 
       assert Policy.can_cancel_meeting?(almost_starting) == :ok
     end
+
+    test "blocks cancellation for expired meetings" do
+      # A lapsed approval request. It was already released and refunded, and
+      # the withdraw link in the request-received email still points here —
+      # cancelling would overwrite the expiry outcome and send a second,
+      # contradicting round of emails.
+      expired_request = %MeetingSchema{
+        uid: "test-uid",
+        status: "expired",
+        start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+        end_time: DateTime.add(DateTime.utc_now(), 7200, :second)
+      }
+
+      assert {:error, "Cannot cancel an expired meeting"} =
+               Policy.can_cancel_meeting?(expired_request)
+    end
   end
 
   describe "can_reschedule_meeting?/1" do
@@ -150,6 +166,20 @@ defmodule Tymeslot.Bookings.PolicyTest do
 
       assert {:error, "Cannot reschedule a completed meeting"} =
                Policy.can_reschedule_meeting?(completed_meeting)
+    end
+
+    test "blocks rescheduling for expired meetings" do
+      # An expired meeting no longer occupies its slot, so moving it would hand
+      # the attendee a time nothing reserves.
+      expired_meeting = %MeetingSchema{
+        uid: "test-uid",
+        status: "expired",
+        start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+        end_time: DateTime.add(DateTime.utc_now(), 7200, :second)
+      }
+
+      assert {:error, "Cannot reschedule an expired meeting"} =
+               Policy.can_reschedule_meeting?(expired_meeting)
     end
 
     test "allows rescheduling for meeting starting in 1 minute" do

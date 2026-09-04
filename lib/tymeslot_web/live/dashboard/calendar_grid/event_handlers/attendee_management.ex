@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
         with true <- Shared.valid_email?(email),
              false <- already_present,
-             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           new_attendee = %{"email" => email, "name" => nil, "status" => "needs_action"}
           new_attendees = (event.attendees || []) ++ [new_attendee]
@@ -51,9 +51,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
           {:noreply, socket}
         else
-          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
-          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
-          _invalid -> {:noreply, socket}
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+            Shared.flash_guard_error(socket, error)
+
+          {:error, :rate_limited, _message} = error ->
+            Shared.flash_guard_error(socket, error)
+
+          _invalid ->
+            {:noreply, socket}
         end
     end
   end
@@ -102,12 +107,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
         {:noreply, socket}
 
       event ->
-        case EditWorkflow.assert_owns_event(socket, event) do
+        case EditWorkflow.assert_event_writable(socket, event) do
           :ok ->
             {:noreply,
              assign(socket, :confirm_remove_attendee, %{email: email, event_id: event.id})}
 
-          {:error, :unauthorized} = error ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
         end
     end

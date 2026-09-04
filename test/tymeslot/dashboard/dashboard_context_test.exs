@@ -77,6 +77,22 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
       assert %{has_calendar: false} = DashboardContext.get_integration_status(user.id)
     end
 
+    test "reports has_calendar: true when the only integration is an Exchange mailbox" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "exchange",
+        base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+      )
+
+      # `has_calendar` asks whether the account can take a booking, not whether
+      # any row exists. An Exchange mailbox could not while the EWS provider
+      # refused every write; it can now, so the dashboard stops telling the
+      # owner to connect a calendar they have already connected.
+      assert %{has_calendar: true} = DashboardContext.get_integration_status(user.id)
+    end
+
     test "reports has_calendar: true with a CalDAV integration present" do
       user = insert(:user)
 

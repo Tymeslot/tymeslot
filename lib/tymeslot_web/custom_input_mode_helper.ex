@@ -7,10 +7,11 @@ defmodule TymeslotWeb.CustomInputModeHelper do
 
   ## Fields
 
-  The three scheduling preference fields that support custom input mode:
+  The scheduling preference fields that support custom input mode:
   - `:buffer_minutes` - Time buffer between appointments
   - `:advance_booking_days` - How far in advance bookings are allowed
   - `:min_advance_hours` - Minimum notice required for booking
+  - `:slot_interval_minutes` - How far apart booking start times are offered
 
   ## Security
 
@@ -21,7 +22,11 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   alias Phoenix.Component
 
   @typedoc "A scheduling preference field that supports preset tags and custom input."
-  @type field :: :buffer_minutes | :advance_booking_days | :min_advance_hours
+  @type field ::
+          :buffer_minutes
+          | :advance_booking_days
+          | :min_advance_hours
+          | :slot_interval_minutes
 
   # The quick-pick values offered for each scheduling preference field, and the
   # only table of them. Every surface that renders preset tags — the onboarding
@@ -43,7 +48,8 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   @presets %{
     buffer_minutes: [0, 5, 10, 15, 30, 45, 60],
     advance_booking_days: [7, 14, 30, 60, 90, 180, 365],
-    min_advance_hours: [0, 1, 3, 6, 12, 24, 48, 168]
+    min_advance_hours: [0, 1, 3, 6, 12, 24, 48, 168],
+    slot_interval_minutes: [5, 10, 15, 20, 30, 45, 60, 90, 120]
   }
 
   @default_custom_mode Map.new(Map.keys(@presets), &{&1, false})
@@ -144,10 +150,24 @@ defmodule TymeslotWeb.CustomInputModeHelper do
       socket = enable_custom_mode(socket, :buffer_minutes)
   """
   @spec enable_custom_mode(Phoenix.LiveView.Socket.t(), field()) :: Phoenix.LiveView.Socket.t()
-  def enable_custom_mode(socket, field) do
+  def enable_custom_mode(socket, field), do: set_custom_mode(socket, field, true)
+
+  @doc """
+  Sets custom input mode for `field` in either direction.
+
+  `enable_custom_mode/2` covers the tag-button surfaces, where the only
+  transition a single click can make is *into* custom mode: leaving it is a
+  different click, on a preset tag, handled by `toggle_custom_mode/4`.
+
+  A control that carries its presets and its Custom option in one widget — the
+  meeting type form's interval dropdown — has one change event that can mean
+  either direction, so it needs to say which.
+  """
+  @spec set_custom_mode(Phoenix.LiveView.Socket.t(), field(), boolean()) ::
+          Phoenix.LiveView.Socket.t()
+  def set_custom_mode(socket, field, custom?) when is_boolean(custom?) do
     current_custom_mode = Map.get(socket.assigns, :custom_input_mode, @default_custom_mode)
-    custom_input_mode = Map.put(current_custom_mode, field, true)
-    Component.assign(socket, :custom_input_mode, custom_input_mode)
+    Component.assign(socket, :custom_input_mode, Map.put(current_custom_mode, field, custom?))
   end
 
   @doc """

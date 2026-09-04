@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       organizer: format_organizer(meeting_details),
       attendee: format_attendees(meeting_details),
       conference: conference_uri(meeting_details),
-      status: "CONFIRMED"
+      status: Map.get(meeting_details, :status, "CONFIRMED")
     }
   end
 

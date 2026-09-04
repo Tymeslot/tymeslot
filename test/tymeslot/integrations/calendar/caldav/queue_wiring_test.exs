@@ -136,6 +136,34 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "nil-paths")
     end
+
+    # Regression: a booking still awaiting the host's approval must stay
+    # tentative through an offline-queue round trip. `event_data[:status]`
+    # is exactly what `CalendarEventBuilder.build_event_data/1` sets, so a
+    # cache row losing it means the eventual replay writes the held request
+    # to the host's calendar as an ordinary confirmed event.
+    test "carries the tentative status through from event_data for a held request" do
+      integration = caldav_integration()
+      meeting = build_meeting(integration, "gated-uid")
+      data = Map.merge(event_data(), %{status: :tentative, transparency: :opaque})
+
+      assert :ok = QueueWiring.tag(meeting, :create, data)
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "gated-uid")
+      assert row.status == "tentative"
+      assert row.transparency == "opaque"
+    end
+
+    test "defaults to confirmed/opaque when event_data carries no status (e.g. a delete)" do
+      integration = caldav_integration()
+      meeting = build_meeting(integration, "no-status-uid")
+
+      assert :ok = QueueWiring.tag(meeting, :delete, event_data())
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "no-status-uid")
+      assert row.status == "confirmed"
+      assert row.transparency == "opaque"
+    end
   end
 
   describe "clear/2" do

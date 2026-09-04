@@ -21,6 +21,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   alias Tymeslot.Workers.FallbackSyncSweepWorker
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncExchangeCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
@@ -187,6 +188,75 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       integration =
         insert(:calendar_integration,
           provider: "ics_url",
+          is_active: true,
+          last_external_sync_at: nil
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      refute_enqueued(
+        worker: SyncCalDavCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+  end
+
+  describe "perform/1 - active Exchange integration" do
+    # Without this branch Exchange never syncs on a schedule, and nothing else
+    # says so: manual refresh goes through `CalendarGrid` and keeps working, so
+    # the gap surfaces only as a diary that quietly stops being current.
+    test "enqueues a SyncExchangeCalendarWorker job for a mailbox that has never synced" do
+      integration =
+        insert(:calendar_integration,
+          provider: "exchange",
+          is_active: true,
+          last_external_sync_at: nil
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      assert_enqueued(
+        worker: SyncExchangeCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "enqueues a job once the mailbox is older than its 30 minute interval" do
+      integration =
+        insert(:calendar_integration,
+          provider: "exchange",
+          is_active: true,
+          last_external_sync_at: DateTime.add(DateTime.utc_now(), -31, :minute)
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      assert_enqueued(
+        worker: SyncExchangeCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "leaves a recently synced mailbox alone" do
+      integration =
+        insert(:calendar_integration,
+          provider: "exchange",
+          is_active: true,
+          last_external_sync_at: DateTime.add(DateTime.utc_now(), -5, :minute)
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      refute_enqueued(
+        worker: SyncExchangeCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "never sends a mailbox down the CalDAV path" do
+      integration =
+        insert(:calendar_integration,
+          provider: "exchange",
           is_active: true,
           last_external_sync_at: nil
         )

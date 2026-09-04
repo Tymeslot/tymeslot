@@ -37,6 +37,46 @@ defmodule Tymeslot.Bookings.DemoOrchestratorTest do
       assert meeting.attendee_email == "john@example.com"
     end
 
+    test "mocks status confirmed when the meeting type does not require approval" do
+      user = insert(:user)
+      insert(:profile, user: user, full_name: "Test Organizer")
+
+      params = %{
+        meeting_params: %{
+          organizer_user_id: user.id,
+          duration: 30,
+          date: "2026-01-10",
+          time: "10:00",
+          user_timezone: "America/New_York",
+          requires_approval: false
+        },
+        form_data: %{"name" => "John Doe", "email" => "john@example.com"}
+      }
+
+      assert {:ok, meeting} = DemoOrchestrator.submit_booking(params)
+      assert meeting.status == "confirmed"
+    end
+
+    test "mocks status awaiting_approval for a preview of a gated meeting type" do
+      user = insert(:user)
+      insert(:profile, user: user, full_name: "Test Organizer")
+
+      params = %{
+        meeting_params: %{
+          organizer_user_id: user.id,
+          duration: 30,
+          date: "2026-01-10",
+          time: "10:00",
+          user_timezone: "America/New_York",
+          requires_approval: true
+        },
+        form_data: %{"name" => "John Doe", "email" => "john@example.com"}
+      }
+
+      assert {:ok, meeting} = DemoOrchestrator.submit_booking(params)
+      assert meeting.status == "awaiting_approval"
+    end
+
     test "returns error for invalid duration" do
       user = insert(:user)
 

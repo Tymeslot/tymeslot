@@ -25,6 +25,136 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
     )
   end
 
+  defp insert_exchange(user, attrs \\ []) do
+    insert(
+      :calendar_integration,
+      Keyword.merge(
+        [
+          user: user,
+          provider: "exchange",
+          base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+        ],
+        attrs
+      )
+    )
+  end
+
+  describe "an Exchange mailbox as primary" do
+    # This block pinned the opposite until the EWS write path landed: an
+    # Exchange mailbox was read-only, so it was refused as a primary and
+    # skipped by every promotion. It can now receive a booking, so it is an
+    # ordinary candidate, and these are the same five situations read the
+    # other way. The invariant itself has not gone anywhere; the subscription
+    # block below is where it still holds.
+    test "set_primary_calendar_integration accepts an Exchange mailbox", %{user: user} do
+      exchange = insert_exchange(user)
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, exchange.id)
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == exchange.id
+    end
+
+    test "deleting the primary promotes the most recent candidate, Exchange included",
+         %{user: user} do
+      # Promotion takes the most recently added candidate, and the Exchange
+      # mailbox is the newest of the three. Nothing filters it out any more, so
+      # recency alone decides.
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}],
+          inserted_at: ~N[2024-01-01 10:00:00]
+        )
+
+      _older_fallback =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: ["/dav/fallback"],
+          inserted_at: ~N[2024-01-02 10:00:00]
+        )
+
+      exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, _result} = CalendarPrimary.delete_with_primary_handling(primary)
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == exchange.id
+    end
+
+    test "deactivating the primary promotes the most recent candidate, Exchange included",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}],
+          inserted_at: ~N[2024-01-01 10:00:00]
+        )
+
+      _older_fallback =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: ["/dav/fallback"],
+          inserted_at: ~N[2024-01-02 10:00:00]
+        )
+
+      exchange = insert_exchange(user, inserted_at: ~N[2024-01-03 10:00:00])
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(primary)
+      refute toggled.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == exchange.id
+    end
+
+    test "deactivating a primary with only an Exchange mailbox remaining promotes it",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}]
+        )
+
+      exchange = insert_exchange(user)
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(primary)
+      refute toggled.is_active
+
+      # The user is left with a primary that works, where before they were
+      # left with none at all.
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == exchange.id
+    end
+
+    test "activating an Exchange mailbox adopts it as the primary", %{user: user} do
+      exchange = insert_exchange(user)
+
+      assert {:ok, toggled_off} = CalendarManagement.toggle_with_primary_rebalance(exchange)
+      refute toggled_off.is_active
+
+      assert {:ok, toggled_on} = CalendarManagement.toggle_with_primary_rebalance(toggled_off)
+      assert toggled_on.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == exchange.id
+    end
+  end
+
   describe "the subscription-never-primary invariant" do
     test "toggling a subscription-only account off and on leaves the primary unset", %{
       user: user

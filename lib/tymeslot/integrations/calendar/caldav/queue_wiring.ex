@@ -133,8 +133,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
       all_day: all_day,
       start_at: start_at,
       end_at: end_at,
-      status: "confirmed",
-      transparency: "opaque",
+      status: status_string(event_data[:status]),
+      transparency: transparency_string(event_data[:transparency]),
       synced_at: now,
       sync_state: sync_state,
       sync_last_attempt_at: now,
@@ -145,6 +145,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   defp sync_state_for(:create), do: "locally_created"
   defp sync_state_for(:update), do: "locally_modified"
   defp sync_state_for(:delete), do: "locally_deleted"
+
+  # `event_data[:status]` carries the held-request marker
+  # (`CalendarEventBuilder.build_event_data/1` sets `:tentative` for a
+  # meeting still awaiting approval). Losing it here is what let a replayed
+  # offline-queue write land as an ordinary confirmed event on the host's
+  # calendar for a request nobody had approved yet.
+  defp status_string(nil), do: "confirmed"
+  defp status_string(status) when is_atom(status), do: Atom.to_string(status)
+  defp status_string(status) when is_binary(status), do: status
+
+  defp transparency_string(nil), do: "opaque"
+
+  defp transparency_string(transparency) when is_atom(transparency),
+    do: Atom.to_string(transparency)
+
+  defp transparency_string(transparency) when is_binary(transparency), do: transparency
 
   # `event_data` is documented as the atom-keyed map `CalendarEventBuilder`
   # produces, but it can also arrive from a payload that has been through JSON

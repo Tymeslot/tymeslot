@@ -1,6 +1,7 @@
 defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :meeting_types
   @moduletag :database
   @moduletag :schema
 
@@ -165,18 +166,29 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       assert "must be less than or equal to 480" in errors_on(changeset).duration_minutes
     end
 
-    test "prevents zero-duration meetings" do
+    test "prevents a meeting shorter than the grid can offer" do
+      # Five minutes is the floor because it is also the smallest slot
+      # interval, so anything below it cannot honestly be put on a booking
+      # page. The form has always shown five as its minimum; this is what
+      # makes it true of anything that reaches the changeset.
       user = insert(:user)
 
-      attrs = %{
-        name: "No Time Meeting",
-        duration_minutes: 0,
-        user_id: user.id
-      }
+      for duration <- [0, 1, 4] do
+        attrs = %{name: "No Time Meeting", duration_minutes: duration, user_id: user.id}
+        changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
 
-      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
-      refute changeset.valid?
-      assert "must be greater than or equal to 1" in errors_on(changeset).duration_minutes
+        refute changeset.valid?, "accepted a #{duration}-minute meeting type"
+        assert "must be greater than or equal to 5" in errors_on(changeset).duration_minutes
+      end
+
+      valid =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+          name: "Quick Chat",
+          duration_minutes: 5,
+          user_id: user.id
+        })
+
+      assert valid.valid?
     end
 
     test "prevents duplicate meeting type names per user" do
@@ -366,5 +378,70 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       refute changeset.valid?
       assert "must be at least USD 0.50" in errors_on(changeset).price_cents
     end
+  end
+
+  describe "slot_interval_minutes" do
+    test "defaults to nil so an existing type keeps using its event length" do
+      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, valid_attrs())
+
+      assert Changeset.get_field(changeset, :slot_interval_minutes) == nil
+    end
+
+    test "accepts an interval shorter than the duration" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 5)
+        )
+
+      assert changeset.valid?
+      assert Changeset.get_change(changeset, :slot_interval_minutes) == 5
+    end
+
+    test "accepts an interval longer than the duration" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 60)
+        )
+
+      assert changeset.valid?
+    end
+
+    test "accepts a value that does not divide the hour" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 7)
+        )
+
+      assert changeset.valid?
+    end
+
+    test "rejects an interval below the floor" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 4)
+        )
+
+      refute changeset.valid?
+      assert "must be greater than or equal to 5" in errors_on(changeset).slot_interval_minutes
+    end
+
+    test "rejects an interval above the ceiling" do
+      changeset =
+        MeetingTypeSchema.changeset(
+          %MeetingTypeSchema{},
+          Map.put(valid_attrs(), :slot_interval_minutes, 481)
+        )
+
+      refute changeset.valid?
+      assert "must be less than or equal to 480" in errors_on(changeset).slot_interval_minutes
+    end
+  end
+
+  defp valid_attrs do
+    %{name: "Intro call", duration_minutes: 30, user_id: 1}
   end
 end

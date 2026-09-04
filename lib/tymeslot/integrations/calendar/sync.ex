@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -65,10 +66,109 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def persist_normalised_events(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
+    calendar_events = flag_tymeslot_owned(integration, calendar_events)
+
     with {:ok, _count} <- upsert_cache(integration, calendar_events) do
       post_commit_reconciliation(integration, calendar_events)
       :ok
     end
+  end
+
+  @doc """
+  Marks the events that mirror one of this integration's own bookings.
+
+  Providers infer ownership from the payload where they can: Google stamps
+  `extendedProperties.private.createdBy`, and the iCal normaliser recognises a
+  `…@tymeslot.com` UID. Neither reaches a booking on a CalDAV or Outlook
+  calendar — a booking's UID is a bare `UUID.uuid4()` (`Bookings.Create`), so
+  `created_by_tymeslot` stayed false on every mirrored booking those providers
+  hold.
+
+  That flag is load-bearing: `CalDAV.OfflineQueue` grants the `:keep_local`
+  force-write only to rows carrying it, so the recovery a conflicting write
+  depends on was inert for exactly the events it was written for.
+
+  Ownership does not have to be inferred from the payload at all. A mirrored
+  booking shares an identifier with the meeting it came from, which is the
+  same rule the grid and the agenda deduplicate on, so resolve it against the
+  integration's meetings. Only ever raises the flag: a provider that already
+  recognised its own marker keeps it.
+  """
+  @spec flag_tymeslot_owned(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
+          [CalendarEvent.t()]
+  def flag_tymeslot_owned(_integration, []), do: []
+
+  def flag_tymeslot_owned(%CalendarIntegrationSchema{} = integration, calendar_events) do
+    identifiers =
+      calendar_events
+      |> Meetings.calendar_identifier_set()
+      |> MapSet.to_list()
+
+    case Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers) do
+      empty when map_size(empty) == 0 ->
+        calendar_events
+
+      meetings_by_identifier ->
+        Enum.map(calendar_events, &mark_if_owned(&1, meetings_by_identifier))
+    end
+  end
+
+  defp mark_if_owned(%CalendarEvent{created_by_tymeslot: true} = event, _meetings), do: event
+
+  defp mark_if_owned(%CalendarEvent{} = event, meetings_by_identifier) do
+    owned? =
+      event
+      |> Meetings.calendar_event_identifiers()
+      |> Enum.any?(&Map.has_key?(meetings_by_identifier, &1))
+
+    %{event | created_by_tymeslot: owned?}
+  end
+
+  @doc """
+  Replaces every cached row an integration holds under one `role`, in a single
+  transaction, with the given events.
+
+  For providers whose sync has more than one read path writing into the same
+  integration. Exchange is the only one today: its busy-time read owns the
+  `busy_only` rows and its item read owns the `display_only` ones, and an
+  unscoped full refresh would have each half delete the other's rows every
+  cycle.
+
+  Pure DB write. **No `post_commit_reconciliation/2`, deliberately**, and not
+  merely as the read-only-mirror argument `SyncIcsCalendarWorker` makes:
+  reconciliation resolves a vanished event to a Tymeslot meeting *by uid*
+  (`Meetings.ExternalCalendarChanges.find_linked_meeting/3`) and cancels it,
+  notifying both parties. Rows written through here can carry a synthesised
+  uid, because a busy interval arrives with no identity of any kind, so a uid
+  collision would cancel a real confirmed booking. The synthesised uids are
+  namespaced to make that collision unreachable; not running the
+  reconciliation at all is the structural half of the same defence, and both
+  are wanted.
+
+  Ownership *is* flagged here, unlike reconciliation. `flag_tymeslot_owned/2`
+  only ever raises `created_by_tymeslot` on a row that matches one of this
+  integration's own meetings, so it cannot mislabel a synthesised busy
+  interval, and Exchange reaches the cache through this function alone —
+  without it, a booking mirrored to an Exchange calendar stays unowned and
+  `CalDAV.OfflineQueue`-style recovery keyed on that flag never applies to it.
+  """
+  @spec full_refresh_for_role(CalendarIntegrationSchema.t(), String.t(), [CalendarEvent.t()]) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def full_refresh_for_role(%CalendarIntegrationSchema{} = integration, role, calendar_events)
+      when is_binary(role) and is_list(calendar_events) do
+    calendar_events = flag_tymeslot_owned(integration, calendar_events)
+
+    CalendarEventQueries.full_refresh_for_role(integration.id, role, calendar_events)
+  rescue
+    e ->
+      Logger.error("Calendar event cache role refresh raised an exception",
+        calendar_integration_id: integration.id,
+        role: role,
+        event_count: length(calendar_events),
+        reason: Exception.message(e)
+      )
+
+      {:error, Exception.message(e)}
   end
 
   @doc """
@@ -141,28 +241,32 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     uids = Enum.map(calendar_events, & &1.uid)
     SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
 
-    provider_event_ids = Enum.map(calendar_events, & &1.provider_event_id)
+    # Match on every identifier the events carry, not `provider_event_id`
+    # alone: a CalDAV event holds its href there while the meeting it mirrors
+    # is only reachable by UID, so an id-only join found no meeting for any
+    # CalDAV integration and silently never reconciled a time change.
+    identifiers =
+      calendar_events
+      |> Meetings.calendar_identifier_set()
+      |> MapSet.to_list()
 
-    meetings_by_id =
-      Meetings.list_meetings_by_provider_event_ids(integration.id, provider_event_ids)
+    meetings_by_identifier =
+      Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
 
-    Enum.each(calendar_events, &maybe_reconcile_time_change(integration, &1, meetings_by_id))
+    Enum.each(
+      calendar_events,
+      &maybe_reconcile_time_change(integration, &1, meetings_by_identifier)
+    )
+
     :ok
   end
 
   defp maybe_reconcile_time_change(
-         _integration,
-         %CalendarEvent{provider_event_id: nil},
-         _meetings_by_id
-       ),
-       do: :ok
-
-  defp maybe_reconcile_time_change(
          integration,
          %CalendarEvent{} = cal_event,
-         meetings_by_id
+         meetings_by_identifier
        ) do
-    case Map.get(meetings_by_id, cal_event.provider_event_id) do
+    case linked_meeting(cal_event, meetings_by_identifier) do
       nil ->
         :ok
 
@@ -173,6 +277,12 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           :ok
         end
     end
+  end
+
+  defp linked_meeting(%CalendarEvent{} = cal_event, meetings_by_identifier) do
+    cal_event
+    |> Meetings.calendar_event_identifiers()
+    |> Enum.find_value(&Map.get(meetings_by_identifier, &1))
   end
 
   # All-day event: compare start_date and end_date only.

@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Utils.UriUtils
 
@@ -270,12 +271,69 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   def event_visible?(_event, %{calendar_list: []}), do: true
 
   def event_visible?(event, %{calendar_list: calendar_list}) do
-    selected = selected_calendars(calendar_list)
+    case selected_calendars(calendar_list) do
+      [] -> false
+      selected -> not is_nil(calendar_for_event(event, selected))
+    end
+  end
 
-    cond do
-      selected == [] -> false
-      caldav_event?(event) -> matches_selected_calendar_path?(event, selected)
-      true -> matches_selected_calendar_id?(event, selected)
+  @doc """
+  Resolves the entry in `calendar_list` that `event` came from, or `nil` when
+  no entry matches.
+
+  Picks the same matching signal `event_visible?/2` documents: a CalDAV event
+  (whose `provider_event_id` is an href rooted at its collection) matches by
+  path prefix, everything else by the `provider_calendar_id` the sync tagged
+  the row with. Callers asking a per-calendar question about an event — is it
+  visible, is it writable — must go through here rather than re-deriving the
+  match, since the two signals disagree on CalDAV.
+  """
+  @spec calendar_for_event(map(), [CalendarEntry.t()] | nil) :: CalendarEntry.t() | nil
+  def calendar_for_event(_event, nil), do: nil
+
+  def calendar_for_event(event, calendar_list) when is_list(calendar_list) do
+    if caldav_event?(event) do
+      find_calendar_by_path(calendar_list, event.provider_event_id)
+    else
+      case Map.get(event, :provider_calendar_id) do
+        pcid when is_binary(pcid) -> find_calendar_by_id(calendar_list, pcid)
+        _untagged -> nil
+      end
+    end
+  end
+
+  @doc """
+  Decides whether an event cached from `integration` sits on a calendar the
+  provider will accept writes to.
+
+  Two independent things can make it read-only, and both have to be asked:
+
+    * the provider itself refuses every write (`ProviderConfig.read_only?/1` —
+      a subscribed ICS feed, which has no write protocol at all), so no
+      calendar under it is writable; and
+    * the individual calendar the event came from is read-only, which is
+      ordinary on an otherwise writable provider: a Google calendar shared
+      with `reader` access, an Outlook calendar reporting `canEdit == false`,
+      a CalDAV collection without the write privilege.
+
+  An event whose originating calendar cannot be resolved counts as writable.
+  Legacy rows predating per-calendar tagging match no entry, and refusing to
+  edit those would break editing on ordinary calendars; the provider-level
+  check still covers the wholly read-only providers.
+  """
+  @spec event_writable?(map(), %{
+          :provider => atom() | String.t() | nil,
+          :calendar_list => [CalendarEntry.t()] | nil,
+          optional(atom()) => term()
+        }) :: boolean()
+  def event_writable?(event, %{provider: provider, calendar_list: calendar_list}) do
+    not ProviderConfig.read_only?(provider) and not read_only_calendar?(event, calendar_list)
+  end
+
+  defp read_only_calendar?(event, calendar_list) do
+    case calendar_for_event(event, calendar_list) do
+      nil -> false
+      entry -> entry.read_only
     end
   end
 
@@ -283,16 +341,4 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     do: String.starts_with?(peid, "/")
 
   defp caldav_event?(_event), do: false
-
-  defp matches_selected_calendar_id?(%{provider_calendar_id: pcid}, selected)
-       when is_binary(pcid) do
-    not is_nil(find_calendar_by_id(selected, pcid))
-  end
-
-  defp matches_selected_calendar_id?(_event, _selected), do: false
-
-  defp matches_selected_calendar_path?(%{provider_event_id: peid}, selected)
-       when is_binary(peid) do
-    not is_nil(find_calendar_by_path(selected, peid))
-  end
 end

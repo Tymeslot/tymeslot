@@ -203,7 +203,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
 
   defp button_locale(options) do
     case sanitize_locale(options[:locale]) do
-      "" -> Locales.default_locale()
+      "" -> Locales.booking_default_locale()
       locale -> locale
     end
   end

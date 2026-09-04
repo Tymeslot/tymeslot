@@ -328,6 +328,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           </:description>
         </.input>
 
+        <%!-- No step: the server accepts any pixel value in range, and a
+        stored width like 320 or 1024 is not a multiple of anything round.
+        A step here would make the form unsubmittable for whoever already
+        has one. --%>
         <%!-- Initial height --%>
         <.input
           type="number"
@@ -336,7 +340,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           label={dgettext("dashboard_embed", "Initial height (px)")}
           min="200"
           max="2000"
-          step="50"
           placeholder="400"
           value={@initial_height}
           phx-debounce="blur"
@@ -357,7 +360,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           label={dgettext("dashboard_embed", "Max width (px)")}
           min="200"
           max="2000"
-          step="50"
           placeholder="1000"
           value={@max_width}
           phx-debounce="blur"

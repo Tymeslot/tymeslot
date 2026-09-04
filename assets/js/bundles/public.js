@@ -21,6 +21,10 @@ const PublicHooks = {
   ),
   QuillVideo: lazyHook("QuillVideo", () =>
     import("../video_hooks").then(m => m.QuillVideo)
+  ),
+  // Only rendered alongside a video background, so it lazy-loads with them.
+  BackgroundMotionToggle: lazyHook("BackgroundMotionToggle", () =>
+    import("../video_hooks").then(m => m.BackgroundMotionToggle)
   )
 };
 

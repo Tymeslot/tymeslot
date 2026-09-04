@@ -26,7 +26,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
   @spec render(PollSchema.t(), variant(), String.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, variant, results_url)
       when variant in [:all_voted, :deadline_passed] and is_binary(results_url) do
-    locale = Locales.default_locale()
+    locale = Locales.admin_default_locale()
     host_name = host_display_name(poll)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->

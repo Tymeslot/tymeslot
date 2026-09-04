@@ -60,6 +60,22 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Gets every active integration for `provider`, across all users.
+
+  Credentials are deliberately left encrypted: callers auditing plaintext
+  columns such as `oauth_scope` have no use for them, and decrypting a whole
+  table's tokens to read one plaintext field is work nobody asked for.
+  """
+  @spec list_active_by_provider(String.t()) :: [VideoIntegrationSchema.t()]
+  def list_active_by_provider(provider) when is_binary(provider) do
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where([v], v.provider == ^provider and v.is_active == true)
+    |> order_by([v], asc: v.id)
+    |> Repo.all()
+  end
+
+  @doc """
   Gets all video integrations for a user (including inactive).
   """
   @spec list_all_for_user(integer()) :: [VideoIntegrationSchema.t()]

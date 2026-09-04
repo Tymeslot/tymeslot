@@ -39,15 +39,15 @@
 }
 
 .step-indicator__step--active .step-indicator__circle {
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
-  color: white;
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
 }
 
 .step-indicator__step--completed .step-indicator__circle {
-  background: var(--theme-accent);
-  border-color: var(--theme-accent);
-  color: white;
+  background: var(--theme-accent-solid);
+  border-color: var(--theme-accent-solid);
+  color: var(--theme-on-accent);
 }
 
 .step-indicator__connector {
@@ -96,7 +96,8 @@
 
 /* Active/completed step enhancement */
 .quill-theme-wrapper .step-circle--active {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
+  color: var(--theme-on-primary);
   box-shadow:
     var(--shadow-primary-md),
     var(--inset-highlight-strong);

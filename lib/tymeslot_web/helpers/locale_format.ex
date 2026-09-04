@@ -223,6 +223,23 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
 
   @doc """
+  Formats a datetime as a full weekday-led date beside its clock time:
+  "Monday, 5 April 2026 · 14:30".
+
+  Shared by the attendee-facing surfaces that show a single meeting's slot (the
+  guest RSVP page and the host's request review page). A guest is an attendee,
+  so the weekday and month follow their language and the clock beside them does
+  too, rather than staying 24-hour.
+  """
+  @spec format_weekday_datetime(Calendar.datetime(), String.t()) :: String.t()
+  def format_weekday_datetime(datetime, locale) do
+    weekday = format_weekday_name(Date.day_of_week(datetime), locale, :full)
+    month = format_month_name(datetime.month, locale, :full)
+
+    "#{weekday}, #{datetime.day} #{month} #{datetime.year} · #{format_time(datetime, locale)}"
+  end
+
+  @doc """
   Formats a number according to locale conventions, to `decimals` decimal
   places (two by default).
   - en: 1,234.56

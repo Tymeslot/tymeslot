@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryCompositionTest do
       credentials-specific error instead of a server error banner.
   """
 
-  use Tymeslot.CalDAVCase, async: false
+  use Tymeslot.HttpTransportCase, async: false
 
   @moduletag :integrations
   @moduletag :integration

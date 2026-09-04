@@ -58,6 +58,12 @@ defmodule Tymeslot.Polls do
   def list_polls(user_id), do: PollQueries.list_for_user(user_id)
 
   @doc """
+  Counts the user's polls that are still open for votes.
+  """
+  @spec count_open_polls(pos_integer()) :: non_neg_integer()
+  def count_open_polls(user_id), do: PollQueries.count_open_for_user(user_id)
+
+  @doc """
   Updates an open poll's title and description, and notifies subscribers.
 
   Only these two fields, and only while the poll is open. The candidate times,

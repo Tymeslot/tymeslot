@@ -20,10 +20,13 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
       now - :auto_pause_cutoff_days` (default 14 days). Catches the
       ambiguous slow-decay case where probes occasionally succeed but the
       integration never reaches the 2-success healthy threshold. The
-      `became_unhealthy_at` timestamp is reset by full recovery, by any
-      successful sync (`HealthCheck.mark_synced_successfully/2`), and by
-      user actions (`HealthCheck.mark_user_recovered/2`), so a real recovery
-      anywhere inside the 14 days clears the timer.
+      `became_unhealthy_at` timestamp is reset by full recovery through the
+      probe and by user actions (`HealthCheck.mark_user_recovered/2`), so a
+      real recovery anywhere inside the 14 days clears the timer. A single
+      successful sync deliberately does not: it clears only the failed-sync
+      streak (`HealthCheck.mark_synced_successfully/2`), because otherwise a
+      server answering one sync a day would reset this timer daily and never
+      be paused.
 
   Both triggers also require the *current* status to be `"unhealthy"`, so an
   integration that's working today but was broken in the past is never

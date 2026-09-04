@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
@@ -58,31 +59,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   def with_editable_event(socket, params, fun) do
     case Integer.parse(params["event-id"] || "") do
       {event_id, ""} ->
-        event = Enum.find(socket.assigns.events, &(&1.id == event_id))
-
-        cond do
-          is_nil(event) ->
-            {:noreply, socket}
-
-          assert_owns_event(socket, event) == {:error, :unauthorized} ->
-            send(
-              self(),
-              {:flash,
-               {:error,
-                dgettext(
-                  "dashboard_calendar_events",
-                  "You don't have permission to modify this event"
-                )}}
-            )
-
-            {:noreply, socket}
-
-          true ->
-            {:noreply, fun.(event)}
+        case Enum.find(socket.assigns.events, &(&1.id == event_id)) do
+          nil -> {:noreply, socket}
+          event -> with_editable_event_found(socket, event, fun)
         end
 
       _invalid ->
         {:noreply, socket}
+    end
+  end
+
+  defp with_editable_event_found(socket, event, fun) do
+    case assert_event_writable(socket, event) do
+      :ok -> {:noreply, fun.(event)}
+      {:error, _reason} = error -> Shared.flash_guard_error(socket, error)
     end
   end
 
@@ -114,6 +104,51 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @spec assert_owns_event(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :unauthorized}
   def assert_owns_event(socket, event) do
     assert_owns_integration(socket, event.calendar_integration_id)
+  end
+
+  @doc """
+  The gate every write to an existing grid event goes through: the organiser
+  must own the integration *and* the calendar the event sits on must accept
+  writes.
+
+  Ownership alone is not enough. A subscribed feed is the organiser's own
+  integration, yet every provider write against it answers
+  `{:error, :read_only}`; a Google calendar shared with `reader` access is
+  likewise owned and unwritable. Refusing here is what keeps the failure a
+  clear message instead of a provider round-trip that ends in "Failed to
+  delete event".
+
+  `event_editable?/2` is the same question asked of the assigns, and gates the
+  affordance in the detail modal. The two must agree: this one is the
+  authority, since a stale socket can still send the event.
+  """
+  @spec assert_event_writable(Phoenix.LiveView.Socket.t(), map()) ::
+          :ok | {:error, :unauthorized} | {:error, :read_only}
+  def assert_event_writable(socket, event) do
+    with :ok <- assert_owns_event(socket, event) do
+      if writable_event?(socket.assigns, event), do: :ok, else: {:error, :read_only}
+    end
+  end
+
+  @doc """
+  Whether the detail modal should offer edit and delete controls for `event`.
+
+  Takes the assigns rather than the socket so templates can call it directly.
+  """
+  @spec event_editable?(map(), map()) :: boolean()
+  def event_editable?(assigns, event) do
+    MapSet.member?(assigns.owned_integration_ids, event.calendar_integration_id) and
+      writable_event?(assigns, event)
+  end
+
+  # Resolves the event's integration from the loaded list — the same list
+  # `owned_integration_ids` is built from, so an event whose integration is
+  # missing here is one the organiser does not own.
+  defp writable_event?(assigns, event) do
+    case Enum.find(assigns.integrations, &(&1.id == event.calendar_integration_id)) do
+      nil -> false
+      integration -> Selection.event_writable?(event, integration)
+    end
   end
 
   @spec assert_owns_integration(Phoenix.LiveView.Socket.t(), integer() | nil) ::

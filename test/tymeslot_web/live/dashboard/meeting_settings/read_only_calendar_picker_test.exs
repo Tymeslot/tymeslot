@@ -110,6 +110,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.ReadOnlyCalendarPickerTest do
         {:calendar_list_refreshed, form_id, calendar_integration.id, read_only_calendars}
       )
 
+      # The handler answers with `send_update/3`, which queues a second message
+      # to the LiveView rather than updating the component inline. One render
+      # only syncs past the refresh message itself and can race that update;
+      # the second render is ordered after it.
+      _synced = render(view)
       html_after = render(view)
 
       assert html_after =~

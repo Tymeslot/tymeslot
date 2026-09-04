@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
+  alias Tymeslot.Integrations.Video.AccessToken
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Disconnect
@@ -302,6 +303,18 @@ defmodule Tymeslot.Integrations.Video do
   @spec test_connection(pos_integer(), pos_integer()) :: {:ok, String.t()} | {:error, any()}
   def test_connection(user_id, id) when is_integer(user_id) and is_integer(id),
     do: Connection.test_connection(user_id, id)
+
+  @doc """
+  Returns a currently-valid OAuth access token for the user's integration,
+  refreshing it first if the stored one has expired.
+
+  The public way for tooling outside this domain to talk to a provider's API:
+  decryption stays with the schema and the refresh goes through the provider's
+  own locked, persisting token path. See
+  `Tymeslot.Integrations.Video.AccessToken`.
+  """
+  @spec access_token(integer(), integer()) :: {:ok, String.t()} | {:error, AccessToken.reason()}
+  defdelegate access_token(integration_id, user_id), to: AccessToken, as: :fetch
 
   @spec probe_integration(VideoIntegrationSchema.t(), keyword()) ::
           {:ok, String.t()} | {:error, any()}

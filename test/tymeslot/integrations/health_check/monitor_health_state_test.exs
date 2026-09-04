@@ -57,6 +57,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 2,
         consecutive_hard_failures: 0,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: nil,
         status: :degraded,
@@ -80,6 +81,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 0,
         consecutive_hard_failures: 0,
+        consecutive_sync_failures: 0,
         successes: 1,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -151,6 +153,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 1,
         consecutive_hard_failures: 0,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -172,6 +175,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 0,
         consecutive_hard_failures: 0,
+        consecutive_sync_failures: 0,
         successes: 1,
         last_check_at: DateTime.utc_now(),
         status: :healthy,
@@ -194,6 +198,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 2,
         consecutive_hard_failures: 2,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -216,6 +221,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 3,
         consecutive_hard_failures: 3,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :unhealthy,
@@ -237,6 +243,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 2,
         consecutive_hard_failures: 2,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -257,6 +264,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 3,
         consecutive_hard_failures: 3,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :unhealthy,
@@ -278,6 +286,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 0,
         consecutive_hard_failures: 0,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :healthy,
@@ -297,6 +306,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 0,
         consecutive_hard_failures: 0,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :healthy,
@@ -317,6 +327,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       old_state = %{
         failures: 2,
         consecutive_hard_failures: 0,
+        consecutive_sync_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -331,6 +342,79 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
       assert new_state.failures == 3
       assert new_state.status == :unhealthy
       assert %DateTime{} = new_state.became_unhealthy_at
+    end
+  end
+
+  describe "record_sync_failure/1" do
+    setup do
+      Application.put_env(:tymeslot, :sync_failure_unhealthy_threshold, 3)
+      on_exit(fn -> Application.delete_env(:tymeslot, :sync_failure_unhealthy_threshold) end)
+    end
+
+    test "counts failed sync cycles without touching the probe's own counters" do
+      state = Monitor.record_sync_failure(Monitor.initial_state())
+
+      assert state.consecutive_sync_failures == 1
+      assert state.status == :healthy
+      assert state.failures == 0
+      # SyncGating pauses sync on this counter, and a remote 5xx must not pause
+      # the only thing that would notice the remote coming back.
+      assert state.consecutive_hard_failures == 0
+      assert state.backoff_ms == :timer.minutes(30)
+    end
+
+    test "forces :unhealthy once the streak reaches the threshold" do
+      state =
+        Enum.reduce(1..3, Monitor.initial_state(), fn _cycle, acc ->
+          Monitor.record_sync_failure(acc)
+        end)
+
+      assert state.consecutive_sync_failures == 3
+      assert state.status == :unhealthy
+      assert %DateTime{} = state.became_unhealthy_at
+    end
+
+    test "keeps the original became_unhealthy_at when the integration was already unhealthy" do
+      stamped = DateTime.add(DateTime.utc_now(), -3 * 24 * 3600, :second)
+
+      state =
+        %{Monitor.initial_state() | status: :unhealthy, became_unhealthy_at: stamped}
+        |> Monitor.record_sync_failure()
+        |> Monitor.record_sync_failure()
+        |> Monitor.record_sync_failure()
+
+      assert state.became_unhealthy_at == stamped
+    end
+  end
+
+  describe "update_health/2 while syncs are failing" do
+    setup do
+      Application.put_env(:tymeslot, :sync_failure_unhealthy_threshold, 3)
+      on_exit(fn -> Application.delete_env(:tymeslot, :sync_failure_unhealthy_threshold) end)
+    end
+
+    test "a passing probe cannot clear a badge raised by a sync-failure streak" do
+      # The whole point of the streak: the probe PROPFINDs a collection the
+      # failing REPORT also targets, and a server can answer one and refuse the
+      # other. A green probe is not evidence the sync works.
+      state =
+        Monitor.update_health(
+          %{Monitor.initial_state() | consecutive_sync_failures: 4, status: :unhealthy},
+          {:ok, :connected}
+        )
+
+      assert state.status == :unhealthy
+      assert state.successes == 1
+    end
+
+    test "a passing probe restores health once the streak has been cleared" do
+      state =
+        Monitor.update_health(
+          %{Monitor.initial_state() | consecutive_sync_failures: 0, status: :healthy},
+          {:ok, :connected}
+        )
+
+      assert state.status == :healthy
     end
   end
 end

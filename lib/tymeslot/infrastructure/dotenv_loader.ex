@@ -34,12 +34,33 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
            sys_cmd_fn: fn _cmd, _args, _opts -> {"", 1} end
          ) do
       {:ok, vars} ->
-        Enum.each(vars, fn {key, value} ->
-          if System.get_env(key) == nil, do: System.put_env(key, value)
-        end)
+        Enum.each(vars, &apply_var(&1, path))
 
       {:error, reason} ->
         Logger.warning("DotenvLoader: skipping malformed .env file", path: path, reason: reason)
+    end
+  end
+
+  # Dotenvy 1.1.1 accumulates each parsed character as `<<codepoint>>`, which
+  # truncates anything outside ASCII to a single byte, so a value such as
+  # `Müller` comes back as invalid UTF-8. `System.put_env/2` raises on that,
+  # and a raise here would take down every boot and `eval` session that reads
+  # the file. The value cannot be repaired (codepoints past U+00FF lose bits),
+  # so it is skipped with a warning naming the key; at container boot the
+  # entrypoint has already exported the correct value from the same file.
+  defp apply_var({key, value}, path) do
+    cond do
+      System.get_env(key) != nil ->
+        :ok
+
+      String.valid?(value) ->
+        System.put_env(key, value)
+
+      true ->
+        Logger.warning(
+          "DotenvLoader: skipping #{key} in #{path}: its value has non-ASCII characters " <>
+            "the parser cannot read; set it in the environment instead"
+        )
     end
   end
 end

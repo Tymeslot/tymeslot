@@ -52,24 +52,36 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
 
   Returns `{:ok, meeting}` if a linked meeting is found, `{:error, :not_found}`
   otherwise. Tries `provider_event_id` first, falls back to `uid`.
+
+  The fallback runs when the first lookup *misses*, not merely when the ID is
+  absent: a CalDAV event carries an href in `provider_event_id`, while the
+  meeting it mirrors carries no provider event ID at all and is only reachable
+  by UID. Falling back on `nil` alone left those meetings unfindable whenever
+  the caller had an href to offer. See `Tymeslot.Meetings.CalendarEventLink`
+  for the identity rule this implements.
   """
   @spec find_linked_meeting(integer(), String.t() | nil, String.t() | nil) ::
           {:ok, Meeting.t()} | {:error, :not_found}
   def find_linked_meeting(calendar_integration_id, provider_event_id, uid) do
-    cond do
-      not is_nil(provider_event_id) ->
-        MeetingCalendarQueries.get_by_provider_event_id(
-          calendar_integration_id,
-          provider_event_id
-        )
-
-      not is_nil(uid) ->
-        MeetingCalendarQueries.get_by_uid_and_integration(calendar_integration_id, uid)
-
-      true ->
-        {:error, :not_found}
+    with {:error, :not_found} <-
+           by_provider_event_id(calendar_integration_id, provider_event_id) do
+      by_uid(calendar_integration_id, uid)
     end
   end
+
+  defp by_provider_event_id(_calendar_integration_id, nil), do: {:error, :not_found}
+
+  defp by_provider_event_id(calendar_integration_id, provider_event_id),
+    do:
+      MeetingCalendarQueries.get_by_provider_event_id(
+        calendar_integration_id,
+        provider_event_id
+      )
+
+  defp by_uid(_calendar_integration_id, nil), do: {:error, :not_found}
+
+  defp by_uid(calendar_integration_id, uid),
+    do: MeetingCalendarQueries.get_by_uid_and_integration(calendar_integration_id, uid)
 
   @spec status_for(signal()) :: String.t()
   defp status_for(:deleted), do: "externally_deleted"

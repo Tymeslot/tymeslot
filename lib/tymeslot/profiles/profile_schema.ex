@@ -12,6 +12,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Timezones
+  alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -27,6 +28,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           has_custom_theme: boolean(),
           allowed_embed_domains: [String.t()] | nil,
           booking_page_published_at: DateTime.t() | nil,
+          booking_text_enabled: boolean(),
+          booking_heading: String.t() | nil,
+          booking_greeting: String.t() | nil,
+          booking_instruction: String.t() | nil,
           freebusy_token: String.t() | nil,
           primary_calendar_integration_id: integer() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
@@ -53,6 +58,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:has_custom_theme, :boolean, default: false)
     field(:allowed_embed_domains, {:array, :string}, default: ["none"])
     field(:booking_page_published_at, :utc_datetime)
+    field(:booking_text_enabled, :boolean, default: false)
+    field(:booking_heading, :string)
+    field(:booking_greeting, :string)
+    field(:booking_instruction, :string)
     field(:freebusy_token, :string)
     field(:meeting_types, {:array, :map}, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
@@ -104,6 +113,62 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     profile
     |> cast(attrs, [:freebusy_token])
     |> unique_constraint(:freebusy_token)
+  end
+
+  @booking_text_fields [:booking_heading, :booking_greeting, :booking_instruction]
+
+  @doc """
+  Focused changeset for the booking page's introductory text.
+
+  The three strings are kept whether or not they are in use, so switching the
+  customisation off and back on restores the organiser's wording instead of
+  losing it. That is why `validate_required/2` applies only while
+  `booking_text_enabled` is true: a blank field is an error when the text is
+  live and unremarkable when it is not.
+
+  Casts with `empty_values: []` deliberately. Ecto's default treats `""` as
+  absent, which would silently drop the change when an organiser clears a field,
+  leaving the old wording on the page.
+  """
+  @spec booking_text_changeset(t(), map()) :: Ecto.Changeset.t()
+  def booking_text_changeset(profile, attrs) do
+    profile
+    |> cast(attrs, [:booking_text_enabled | @booking_text_fields], empty_values: [])
+    |> update_booking_text()
+    |> validate_length(:booking_heading, max: Constraints.booking_heading_max_length())
+    |> validate_length(:booking_greeting, max: Constraints.booking_welcome_line_max_length())
+    |> validate_length(:booking_instruction, max: Constraints.booking_welcome_line_max_length())
+    |> validate_booking_text_present()
+  end
+
+  defp update_booking_text(changeset) do
+    Enum.reduce(@booking_text_fields, changeset, fn field, acc ->
+      update_change(acc, field, &normalize_booking_text/1)
+    end)
+  end
+
+  defp normalize_booking_text(nil), do: nil
+
+  defp normalize_booking_text(value) when is_binary(value) do
+    # Postgres rejects null bytes even though they are valid UTF-8, so they are
+    # stripped at the boundary rather than left to blow up on insert.
+    trimmed =
+      value
+      |> String.replace("\x00", "")
+      |> String.trim()
+
+    blank_to_nil(trimmed)
+  end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
+
+  defp validate_booking_text_present(changeset) do
+    if fetch_field!(changeset, :booking_text_enabled) do
+      validate_required(changeset, @booking_text_fields)
+    else
+      changeset
+    end
   end
 
   defp validate_username(changeset) do

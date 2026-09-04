@@ -9,6 +9,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Availability.{GroupSlots, TimeSlots}
 
   alias Tymeslot.Bookings.{
+    Activation,
     BuildParams,
     CalendarJobs,
     CreateGroup,
@@ -29,10 +30,8 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Notifications.Events
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.VideoRoomWorker
   alias UUID
 
   @type meeting_params :: %{
@@ -194,7 +193,7 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp default_locale, do: Locales.default_locale()
+  defp default_locale, do: Locales.booking_default_locale()
 
   defp resolve_meeting_type_for_duration(meeting_params) do
     type_id = Map.get(meeting_params, :meeting_type_id)
@@ -468,7 +467,7 @@ defmodule Tymeslot.Bookings.Create do
         # Post-creation side effects (emails/video) are now part of the transaction
         # This ensures that if meeting creation fails due to a race condition (unique index),
         # no side-effect jobs (Oban) are committed.
-        handle_post_creation_effects(meeting, opts)
+        Activation.activate(meeting, opts)
         meeting
       else
         {:error, reason} ->
@@ -512,56 +511,4 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp map_transaction_result({:error, reason}), do: {:error, Errors.classify_error(reason)}
-
-  defp handle_post_creation_effects(meeting, opts) do
-    # Calendar job was scheduled atomically with meeting creation
-
-    # If explicitly requested, create video room first when a provider is configured
-    if Keyword.get(opts, :with_video_room, false) do
-      if meeting.video_integration_id do
-        schedule_video_room_with_announcement(meeting)
-      else
-        # No video provider configured, skip video job
-        announce_meeting(meeting)
-      end
-    else
-      # Auto-detect: if the meeting has a specific video provider configured that supports
-      # API-based room creation, create the video room before announcing the booking so
-      # every notification carries the join link.
-      if Policy.auto_creates_video_room?(meeting) do
-        schedule_video_room_with_announcement(meeting)
-      else
-        # No supported auto-create provider (none/unknown/etc.)
-        announce_meeting(meeting)
-      end
-    end
-  end
-
-  defp schedule_video_room_with_announcement(meeting) do
-    case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
-      :ok ->
-        :ok
-
-      {:error, _reason} ->
-        # The job that would have announced this booking never got queued, so
-        # announce it here instead, without a join link.
-        announce_meeting(meeting)
-        :ok
-    end
-  end
-
-  defp announce_meeting(meeting) do
-    case Events.meeting_created(meeting) do
-      {:ok, _result} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to announce meeting creation",
-          meeting_id: meeting.id,
-          error: inspect(reason)
-        )
-
-        :ok
-    end
-  end
 end

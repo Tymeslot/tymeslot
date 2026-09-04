@@ -1,5 +1,6 @@
 /**
- * Tests for `AutoScrollToSlots.manageFocus` (utility_hooks.js).
+ * Tests for `AutoScrollToSlots` (utility_hooks.js): `manageFocus` and the
+ * mobile/tablet auto-scroll driven by its MutationObserver.
  *
  * When the slots region finishes loading, a keyboard/screen-reader user who
  * just activated a calendar day should be carried forward to the "Available
@@ -9,9 +10,16 @@
  * `[data-testid="calendar-day"]` or Rhythm's `.week-day-cell`), and only
  * once per load (the `focusMoved` latch), resetting when the loaded marker
  * disappears (e.g. the user picks a date with no slots).
+ *
+ * The auto-scroll observes `childList`/`subtree` mutations under the slots
+ * container, which also fire for DOM churn unrelated to a new slots view —
+ * notably the two-tier hour picker's minutes panel expanding/collapsing.
+ * `data-slots-loaded` carries the selected date once slots render (e.g.
+ * `data-slots-loaded="2026-09-01"`), and the hook keys its "did the view
+ * actually change" check off that value, not off the mutation firing at all.
  */
 
-import { describe, expect, test, afterEach } from 'vitest';
+import { describe, expect, test, afterEach, beforeEach, vi } from 'vitest';
 import { AutoScrollToSlots } from '../utility_hooks';
 
 function makeHook(el) {
@@ -19,7 +27,9 @@ function makeHook(el) {
 }
 
 // Quill's `.time-slots-panel` — heading is `.slots-heading[tabindex="-1"]`;
-// the loaded grid carries `[data-slots-loaded]` only once slots render.
+// the loaded grid carries `[data-slots-loaded]` only once slots render, set
+// to the selected date (e.g. "2026-09-01"). `loaded` may be `true` (bare
+// attribute), a date string, or falsy (not yet loaded).
 function buildQuillContainer({ loaded } = {}) {
   const el = document.createElement('div');
   el.className = 'time-slots-panel';
@@ -32,7 +42,7 @@ function buildQuillContainer({ loaded } = {}) {
 
   if (loaded) {
     const grid = document.createElement('div');
-    grid.setAttribute('data-slots-loaded', '');
+    grid.setAttribute('data-slots-loaded', loaded === true ? '' : loaded);
     el.appendChild(grid);
   }
 
@@ -42,7 +52,7 @@ function buildQuillContainer({ loaded } = {}) {
 
 // Rhythm's `.time-slots-section` — heading is
 // `.time-slots-section-heading[tabindex="-1"]`; the grid always renders and
-// carries `data-slots-loaded` only once truthy.
+// carries `data-slots-loaded`, set to the selected date, only once truthy.
 function buildRhythmContainer({ loaded } = {}) {
   const el = document.createElement('div');
   el.className = 'time-slots-section';
@@ -55,7 +65,7 @@ function buildRhythmContainer({ loaded } = {}) {
 
   const grid = document.createElement('div');
   grid.className = 'time-slots-grid';
-  if (loaded) grid.setAttribute('data-slots-loaded', '');
+  if (loaded) grid.setAttribute('data-slots-loaded', loaded === true ? '' : loaded);
   el.appendChild(grid);
 
   document.body.appendChild(el);
@@ -164,5 +174,93 @@ describe('AutoScrollToSlots.manageFocus', () => {
     grid.remove();
     hook.manageFocus();
     expect(hook.focusMoved).toBe(false);
+  });
+});
+
+describe('AutoScrollToSlots auto-scroll', () => {
+  const MOBILE_WIDTH = 500;
+
+  beforeEach(() => {
+    vi.stubGlobal('innerWidth', MOBILE_WIDTH);
+    vi.useFakeTimers();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  test('picking a new date scrolls once slots are loaded', () => {
+    const { el } = buildQuillContainer({ loaded: false });
+    const hook = makeHook(el);
+    hook.mounted();
+
+    // The date pick lands: the loaded grid appears, carrying the date.
+    const grid = document.createElement('div');
+    grid.setAttribute('data-slots-loaded', '2026-09-01');
+    el.appendChild(grid);
+    hook.handleSlotsUpdate();
+    vi.advanceTimersByTime(100);
+
+    expect(el.scrollIntoView).toHaveBeenCalledOnce();
+  });
+
+  test('expanding an hour does not scroll — the loaded date is unchanged', () => {
+    const { el } = buildQuillContainer({ loaded: '2026-09-01' });
+    const hook = makeHook(el);
+    hook.mounted();
+
+    // Two-tier picker: tapping an hour adds a minutes panel under the
+    // already-loaded grid without touching `data-slots-loaded`.
+    const grid = el.querySelector('[data-slots-loaded]');
+    const minutesPanel = document.createElement('div');
+    minutesPanel.className = 'time-period-slots--minutes';
+    grid.appendChild(minutesPanel);
+    hook.handleSlotsUpdate();
+    vi.advanceTimersByTime(100);
+
+    expect(el.scrollIntoView).not.toHaveBeenCalled();
+
+    // Tapping the hour again to collapse it removes the panel — still the
+    // same loaded date, still no scroll.
+    minutesPanel.remove();
+    hook.handleSlotsUpdate();
+    vi.advanceTimersByTime(100);
+
+    expect(el.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  test('picking a different date after one is already loaded scrolls again', () => {
+    const { el } = buildQuillContainer({ loaded: '2026-09-01' });
+    const hook = makeHook(el);
+    hook.mounted();
+
+    const grid = el.querySelector('[data-slots-loaded]');
+    grid.setAttribute('data-slots-loaded', '2026-09-02');
+    hook.handleSlotsUpdate();
+    vi.advanceTimersByTime(100);
+
+    expect(el.scrollIntoView).toHaveBeenCalledOnce();
+  });
+
+  test('does not scroll when embedded, even for a genuinely new date', () => {
+    document.documentElement.setAttribute('data-embedded', 'true');
+
+    const { el } = buildQuillContainer({ loaded: false });
+    const hook = makeHook(el);
+    hook.mounted();
+
+    const grid = document.createElement('div');
+    grid.setAttribute('data-slots-loaded', '2026-09-01');
+    el.appendChild(grid);
+    hook.handleSlotsUpdate();
+    vi.advanceTimersByTime(100);
+
+    expect(el.scrollIntoView).not.toHaveBeenCalled();
+
+    document.documentElement.removeAttribute('data-embedded');
   });
 });

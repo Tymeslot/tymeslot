@@ -45,7 +45,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
 
   describe "accent colour" do
     test "the section renders with the three branding controls", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+      {:ok, _lv, html} = live(conn, ~p"/admin/email")
 
       assert html =~ "Email branding"
       assert html =~ "Email accent colour"
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "saving a hex colour persists it and changes the email tokens", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       html =
         lv
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "an uppercase hex is normalised before it is stored", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       render_submit(accent_form(lv), %{"key" => "email_brand_accent", "value" => "#7C3AED"})
 
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "a non-colour is rejected with a usable message and stores nothing", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       html =
         lv
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
 
     test "clearing the field restores the stock turquoise", %{conn: conn} do
       {:ok, _settings} = AppSettings.update(%{email_brand_accent: "#7c3aed"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       render_submit(accent_form(lv), %{"key" => "email_brand_accent", "value" => ""})
 
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     test "a low-contrast colour renders a warning rather than being rejected", %{conn: conn} do
       {:ok, _settings} = AppSettings.update(%{email_brand_accent: "#f5d90a"})
 
-      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+      {:ok, _lv, html} = live(conn, ~p"/admin/email")
 
       assert html =~ "Buttons may be hard to read."
       assert AppSettings.get(:email_brand_accent) == "#f5d90a"
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     test "a colour with adequate contrast renders no warning", %{conn: conn} do
       {:ok, _settings} = AppSettings.update(%{email_brand_accent: "#0f172a"})
 
-      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+      {:ok, _lv, html} = live(conn, ~p"/admin/email")
 
       refute html =~ "Buttons may be hard to read."
     end
@@ -116,7 +116,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     test "picking the swatch does not autosave, and a stale hex submit can't be raced by it",
          %{conn: conn} do
       {:ok, _settings} = AppSettings.update(%{email_brand_accent: "#123456"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       # Simulate the swatch commit that used to write straight to
       # `AppSettings` on blur.
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
 
     test "the hex form has an accessible name and the swatch/hex controls describe the feedback region",
          %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+      {:ok, _lv, html} = live(conn, ~p"/admin/email")
 
       assert html =~
                ~s(id="admin-setting-hex-form-email_brand_accent" phx-submit="save_setting" class="flex items-center gap-2" aria-label="Set Email accent colour")
@@ -156,7 +156,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
 
   describe "brand name" do
     test "saving a name persists it and feeds the email copy", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       html =
         lv
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "an over-long name is rejected", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       html =
         lv
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "submitting the built-in default unchanged still acknowledges the save", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       html =
         lv
@@ -195,7 +195,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
 
   describe "logo upload" do
     test "an uploaded PNG is stored and previewed", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       logo = file_input(lv, "#admin-email-logo-form", :email_logo, [entry(@png)])
 
@@ -207,7 +207,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "bytes that are not a PNG are rejected and nothing is stored", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       logo =
         file_input(lv, "#admin-email-logo-form", :email_logo, [
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
       File.write!(path, @png)
       {:ok, _relative} = Branding.store_logo(path)
 
-      {:ok, lv, html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, html} = live(conn, ~p"/admin/email")
       assert html =~ "/uploads/branding/"
 
       html = lv |> element("button[phx-click='remove_email_logo']") |> render_click()
@@ -236,7 +236,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "the browser reports a conversion failure without storing anything", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       html = render_hook(lv, "email_logo_conversion_failed", %{})
 
@@ -245,7 +245,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
     end
 
     test "the hook reports an oversized source before it reaches the server", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       html = render_hook(lv, "email_logo_too_large", %{})
 
@@ -255,7 +255,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
 
     test "an entry rejected by the framework's own size limit is surfaced, not silent",
          %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
       oversized = :binary.copy(<<0>>, 2_000_001)
       logo = file_input(lv, "#admin-email-logo-form", :email_logo, [entry(oversized)])
@@ -271,7 +271,7 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
 
     test "the upload control has a visible focus state and the errors are announced",
          %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+      {:ok, _lv, html} = live(conn, ~p"/admin/email")
 
       assert html =~ "focus-within:ring-2"
       assert html =~ ~s(aria-describedby="email-logo-errors")

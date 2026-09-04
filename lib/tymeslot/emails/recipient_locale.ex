@@ -52,19 +52,19 @@ defmodule Tymeslot.Emails.RecipientLocale do
   @doc "The locale to render for `user`, defaulting when unset or unsupported."
   @spec locale_for(map()) :: String.t()
   def locale_for(%{locale: locale}) do
-    if Locales.acceptable?(locale), do: locale, else: Locales.default_locale()
+    if Locales.acceptable?(locale), do: locale, else: Locales.admin_default_locale()
   end
 
-  def locale_for(_user), do: Locales.default_locale()
+  def locale_for(_user), do: Locales.admin_default_locale()
 
   @doc "The locale to render for the user identified by `user_id`."
   @spec locale_for_user_id(term()) :: String.t()
-  def locale_for_user_id(nil), do: Locales.default_locale()
+  def locale_for_user_id(nil), do: Locales.admin_default_locale()
 
   def locale_for_user_id(user_id) do
     case Auth.get_user(user_id) do
       {:ok, user} -> locale_for(user)
-      {:error, :not_found} -> Locales.default_locale()
+      {:error, :not_found} -> Locales.admin_default_locale()
     end
   end
 end

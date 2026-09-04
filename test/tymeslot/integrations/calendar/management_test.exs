@@ -131,11 +131,12 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   # ---------------------------------------------------------------------------
 
   describe "mark_sync_success/1" do
-    test "resets the health state row without enqueueing a probe" do
+    test "clears the failed-sync streak without enqueueing a probe" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
+      unhealthy_since = DateTime.add(DateTime.utc_now(), -3 * 24 * 3600, :second)
 
-      # Seed an unhealthy row.
+      # Seed an unhealthy row mid-outage, with a streak of failed sync cycles.
       %IntegrationHealthStateSchema{}
       |> IntegrationHealthStateSchema.changeset(%{
         integration_type: "calendar",
@@ -144,19 +145,26 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
         status: "unhealthy",
         failures: 3,
         consecutive_hard_failures: 3,
+        consecutive_sync_failures: 11,
         successes: 0,
-        backoff_ms: :timer.hours(1)
+        backoff_ms: :timer.hours(1),
+        became_unhealthy_at: unhealthy_since
       })
       |> Repo.insert!()
 
       assert {:ok, _updated} = CalendarManagement.mark_sync_success(integration)
 
-      # Health row is reset to a healthy baseline.
       {:ok, row} = IntegrationHealthStateQueries.get(:calendar, integration.id)
-      assert row.status == "healthy"
-      assert row.failures == 0
+      assert row.consecutive_sync_failures == 0
 
-      # A successful sync proves health — no redundant probe should be enqueued.
+      # The streak has ended; the outage has not. Ending the episode belongs to
+      # the probe, so that one lucky sync a day cannot keep restarting the
+      # 48-hour notification clock.
+      assert row.status == "unhealthy"
+      assert row.failures == 3
+      assert row.became_unhealthy_at == unhealthy_since
+
+      # A sync cycle is not the owner waiting on an answer — no probe.
       refute_enqueued(
         worker: IntegrationHealthWorker,
         args: %{"type" => "calendar", "integration_id" => integration.id}

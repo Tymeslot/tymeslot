@@ -117,11 +117,16 @@ defmodule TymeslotWeb.Components.CoreComponents do
 
   @doc """
   Renders an icon badge with gradient background.
+
+  Accepts either a `hero-…` icon name via `icon`, or raw SVG children via the
+  default slot. See `TymeslotWeb.Components.CoreComponents.Containers.icon_badge/1`,
+  which this delegates to; these declarations must stay in step with it, since a
+  wrapper that declares less than its delegate silently rejects the difference.
   """
-  attr :color_from, :string, default: "#10b981"
-  attr :color_to, :string, default: "#059669"
   attr :size, :atom, default: :medium, values: [:small, :medium, :large]
-  slot :inner_block, required: true
+  attr :icon, :string, default: nil, doc: "A `hero-…` icon name, rendered via `<.icon>`"
+  attr :class, :string, default: ""
+  slot :inner_block, doc: "Raw SVG children (e.g. `<path>`), used when `icon` is not given"
   @spec icon_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def icon_badge(assigns), do: Containers.icon_badge(assigns)
 
@@ -168,6 +173,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   attr :options, :list
   attr :multiple, :boolean, default: false
   attr :required, :boolean, default: false
+  attr :disabled, :boolean, default: false
   attr :placeholder, :string, default: nil
   attr :rows, :integer, default: 4
   attr :icon, :string, default: nil
@@ -316,7 +322,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
     * `:on_close` - Required. Event name fired by `phx-click-away` and Escape key when open.
     * `:target` - `phx-target` forwarded to the trigger button and the click-away handler.
     * `:position` - Panel placement: `:bottom_end` (default), `:bottom_start`, `:top_end`, `:top_start`.
-    * `:role` - ARIA role on the panel `<div>`. Default `"menu"`. Pass `"dialog"` for panels that contain non-menuitem content such as inputs or checkboxes.
+    * `:role` - ARIA role on the panel `<div>`, and the trigger's matching `aria-haspopup` value. Default `"menu"`. Pass `"dialog"` for panels that contain non-menuitem content such as inputs or checkboxes.
     * `:aria_orientation` - ARIA orientation on the panel. Default `"vertical"`.
     * `:trigger_class` - CSS classes on the trigger `<button>`.
     * `:class` - Additional CSS classes appended to the panel `<div>`.

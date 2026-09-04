@@ -16,6 +16,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           name: String.t() | nil,
           description: String.t() | nil,
           duration_minutes: integer() | nil,
+          slot_interval_minutes: integer() | nil,
           icon: String.t() | nil,
           is_active: boolean(),
           is_private: boolean(),
@@ -28,6 +29,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           payment_required: boolean(),
           price_cents: integer() | nil,
           max_participants: integer(),
+          requires_approval: boolean(),
+          approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
           max_bookings_per_day: pos_integer() | nil,
           max_bookings_per_week: pos_integer() | nil,
@@ -46,6 +49,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:name, :string)
     field(:description, :string)
     field(:duration_minutes, :integer)
+    field(:slot_interval_minutes, :integer)
     field(:icon, :string)
     field(:is_active, :boolean, default: true)
     field(:is_private, :boolean, default: false)
@@ -59,6 +63,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
     field(:max_participants, :integer, default: 1)
+
+    # Bookings on this meeting type are held until the host approves them,
+    # rather than confirmed on submission. `approval_window_hours` nil means
+    # "use `Constraints.default_approval_window_hours/0`", the same way a nil
+    # `availability_schedule_id` means "use the profile default".
+    field(:requires_approval, :boolean, default: false)
+    field(:approval_window_hours, :integer)
     field(:is_archived, :boolean, default: false)
     field(:max_bookings_per_day, :integer)
     field(:max_bookings_per_week, :integer)
@@ -127,6 +138,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :name,
       :description,
       :duration_minutes,
+      :slot_interval_minutes,
       :icon,
       :is_active,
       :is_private,
@@ -144,6 +156,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :payment_required,
       :price_cents,
       :max_participants,
+      :requires_approval,
+      :approval_window_hours,
       :is_archived,
       :max_bookings_per_day,
       :max_bookings_per_week,
@@ -155,8 +169,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_length(:name, Constraints.name_length_opts())
     |> validate_length(:description, max: Constraints.description_max_length())
     |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
+    |> validate_number(:slot_interval_minutes, Constraints.slot_interval_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
     |> validate_number(:max_participants, Constraints.max_participants_opts())
+    |> validate_number(:approval_window_hours, Constraints.approval_window_hours_opts())
     |> validate_booking_limits(:meeting_types)
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
     |> normalize_slug()

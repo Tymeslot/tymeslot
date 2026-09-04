@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
       Locales.acceptable(path_locale(session)) ||
         Locales.acceptable(user_locale(socket)) ||
         Locales.acceptable(session_locale(session)) ||
-        Locales.default_locale()
+        Locales.admin_default_locale()
 
     Gettext.put_locale(locale)
 
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
     ambient =
       Locales.acceptable(path_locale(session)) ||
         Locales.acceptable(session_locale(session)) ||
-        Locales.default_locale()
+        Locales.admin_default_locale()
 
     {:cont, assign(socket, locale: locale, ambient_locale: ambient)}
   end

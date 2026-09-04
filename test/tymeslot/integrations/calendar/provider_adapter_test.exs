@@ -153,6 +153,37 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
       refute adapter_client.client == integration
     end
 
+    test "Exchange: hands the provider a client it can read a config out of" do
+      integration = %CalendarIntegrationSchema{
+        id: 5,
+        provider: "exchange",
+        base_url: "https://mail.example.com/EWS/Exchange.asmx",
+        username_encrypted: nil,
+        password_encrypted: nil,
+        provider_account_email: "room@example.com",
+        verify_ssl: true
+      }
+
+      assert {:ok, adapter_client} = ProviderAdapter.new_client_from_integration(integration)
+      assert adapter_client.provider_type == :exchange
+
+      assert adapter_client.provider_module ==
+               Tymeslot.Integrations.Calendar.Exchange.Provider
+
+      # EWS is not CalDAV, so no CalDAV client is built for it. What pins that
+      # is the mailbox address: `provider_account_email` is the one field the
+      # CalDAV branch's config does not carry, so adding :exchange to
+      # @caldav_based_providers makes this raise. `base_url` and `verify_ssl`
+      # survive that branch and would keep a test written on them green.
+      assert [config] =
+               Tymeslot.Integrations.Calendar.Exchange.Provider.build_client_configs(
+                 adapter_client.client
+               )
+
+      assert config.provider_account_email == "room@example.com"
+      assert config.base_url == "https://mail.example.com/EWS/Exchange.asmx"
+    end
+
     test "returns {:error, _} for an unknown provider" do
       integration = %CalendarIntegrationSchema{id: 4, provider: "unknown"}
       assert {:error, _reason} = ProviderAdapter.new_client_from_integration(integration)

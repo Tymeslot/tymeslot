@@ -9,6 +9,7 @@ defmodule Tymeslot.CalendarGridTest do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncExchangeCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
@@ -254,6 +255,21 @@ defmodule Tymeslot.CalendarGridTest do
 
       assert_enqueued(
         worker: RefreshOutlookCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "enqueues SyncExchangeCalendarWorker for exchange integrations" do
+      # Without an explicit clause the catch-all answers
+      # `{:error, "unknown provider: exchange"}`, so "Refresh now" reports a
+      # failure and nothing is fetched.
+      integration = insert(:calendar_integration, provider: "exchange")
+
+      {:ok, %{enqueued: 1, skipped: 0, errors: []}} =
+        CalendarGrid.refresh_events(integration.user_id)
+
+      assert_enqueued(
+        worker: SyncExchangeCalendarWorker,
         args: %{"calendar_integration_id" => integration.id}
       )
     end
