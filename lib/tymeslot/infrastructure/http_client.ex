@@ -405,11 +405,22 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   end
 
   # `bypass_proxy: true` sends one request directly while the global proxy
-  # configuration stays in place. `Infrastructure.ProxyVerifier` is what needs
-  # it: the only way to know a proxied request truly traversed the proxy is to
-  # compare the origin it reports against the address this machine leaves from
-  # on its own, and that second request must skip the proxy without disturbing
-  # the configuration every other request is using concurrently.
+  # configuration stays in place. Two things set it.
+  #
+  # `Infrastructure.ProxyVerifier` sets it deliberately: the only way to know a
+  # proxied request truly traversed the proxy is to compare the origin it
+  # reports against the address this machine leaves from on its own, and that
+  # second request must skip the proxy without disturbing the configuration
+  # every other request is using concurrently.
+  #
+  # `Security.ConnectionPinning` sets it as a verdict rather than a wish. A
+  # pinned request arrives here with its host already rewritten to the IP
+  # literal the SSRF check approved, and asking `ProxyConfig` about that
+  # literal answers a different question from the one the pin answered about
+  # the hostname: an operator's `NO_PROXY` names hosts, so the bypass they
+  # configured would stop matching and the request would take a proxy the pin
+  # had already established does not apply. Pinning happens only when no proxy
+  # applies, so honouring the flag here is what keeps the decision single.
   @spec get_proxy_options(String.t(), keyword()) :: keyword()
   defp get_proxy_options(url, options) do
     if Keyword.get(options, :bypass_proxy, false) do

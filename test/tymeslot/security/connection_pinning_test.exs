@@ -22,7 +22,7 @@ defmodule Tymeslot.Security.ConnectionPinningTest do
     :ok
   end
 
-  describe "pin/2" do
+  describe "pin/3" do
     test "connects to the approved address while keeping the hostname for TLS and routing" do
       assert {:ok, url, opts} =
                ConnectionPinning.pin("https://hooks.example.com/notify?x=1", [{93, 184, 216, 34}])
@@ -81,6 +81,28 @@ defmodule Tymeslot.Security.ConnectionPinningTest do
 
       assert ConnectionPinning.pin("http://hooks.example.com/notify", [{93, 184, 216, 34}]) ==
                :unpinned
+    end
+
+    test "pins a request that is already going direct past the configured proxy" do
+      # `bypass_proxy: true` is the caller saying this one request leaves
+      # directly however the environment is configured — `ProxyVerifier`
+      # measures the unproxied origin that way. Nothing resolves the
+      # destination on our behalf then, so the SSRF verdict can and must be
+      # made binding.
+      with_config(:tymeslot, :http_proxy, %{
+        http_proxy: %{host: "proxy.internal", port: 3128, auth: nil, scheme: "http"},
+        https_proxy: nil,
+        no_proxy: []
+      })
+
+      assert {:ok, url, _opts} =
+               ConnectionPinning.pin(
+                 "http://hooks.example.com/notify",
+                 [{93, 184, 216, 34}],
+                 bypass_proxy: true
+               )
+
+      assert url == "http://93.184.216.34/notify"
     end
   end
 
