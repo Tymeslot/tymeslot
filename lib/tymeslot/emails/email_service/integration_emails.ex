@@ -6,7 +6,13 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Shared.MjmlEmail
-  alias Tymeslot.Emails.Templates.{AdminAlert, IntegrationPaused, IntegrationUnhealthy}
+
+  alias Tymeslot.Emails.Templates.{
+    AdminAlert,
+    IntegrationPaused,
+    IntegrationReauthRequired,
+    IntegrationUnhealthy
+  }
 
   @doc """
   Sends an integration unhealthy notification to the integration owner.
@@ -35,6 +41,44 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       MjmlEmail.base_email()
       |> Email.to({display_name, user.email})
       |> Email.subject("Your #{type_label} integration may need attention")
+      |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
+
+    Delivery.deliver(email)
+  end
+
+  @doc """
+  Sends a "reconnect required" notification to the integration owner.
+
+  Called when an integration is flagged `needs_reauth` — a revoked grant, or
+  one whose scopes no longer cover what Tymeslot must do. Unlike the unhealthy
+  notification, this one describes a state that cannot resolve itself.
+  """
+  @spec send_integration_reauth_notification(
+          Tymeslot.Emails.EmailService.user_map(),
+          %{required(:provider) => atom(), optional(atom()) => term()},
+          atom() | String.t()
+        ) ::
+          {:ok, any()} | {:error, any()}
+  def send_integration_reauth_notification(user, integration, type) do
+    Logger.info("Sending integration reauth notification",
+      user_id: user.id,
+      integration_id: integration.id,
+      type: type
+    )
+
+    html_body = IntegrationReauthRequired.render(user, integration, type)
+    text_body = IntegrationReauthRequired.render_text(user, integration, type)
+
+    provider_label =
+      integration.provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
+    display_name = Map.get(user, :name) || user.email
+
+    email =
+      MjmlEmail.base_email()
+      |> Email.to({display_name, user.email})
+      |> Email.subject("Reconnect your #{provider_label} integration")
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 

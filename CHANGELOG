@@ -1,4 +1,35 @@
 
+[1.15.0]
+* Stop an accented character in .env from crashing startup
+* Recognise Tymeslot's own bookings on an Exchange calendar
+* Apply availability breaks on the host's clock, not the booker's
+* Recover a booking whose calendar copy was edited on the server
+* Restore a CalDAV booking whose calendar event is missing
+* Prompt a Zoom reconnect when rescheduling is not permitted
+* Stop CalDAV bookings showing twice on the calendar and agenda
+* Give the settings and onboarding timezone control accessible names
+* Raise booking page button contrast to WCAG AA on every palette
+* Give the booking page timezone controls accessible names
+* Announce dropdowns as the menu or dialog they open
+* Stop offering edit controls on read-only calendars
+* Settle the merge fallout in aliases, migration and typing
+* Keep the calendar scroll position when a sync starts
+* Recover from a CalDAV server that refuses the sync method it advertises
+* Close a DNS-rebinding hole in outbound requests
+* Warn before a username change breaks shared links
+* Surface a calendar that keeps failing to sync
+* Stop reporting a working CalDAV calendar as unreachable
+* Stop an expired meeting being rescheduled
+* Announce the status switch state to assistive technology
+* Apply maxlength and the other HTML constraints on form inputs
+* Configure a Cloudron install from a file instead of the CLI
+* Let visitors pause the sign-in background video
+* Let visitors pause the booking page background video
+* Write confirmed bookings to Exchange calendars
+* Let hosts write their own booking page heading and welcome text
+* Let hosts require their approval before a booking is confirmed
+
+
 [1.14.0]
 * Trip the calendar circuit breaker on repeated server errors
 * Send mail through self-hosted SMTP relays

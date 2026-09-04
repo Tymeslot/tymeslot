@@ -12,7 +12,7 @@ defmodule Tymeslot.Security.ConnectionPinning do
   the connect cannot close, because every resolve-then-connect design has the
   window.
 
-  `pin/2` closes it by connecting to the address that was actually approved.
+  `pin/3` closes it by connecting to the address that was actually approved.
   The URL's host is replaced with that IP literal and `:hostname` is passed
   through to Mint, which uses it for TLS SNI, certificate verification and the
   `Host` header — so a virtual-hosted target behind a CDN still routes, and a
@@ -21,16 +21,32 @@ defmodule Tymeslot.Security.ConnectionPinning do
 
   ## When pinning does not apply
 
-  `pin/2` returns `:unpinned` rather than guessing, in four cases:
+  `pin/3` returns `:unpinned` rather than guessing, in four cases:
 
     * **No approved addresses.** Nothing was resolved to pin to — the caller
       validated by syntax alone (non-production, or an operator opt-out), so
       there is no verdict to make binding.
     * **The host is already an IP literal.** There is no name to rebind.
-    * **A proxy applies to this URL.** The socket opens to the proxy, and the
-      proxy resolves the destination itself; rewriting the host would only
+    * **A proxy applies to this request.** The socket opens to the proxy, and
+      the proxy resolves the destination itself; rewriting the host would only
       change what we ask the proxy for.
     * **A `Req` test plug is configured.** No socket is opened at all.
+
+  ## The proxy decision is made here, once
+
+  Whether a proxy applies is a question about the *original* hostname: an
+  operator's `NO_PROXY` names `internal.example.com` or `*.example.com`, never
+  the address behind it. Pinning rewrites the host to an IP literal, so a
+  second evaluation further down would ask that question of a string no bypass
+  list can match, and a request the operator excluded from the proxy would go
+  through it after all.
+
+  So the decision is taken here and travels with the request: a pinned request
+  carries `bypass_proxy: true`, which is not an instruction to skip a proxy
+  that applies but the recorded verdict that none does — pinning happens only
+  when none does. `Tymeslot.Infrastructure.HTTPClient` honours it rather than
+  re-deriving anything from the rewritten URL. An unpinned request keeps its
+  original hostname, so the client's own evaluation of it is still correct.
   """
 
   alias Tymeslot.Infrastructure.ProxyConfig
@@ -42,25 +58,43 @@ defmodule Tymeslot.Security.ConnectionPinning do
   to one of `addresses`, or `:unpinned` when it cannot.
 
   The returned options are ordinary `Tymeslot.Infrastructure.HTTPClient`
-  options and merge with the caller's own.
+  options and merge with the caller's own. `options` is the caller's own list:
+  only `:bypass_proxy` is read from it, so that a request already going direct
+  is pinned rather than left unpinned by a proxy it will never use.
   """
-  @spec pin(String.t(), [address()]) :: {:ok, String.t(), keyword()} | :unpinned
-  def pin(_url, []), do: :unpinned
+  @spec pin(String.t(), [address()], keyword()) :: {:ok, String.t(), keyword()} | :unpinned
+  def pin(url, addresses, options \\ [])
 
-  def pin(url, [address | _rest]) do
+  def pin(_url, [], _options), do: :unpinned
+
+  def pin(url, [address | _rest], options) do
     uri = URI.parse(url)
 
     cond do
       is_nil(uri.host) or uri.host == "" -> :unpinned
       ip_literal?(uri.host) -> :unpinned
       test_plug_configured?() -> :unpinned
-      not is_nil(ProxyConfig.get_proxy_for_url(url)) -> :unpinned
-      true -> {:ok, rewrite_host(uri, address), [connect_options: [hostname: uri.host]]}
+      proxied?(url, options) -> :unpinned
+      true -> {:ok, rewrite_host(uri, address), pin_options(uri.host)}
     end
   end
 
+  # `bypass_proxy: true` is the pin's own verdict travelling with the request:
+  # this URL was checked against the proxy configuration under its real
+  # hostname and no proxy applies to it. Without it the client would ask the
+  # same question again of the IP literal, where a `NO_PROXY` entry naming the
+  # host cannot match.
+  defp pin_options(hostname) do
+    [connect_options: [hostname: hostname], bypass_proxy: true]
+  end
+
+  defp proxied?(url, options) do
+    not Keyword.get(options, :bypass_proxy, false) and
+      ProxyConfig.get_proxy_for_url(url) != nil
+  end
+
   @doc """
-  Applies `pin/2` to a request, returning the URL to call and the options to
+  Applies `pin/3` to a request, returning the URL to call and the options to
   call it with.
 
   Convenience for the two call sites that already hold the caller's option
@@ -77,7 +111,7 @@ defmodule Tymeslot.Security.ConnectionPinning do
   """
   @spec pin_request(String.t(), [address()], keyword()) :: {String.t(), keyword()}
   def pin_request(url, addresses, options) do
-    case pin(url, addresses) do
+    case pin(url, addresses, options) do
       {:ok, pinned_url, pin_options} -> {pinned_url, merge_options(options, pin_options)}
       :unpinned -> {url, options}
     end

@@ -69,16 +69,20 @@ defmodule Tymeslot.CalendarGrid do
   @doc """
   Returns the user's live bookings overlapping `[start_dt, end_dt)` projected
   into the grid's event shape, excluding bookings whose provider-synced copy
-  is identified by `synced_event_ids`. See
+  is among `cached_events`. See
   `Tymeslot.CalendarGrid.BookingEvents.list_for_range/4`.
   """
-  @spec list_booking_events_for_range(pos_integer(), DateTime.t(), DateTime.t(), MapSet.t()) ::
-          [BookingEvent.t()]
+  @spec list_booking_events_for_range(
+          pos_integer(),
+          DateTime.t(),
+          DateTime.t(),
+          Enumerable.t()
+        ) :: [BookingEvent.t()]
   defdelegate list_booking_events_for_range(
                 user_id,
                 start_dt,
                 end_dt,
-                synced_event_ids \\ MapSet.new()
+                cached_events \\ []
               ),
               to: BookingEvents,
               as: :list_for_range

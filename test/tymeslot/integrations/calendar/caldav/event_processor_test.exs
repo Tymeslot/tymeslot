@@ -275,7 +275,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       assert length(events) == 3
 
       [first | rest] = events
-      assert first.uid == "recurring-001@example.com_20260408T100000Z"
+      # Local wall-clock time, with no `Z`: the suffix is in the event's own
+      # zone, not UTC.
+      assert first.uid == "recurring-001@example.com_20260408T100000"
       assert first.summary == "Weekly Sync"
       assert first.recurrence_rule == "FREQ=WEEKLY;COUNT=3"
       assert first.all_day == false

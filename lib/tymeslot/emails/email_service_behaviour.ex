@@ -56,6 +56,12 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               atom() | String.t()
             ) ::
               {:ok, any()} | {:error, any()}
+  @callback send_integration_reauth_notification(
+              user_map(),
+              %{required(:provider) => atom(), optional(atom()) => term()},
+              atom() | String.t()
+            ) ::
+              {:ok, any()} | {:error, any()}
   @callback send_integration_paused_notification(
               user_map(),
               %{required(:provider) => atom(), optional(atom()) => term()},

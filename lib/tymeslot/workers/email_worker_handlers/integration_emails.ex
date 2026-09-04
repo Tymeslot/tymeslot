@@ -68,6 +68,67 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     end
   end
 
+  @spec handle_integration_reauth_notification(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_integration_reauth_notification(%{
+        "user_id" => user_id,
+        "integration_id" => integration_id,
+        "integration_type" => integration_type
+      }) do
+    with {:ok, user} <- UserQueries.get_user(user_id),
+         {:ok, integration} <- fetch_integration(integration_type, integration_id) do
+      send_reauth_notification(user, integration, integration_type)
+    else
+      {:error, :not_found} ->
+        Logger.warning("User or integration not found for reauth notification",
+          user_id: user_id,
+          integration_id: integration_id
+        )
+
+        {:discard, "User or integration not found"}
+    end
+  end
+
+  # The integration is re-read at send time rather than trusted from the job
+  # args, so a user who reconnected between the flag and the send is not told
+  # to reconnect something that already works.
+  defp send_reauth_notification(_user, %{needs_reauth: false} = integration, integration_type) do
+    Logger.info("Integration no longer needs reauth, discarding notification",
+      integration_id: integration.id,
+      type: integration_type
+    )
+
+    {:discard, "Integration no longer needs reauth"}
+  end
+
+  defp send_reauth_notification(user, integration, integration_type) do
+    type_atom = safe_integration_type_atom(integration_type)
+
+    case Config.email_service_module().send_integration_reauth_notification(
+           user,
+           integration,
+           type_atom
+         ) do
+      {:ok, _result} ->
+        Logger.info("Integration reauth notification sent",
+          user_id: user.id,
+          integration_id: integration.id,
+          type: integration_type
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to send integration reauth notification",
+          user_id: user.id,
+          integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        DeliveryOutcome.from_error(reason, "Failed to send notification")
+    end
+  end
+
   @spec handle_integration_paused_notification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_integration_paused_notification(%{

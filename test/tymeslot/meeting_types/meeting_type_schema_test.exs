@@ -69,18 +69,29 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       assert "must be less than or equal to 480" in errors_on(changeset).duration_minutes
     end
 
-    test "prevents zero-duration meetings" do
+    test "prevents a meeting shorter than the grid can offer" do
+      # Five minutes is the floor because it is also the smallest slot
+      # interval, so anything below it cannot honestly be put on a booking
+      # page. The form has always shown five as its minimum; this is what
+      # makes it true of anything that reaches the changeset.
       user = insert(:user)
 
-      attrs = %{
-        name: "No Time Meeting",
-        duration_minutes: 0,
-        user_id: user.id
-      }
+      for duration <- [0, 1, 4] do
+        attrs = %{name: "No Time Meeting", duration_minutes: duration, user_id: user.id}
+        changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
 
-      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
-      refute changeset.valid?
-      assert "must be greater than or equal to 1" in errors_on(changeset).duration_minutes
+        refute changeset.valid?, "accepted a #{duration}-minute meeting type"
+        assert "must be greater than or equal to 5" in errors_on(changeset).duration_minutes
+      end
+
+      valid =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, %{
+          name: "Quick Chat",
+          duration_minutes: 5,
+          user_id: user.id
+        })
+
+      assert valid.valid?
     end
 
     test "prevents duplicate meeting type names per user" do

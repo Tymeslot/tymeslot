@@ -223,7 +223,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       description:
         dgettext_noop(
           "dashboard_calendar_providers",
-          "On-premises Microsoft Exchange Server, read-only"
+          "On-premises Microsoft Exchange Server, two-way sync"
         ),
       button_text: "Connect Exchange",
       click_event: "connect_provider",

@@ -147,7 +147,8 @@ defmodule Tymeslot.Availability.Conflicts do
       )
 
     Enum.any?(business_hours_windows, fn window ->
-      breaks = BusinessHours.breaks_for_day(window.date, schedule_id, config)
+      breaks =
+        BusinessHours.resolved_breaks_for_day(window.date, schedule_id, owner_timezone, config)
 
       slots =
         TimeSlots.generate_slots_for_range_with_breaks(

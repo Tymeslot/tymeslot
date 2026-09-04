@@ -1175,12 +1175,12 @@ msgstr "Unbekannter Video-Anbieter"
 msgid "You authenticated with a different account than the one linked to this integration. Please use the correct account."
 msgstr "Sie haben sich mit einem anderen Konto angemeldet als dem, das mit dieser Integration verknüpft ist. Bitte verwenden Sie das richtige Konto."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider.ex
+#: lib/tymeslot/integrations/video/providers/zoom_provider/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr "Der Zugriff auf Zoom wurde widerrufen. Bitte verbinden Sie Ihr Zoom-Konto erneut."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider.ex
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
 msgstr "Zoom fehlt die für das %{action} erforderliche Berechtigung. Bitte verbinden Sie Ihr Zoom-Konto erneut."
@@ -1194,11 +1194,6 @@ msgstr "Die Aktualisierung des Zoom-Tokens ist nach einem 401-Fehler fehlgeschla
 #, elixir-autogen, elixir-format
 msgid "cancel meetings"
 msgstr "Absagen von Meetings"
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "create and update meetings"
-msgstr "Erstellen und Aktualisieren von Meetings"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1246,3 +1241,13 @@ msgstr "Auch deren Meetingräume löschen. Teilnehmende, die den Beitrittslink b
 #, elixir-autogen, elixir-format
 msgid "URL redirects too many times"
 msgstr "Die URL leitet zu oft weiter"
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "create meetings"
+msgstr "Erstellen von Meetings"
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "reschedule meetings"
+msgstr "Verschieben von Meetings"

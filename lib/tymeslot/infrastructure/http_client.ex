@@ -32,7 +32,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
   require Logger
   alias Req.{Request, Response}
-  alias Tymeslot.Infrastructure.{Metrics, ProxyConfig, ResponseTooLargeError}
+  alias Tymeslot.Infrastructure.{FinchPool, Metrics, ProxyConfig, ResponseTooLargeError}
   alias Tymeslot.Security.{ConnectionPinning, SsrfBlockedError, SsrfGuard}
 
   # Generous enough that no legitimate response comes close: the largest bodies
@@ -297,42 +297,26 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     timeout = get_timeout(method, user_options)
 
     # Get proxy configuration for this URL (considers NO_PROXY, HTTP vs HTTPS)
-    proxy_options = get_proxy_options(url)
+    proxy_options = get_proxy_options(url, user_options)
 
     req_method = normalize_method(method)
 
-    # Build base request options
-    # NOTE: Cannot set both :finch and :connect_options (Req limitation)
-    # When proxy is configured, connect_options will be set, so don't set finch
-    base_options =
-      if proxy_options == [] do
-        {transport_key, transport_val} = req_transport_option()
+    base_options = [
+      method: req_method,
+      url: url,
+      headers: headers,
+      receive_timeout: timeout,
+      # Disable Req's default retry: :safe_transient which silently retries
+      # GET/HEAD/OPTIONS on 5xx and transient errors. Retries are handled
+      # explicitly at the CalDAV layer (RetryLogic) and Oban layer.
+      retry: false,
+      # Disable automatic JSON decoding to match HTTPoison behavior
+      # Callers handle JSON parsing explicitly with Jason.decode!
+      decode_body: false
+    ]
 
-        base = [
-          method: req_method,
-          url: url,
-          headers: headers,
-          receive_timeout: timeout,
-          # Disable Req's default retry: :safe_transient which silently retries
-          # GET/HEAD/OPTIONS on 5xx and transient errors. Retries are handled
-          # explicitly at the CalDAV layer (RetryLogic) and Oban layer.
-          retry: false,
-          # Disable automatic JSON decoding to match HTTPoison behavior
-          # Callers handle JSON parsing explicitly with Jason.decode!
-          decode_body: false
-        ]
-
-        Keyword.put(base, transport_key, transport_val)
-      else
-        [
-          method: req_method,
-          url: url,
-          headers: headers,
-          receive_timeout: timeout,
-          retry: false,
-          decode_body: false
-        ]
-      end
+    {transport_key, transport_val} = req_transport_option(proxy_options)
+    base_options = Keyword.put(base_options, transport_key, transport_val)
 
     # Add body if present (and not empty)
     options_with_body =
@@ -354,31 +338,56 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         Keyword.put(options_with_body, :into, capped_collector(max_response_bytes(user_options)))
       end
 
-    # Add proxy options if configured
-    options_with_proxy = Keyword.merge(options_with_cap, proxy_options)
-
     # Merge with user options (user options take precedence)
-    # Special handling for connect_options to deep merge with proxy config
     # Strip HTTPoison-style timeout keys that were handled by get_timeout/2,
     # and :max_response_bytes, which Req does not recognise
-    user_opts_clean = Keyword.drop(user_options, [:timeout, :recv_timeout, :max_response_bytes])
+    user_opts_clean =
+      Keyword.drop(user_options, [:timeout, :recv_timeout, :max_response_bytes, :bypass_proxy])
 
-    case Keyword.get(user_opts_clean, :connect_options) do
-      nil ->
-        Keyword.merge(options_with_proxy, user_opts_clean)
+    # The proxy's connection options and the caller's are one set: both
+    # describe the same socket, so they are merged and handed to the pool
+    # together rather than one being a special case of the other.
+    connect_options =
+      Keyword.merge(
+        Keyword.get(proxy_options, :connect_options, []),
+        Keyword.get(user_opts_clean, :connect_options, [])
+      )
 
-      user_connect_opts ->
-        proxy_connect_opts = Keyword.get(options_with_proxy, :connect_options, [])
-        merged_connect_opts = Keyword.merge(proxy_connect_opts, user_connect_opts)
+    options_with_cap
+    |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
+    |> apply_connect_options(url, connect_options)
+  end
 
-        # Cannot use both :finch and :connect_options (Req limitation)
-        options_with_proxy
-        |> Keyword.delete(:connect_options)
+  # Req refuses `:finch` and `:connect_options` on the same request: hand it
+  # connection options and it serves them from a Finch instance it starts and
+  # names itself, one per distinct set of options, kept forever. Connection
+  # pinning passes the target's hostname that way on every SSRF-guarded
+  # request, so that used to mean a permanent extra instance per destination.
+  # `FinchPool` says the same thing as a tagged pool on `Tymeslot.Finch`, and
+  # the request then carries `:finch` alone.
+  #
+  # The fallback is the behaviour that preceded it, and runs whenever the
+  # request is not going through Finch at all — the suite routes Req through a
+  # test plug, which opens no socket and has no pool to register.
+  defp apply_connect_options(options, _url, []), do: options
+
+  defp apply_connect_options(options, url, connect_options) do
+    with {:ok, finch_options} <- Keyword.fetch(options, :finch),
+         {:ok, pooled_options} <- FinchPool.request_option(url, connect_options) do
+      Keyword.put(options, :finch, Keyword.merge(finch_options, pooled_options))
+    else
+      _no_finch_instance ->
+        options
         |> Keyword.delete(:finch)
-        |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
-        |> Keyword.put(:connect_options, merged_connect_opts)
+        |> Keyword.put(:connect_options, connect_options)
     end
   end
+
+  # A proxied request never goes through the test plug. The proxy is the thing
+  # being exercised on those paths, and a plug opens no socket for it to
+  # traverse, so there would be nothing left to observe.
+  defp req_transport_option([]), do: req_transport_option()
+  defp req_transport_option(_proxy_options), do: {:finch, [name: FinchPool.instance()]}
 
   # Req 0.7 moved the Finch adapter's settings under a keyword list; the bare
   # `finch: name` form still works but is deprecated and goes away in 0.8.
@@ -395,8 +404,34 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     method |> Atom.to_string() |> String.upcase()
   end
 
-  @spec get_proxy_options(String.t()) :: keyword()
-  defp get_proxy_options(url) do
+  # `bypass_proxy: true` sends one request directly while the global proxy
+  # configuration stays in place. Two things set it.
+  #
+  # `Infrastructure.ProxyVerifier` sets it deliberately: the only way to know a
+  # proxied request truly traversed the proxy is to compare the origin it
+  # reports against the address this machine leaves from on its own, and that
+  # second request must skip the proxy without disturbing the configuration
+  # every other request is using concurrently.
+  #
+  # `Security.ConnectionPinning` sets it as a verdict rather than a wish. A
+  # pinned request arrives here with its host already rewritten to the IP
+  # literal the SSRF check approved, and asking `ProxyConfig` about that
+  # literal answers a different question from the one the pin answered about
+  # the hostname: an operator's `NO_PROXY` names hosts, so the bypass they
+  # configured would stop matching and the request would take a proxy the pin
+  # had already established does not apply. Pinning happens only when no proxy
+  # applies, so honouring the flag here is what keeps the decision single.
+  @spec get_proxy_options(String.t(), keyword()) :: keyword()
+  defp get_proxy_options(url, options) do
+    if Keyword.get(options, :bypass_proxy, false) do
+      []
+    else
+      proxy_options_for(url)
+    end
+  end
+
+  @spec proxy_options_for(String.t()) :: keyword()
+  defp proxy_options_for(url) do
     # Get proxy config for this URL (considers NO_PROXY and URL scheme)
     proxy_config = ProxyConfig.get_proxy_for_url(url)
 

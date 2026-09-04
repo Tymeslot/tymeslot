@@ -322,7 +322,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
     * `:on_close` - Required. Event name fired by `phx-click-away` and Escape key when open.
     * `:target` - `phx-target` forwarded to the trigger button and the click-away handler.
     * `:position` - Panel placement: `:bottom_end` (default), `:bottom_start`, `:top_end`, `:top_start`.
-    * `:role` - ARIA role on the panel `<div>`. Default `"menu"`. Pass `"dialog"` for panels that contain non-menuitem content such as inputs or checkboxes.
+    * `:role` - ARIA role on the panel `<div>`, and the trigger's matching `aria-haspopup` value. Default `"menu"`. Pass `"dialog"` for panels that contain non-menuitem content such as inputs or checkboxes.
     * `:aria_orientation` - ARIA orientation on the panel. Default `"vertical"`.
     * `:trigger_class` - CSS classes on the trigger `<button>`.
     * `:class` - Additional CSS classes appended to the panel `<div>`.

@@ -306,8 +306,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         %Date{} = d ->
           Calendar.strftime(d, "%Y%m%d")
 
+        # Local wall-clock time, deliberately not UTC. `_occ_start` has already
+        # been shifted into the event's own zone, so a `Z` here would label a
+        # local time as UTC. The wall clock is also the more stable of the two:
+        # it does not move across a DST transition, so an occurrence keeps one
+        # identity all year and the cache updates its row instead of growing a
+        # second one. Rows are keyed on `(calendar_integration_id, uid)`, so
+        # changing this format changes identity for every occurrence already
+        # cached and needs a migration to rewrite them, in
+        # `event_colour_overrides.provider_uid` as well as in the cache itself.
+        # `20260904094944_strip_utc_label_from_occurrence_uids` is the one that
+        # accompanied the last such change, and the pattern to follow.
         %DateTime{} = dt ->
-          Calendar.strftime(dt, "%Y%m%dT%H%M%SZ")
+          Calendar.strftime(dt, "%Y%m%dT%H%M%S")
 
         _other ->
           "unknown"

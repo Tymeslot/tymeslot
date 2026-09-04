@@ -215,7 +215,18 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
     end
 
     if origin_ip = details[:origin_ip] do
-      Mix.shell().info("  Origin IP: #{origin_ip}")
+      Mix.shell().info("  Origin IP through the proxy: #{origin_ip}")
+    end
+
+    # The address the destination sees when the proxy is bypassed. Printing it
+    # beside the proxied one shows the operator the evidence the verdict rests
+    # on: two different origins mean the proxy carried the request.
+    if direct_origin_ip = details[:direct_origin_ip] do
+      Mix.shell().info("  Origin IP without the proxy: #{direct_origin_ip}")
+    end
+
+    if details[:direct_egress] == :unreachable do
+      Mix.shell().info("  Origin IP without the proxy: unreachable (no direct route out)")
     end
   end
 

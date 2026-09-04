@@ -8,7 +8,24 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
 
   @username_min_length 3
   @username_max_length 30
-  @username_regex ~r/^[a-z0-9][a-z0-9_-]*$/
+  # One source for the rule, in both the shapes it has to be expressed in: the
+  # anchored regex this module validates with, and the unanchored body a form
+  # field's `pattern` attribute takes. They were written out separately once
+  # and drifted — the browser copy omitted the underscore, which every default
+  # username has (`Profiles.Usernames.generate_default_username/1` builds
+  # "user_<id>"), so the profile form refused to submit for any account that
+  # had never customised its URL.
+  @username_pattern "[a-z0-9][a-z0-9_-]*"
+  @username_regex ~r/^#{@username_pattern}$/
+
+  @doc """
+  The accepted username shape as an HTML `pattern` attribute value.
+
+  Unanchored, because `pattern` anchors itself, and free of any length bound,
+  because `minlength`/`maxlength` carry that half of the rule on the field.
+  """
+  @spec html_pattern() :: String.t()
+  def html_pattern, do: @username_pattern
 
   @doc """
   Validates username with specific error messages.

@@ -5,14 +5,21 @@ require Logger
 # vars always win. On Cloudron `/app` is read-only and reset on every upgrade,
 # so `.env` lives on the persistent `/app/data` volume.
 if config_env() != :test do
-  dotenv_path =
+  # `/app/data` is the volume both container images persist, so it is where an
+  # operator's file survives an image update; the release root is where a
+  # release unpacked on a host keeps its own. Both are offered, first match per
+  # key, so no deployment has to be told which one it is.
+  dotenv_paths =
     if System.get_env("DEPLOYMENT_TYPE") == "cloudron" do
-      "/app/data/.env"
+      ["/app/data/.env"]
     else
-      Path.join(System.get_env("RELEASE_ROOT") || Path.expand("..", __DIR__), ".env")
+      [
+        "/app/data/.env",
+        Path.join(System.get_env("RELEASE_ROOT") || Path.expand("..", __DIR__), ".env")
+      ]
     end
 
-  Tymeslot.Infrastructure.DotenvLoader.load([dotenv_path])
+  Tymeslot.Infrastructure.DotenvLoader.load(dotenv_paths)
 end
 
 # Helper to parse IP addresses using Erlang's built-in parser
@@ -316,6 +323,8 @@ if config_env() == :prod do
         {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
         # Run daily at 03:30 UTC to prune old/inactive calendar event cache
         {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
+        # Run daily at 05:30 UTC to flag Zoom grants missing a scope Tymeslot needs
+        {"30 5 * * *", Tymeslot.Workers.ZoomScopeAuditWorker},
         # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
         {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
         # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
@@ -327,6 +336,14 @@ if config_env() == :prod do
         {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker}
       ]
     ]
+
+  # Enable the Zoom update scope only where the Marketplace app behind this
+  # deployment is actually configured for `meeting:update:meeting`. Requesting
+  # it elsewhere is silently dropped by Zoom and makes Tymeslot ask users to
+  # reconnect for a scope no reconnect can produce.
+  config :tymeslot,
+         :zoom_update_scope_enabled,
+         System.get_env("ZOOM_UPDATE_SCOPE_ENABLED") == "true"
 
   # Configure mailer based on EMAIL_ADAPTER setting. `Tymeslot.Mailer.Providers`
   # owns the list of supported values and the variables each one reads; an

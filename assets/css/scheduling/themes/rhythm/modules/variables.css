@@ -48,6 +48,23 @@
   --theme-secondary: #14b8a6;
   --theme-accent: #10b981;
   --theme-accent-dark: #059669;
+
+  /* Filled-control ink and surface (WCAG 1.4.3 / 1.4.11).
+     A palette colour used as a *surface* needs a foreground that passes on top
+     of it, which white does not: white on the default primary above is 2.43:1.
+     `Tymeslot.ThemeCustomizations.ContrastTokens` derives these per palette and
+     the generated :root block overrides them; the values here are that
+     derivation applied to the defaults above, and are what self-hosted Core
+     uses when the organiser has saved no customisation.
+     Only filled surfaces read *-solid — --theme-primary itself stays as chosen,
+     because borders, focus rings and bright text on the dark card need it
+     bright. */
+  --theme-on-primary: #0f172a;
+  --theme-primary-solid: var(--theme-primary);
+  --theme-primary-solid-hover: var(--theme-primary-hover);
+  --theme-on-accent: #0f172a;
+  --theme-accent-solid: var(--theme-accent);
+
   --theme-warning: #fbbf24;
   --theme-info: #6366f1;
   --theme-info-dark: #4f46e5;

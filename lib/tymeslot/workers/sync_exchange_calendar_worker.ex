@@ -80,6 +80,15 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   right, and a delete of a row that is already gone is a no-op. Re-bootstrapping
   on every full read would instead cost a whole-folder enumeration each time.
 
+  A token the server later refuses (`ErrorInvalidSyncStateData` and its
+  version sibling, classified by `Exchange.ItemSync.invalid_sync_state?/1`) is
+  the one failure that recovers rather than being reported. The token is
+  dropped and this cycle falls through to the full read, which re-bootstraps
+  it. Reporting it instead is what the worker used to do, and it stalled the
+  folder permanently: the refusal repeated every cycle, `last_external_sync_at`
+  never advanced so the fallback sweep re-enqueued it, and the availability
+  half was re-read in full each time for a grid half that could never succeed.
+
   The busy half has no incremental form — `GetUserAvailability` takes a window
   and answers intervals, with no token and no change feed — so it re-reads and
   replaces wholesale on every cycle, exactly as before.
@@ -237,12 +246,21 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   # schedule the next full read. Stamping it after an incremental cycle would
   # hold it permanently fresh and the daily full re-read would never come due
   # again, so items sliding into the window would never be picked up.
+  #
+  # `{:error, :full_sync_required, integration}` is the incremental read asking
+  # for the other one rather than failing: the server refused a stored token,
+  # `ItemCache` has already dropped it, and the integration handed back is the
+  # one without it, so the full read's bootstrap re-establishes it. Reporting
+  # the refusal instead would have the folder fail identically every cycle,
+  # forever.
   defp refresh_items(integration, from, to) do
     if ItemCache.full_sync_due?(integration) do
       full_refresh_items(integration, from, to)
     else
-      with {:ok, uids} <- ItemCache.incremental_refresh(integration, from, to) do
-        {:ok, uids, :incremental}
+      case ItemCache.incremental_refresh(integration, from, to) do
+        {:ok, uids} -> {:ok, uids, :incremental}
+        {:error, :full_sync_required, integration} -> full_refresh_items(integration, from, to)
+        {:error, _reason} = error -> error
       end
     end
   end

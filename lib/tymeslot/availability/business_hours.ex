@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -200,6 +201,31 @@ defmodule Tymeslot.Availability.BusinessHours do
       _other ->
         []
     end
+  end
+
+  @doc """
+  The day's breaks as absolute instants on the owner's clock.
+
+  `breaks_for_day/3` returns bare `Time` structs, which mean nothing until
+  they are anchored to a date and a zone. Both have to be the owner's: the
+  window a slot grid is built from has already been shifted into the booker's
+  zone, so resolving there moves the owner's break by the offset between the
+  two clocks.
+
+  `date` is the owner-frame date the breaks were read for — a window's own
+  `:date`, not the date its `start_dt` falls on in the booker's zone, which
+  can be a day earlier.
+  """
+  @spec resolved_breaks_for_day(
+          Date.t(),
+          integer() | nil,
+          String.t(),
+          Calculate.availability_config()
+        ) :: [{DateTime.t(), DateTime.t()}]
+  def resolved_breaks_for_day(date, schedule_id, owner_timezone, config) do
+    date
+    |> breaks_for_day(schedule_id, config)
+    |> TimeSlots.resolve_breaks(date, owner_timezone)
   end
 
   @doc """

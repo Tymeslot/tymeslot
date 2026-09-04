@@ -10,6 +10,7 @@ defmodule Tymeslot.Polls.PollSchema do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Polls.{PollParticipantSchema, PollTimeSlotSchema}
   alias Tymeslot.Utils.UnguessableToken
+  alias Tymeslot.Validation.Constraints
 
   @max_slots 40
   @max_participants 40
@@ -71,7 +72,7 @@ defmodule Tymeslot.Polls.PollSchema do
       :timezone
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
-    |> validate_number(:duration_minutes, greater_than: 0, less_than_or_equal_to: 1440)
+    |> validate_number(:duration_minutes, Constraints.poll_duration_minutes_opts())
     |> validate_length(:title, max: 255)
     |> put_new_token()
     |> unique_constraint(:token)

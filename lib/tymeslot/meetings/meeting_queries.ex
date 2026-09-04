@@ -265,8 +265,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
     {claimed, _rows} =
       Repo.update_all(
-        from(m in Meeting, where: m.id == ^uuid and is_nil(m.announced_at)),
-        set: [announced_at: now]
+        from(m in Meeting,
+          where: m.id == ^uuid and is_nil(m.announced_at),
+          update: [
+            set: [
+              announced_at: ^now,
+              # `announced_at` is cleared again if a reschedule sends this
+              # booking back into the approval gate, so the fact that it was
+              # once announced has to survive somewhere else. COALESCE keeps
+              # the first stamp across any number of re-gates.
+              first_announced_at: fragment("COALESCE(?, ?)", m.first_announced_at, ^now)
+            ]
+          ]
+        ),
+        []
       )
 
     cond do

@@ -1,6 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @moduledoc """
-  Read-only Microsoft Exchange calendar provider, speaking EWS.
+  Microsoft Exchange calendar provider, speaking EWS.
+
+  Reads busy time and calendar items, and writes confirmed bookings back
+  through `Exchange.Writes` (`CreateItem`, `UpdateItem`, `DeleteItem`). It was
+  read-only until the write path landed, and nothing in this module should
+  still say otherwise.
 
   Targets **on-premises** Exchange Server (2016, 2019, SE). Exchange Online is
   served by the `:outlook` provider over Microsoft Graph instead, and its EWS

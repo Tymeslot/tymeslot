@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
   describe "update_meeting_room/3" do
     test "dispatches to provider callback and propagates return value (Zoom)" do
       config = %{
-        oauth_scope: "meeting:write:meeting",
+        oauth_scope: "meeting:write:meeting meeting:update:meeting",
         access_token: "test-token",
         refresh_token: "test-refresh",
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),

@@ -164,8 +164,9 @@ defmodule Tymeslot.Integrations.HealthCheck do
   Resets the health row to a healthy baseline and enqueues an immediate
   verification probe with no jitter so the state is reconciled with reality
   within seconds. Use `mark_synced_successfully/2` instead when the signal is
-  a successful sync — that already proves health, so the extra probe is
-  wasted work.
+  a successful sync: a sync is the integration's own periodic work rather than
+  a deliberate act by its owner, so it clears the failed-sync streak without
+  declaring the integration recovered.
 
   Idempotent and safe to call when no row exists.
   """
@@ -194,20 +195,28 @@ defmodule Tymeslot.Integrations.HealthCheck do
   end
 
   @doc """
-  Resets the health state row after a successful sync.
+  Records that one sync cycle for this integration completed, ending whatever
+  streak of failed cycles `record_sync_failure/2` had been building.
 
-  A real sync is the strongest possible health signal — it actually exercised
-  the credentials end-to-end. Without this, the badge can stay stuck on
-  `:unhealthy` for up to an hour while syncs are happily working in parallel.
+  It clears the streak counter and nothing else. One successful cycle says the
+  streak has ended; it does not say the outage has, and the two are different
+  claims for a server that refuses most syncs while answering the occasional
+  one. Resetting the whole row here would restart the 48-hour notification
+  clock on every such success, so the badge would flap and the owner would
+  never be told. Declaring the integration healthy again is left to the probe's
+  flap-protected recovery path, which is also what clears
+  `became_unhealthy_at`; see
+  `IntegrationHealthStateQueries.clear_sync_failures/2`.
 
-  Unlike `mark_user_recovered/2`, this does not enqueue a probe — sync just
-  proved everything works, so re-probing is wasted work.
+  Unlike `mark_user_recovered/2`, this does not enqueue a probe: the scheduled
+  one will arrive on its own, and a sync cycle is not the owner waiting on an
+  answer.
 
   Idempotent and safe to call when no row exists.
   """
   @spec mark_synced_successfully(integration_type(), integer()) :: :ok
   def mark_synced_successfully(type, integration_id) do
-    IntegrationHealthStateQueries.reset(type, integration_id)
+    IntegrationHealthStateQueries.clear_sync_failures(type, integration_id)
     :ok
   end
 

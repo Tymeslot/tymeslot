@@ -12,12 +12,14 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
   use TymeslotWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
   @moduletag :live
   @moduletag :bookings
 
   alias Ecto.Changeset
+  alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingSchema
@@ -46,6 +48,50 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
     }
 
     insert(:meeting, Map.merge(defaults, attrs))
+  end
+
+  # A held request on a gated meeting type, owned by a host who is bookable at
+  # any hour — so the invitee can actually move it, which returns it to the
+  # gate as a new request (`Tymeslot.Bookings.Reschedule`).
+  defp movable_request(attrs \\ %{}) do
+    %{user: user} = create_always_bookable_profile()
+
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        user_id: user.id,
+        requires_approval: true,
+        approval_window_hours: 12
+      )
+
+    meeting =
+      held_meeting(
+        Map.merge(
+          %{
+            organizer_user: user,
+            organizer_user_id: user.id,
+            meeting_type_id: meeting_type.id,
+            # Made an hour ago: the host is reading the email later, and the
+            # re-request the invitee is about to make must land on a visibly
+            # different `approval_requested_at` (both are truncated to the
+            # second, and this test moves faster than that).
+            approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+            approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
+          },
+          attrs
+        )
+      )
+
+    %{user: user, meeting: meeting}
+  end
+
+  defp reschedule_params do
+    %{
+      date: Date.to_string(Date.add(Date.utc_today(), 2)),
+      time: "2:00 PM",
+      duration: "60min",
+      user_timezone: "America/New_York"
+    }
   end
 
   defp request_path(meeting, query \\ "") do
@@ -168,6 +214,62 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
              |> render_submit() =~ "Booking declined"
 
       assert reload(meeting).decline_reason == "Away that week"
+    end
+
+    test "a request the invitee re-timed is not answered from the copy on screen",
+         %{conn: conn} do
+      %{user: user, meeting: meeting} = movable_request()
+
+      {:ok, view, html} = live(conn, request_path(meeting))
+      assert html =~ "Approve booking"
+
+      # The invitee moves the still-held request while the host reads the
+      # email. On a gated meeting type that is a brand new request: a fresh
+      # `approval_requested_at`, a fresh deadline, and above all a different
+      # time from the one rendered on the host's page.
+      {:ok, rerequested} =
+        Reschedule.execute(meeting.uid, reschedule_params(), %{}, user.id)
+
+      assert rerequested.start_time != meeting.start_time
+
+      html = view |> element("[data-testid='approve-request']") |> render_click()
+
+      # The guarded transition only tests the status, so without the answer
+      # path re-checking the token the host would confirm a time they have
+      # never been shown.
+      assert html =~ "Link not recognised"
+      assert render(view) =~ "changed since this page was opened"
+
+      stored = reload(meeting)
+      assert stored.status == "awaiting_approval"
+      assert DateTime.compare(stored.start_time, rerequested.start_time) == :eq
+    end
+
+    test "the old request's lapsed deadline does not expire the new live one",
+         %{conn: conn} do
+      # The host's page was rendered while the first request's deadline was
+      # still ahead; by the time they click, that deadline has passed and the
+      # invitee has re-requested a different time with a window of its own.
+      # `Approval.approve/1` releases a request answered past its deadline, so
+      # answering the stale copy would expire the live request the host was
+      # never asked about.
+      %{user: user, meeting: meeting} =
+        movable_request(%{
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -1, :minute)
+        })
+
+      {:ok, view, _html} = live(conn, request_path(meeting))
+
+      {:ok, rerequested} = Reschedule.execute(meeting.uid, reschedule_params(), %{}, user.id)
+      assert rerequested.status == "awaiting_approval"
+
+      # Dispatched directly, as the older DOM the host is looking at would:
+      # the page itself now renders the lapsed state, without the button.
+      render_click(view, "approve", %{})
+
+      stored = reload(meeting)
+      assert stored.status == "awaiting_approval"
+      assert is_nil(stored.approval_resolved_at)
     end
 
     test "a request answered elsewhere reports what actually happened", %{conn: conn} do

@@ -207,6 +207,79 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
     assert %{exchange_sync_states: %{"calendar" => ^first_token}} = Repo.reload!(integration)
   end
 
+  test "a token the server refuses is dropped and the folder re-bootstraps", %{
+    integration: integration
+  } do
+    stub_full_sync()
+    assert :ok = run(integration)
+    assert %{exchange_sync_states: %{"calendar" => _token}} = Repo.reload!(integration)
+    sent_requests()
+
+    stub_full_sync(
+      sync_folder_items:
+        ExchangeFixtures.failed_response("SyncFolderItems", "ErrorInvalidSyncStateData")
+    )
+
+    # Keeping a token the server has refused strands the folder for good: the
+    # same token is replayed every cycle, refused identically, and the run
+    # fails while still paying for the whole availability read.
+    assert :ok = run(integration)
+
+    assert Enum.any?(sent_requests(), &(&1 =~ "<m:FindItem"))
+    assert Repo.reload!(integration).exchange_sync_states == %{}
+    assert is_nil(Repo.reload!(integration).sync_error)
+  end
+
+  test "the folder that lost its token bootstraps a fresh one next cycle", %{
+    integration: integration
+  } do
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    stub_full_sync(
+      sync_folder_items:
+        ExchangeFixtures.failed_response("SyncFolderItems", "ErrorInvalidSyncStateVersion")
+    )
+
+    assert :ok = run(integration)
+
+    stub_full_sync(sync_folder_items: ExchangeFixtures.sync_folder_items_response([]))
+    assert :ok = run(integration)
+
+    # Without this the recovery is only half of one: the folder would take a
+    # full read every cycle from here on, having never got a token back.
+    assert %{exchange_sync_states: %{"calendar" => token}} = Repo.reload!(integration)
+    assert token == ExchangeFixtures.sync_state()
+  end
+
+  test "a booking the feed reports is cached as one of ours", %{integration: integration} do
+    stub_full_sync()
+    assert :ok = run(integration)
+
+    # Booked after the full read, so the incremental path is the only one that
+    # can flag the mirror row. Left unflagged, everything keyed on
+    # `created_by_tymeslot` treats a confirmed booking as somebody else's
+    # event until the daily full read happens to rewrite it.
+    insert(:meeting, calendar_integration_id: integration.id, provider_event_id: "item-2")
+
+    stub_full_sync(
+      sync_folder_items:
+        ExchangeFixtures.sync_folder_items_response([{:create, "item-2"}],
+          sync_state: "sync-state-2"
+        ),
+      get_item: ExchangeFixtures.get_item_response(id: "item-2", uid: "uid-2")
+    )
+
+    assert :ok = run(integration)
+
+    rows = Map.new(grid_rows(integration), &{&1.provider_event_id, &1})
+
+    assert %{created_by_tymeslot: true} = rows["item-2"]
+    # And only that one: flagging is a claim of ownership, not a blanket mark
+    # on whatever the feed happened to mention.
+    assert %{created_by_tymeslot: false} = rows["item-1"]
+  end
+
   test "a stale full sync forces the window to be re-read", %{integration: integration} do
     stub_full_sync()
     assert :ok = run(integration)

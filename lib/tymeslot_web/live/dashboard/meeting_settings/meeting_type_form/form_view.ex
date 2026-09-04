@@ -122,9 +122,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 value={
                   Map.get(@form_data, "duration", if(@type, do: @type.duration_minutes, else: "30"))
                 }
-                min={Constraints.duration_minutes_form_min()}
+                min={Constraints.duration_minutes_opts()[:greater_than_or_equal_to]}
                 max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
-                step="5"
                 required
                 placeholder="30"
                 phx-change="validate_meeting_type"
@@ -140,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 {dgettext(
                   "dashboard_meeting_form",
                   "Enter a duration between %{min} and %{max} minutes",
-                  min: Constraints.duration_minutes_form_min(),
+                  min: Constraints.duration_minutes_opts()[:greater_than_or_equal_to],
                   max: Constraints.duration_minutes_opts()[:less_than_or_equal_to]
                 )}
               </p>

@@ -30,8 +30,27 @@ defmodule Tymeslot.Validation.Constraints do
   @spec min_advance_hours_range() :: Range.t()
   def min_advance_hours_range, do: 0..168
 
+  @doc """
+  How long a meeting may be, in minutes.
+
+  The floor is five rather than one because a booking shorter than that is a
+  typo, not a product: it is below the smallest slot interval the grid can be
+  drawn at (`slot_interval_minutes_range/0` starts at five too), so a
+  three-minute meeting type has no honest way to be offered. The form has
+  always shown five as its minimum; this is the rule behind it.
+  """
   @spec duration_minutes_range() :: Range.t()
-  def duration_minutes_range, do: 1..480
+  def duration_minutes_range, do: 5..480
+
+  @doc """
+  How long a poll's proposed meeting may be, in minutes.
+
+  Same floor as `duration_minutes_range/0`, and for the same reason. The
+  ceiling is higher: a poll is how a whole-day workshop gets scheduled, which
+  is not something a meeting type is asked to express.
+  """
+  @spec poll_duration_minutes_range() :: Range.t()
+  def poll_duration_minutes_range, do: 5..1440
 
   @spec slot_interval_minutes_range() :: Range.t()
   def slot_interval_minutes_range, do: 5..480
@@ -120,6 +139,12 @@ defmodule Tymeslot.Validation.Constraints do
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
 
+  @spec poll_duration_minutes_opts() :: keyword()
+  def poll_duration_minutes_opts do
+    range = poll_duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
   @spec approval_window_hours_opts() :: keyword()
   def approval_window_hours_opts do
     range = approval_window_hours_range()
@@ -137,10 +162,6 @@ defmodule Tymeslot.Validation.Constraints do
     range = booking_limit_range()
     [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
   end
-
-  @doc "Minimum duration exposed in the meeting type form (step=5, so 1-4 min is impractical)."
-  @spec duration_minutes_form_min() :: pos_integer()
-  def duration_minutes_form_min, do: 5
 
   # Field lengths
 

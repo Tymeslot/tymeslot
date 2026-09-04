@@ -31,6 +31,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_email_change_notification" => {AuthEmails, :handle_email_change_notification},
     "send_integration_unhealthy_notification" =>
       {IntegrationEmails, :handle_integration_unhealthy_notification},
+    "send_integration_reauth_notification" =>
+      {IntegrationEmails, :handle_integration_reauth_notification},
     "send_integration_paused_notification" =>
       {IntegrationEmails, :handle_integration_paused_notification},
     "send_calendar_invitation" => {IntegrationEmails, :handle_calendar_invitation},

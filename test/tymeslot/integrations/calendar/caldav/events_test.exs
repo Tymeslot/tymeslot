@@ -282,6 +282,69 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                )
     end
 
+    test "reports an absent event as :not_found when If-Match: * is rejected" do
+      # The event is gone from the server (never created, or deleted in the
+      # organiser's own client). HEAD 404s, so we fall back to `If-Match: *`,
+      # which the server rejects with 412 because it holds no representation.
+      # That is absence, not a conflict: reporting :not_found is what lets
+      # CalendarEventSync recreate the booking's event. Reporting
+      # :precondition_failed instead left the calendar permanently empty.
+      stub_sequential(
+        fn conn ->
+          assert conn.method == "HEAD"
+          Conn.send_resp(conn, 404, "")
+        end,
+        fn conn ->
+          assert conn.method == "PUT"
+          assert Conn.get_req_header(conn, "if-match") == ["*"]
+
+          Conn.send_resp(conn, 412, "")
+        end
+      )
+
+      event_data = %{
+        summary: "Booking that never landed",
+        start_time: ~U[2026-02-24 10:00:00Z],
+        end_time: ~U[2026-02-24 11:00:00Z]
+      }
+
+      assert {:error, :not_found} =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "absent-uid",
+                 event_data,
+                 skip_breaker: true
+               )
+    end
+
+    test "keeps a 412 against a real ETag as a conflict, not an absence" do
+      # With a genuine ETag the condition carried a lost-update guarantee, so a
+      # 412 means someone else changed the event. That must stay
+      # :precondition_failed under the default :fail policy — recreating here
+      # would clobber the server's newer version.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        Conn.send_resp(conn, 412, "")
+      end)
+
+      event_data = %{
+        summary: "Concurrently edited",
+        start_time: ~U[2026-02-24 10:00:00Z],
+        end_time: ~U[2026-02-24 11:00:00Z]
+      }
+
+      assert {:error, :precondition_failed} =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "conflicted-uid",
+                 event_data,
+                 etag: "\"server-etag\"",
+                 skip_breaker: true
+               )
+    end
+
     test "uses supplied etag via opts and skips HEAD" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method == "PUT",

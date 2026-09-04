@@ -93,6 +93,37 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert {:error, "Cannot cancel a meeting that has already occurred"} =
                Cancel.execute(meeting.uid)
     end
+
+    test "refuses the withdraw link on a request that already expired" do
+      %{user: user} = create_user_with_profile()
+
+      # The invitee's request-received email carries a "Withdraw your request"
+      # link, and it stays in their inbox after the deadline passes. By then
+      # `Meetings.Approval` has released the slot, told them the request
+      # lapsed and refunded anything paid — so running the cancellation
+      # pipeline over that would overwrite the outcome and send a second,
+      # contradicting round of emails for a meeting that never happened.
+      expired =
+        insert_meeting_for_user(user, %{
+          status: "expired",
+          start_offset: 3_600,
+          duration: 3_600,
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -13, :hour),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          approval_resolved_at: DateTime.utc_now(:second),
+          cancelled_at: DateTime.utc_now(:second)
+        })
+
+      assert {:error, "Cannot cancel an expired meeting"} = Cancel.execute(expired.uid)
+
+      {:ok, stored} = MeetingQueries.get_meeting_by_uid(expired.uid)
+      assert stored.status == "expired"
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_cancellation_emails", "meeting_id" => expired.id}
+      )
+    end
   end
 
   describe "execute/1 with meeting struct" do
@@ -279,15 +310,20 @@ defmodule Tymeslot.Bookings.CancelTest do
     # re-entered the gate (a reschedule of a confirmed booking resets it to
     # "awaiting_approval") is not the same case as one that never got
     # approved: there IS a confirmed meeting to weigh a refund choice
-    # against, so the automatic full refund must not run. `announced_at` is
-    # the durable marker of that history (set once, by activation, and never
-    # reset by a reschedule).
+    # against, so the automatic full refund must not run.
+    #
+    # `first_announced_at` is the durable marker of that history and
+    # `announced_at` is not: the re-gating reschedule clears the latter so the
+    # host's second approval can claim the fan-out again. A row carrying only
+    # `announced_at` is one production cannot produce, which is what this test
+    # used to build.
     test "does not auto-refund a request that was a confirmed meeting before re-entering the gate" do
       %{user: user} = create_user_with_profile()
 
       meeting =
         insert_held_paid_request(user, "awaiting_approval", %{
-          announced_at: DateTime.utc_now(:second)
+          announced_at: nil,
+          first_announced_at: DateTime.utc_now(:second)
         })
 
       # No `expect/3` is set on StripeAdapterMock, so Mox raises if the
