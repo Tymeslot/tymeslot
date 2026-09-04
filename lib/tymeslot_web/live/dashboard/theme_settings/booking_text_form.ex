@@ -20,8 +20,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   | `:saved`    | "All changes saved"       | Persist succeeded.                               |
   | `:incomplete`| "Complete the form to save" | A required line is blank mid-edit.            |
   | `:unsaved`  | "Unsaved changes"         | Validation rejected the edit, so nothing wrote.  |
-  | `:throttled`| "Too many changes…"       | Rate limit hit; the next edit retries.           |
+  | `:throttled`| "Too many changes…"       | Rate limit hit; the edit is held and retried.    |
   | `:error`    | "Couldn't save changes"   | Unexpected persistence failure.                  |
+
+  The rate limit behind `:throttled` is shared with every other theme-
+  customisation write, so hitting it is rarely the host's own doing and the
+  edit in hand is not theirs to lose: with no save button and a debounce that
+  fires after they have stopped typing, dropping it would leave the last thing
+  they wrote unwritten while the indicator promised otherwise. The params are
+  therefore held and retried on a backoff until they land, a later edit
+  replacing whatever is held.
 
   ## Turning the customisation off
 
@@ -50,13 +58,25 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
 
   @text_fields [:booking_heading, :booking_greeting, :booking_instruction]
 
+  # Backoff before a held save is retried. The shared bucket allows 150 writes
+  # per five minutes, so a retry every five seconds contributes at most 60 to a
+  # window: quick enough to write the edit soon after the bucket clears, sparse
+  # enough that the retry cannot keep it saturated by itself.
+  @retry_after_ms 5_000
+
   @impl Phoenix.LiveComponent
+  # A retry the component scheduled for itself; it carries no profile, so it
+  # cannot go through the ordinary update path.
+  def update(%{retry_save: true}, socket), do: {:ok, retry(socket)}
+
   def update(assigns, socket) do
     socket =
       socket
       |> assign(assigns)
       |> assign_new(:preview_token, fn -> System.system_time() end)
       |> assign_new(:save_status, fn -> :idle end)
+      |> assign_new(:pending_params, fn -> nil end)
+      |> assign_new(:retry_scheduled?, fn -> false end)
       |> assign_form(ProfileSchema.booking_text_changeset(assigns.profile, %{}))
 
     {:ok, socket}
@@ -300,19 +320,49 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
 
   defp default_for(:booking_instruction, _profile), do: BookingText.default_instruction()
 
+  # Clearing on the way in is what makes a newer edit replace a held one: this
+  # attempt supersedes it, and only a throttle puts anything back.
   defp persist(socket, params) do
+    socket = assign(socket, :pending_params, nil)
+
     with :ok <- check_rate_limit(socket),
          {:ok, sanitized} <- sanitize(params, socket) do
       save(socket, sanitized)
     else
       {:error, :rate_limited, _message} ->
-        assign(socket, :save_status, :throttled)
+        hold(socket, params)
 
       {:error, field_errors} ->
         socket
         |> assign_form(invalid_changeset(socket, params, field_errors))
         |> assign(:save_status, :unsaved)
     end
+  end
+
+  defp hold(socket, params) do
+    socket
+    |> schedule_retry()
+    |> assign(pending_params: params, save_status: :throttled)
+  end
+
+  # One timer at a time: a host still typing while throttled would otherwise
+  # stack one per keystroke, and each would spend a check of the very bucket
+  # that is full. The flag clears when the retry arrives, so a retry that is
+  # throttled again schedules the next one on its way back through here.
+  defp schedule_retry(%{assigns: %{retry_scheduled?: true}} = socket), do: socket
+
+  defp schedule_retry(socket) do
+    send_update_after(__MODULE__, [id: socket.assigns.id, retry_save: true], @retry_after_ms)
+    assign(socket, :retry_scheduled?, true)
+  end
+
+  defp retry(%{assigns: %{pending_params: nil}} = socket),
+    do: assign(socket, :retry_scheduled?, false)
+
+  defp retry(%{assigns: %{pending_params: params}} = socket) do
+    socket
+    |> assign(:retry_scheduled?, false)
+    |> persist(params)
   end
 
   # The three lines are organiser-authored prose bound for a public page, so
