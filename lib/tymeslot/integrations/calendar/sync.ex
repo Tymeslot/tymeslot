@@ -144,11 +144,20 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   namespaced to make that collision unreachable; not running the
   reconciliation at all is the structural half of the same defence, and both
   are wanted.
+
+  Ownership *is* flagged here, unlike reconciliation. `flag_tymeslot_owned/2`
+  only ever raises `created_by_tymeslot` on a row that matches one of this
+  integration's own meetings, so it cannot mislabel a synthesised busy
+  interval, and Exchange reaches the cache through this function alone —
+  without it, a booking mirrored to an Exchange calendar stays unowned and
+  `CalDAV.OfflineQueue`-style recovery keyed on that flag never applies to it.
   """
   @spec full_refresh_for_role(CalendarIntegrationSchema.t(), String.t(), [CalendarEvent.t()]) ::
           {:ok, non_neg_integer()} | {:error, term()}
   def full_refresh_for_role(%CalendarIntegrationSchema{} = integration, role, calendar_events)
       when is_binary(role) and is_list(calendar_events) do
+    calendar_events = flag_tymeslot_owned(integration, calendar_events)
+
     CalendarEventQueries.full_refresh_for_role(integration.id, role, calendar_events)
   rescue
     e ->
