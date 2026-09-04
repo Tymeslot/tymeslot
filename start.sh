@@ -4,7 +4,110 @@ set -eu
 
 echo "==> Starting Tymeslot"
 
-# Environment variables are set externally in production
+# --- Operator configuration file --------------------------------------------
+# /app/data/.env lets an operator manage variables in a file instead of one
+# `cloudron env set` per key. On first boot it is seeded from the packaged
+# .env.example with every assignment commented out, so a fresh install starts
+# with the documented list in place and nothing enabled by it.
+#
+# Values are applied as a fallback: anything already in the environment (i.e.
+# set through Cloudron) wins, which is the precedence config/runtime.exs
+# applies via Tymeslot.Infrastructure.DotenvLoader. Loading the file here,
+# before the key generation below, is what makes SECRET_KEY_BASE and
+# DATA_ENCRYPTION_KEY settable from it at all.
+#
+# The file is parsed, never sourced: sourcing would run whatever an operator
+# pasted into it, and would let it override Cloudron's own variables.
+ENV_FILE="/app/data/.env"
+ENV_TEMPLATE="/app/.env.example"
+
+if [ ! -f "$ENV_FILE" ] && [ -f "$ENV_TEMPLATE" ]; then
+  {
+    cat <<'HEADER'
+# Tymeslot configuration
+#
+# Created on first boot from the packaged .env.example with every value
+# commented out, so it changes nothing until you edit it. Uncomment the
+# lines you need, then restart the app:
+#
+#   cloudron restart --app <your-app-domain>
+#
+# Variables set with `cloudron env set`, or on the dashboard's Environment
+# tab, always win over the values below; use those for one-off overrides.
+#
+# Cloudron provides the database, the mail relay and OIDC through addons, so
+# leave the DATABASE_*, POSTGRES_* and SMTP_* entries commented out unless
+# you deliberately point Tymeslot at your own servers. The same goes for
+# EMAIL_ADAPTER: uncommenting it as "test" silently discards every email.
+#
+# SECRET_KEY_BASE and DATA_ENCRYPTION_KEY are generated on first boot and
+# kept in /app/data, so leave them alone unless you are restoring an
+# existing installation. Changing DATA_ENCRYPTION_KEY on an install that
+# already holds encrypted credentials makes them undecryptable.
+#
+# Upgrades never touch this file. The packaged reference copy at
+# /app/.env.example is refreshed with each release.
+
+HEADER
+    sed 's/^\([A-Za-z_][A-Za-z0-9_]*=\)/# \1/' "$ENV_TEMPLATE"
+  } > "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+  echo "==> Seeded $ENV_FILE from the packaged template (nothing enabled)"
+fi
+
+# Applies KEY=value lines that name a variable which is not already set.
+# Unterminated quotes (a multi-line value) are skipped rather than guessed at;
+# DotenvLoader parses those correctly when the release boots.
+load_env_file() {
+  local file="$1"
+  local line key value
+
+  [ -f "$file" ] || return 0
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    case "$line" in
+      '' | '#'*) continue ;;
+      export\ *) line="${line#export }" ;;
+    esac
+    case "$line" in
+      *=*) ;;
+      *) continue ;;
+    esac
+
+    key="${line%%=*}"
+    key="${key%"${key##*[![:space:]]}"}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+
+    value="${line#*=}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    case "$value" in
+      \"*\") value="${value#\"}"; value="${value%\"}" ;;
+      \'*\') value="${value#\'}"; value="${value%\'}" ;;
+      \"* | \'*) continue ;;
+      *)
+        value="${value%%[[:space:]]#*}"
+        value="${value%"${value##*[![:space:]]}"}"
+        ;;
+    esac
+
+    if [ -z "${!key+set}" ]; then
+      export "$key=$value"
+      loaded_keys="${loaded_keys} ${key}"
+    fi
+  done < "$file"
+
+  return 0
+}
+
+loaded_keys=""
+load_env_file "$ENV_FILE"
+if [ -n "$loaded_keys" ]; then
+  echo "==> Loaded from $ENV_FILE:$loaded_keys"
+else
+  echo "==> No variables applied from $ENV_FILE"
+fi
 
 # Generate SECRET_KEY_BASE on first run if not already set via env
 SECRET_FILE="/app/data/secret_key_base"
@@ -26,7 +129,6 @@ fi
 # It MUST persist across restarts — losing it makes existing credentials
 # unrecoverable, forcing every integration to be reconnected.
 DATA_KEY_FILE="/app/data/data_encryption_key"
-ENV_FILE="/app/data/.env"
 if [ -z "${DATA_ENCRYPTION_KEY:-}" ]; then
   if [ ! -f "$DATA_KEY_FILE" ]; then
     openssl rand -base64 48 | tr -d '\n' > "$DATA_KEY_FILE"
@@ -41,8 +143,10 @@ if [ -z "${DATA_ENCRYPTION_KEY:-}" ]; then
   # /app/data/.env (see DotenvLoader) — persist the key there so exec sessions
   # (e.g. the re-encryption sweep) see it too. Upsert rather than append so
   # restarts don't duplicate the line.
-  touch "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
+  if [ ! -f "$ENV_FILE" ]; then
+    touch "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+  fi
   if grep -q '^DATA_ENCRYPTION_KEY=' "$ENV_FILE"; then
     sed -i "s|^DATA_ENCRYPTION_KEY=.*|DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY}|" "$ENV_FILE"
   else

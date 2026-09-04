@@ -342,4 +342,86 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
                )
     end
   end
+
+  describe "handle_integration_reauth_notification/1" do
+    test "sends the reconnect notice for a flagged integration" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          needs_reauth: true,
+          sync_error: "Zoom is missing the permission needed to reschedule meetings."
+        )
+
+      expect(EmailServiceMock, :send_integration_reauth_notification, fn _user,
+                                                                         sent_integration,
+                                                                         :video ->
+        assert sent_integration.id == integration.id
+        assert sent_integration.sync_error =~ "reschedule meetings"
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_reauth_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => integration.id,
+                   "integration_type" => "video"
+                 }
+               )
+    end
+
+    test "discards when the user reconnected before the job ran" do
+      # The queue is not instantaneous, and telling someone to reconnect
+      # something they already reconnected is worse than saying nothing.
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom", needs_reauth: false)
+
+      assert {:discard, "Integration no longer needs reauth"} =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_reauth_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => integration.id,
+                   "integration_type" => "video"
+                 }
+               )
+    end
+
+    test "discards when the user or integration is missing" do
+      assert {:discard, "User or integration not found"} =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_reauth_notification",
+                 %{
+                   "user_id" => 999_999,
+                   "integration_id" => 999_999,
+                   "integration_type" => "video"
+                 }
+               )
+    end
+
+    test "returns retriable error when delivery fails" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom", needs_reauth: true)
+
+      expect(EmailServiceMock, :send_integration_reauth_notification, fn _user,
+                                                                         _integration,
+                                                                         :video ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_reauth_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => integration.id,
+                   "integration_type" => "video"
+                 }
+               )
+    end
+  end
 end

@@ -9,7 +9,7 @@
   "version": "1.14.0",
   "healthCheckPath": "/healthcheck",
   "httpPort": 4000,
-  "postInstallMessage": "Thank you for installing Tymeslot!",
+  "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
   "addons": {
     "localstorage": {},
     "oidc": {

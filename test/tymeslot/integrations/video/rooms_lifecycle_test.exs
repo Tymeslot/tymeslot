@@ -414,7 +414,7 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
       access_token: "valid_token",
       refresh_token: "refresh_token",
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
-      oauth_scope: "meeting:write:meeting meeting:delete:meeting"
+      oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting"
     }
 
     {:ok, integration} = VideoIntegrationQueries.create(Map.merge(defaults, overrides))

@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload
+  alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Reauth
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
@@ -74,7 +75,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
           {:ok, String.t()} | {:error, term()} | {:provider_error, term()}
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def precheck_create_meeting_room(config) do
-    with {:ok, :valid} <- validate_zoom_scope(config, :write) do
+    with {:ok, :valid} <- Reauth.validate_scope(config, :write) do
       classify_token_result(get_access_token(config))
     end
   end
@@ -245,7 +246,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def update_meeting_room(room_id, config) when is_binary(room_id) do
     Logger.info("Updating Zoom meeting room", room_id: room_id)
 
-    with {:ok, :valid} <- validate_zoom_scope(config, :write),
+    with {:ok, :valid} <- Reauth.validate_scope(config, :update),
          {:ok, token} <- get_access_token(config),
          {:ok, {start_time, end_time}} <- Payload.get_meeting_times(config),
          :ok <- patch_scheduled_meeting(token, room_id, start_time, end_time, config) do
@@ -266,7 +267,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def delete_meeting_room(room_id, config) when is_binary(room_id) do
     Logger.info("Deleting Zoom meeting room", room_id: room_id)
 
-    with {:ok, :valid} <- validate_zoom_scope(config, :delete),
+    with {:ok, :valid} <- Reauth.validate_scope(config, :delete),
          {:ok, token} <- get_access_token(config),
          :ok <- delete_scheduled_meeting(token, room_id, config) do
       Logger.info("Successfully deleted Zoom meeting", room_id: room_id)
@@ -283,24 +284,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   # ----- Private -----
-
-  # See `Scopes` for why a delete cannot be authorised by the write scope.
-  defp validate_zoom_scope(config, operation) do
-    stored_scope = String.downcase(Map.get(config, :oauth_scope) || "")
-
-    if Scopes.satisfied?(stored_scope, operation) do
-      {:ok, :valid}
-    else
-      Logger.error("Zoom integration missing required scope",
-        stored_scope: stored_scope,
-        operation: operation,
-        required_scope: Scopes.required_description(operation)
-      )
-
-      flag_missing_scope(config, operation)
-      {:error, :insufficient_scope}
-    end
-  end
 
   defp get_access_token(config) do
     OAuthTokenManager.validated_access_token(config,
@@ -482,11 +465,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         # returns 401, flag the integration for reauthentication.
         retry_after_401(:patch, room_id, config, body)
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Payload.decode_and_format_error(status, body)
-
-      {:error, reason} ->
-        {:error, reason}
+      # Everything else — including the 400/4711 that means the grant lacks
+      # `meeting:update:meeting` — shares the update-verb error handling used by
+      # the post-401 retry path, so a scope rejection is recognised on the first
+      # attempt rather than retried as though it were transient.
+      response ->
+        handle_error_response(response, config, :update)
     end
   end
 
@@ -511,7 +495,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
              ) do
           {:ok, %Req.Response{status: 401, body: response_body}} ->
             # Refresh succeeded but Zoom still rejects — token is revoked.
-            flag_revoked_token(config)
+            Reauth.flag_revoked_token(config)
             Payload.decode_and_format_error(401, response_body)
 
           response ->
@@ -520,7 +504,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
       {:error, _reason} ->
         # Refresh itself failed — credentials are no longer usable.
-        flag_revoked_token(config)
+        Reauth.flag_revoked_token(config)
 
         {:error,
          dgettext(
@@ -548,7 +532,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         {:error, :meeting_not_found}
 
       other ->
-        handle_error_response(other, config, :write)
+        handle_error_response(other, config, :update)
     end
   end
 
@@ -577,7 +561,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         status: status
       )
 
-      flag_missing_scope(config, operation)
+      Reauth.flag_missing_scope(config, operation)
       {:error, :insufficient_scope}
     else
       Payload.decode_and_format_error(status, body)
@@ -608,38 +592,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       response ->
         handle_verb_response(:delete, room_id, config, response)
     end
-  end
-
-  # Flags the integration as needing reauthentication after a 401 that survived
-  # a forced token refresh — this indicates server-side revocation at zoom.us.
-  # The dashboard surfaces this via the "Reconnect required" badge on the video row.
-  defp flag_revoked_token(config) do
-    flag_for_reauth(
-      config,
-      "zoom_token_revoked",
-      dgettext(
-        "dashboard_integrations",
-        "Zoom access was revoked. Please reconnect your Zoom account."
-      )
-    )
-  end
-
-  # A grant that predates a scope change can only be widened by re-consenting,
-  # so it needs the same "Reconnect required" badge as a revoked token.
-  defp flag_missing_scope(config, operation) do
-    flag_for_reauth(
-      config,
-      "zoom_missing_scope",
-      dgettext(
-        "dashboard_integrations",
-        "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account.",
-        action: Scopes.action_phrase(operation)
-      )
-    )
-  end
-
-  defp flag_for_reauth(config, event, message) do
-    OAuthTokenManager.flag_needs_reauth(config, label: "Zoom", event: event, message: message)
   end
 
   defp zoom_oauth_helper do

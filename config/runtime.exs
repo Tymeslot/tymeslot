@@ -316,6 +316,8 @@ if config_env() == :prod do
         {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
         # Run daily at 03:30 UTC to prune old/inactive calendar event cache
         {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
+        # Run daily at 05:30 UTC to flag Zoom grants missing a scope Tymeslot needs
+        {"30 5 * * *", Tymeslot.Workers.ZoomScopeAuditWorker},
         # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
         {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
         # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
@@ -327,6 +329,14 @@ if config_env() == :prod do
         {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker}
       ]
     ]
+
+  # Enable the Zoom update scope only where the Marketplace app behind this
+  # deployment is actually configured for `meeting:update:meeting`. Requesting
+  # it elsewhere is silently dropped by Zoom and makes Tymeslot ask users to
+  # reconnect for a scope no reconnect can produce.
+  config :tymeslot,
+         :zoom_update_scope_enabled,
+         System.get_env("ZOOM_UPDATE_SCOPE_ENABLED") == "true"
 
   # Configure mailer based on EMAIL_ADAPTER setting. `Tymeslot.Mailer.Providers`
   # owns the list of supported values and the variables each one reads; an

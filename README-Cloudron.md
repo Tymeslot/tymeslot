@@ -84,10 +84,12 @@ Use `cloudron env set` or the dashboard's **Environment** tab as shown above. Cl
 
 **Option 2: `.env` file in the data directory**
 
-Tymeslot reads `/app/data/.env` at boot and loads any keys that are not already set in the environment. This is convenient when you have many variables to manage, want to keep them under version control on your own host, or are scripting the deployment.
+Tymeslot reads `/app/data/.env` at boot and applies any key that is not already set in the environment. This is convenient when you have many variables to manage, want to keep them under version control on your own host, or are scripting the deployment.
+
+The file is created on first boot from the packaged variable reference, with every value commented out, so a new install already contains the full documented list and nothing is enabled by it. Uncomment what you need:
 
 ```bash
-# Edit the .env file directly inside the running container
+# Edit the file directly inside the running container
 cloudron exec --app tymeslot.yourdomain.com -- vi /app/data/.env
 
 # Or copy a prepared file in from your workstation
@@ -97,7 +99,9 @@ cloudron push --app tymeslot.yourdomain.com ./my-env /app/data/.env
 cloudron restart --app tymeslot.yourdomain.com
 ```
 
-The file uses standard dotenv syntax (`KEY=value`, one per line, `#` for comments). It must live in `/app/data` — `/app` itself is read-only on Cloudron and is wiped on every app upgrade. Variables set via `cloudron env set` always win over `.env` entries, so use the CLI for one-off overrides.
+The file uses standard dotenv syntax (`KEY=value`, one per line, `#` for comments). It must live in `/app/data`: `/app` itself is read-only on Cloudron and is replaced on every app upgrade, which is also why upgrades never touch your file. The reference copy that seeded it stays at `/app/.env.example` and is refreshed with each release, so `diff` it against your own file after an upgrade to see what is new.
+
+Variables set with `cloudron env set` always win over `.env` entries, so use the CLI for one-off overrides. `SECRET_KEY_BASE` and `DATA_ENCRYPTION_KEY` are honoured from the file too, and setting either there stops the container generating its own; leave them commented out unless you are restoring an existing installation.
 
 ### Accessing Your Installation
 

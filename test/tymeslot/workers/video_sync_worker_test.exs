@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   import Mox
   import Tymeslot.MeetingTestHelpers
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
@@ -92,6 +93,65 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
 
       assert {:error, _reason} =
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+    end
+
+    test "discards instead of retrying when the grant lacks the update scope" do
+      %{user: user} = create_user_with_profile()
+
+      integration =
+        insert_zoom_integration(user)
+        |> Changeset.change(%{
+          oauth_scope: "meeting:write:meeting meeting:delete:meeting"
+        })
+        |> Repo.update!()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_room_id: "444"
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      # Retrying cannot widen a grant, so the job must not burn its budget and
+      # page an admin. Nor is the user flagged: Tymeslot does not request
+      # `meeting:update:meeting`, so reconnecting would change nothing.
+      assert {:discard, _reason} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+
+      refute Repo.reload!(integration).needs_reauth
+    end
+
+    test "discards instead of retrying when Zoom rejects the PATCH with 4711" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_room_id: "555"
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "code" => 4711,
+               "message" =>
+                 "Invalid access token, does not contain scopes:" <>
+                   "[meeting:update:meeting:admin, meeting:update:meeting]."
+             })
+         }}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+
+      refute Repo.reload!(integration).needs_reauth
     end
   end
 
@@ -334,7 +394,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       access_token_encrypted: Encryption.encrypt("access-token"),
       refresh_token_encrypted: Encryption.encrypt("refresh-token"),
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:delete:meeting",
+      oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting",
       provider_account_id: nil
     )
   end

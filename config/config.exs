@@ -366,6 +366,12 @@ config :tymeslot, :video_providers, %{
   custom: [enabled: true]
 }
 
+# Whether this deployment's Zoom Marketplace app is configured for
+# `meeting:update:meeting`. Off by default: requesting a scope the app lacks is
+# silently dropped by Zoom, and would make Tymeslot ask users to reconnect for a
+# scope no reconnect can produce. See `ZoomProvider.Scopes`.
+config :tymeslot, :zoom_update_scope_enabled, false
+
 config :tymeslot, :calendar_providers, %{
   caldav: [enabled: true],
   radicale: [enabled: true],
