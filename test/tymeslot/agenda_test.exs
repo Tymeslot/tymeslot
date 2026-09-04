@@ -93,6 +93,29 @@ defmodule Tymeslot.AgendaTest do
       assert entry.source == :tymeslot
     end
 
+    test "drops the CalDAV copy of a booking, which shares only its UID",
+         %{user: user, tomorrow: tomorrow} do
+      slot = at(tomorrow, ~T[12:00:00])
+      uid = "abc123@tymeslot.com"
+
+      # A CalDAV booking carries no provider_event_id; its synced copy is keyed
+      # by href. Only the UID links the two.
+      booking(user, slot, title: "Real booking", uid: uid, provider_event_id: nil)
+
+      external_event(user, slot,
+        summary: "Duplicate",
+        uid: uid,
+        provider_event_id: "/cal/primary/#{uid}.ics",
+        created_by_tymeslot: false
+      )
+
+      day = Agenda.day_agenda(user, "Etc/UTC")
+
+      assert [entry] = entries(day)
+      assert entry.title == "Real booking"
+      assert entry.source == :tymeslot
+    end
+
     test "excludes transparent (free) external events", %{user: user, tomorrow: tomorrow} do
       external_event(user, at(tomorrow, ~T[12:00:00]),
         summary: "Focus time",

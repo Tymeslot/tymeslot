@@ -490,7 +490,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   # open, so tests that assert on menu items must open it first.
   defp open_user_menu(view) do
     view
-    |> element("#user-menu button[aria-haspopup='true']")
+    |> element("#user-menu button[aria-haspopup='menu']")
     |> render_click()
   end
 end

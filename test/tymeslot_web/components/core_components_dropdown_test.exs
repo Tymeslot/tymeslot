@@ -79,6 +79,12 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
     assert html =~ ~s(aria-controls="test-dd-panel")
   end
 
+  test "trigger advertises the popup kind it actually opens" do
+    # aria-haspopup="true" means "menu". A dialog panel behind it makes the
+    # trigger announce one thing and open another.
+    assert render_dropdown() =~ ~s(aria-haspopup="menu")
+  end
+
   test "panel defaults to role=menu" do
     html = render_dropdown(%{open: true})
     assert html =~ ~s(role="menu")
@@ -118,6 +124,8 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
       )
 
     assert html =~ ~s(role="dialog")
+    assert html =~ ~s(aria-haspopup="dialog")
+    refute html =~ ~s(aria-haspopup="true")
   end
 
   test "dialog panel receives an accessible name from panel_label" do

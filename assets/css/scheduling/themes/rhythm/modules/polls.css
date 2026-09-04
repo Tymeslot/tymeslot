@@ -123,8 +123,8 @@ html.rhythm-theme .poll-submit-button {
   align-self: stretch;
   padding: var(--space-sm) var(--space-lg);
   border-radius: var(--button-radius);
-  background: var(--theme-primary);
-  color: #fff;
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
   font-size: var(--theme-font-size-base);
   font-weight: 600;
   cursor: pointer;
@@ -132,7 +132,7 @@ html.rhythm-theme .poll-submit-button {
 }
 
 html.rhythm-theme .poll-submit-button:hover {
-  background: var(--theme-primary-hover);
+  background: var(--theme-primary-solid-hover);
 }
 
 /* Slot grid */

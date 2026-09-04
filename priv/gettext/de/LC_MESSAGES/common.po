@@ -238,3 +238,18 @@ msgstr "Ein Sonderzeichen"
 #, elixir-autogen, elixir-format
 msgid "This tab contains errors"
 msgstr "Dieser Tab enthält Fehler"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Hintergrundvideo pausieren"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Hintergrundvideo abspielen"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr "Zeitzonen suchen"

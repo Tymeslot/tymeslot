@@ -78,9 +78,9 @@
 }
 
 .calendar-day--selected {
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
-  color: white;
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
 }
 
 .calendar-day--unavailable {
@@ -189,8 +189,9 @@
 }
 
 .week-day-cell.selected {
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
 }
 
 .week-day-cell:disabled {

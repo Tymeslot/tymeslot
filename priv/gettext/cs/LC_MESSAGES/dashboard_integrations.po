@@ -1182,12 +1182,12 @@ msgstr "Neznámý poskytovatel videa"
 msgid "You authenticated with a different account than the one linked to this integration. Please use the correct account."
 msgstr "Ověření proběhlo pod jiným účtem, než který je propojen s touto integrací. Použijte prosím správný účet."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider.ex
+#: lib/tymeslot/integrations/video/providers/zoom_provider/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr "Přístup ke službě Zoom byl odvolán. Připojte prosím svůj účet Zoom znovu."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider.ex
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
 msgstr "Službě Zoom chybí oprávnění pro tuto akci: %{action}. Připojte prosím svůj účet Zoom znovu."
@@ -1201,11 +1201,6 @@ msgstr "Obnovení tokenu Zoom po chybě 401 se nezdařilo. Připojte prosím sv�
 #, elixir-autogen, elixir-format
 msgid "cancel meetings"
 msgstr "rušení schůzek"
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "create and update meetings"
-msgstr "vytváření a úprava schůzek"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1254,3 +1249,13 @@ msgstr "Smazat i jejich místnosti pro schůzky. Účastníkům, kteří už ma
 #, elixir-autogen, elixir-format
 msgid "URL redirects too many times"
 msgstr "URL adresa přesměrovává příliš mnohokrát"
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "create meetings"
+msgstr "vytváření schůzek"
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "reschedule meetings"
+msgstr "přeplánování schůzek"

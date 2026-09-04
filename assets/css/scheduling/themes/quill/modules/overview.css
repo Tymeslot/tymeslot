@@ -2,7 +2,8 @@
 
 /* Overview Component Styles */
 .overview-success-badge {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
+  color: var(--theme-on-primary);
 }
 
 /* ===== Base Styles ===== */
@@ -141,7 +142,8 @@
 
 /* Duration card states */
 .duration-card--selected {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
+  color: var(--theme-on-primary);
   box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 40%, transparent);
   border: var(--border-width-medium) solid var(--theme-primary);
 }

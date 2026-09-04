@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
 
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Components.Auth.AuthVideoConfig
+  import TymeslotWeb.Components.BackgroundMotionToggle, only: [background_motion_toggle: 1]
   import TymeslotWeb.Components.CoreComponents, only: [flash_group: 1]
 
   @spec auth_logo_header(map()) :: Phoenix.LiveView.Rendered.t()
@@ -89,6 +90,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
           </video>
         <% end %>
       </div>
+      <.background_motion_toggle />
 
       <.auth_back_link />
 

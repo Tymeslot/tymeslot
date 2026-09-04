@@ -1,0 +1,73 @@
+/* ============================================================================
+   BACKGROUND MOTION TOGGLE — shared across all themes
+   ----------------------------------------------------------------------------
+   Pause/play control for the background video (WCAG 2.2.2 Pause, Stop, Hide).
+   Rendered only where a video background exists, so it needs no empty state.
+
+   Positioned opposite the language switcher (which sits top-right in both
+   themes) so the two pieces of floating chrome never collide, and above the
+   footer branding row rather than inside it.
+   ============================================================================ */
+
+.background-motion-toggle {
+  position: fixed;
+  bottom: var(--space-md);
+  left: var(--space-md);
+  z-index: var(--z-dropdown);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.45);
+  /* Literal rather than a token: the two themes carry different token systems
+     and only Quill has a glass-blur scale, so a token here resolves to nothing
+     on Rhythm and silently drops the blur. The control is deliberately
+     identical across themes, so it owns these two values, as it already owns
+     its size and its black translucent ground. */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.background-motion-toggle:hover {
+  background: rgba(0, 0, 0, 0.65);
+  /* Literal for the same reason as the blur above: Rhythm names this shade
+     --border-strong, Quill --border-intense, and an unresolved var() here falls
+     back to currentColor, turning the border solid white on hover. */
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.background-motion-toggle:focus-visible {
+  outline: var(--border-width-thick) solid white;
+  outline-offset: var(--space-3xs);
+}
+
+.background-motion-toggle__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* One icon per state. The hook owns data-state; the server renders "playing"
+   so the button is correct before JavaScript runs. */
+.background-motion-toggle[data-state="playing"] .background-motion-toggle__icon--play,
+.background-motion-toggle[data-state="stopped"] .background-motion-toggle__icon--pause {
+  display: none;
+}
+
+/* Embeds hide the background video entirely, so the control would pause
+   nothing. Printing has no motion either. */
+html[data-embedded] .background-motion-toggle {
+  display: none;
+}
+
+@media print {
+  .background-motion-toggle {
+    display: none;
+  }
+}

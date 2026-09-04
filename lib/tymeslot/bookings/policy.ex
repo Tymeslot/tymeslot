@@ -377,6 +377,19 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == "completed" ->
         {:error, "Cannot cancel a completed meeting"}
 
+      # An expired meeting (a lapsed approval request or an abandoned paid
+      # checkout) has already been released: its slot was freed, the attendee
+      # was told the request lapsed, and `Meetings.Approval` has already
+      # refunded whatever was paid for it. Cancelling would overwrite that
+      # outcome with `"cancelled"` and run the whole cancellation pipeline
+      # over it — a second pair of emails contradicting the expiry notice, a
+      # `meeting.cancelled` webhook for a meeting that never happened, and a
+      # calendar delete for an event already removed. The request-received
+      # email's withdraw link stays live in the invitee's inbox after the
+      # deadline, so this is a reachable click, not a theoretical one.
+      meeting.status == "expired" ->
+        {:error, "Cannot cancel an expired meeting"}
+
       meeting_is_current?(meeting) ->
         Logger.info("Blocked cancellation: meeting has already started",
           meeting_uid: meeting.uid

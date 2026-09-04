@@ -17,26 +17,27 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
   `BookingEvent` structs, excluding any whose synced provider copy is already
   present.
 
-  `synced_event_ids` is the set of `provider_event_id`s among the cached
-  provider events loaded for the same window. A booking that has been written
-  back to a connected calendar reappears in the cache as a
-  `created_by_tymeslot` event; that copy stays the interactive one on the
-  grid, so the booking projection is dropped to avoid a duplicate block.
+  `cached_events` is the cached provider events loaded for the same window. A
+  booking that has been written back to a connected calendar reappears in the
+  cache as a `created_by_tymeslot` event; that copy stays the interactive one
+  on the grid, so the booking projection is dropped to avoid a duplicate
+  block.
+
+  Pass the cached events themselves rather than a pre-extracted key set: which
+  identifier links the two sides varies by provider family, and
+  `Tymeslot.Meetings.CalendarEventLink` is the one place that knows the rule.
   """
-  @spec list_for_range(pos_integer(), DateTime.t(), DateTime.t(), MapSet.t()) :: [
+  @spec list_for_range(pos_integer(), DateTime.t(), DateTime.t(), Enumerable.t()) :: [
           BookingEvent.t()
         ]
-  def list_for_range(user_id, start_dt, end_dt, synced_event_ids \\ MapSet.new()) do
+  def list_for_range(user_id, start_dt, end_dt, cached_events \\ []) do
+    synced_identifiers = Meetings.calendar_identifier_set(cached_events)
+
     user_id
     |> Meetings.list_meetings_in_range_for_organizer(start_dt, end_dt)
-    |> Enum.reject(&synced?(&1, synced_event_ids))
+    |> Enum.reject(&Meetings.linked_to_calendar_event?(&1, synced_identifiers))
     |> Enum.map(&to_event/1)
   end
-
-  defp synced?(%{provider_event_id: nil}, _synced_event_ids), do: false
-
-  defp synced?(%{provider_event_id: provider_event_id}, synced_event_ids),
-    do: MapSet.member?(synced_event_ids, provider_event_id)
 
   defp to_event(meeting) do
     %BookingEvent{

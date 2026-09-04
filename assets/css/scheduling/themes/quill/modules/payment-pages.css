@@ -60,8 +60,8 @@
   display: inline-block;
   margin-top: var(--space-lg);
   padding: var(--space-sm) var(--space-lg);
-  background: var(--theme-primary);
-  color: white;
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
   border-radius: var(--button-radius-sm);
   font-weight: var(--font-weight-semibold);
   text-decoration: none;
@@ -69,5 +69,5 @@
 }
 
 .payment-page-link:hover {
-  background: var(--theme-primary-hover);
+  background: var(--theme-primary-solid-hover);
 }

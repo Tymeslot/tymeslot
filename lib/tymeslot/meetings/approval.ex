@@ -228,18 +228,7 @@ defmodule Tymeslot.Meetings.Approval do
       {:ok, confirmed} ->
         Logger.info("Booking request approved", meeting_id: confirmed.id, uid: confirmed.uid)
         AvailabilityCache.invalidate_for_user(confirmed.organizer_user_id)
-
-        best_effort(confirmed, "cancel request notifications", fn ->
-          Orchestrator.cancel_request_notifications(confirmed)
-        end)
-
-        best_effort(confirmed, "confirm calendar event", fn ->
-          confirm_calendar_event(confirmed)
-        end)
-
-        best_effort(confirmed, "activate booking", fn ->
-          Activation.activate(confirmed, with_video_room: true)
-        end)
+        activate_confirmed(confirmed)
 
         {:ok, confirmed}
 
@@ -264,6 +253,48 @@ defmodule Tymeslot.Meetings.Approval do
 
         error
     end
+  end
+
+  @doc """
+  Runs everything a booking newly confirmed out of the approval gate needs.
+
+  `approve/1` calls this once it has won the guarded transition. It is public
+  because approval is not the only way a held request becomes a confirmed
+  booking: `Tymeslot.Bookings.Reschedule` confirms one outright when its
+  meeting type stopped requiring approval while the request was still held,
+  and that booking needs precisely the same treatment. There is no host answer
+  to guard there — there is no gate left to answer — but the resulting meeting
+  is indistinguishable from an approved one, and it has never been announced
+  to anybody: without this it would have no confirmation email, no ICS, no
+  video room, no reminders and no `meeting.created` webhook, while the request
+  emails' nudge and expiry jobs stayed armed against a booking that is no
+  longer held.
+
+  Three steps, in this order: stop the request notifications, flip the
+  tentative calendar hold to a real event, then hand the meeting to
+  `Bookings.Activation`, which creates the video room before composing the
+  confirmation so the join link is in the invitee's first email rather than a
+  later correction.
+
+  Each step is best-effort. The row is committed before this runs, so no
+  failure here may turn a real confirmation into an error the caller has to
+  explain; every step is separately retried or logged by its own module.
+  """
+  @spec activate_confirmed(Meeting.t()) :: :ok
+  def activate_confirmed(%Meeting{} = confirmed) do
+    best_effort(confirmed, "cancel request notifications", fn ->
+      Orchestrator.cancel_request_notifications(confirmed)
+    end)
+
+    best_effort(confirmed, "confirm calendar event", fn ->
+      confirm_calendar_event(confirmed)
+    end)
+
+    best_effort(confirmed, "activate booking", fn ->
+      Activation.activate(confirmed, with_video_room: true)
+    end)
+
+    :ok
   end
 
   @doc """

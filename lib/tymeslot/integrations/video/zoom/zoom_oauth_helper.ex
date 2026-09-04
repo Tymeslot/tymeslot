@@ -27,15 +27,20 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.ZoomConfig
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
 
   require Logger
 
-  # Granular scopes split delete out from write: `meeting:write:meeting` covers
-  # creating and rescheduling, but cancelling a booking needs
-  # `meeting:delete:meeting` in its own right. Tokens granted before this scope
-  # was requested keep the old grant, so Zoom rejects their deletes with code
-  # 4711 until the user reconnects.
-  @zoom_scope "meeting:write:meeting meeting:read:meeting meeting:delete:meeting user:read:user"
+  # Granular scopes are one per action, so each write Tymeslot performs has to
+  # be asked for by name. `Scopes` owns which ones this deployment asks for and
+  # why one of them is conditional; keeping the list there is what lets the
+  # pre-flight tell "your grant is stale" apart from "this Zoom app cannot do
+  # that at all".
+  #
+  # Resolved per call, not into a module attribute: the setting behind it is
+  # read from the environment at boot, so freezing it at compile time would
+  # bake one deployment's answer into every image.
+  defp zoom_scope, do: Scopes.requested_scope()
 
   @authorize_url "https://zoom.us/oauth/authorize"
   @token_url "https://zoom.us/oauth/token"
@@ -59,12 +64,12 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
       client_id: ZoomConfig.client_id(),
       redirect_uri: redirect_uri,
       response_type: "code",
-      scope: @zoom_scope,
+      scope: zoom_scope(),
       state: state
     }
 
     url = ProviderHelpers.build_authorization_url(@authorize_url, params, login_hint)
-    Logger.info("Generated Zoom OAuth URL", scope: @zoom_scope)
+    Logger.info("Generated Zoom OAuth URL", scope: zoom_scope())
     url
   end
 
@@ -96,7 +101,7 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   @spec refresh_access_token(String.t(), String.t() | nil) ::
           {:ok, map()} | {:error, String.t()}
   def refresh_access_token(refresh_token, current_scope \\ nil) do
-    scope = current_scope || @zoom_scope
+    scope = current_scope || zoom_scope()
 
     body = %{
       grant_type: "refresh_token",
@@ -158,7 +163,7 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
       integration_id: integration_id,
       provider_account_id: profile["id"],
       provider_account_email: profile["email"],
-      scope: tokens[:scope] || @zoom_scope
+      scope: tokens[:scope] || zoom_scope()
     })
   end
 
@@ -172,7 +177,7 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
         @token_url,
         client_id,
         client_secret,
-        @zoom_scope,
+        zoom_scope(),
         headers: headers,
         omit_body_credentials: true
       )

@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig do
   @moduledoc """
-  Configuration form for connecting a read-only Microsoft Exchange mailbox
-  over EWS.
+  Configuration form for connecting a Microsoft Exchange mailbox over EWS.
 
   Deliberately not built on `ConfigBase` or the shared CalDAV `config_form/1`.
   Exchange is not a CalDAV server, and three differences make the shared form
@@ -19,11 +18,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
       `calendar_selection/1` keys its checkboxes on `calendar.path`, which an
       EWS folder does not have.
 
-  The copy carries one behavioural difference the user has to know about:
-  deselecting a calendar narrows what appears on the dashboard grid, but
-  **not** the busy time this mailbox contributes. Availability comes from
+  The copy carries two behavioural differences the user has to know about.
+  Deselecting a calendar narrows what appears on the dashboard grid, but
+  **not** the busy time this mailbox contributes: availability comes from
   `GetUserAvailability`, which answers for the whole mailbox and cannot be
-  narrowed to a folder.
+  narrowed to a folder. And the mailbox is written to as well as read —
+  confirmed bookings go to the calendar chosen as the booking destination —
+  while `FindFolder` states no per-folder rights, so a folder the account
+  cannot write to looks exactly like one it can until the first booking fails
+  (see `Exchange.Creation`).
   """
 
   use TymeslotWeb, :live_component
@@ -54,7 +57,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
           <p class="text-sm text-tymeslot-500 font-medium">
             {dgettext(
               "dashboard_calendar_providers",
-              "Read busy time from an on-premises Exchange Server"
+              "Sync busy time and bookings with an on-premises Exchange Server"
             )}
           </p>
         </div>
@@ -196,10 +199,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ExchangeConfig 
         </label>
       </div>
 
+      <%!-- Exchange reports no per-folder rights, so a folder the account
+            cannot write to is indistinguishable here from one it can. Stating
+            that up front is the only warning available before the first
+            booking is written; see `Exchange.Creation`. --%>
       <.info_box variant={:info}>
         {dgettext(
           "dashboard_calendar_providers",
-          "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
+          "This mailbox is read from and written to: it blocks the times you're already busy, and confirmed bookings are added to the calendar you choose as your booking destination. Exchange does not report which calendars your account may write to, so if you choose one it cannot write to, the first booking sent there fails."
         )}
       </.info_box>
 

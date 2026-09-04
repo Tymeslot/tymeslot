@@ -9,6 +9,7 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Meetings.CalendarEventLink
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Repo
@@ -40,31 +41,40 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   end
 
   @doc """
-  Returns a map from `provider_event_id` to meeting for all meetings linked to the
-  given integration whose `provider_event_id` is in the supplied list.
+  Returns the meetings linked to `calendar_integration_id` that share any of
+  `identifiers`, keyed by **every** identifier each matched meeting carries.
 
-  Events with a `nil` provider_event_id are silently excluded because they cannot
-  be keyed. Use this instead of `get_by_provider_event_id/2` in loops to avoid
-  N+1 queries.
+  The keys are what makes this usable in a loop: a caller holding a cached
+  provider event can look the meeting up under whichever identifier it has,
+  without knowing which of the two the provider family populates. See
+  `Tymeslot.Meetings.CalendarEventLink` for the identity rule.
+
+  Blank identifiers are dropped — they cannot be keyed. Use this instead of
+  `get_by_provider_event_id/2` in loops to avoid N+1 queries.
   """
-  @spec list_by_provider_event_ids(integer(), [String.t()]) :: %{String.t() => Meeting.t()}
-  def list_by_provider_event_ids(_calendar_integration_id, []), do: %{}
+  @spec list_by_calendar_identifiers(integer(), [String.t() | nil]) :: %{
+          String.t() => Meeting.t()
+        }
+  def list_by_calendar_identifiers(_calendar_integration_id, []), do: %{}
 
-  def list_by_provider_event_ids(calendar_integration_id, provider_event_ids)
-      when is_list(provider_event_ids) do
-    ids = Enum.reject(provider_event_ids, &is_nil/1)
+  def list_by_calendar_identifiers(calendar_integration_id, identifiers)
+      when is_list(identifiers) do
+    case Enum.reject(identifiers, &CalendarEventLink.blank_identifier?/1) do
+      [] ->
+        %{}
 
-    if ids == [] do
-      %{}
-    else
-      Meeting
-      |> where(
-        [m],
-        m.calendar_integration_id == ^calendar_integration_id and
-          m.provider_event_id in ^ids
-      )
-      |> Repo.all()
-      |> Map.new(&{&1.provider_event_id, &1})
+      ids ->
+        Meeting
+        |> where(
+          [m],
+          m.calendar_integration_id == ^calendar_integration_id and
+            (m.provider_event_id in ^ids or m.uid in ^ids)
+        )
+        |> Repo.all()
+        |> Enum.flat_map(fn meeting ->
+          Enum.map(CalendarEventLink.identifiers(meeting), &{&1, meeting})
+        end)
+        |> Map.new()
     end
   end
 

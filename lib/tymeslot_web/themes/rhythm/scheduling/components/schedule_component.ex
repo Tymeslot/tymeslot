@@ -121,7 +121,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 selected_duration={@selected_duration}
               />
               <div class="timezone-selector-container">
-                <label class="timezone-label">{dgettext("booking", "Your timezone")}:</label>
+                <%!-- Visual label only: it names no control (the trigger below carries
+                     its own accessible name), so it must not be a <label> element. --%>
+                <div class="timezone-label">{dgettext("booking", "Your timezone")}:</div>
                 <div class="timezone-dropdown-wrapper">
                   <.dropdown
                     id="rhythm-timezone-dropdown"
@@ -134,9 +136,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     trigger_class="timezone-trigger"
                     class="timezone-dropdown"
                     unstyled={true}
-                    aria-label={dgettext("booking", "Select timezone")}
                   >
                     <:trigger>
+                      <span class="sr-only">
+                        {dgettext("booking", "Your timezone")}:
+                      </span>
                       <div class="timezone-display">
                         <%= if country_code = Timezones.country_code(@user_timezone || "America/New_York") do %>
                           <%= if Timezones.flag_exists?(country_code) do %>
@@ -160,6 +164,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                             dgettext("booking", "Search cities, countries, or timezones...")
                           }
                           class="timezone-search"
+                          aria-label={dgettext("booking", "Search timezones")}
                           phx-keyup="search_timezone"
                           phx-target={@myself}
                           name="search"

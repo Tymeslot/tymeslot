@@ -53,6 +53,8 @@ docker run -d \
   luka1thb/tymeslot:latest
 ```
 
+A long `-e` list gets unwieldy. Compose reads a `.env` next to it (see below), and `docker run` has two alternatives: `--env-file ./my-env` on the host, or a `.env` file inside the `/app/data` volume, which the app reads at boot and which survives image updates because the volume does. Values passed with `-e` or `--env-file` win over that file, so it works as the defaults layer under one-off overrides. Copy [`.env.example`](.env.example) as your starting point; it documents every variable.
+
 This will pull the image automatically if it is not present locally. For a pinned version, replace `latest` with a release tag — `luka1thb/tymeslot:<VERSION>`, substituting the version number you want. The full list of published tags is on [Docker Hub](https://hub.docker.com/r/luka1thb/tymeslot/tags).
 
 **Prefer Compose?** The repository's `docker-compose.yml` runs the same published image and needs no clone. Download it next to your `.env` and start:

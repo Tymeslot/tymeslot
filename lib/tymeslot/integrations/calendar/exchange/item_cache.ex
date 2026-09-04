@@ -32,9 +32,18 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   ## Nothing here decides freshness
 
   Whether a cycle may run incrementally at all is `full_sync_due?/1`'s answer
-  and the worker's decision. This module never falls back to a full read on its
-  own: a failure is reported, the tokens are left where they were, and the next
+  and the worker's decision. This module never performs a full read on its own:
+  a failure is reported, the tokens are left where they were, and the next
   cycle decides again with the same rule.
+
+  The one exception is a token the server refuses outright
+  (`ItemSync.invalid_sync_state?/1`). That folder's token is dropped and the
+  worker is *asked* for a full read through `{:error, :full_sync_required,
+  integration}`; the read itself still belongs to the worker. Without it the
+  folder is stuck for good: the refusal repeats every cycle, the sweep
+  re-enqueues it because `last_external_sync_at` never advances, and the
+  availability half is re-read in full each time for a grid half that can
+  never succeed.
   """
 
   require Logger
@@ -117,9 +126,18 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   The first folder to fail ends the refresh with its error and no token is
   stored for any of them, so the retry re-reads the same span rather than
   acknowledging a partial one.
+
+  A folder whose token the server refuses is the one failure this recovers
+  from rather than reports. Its token is dropped and the answer is
+  `{:error, :full_sync_required, integration}`, carrying the integration with
+  that token already gone: the caller's full read then re-bootstraps it, where
+  reporting the refusal would have every later cycle replay the same spent
+  token.
   """
   @spec incremental_refresh(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
-          {:ok, [String.t()]} | {:error, term()}
+          {:ok, [String.t()]}
+          | {:error, :full_sync_required, CalendarIntegrationSchema.t()}
+          | {:error, term()}
   def incremental_refresh(integration, from, to) do
     integration
     |> item_clients()
@@ -131,8 +149,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
         {:ok, folder_uids, state} ->
           {:cont, {:ok, uids ++ folder_uids, Map.put(states, folder_key(client), state)}}
 
-        {:error, _reason} = error ->
-          {:halt, error}
+        {:error, reason} ->
+          {:halt, {:error, reason, folder_key(client)}}
       end
     end)
     |> finish_incremental(integration)
@@ -146,7 +164,30 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
     {:ok, uids}
   end
 
-  defp finish_incremental({:error, _reason} = error, _integration), do: error
+  defp finish_incremental({:error, reason, folder_key}, integration) do
+    if ItemSync.invalid_sync_state?(reason) do
+      {:error, :full_sync_required, discard_sync_state(integration, folder_key, reason)}
+    else
+      {:error, reason}
+    end
+  end
+
+  # Dropped rather than left in place, and dropped before the full read runs,
+  # because `bootstrap_sync_states/1` skips any folder that still has one:
+  # keeping it would have the recovering full read leave the spent token
+  # exactly where it was and the next cycle fail on it again.
+  defp discard_sync_state(integration, folder_key, reason) do
+    Logger.warning("Exchange rejected the stored sync token; forcing a full item read",
+      calendar_integration_id: integration.id,
+      folder: folder_key,
+      reason: inspect(reason)
+    )
+
+    integration.exchange_sync_states
+    |> Kernel.||(%{})
+    |> Map.delete(folder_key)
+    |> write_sync_states(integration)
+  end
 
   defp sync_one_folder(integration, client, from, to) do
     stored = stored_sync_state(integration, client)
@@ -188,8 +229,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   # that moved out of the window appears in both lists otherwise — it was
   # fetched, normalised and then classified out — and deleting last is what
   # makes the outcome the same either way.
+  #
+  # Ownership is flagged here for the same reason `full_refresh_for_role/3`
+  # flags it on the other path: a booking Tymeslot wrote to the mailbox comes
+  # back through the feed as an ordinary create, and a row inserted unowned
+  # stays unowned — `replace_fields/0` leaves `created_by_tymeslot` alone on
+  # conflict — until the daily full read happens to rewrite it.
   defp write_incremental(integration, events, deleted_ids) do
-    Sync.upsert_cache(integration, events)
+    Sync.upsert_cache(integration, Sync.flag_tymeslot_owned(integration, events))
 
     ProviderCalendarEventQueries.delete_by_provider_event_ids(
       integration.id,
@@ -259,27 +306,34 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   defp persist_sync_states(states, integration) do
     live_keys = integration |> item_clients() |> Enum.map(&folder_key/1) |> MapSet.new()
 
-    merged =
-      integration.exchange_sync_states
-      |> Kernel.||(%{})
-      |> Map.merge(states)
-      |> Map.filter(fn {key, _state} -> MapSet.member?(live_keys, key) end)
+    integration.exchange_sync_states
+    |> Kernel.||(%{})
+    |> Map.merge(states)
+    |> Map.filter(fn {key, _state} -> MapSet.member?(live_keys, key) end)
+    |> write_sync_states(integration)
 
+    :ok
+  end
+
+  # Answers the integration carrying `states`, written or not. A failed write
+  # is not fatal — the tokens are an optimisation, and losing them costs the
+  # next cycle a full read rather than correctness — but the struct handed back
+  # still has to state the intent, because this cycle's caller reads it back to
+  # decide what `bootstrap_sync_states/1` must re-establish.
+  defp write_sync_states(states, integration) do
     case CalendarIntegrationQueries.update_sync_state(integration, %{
-           exchange_sync_states: merged
+           exchange_sync_states: states
          }) do
-      {:ok, _updated} ->
-        :ok
+      {:ok, updated} ->
+        updated
 
       {:error, changeset} ->
-        # Not fatal: the tokens are an optimisation, and losing them costs the
-        # next cycle a full read rather than correctness.
         Logger.warning("Failed to persist Exchange sync states",
           calendar_integration_id: integration.id,
           error: inspect(changeset)
         )
 
-        :ok
+        %{integration | exchange_sync_states: states}
     end
   end
 end
