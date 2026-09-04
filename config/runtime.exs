@@ -5,14 +5,21 @@ require Logger
 # vars always win. On Cloudron `/app` is read-only and reset on every upgrade,
 # so `.env` lives on the persistent `/app/data` volume.
 if config_env() != :test do
-  dotenv_path =
+  # `/app/data` is the volume both container images persist, so it is where an
+  # operator's file survives an image update; the release root is where a
+  # release unpacked on a host keeps its own. Both are offered, first match per
+  # key, so no deployment has to be told which one it is.
+  dotenv_paths =
     if System.get_env("DEPLOYMENT_TYPE") == "cloudron" do
-      "/app/data/.env"
+      ["/app/data/.env"]
     else
-      Path.join(System.get_env("RELEASE_ROOT") || Path.expand("..", __DIR__), ".env")
+      [
+        "/app/data/.env",
+        Path.join(System.get_env("RELEASE_ROOT") || Path.expand("..", __DIR__), ".env")
+      ]
     end
 
-  Tymeslot.Infrastructure.DotenvLoader.load([dotenv_path])
+  Tymeslot.Infrastructure.DotenvLoader.load(dotenv_paths)
 end
 
 # Helper to parse IP addresses using Erlang's built-in parser

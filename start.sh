@@ -19,40 +19,73 @@ echo "==> Starting Tymeslot"
 # The file is parsed, never sourced: sourcing would run whatever an operator
 # pasted into it, and would let it override Cloudron's own variables.
 ENV_FILE="/app/data/.env"
-ENV_TEMPLATE="/app/.env.example"
+ENV_TEMPLATE_SCRIPT="/app/env-template.sh"
+seeded_now=0
 
-if [ ! -f "$ENV_FILE" ] && [ -f "$ENV_TEMPLATE" ]; then
+# An install upgrading from a release that generated DATA_ENCRYPTION_KEY already
+# has an .env holding that one line, so "the file exists" is not the same as
+# "the operator has a file". Treat one the container wrote entirely by itself as
+# unseeded, and carry its key line into the seeded version.
+env_file_is_machine_written() {
+  local file="$1"
+  local line
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    case "$line" in
+      '' | '#'* | DATA_ENCRYPTION_KEY=*) continue ;;
+      *) return 1 ;;
+    esac
+  done < "$file"
+
+  return 0
+}
+
+# Seeding happens once. The marker is what makes that true: without it the
+# seeded file, being comments plus the container's own key line, would look
+# machine-written on every subsequent boot and be rewritten each time.
+env_file_is_seeded() {
+  grep -q '^# tymeslot:seeded' "$1"
+}
+
+if [ -x "$ENV_TEMPLATE_SCRIPT" ] &&
+  { [ ! -f "$ENV_FILE" ] ||
+    { ! env_file_is_seeded "$ENV_FILE" && env_file_is_machine_written "$ENV_FILE"; }; }; then
+  generated_key_line=""
+  if [ -f "$ENV_FILE" ]; then
+    generated_key_line=$(grep '^DATA_ENCRYPTION_KEY=' "$ENV_FILE" || true)
+  fi
+
+  # Everything this app already has configured goes into the file too, so it is
+  # a complete picture rather than an empty form next to the real settings.
+  seeded_now=1
+  imported_lines=$("$ENV_TEMPLATE_SCRIPT" --import)
+
   {
-    cat <<'HEADER'
-# Tymeslot configuration
-#
-# Created on first boot from the packaged .env.example with every value
-# commented out, so it changes nothing until you edit it. Uncomment the
-# lines you need, then restart the app:
-#
-#   cloudron restart --app <your-app-domain>
-#
-# Variables set with `cloudron env set`, or on the dashboard's Environment
-# tab, always win over the values below; use those for one-off overrides.
-#
-# Cloudron provides the database, the mail relay and OIDC through addons, so
-# leave the DATABASE_*, POSTGRES_* and SMTP_* entries commented out unless
-# you deliberately point Tymeslot at your own servers. The same goes for
-# EMAIL_ADAPTER: uncommenting it as "test" silently discards every email.
-#
-# SECRET_KEY_BASE and DATA_ENCRYPTION_KEY are generated on first boot and
-# kept in /app/data, so leave them alone unless you are restoring an
-# existing installation. Changing DATA_ENCRYPTION_KEY on an install that
-# already holds encrypted credentials makes them undecryptable.
-#
-# Upgrades never touch this file. The packaged reference copy at
-# /app/.env.example is refreshed with each release.
+    "$ENV_TEMPLATE_SCRIPT" --template
+    if [ -n "$generated_key_line" ]; then
+      printf '\n%s\n' "$generated_key_line"
+    fi
+    if [ -n "$imported_lines" ]; then
+      printf '%s\n' "$imported_lines"
+    fi
+  } > "${ENV_FILE}.tmp"
 
-HEADER
-    sed 's/^\([A-Za-z_][A-Za-z0-9_]*=\)/# \1/' "$ENV_TEMPLATE"
-  } > "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
-  echo "==> Seeded $ENV_FILE from the packaged template (nothing enabled)"
+  chmod 600 "${ENV_FILE}.tmp"
+  mv "${ENV_FILE}.tmp" "$ENV_FILE"
+  echo "==> Seeded $ENV_FILE from the packaged template"
+
+  imported_keys=$(printf '%s\n' "$imported_lines" |
+    grep -oE '^[A-Z][A-Z_0-9]*=' | tr -d '=' | tr '\n' ' ' | sed 's/ $//')
+  if [ -n "$imported_keys" ]; then
+    echo "==> Copied the variables this app already has set into $ENV_FILE:"
+    echo "==>   $imported_keys"
+    echo "==> Cloudron still supplies them and still takes precedence, so nothing"
+    echo "==> has changed. To manage them in the file from now on, hand them over"
+    echo "==> from your workstation:"
+    echo "==>   cloudron env unset --app ${CLOUDRON_APP_DOMAIN:-<your-app-domain>} $imported_keys"
+  fi
 fi
 
 # Applies KEY=value lines that name a variable which is not already set.
@@ -60,7 +93,7 @@ fi
 # DotenvLoader parses those correctly when the release boots.
 load_env_file() {
   local file="$1"
-  local line key value
+  local line key value file_applied=""
 
   [ -f "$file" ] || return 0
 
@@ -92,10 +125,21 @@ load_env_file() {
         ;;
     esac
 
-    if [ -z "${!key+set}" ]; then
-      export "$key=$value"
-      loaded_keys="${loaded_keys} ${key}"
-    fi
+    # A key repeated in one file takes its last value, which is what Dotenvy
+    # does when config/runtime.exs parses the same file. A key already in the
+    # environment is left alone: the shell still wins over the file.
+    case " ${file_applied} " in
+      *" ${key} "*)
+        export "$key=$value"
+        ;;
+      *)
+        if [ -z "${!key+set}" ]; then
+          export "$key=$value"
+          file_applied="${file_applied} ${key}"
+          loaded_keys="${loaded_keys} ${key}"
+        fi
+        ;;
+    esac
   done < "$file"
 
   return 0
@@ -109,6 +153,61 @@ else
   echo "==> No variables applied from $ENV_FILE"
 fi
 
+# Names the variables the app has but the file does not. Those are exactly the
+# ones an operator would have to copy by hand before handing anything over to
+# the file, so it is worth one line at boot rather than a discovery made after
+# `cloudron env unset`. Mixing the two sources is a supported way to run, so
+# this reports rather than warns.
+report_variables_missing_from_env_file() {
+  local file="$1"
+  local key file_keys missing=""
+
+  [ -f "$file" ] || return 0
+  [ -x "$ENV_TEMPLATE_SCRIPT" ] || return 0
+
+  file_keys=" $(grep -oE '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' "$file" | tr -d ' =' | tr '\n' ' ')"
+
+  for key in $("$ENV_TEMPLATE_SCRIPT" --import | grep -oE '^[A-Z][A-Z_0-9]*=' | tr -d '='); do
+    case "$file_keys" in
+      *" ${key} "*) ;;
+      *) missing="${missing} ${key}" ;;
+    esac
+  done
+
+  [ -n "$missing" ] || return 0
+
+  echo "==> Set in this app's environment but not in ${file}:${missing}"
+  echo "==> Copy them in with:"
+  echo "==>   cloudron exec --app ${CLOUDRON_APP_DOMAIN:-<your-app-domain>} -- sh -c '${ENV_TEMPLATE_SCRIPT} --import ${file} >> ${file}'"
+
+  return 0
+}
+
+if [ "$seeded_now" = 0 ]; then
+  report_variables_missing_from_env_file "$ENV_FILE"
+fi
+
+# Warns when the .env supplies a key this container had previously generated
+# for itself and the two differ. Such a line used to be ignored, because the
+# generation below ran before anything read the file; now it takes effect, and
+# that is worth one loud line at boot rather than a puzzling failure later.
+warn_if_overrides_generated() {
+  local key="$1" file="$2" consequence="$3"
+
+  case " ${loaded_keys} " in
+    *" ${key} "*) ;;
+    *) return 0 ;;
+  esac
+  [ -f "$file" ] || return 0
+  [ "$(cat "$file")" != "${!key}" ] || return 0
+
+  echo "!!! WARNING: ${key} in ${ENV_FILE} differs from the value in ${file}."
+  echo "!!! The file value is now in use; ${consequence}."
+  echo "!!! Remove that line from ${ENV_FILE} and restart to return to the generated value."
+
+  return 0
+}
+
 # Generate SECRET_KEY_BASE on first run if not already set via env
 SECRET_FILE="/app/data/secret_key_base"
 if [ -z "${SECRET_KEY_BASE:-}" ]; then
@@ -121,6 +220,8 @@ if [ -z "${SECRET_KEY_BASE:-}" ]; then
   echo "==> SECRET_KEY_BASE loaded from $SECRET_FILE"
 else
   echo "==> SECRET_KEY_BASE set via environment"
+  warn_if_overrides_generated SECRET_KEY_BASE "$SECRET_FILE" \
+    "every session signed with the previous secret is invalidated, logging all users out"
 fi
 
 # Generate DATA_ENCRYPTION_KEY on first run if not already set via env.
@@ -154,6 +255,8 @@ if [ -z "${DATA_ENCRYPTION_KEY:-}" ]; then
   fi
 else
   echo "==> DATA_ENCRYPTION_KEY set via environment"
+  warn_if_overrides_generated DATA_ENCRYPTION_KEY "$DATA_KEY_FILE" \
+    "credentials encrypted under the generated key can no longer be decrypted"
 fi
 
 # Create necessary directories for runtime

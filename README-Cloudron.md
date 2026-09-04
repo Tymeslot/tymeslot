@@ -86,7 +86,7 @@ Use `cloudron env set` or the dashboard's **Environment** tab as shown above. Cl
 
 Tymeslot reads `/app/data/.env` at boot and applies any key that is not already set in the environment. This is convenient when you have many variables to manage, want to keep them under version control on your own host, or are scripting the deployment.
 
-The file is created on first boot from the packaged variable reference, with every value commented out, so a new install already contains the full documented list and nothing is enabled by it. Uncomment what you need:
+The file is created from the packaged variable reference with every value commented out, so it already contains the full documented list and nothing is enabled by it. On top of that, the variables this app already has set are copied into it, so it is a complete picture of your configuration rather than an empty form standing next to it. New installs get the file on first boot; an existing install gets it on the first boot after upgrading, unless it already holds settings of your own, in which case it is left exactly as it is.
 
 ```bash
 # Edit the file directly inside the running container
@@ -101,7 +101,41 @@ cloudron restart --app tymeslot.yourdomain.com
 
 The file uses standard dotenv syntax (`KEY=value`, one per line, `#` for comments). It must live in `/app/data`: `/app` itself is read-only on Cloudron and is replaced on every app upgrade, which is also why upgrades never touch your file. The reference copy that seeded it stays at `/app/.env.example` and is refreshed with each release, so `diff` it against your own file after an upgrade to see what is new.
 
-Variables set with `cloudron env set` always win over `.env` entries, so use the CLI for one-off overrides. `SECRET_KEY_BASE` and `DATA_ENCRYPTION_KEY` are honoured from the file too, and setting either there stops the container generating its own; leave them commented out unless you are restoring an existing installation.
+Variables set with `cloudron env set` always win over `.env` entries, so use the CLI for one-off overrides. `SECRET_KEY_BASE` and `DATA_ENCRYPTION_KEY` are honoured from the file too, and setting either there stops the container generating its own; leave them alone unless you are restoring an existing installation.
+
+### Moving Existing Variables Into the File
+
+Copying a variable into the file does not move it: Cloudron still supplies it and still wins, so editing it in the file changes nothing until you take it out of Cloudron. The order matters, and this order is safe at every step, because the value is in both places until the last command.
+
+1. Check what the file already holds. If the app was seeded as described above, your variables are in there already and you can skip to step 3.
+
+   ```bash
+   cloudron exec --app tymeslot.yourdomain.com -- grep -v '^#' /app/data/.env
+   ```
+
+2. If your file predates seeding, the container writes the current values for you. The boot log names this command whenever there is something to copy. It appends, never overwrites, and naming the file twice is deliberate: the first is read to skip variables it already assigns, so running it again adds nothing and cannot leave two lines for one variable.
+
+   ```bash
+   cloudron exec --app tymeslot.yourdomain.com -- sh -c '/app/env-template.sh --import /app/data/.env >> /app/data/.env'
+   ```
+
+   To get the commented reference list as well, run the same command with `--template` instead of `--import`.
+
+3. Compare the two lists and confirm every variable you set is present in the file.
+
+   ```bash
+   cloudron env list --app tymeslot.yourdomain.com
+   ```
+
+   Anything the import skipped, and anything Cloudron sets that Tymeslot does not document, must be copied by hand before the next step. The import deliberately leaves the platform's own variables (`CLOUDRON_*`, `PORT`, `DEPLOYMENT_TYPE` and friends) alone: those belong to Cloudron, and pinning addon credentials in a file would break them the moment Cloudron rotates one.
+
+4. Hand the variables over, naming the ones you copied. The app restarts and picks the values up from the file.
+
+   ```bash
+   cloudron env unset --app tymeslot.yourdomain.com PHX_HOST EMAIL_ADAPTER SMTP_HOST
+   ```
+
+The boot log after seeding prints this command with your own variables already filled in. To go back, `cloudron env set` the variable again: it takes precedence over the file immediately.
 
 ### Accessing Your Installation
 
