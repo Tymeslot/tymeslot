@@ -88,6 +88,84 @@ if [ -x "$ENV_TEMPLATE_SCRIPT" ] &&
   fi
 fi
 
+# Encodes one \uXXXX codepoint as UTF-8 in utf8_bytes. Bash's own `printf
+# \uXXXX` is locale-dependent and prints the escape verbatim under LANG=C, so
+# the bytes are assembled by hand; Dotenvy produces UTF-8 whatever the locale.
+# Four hex digits reach 0xFFFF at most, so three bytes always suffice.
+dotenv_utf8() {
+  local codepoint=$((16#$1)) octal
+
+  if [ "$codepoint" -lt 128 ]; then
+    printf -v octal '\\%03o' "$codepoint"
+  elif [ "$codepoint" -lt 2048 ]; then
+    printf -v octal '\\%03o\\%03o' \
+      $((192 + codepoint / 64)) $((128 + codepoint % 64))
+  else
+    printf -v octal '\\%03o\\%03o\\%03o' \
+      $((224 + codepoint / 4096)) $((128 + codepoint / 64 % 64)) $((128 + codepoint % 64))
+  fi
+
+  # printf -v, unlike $(...), keeps a trailing newline the codepoint may be.
+  printf -v utf8_bytes '%b' "$octal"
+}
+
+# Resolves the escape sequences a double-quoted dotenv value carries, exactly
+# as Dotenvy does when the release parses the same file: \n \r \t \f \b become
+# those characters, \uXXXX becomes that codepoint, \\ \" \' \$ become the bare
+# character, and a backslash before anything else is dropped. Without this the
+# two readers would disagree on any secret holding a quote or a backslash, and
+# this one runs first, so its value is the one the app would get.
+#
+# Answers on stdout would lose a trailing newline, so the result comes back in
+# dotenv_value. Returns 1 for input Dotenvy would reject: an unescaped quote
+# inside the value (the line has a stray quote), or a trailing backslash (the
+# closing quote was escaped, so the value never ended).
+dotenv_unescape() {
+  local rest="$1" out="" chunk char hex
+
+  while [ -n "$rest" ]; do
+    case "$rest" in
+      *\\*) chunk="${rest%%\\*}" ;;
+      *) chunk="$rest" ;;
+    esac
+    case "$chunk" in
+      *\"*) return 1 ;;
+    esac
+
+    out="${out}${chunk}"
+    rest="${rest#"$chunk"}"
+    [ -n "$rest" ] || break
+
+    rest="${rest#\\}"
+    char="${rest:0:1}"
+    rest="${rest:1}"
+    case "$char" in
+      '') return 1 ;;
+      n) out="${out}"$'\n' ;;
+      r) out="${out}"$'\r' ;;
+      t) out="${out}"$'\t' ;;
+      f) out="${out}"$'\f' ;;
+      b) out="${out}"$'\b' ;;
+      u)
+        hex="${rest:0:4}"
+        case "$hex" in
+          [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f])
+            dotenv_utf8 "$hex"
+            out="${out}${utf8_bytes}"
+            rest="${rest:4}"
+            ;;
+          *) return 1 ;;
+        esac
+        ;;
+      *) out="${out}${char}" ;;
+    esac
+  done
+
+  dotenv_value="$out"
+
+  return 0
+}
+
 # Applies KEY=value lines that name a variable which is not already set.
 # Unterminated quotes (a multi-line value) are skipped rather than guessed at;
 # DotenvLoader parses those correctly when the release boots.
@@ -116,8 +194,24 @@ load_env_file() {
     value="${line#*=}"
     value="${value#"${value%%[![:space:]]*}"}"
     case "$value" in
-      \"*\") value="${value#\"}"; value="${value%\"}" ;;
-      \'*\') value="${value#\'}"; value="${value%\'}" ;;
+      # Double quotes carry escapes, so the outer pair comes off and the rest
+      # is unescaped; a line Dotenvy would reject is skipped instead.
+      \"*\")
+        value="${value#\"}"
+        value="${value%\"}"
+        dotenv_unescape "$value" || continue
+        value="$dotenv_value"
+        ;;
+      # Single quotes are literal on both sides, so the outer pair is all that
+      # comes off. A quote in between ends the value early for Dotenvy, which
+      # then rejects the file; skip rather than read it differently here.
+      \'*\')
+        value="${value#\'}"
+        value="${value%\'}"
+        case "$value" in
+          *\'*) continue ;;
+        esac
+        ;;
       \"* | \'*) continue ;;
       *)
         value="${value%%[[:space:]]#*}"

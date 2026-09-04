@@ -59,6 +59,12 @@ print_header() {
 # Variables set with `cloudron env set`, or on the dashboard's Environment
 # tab, always win over the values below; use those for one-off overrides.
 #
+# Quote any value that is not a plain word. Single quotes are literal, so
+# 'p@ss #1 $x' is exactly that; inside double quotes \n and \uXXXX are escape
+# sequences, ${VAR} and $(cmd) are expanded unless written \$, and " and \
+# must be written \" and \\. Unquoted, a value is cut at the first # and
+# loses its backslashes. Use single quotes unless the value holds one.
+#
 # Cloudron provides the database, the mail relay and OIDC through addons, so
 # leave the DATABASE_*, POSTGRES_* and SMTP_* entries commented out unless
 # you deliberately point Tymeslot at your own servers. The same goes for
@@ -81,14 +87,33 @@ print_template() {
 }
 
 # Quotes a value only when it needs it, so the common case stays readable.
+#
+# Single quotes are the default, because both readers of this file agree on
+# them byte for byte: a single-quoted dotenv value is literal, with no escape
+# sequences, no ${VAR} interpolation and no $(cmd) substitution, in Dotenvy
+# (which parses the file inside the release) and in start.sh's load_env_file
+# (which parses it before the release boots).
+#
+# A single quote cannot appear inside a single-quoted value: dotenv has no
+# escape for it, and Dotenvy rejects the whole file rather than the one line.
+# Such a value is double-quoted instead, with \\, \" and \$ escaped; those are
+# the escapes load_env_file understands, and Dotenvy resolves them the same
+# way. Escaping $ is what keeps Dotenvy from treating ${...} or $(...) in a
+# secret as something to expand.
 format_assignment() {
   local key="$1" value="$2" escaped
 
   case "$value" in
     *[!A-Za-z0-9_/.:@+=-]*)
-      escaped="${value//\\/\\\\}"
-      escaped="${escaped//\"/\\\"}"
-      printf '%s="%s"\n' "$key" "$escaped"
+      case "$value" in
+        *\'*)
+          escaped="${value//\\/\\\\}"
+          escaped="${escaped//\"/\\\"}"
+          escaped="${escaped//\$/\\\$}"
+          printf '%s="%s"\n' "$key" "$escaped"
+          ;;
+        *) printf "%s='%s'\n" "$key" "$value" ;;
+      esac
       ;;
     *) printf '%s=%s\n' "$key" "$value" ;;
   esac
