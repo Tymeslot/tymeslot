@@ -23,8 +23,13 @@
   border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(var(--glass-blur-md));
-  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  /* Literal rather than a token: the two themes carry different token systems
+     and only Quill has a glass-blur scale, so a token here resolves to nothing
+     on Rhythm and silently drops the blur. The control is deliberately
+     identical across themes, so it owns these two values, as it already owns
+     its size and its black translucent ground. */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: white;
   cursor: pointer;
   transition: var(--transition-normal);
@@ -32,7 +37,10 @@
 
 .background-motion-toggle:hover {
   background: rgba(0, 0, 0, 0.65);
-  border-color: var(--border-intense);
+  /* Literal for the same reason as the blur above: Rhythm names this shade
+     --border-strong, Quill --border-intense, and an unresolved var() here falls
+     back to currentColor, turning the border solid white on hover. */
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .background-motion-toggle:focus-visible {
