@@ -83,6 +83,32 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemSync do
   # reaching this is a broken server rather than a busy one.
   @max_pages 500
 
+  # The two response codes EWS uses to refuse a token rather than the request.
+  # `ErrorInvalidSyncStateData` is a token the server cannot read at all;
+  # `ErrorInvalidSyncStateVersion` is one it could read but issued under a
+  # schema it no longer honours. Both say the same thing to a caller — this
+  # token is spent — and neither is fixed by sending it again.
+  @invalid_sync_state_codes ["ErrorInvalidSyncStateData", "ErrorInvalidSyncStateVersion"]
+
+  @doc """
+  Tells whether a failure means the *token* is unusable rather than the request.
+
+  The distinction matters because the two failures need opposite handling. An
+  `ErrorAccessDenied` says nothing about the stored token, so keeping it is
+  right: the folder is unreadable this cycle and readable again when the
+  rights come back. A refused token is the other way round — every later cycle
+  replays the same spent token, is refused identically, and the folder never
+  syncs again — so a caller must drop it and re-bootstrap from a full read.
+
+  Deliberately narrow. Only these two codes name the token itself; anything
+  else, including a code this provider has never seen, keeps the token, because
+  discarding one on an unrecognised failure trades a permanent stall for a
+  whole-folder re-enumeration every cycle.
+  """
+  @spec invalid_sync_state?(term()) :: boolean()
+  def invalid_sync_state?({:response_code, code}), do: code in @invalid_sync_state_codes
+  def invalid_sync_state?(_other), do: false
+
   @doc """
   Drains a folder's change feed and answers everything since `sync_state`.
 
