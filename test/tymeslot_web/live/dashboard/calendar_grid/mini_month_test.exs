@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
 
       html =
         lv
-        |> element("#mini-month-popover button[aria-haspopup='true']")
+        |> element("#mini-month-popover button[aria-haspopup='dialog']")
         |> render_click()
 
       assert html =~ ~s(id="mini-month-popover-panel")
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       lv
-      |> element("#mini-month-popover button[aria-haspopup='true']")
+      |> element("#mini-month-popover button[aria-haspopup='dialog']")
       |> render_click()
 
       # The 15th of the current month is always present in the 6×7 matrix.
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       lv
-      |> element("#mini-month-popover button[aria-haspopup='true']")
+      |> element("#mini-month-popover button[aria-haspopup='dialog']")
       |> render_click()
 
       today = Date.utc_today()

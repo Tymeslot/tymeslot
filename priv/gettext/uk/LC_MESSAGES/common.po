@@ -238,3 +238,18 @@ msgstr "Один спеціальний символ"
 #, elixir-autogen, elixir-format
 msgid "This tab contains errors"
 msgstr "Ця вкладка містить помилки"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Призупинити фонове відео"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Відтворити фонове відео"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr "Пошук часових поясів"

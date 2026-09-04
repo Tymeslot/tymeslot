@@ -19,8 +19,8 @@
 }
 
 .action-button--primary {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--theme-primary-solid) 0%, var(--theme-primary-solid-hover) 100%);
+  color: var(--theme-on-primary);
   box-shadow: var(--shadow-primary-sm);
 }
 

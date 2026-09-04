@@ -85,9 +85,9 @@
 }
 
 .custom-question-yes-no-tile.is-selected {
-  color: white;
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
+  color: var(--theme-on-primary);
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
   box-shadow: 0 6px 16px var(--option-tile-selected-glow);
 }
 
@@ -108,9 +108,9 @@
 }
 
 .custom-question-yes-no-tile.is-selected .custom-question-yes-no-icon {
-  background: white;
-  border-color: white;
-  color: var(--theme-primary);
+  background: var(--theme-on-primary);
+  border-color: var(--theme-on-primary);
+  color: var(--theme-primary-solid);
 }
 
 .custom-question-yes-no-label {
@@ -165,9 +165,9 @@
 }
 
 .custom-question-option-card.is-selected {
-  color: white;
-  background: var(--theme-primary);
-  border-color: var(--theme-primary);
+  color: var(--theme-on-primary);
+  background: var(--theme-primary-solid);
+  border-color: var(--theme-primary-solid);
   box-shadow: 0 4px 14px var(--option-tile-selected-glow);
 }
 
@@ -204,9 +204,9 @@
 }
 
 .custom-question-option-card.is-selected .custom-question-option-indicator {
-  background: white;
-  border-color: white;
-  color: var(--theme-primary);
+  background: var(--theme-on-primary);
+  border-color: var(--theme-on-primary);
+  color: var(--theme-primary-solid);
 }
 
 .custom-question-option-card.is-selected .custom-question-option-indicator.is-radio::after {
@@ -214,7 +214,7 @@
   width: 0.6rem;
   height: 0.6rem;
   border-radius: 50%;
-  background: var(--theme-primary);
+  background: var(--theme-primary-solid);
 }
 
 .custom-question-option-card.is-selected .custom-question-option-indicator.is-check svg {

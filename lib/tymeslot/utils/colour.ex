@@ -265,6 +265,29 @@ defmodule Tymeslot.Utils.Colour do
     end
   end
 
+  @doc """
+  Lightens `hsl` in `step` increments of lightness until it reaches at least
+  `minimum` contrast against `reference`, giving up at a lightness ceiling of
+  1.0 and returning the lightest value tried.
+
+  The mirror of `darken_until_contrast/4`, for the case where `reference` is a
+  dark ink: contrast then grows as the surface gets lighter, so darkening it
+  would walk the wrong way.
+  """
+  @spec lighten_until_contrast(hsl(), rgb() | String.t(), float(), float()) :: hsl()
+  def lighten_until_contrast(hsl, reference, minimum, step \\ 0.02)
+
+  def lighten_until_contrast({_h, _s, l} = hsl, _reference, _minimum, _step) when l >= 1.0,
+    do: hsl
+
+  def lighten_until_contrast({h, s, l} = hsl, reference, minimum, step) do
+    if contrast_ratio(hsl_to_hex(hsl), reference) >= minimum do
+      hsl
+    else
+      lighten_until_contrast({h, s, clamp(l + step, 0.0, 1.0)}, reference, minimum, step)
+    end
+  end
+
   @doc "Clamps `n` into the inclusive range `lo..hi`."
   @spec clamp(number(), number(), number()) :: number()
   def clamp(n, lo, _hi) when n < lo, do: lo

@@ -166,15 +166,15 @@
 .submit-button,
 .action-button-primary {
   padding: var(--button-padding-y) var(--button-padding-x);
-  background: var(--theme-primary);
-  color: white;
-  border: var(--border-width-thin) solid var(--theme-primary);
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+  border: var(--border-width-thin) solid var(--theme-primary-solid);
 }
 
 .submit-button:hover,
 .action-button-primary:hover {
-  background: var(--theme-primary-hover);
-  border-color: var(--theme-primary-hover);
+  background: var(--theme-primary-solid-hover);
+  border-color: var(--theme-primary-solid-hover);
   transform: translateY(-1px);
 }
 

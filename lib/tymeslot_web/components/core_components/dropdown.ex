@@ -15,7 +15,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
     default: :bottom_end,
     values: [:bottom_end, :bottom_start, :top_end, :top_start]
 
-  attr :role, :string, default: "menu"
+  attr :role, :string,
+    default: "menu",
+    doc: """
+    ARIA role of the floating panel, and therefore also the trigger's
+    `aria-haspopup` value: the two have to agree, or assistive technology
+    announces a menu and then opens a dialog.
+    """
+
   attr :aria_orientation, :string, default: "vertical"
 
   attr :panel_label, :string,
@@ -72,7 +79,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
         phx-click={@on_toggle}
         phx-target={@target}
         aria-expanded={to_string(@open)}
-        aria-haspopup="true"
+        aria-haspopup={@role}
         aria-controls={"#{@id}-panel"}
         {@trigger_attrs}
         {@rest}

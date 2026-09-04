@@ -1840,3 +1840,9 @@ msgstr "Impossible de reporter une réunion expirée"
 #, elixir-autogen, elixir-format
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
 msgstr "Ce créneau a entre-temps été réservé par quelqu'un d'autre, cette demande ne peut donc plus être acceptée."
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr "Rechercher des fuseaux horaires"

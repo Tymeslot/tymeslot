@@ -28,8 +28,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   def timezone_selector(assigns) do
     ~H"""
     <div class="relative" data-locale={@locale}>
-      <%!-- Label: hidden on small screens --%>
-      <label class="timezone-label">
+      <%!-- Visual label only: it names no control (the trigger below carries its
+           own accessible name), so it must not be a <label> element. --%>
+      <div class="timezone-label">
         <div class="timezone-label-content">
           <svg class="timezone-label-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -41,7 +42,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
           </svg>
           {dgettext("booking", "Your timezone")}
         </div>
-      </label>
+      </div>
 
       <div class="timezone-dropdown-wrapper">
         <.dropdown
@@ -55,9 +56,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
           trigger_class="timezone-trigger"
           class="timezone-dropdown"
           unstyled={true}
-          aria-label={dgettext("booking", "Select timezone")}
         >
           <:trigger>
+            <span class="sr-only">{dgettext("booking", "Your timezone")}:</span>
             <div class="timezone-trigger-row">
               <div class="timezone-trigger-info">
                 <.timezone_flag timezone={@user_timezone} class="timezone-flag" fallback_icon="🌐" />
@@ -103,6 +104,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                 name="search"
                 value={@timezone_search}
                 placeholder={dgettext("booking", "Search cities, countries, or timezones...")}
+                aria-label={dgettext("booking", "Search timezones")}
                 autocomplete="off"
                 phx-hook="AutoFocus"
               />
