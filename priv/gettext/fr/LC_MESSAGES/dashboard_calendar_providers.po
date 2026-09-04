@@ -1104,7 +1104,6 @@ msgstr "Le flux de calendrier a rejeté le lien. Il a peut-être été révoqué
 msgid "The calendar feed returned HTTP %{status}."
 msgstr "Le flux de calendrier a renvoyé HTTP %{status}."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
@@ -1144,11 +1143,6 @@ msgstr "Point de terminaison EWS introuvable. Il se termine généralement par /
 #, elixir-autogen, elixir-format
 msgid "Exchange connection successful"
 msgstr "Connexion à Exchange réussie"
-
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
-#, elixir-autogen, elixir-format
-msgid "On-premises Microsoft Exchange Server, read-only"
-msgstr "Serveur Microsoft Exchange sur site, en lecture seule"
 
 #: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
 #, elixir-autogen, elixir-format
@@ -1242,11 +1236,6 @@ msgstr "Mon calendrier Exchange"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #, elixir-autogen, elixir-format
-msgid "Read busy time from an on-premises Exchange Server"
-msgstr "Lire les périodes occupées depuis un serveur Exchange sur site"
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
-#, elixir-autogen, elixir-format
 msgid "Select calendars to show on your dashboard:"
 msgstr "Sélectionnez les calendriers à afficher sur votre tableau de bord :"
 
@@ -1274,3 +1263,18 @@ msgstr "Vérifier le certificat TLS du serveur"
 #, elixir-autogen, elixir-format
 msgid "name@example.com or DOMAIN\\user"
 msgstr "name@example.com ou DOMAIN\\user"
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "On-premises Microsoft Exchange Server, two-way sync"
+msgstr "Serveur Microsoft Exchange sur site, synchronisation bidirectionnelle"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Sync busy time and bookings with an on-premises Exchange Server"
+msgstr "Synchroniser les périodes occupées et les réservations avec un serveur Exchange sur site"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "This mailbox is read from and written to: it blocks the times you're already busy, and confirmed bookings are added to the calendar you choose as your booking destination. Exchange does not report which calendars your account may write to, so if you choose one it cannot write to, the first booking sent there fails."
+msgstr "Cette boîte aux lettres est lue et écrite : elle bloque les périodes où vous êtes déjà occupé et les réservations confirmées sont ajoutées au calendrier que vous choisissez comme destination de vos réservations. Exchange n’indique pas dans quels calendriers votre compte peut écrire : si vous en choisissez un où il ne peut pas écrire, la première réservation qui y est envoyée échoue."

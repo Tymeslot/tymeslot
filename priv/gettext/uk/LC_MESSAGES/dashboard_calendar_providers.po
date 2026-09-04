@@ -1105,7 +1105,6 @@ msgstr "Фід календаря відхилив посилання. Можл�
 msgid "The calendar feed returned HTTP %{status}."
 msgstr "Фід календаря повернув HTTP %{status}."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
@@ -1145,11 +1144,6 @@ msgstr "Кінцеву точку EWS не знайдено. Зазвичай в
 #, elixir-autogen, elixir-format
 msgid "Exchange connection successful"
 msgstr "Підключення до Exchange успішне"
-
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
-#, elixir-autogen, elixir-format
-msgid "On-premises Microsoft Exchange Server, read-only"
-msgstr "Локальний сервер Microsoft Exchange, лише для перегляду"
 
 #: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
 #, elixir-autogen, elixir-format
@@ -1243,11 +1237,6 @@ msgstr "Мій календар Exchange"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #, elixir-autogen, elixir-format
-msgid "Read busy time from an on-premises Exchange Server"
-msgstr "Читає зайнятий час із власного сервера Exchange"
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
-#, elixir-autogen, elixir-format
 msgid "Select calendars to show on your dashboard:"
 msgstr "Виберіть календарі, які показувати на панелі керування:"
 
@@ -1275,3 +1264,18 @@ msgstr "Перевіряти сертифікат TLS сервера"
 #, elixir-autogen, elixir-format
 msgid "name@example.com or DOMAIN\\user"
 msgstr "name@example.com або DOMAIN\\user"
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "On-premises Microsoft Exchange Server, two-way sync"
+msgstr "Локальний сервер Microsoft Exchange, двостороння синхронізація"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Sync busy time and bookings with an on-premises Exchange Server"
+msgstr "Синхронізуйте зайнятий час і бронювання з локальним сервером Exchange"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "This mailbox is read from and written to: it blocks the times you're already busy, and confirmed bookings are added to the calendar you choose as your booking destination. Exchange does not report which calendars your account may write to, so if you choose one it cannot write to, the first booking sent there fails."
+msgstr "Ця поштова скринька і читається, і записується: вона блокує час, коли ви вже зайняті, а підтверджені бронювання додаються до календаря, який ви виберете місцем призначення для бронювань. Exchange не повідомляє, у які календарі ваш обліковий запис може записувати, тож якщо ви виберете той, у який він записувати не може, перше надіслане туди бронювання завершиться помилкою."

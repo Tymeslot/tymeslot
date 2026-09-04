@@ -359,11 +359,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     provider_name = Helpers.format_provider_name(integration.provider)
     calendar_list = integration.calendar_list || []
 
-    # Two distinct questions, and they part company on Exchange: a subscribed
-    # feed carries no credentials and exactly one calendar, so it gets neither
-    # the reconnect nor the manage-calendars action, while an Exchange mailbox
-    # has both. Read-only is the wider of the two, and it is what the badge
-    # states.
+    # Two distinct questions: a subscribed feed carries no credentials and
+    # exactly one calendar, so it gets neither the reconnect nor the
+    # manage-calendars action, and it is also the one provider that is
+    # read-only by construction, which is what the badge states.
     subscription? = ProviderConfig.subscription?(integration.provider)
     read_only? = ProviderConfig.read_only?(integration.provider)
 
@@ -574,9 +573,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   end
 
   # Two situations, two sentences, and the provider is what tells them apart.
-  # A provider that is read-only by construction gets a plain description: an
-  # Exchange mailbox or a subscribed feed blocks time and never takes
-  # bookings, which is how it has always behaved and is nothing to fix. The
+  # A provider that is read-only by construction gets a plain description: a
+  # subscribed feed blocks time and never takes bookings, which is how it has
+  # always behaved and is nothing to fix. The
   # warning below says "no longer", which is the right thing to tell someone
   # whose writable calendar has become read-only on the server and whose
   # bookings are now failing; saying it about a feed would report a breakage

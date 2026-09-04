@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   @type user_id :: pos_integer()
 
   @doc """
-  Validates and creates a read-only Exchange (EWS) integration.
+  Validates and creates an Exchange (EWS) integration.
 
   Returns the same result shapes as
   `Tymeslot.Integrations.Calendar.Creation.create_with_validation/3`.
@@ -60,10 +60,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
     # Deliberately no `Creation.ensure_primary_on_first/3`, for the reason the
     # subscription path omits it too: it promotes the user's first integration
     # unconditionally, through `CalendarPrimary` directly rather than through
-    # `PrimarySelection.maybe_set_as_primary/1`, so its read-only guard never
-    # runs. An Exchange mailbox can never receive a booking, and promoting one
-    # would leave a user whose only calendar is Exchange with a primary that
-    # fails every booking write.
+    # `PrimarySelection.maybe_set_as_primary/1`, so its guards never run. An
+    # Exchange mailbox can now receive a booking, but only into a folder the
+    # account may write to, and `FindFolder` never says which those are (see
+    # the moduledoc). Promoting one unasked would pick that folder for the
+    # user, so the choice stays theirs to make explicitly.
     with {:ok, sanitized} <-
            CalendarInputValidation.validate_exchange_form(params, metadata: metadata),
          :ok <- check_no_duplicate(user_id, sanitized),

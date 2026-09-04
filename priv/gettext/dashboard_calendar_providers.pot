@@ -1104,7 +1104,6 @@ msgstr ""
 msgid "The calendar feed returned HTTP %{status}."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
@@ -1143,11 +1142,6 @@ msgstr ""
 #: lib/tymeslot/integrations/calendar/exchange/provider.ex
 #, elixir-autogen, elixir-format
 msgid "Exchange connection successful"
-msgstr ""
-
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
-#, elixir-autogen, elixir-format
-msgid "On-premises Microsoft Exchange Server, read-only"
 msgstr ""
 
 #: lib/tymeslot/workers/sync_exchange_calendar_worker.ex
@@ -1242,11 +1236,6 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #, elixir-autogen, elixir-format
-msgid "Read busy time from an on-premises Exchange Server"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
-#, elixir-autogen, elixir-format
 msgid "Select calendars to show on your dashboard:"
 msgstr ""
 
@@ -1273,4 +1262,19 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #, elixir-autogen, elixir-format
 msgid "name@example.com or DOMAIN\\user"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "On-premises Microsoft Exchange Server, two-way sync"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "Sync busy time and bookings with an on-premises Exchange Server"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
+#, elixir-autogen, elixir-format
+msgid "This mailbox is read from and written to: it blocks the times you're already busy, and confirmed bookings are added to the calendar you choose as your booking destination. Exchange does not report which calendars your account may write to, so if you choose one it cannot write to, the first booking sent there fails."
 msgstr ""
