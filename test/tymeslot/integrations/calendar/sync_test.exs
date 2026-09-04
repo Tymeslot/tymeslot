@@ -7,7 +7,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
   import Mox
 
+  alias Ecto.UUID
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
@@ -465,6 +467,51 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       assert is_nil(updated.calendar_sync_status)
+    end
+
+    test "flags a mirrored booking as ours though its UID carries no Tymeslot marker" do
+      integration = insert(:calendar_integration)
+      start_time = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+      # A booking's UID is a bare UUID, so neither the `@tymeslot.com` suffix
+      # nor a provider marker identifies it. The link to the meeting does.
+      uid = UUID.generate()
+
+      insert(:meeting,
+        calendar_integration_id: integration.id,
+        provider_event_id: nil,
+        uid: uid,
+        start_time: start_time
+      )
+
+      event =
+        CalendarEvent.new!(%{
+          uid: uid,
+          calendar_integration_id: integration.id,
+          provider: :caldav,
+          provider_calendar_id: "/cal/primary",
+          provider_event_id: "/cal/primary/#{uid}.ics",
+          all_day: false,
+          start_at: start_time,
+          end_at: DateTime.add(start_time, 3600, :second),
+          synced_at: DateTime.utc_now(:microsecond)
+        })
+
+      refute event.created_by_tymeslot
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+      assert cached.created_by_tymeslot
+    end
+
+    test "leaves an unrelated provider event unflagged" do
+      integration = insert(:calendar_integration)
+      event = build_timed_event(integration, "/cal/primary/someone-elses.ics")
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      refute cached.created_by_tymeslot
     end
 
     test "upsert error: returns {:error, reason} when upsert raises" do

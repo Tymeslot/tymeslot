@@ -66,10 +66,62 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def persist_normalised_events(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
+    calendar_events = flag_tymeslot_owned(integration, calendar_events)
+
     with {:ok, _count} <- upsert_cache(integration, calendar_events) do
       post_commit_reconciliation(integration, calendar_events)
       :ok
     end
+  end
+
+  @doc """
+  Marks the events that mirror one of this integration's own bookings.
+
+  Providers infer ownership from the payload where they can: Google stamps
+  `extendedProperties.private.createdBy`, and the iCal normaliser recognises a
+  `…@tymeslot.com` UID. Neither reaches a booking on a CalDAV or Outlook
+  calendar — a booking's UID is a bare `UUID.uuid4()` (`Bookings.Create`), so
+  `created_by_tymeslot` stayed false on every mirrored booking those providers
+  hold.
+
+  That flag is load-bearing: `CalDAV.OfflineQueue` grants the `:keep_local`
+  force-write only to rows carrying it, so the recovery a conflicting write
+  depends on was inert for exactly the events it was written for.
+
+  Ownership does not have to be inferred from the payload at all. A mirrored
+  booking shares an identifier with the meeting it came from, which is the
+  same rule the grid and the agenda deduplicate on, so resolve it against the
+  integration's meetings. Only ever raises the flag: a provider that already
+  recognised its own marker keeps it.
+  """
+  @spec flag_tymeslot_owned(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
+          [CalendarEvent.t()]
+  def flag_tymeslot_owned(_integration, []), do: []
+
+  def flag_tymeslot_owned(%CalendarIntegrationSchema{} = integration, calendar_events) do
+    identifiers =
+      calendar_events
+      |> Meetings.calendar_identifier_set()
+      |> MapSet.to_list()
+
+    case Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers) do
+      empty when map_size(empty) == 0 ->
+        calendar_events
+
+      meetings_by_identifier ->
+        Enum.map(calendar_events, &mark_if_owned(&1, meetings_by_identifier))
+    end
+  end
+
+  defp mark_if_owned(%CalendarEvent{created_by_tymeslot: true} = event, _meetings), do: event
+
+  defp mark_if_owned(%CalendarEvent{} = event, meetings_by_identifier) do
+    owned? =
+      event
+      |> Meetings.calendar_event_identifiers()
+      |> Enum.any?(&Map.has_key?(meetings_by_identifier, &1))
+
+    %{event | created_by_tymeslot: owned?}
   end
 
   @doc """
