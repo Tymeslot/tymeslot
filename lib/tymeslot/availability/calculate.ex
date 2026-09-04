@@ -97,7 +97,13 @@ defmodule Tymeslot.Availability.Calculate do
         all_available_slots =
           business_hours_windows
           |> Enum.flat_map(fn window ->
-            breaks = BusinessHours.breaks_for_day(window.date, schedule_id, config)
+            breaks =
+              BusinessHours.resolved_breaks_for_day(
+                window.date,
+                schedule_id,
+                owner_timezone,
+                config
+              )
 
             all_slots =
               TimeSlots.generate_slots_for_range_with_breaks(

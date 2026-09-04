@@ -209,7 +209,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
 
       # Break from 10:00 to 10:30
-      breaks = [{~T[10:00:00], ~T[10:30:00]}]
+      breaks = utc_breaks([{~T[10:00:00], ~T[10:30:00]}], date)
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
@@ -226,7 +226,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
 
       # Break from 10:00 to 11:00 (excludes 10:00 and 10:30 for 30-min slots)
-      breaks = [{~T[10:00:00], ~T[11:00:00]}]
+      breaks = utc_breaks([{~T[10:00:00], ~T[11:00:00]}], date)
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
@@ -242,10 +242,14 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[14:00:00])
 
       # Morning break (10:00-10:30) and lunch break (12:00-13:00)
-      breaks = [
-        {~T[10:00:00], ~T[10:30:00]},
-        {~T[12:00:00], ~T[13:00:00]}
-      ]
+      breaks =
+        utc_breaks(
+          [
+            {~T[10:00:00], ~T[10:30:00]},
+            {~T[12:00:00], ~T[13:00:00]}
+          ],
+          date
+        )
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
@@ -261,7 +265,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
 
       # Break from 10:15 to 10:45 - the 10:00 slot would end at 10:30, overlapping
-      breaks = [{~T[10:15:00], ~T[10:45:00]}]
+      breaks = utc_breaks([{~T[10:15:00], ~T[10:45:00]}], date)
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
@@ -279,7 +283,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       date = ~D[2026-10-25]
       start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
       end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
-      breaks = [{~T[01:30:00], ~T[01:45:00]}]
+      breaks = TimeSlots.resolve_breaks([{~T[01:30:00], ~T[01:45:00]}], date, "Europe/London")
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
@@ -294,7 +298,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       date = ~D[2026-03-29]
       start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
       end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
-      breaks = [{~T[01:30:00], ~T[01:45:00]}]
+      breaks = TimeSlots.resolve_breaks([{~T[01:30:00], ~T[01:45:00]}], date, "Europe/London")
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
@@ -356,7 +360,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
       # A break at wall-clock 10:30–11:00 is unambiguous and must still apply
       # — proves resolve_wall_time doesn't silently drop usable breaks.
-      breaks = [{~T[10:30:00], ~T[11:00:00]}]
+      breaks = TimeSlots.resolve_breaks([{~T[10:30:00], ~T[11:00:00]}], date, "Europe/London")
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
 
@@ -423,6 +427,14 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       # 11:30 PM is excluded because a 30-min meeting would end at 12:00 AM next day
       assert length(slots) == 3
     end
+  end
+
+  # Production resolves breaks against the owner's date and zone before they
+  # reach the slot grid (`Calculate` and `Conflicts` both do). Every case in
+  # this module is single-timezone, so the window's own UTC clock *is* the
+  # owner's; the cross-timezone cases live in the module below.
+  defp utc_breaks(breaks, date) do
+    TimeSlots.resolve_breaks(breaks, date, "Etc/UTC")
   end
 
   defp slot_range(start_time, end_time, date \\ ~D[2025-06-15]) do
@@ -549,7 +561,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
 
     test "breaks are filtered by the meeting's length, not by the interval",
          %{date: date, start_dt: start_dt, end_dt: end_dt} do
-      breaks = [{~T[09:20:00], ~T[09:30:00]}]
+      breaks = TimeSlots.resolve_breaks([{~T[09:20:00], ~T[09:30:00]}], date, "Europe/London")
 
       slots =
         slots_on_own_clock(start_dt, end_dt, 30, date, breaks, 5)

@@ -16,19 +16,50 @@ defmodule Tymeslot.Availability.TimeSlots do
   end
 
   @doc """
+  Resolves a day's breaks into absolute instants on the owner's clock.
+
+  Break times are stored as the owner's local wall-clock times with no date
+  attached, so they mean nothing until anchored to a date and a zone. Both
+  have to be the *owner's*: the window a slot grid is built from has already
+  been shifted into the booker's zone, and resolving a break there puts the
+  owner's lunch on the booker's clock, hiding the wrong hours by exactly the
+  offset between them.
+
+  `owner_date` must be the owner-frame date the breaks were read for
+  (`window.date`), not the date of the window's start in the booker's zone.
+  A window can straddle midnight in the booker's zone, which is why windows
+  carry the date they came from; taking the date off the booker-side datetime
+  reintroduces the same error one day out instead of one offset out.
+
+  Resolving against a real date and zone, rather than applying a fixed offset,
+  is also what keeps this correct across a DST boundary inside the window.
+  """
+  @spec resolve_breaks([{Time.t(), Time.t()}], Date.t(), String.t()) ::
+          [{DateTime.t(), DateTime.t()}]
+  def resolve_breaks(breaks, owner_date, owner_timezone)
+      when is_list(breaks) and is_binary(owner_timezone) do
+    Enum.map(breaks, fn {break_start_time, break_end_time} ->
+      {resolve_wall_time(owner_date, break_start_time, owner_timezone),
+       resolve_wall_time(owner_date, break_end_time, owner_timezone)}
+    end)
+  end
+
+  @doc """
   Generates time slots for a date range, excluding break periods, on the
   historical duration-locked grid.
 
   Equivalent to `generate_slots_for_range_with_breaks/7` with no interval and
   no anchor, and kept as its own arity because the duration-locked grid needs
   neither.
+
+  Breaks are absolute instants; see `resolve_breaks/3`.
   """
   @spec generate_slots_for_range_with_breaks(
           DateTime.t(),
           DateTime.t(),
           integer(),
           Date.t(),
-          [{Time.t(), Time.t()}]
+          [{DateTime.t(), DateTime.t()}]
         ) :: [String.t()]
   def generate_slots_for_range_with_breaks(
         start_dt,
@@ -56,6 +87,11 @@ defmodule Tymeslot.Availability.TimeSlots do
     - end_dt: End datetime
     - duration_minutes: Meeting duration in minutes
     - selected_date: The date for slot generation
+    - breaks: Break periods as absolute `{start, end}` instants, already
+      resolved against the owner's date and zone by `resolve_breaks/3`.
+      They must arrive resolved: `start_dt` here is in the *booker's* zone,
+      so a break carried as a bare `Time` would be read on the booker's wall
+      clock and land on the wrong hours whenever the two zones differ.
     - breaks: List of {start_time, end_time} tuples representing break periods
     - interval_minutes: Optional spacing between slot starts. Defaults to the
       meeting duration, which is the historical behaviour. A shorter interval
@@ -78,7 +114,7 @@ defmodule Tymeslot.Availability.TimeSlots do
           DateTime.t(),
           integer(),
           Date.t(),
-          [{Time.t(), Time.t()}],
+          [{DateTime.t(), DateTime.t()}],
           pos_integer() | nil,
           String.t() | nil
         ) :: [String.t()]
@@ -309,22 +345,19 @@ defmodule Tymeslot.Availability.TimeSlots do
 
   defp filter_slots_by_breaks(slots, [], _start_dt, _duration_minutes), do: slots
 
+  # Slots are resolved on the booker's clock, which is where they are offered;
+  # breaks arrive already absolute, resolved on the owner's. Both sides are
+  # instants by the time they meet, so the comparison holds across any offset.
   defp filter_slots_by_breaks(slots, breaks, start_dt, duration_minutes) do
     date = DateTime.to_date(start_dt)
     timezone = start_dt.time_zone
-
-    resolved_breaks =
-      Enum.map(breaks, fn {break_start_time, break_end_time} ->
-        {resolve_wall_time(date, break_start_time, timezone),
-         resolve_wall_time(date, break_end_time, timezone)}
-      end)
 
     Enum.filter(slots, fn slot ->
       slot_time = parse_time_slot(slot)
       slot_start_dt = resolve_wall_time(date, slot_time, timezone)
       slot_end_dt = DateTime.add(slot_start_dt, duration_minutes, :minute)
 
-      not Enum.any?(resolved_breaks, fn {break_start_dt, break_end_dt} ->
+      not Enum.any?(breaks, fn {break_start_dt, break_end_dt} ->
         TimeRange.overlaps?(slot_start_dt, slot_end_dt, break_start_dt, break_end_dt)
       end)
     end)
