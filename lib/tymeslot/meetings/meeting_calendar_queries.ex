@@ -14,7 +14,9 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Repo
 
-  @valid_sync_statuses ~w(externally_deleted externally_modified)
+  @externally_deleted "externally_deleted"
+  @externally_modified "externally_modified"
+  @valid_sync_statuses [@externally_deleted, @externally_modified]
 
   @doc """
   Finds a meeting by its external provider event ID and calendar integration.
@@ -124,6 +126,35 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
     else
       {:error, :not_found}
     end
+  end
+
+  @doc """
+  Clears `calendar_sync_status` on a meeting, but only while it reads
+  `"externally_modified"`.
+
+  Narrower than `clear_calendar_sync_status/1` on purpose: an
+  `"externally_deleted"` meeting has already been auto-cancelled and its status
+  is the record of why, so it must survive. Filtering in the `WHERE` rather
+  than round-tripping the row keeps this safe to call for every event of a
+  sync pass, which is how it is used — the overwhelmingly common outcome is
+  that there was nothing to clear.
+
+  Always returns `:ok`; a meeting that is not flagged, or no longer exists, is
+  not an error at this call site.
+  """
+  @spec clear_external_modification(String.t()) :: :ok
+  def clear_external_modification(meeting_id) do
+    Meeting
+    |> where([m], m.id == ^meeting_id and m.calendar_sync_status == @externally_modified)
+    |> Repo.update_all(
+      set: [
+        calendar_sync_status: nil,
+        calendar_sync_status_dismissed_at: nil,
+        updated_at: DateTime.utc_now(:second)
+      ]
+    )
+
+    :ok
   end
 
   @doc """

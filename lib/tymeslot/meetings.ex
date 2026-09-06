@@ -536,6 +536,18 @@ defmodule Tymeslot.Meetings do
               as: :apply_change
 
   @doc """
+  Clears an `"externally_modified"` flag on a meeting whose provider event
+  agrees with it again.
+
+  The counterpart of `apply_external_calendar_change/4` with a `:modified`
+  signal: detection is stateless, so a sync pass that finds the two sides in
+  agreement is the only thing that can retire a flag an earlier pass raised.
+  """
+  defdelegate resolve_external_calendar_change(meeting),
+    to: ExternalCalendarChanges,
+    as: :resolve_modification
+
+  @doc """
   Looks up a meeting linked to a calendar event by provider event ID or UID.
 
   Returns `{:ok, meeting}` or `{:error, :not_found}`. Tries

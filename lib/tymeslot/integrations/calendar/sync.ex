@@ -274,7 +274,11 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
         if time_changed?(meeting.start_time, cal_event) do
           reconcile(integration.id, cal_event.provider_event_id, cal_event.uid, :modified)
         else
-          :ok
+          # Agreement is a signal too. This pass cannot know whether an earlier
+          # one flagged the meeting, and nothing else retires the flag, so a
+          # divergence that has since resolved would otherwise leave the host
+          # with a badge and a notification that was never withdrawn.
+          Meetings.resolve_external_calendar_change(meeting)
         end
     end
   end

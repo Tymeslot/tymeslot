@@ -8,7 +8,8 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   This module owns the meeting-side consequences: updating the
   `calendar_sync_status`, auto-cancelling the meeting on external deletion
   (with status revert if cancellation fails, so the next sync retries the
-  whole operation), and notifying the host about external modifications.
+  whole operation), notifying the host about external modifications, and
+  clearing that flag again once the two sides agree.
 
   Detection of changes stays in the Calendar context — this module never
   talks to calendar providers or the event cache.
@@ -49,6 +50,35 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
         :ok
     end
   end
+
+  @doc """
+  Clears a previously recorded external modification, now that the provider
+  event agrees with the meeting again.
+
+  The counterpart of the `:modified` signal, and the reason the flag is not
+  one-way. Detection is stateless — a sync pass compares one event against one
+  meeting and has no memory of what an earlier pass flagged — so nothing else
+  in the system ever takes `"externally_modified"` back off a meeting. A
+  divergence that resolved itself (the host put the time back, or our own
+  write to the provider finally landed) would otherwise leave the host with a
+  permanent badge and a notification that was never withdrawn.
+
+  Deliberately narrow: `"externally_deleted"` is left alone. That signal
+  auto-cancels the meeting, and the status is the record of why it was
+  cancelled, not a condition that can lapse.
+  """
+  @spec resolve_modification(Meeting.t()) :: :ok
+  def resolve_modification(%{calendar_sync_status: @externally_modified} = meeting) do
+    MeetingCalendarQueries.clear_external_modification(meeting.id)
+
+    Logger.info("External calendar modification resolved",
+      meeting_id: meeting.id
+    )
+
+    :ok
+  end
+
+  def resolve_modification(_meeting), do: :ok
 
   @doc """
   Looks up a meeting linked to a calendar event by provider event ID or UID.

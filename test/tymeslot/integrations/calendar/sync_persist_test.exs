@@ -178,6 +178,81 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
       assert updated.calendar_sync_status == "externally_modified"
     end
 
+    test "clears a stale externally_modified flag once the times agree again" do
+      integration = insert(:calendar_integration)
+
+      start_time = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+      uid = "resolved-#{System.unique_integer([:positive])}@tymeslot.com"
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: nil,
+          uid: uid,
+          start_time: start_time,
+          calendar_sync_status: "externally_modified",
+          calendar_sync_status_dismissed_at: DateTime.utc_now(:second)
+        )
+
+      # The provider now agrees with the booking again — the host put the time
+      # back, or our own write to the calendar finally landed.
+      event =
+        CalendarEvent.new!(%{
+          uid: uid,
+          calendar_integration_id: integration.id,
+          provider: :caldav,
+          provider_calendar_id: "/cal/primary",
+          provider_event_id: "/cal/primary/#{uid}.ics",
+          all_day: false,
+          start_at: start_time,
+          end_at: DateTime.add(start_time, 3600, :second),
+          synced_at: DateTime.utc_now(:microsecond)
+        })
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == nil
+      assert updated.calendar_sync_status_dismissed_at == nil
+    end
+
+    test "leaves an externally_deleted meeting flagged when a matching event reappears" do
+      integration = insert(:calendar_integration)
+
+      start_time = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+      uid = "still-deleted-#{System.unique_integer([:positive])}@tymeslot.com"
+
+      # The deletion signal auto-cancelled the meeting, and the status is the
+      # record of why. Agreement about the time must not erase it.
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: nil,
+          uid: uid,
+          start_time: start_time,
+          status: "cancelled",
+          calendar_sync_status: "externally_deleted"
+        )
+
+      event =
+        CalendarEvent.new!(%{
+          uid: uid,
+          calendar_integration_id: integration.id,
+          provider: :caldav,
+          provider_calendar_id: "/cal/primary",
+          provider_event_id: "/cal/primary/#{uid}.ics",
+          all_day: false,
+          start_at: start_time,
+          end_at: DateTime.add(start_time, 3600, :second),
+          synced_at: DateTime.utc_now(:microsecond)
+        })
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_deleted"
+    end
+
     test "leaves an unrelated meeting alone when no identifier matches" do
       integration = insert(:calendar_integration)
       start_time = DateTime.add(DateTime.utc_now(:second), 3600, :second)
