@@ -3,10 +3,19 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   Daily maintenance job that prunes stale data from the calendar event cache.
 
   Two cleanup passes:
-  1. **Old events** — removes events whose `end_at` is more than 90 days in
-     the past. Sync workers only fetch a bounded window (e.g. 60 days back for
-     CalDAV), so events outside that window will never be refreshed and serve
-     no purpose in the cache.
+  1. **Old events** — removes events whose `end_at` falls before the oldest
+     date any sync still reaches. A row outside that window will never be
+     refreshed again, so it serves no purpose in the cache; a row inside it
+     would be re-fetched on the next run, and deleting it only to write it
+     back is churn.
+
+     The cutoff is therefore derived from `ProviderConfig.sync_window_past_days/0`
+     rather than fixed. It was previously a flat 90 days, justified by a
+     60-day CalDAV window that no longer exists: every provider now reads a
+     year back, so the prune was deleting a year's worth of live rows every
+     night for the next sync to re-insert. The grace period keeps the two
+     bounds from meeting exactly, since they are computed at different times
+     of day.
   2. **Inactive integrations** — removes events belonging to integrations the
      user has deactivated. These events are invisible in the UI and would only
      be cleaned up when the integration is fully deleted (via cascade), so
@@ -21,8 +30,10 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
 
-  @retention_days 90
+  @grace_days 30
+  @retention_days ProviderConfig.sync_window_past_days() + @grace_days
 
   @impl Oban.Worker
   def perform(_job) do
