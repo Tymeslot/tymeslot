@@ -1,4 +1,9 @@
 
+[1.15.1]
+* Clear the external-calendar warning once the calendar agrees
+* Stop flagging meetings that have already happened as changed
+
+
 [1.15.0]
 * Stop an accented character in .env from crashing startup
 * Recognise Tymeslot's own bookings on an Exchange calendar
