@@ -117,15 +117,21 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   removing it costs the grid an entry and no more.
 
   `Calendar.Sync.post_commit_reconciliation/2` could not cancel anything even
-  if it ran. It walks the events *present* in the sync rather than vanished
-  ones, returns early for every event whose `provider_event_id` is nil —
-  which is every synthesised busy row — resolves the rest by
-  `provider_event_id` rather than uid, and signals `:modified`, never
-  `:deleted`. It is skipped on `SyncIcsCalendarWorker`'s narrower grounds
-  instead: a read-only mirror of someone else's mailbox has no business
-  rewriting Tymeslot meetings whose times moved. Its other two effects, the
-  availability-cache invalidation and the grid broadcast, are wanted and are
-  done directly by `handle_result/2`.
+  if it ran: it walks the events *present* in the sync rather than vanished
+  ones, and signals `:modified`, never `:deleted`. It is skipped on
+  `SyncIcsCalendarWorker`'s narrower grounds instead: a read-only mirror of
+  someone else's mailbox has no business rewriting Tymeslot meetings whose
+  times moved. Its other two effects, the availability-cache invalidation and
+  the grid broadcast, are wanted and are done directly by `handle_result/2`.
+
+  Two further reasons once stood here and no longer hold: that pass used to
+  return early for every event with a nil `provider_event_id` — which is every
+  synthesised busy row — and to resolve the rest by `provider_event_id` alone.
+  It now matches on any shared identifier, uid included, so a synthesised row
+  is a candidate like any other. The namespacing of those uids
+  (`Exchange.IntervalNormaliser`) is what keeps them from colliding with a
+  real booking, and skipping the pass entirely is the structural half of the
+  same defence.
 
   ## Failure handling
 
