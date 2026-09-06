@@ -166,6 +166,65 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
     end
   end
 
+  describe "reconcile/4 for a meeting whose slot has elapsed" do
+    test "does not flag a confirmed meeting that has already happened" do
+      integration = insert(:calendar_integration)
+
+      meeting = insert_elapsed_meeting(integration, "evt-elapsed-modified-1")
+
+      assert :ok = Sync.reconcile(integration.id, "evt-elapsed-modified-1", nil, :modified)
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == nil
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    test "does not cancel a confirmed meeting that has already happened" do
+      integration = insert(:calendar_integration)
+
+      meeting = insert_elapsed_meeting(integration, "evt-elapsed-deleted-1")
+
+      assert :ok = Sync.reconcile(integration.id, "evt-elapsed-deleted-1", nil, :deleted)
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == nil
+      assert updated.status == "confirmed"
+      assert updated.cancelled_at == nil
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    test "still flags a meeting that is currently under way" do
+      integration = insert(:calendar_integration)
+      now = DateTime.utc_now(:second)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-in-progress-1",
+          status: "confirmed",
+          start_time: DateTime.add(now, -15, :minute),
+          end_time: DateTime.add(now, 15, :minute)
+        )
+
+      assert :ok = Sync.reconcile(integration.id, "evt-in-progress-1", nil, :modified)
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_modified"
+    end
+
+    defp insert_elapsed_meeting(integration, provider_event_id) do
+      start_time = DateTime.add(DateTime.utc_now(:second), -30, :day)
+
+      insert(:meeting,
+        calendar_integration_id: integration.id,
+        provider_event_id: provider_event_id,
+        status: "confirmed",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute)
+      )
+    end
+  end
+
   describe "reconcile/4 idempotency" do
     test "does not write to the DB when status already matches the incoming signal" do
       integration = insert(:calendar_integration)
