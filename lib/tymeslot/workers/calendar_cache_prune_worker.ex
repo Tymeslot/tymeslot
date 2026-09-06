@@ -33,11 +33,11 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   @grace_days 30
-  @retention_days ProviderConfig.sync_window_past_days() + @grace_days
 
   @impl Oban.Worker
   def perform(_job) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@retention_days, :day)
+    retention_days = retention_days()
+    cutoff = DateTime.add(DateTime.utc_now(), -retention_days, :day)
 
     old_count = ProviderCalendarEventQueries.prune_ended_before(cutoff)
     inactive_count = ProviderCalendarEventQueries.prune_inactive_integrations()
@@ -45,9 +45,16 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
     Logger.info("Calendar cache prune completed",
       old_events_pruned: old_count,
       inactive_events_pruned: inactive_count,
-      retention_days: @retention_days
+      retention_days: retention_days
     )
 
     :ok
   end
+
+  # Read at runtime rather than folded into a module attribute. Calling
+  # `ProviderConfig` at compile time makes this worker a compile-time
+  # dependency of it, and `mix xref graph --label compile-connected` is
+  # budgeted at 25 edges; this one pushed it to 26.
+  @spec retention_days() :: pos_integer()
+  defp retention_days, do: ProviderConfig.sync_window_past_days() + @grace_days
 end
