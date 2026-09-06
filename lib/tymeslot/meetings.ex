@@ -421,6 +421,10 @@ defmodule Tymeslot.Meetings do
   URL can't be used to confirm a cancelled booking ever existed, or to
   produce an .ics for a voided time slot.
 
+  Note that nothing writes the `"completed"` status: a booking that has
+  happened is still `"confirmed"`, so a past meeting stays exportable and
+  only the other two arms of that predicate are reachable today.
+
   Runs the meeting through `ContentBuilder.build_appointment_details/1` — the
   same transformation the confirmation/reminder emails use for timezone
   conversion, location, and organizer contact info — carrying over the

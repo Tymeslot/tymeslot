@@ -490,6 +490,11 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   cancelled, completed and expired bookings are excluded. Used by the booking
   limits feature to bucket bookings into host-timezone periods.
 
+  Nothing writes the `"completed"` status, so a booking that has already
+  happened is still `"confirmed"` and still counts towards its period's cap.
+  That is what the caps are meant to measure — a day's load, not what is left
+  of it — but it does mean the exclusion above is latent, not observed.
+
   Options:
     * `:exclude_uid` — omit one meeting by UID (self-exclusion on reschedule).
   """
