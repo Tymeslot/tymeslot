@@ -98,13 +98,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "valid_providers/0" do
-    test "returns list of all valid video provider atoms" do
-      assert Enum.sort(ProviderRegistry.valid_providers()) ==
-               [:custom, :google_meet, :mirotalk, :teams, :zoom]
-    end
-  end
-
   describe "test_provider_connection/2" do
     test "tests mirotalk connection with valid config" do
       config = %{
@@ -240,10 +233,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
     test "all_providers_with_dev/0 lists Zoom among providers" do
       assert :zoom in ProviderConfig.all_providers_with_dev()
-    end
-
-    test "oauth_providers/0 lists Zoom" do
-      assert :zoom in ProviderConfig.oauth_providers()
     end
 
     test "display_name/1 returns Zoom for :zoom" do

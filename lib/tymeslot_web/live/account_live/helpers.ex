@@ -79,13 +79,10 @@ defmodule TymeslotWeb.AccountLive.Helpers do
     end
   end
 
-  @doc """
-  Determines if a user is using social authentication.
-  """
   @spec social_user?(Ecto.Schema.t() | nil) :: boolean()
-  def social_user?(nil), do: false
+  defp social_user?(nil), do: false
 
-  def social_user?(user) do
+  defp social_user?(user) do
     user.provider not in [nil, @email_provider]
   end
 end

@@ -44,12 +44,13 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       expect_calendar_create_success(integration.id)
 
       cache_key =
-        AvailabilityCache.month_availability_key(
+        AvailabilityCache.availability_range_key(
           meeting.organizer_user_id,
-          2026,
-          6,
+          ~D[2026-06-01],
+          ~D[2026-06-30],
           "UTC",
-          30
+          30,
+          nil
         )
 
       # Seed the cache the way a booking-page render would, so we can prove

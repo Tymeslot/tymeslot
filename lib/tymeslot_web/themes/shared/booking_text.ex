@@ -87,13 +87,6 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   @spec default_instruction() :: String.t()
   def default_instruction, do: dgettext("booking", "Pick an option below.")
 
-  @doc """
-  True when the organiser's own wording is in use.
-  """
-  @spec customized?(ProfileSchema.t() | nil) :: boolean()
-  def customized?(%{booking_text_enabled: true}), do: true
-  def customized?(_profile), do: false
-
   defp custom(%{booking_text_enabled: true} = profile, field), do: Map.get(profile, field)
   defp custom(_profile, _field), do: nil
 end

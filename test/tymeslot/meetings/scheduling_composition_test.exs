@@ -162,39 +162,6 @@ defmodule Tymeslot.Meetings.SchedulingCompositionTest do
     end
   end
 
-  describe "has_time_conflict?/3" do
-    test "returns true when overlap exists", %{user: user} do
-      base = future_time(2, :day)
-      insert_meeting(user, base)
-
-      assert Scheduling.has_time_conflict?(base, DateTime.add(base, 30, :minute))
-    end
-
-    test "returns true for overlaps across any organiser (global scope)" do
-      other_user = insert(:user)
-      other_profile = insert(:profile, user: other_user)
-      insert(:availability_schedule, profile: other_profile, is_default: true, buffer_minutes: 15)
-
-      base = future_time(3, :day)
-      insert_meeting(other_user, base)
-
-      # No meeting for setup `user` exists at this slot; the only overlap
-      # belongs to other_user. The query is global, so it must still return true.
-      assert Scheduling.has_time_conflict?(base, DateTime.add(base, 30, :minute))
-    end
-
-    test "returns false when the given uid matches the only overlapping meeting", %{user: user} do
-      base = future_time(2, :day)
-      meeting = insert_meeting(user, base)
-
-      refute Scheduling.has_time_conflict?(
-               base,
-               DateTime.add(base, 30, :minute),
-               meeting.uid
-             )
-    end
-  end
-
   # ----- helpers -----
 
   defp future_time(amount, unit) do

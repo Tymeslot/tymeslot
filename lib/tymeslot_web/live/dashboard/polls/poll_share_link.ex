@@ -63,15 +63,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollShareLink do
     """
   end
 
-  @doc """
-  The public voting URL for a poll, or `nil` when the host has no username to
-  build one from.
-  """
+  # The public voting URL for a poll, or `nil` when the host has no username to
+  # build one from.
   @spec share_url(map(), map()) :: String.t() | nil
-  def share_url(%{username: username}, poll)
-      when is_binary(username) and username != "" do
+  defp share_url(%{username: username}, poll)
+       when is_binary(username) and username != "" do
     UrlBuilder.build_url("/#{username}/poll/#{poll.token}")
   end
 
-  def share_url(_profile, _poll), do: nil
+  defp share_url(_profile, _poll), do: nil
 end

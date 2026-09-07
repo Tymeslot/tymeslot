@@ -137,13 +137,8 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
     """
   end
 
-  @doc """
-  Sanitizes a file path for background assets.
-  Only allows alphanumeric, dots, dashes, and underscores.
-  This prevents directory traversal and other injection attacks.
-  """
   @spec sanitize_path(String.t() | nil) :: String.t()
-  def sanitize_path(path), do: Validation.sanitize_path(path)
+  defp sanitize_path(path), do: Validation.sanitize_path(path)
 
   @doc """
   Safely gets the background type from a customization map or struct.
@@ -192,11 +187,8 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
     |> assign(:show_language_switcher, show_language_switcher)
   end
 
-  @doc """
-  Gets a poster image path for video background presets, if available.
-  """
   @spec get_background_video_poster(map() | struct() | nil) :: String.t() | nil
-  def get_background_video_poster(customization) do
+  defp get_background_video_poster(customization) do
     background_value = get_background_value(customization)
 
     cond do

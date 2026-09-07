@@ -160,11 +160,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     if PreviewToken.owner?(token, socket.assigns[:organizer_user_id]), do: token
   end
 
-  @doc """
-  Assigns theme customization data if an organizer profile is present.
-  """
   @spec maybe_assign_customization(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def maybe_assign_customization(socket) do
+  defp maybe_assign_customization(socket) do
     if socket.assigns[:organizer_profile] do
       CustomizationHelpers.assign_theme_customization(
         socket,

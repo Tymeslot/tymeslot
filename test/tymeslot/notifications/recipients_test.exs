@@ -100,33 +100,6 @@ defmodule Tymeslot.Notifications.RecipientsTest do
     end
   end
 
-  describe "build_recipient_context/2" do
-    test "builds organiser context with organiser fields and timezone" do
-      meeting = meeting_with_organizer()
-
-      context = Recipients.build_recipient_context(meeting, :organizer)
-
-      assert context.recipient_type == :organizer
-      assert context.recipient_name == "Alice Organizer"
-      assert context.recipient_email == "alice@example.com"
-      assert context.recipient_timezone == "Europe/London"
-      assert context.meeting_id == meeting.id
-      assert context.organizer_email == "alice@example.com"
-      assert context.attendee_email == "bob@example.com"
-    end
-
-    test "builds attendee context with attendee fields and timezone" do
-      meeting = meeting_with_organizer()
-
-      context = Recipients.build_recipient_context(meeting, :attendee)
-
-      assert context.recipient_type == :attendee
-      assert context.recipient_name == "Bob Attendee"
-      assert context.recipient_email == "bob@example.com"
-      assert context.recipient_timezone == "America/New_York"
-    end
-  end
-
   describe "validate_recipients/1" do
     test "accepts a complete :both pair" do
       meeting = meeting_with_organizer()

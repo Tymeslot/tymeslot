@@ -5,7 +5,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
 
@@ -69,7 +69,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
       assert meeting.organizer_user_id == user.id
 
       # Alice becomes a guest on the minted meeting.
-      guest_emails = meeting.id |> Meetings.list_meeting_guests() |> Enum.map(& &1.email)
+      guest_emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
       assert "alice@example.com" in guest_emails
       refute "bob@example.com" in guest_emails
 
@@ -117,7 +117,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
 
       assert meeting.attendee_email == "ada@example.com"
 
-      guest_emails = meeting.id |> Meetings.list_meeting_guests() |> Enum.map(& &1.email)
+      guest_emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
       assert guest_emails == ["bob@example.com"]
     end
 

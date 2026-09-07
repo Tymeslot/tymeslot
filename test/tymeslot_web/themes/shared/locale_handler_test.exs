@@ -15,32 +15,6 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     {:ok, socket: socket}
   end
 
-  describe "assign_locale/1" do
-    test "assigns locale from socket assigns" do
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{locale: "de", __changed__: %{}},
-        endpoint: TymeslotWeb.Endpoint
-      }
-
-      socket = LocaleHandler.assign_locale(socket)
-
-      assert socket.assigns.locale == "de"
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
-    end
-
-    test "uses default locale when not present in assigns" do
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{__changed__: %{}},
-        endpoint: TymeslotWeb.Endpoint
-      }
-
-      socket = LocaleHandler.assign_locale(socket)
-
-      assert socket.assigns.locale == "en"
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "en"
-    end
-  end
-
   describe "handle_locale_change/2" do
     test "changes locale when valid", %{socket: socket} do
       updated_socket = LocaleHandler.handle_locale_change(socket, "de")

@@ -24,15 +24,6 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   end
 
   @doc """
-  Cache key helpers for consistent key generation.
-  """
-  @spec month_availability_key(integer(), integer(), integer(), String.t(), integer() | nil) ::
-          {atom(), integer(), integer(), integer(), String.t(), integer() | nil}
-  def month_availability_key(user_id, year, month, timezone, duration) do
-    {:month_availability, user_id, year, month, timezone, duration}
-  end
-
-  @doc """
   Cache key for range-based availability lookups.
 
   `meeting_type_id` is part of the key because per-meeting-type booking
@@ -76,7 +67,6 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   def invalidate_for_user(nil), do: :ok
 
   def invalidate_for_user(user_id) do
-    invalidate_pattern({:month_availability, user_id, :_, :_, :_, :_})
     invalidate_pattern({:range_availability, user_id, :_, :_, :_, :_, :_})
     invalidate(booking_window_events_key(user_id))
     :ok

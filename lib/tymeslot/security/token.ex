@@ -4,8 +4,6 @@ defmodule Tymeslot.Security.Token do
   Utilities for generating secure tokens for authentication (session, verification, etc).
   """
 
-  alias Plug.Crypto
-
   @session_token_validity_hours 24
 
   @doc """
@@ -89,36 +87,4 @@ defmodule Tymeslot.Security.Token do
       _expired -> {:error, :token_expired}
     end
   end
-
-  @doc """
-  Securely verifies a token against expected value and expiry with timing attack resistance.
-  Returns {:ok, token} if valid, {:error, :token_invalid} if invalid or expired.
-  """
-  @spec verify_token_secure(String.t(), String.t(), DateTime.t()) ::
-          {:ok, String.t()} | {:error, :token_invalid}
-  def verify_token_secure(provided_token, expected_token, expiry_datetime) do
-    # Always perform both checks regardless of individual results
-    time_valid = DateTime.compare(DateTime.utc_now(), expiry_datetime) == :lt
-    token_valid = secure_compare_tokens(provided_token, expected_token)
-
-    # Use constant-time AND operation
-    if time_valid and token_valid do
-      {:ok, provided_token}
-    else
-      # Always sleep a small random amount to prevent timing analysis
-      :timer.sleep(:rand.uniform(50))
-      {:error, :token_invalid}
-    end
-  end
-
-  @doc """
-  Securely compares two tokens using constant-time comparison to prevent timing attacks.
-  """
-  @spec secure_compare_tokens(String.t(), String.t()) :: boolean()
-  def secure_compare_tokens(token1, token2) when is_binary(token1) and is_binary(token2) do
-    # Use Phoenix's built-in secure comparison
-    Crypto.secure_compare(token1, token2)
-  end
-
-  def secure_compare_tokens(_invalid_token1, _invalid_token2), do: false
 end

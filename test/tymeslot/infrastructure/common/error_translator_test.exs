@@ -105,47 +105,6 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslatorTest do
     end
   end
 
-  describe "categorize_error/1" do
-    test "categorizes various errors" do
-      assert ErrorTranslator.categorize_error(:invalid_credentials) == :authentication
-      assert ErrorTranslator.categorize_error(:timeout) == :network
-      assert ErrorTranslator.categorize_error(:insufficient_permissions) == :permission
-      assert ErrorTranslator.categorize_error(:calendar_not_found) == :configuration
-      assert ErrorTranslator.categorize_error({:http_error, 429}) == :rate_limit
-      assert ErrorTranslator.categorize_error({:http_error, 500}) == :server
-      assert ErrorTranslator.categorize_error(:something_else) == :unknown
-    end
-  end
-
-  describe "should_retry?/1" do
-    test "returns true for transient errors with retry_after" do
-      assert ErrorTranslator.should_retry?(%{severity: :transient, retry_after: 60})
-    end
-
-    test "returns false otherwise" do
-      refute ErrorTranslator.should_retry?(%{severity: :permanent, retry_after: 60})
-      refute ErrorTranslator.should_retry?(%{severity: :transient, retry_after: nil})
-    end
-  end
-
-  describe "format_user_message/1" do
-    test "formats message with details, steps and reference" do
-      error = %{
-        message: "Msg",
-        details: "Det",
-        resolution_steps: ["Step 1", "Step 2"],
-        support_reference: "REF123"
-      }
-
-      formatted = ErrorTranslator.format_user_message(error)
-      assert formatted =~ "Msg"
-      assert formatted =~ "Det"
-      assert formatted =~ "Step 1"
-      assert formatted =~ "Step 2"
-      assert formatted =~ "REF123"
-    end
-  end
-
   describe "duration formatting" do
     test "formats seconds, minutes, and hours" do
       # We test this through translate_error with 429

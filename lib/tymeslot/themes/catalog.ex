@@ -146,12 +146,6 @@ defmodule Tymeslot.Themes.Catalog do
   def valid_id?(id) when is_binary(id), do: Map.has_key?(@id_to_facts_map, id)
 
   @doc """
-  Checks whether a theme key is registered.
-  """
-  @spec valid_key?(theme_key()) :: boolean()
-  def valid_key?(key) when is_atom(key), do: Map.has_key?(@themes, key)
-
-  @doc """
   Returns the default theme's facts (Quill).
   """
   @spec default() :: theme_facts()

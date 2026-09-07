@@ -21,6 +21,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Wallaby.Element
@@ -235,7 +236,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         is_active: true
       })
 
-    {profile, MeetingTypes.to_slug(meeting_type)}
+    {profile, Slugs.to_slug(meeting_type)}
   end
 
   defp create_user_with_yes_no_question do
@@ -259,7 +260,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         ]
       })
 
-    {profile, MeetingTypes.to_slug(meeting_type)}
+    {profile, Slugs.to_slug(meeting_type)}
   end
 
   # ── Navigation helpers ────────────────────────────────────────────────

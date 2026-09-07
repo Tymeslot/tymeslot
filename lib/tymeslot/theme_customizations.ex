@@ -41,14 +41,6 @@ defmodule Tymeslot.ThemeCustomizations do
   end
 
   @doc """
-  Gets all theme customizations for a profile.
-  """
-  @spec get_all_by_profile_id(profile_id()) :: [ThemeCustomizationSchema.t()]
-  def get_all_by_profile_id(profile_id) do
-    ThemeCustomizationQueries.get_all_by_profile_id(profile_id)
-  end
-
-  @doc """
   Returns a random video-background preset key (e.g. `"preset:blue-wave"`).
 
   Used to seed a fresh account with a moving background so its booking page —
@@ -155,18 +147,6 @@ defmodule Tymeslot.ThemeCustomizations do
 
       error ->
         error
-    end
-  end
-
-  @doc """
-  Resets theme customization to defaults for a specific theme.
-  """
-  @spec reset_to_defaults(profile_id(), theme_id()) ::
-          {:ok, ThemeCustomizationSchema.t() | :no_customization} | {:error, Changeset.t()}
-  def reset_to_defaults(profile_id, theme_id) do
-    case get_by_profile_and_theme(profile_id, theme_id) do
-      nil -> {:ok, :no_customization}
-      customization -> delete_theme_customization(customization)
     end
   end
 
@@ -343,24 +323,6 @@ defmodule Tymeslot.ThemeCustomizations do
 
       {:ok, saved}
     end
-  end
-
-  @doc """
-  Gets background description for display in the component.
-  """
-  @spec get_background_description(ThemeCustomizationSchema.t() | map()) :: String.t()
-  def get_background_description(customization) do
-    presets = Presets.get_all_presets()
-    Backgrounds.generate_background_description(customization, presets)
-  end
-
-  @doc """
-  Gets CSS value for a background configuration.
-  """
-  @spec get_background_css(ThemeCustomizationSchema.t() | map()) :: String.t() | nil
-  def get_background_css(customization) do
-    presets = Presets.get_all_presets()
-    Backgrounds.get_background_css(customization, presets)
   end
 
   @doc """

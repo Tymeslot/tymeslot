@@ -9,55 +9,9 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
 
   alias Tymeslot.Security.FieldValidators.IntegrationNameValidator
   alias Tymeslot.Security.{InputProcessor, UniversalSanitizer}
-  alias Tymeslot.Validation.Constraints
 
   # See IntegrationNameValidator for the rationale behind this character set.
   @invisible_chars ~r/[\x{200B}-\x{200F}\x{2028}-\x{202F}\x{205F}-\x{206F}\x{FEFF}\x{00AD}]/u
-
-  @spec validate_integration_name(String.t()) :: {:ok, String.t()} | {:error, %{name: String.t()}}
-  def validate_integration_name(name) when is_binary(name) do
-    cleaned =
-      name
-      |> String.trim()
-      |> String.replace(@invisible_chars, "")
-
-    range = Constraints.integration_name_length_range()
-
-    cond do
-      cleaned == "" ->
-        {:error, %{name: dgettext("dashboard_integrations", "Name is required")}}
-
-      String.length(cleaned) < range.first ->
-        {:error,
-         %{
-           name:
-             dngettext(
-               "dashboard_integrations",
-               "Name must be at least %{count} character",
-               "Name must be at least %{count} characters",
-               range.first
-             )
-         }}
-
-      String.length(cleaned) > range.last ->
-        {:error,
-         %{
-           name:
-             dngettext(
-               "dashboard_integrations",
-               "Name must be %{count} character or less",
-               "Name must be %{count} characters or less",
-               range.last
-             )
-         }}
-
-      true ->
-        {:ok, cleaned}
-    end
-  end
-
-  def validate_integration_name(_value),
-    do: {:error, %{name: dgettext("dashboard_integrations", "Name must be text")}}
 
   @doc """
   Strict, centralized validator for integration names with universal sanitization.

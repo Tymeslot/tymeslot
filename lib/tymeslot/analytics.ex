@@ -186,13 +186,13 @@ defmodule Tymeslot.Analytics do
   defdelegate count_converting_visitors(user_id, from, to), to: Meetings
 
   @doc """
-  Prunes analytics events older than `days` (default 90). Called by the shared
+  Prunes analytics events older than `days`. Called by the shared
   `DataRetentionWorker` so the per-page-view event log does not grow unbounded.
   Dashboard aggregates only reflect events within the retention window.
   Returns the `{deleted_count, nil}` tuple from `delete_all`.
   """
   @spec prune_events(integer()) :: {non_neg_integer(), nil}
-  def prune_events(days \\ 90) do
+  def prune_events(days) do
     EventQueries.delete_events_older_than(days)
   end
 

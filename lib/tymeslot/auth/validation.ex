@@ -8,7 +8,6 @@ defmodule Tymeslot.Auth.Validation do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.InputProcessor
 
@@ -121,24 +120,4 @@ defmodule Tymeslot.Auth.Validation do
       {:error, msg} -> {:error, %{password_confirmation: msg}}
     end
   end
-
-  @doc """
-  Formats validation errors for display.
-
-  ## Parameters
-  - errors: Map of field errors or changeset
-
-  ## Returns
-  Formatted error string or map suitable for display
-  """
-  @spec format_validation_errors(any()) :: String.t() | map()
-  def format_validation_errors(errors) when is_map(errors) do
-    ErrorFormatter.format_validation_errors(errors)
-  end
-
-  def format_validation_errors({:error, errors}) when is_map(errors) do
-    format_validation_errors(errors)
-  end
-
-  def format_validation_errors(_input), do: dgettext("auth", "Invalid input provided.")
 end

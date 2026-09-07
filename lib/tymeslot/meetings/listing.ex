@@ -20,7 +20,7 @@ defmodule Tymeslot.Meetings.Listing do
   """
   @spec list_user_meetings_cursor_page(String.t(), keyword()) ::
           {:ok, CursorPage.t()} | {:error, :invalid_cursor}
-  def list_user_meetings_cursor_page(user_email, opts \\ []) do
+  def list_user_meetings_cursor_page(user_email, opts) do
     per_page = Keyword.get(opts, :per_page, 20)
     cursor = Keyword.get(opts, :after)
 
@@ -48,7 +48,7 @@ defmodule Tymeslot.Meetings.Listing do
   """
   @spec list_user_meetings_cursor_page_by_id(integer(), keyword()) ::
           {:ok, CursorPage.t()} | {:error, :invalid_cursor}
-  def list_user_meetings_cursor_page_by_id(user_id, opts \\ []) do
+  def list_user_meetings_cursor_page_by_id(user_id, opts) do
     case UserQueries.get_user(user_id) do
       {:ok, user} ->
         list_user_meetings_cursor_page(user.email, opts)
@@ -70,7 +70,7 @@ defmodule Tymeslot.Meetings.Listing do
   """
   @spec list_user_meetings_by_filter(integer(), String.t(), keyword()) ::
           {:ok, CursorPage.t()} | {:error, :invalid_cursor}
-  def list_user_meetings_by_filter(user_id, filter, opts \\ []) do
+  def list_user_meetings_by_filter(user_id, filter, opts) do
     per_page = Keyword.get(opts, :per_page, 20)
     after_cursor = Keyword.get(opts, :after)
 

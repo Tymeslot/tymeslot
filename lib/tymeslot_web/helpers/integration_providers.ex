@@ -1,29 +1,13 @@
 defmodule TymeslotWeb.Helpers.IntegrationProviders do
   @moduledoc """
-  Presentation helpers for integration providers — formatting messages,
-  mapping errors to form fields, and rendering token expiry.
+  Presentation helpers for integration providers — formatting messages and
+  mapping errors to form fields.
 
   For provider metadata (names, icons, OAuth status, listings), use
   `Tymeslot.Integrations.Providers.Directory` directly.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
-
-  @doc """
-  Format token expiry for display.
-  """
-  @spec format_token_expiry(nil | DateTime.t()) :: String.t()
-  def format_token_expiry(nil), do: dgettext("dashboard_integrations", "Unknown")
-
-  def format_token_expiry(expires_at) do
-    case DateTime.compare(expires_at, DateTime.utc_now()) do
-      :gt ->
-        dgettext("dashboard_integrations", "in %{duration}", duration: relative_time(expires_at))
-
-      _other ->
-        dgettext("dashboard_integrations", "Token expired")
-    end
-  end
 
   @doc """
   Turns a `Tymeslot.Integrations.Shared.ConnectionProbe` refusal into a
@@ -130,45 +114,4 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
       dgettext("dashboard_integrations", "Connection test failed: %{reason}",
         reason: inspect(reason)
       )
-
-  # --- internal helpers ---
-
-  @spec relative_time(DateTime.t()) :: String.t()
-  defp relative_time(datetime) do
-    diff = DateTime.diff(datetime, DateTime.utc_now(), :second)
-
-    cond do
-      diff > 86_400 ->
-        dngettext(
-          "dashboard_integrations",
-          "%{count} day",
-          "%{count} days",
-          div(diff, 86_400)
-        )
-
-      diff > 3600 ->
-        dngettext(
-          "dashboard_integrations",
-          "%{count} hour",
-          "%{count} hours",
-          div(diff, 3600)
-        )
-
-      diff > 60 ->
-        dngettext(
-          "dashboard_integrations",
-          "%{count} minute",
-          "%{count} minutes",
-          div(diff, 60)
-        )
-
-      true ->
-        dngettext(
-          "dashboard_integrations",
-          "%{count} second",
-          "%{count} seconds",
-          diff
-        )
-    end
-  end
 end

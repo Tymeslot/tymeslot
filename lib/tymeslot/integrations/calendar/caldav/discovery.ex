@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   """
   @spec test_connection(Base.client(), keyword()) ::
           {:ok, String.t()} | {:error, Base.error_reason()}
-  def test_connection(client, opts \\ []) do
+  def test_connection(client, opts) do
     with :ok <- UrlValidation.validate_http_url(client.base_url, url_validation_opts(opts)) do
       discovery_url = UrlBuilder.build_discovery_url(client)
 
@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   """
   @spec discover_calendars(Base.client(), keyword()) ::
           {:ok, [CalendarEntry.t()]} | {:error, Base.error_reason()}
-  def discover_calendars(client, opts \\ []) do
+  def discover_calendars(client, opts) do
     with :ok <- UrlValidation.validate_http_url(client.base_url, url_validation_opts(opts)) do
       with_discovery_breaker(client, opts, fn ->
         discovery_url = UrlBuilder.build_discovery_url(client)

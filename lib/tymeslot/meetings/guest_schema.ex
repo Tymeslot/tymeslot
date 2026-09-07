@@ -91,10 +91,6 @@ defmodule Tymeslot.Meetings.GuestSchema do
     cast(guest, %{confirmation_sent_at: sent_at}, [:confirmation_sent_at])
   end
 
-  @doc "Returns the list of valid RSVP status values."
-  @spec valid_statuses() :: [String.t()]
-  def valid_statuses, do: @valid_statuses
-
   @typedoc "Aggregate RSVP counts for a list of guests."
   @type summary :: %{
           total: non_neg_integer(),
@@ -118,9 +114,8 @@ defmodule Tymeslot.Meetings.GuestSchema do
   def status_key("declined"), do: :declined
   def status_key(_pending), do: :pending
 
-  @doc "Generates an unguessable, URL-safe RSVP token."
-  @spec generate_token() :: String.t()
-  def generate_token do
+  # Generates an unguessable, URL-safe RSVP token.
+  defp generate_token do
     @token_bytes
     |> :crypto.strong_rand_bytes()
     |> Base.url_encode64(padding: false)

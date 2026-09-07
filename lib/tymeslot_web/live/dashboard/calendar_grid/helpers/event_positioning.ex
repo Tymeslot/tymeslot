@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   alias Tymeslot.Integrations.Calendar.EventColour
 
   @spec top_rem(DateTime.t(), String.t()) :: float()
-  def top_rem(dt, tz \\ "UTC") do
+  def top_rem(dt, tz) do
     local_dt = DateTime.shift_zone!(dt, tz)
     minutes = local_dt.hour * 60 + local_dt.minute
     Float.round(minutes / 60 * 4, 3)

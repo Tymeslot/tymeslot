@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         user_timezone,
         organizer_user_id,
         organizer_profile,
-        context \\ nil
+        context
       ) do
     # Security: Ensure user_id matches the profile owner to prevent IDOR
     if organizer_profile && organizer_user_id != organizer_profile.user_id do
@@ -267,11 +267,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       socket.assigns[:current_month]
   end
 
-  @doc """
-  Cancels any existing availability fetch task.
-  """
+  # Cancels any existing availability fetch task.
   @spec maybe_cancel_existing_task(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def maybe_cancel_existing_task(socket) do
+  defp maybe_cancel_existing_task(socket) do
     socket =
       if old_task = socket.assigns[:availability_task] do
         duration =

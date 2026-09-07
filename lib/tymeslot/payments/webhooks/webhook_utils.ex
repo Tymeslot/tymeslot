@@ -11,7 +11,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookUtils do
   Fetches a user and executes a template-based email delivery.
   """
   @spec deliver_user_email(integer(), atom(), atom(), list(), keyword()) :: :ok
-  def deliver_user_email(user_id, config_key, template_fun, args, opts \\ []) do
+  def deliver_user_email(user_id, config_key, template_fun, args, opts) do
     repo = Application.get_env(:tymeslot, :repo, Tymeslot.Repo)
 
     case repo.get(UserSchema, user_id) do

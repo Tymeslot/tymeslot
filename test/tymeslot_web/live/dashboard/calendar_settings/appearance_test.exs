@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.AppearanceTest do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
@@ -179,7 +180,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.AppearanceTest do
       integration = insert(:calendar_integration, user: user)
       view = open_manage_modal(conn, integration)
 
-      Calendar.delete_integration(integration.id, user.id)
+      {:ok, to_delete} = CalendarManagement.get_calendar_integration(integration.id, user.id)
+      CalendarManagement.delete_calendar_integration(to_delete)
 
       view
       |> swatch(integration, "grape")

@@ -164,7 +164,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
       30,
       "Etc/UTC",
       user.id,
-      profile
+      profile,
+      nil
     )
   end
 end

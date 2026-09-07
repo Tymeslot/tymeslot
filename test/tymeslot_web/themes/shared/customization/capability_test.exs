@@ -15,8 +15,6 @@ defmodule TymeslotWeb.Themes.Shared.Customization.CapabilityTest do
              "color_scheme" => "default"
            }
 
-    assert Capability.supports_customization?("1", :background) == true
-
     # An empty customisation map carries no overrides, so no CSS is emitted.
     assert Capability.generate_css("1", %{}) == ""
   end

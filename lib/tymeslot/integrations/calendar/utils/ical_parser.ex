@@ -55,30 +55,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       {:error, "Parse error: #{inspect(error)}"}
   end
 
-  @doc """
-  Parses CalDAV multistatus XML response containing multiple calendar entries.
-  """
-  @spec parse_multistatus(binary()) :: {:ok, list(map())}
-  def parse_multistatus(xml_body) when is_binary(xml_body) do
-    trimmed_body = String.trim(xml_body)
-    if trimmed_body == "", do: {:ok, []}, else: parse_calendars_from_multistatus(trimmed_body)
-  end
-
-  defp parse_calendars_from_multistatus(trimmed_body) do
-    calendars = extract_calendars_from_xml(trimmed_body)
-
-    events = Enum.flat_map(calendars, &parse_calendar_data/1)
-
-    {:ok, events}
-  end
-
-  defp parse_calendar_data(calendar_data) do
-    case parse(calendar_data) do
-      {:ok, events} -> events
-      {:error, _reason} -> []
-    end
-  end
-
   # Private functions
 
   defp normalize_content(content) do
@@ -454,23 +430,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         parse_datetime_property(%{value: String.trim(str), timezone: timezone}, vtimezones)
       end)
       |> Enum.reject(&is_nil/1)
-    end)
-  end
-
-  defp extract_calendars_from_xml(xml_body) do
-    # Pattern to extract calendar data from CalDAV response
-    # Namespace prefixes vary by server (C:, cal:, caldav:, etc.)
-    calendar_data_pattern =
-      ~r/<(?:[a-zA-Z]+:)?calendar-data[^>]*>(.*?)<\/(?:[a-zA-Z]+:)?calendar-data>/s
-
-    Enum.map(Regex.scan(calendar_data_pattern, xml_body), fn [_match, calendar_data] ->
-      # Unescape XML entities
-      calendar_data
-      |> String.replace("&lt;", "<")
-      |> String.replace("&gt;", ">")
-      |> String.replace("&amp;", "&")
-      |> String.replace("&quot;", "\"")
-      |> String.replace("&apos;", "'")
     end)
   end
 end

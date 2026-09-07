@@ -484,7 +484,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   `Exchange.Requests`), so there is nothing for a caller to vary.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
-  def delete_event(client, item_id, _opts \\ []) do
+  def delete_event(client, item_id, _opts) do
     client
     |> to_config()
     |> Writes.delete_item(item_id)

@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   @doc "Initialises form, touched-field, validation-error, and saving assigns."
   @spec setup_form_state(Phoenix.LiveView.Socket.t(), map(), keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def setup_form_state(socket, form_data \\ %{}, opts \\ []) do
+  def setup_form_state(socket, form_data, opts) do
     as = Keyword.get(opts, :as)
 
     socket
@@ -132,12 +132,10 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
     assign(socket, :touched_fields, MapSet.put(socket.assigns.touched_fields, field_name))
   end
 
-  @doc """
-  Stores client IP in socket assigns during mount.
-  Should be called during mount to capture IP for later use.
-  """
+  # Stores client IP in socket assigns during mount, to capture the IP for
+  # later use.
   @spec store_client_ip(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def store_client_ip(socket) do
+  defp store_client_ip(socket) do
     # Try mount-specific extraction first if not already in assigns
     ip =
       case socket.assigns[:client_ip] do

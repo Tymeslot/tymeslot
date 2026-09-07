@@ -194,14 +194,6 @@ defmodule Tymeslot.Security.Encryption do
   @spec current_version() :: non_neg_integer()
   def current_version, do: keyring().current_version
 
-  @doc """
-  Generates a new random API key.
-  """
-  @spec generate_api_key() :: String.t()
-  def generate_api_key do
-    Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
-  end
-
   @doc false
   # Internal helper: encrypt a value under the legacy (v0) key in the prefix-less
   # format. Used by the sweep's tests and any tooling that must materialise legacy

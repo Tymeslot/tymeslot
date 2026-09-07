@@ -127,20 +127,16 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
           }
   end
 
-  @doc """
-  Resolves the actor a connection test should be charged to.
-
-  `subject` is the integration struct (or anything map-like carrying
-  `:user_id` and `:id`) — never the provider-specific config a `Request.run`
-  closure closes over, which can drop those fields entirely (see
-  `Calendar.Connection.test_connection/2`). Callers only need this for
-  `:interactive` requests; a `:background` request's actor is never charged
-  (see the moduledoc), so a caller building one should pass `actor: nil`
-  rather than call this.
-  """
+  # Resolves the actor a connection test should be charged to.
+  #
+  # `subject` is the integration struct (or anything map-like carrying
+  # `:user_id` and `:id`) — never the provider-specific config a `Request.run`
+  # closure closes over, which can drop those fields entirely (see
+  # `Calendar.Connection.test_connection/2`). Only `:interactive` requests need
+  # this; a `:background` request's actor is never charged (see the moduledoc).
   @spec resolve_actor(map() | struct(), :interactive) ::
           {:ok, actor()} | {:error, :unattributable}
-  def resolve_actor(subject, :interactive) do
+  defp resolve_actor(subject, :interactive) do
     case Map.get(subject, :user_id) do
       user_id when is_integer(user_id) and user_id > 0 -> {:ok, {:user, user_id}}
       _other -> {:error, :unattributable}

@@ -68,23 +68,12 @@ defmodule TymeslotWeb.AuthLive.SecurityHelper do
   def rate_limit_ip(%{ip: ip}) when ip in [nil, ""], do: "unknown"
   def rate_limit_ip(%{ip: ip}), do: ip
 
-  @doc """
-  Get current user ID from socket assigns for security logging.
-  """
   @spec get_current_user_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
-  def get_current_user_id(socket) do
+  defp get_current_user_id(socket) do
     case socket.assigns[:current_user] do
       %{id: id} -> id
       _other -> nil
     end
-  end
-
-  @doc """
-  Set loading state on socket.
-  """
-  @spec set_loading(Phoenix.LiveView.Socket.t(), boolean()) :: Phoenix.LiveView.Socket.t()
-  def set_loading(socket, loading \\ true) do
-    Component.assign(socket, :loading, loading)
   end
 
   @doc """

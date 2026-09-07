@@ -67,8 +67,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   subsequent pull cannot clobber a local change that has not reached the server
   yet if the push happens first.
 
-  Passing `force_full_fetch?: true` skips tier handling entirely; see
-  `forced_full_fetch/2`.
+  Passing `force_full_fetch?: true` skips tier handling entirely: a plain
+  calendar-query REPORT runs against every configured path, then the sync
+  token is reset and the full-sync timestamp recorded.
   """
   @spec run(struct(), boolean()) :: result()
   def run(integration, force_full_fetch?) do
@@ -104,20 +105,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # Forced full fetch
   # ---------------------------------------------------------------------------
 
-  @doc """
-  Runs a calendar-query REPORT against every configured path, ignoring the
-  tier, then resets the sync token and records the full-sync timestamp.
-
-  Tier 1 delta sync and Tier 2 CTag checks can silently miss events that were
-  already on the server when the initial sync ran, so a plain calendar-query
-  REPORT is the only way to re-establish ground truth. Clearing the sync token
-  makes the next normal sync rebuild its state from scratch, which can
-  self-heal a server whose own sync tracking has drifted. Clearing the tier
-  forces re-detection, which is otherwise one-shot and would never notice a
-  server upgrade that adds sync-collection support.
-  """
+  # Runs a calendar-query REPORT against every configured path, ignoring the
+  # tier, then resets the sync token and records the full-sync timestamp.
+  #
+  # Tier 1 delta sync and Tier 2 CTag checks can silently miss events that were
+  # already on the server when the initial sync ran, so a plain calendar-query
+  # REPORT is the only way to re-establish ground truth. Clearing the sync token
+  # makes the next normal sync rebuild its state from scratch, which can
+  # self-heal a server whose own sync tracking has drifted. Clearing the tier
+  # forces re-detection, which is otherwise one-shot and would never notice a
+  # server upgrade that adds sync-collection support.
   @spec forced_full_fetch(struct(), map()) :: result()
-  def forced_full_fetch(integration, client) do
+  defp forced_full_fetch(integration, client) do
     paths = client.calendar_paths
 
     if Enum.empty?(paths) do

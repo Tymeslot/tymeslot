@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Workers.ColourWriteBackWorker
 
   setup :verify_on_exit!
@@ -21,7 +22,8 @@ defmodule Tymeslot.Integrations.CalendarTest do
       integration2 = insert(:calendar_integration, user: user)
 
       # Set integration1 as primary
-      assert {:ok, _result} = Calendar.set_primary(user.id, integration1.id)
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, integration1.id)
 
       integrations = Calendar.list_integrations(user.id)
 
@@ -68,32 +70,6 @@ defmodule Tymeslot.Integrations.CalendarTest do
 
       assert {:ok, toggled_back} = Calendar.toggle_integration(integration.id, user.id)
       assert toggled_back.is_active
-    end
-  end
-
-  describe "delete_integration/2" do
-    test "deletes integration" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
-
-      assert {:ok, _result} = Calendar.delete_integration(integration.id, user.id)
-      assert {:error, :not_found} = Calendar.get_integration(integration.id, user.id)
-    end
-  end
-
-  describe "primary calendar management" do
-    test "set_primary/2 and clear_primary/1" do
-      user = insert(:user)
-      insert(:profile, user: user)
-      integration = insert(:calendar_integration, user: user)
-
-      assert {:ok, _result} = Calendar.set_primary(user.id, integration.id)
-      integrations = Calendar.list_integrations(user.id)
-      assert Enum.find(integrations, &(&1.id == integration.id)).is_primary
-
-      assert {:ok, _result} = Calendar.clear_primary(user.id)
-      integrations = Calendar.list_integrations(user.id)
-      refute Enum.find(integrations, &(&1.id == integration.id)).is_primary
     end
   end
 

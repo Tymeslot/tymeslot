@@ -46,9 +46,9 @@ defmodule Tymeslot.Profiles.Avatars do
     end
   end
 
-  @doc "Validates the file extension against accepted avatar types."
+  # Validates the file extension against accepted avatar types.
   @spec validate_file_type(map()) :: :ok | {:error, String.t()}
-  def validate_file_type(file_params) do
+  defp validate_file_type(file_params) do
     case Map.get(file_params, "client_name") do
       nil ->
         {:error, "No file name provided"}
@@ -64,9 +64,9 @@ defmodule Tymeslot.Profiles.Avatars do
     end
   end
 
-  @doc "Validates the file size against the maximum allowed."
+  # Validates the file size against the maximum allowed.
   @spec validate_file_size(map()) :: :ok | {:error, String.t()}
-  def validate_file_size(file_params) do
+  defp validate_file_size(file_params) do
     case Map.get(file_params, "size") do
       nil ->
         :ok

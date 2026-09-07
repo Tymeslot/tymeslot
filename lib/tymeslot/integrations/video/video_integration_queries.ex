@@ -210,17 +210,12 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     end
   end
 
-  @doc """
-  Finds an active video integration for a user and provider whose
-  `provider_account_id` is NULL.
-
-  This is the set the `unique_active_video_null_account_per_user` index covers,
-  so it is what a reactivation of a legacy row has to be checked against.
-  """
-  @spec get_active_null_account_for_user(integer(), String.t()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
-  def get_active_null_account_for_user(user_id, provider)
-      when is_integer(user_id) and is_binary(provider) do
+  # Finds an active video integration for a user and provider whose
+  # `provider_account_id` is NULL. This is the set the
+  # `unique_active_video_null_account_per_user` index covers, so it is what a
+  # reactivation of a legacy row has to be checked against.
+  defp get_active_null_account_for_user(user_id, provider)
+       when is_integer(user_id) and is_binary(provider) do
     VideoIntegrationSchema
     |> exclude_deleted()
     |> where(
@@ -454,29 +449,5 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
       {:ok, _existing} -> {:error, :duplicate_account}
       {:error, :not_found} -> :ok
     end
-  end
-
-  @doc """
-  Counts video integrations for a user.
-  """
-  @spec count_for_user(integer()) :: non_neg_integer()
-  def count_for_user(user_id) do
-    VideoIntegrationSchema
-    |> exclude_deleted()
-    |> where([v], v.user_id == ^user_id)
-    |> select([v], count(v.id))
-    |> Repo.one() || 0
-  end
-
-  @doc """
-  Gets all video integrations (for consistency checks).
-  Used by data consistency service.
-  """
-  @spec list_all() :: list(VideoIntegrationSchema.t())
-  def list_all do
-    VideoIntegrationSchema
-    |> exclude_deleted()
-    |> Repo.all()
-    |> Enum.map(&VideoIntegrationSchema.decrypt_credentials/1)
   end
 end

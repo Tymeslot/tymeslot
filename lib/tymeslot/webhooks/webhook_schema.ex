@@ -130,12 +130,6 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
     %{webhook | webhook_token: Encryption.decrypt(webhook.webhook_token_encrypted)}
   end
 
-  @doc """
-  Returns all valid event types
-  """
-  @spec valid_events() :: [String.t()]
-  def valid_events, do: @valid_events
-
   @max_failure_count 10
 
   @doc """

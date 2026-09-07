@@ -171,27 +171,17 @@ defmodule Tymeslot.Auth.ErrorFormatter do
     format_validation_errors(changeset)
   end
 
-  @doc """
-  Formats a single field error.
-
-  ## Parameters
-  - field: The field name atom
-  - errors: List of error messages for the field
-
-  ## Returns
-  - A formatted string for the field errors
-  """
+  # Formats a single field error: the field name, humanised, followed by its
+  # error messages.
   @spec format_field_error(atom(), list(String.t())) :: String.t()
-  def format_field_error(field, errors) when is_list(errors) do
+  defp format_field_error(field, errors) when is_list(errors) do
     field_name = field |> to_string() |> String.replace("_", " ") |> String.capitalize()
     "#{field_name} #{Enum.join(errors, ", ")}"
   end
 
-  @doc """
-  Returns a generic authentication error message to prevent user enumeration.
-  """
+  # Returns a generic authentication error message to prevent user enumeration.
   @spec generic_auth_error() :: String.t()
-  def generic_auth_error do
+  defp generic_auth_error do
     dgettext("auth", "Invalid email or password.")
   end
 
@@ -231,29 +221,6 @@ defmodule Tymeslot.Auth.ErrorFormatter do
 
   defp operation_name("registration"), do: dgettext("auth", "Registration")
   defp operation_name(operation), do: String.capitalize(operation)
-
-  @doc """
-  Formats email verification errors.
-  """
-  @spec format_verification_error(atom() | String.t()) :: String.t()
-  def format_verification_error(:invalid_token),
-    do: dgettext("auth", "Invalid verification token. Please request a new verification email.")
-
-  def format_verification_error(:token_expired),
-    do:
-      dgettext(
-        "auth",
-        "Your verification token has expired. Please request a new verification email."
-      )
-
-  def format_verification_error(:rate_limited),
-    do: dgettext("auth", "Too many verification attempts. Please try again later.")
-
-  def format_verification_error(:email_send_failed),
-    do: dgettext("auth", "Failed to send verification email. Please try again later.")
-
-  def format_verification_error(_reason),
-    do: dgettext("auth", "Verification failed. Please try again.")
 
   @doc """
   Formats password reset operation errors.

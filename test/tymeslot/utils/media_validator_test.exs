@@ -43,21 +43,6 @@ defmodule Tymeslot.Utils.MediaValidatorTest do
     end
   end
 
-  describe "valid_media?/1" do
-    test "returns true for image or video" do
-      png_header =
-        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
-          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
-
-      assert MediaValidator.valid_media?(png_header)
-      assert MediaValidator.valid_media?(<<0, 0, 0, 20, "ftypmp42">>)
-    end
-
-    test "returns false for others" do
-      refute MediaValidator.valid_media?(<<"random data">>)
-    end
-  end
-
   describe "valid_image_file?/1, valid_video_file?/1, valid_png_file?/1 file handling" do
     test "returns false for a 0-byte file without leaking the file handle" do
       path =

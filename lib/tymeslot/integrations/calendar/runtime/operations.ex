@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   end
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
-  def get_event(uid, user_id \\ nil) do
+  def get_event(uid, user_id) do
     EventOperations.get_event(uid, user_id)
   end
 
@@ -54,7 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
           keyword()
         ) ::
           {:ok, map()} | {:error, term()}
-  def delete_event_and_reconcile(uid, provider_event_id, context, opts \\ []) do
+  def delete_event_and_reconcile(uid, provider_event_id, context, opts) do
     EventOperations.delete_event_and_reconcile(uid, provider_event_id, context, opts)
   end
 

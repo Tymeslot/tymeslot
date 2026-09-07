@@ -125,7 +125,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   Falls back to the user's primary calendar if not specified.
   """
   @spec create_event(calendar_event_data(), create_context()) :: {:ok, map()} | {:error, term()}
-  def create_event(event_data, context \\ nil) do
+  def create_event(event_data, context) do
     case context do
       id when is_integer(id) and id > 0 ->
         behaviour_module().create_event(event_data, id)
@@ -158,7 +158,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
           pos_integer() | MeetingSchema.t() | {pos_integer(), pos_integer()} | nil
         ) ::
           :ok | {:error, term()}
-  def update_event(uid, event_data, context \\ nil) do
+  def update_event(uid, event_data, context) do
     behaviour_module().update_event(uid, event_data, context)
   end
 

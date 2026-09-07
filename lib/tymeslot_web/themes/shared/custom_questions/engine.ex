@@ -80,11 +80,6 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
   def prev(%__MODULE__{current_index: 0} = s), do: s
   def prev(%__MODULE__{} = s), do: %{s | current_index: s.current_index - 1}
 
-  @spec complete?(t()) :: boolean()
-  def complete?(%__MODULE__{definitions: defs, current_index: i} = s) do
-    i == length(defs) - 1 and match?({:ok, _}, validate_current(s))
-  end
-
   @spec validate_all(t()) :: {:ok, map()} | {:error, %{String.t() => String.t()}}
   def validate_all(%__MODULE__{definitions: defs, answers: ans}),
     do: CustomFields.validate_answers(defs, ans)

@@ -250,7 +250,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   against a live server. Keep additions in schema order.
   """
   @spec create_item(item_spec(), :calendar | String.t()) :: String.t()
-  def create_item(spec, folder \\ :calendar) when is_map(spec) do
+  def create_item(spec, folder) when is_map(spec) do
     """
     <m:CreateItem SendMeetingInvitations="SendToNone">
       <m:SavedItemFolderId>#{folder_element(folder)}</m:SavedItemFolderId>

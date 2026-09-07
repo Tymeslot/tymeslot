@@ -96,7 +96,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
     end
   end
 
-  describe "get_by_profile_and_theme/2 and get_by_profile_and_theme_t/2" do
+  describe "get_by_profile_and_theme/2" do
     test "retrieves customization by profile and theme" do
       profile = insert(:profile)
 
@@ -115,23 +115,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       result = ThemeCustomizationQueries.get_by_profile_and_theme(profile.id, "nonexistent")
 
       assert result == nil
-    end
-
-    test "get_by_profile_and_theme_t returns tagged tuple for existing customization" do
-      profile = insert(:profile)
-      customization = insert(:theme_customization, profile: profile, theme_id: "1")
-
-      assert {:ok, result} =
-               ThemeCustomizationQueries.get_by_profile_and_theme_t(profile.id, "1")
-
-      assert result.id == customization.id
-    end
-
-    test "get_by_profile_and_theme_t returns error tuple when not found" do
-      profile = insert(:profile)
-
-      assert {:error, :not_found} =
-               ThemeCustomizationQueries.get_by_profile_and_theme_t(profile.id, "nonexistent")
     end
   end
 
@@ -199,7 +182,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
     end
   end
 
-  describe "get_profile_by_user_id/1 and get_profile_by_user_id_t/1" do
+  describe "get_profile_by_user_id/1" do
     test "retrieves profile by user_id" do
       user = insert(:user)
       profile = insert(:profile, user: user)
@@ -214,18 +197,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
       result = ThemeCustomizationQueries.get_profile_by_user_id(999_999)
 
       assert result == nil
-    end
-
-    test "get_profile_by_user_id_t returns tagged tuple for existing profile" do
-      user = insert(:user)
-      profile = insert(:profile, user: user)
-
-      assert {:ok, result} = ThemeCustomizationQueries.get_profile_by_user_id_t(user.id)
-      assert result.id == profile.id
-    end
-
-    test "get_profile_by_user_id_t returns error tuple when not found" do
-      assert {:error, :not_found} = ThemeCustomizationQueries.get_profile_by_user_id_t(999_999)
     end
   end
 

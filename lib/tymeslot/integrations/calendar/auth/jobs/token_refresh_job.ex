@@ -79,11 +79,8 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
     refresh_expiring_tokens()
   end
 
-  @doc """
-  Refreshes all calendar tokens that are expiring soon for both Google and Outlook.
-  """
   @spec refresh_expiring_tokens() :: :ok | {:error, term()}
-  def refresh_expiring_tokens do
+  defp refresh_expiring_tokens do
     threshold = DateTime.add(DateTime.utc_now(), @refresh_threshold_hours, :hour)
 
     # Refresh Google Calendar tokens

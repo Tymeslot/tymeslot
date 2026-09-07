@@ -23,7 +23,7 @@ defmodule Tymeslot.Slack.InputValidation do
     * `:oauth_existing` — name, `channel_id`, events
   """
   @spec validate_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
-  def validate_form(params, opts \\ []) do
+  def validate_form(params, opts) do
     mode = Keyword.get(opts, :mode, :webhook_url)
     errors = %{}
 

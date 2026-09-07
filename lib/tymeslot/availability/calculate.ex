@@ -69,7 +69,7 @@ defmodule Tymeslot.Availability.Calculate do
         user_timezone,
         owner_timezone,
         events,
-        config \\ %{}
+        config
       ) do
     duration_minutes = duration_minutes |> max(1) |> min(1440)
     schedule_id = Map.get(config, :schedule_id)
@@ -196,7 +196,7 @@ defmodule Tymeslot.Availability.Calculate do
         owner_timezone,
         user_timezone,
         events,
-        config \\ %{}
+        config
       ) do
     now = DateTimeUtils.now_in_timezone(user_timezone)
     today = DateTime.to_date(now)
@@ -312,7 +312,7 @@ defmodule Tymeslot.Availability.Calculate do
           availability_config(),
           %{String.t() => boolean()} | atom() | nil
         ) :: [calendar_day()]
-  def get_calendar_days(user_timezone, year, month, config \\ %{}, availability_map \\ nil) do
+  def get_calendar_days(user_timezone, year, month, config, availability_map \\ nil) do
     now = DateTimeUtils.now_in_timezone(user_timezone)
     today = DateTime.to_date(now)
 

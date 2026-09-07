@@ -5,14 +5,8 @@ defmodule Tymeslot.Utils.AvatarUtils do
 
   require Logger
 
-  @doc """
-  Generates a fallback SVG avatar based on user's initials and a consistent color.
-  """
-  @spec generate_fallback_svg(map() | nil, non_neg_integer()) :: String.t()
-  def generate_fallback_svg(profile, size \\ 300)
-  def generate_fallback_svg(nil, size), do: generate_generic_fallback_svg(size)
-
-  def generate_fallback_svg(profile, size) do
+  @spec generate_fallback_svg(map(), non_neg_integer()) :: String.t()
+  defp generate_fallback_svg(profile, size) do
     initials = get_initials(profile)
     color = get_consistent_color(profile)
     profile_id = Map.get(profile, :id, "default")
@@ -65,13 +59,8 @@ defmodule Tymeslot.Utils.AvatarUtils do
     "data:image/svg+xml;base64,#{encoded}"
   end
 
-  @doc """
-  Gets initials from a profile.
-  """
-  @spec get_initials(map() | nil) :: String.t()
-  def get_initials(nil), do: "U"
-
-  def get_initials(profile) do
+  @spec get_initials(map()) :: String.t()
+  defp get_initials(profile) do
     cond do
       profile.full_name && String.trim(profile.full_name) != "" ->
         profile.full_name
@@ -99,13 +88,8 @@ defmodule Tymeslot.Utils.AvatarUtils do
       "U"
   end
 
-  @doc """
-  Gets a consistent color scheme based on the profile ID.
-  """
-  @spec get_consistent_color(map() | nil) :: %{start: String.t(), end: String.t()}
-  def get_consistent_color(nil), do: %{start: "#667eea", end: "#764ba2"}
-
-  def get_consistent_color(profile) do
+  @spec get_consistent_color(map()) :: %{start: String.t(), end: String.t()}
+  defp get_consistent_color(profile) do
     # Use profile ID to generate consistent colors
     profile_id = Map.get(profile, :id, 0)
     hash = :erlang.phash2(profile_id, 1000)
@@ -147,11 +131,8 @@ defmodule Tymeslot.Utils.AvatarUtils do
     Enum.at(color_schemes, rem(hash, length(color_schemes)))
   end
 
-  @doc """
-  Generates a generic fallback SVG avatar for cases where no profile exists.
-  """
   @spec generate_generic_fallback_svg(non_neg_integer()) :: String.t()
-  def generate_generic_fallback_svg(size \\ 300) do
+  defp generate_generic_fallback_svg(size) do
     """
     <svg width="#{size}" height="#{size}" viewBox="0 0 #{size} #{size}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -170,11 +151,8 @@ defmodule Tymeslot.Utils.AvatarUtils do
     """
   end
 
-  @doc """
-  Generates a generic fallback data URI for cases where no profile exists.
-  """
   @spec generate_generic_fallback_data_uri(non_neg_integer()) :: String.t()
-  def generate_generic_fallback_data_uri(size \\ 300) do
+  defp generate_generic_fallback_data_uri(size) do
     svg = generate_generic_fallback_svg(size)
     encoded = Base.encode64(svg)
     "data:image/svg+xml;base64,#{encoded}"

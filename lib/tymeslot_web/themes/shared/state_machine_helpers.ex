@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   Only allows navigation to previous or current steps.
   """
   @spec can_navigate_to_step?(Phoenix.LiveView.Socket.t(), atom(), map()) :: boolean()
-  def can_navigate_to_step?(socket, target_state, states \\ @default_states) do
+  def can_navigate_to_step?(socket, target_state, states) do
     current_state = socket.assigns[:current_state]
 
     with %{step: current_step} <- states[current_state],
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
 
   @spec validate_step_requirements(Phoenix.LiveView.Socket.t(), atom()) ::
           :ok | {:error, MeetingTypes.Duration.selection_error() | Calculate.selection_error()}
-  def validate_step_requirements(socket, :schedule) do
+  defp validate_step_requirements(socket, :schedule) do
     MeetingTypes.validate_duration_selection(
       socket.assigns[:selected_duration],
       validatable_meeting_types(socket)
@@ -105,10 +105,10 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   end
 
   # Same precondition as :booking — booker must have selected a date and time.
-  def validate_step_requirements(socket, :questions),
+  defp validate_step_requirements(socket, :questions),
     do: validate_step_requirements(socket, :booking)
 
-  def validate_step_requirements(socket, :booking) do
+  defp validate_step_requirements(socket, :booking) do
     Calculate.validate_time_selection(
       socket.assigns[:selected_date],
       socket.assigns[:selected_time],

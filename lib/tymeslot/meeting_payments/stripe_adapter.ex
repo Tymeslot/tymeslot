@@ -38,7 +38,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
               {:ok, map()} | {:error, term()}
 
   @spec create_account(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def create_account(params, opts \\ []) do
+  def create_account(params, opts) do
     Telemetry.span_stripe(:create_account, nil, fn -> impl().create_account(params, opts) end)
   end
 
@@ -57,14 +57,14 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   end
 
   @spec create_checkout_session(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def create_checkout_session(params, opts \\ []) do
+  def create_checkout_session(params, opts) do
     Telemetry.span_stripe(:create_checkout_session, opts[:connect_account], fn ->
       impl().create_checkout_session(params, opts)
     end)
   end
 
   @spec retrieve_checkout_session(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
-  def retrieve_checkout_session(id, opts \\ []) do
+  def retrieve_checkout_session(id, opts) do
     normalise_read(
       Telemetry.span_stripe(:retrieve_checkout_session, opts[:connect_account], fn ->
         impl().retrieve_checkout_session(id, opts)
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   end
 
   @spec retrieve_payment_intent(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
-  def retrieve_payment_intent(id, opts \\ []) do
+  def retrieve_payment_intent(id, opts) do
     normalise_read(
       Telemetry.span_stripe(:retrieve_payment_intent, opts[:connect_account], fn ->
         impl().retrieve_payment_intent(id, opts)
@@ -82,7 +82,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   end
 
   @spec retrieve_charge(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
-  def retrieve_charge(id, opts \\ []) do
+  def retrieve_charge(id, opts) do
     normalise_read(
       Telemetry.span_stripe(:retrieve_charge, opts[:connect_account], fn ->
         impl().retrieve_charge(id, opts)
@@ -91,14 +91,14 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   end
 
   @spec expire_checkout_session(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
-  def expire_checkout_session(session_id, opts \\ []) do
+  def expire_checkout_session(session_id, opts) do
     Telemetry.span_stripe(:expire_checkout_session, opts[:connect_account], fn ->
       impl().expire_checkout_session(session_id, opts)
     end)
   end
 
   @spec create_refund(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def create_refund(params, opts \\ []) do
+  def create_refund(params, opts) do
     Telemetry.span_stripe(:create_refund, opts[:connect_account], fn ->
       impl().create_refund(params, opts)
     end)

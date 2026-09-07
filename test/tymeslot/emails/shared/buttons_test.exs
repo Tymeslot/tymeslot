@@ -58,20 +58,4 @@ defmodule Tymeslot.Emails.Shared.ButtonsTest do
       assert Colour.contrast_ratio(expected_text, accent_deep) >= 4.5
     end
   end
-
-  describe "action_button_group/2" do
-    test "includes both button URLs and labels in the output" do
-      buttons = [
-        %{text: "Accept", url: "https://example.com/accept"},
-        %{text: "Decline", url: "https://example.com/decline"}
-      ]
-
-      html = Buttons.action_button_group(:confirmed, buttons)
-
-      assert html =~ "https://example.com/accept"
-      assert html =~ "Accept"
-      assert html =~ "https://example.com/decline"
-      assert html =~ "Decline"
-    end
-  end
 end

@@ -57,22 +57,6 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     do: dgettext("booking", "Invalid date/time")
 
   @doc """
-  Formats meeting time with localization and timezone awareness.
-  """
-  @spec format_meeting_time(DateTime.t(), String.t()) :: String.t()
-  def format_meeting_time(datetime, timezone) do
-    case DateTime.shift_zone(datetime, timezone) do
-      {:ok, shifted} ->
-        time_str = format_time_by_locale(shifted)
-        dgettext("booking", "%{time} %{timezone}", time: time_str, timezone: shifted.zone_abbr)
-
-      _other ->
-        time_str = format_time_by_locale(datetime)
-        dgettext("booking", "%{time} UTC", time: time_str)
-    end
-  end
-
-  @doc """
   Formats a meeting start time for the payment return pages — localized and
   shifted into the attendee's timezone, so the confirmation shows the time the
   attendee will actually keep rather than raw UTC. Falls back to UTC if the
@@ -225,11 +209,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   @spec format_duration(any()) :: String.t()
   def format_duration(_other), do: dgettext("booking", "Unknown duration")
 
-  @doc """
-  Gets month name translated.
-  """
   @spec get_month_name(integer()) :: String.t()
-  def get_month_name(month) do
+  defp get_month_name(month) do
     case month do
       1 -> dgettext("booking", "January")
       2 -> dgettext("booking", "February")
@@ -246,11 +227,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     end
   end
 
-  @doc """
-  Gets weekday name translated.
-  """
   @spec get_weekday_name(integer()) :: String.t()
-  def get_weekday_name(day) do
+  defp get_weekday_name(day) do
     case day do
       1 -> dgettext("booking", "Monday")
       2 -> dgettext("booking", "Tuesday")

@@ -63,12 +63,6 @@ defmodule Tymeslot.Locales do
   end
 
   @doc """
-  Returns the pseudo-localisation locale code (`"pseudo"`).
-  """
-  @spec pseudo_locale() :: String.t()
-  def pseudo_locale, do: @pseudo_code
-
-  @doc """
   Whether the development pseudo-localisation locale is enabled.
 
   Off everywhere except dev (see `config/dev.exs`); guarantees the pseudo locale

@@ -48,14 +48,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.FormInput do
     end
   end
 
-  @doc """
-  Maps a submitted field name onto the atom the validators dispatch on.
-
-  Anything outside the known set becomes `:unknown`, which every validator
-  clause accepts and passes through.
-  """
+  # Maps a submitted field name onto the atom the validators dispatch on.
+  # Anything outside the known set becomes `:unknown`, which every validator
+  # clause accepts and passes through.
   @spec field_atom(String.t()) :: atom()
-  def field_atom(field), do: Map.get(@field_atoms, field, :unknown)
+  defp field_atom(field), do: Map.get(@field_atoms, field, :unknown)
 
   @doc """
   Converts a params map's string keys to atoms for the context call.

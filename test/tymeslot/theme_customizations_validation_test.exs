@@ -155,48 +155,5 @@ defmodule Tymeslot.ThemeCustomizationsValidationTest do
       assert Validation.sanitize_css(nil) == ""
       assert Validation.sanitize_css(123) == ""
     end
-
-    test "validate_customization_changes/1 validates multiple fields" do
-      changes = %{color_scheme: "purple", background_type: "gradient"}
-
-      assert Validation.validate_customization_changes(changes) == :ok
-    end
-
-    test "validate_customization_changes/1 collects errors" do
-      changes = %{color_scheme: "invalid_scheme", background_type: "invalid_type"}
-
-      assert {:error, errors} = Validation.validate_customization_changes(changes)
-      assert length(errors) == 2
-    end
-
-    test "sanitize_customization_input/1 trims string values" do
-      attrs = %{"color_scheme" => "  purple  ", "background_type" => " gradient "}
-
-      {:ok, sanitized} = Validation.sanitize_customization_input(attrs)
-
-      assert sanitized["color_scheme"] == "purple"
-      assert sanitized["background_type"] == "gradient"
-    end
-
-    test "sanitize_customization_input/1 rejects non-map input" do
-      assert {:error, _reason} = Validation.sanitize_customization_input("not a map")
-    end
-
-    test "validate_file_extension/2 validates image extensions" do
-      assert Validation.validate_file_extension("image.jpg", :image) == :ok
-      assert Validation.validate_file_extension("image.png", :image) == :ok
-      assert Validation.validate_file_extension("image.webp", :image) == :ok
-      assert {:error, _reason} = Validation.validate_file_extension("image.exe", :image)
-    end
-
-    test "validate_file_extension/2 validates video extensions" do
-      assert Validation.validate_file_extension("video.mp4", :video) == :ok
-      assert Validation.validate_file_extension("video.webm", :video) == :ok
-      assert {:error, _reason} = Validation.validate_file_extension("video.exe", :video)
-    end
-
-    test "validate_file_extension/2 handles unknown types" do
-      assert {:error, _reason} = Validation.validate_file_extension("file.txt", :unknown)
-    end
   end
 end

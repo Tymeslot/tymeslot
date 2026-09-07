@@ -158,34 +158,6 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
   end
 
   @doc """
-  Updates `calendar_sync_status` on a meeting and clears `calendar_sync_status_dismissed_at`.
-
-  `status` must be one of `"externally_deleted"` or `"externally_modified"`.
-
-  Returns `{:ok, meeting}` on success or `{:error, :not_found}` if no row matched.
-  """
-  @spec update_calendar_sync_status(String.t(), String.t()) ::
-          {:ok, Meeting.t()} | {:error, :not_found}
-  def update_calendar_sync_status(meeting_id, status) when status in @valid_sync_statuses do
-    {count, _rows} =
-      Meeting
-      |> where([m], m.id == ^meeting_id)
-      |> Repo.update_all(
-        set: [
-          calendar_sync_status: status,
-          calendar_sync_status_dismissed_at: nil,
-          updated_at: DateTime.utc_now(:second)
-        ]
-      )
-
-    if count > 0 do
-      MeetingQueries.get_meeting(meeting_id)
-    else
-      {:error, :not_found}
-    end
-  end
-
-  @doc """
   Atomically updates `calendar_sync_status` only when the current value differs.
 
   Returns `{:ok, meeting}` if the row was updated, `{:ok, :already_set}` if the

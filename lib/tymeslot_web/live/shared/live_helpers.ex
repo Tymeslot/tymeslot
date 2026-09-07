@@ -3,12 +3,9 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   Helper functions for LiveViews.
   These are functions that work with socket assigns, not components.
   """
-  import Phoenix.LiveView
   import Phoenix.Component
 
-  alias Ecto.Changeset
   alias Tymeslot.Auth.Authentication
-  alias Tymeslot.Profiles
   alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
 
@@ -35,21 +32,6 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   # ========== TIMEZONE HELPERS ==========
 
   @doc """
-  Assigns user timezone to the socket, checking params, connection info, then defaulting.
-  """
-  @spec assign_user_timezone(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def assign_user_timezone(socket, params) do
-    timezone =
-      params["timezone"] ||
-        get_connect_params(socket)["timezone"] ||
-        Profiles.get_default_timezone()
-
-    # Normalize timezone to ensure consistency
-    normalized_timezone = Timezones.normalize(timezone)
-    assign(socket, :user_timezone, normalized_timezone)
-  end
-
-  @doc """
   Validates and updates timezone on the socket.
   """
   @spec update_timezone(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
@@ -62,90 +44,6 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
 
       {:error, _reason} ->
         socket
-    end
-  end
-
-  # ========== FORM HELPERS ==========
-
-  @doc """
-  Sets up initial form state on the socket.
-  """
-  @spec setup_form_state(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def setup_form_state(socket, initial_data \\ %{}) do
-    socket
-    |> assign(:form, to_form(initial_data))
-    |> assign(:touched_fields, MapSet.new())
-    |> assign(:validation_errors, [])
-    |> assign(:submitting, false)
-  end
-
-  @doc """
-  Marks a field as touched for validation display.
-  """
-  @spec mark_field_touched(Phoenix.LiveView.Socket.t(), String.t() | atom()) ::
-          Phoenix.LiveView.Socket.t()
-  def mark_field_touched(socket, field_name) when is_binary(field_name) do
-    mark_field_touched(socket, String.to_existing_atom(field_name))
-  end
-
-  def mark_field_touched(socket, field_name) when is_atom(field_name) do
-    touched = MapSet.put(socket.assigns.touched_fields, field_name)
-    assign(socket, :touched_fields, touched)
-  end
-
-  @doc """
-  Filters validation errors to only show for touched fields.
-  """
-  @spec filter_errors_for_touched_fields(list(), MapSet.t()) :: list()
-  def filter_errors_for_touched_fields(errors, touched_fields) do
-    Enum.filter(errors, fn {field, _message} ->
-      MapSet.member?(touched_fields, field)
-    end)
-  end
-
-  @doc """
-  Updates form with validation errors.
-  """
-  @spec assign_form_errors(Phoenix.LiveView.Socket.t(), list() | Changeset.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def assign_form_errors(socket, errors) when is_list(errors) do
-    # Filter errors for touched fields
-    filtered_errors = filter_errors_for_touched_fields(errors, socket.assigns.touched_fields)
-    assign(socket, :validation_errors, filtered_errors)
-  end
-
-  def assign_form_errors(socket, changeset) do
-    errors =
-      Changeset.traverse_errors(changeset, fn {msg, opts} ->
-        Regex.replace(~r"%{(\w+)}", msg, fn _arg1, key ->
-          opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
-        end)
-      end)
-
-    flat_errors =
-      Enum.flat_map(errors, fn {field, messages} ->
-        Enum.map(messages, fn msg -> {field, msg} end)
-      end)
-
-    assign_form_errors(socket, flat_errors)
-  end
-
-  # ========== NAVIGATION HELPERS ==========
-
-  @doc """
-  Common helper to handle form submission state.
-  """
-  @spec with_submission_state(Phoenix.LiveView.Socket.t(), function()) ::
-          {:ok, Phoenix.LiveView.Socket.t(), any()} | {:error, Phoenix.LiveView.Socket.t(), any()}
-  def with_submission_state(socket, fun) do
-    socket = assign(socket, :submitting, true)
-
-    case fun.() do
-      {:ok, result} ->
-        {:ok, assign(socket, :submitting, false), result}
-
-      {:error, reason} ->
-        {:error, assign(socket, :submitting, false), reason}
     end
   end
 

@@ -71,14 +71,11 @@ defmodule Tymeslot.MeetingTypes.Slugs do
     end)
   end
 
-  @doc """
-  Normalises a user-supplied slug the same way the schema does: blank becomes
-  `nil` (derive from name), otherwise trimmed and downcased.
-  """
-  @spec normalize_slug(String.t() | nil) :: String.t() | nil
-  def normalize_slug(nil), do: nil
+  # Normalises a user-supplied slug the same way the schema does: blank becomes
+  # `nil` (derive from name), otherwise trimmed and downcased.
+  defp normalize_slug(nil), do: nil
 
-  def normalize_slug(slug) when is_binary(slug) do
+  defp normalize_slug(slug) when is_binary(slug) do
     case slug |> String.trim() |> String.downcase() do
       "" -> nil
       normalized -> normalized

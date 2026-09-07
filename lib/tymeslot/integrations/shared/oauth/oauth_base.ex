@@ -8,8 +8,6 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.Common.ConfigManager
 
   # Type definitions
@@ -18,13 +16,6 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
           refresh_token: String.t(),
           token_expires_at: DateTime.t(),
           oauth_scope: String.t()
-        }
-
-  @type oauth_tokens :: %{
-          access_token: String.t(),
-          refresh_token: String.t(),
-          expires_at: DateTime.t(),
-          scope: String.t()
         }
 
   @doc """
@@ -118,43 +109,6 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
     )
 
     {:error, type}
-  end
-
-  @doc """
-  Creates or updates a calendar integration in the database.
-
-  This handles the common pattern of checking if an integration exists and either
-  creating or updating it accordingly.
-  """
-  @spec create_or_update_integration(integer(), String.t(), %{atom() => term()}, oauth_tokens()) ::
-          {:ok, any()} | {:error, any()}
-  def create_or_update_integration(user_id, provider_name, provider_config, tokens) do
-    case CalendarIntegrationQueries.get_by_user_and_provider(user_id, provider_name) do
-      {:error, :not_found} ->
-        attrs =
-          Map.merge(provider_config, %{
-            user_id: user_id,
-            provider: provider_name,
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            token_expires_at: tokens.expires_at,
-            oauth_scope: tokens.scope,
-            is_active: true
-          })
-
-        PrimarySelection.create_with_auto_primary(attrs)
-
-      {:ok, existing_integration} ->
-        attrs = %{
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          token_expires_at: tokens.expires_at,
-          oauth_scope: tokens.scope,
-          is_active: true
-        }
-
-        CalendarIntegrationQueries.update_credentials(existing_integration, attrs)
-    end
   end
 
   @doc """

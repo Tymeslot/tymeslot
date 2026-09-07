@@ -163,25 +163,6 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
     end
   end
 
-  describe "format_verification_error/1" do
-    test "formats verification error atoms" do
-      assert ErrorFormatter.format_verification_error(:invalid_token) ==
-               "Invalid verification token. Please request a new verification email."
-
-      assert ErrorFormatter.format_verification_error(:token_expired) ==
-               "Your verification token has expired. Please request a new verification email."
-
-      assert ErrorFormatter.format_verification_error(:rate_limited) ==
-               "Too many verification attempts. Please try again later."
-
-      assert ErrorFormatter.format_verification_error(:email_send_failed) ==
-               "Failed to send verification email. Please try again later."
-
-      assert ErrorFormatter.format_verification_error(:other) ==
-               "Verification failed. Please try again."
-    end
-  end
-
   describe "format_password_reset_error/1" do
     test "formats password reset error atoms" do
       assert ErrorFormatter.format_password_reset_error(:user_not_found) ==

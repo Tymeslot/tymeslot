@@ -51,7 +51,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   """
   @spec stream_all_active(pos_integer(), acc, (CalendarIntegrationSchema.t(), acc -> acc)) :: acc
         when acc: term()
-  def stream_all_active(max_rows \\ 100, initial_acc, fun) when is_function(fun, 2) do
+  def stream_all_active(max_rows, initial_acc, fun) when is_function(fun, 2) do
     {:ok, result} =
       Repo.transaction(
         fn ->
@@ -202,32 +202,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
       integration -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
     end
   end
-
-  @doc """
-  Finds an active calendar integration for a user and provider whose
-  `provider_account_id` is NULL.
-
-  This is the set the `unique_active_calendar_null_account_per_user` index
-  covers, so it is what a reactivation of a legacy row has to be checked
-  against.
-  """
-  @spec get_active_null_account_for_user(integer(), String.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
-  def get_active_null_account_for_user(user_id, provider)
-      when is_integer(user_id) and is_binary(provider) do
-    CalendarIntegrationSchema
-    |> where(
-      [c],
-      c.user_id == ^user_id and c.provider == ^provider and
-        is_nil(c.provider_account_id) and c.is_active == true
-    )
-    |> limit(1)
-    |> Repo.one()
-    |> null_account_result()
-  end
-
-  defp null_account_result(nil), do: {:error, :not_found}
-  defp null_account_result(integration), do: {:ok, integration}
 
   @doc """
   Finds any calendar integration (active or inactive) by provider and account ID for a user.
@@ -519,17 +493,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   def acquire_primary_lock(user_id) do
     Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@primary_lock_class, user_id])
     :ok
-  end
-
-  @doc """
-  Gets all calendar integrations (for consistency checks).
-  Used by data consistency service.
-  """
-  @spec list_all() :: list(CalendarIntegrationSchema.t())
-  def list_all do
-    CalendarIntegrationSchema
-    |> Repo.all()
-    |> Enum.map(&CalendarIntegrationSchema.decrypt_credentials/1)
   end
 
   @doc """

@@ -102,46 +102,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
     end
   end
 
-  describe "list_meetings/0" do
-    test "returns all meetings ordered by start time desc" do
-      {start1, end1} = build_meeting_times(1, 60)
-      {start2, end2} = build_meeting_times(2, 60)
-
-      meeting1 = insert(:meeting, start_time: start1, end_time: end1)
-      meeting2 = insert(:meeting, start_time: start2, end_time: end2)
-
-      meetings = MeetingListQueries.list_meetings()
-
-      # Meeting2 has later start time so should be first (desc order)
-      assert hd(meetings).id == meeting2.id
-      assert List.last(meetings).id == meeting1.id
-    end
-
-    test "returns empty list when no meetings" do
-      assert MeetingListQueries.list_meetings() == []
-    end
-  end
-
-  describe "list_meetings_by_status/1" do
-    test "returns only meetings with specified status" do
-      insert(:meeting, status: "confirmed")
-      insert(:meeting, status: "confirmed")
-      insert(:meeting, status: "cancelled")
-
-      confirmed = MeetingListQueries.list_meetings_by_status("confirmed")
-      cancelled = MeetingListQueries.list_meetings_by_status("cancelled")
-
-      assert length(confirmed) == 2
-      assert length(cancelled) == 1
-    end
-
-    test "returns empty list for status with no meetings" do
-      insert(:meeting, status: "confirmed")
-
-      assert MeetingListQueries.list_meetings_by_status("cancelled") == []
-    end
-  end
-
   describe "list_upcoming_meetings/0" do
     test "returns only future meetings" do
       {future_start, future_end} = build_meeting_times(1, 60)
@@ -159,60 +119,12 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
     end
   end
 
-  describe "list_meetings_by_date_range/2" do
-    test "returns meetings within the date range" do
-      # Create meeting in the target range
-      start_time = DateTime.new!(~D[2025-06-15], ~T[10:00:00], "Etc/UTC")
-      end_time = DateTime.add(start_time, 60, :minute)
-      meeting_in_range = insert(:meeting, start_time: start_time, end_time: end_time)
-
-      # Create meeting outside the range
-      outside_start = DateTime.new!(~D[2025-06-20], ~T[10:00:00], "Etc/UTC")
-      outside_end = DateTime.add(outside_start, 60, :minute)
-      _outside_meeting = insert(:meeting, start_time: outside_start, end_time: outside_end)
-
-      range_start = DateTime.new!(~D[2025-06-14], ~T[00:00:00], "Etc/UTC")
-      range_end = DateTime.new!(~D[2025-06-16], ~T[23:59:59], "Etc/UTC")
-
-      meetings = MeetingListQueries.list_meetings_by_date_range(range_start, range_end)
-
-      assert length(meetings) == 1
-      assert hd(meetings).id == meeting_in_range.id
-    end
-
-    test "returns empty list when no meetings in range" do
-      start_time = DateTime.new!(~D[2025-06-15], ~T[10:00:00], "Etc/UTC")
-      end_time = DateTime.add(start_time, 60, :minute)
-      _meeting = insert(:meeting, start_time: start_time, end_time: end_time)
-
-      # Range that doesn't include the meeting
-      range_start = DateTime.new!(~D[2025-07-01], ~T[00:00:00], "Etc/UTC")
-      range_end = DateTime.new!(~D[2025-07-31], ~T[23:59:59], "Etc/UTC")
-
-      meetings = MeetingListQueries.list_meetings_by_date_range(range_start, range_end)
-
-      assert meetings == []
-    end
-  end
-
   describe "list_meetings_by_attendee_email/1" do
     test "returns meetings for specified attendee" do
       meeting1 = insert(:meeting, attendee_email: "john@example.com")
       _meeting2 = insert(:meeting, attendee_email: "jane@example.com")
 
       meetings = MeetingListQueries.list_meetings_by_attendee_email("john@example.com")
-
-      assert length(meetings) == 1
-      assert hd(meetings).id == meeting1.id
-    end
-  end
-
-  describe "list_meetings_by_organizer_email/1" do
-    test "returns meetings for specified organizer" do
-      meeting1 = insert(:meeting, organizer_email: "organizer1@example.com")
-      _meeting2 = insert(:meeting, organizer_email: "organizer2@example.com")
-
-      meetings = MeetingListQueries.list_meetings_by_organizer_email("organizer1@example.com")
 
       assert length(meetings) == 1
       assert hd(meetings).id == meeting1.id
@@ -413,30 +325,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
 
       assert Enum.map(results, & &1.id) == [sooner.id, later.id]
-    end
-  end
-
-  describe "upcoming_meetings/1" do
-    test "returns a plain confirmed upcoming meeting" do
-      {start_time, end_time} = build_meeting_times(1, 60)
-      meeting = insert(:meeting, status: "confirmed", start_time: start_time, end_time: end_time)
-
-      results = MeetingListQueries.upcoming_meetings()
-
-      assert Enum.map(results, & &1.id) == [meeting.id]
-    end
-
-    test "excludes a confirmed meeting with a pending reschedule request" do
-      {start_time, end_time} = build_meeting_times(1, 60)
-
-      insert(:meeting,
-        status: "confirmed",
-        reschedule_requested_at: DateTime.utc_now(),
-        start_time: start_time,
-        end_time: end_time
-      )
-
-      assert MeetingListQueries.upcoming_meetings() == []
     end
   end
 end

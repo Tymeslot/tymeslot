@@ -158,8 +158,6 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
       ids = user.id |> VideoIntegrationQueries.list_all_for_user() |> Enum.map(& &1.id)
       assert kept.id in ids
       refute going.id in ids
-
-      assert VideoIntegrationQueries.count_for_user(user.id) == 1
     end
 
     test "keeps the row fetchable by id so cleanup can still authenticate" do

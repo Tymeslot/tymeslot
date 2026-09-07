@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         year,
         month,
         organizer_profile,
-        availability_map \\ nil,
+        availability_map,
         meeting_type \\ nil
       ) do
     if organizer_profile do
@@ -87,23 +87,14 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   end
 
   @doc """
-  Computes the 42-day display range for a calendar grid.
-
-  Delegates to `Calculate.display_range/2` — the single source of truth
-  for the calendar grid window.
-  """
-  @spec display_range(integer(), integer()) :: {Date.t(), Date.t()}
-  defdelegate display_range(year, month), to: Calculate
-
-  @doc """
   Gets calendar days for a week view.
   """
   @spec get_week_days(Date.t(), map(), map() | atom() | nil, String.t(), map() | nil) :: [map()]
   def get_week_days(
         week_start,
         organizer_profile,
-        availability_map \\ nil,
-        user_timezone \\ "Etc/UTC",
+        availability_map,
+        user_timezone,
         meeting_type \\ nil
       ) do
     if organizer_profile do

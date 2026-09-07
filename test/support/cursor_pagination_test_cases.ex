@@ -6,7 +6,7 @@ defmodule Tymeslot.CursorPaginationTestCases do
   """
   @cursor_pagination_tests (quote do
                               import Tymeslot.MeetingTestHelpers
-                              alias Tymeslot.Meetings
+                              alias Tymeslot.Meetings.Listing
 
                               defp seed_cursor_meetings(user) do
                                 for i <- 1..5 do
@@ -16,7 +16,7 @@ defmodule Tymeslot.CursorPaginationTestCases do
 
                               defp fetch_cursor_page(user, opts \\ []) do
                                 opts = Keyword.put_new(opts, :per_page, 3)
-                                Meetings.list_user_meetings_cursor_page(user.email, opts)
+                                Listing.list_user_meetings_cursor_page(user.email, opts)
                               end
 
                               test "returns first page of meetings" do
