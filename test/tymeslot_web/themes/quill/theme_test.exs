@@ -34,6 +34,10 @@ defmodule TymeslotWeb.Themes.Quill.ThemeTest do
                TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent
              )
     end
+
+    test "maps every state to a real LiveComponent" do
+      assert ThemeCommonTestCases.test_components_are_live_components(Theme)
+    end
   end
 
   describe "live_view_module/0" do
