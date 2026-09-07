@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   @moduledoc """
-  Detects and provides configuration for different CalDAV server implementations.
+  Detects which CalDAV server implementation a URL belongs to.
 
-  This module identifies the type of CalDAV server based on URLs, response headers,
-  and server capabilities, then provides appropriate configuration for each server type.
+  Classification is by URL alone: the hostname and the well-known path each
+  implementation serves its DAV endpoint under. `CalDAV.Provider.new/1` uses the
+  result to pick the path-construction rules for that server, falling back to
+  generic CalDAV handling for anything unrecognised.
 
   ## Supported Server Types
 
