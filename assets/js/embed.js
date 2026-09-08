@@ -62,6 +62,48 @@
 
   const BASE_URL = CONFIG.getBaseUrl();
 
+  // Body scroll-lock state, deliberately at module scope rather than stashed on
+  // the modal element. Reopening the popup tears the old modal down while the
+  // new one is already being built, so element-held state let the new modal
+  // capture the locked 'hidden' as if it were the page's own value — leaving the
+  // embedder's page permanently unscrollable once it finally closed.
+  let bodyOverflowBeforeLock = null;
+  // Handle for the deferred teardown, so a reopen can cancel a fade-out that
+  // would otherwise restore scrolling behind the modal that just opened.
+  let pendingCloseTimeout = null;
+
+  // Only the first lock records the page's own value; nested/repeated locks keep
+  // it, so the page is always restored to what it had before any modal opened.
+  function lockBodyScroll() {
+    if (bodyOverflowBeforeLock === null) {
+      bodyOverflowBeforeLock = document.body.style.overflow;
+    }
+    document.body.style.overflow = 'hidden';
+  }
+
+  function unlockBodyScroll() {
+    if (bodyOverflowBeforeLock === null) return;
+    document.body.style.overflow = bodyOverflowBeforeLock;
+    bodyOverflowBeforeLock = null;
+  }
+
+  // Synchronous half of closing: detach listeners, drop the node, restore focus.
+  // Kept separate from the fade-out so a reopen can run it immediately.
+  function teardownModal(modal) {
+    if (modal.escapeHandler) {
+      document.removeEventListener('keydown', modal.escapeHandler);
+    }
+    if (modal.resizeHandler) {
+      window.removeEventListener('resize', modal.resizeHandler);
+    }
+    const prevFocus = modal._previousFocus;
+    modal.remove();
+    // Restore focus to the element that was active before the modal opened
+    if (prevFocus && typeof prevFocus.focus === 'function') {
+      prevFocus.focus();
+    }
+  }
+
   function modalContentMaxHeight() {
     // 50px headroom top/bottom — matches cal.com's getMaxHeightForModal()
     // and gives the close button breathing room above the iframe content.
@@ -571,9 +613,24 @@
      * Open booking in a modal
      */
     open: function(username, options = {}) {
-      // Remove existing modal if any
-      this.close();
-      if (!validateUsername('open', username)) return;
+      // Replace any existing modal synchronously rather than via close(),
+      // which defers teardown by 300ms: that would briefly put two
+      // #tymeslot-modal nodes in the DOM and let the old teardown restore the
+      // page's scroll behind the modal being opened here. The scroll lock is
+      // deliberately left held — this modal is about to re-take it, and
+      // releasing it in between would lose the page's original value.
+      if (pendingCloseTimeout !== null) {
+        clearTimeout(pendingCloseTimeout);
+        pendingCloseTimeout = null;
+      }
+      const existingModal = document.getElementById('tymeslot-modal');
+      if (existingModal) teardownModal(existingModal);
+      // Bailing out here still has to release the lock the torn-down modal
+      // held, or an invalid reopen leaves the page unscrollable for good.
+      if (!validateUsername('open', username)) {
+        unlockBodyScroll();
+        return;
+      }
 
       // If the page has an inline container with data-max-width, treat it as
       // the default for the popup too — so embedders who configure a single
@@ -618,8 +675,7 @@
 
       modal._previousFocus = document.activeElement;
       document.body.appendChild(modal);
-      modal.previousBodyOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
+      lockBodyScroll();
       // Move focus into the dialog for keyboard/screen reader users
       closeButton.focus();
 
@@ -679,30 +735,28 @@
      * Close the modal
      */
     close: function() {
-      const modal = document.getElementById('tymeslot-modal');
-      if (modal) {
-        const container = modal.querySelector('[data-tymeslot-container]');
-        modal.style.opacity = '0';
-        if (container) {
-          container.style.transform = 'scale(0.95)';
-        }
-        
-        setTimeout(() => {
-          if (modal.escapeHandler) {
-            document.removeEventListener('keydown', modal.escapeHandler);
-          }
-          if (modal.resizeHandler) {
-            window.removeEventListener('resize', modal.resizeHandler);
-          }
-          const prevFocus = modal._previousFocus;
-          modal.remove();
-          document.body.style.overflow = modal.previousBodyOverflow || '';
-          // Restore focus to the element that was active before the modal opened
-          if (prevFocus && typeof prevFocus.focus === 'function') {
-            prevFocus.focus();
-          }
-        }, 300);
+      // A fade-out already in flight is superseded by this call. Cancelled
+      // before the modal lookup so a teardown can never outlive the node it
+      // was scheduled for.
+      if (pendingCloseTimeout !== null) {
+        clearTimeout(pendingCloseTimeout);
+        pendingCloseTimeout = null;
       }
+
+      const modal = document.getElementById('tymeslot-modal');
+      if (!modal) return;
+
+      const container = modal.querySelector('[data-tymeslot-container]');
+      modal.style.opacity = '0';
+      if (container) {
+        container.style.transform = 'scale(0.95)';
+      }
+
+      pendingCloseTimeout = setTimeout(() => {
+        pendingCloseTimeout = null;
+        teardownModal(modal);
+        unlockBodyScroll();
+      }, 300);
     },
     
     /**
