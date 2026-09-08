@@ -73,7 +73,7 @@ defmodule Tymeslot.Meetings.MeetingListQueriesTest do
       meeting: meeting
     } do
       assert [%{id: id} = loaded] =
-               MeetingListQueries.list_meetings_for_user_paginated_cursor(organizer.email)
+               MeetingListQueries.list_meetings_for_user_paginated_cursor(organizer.email, [])
 
       assert id == meeting.id
       assert length(loaded.participants) == 2
@@ -89,7 +89,8 @@ defmodule Tymeslot.Meetings.MeetingListQueriesTest do
     test "the demoted original attendee sees no participant roster and only their own guest" do
       assert [loaded] =
                MeetingListQueries.list_meetings_for_user_paginated_cursor(
-                 "original-booker@example.com"
+                 "original-booker@example.com",
+                 []
                )
 
       assert loaded.participants == []
