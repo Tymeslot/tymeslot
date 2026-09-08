@@ -139,7 +139,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :target, :any, required: true
 
   @spec meeting_card(map()) :: Phoenix.LiveView.Rendered.t()
-  def meeting_card(assigns) do
+  defp meeting_card(assigns) do
     ~H"""
     <div class="card-glass hover:bg-white hover:border-turquoise-100 hover:shadow-2xl hover:shadow-turquoise-500/5 group/card">
       <.calendar_sync_banner

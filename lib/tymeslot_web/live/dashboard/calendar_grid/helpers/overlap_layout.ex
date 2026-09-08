@@ -5,18 +5,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
   # Events that would land in column 4+ are returned as overflow and rendered as a "+N" chip.
   @max_visible_cols 3
 
-  @spec positioned_events_for_day(map(), Date.t()) :: list()
-  def positioned_events_for_day(assigns, date) do
-    {visible, _overflow} = layout_for_day(assigns, date)
-    visible
-  end
-
-  @spec overflow_events_for_day(map(), Date.t()) :: list()
-  def overflow_events_for_day(assigns, date) do
-    {_visible, overflow} = layout_for_day(assigns, date)
-    overflow
-  end
-
   @spec layout_for_day(map(), Date.t()) :: {list(), list()}
   def layout_for_day(assigns, date) do
     tz = assigns.user_timezone

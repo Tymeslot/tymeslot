@@ -33,13 +33,4 @@ defmodule Tymeslot.Emails.Shared.StageTest do
       refute html =~ "A &amp;amp; B"
     end
   end
-
-  describe "compact_stage/3" do
-    test "returns a non-empty MJML string containing the eyebrow and title" do
-      html = Stage.compact_stage(:confirmed, "Notice", "Account verified")
-
-      assert html =~ "Notice"
-      assert html =~ "Account verified"
-    end
-  end
 end

@@ -50,8 +50,8 @@ lib/tymeslot_web/themes/[theme_name]/
 >
 > Themes may add their own internal structure beyond the above — Quill nests
 > `scheduling/components/schedule/panels.ex`, and Rhythm keeps a theme-local
-> `shared/` directory (`meeting_ticket.ex`, `organizer_header.ex`,
-> `status_badge.ex`) for components reused only within that theme.
+> `shared/` directory (`organizer_header.ex`, `status_badge.ex`) for
+> components reused only within that theme.
 
 ```
 assets/css/scheduling/themes/[theme_name]/

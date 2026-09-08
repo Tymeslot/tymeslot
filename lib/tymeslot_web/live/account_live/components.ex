@@ -189,9 +189,6 @@ defmodule TymeslotWeb.AccountLive.Components do
     """
   end
 
-  @doc """
-  Renders a card header with title, current value, and action button.
-  """
   attr :title, :string, required: true
   attr :is_social, :boolean, required: true
   attr :provider, :string, default: nil
@@ -204,7 +201,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   attr :show_form, :boolean, required: true
 
   @spec card_header(map) :: Phoenix.LiveView.Rendered.t()
-  def card_header(assigns) do
+  defp card_header(assigns) do
     ~H"""
     <div class="flex items-center justify-between mb-4">
       <div>
@@ -260,13 +257,10 @@ defmodule TymeslotWeb.AccountLive.Components do
     """
   end
 
-  @doc """
-  Renders a tooltip for social login restrictions.
-  """
   attr :provider, :string, required: true
 
   @spec social_tooltip(map) :: Phoenix.LiveView.Rendered.t()
-  def social_tooltip(assigns) do
+  defp social_tooltip(assigns) do
     ~H"""
     <div class="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10">
       <div class="bg-tymeslot-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
@@ -278,14 +272,11 @@ defmodule TymeslotWeb.AccountLive.Components do
     """
   end
 
-  @doc """
-  Renders a notice for pending email change.
-  """
   attr :pending_email, :string, required: true
   attr :email_change_sent_at, :any, default: nil
 
   @spec pending_email_notice(map) :: Phoenix.LiveView.Rendered.t()
-  def pending_email_notice(assigns) do
+  defp pending_email_notice(assigns) do
     ~H"""
     <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
       <div class="flex items-start">

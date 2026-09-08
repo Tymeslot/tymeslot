@@ -125,34 +125,11 @@ defmodule Tymeslot.Infrastructure.Config do
   end
 
   @doc """
-  Returns true if at least one social auth provider (Google, GitHub, or the
-  generic OAuth/OIDC adapter) is enabled. Used to determine whether disabling
-  password auth is safe — without an alternative log-in path it would lock
-  every user out.
-  """
-  @spec any_social_auth_enabled?() :: boolean()
-  def any_social_auth_enabled? do
-    social_auth = Application.get_env(:tymeslot, :social_auth, [])
-
-    Keyword.get(social_auth, :google_enabled, false) or
-      Keyword.get(social_auth, :github_enabled, false) or
-      Keyword.get(social_auth, :oauth_enabled, false)
-  end
-
-  @doc """
   Checks if legal agreements should be enforced.
   """
   @spec enforce_legal_agreements?() :: boolean()
   def enforce_legal_agreements? do
     app_config_module().enforce_legal_agreements?()
-  end
-
-  @doc """
-  Checks if marketing-related links should be shown.
-  """
-  @spec show_marketing_links?() :: boolean()
-  def show_marketing_links? do
-    app_config_module().show_marketing_links?()
   end
 
   @doc """

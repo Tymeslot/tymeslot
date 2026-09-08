@@ -20,7 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
       providers = ProviderRegistry.list_providers()
 
       # list_providers/0 reports the registry's static map, so the dev-only
-      # providers appear here even when valid_providers/0 filters them out.
+      # providers appear here even when the runtime toggles filter them out.
       assert :debug in providers
       assert :demo in providers
     end
@@ -127,9 +127,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "valid_providers/0" do
+  describe "ProviderConfig.all_providers_with_dev/0" do
     test "returns list of all valid provider atoms" do
-      providers = ProviderRegistry.valid_providers()
+      providers = ProviderConfig.all_providers_with_dev()
 
       assert :caldav in providers
       assert :google in providers
@@ -139,13 +139,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     end
 
     test "reports only providers that are enabled at runtime" do
-      valid = ProviderRegistry.valid_providers()
+      valid = ProviderConfig.all_providers_with_dev()
       registered = ProviderRegistry.list_providers()
 
       assert valid != []
 
       assert Enum.all?(valid, &(&1 in registered)),
-             "valid_providers/0 must be a subset of the registered providers"
+             "all_providers_with_dev/0 must be a subset of the registered providers"
 
       # Registered, but not enabled in the test environment.
       refute :debug in valid
@@ -325,7 +325,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     end
   end
 
-  # `provider_constraint_list/0` rather than `valid_providers/0`: the latter is
+  # `provider_constraint_list/0` rather than `all_providers_with_dev/0`: the latter is
   # filtered by the runtime toggles, so a provider pinned off in config would
   # drop out of the comparison and take any drift with it.
   defp config_providers do

@@ -179,13 +179,6 @@ defmodule Tymeslot.Profiles do
     do: ProfileQueries.update_booking_text(profile, attrs)
 
   @doc """
-  Updates a specific field in the profile.
-  """
-  @spec update_profile_field(profile, atom(), term()) :: result(profile)
-  def update_profile_field(%ProfileSchema{} = profile, field, value),
-    do: ProfileQueries.update_field(profile, field, value)
-
-  @doc """
   Updates the full name for a profile.
   """
   @spec update_full_name(profile, String.t()) :: result(profile)
@@ -268,13 +261,6 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
-  Validates username format.
-  """
-  @spec validate_username_format(term()) :: :ok | {:error, String.t()}
-  def validate_username_format(username),
-    do: UsernameValidator.validate(username, reserved_words: ReservedPaths.list())
-
-  @doc """
   Returns a list of reserved paths.
   """
   @spec reserved_paths() :: [String.t()]
@@ -342,9 +328,6 @@ defmodule Tymeslot.Profiles do
         {:ok, {:error, validation_error}}
     end
   end
-
-  @spec update_avatar(profile, uploaded_entry) :: result(profile)
-  def update_avatar(profile, entry), do: Avatars.update_avatar(profile, entry)
 
   @spec delete_avatar(profile) :: result(profile)
   def delete_avatar(profile), do: Avatars.delete_avatar(profile)

@@ -89,12 +89,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     end
   end
 
-  @doc """
-  Builds the UI-state map the context uses to resolve mode, icon and the
-  selected video integration from the submitted params.
-  """
+  # Builds the UI-state map the context uses to resolve mode, icon and the
+  # selected video integration from the submitted params.
   @spec build_ui_state(map(), map()) :: map()
-  def build_ui_state(params, sanitized_params) do
+  defp build_ui_state(params, sanitized_params) do
     %{
       meeting_mode: Map.get(sanitized_params, "meeting_mode", "personal"),
       selected_icon: Map.get(sanitized_params, "icon", "none"),

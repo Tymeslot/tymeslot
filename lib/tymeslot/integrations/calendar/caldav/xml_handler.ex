@@ -62,8 +62,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   @doc """
   Builds a calendar-query REPORT request for fetching events.
   """
-  @spec build_calendar_query(DateTime.t(), DateTime.t(), keyword()) :: String.t()
-  def build_calendar_query(start_time, end_time, _opts \\ []) do
+  @spec build_calendar_query(DateTime.t(), DateTime.t()) :: String.t()
+  def build_calendar_query(start_time, end_time) do
     start_str = format_caldav_datetime(start_time)
     end_str = format_caldav_datetime(end_time)
 

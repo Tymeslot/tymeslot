@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Components.Shared.TimeOptions do
   organiser picks "2:30 PM" from the list and the schedule still stores 14:30.
   """
   @spec time_options(String.t() | nil) :: list({String.t(), String.t()})
-  def time_options(time_format \\ "24h") do
+  def time_options(time_format) do
     for hour <- 0..23, minute <- [0, 15, 30, 45] do
       value =
         String.pad_leading("#{hour}", 2, "0") <> ":" <> String.pad_leading("#{minute}", 2, "0")
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Components.Shared.TimeOptions do
   """
   @spec time_options_between(Time.t(), Time.t(), String.t() | nil) ::
           list({String.t(), String.t()})
-  def time_options_between(%Time{} = from, %Time{} = to, time_format \\ "24h") do
+  def time_options_between(%Time{} = from, %Time{} = to, time_format) do
     time_format
     |> time_options()
     |> Enum.filter(fn {_label, value} ->

@@ -187,16 +187,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     handle_complete_onboarding(socket)
   end
 
-  @doc """
-  Completes the onboarding flow, marking it done and redirecting.
-
-  ## Options
-
-  * `:redirect_to` - Path to redirect to after completion (default: `/dashboard`)
-  """
+  # Completes the onboarding flow, marking it done and redirecting. The
+  # `:redirect_to` option sets the path to redirect to (default: `/dashboard`).
   @spec handle_complete_onboarding(Phoenix.LiveView.Socket.t(), keyword()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_complete_onboarding(socket, opts \\ []) do
+  defp handle_complete_onboarding(socket, opts \\ []) do
     redirect_to = Keyword.get(opts, :redirect_to, ~p"/dashboard")
     {:noreply, complete_onboarding(socket, redirect_to)}
   end

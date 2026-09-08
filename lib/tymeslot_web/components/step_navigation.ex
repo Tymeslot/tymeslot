@@ -58,7 +58,7 @@ defmodule TymeslotWeb.StepNavigation do
   attr :clickable, :boolean, default: false
 
   @spec step_item(map()) :: Phoenix.LiveView.Rendered.t()
-  def step_item(assigns) do
+  defp step_item(assigns) do
     ~H"""
     <div class="step-item-wrapper flex flex-col items-center">
       <%= if @clickable do %>

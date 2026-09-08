@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   Results are ordered soonest-expiring first.
   """
   @spec list_expiring_google_channels(non_neg_integer()) :: [CalendarIntegrationSchema.t()]
-  def list_expiring_google_channels(hours_ahead \\ 48) do
+  def list_expiring_google_channels(hours_ahead) do
     list_expiring_webhook_integrations(
       "google",
       :google_channel_id,
@@ -104,7 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   Results are ordered soonest-expiring first.
   """
   @spec list_expiring_outlook_subscriptions(non_neg_integer()) :: [CalendarIntegrationSchema.t()]
-  def list_expiring_outlook_subscriptions(hours_ahead \\ 48) do
+  def list_expiring_outlook_subscriptions(hours_ahead) do
     list_expiring_webhook_integrations(
       "outlook",
       :graph_subscription_id,

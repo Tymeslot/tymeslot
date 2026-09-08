@@ -38,8 +38,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   for meaning; see `error_field/1` for deriving a form field instead.
   """
   @spec sanitize_error_message(String.t() | atom() | tuple(), provider()) :: String.t()
-  def sanitize_error_message(error, provider \\ :generic)
-
   def sanitize_error_message(error, provider) when is_binary(error) do
     # Log the full error internally
     Logger.error("Calendar provider error", provider: provider, error: error)
@@ -254,7 +252,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   """
   @spec with_error_handling(provider(), function(), %{atom() => term()}) ::
           {:ok, any()} | {:error, String.t()}
-  def with_error_handling(provider, operation, context \\ %{}) do
+  def with_error_handling(provider, operation, context) do
     case with_classified_error_handling(provider, operation, context) do
       {:error, {_category, message}} -> {:error, message}
       ok -> ok
@@ -273,7 +271,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   """
   @spec with_classified_error_handling(provider(), function(), %{atom() => term()}) ::
           {:ok, any()} | {:error, {error_category(), String.t()}}
-  def with_classified_error_handling(provider, operation, context \\ %{}) do
+  def with_classified_error_handling(provider, operation, context) do
     case operation.() do
       {:ok, result} ->
         {:ok, result}

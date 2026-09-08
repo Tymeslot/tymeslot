@@ -7,7 +7,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
 
   alias Ecto.UUID
   alias Tymeslot.Meetings.MeetingCalendarQueries, as: MeetingQueries
-  alias Tymeslot.Meetings.MeetingSchema
 
   defp create_meeting_with_calendar(overrides \\ %{}) do
     user = insert(:user)
@@ -156,53 +155,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
     end
   end
 
-  describe "update_calendar_sync_status/2" do
-    test "sets status to externally_deleted" do
-      {_user, _integration, meeting} = create_meeting_with_calendar()
-
-      assert {:ok, updated} =
-               MeetingQueries.update_calendar_sync_status(meeting.id, "externally_deleted")
-
-      assert updated.calendar_sync_status == "externally_deleted"
-    end
-
-    test "sets status to externally_modified" do
-      {_user, _integration, meeting} = create_meeting_with_calendar()
-
-      assert {:ok, updated} =
-               MeetingQueries.update_calendar_sync_status(meeting.id, "externally_modified")
-
-      assert updated.calendar_sync_status == "externally_modified"
-    end
-
-    test "clears dismissed_at on update" do
-      {_user, _integration, meeting} = create_meeting_with_calendar()
-
-      # Set dismissed_at first
-      MeetingSchema
-      |> where([m], m.id == ^meeting.id)
-      |> Repo.update_all(
-        set: [
-          calendar_sync_status: "externally_modified",
-          calendar_sync_status_dismissed_at: DateTime.utc_now(:second)
-        ]
-      )
-
-      assert {:ok, updated} =
-               MeetingQueries.update_calendar_sync_status(meeting.id, "externally_deleted")
-
-      assert is_nil(updated.calendar_sync_status_dismissed_at)
-    end
-
-    test "returns :not_found for non-existent meeting" do
-      assert {:error, :not_found} =
-               MeetingQueries.update_calendar_sync_status(
-                 UUID.generate(),
-                 "externally_deleted"
-               )
-    end
-  end
-
   describe "update_calendar_sync_status_if_changed/2" do
     test "updates status when different" do
       {_user, _integration, meeting} = create_meeting_with_calendar()
@@ -221,7 +173,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
 
       # Set status first
       {:ok, _meeting} =
-        MeetingQueries.update_calendar_sync_status(meeting.id, "externally_deleted")
+        MeetingQueries.update_calendar_sync_status_if_changed(meeting.id, "externally_deleted")
 
       assert {:ok, :already_set} =
                MeetingQueries.update_calendar_sync_status_if_changed(

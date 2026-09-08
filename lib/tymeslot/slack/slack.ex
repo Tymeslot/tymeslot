@@ -339,22 +339,22 @@ defmodule Tymeslot.Slack do
   # ============================================================================
 
   @spec list_deliveries(integer(), keyword()) :: [Tymeslot.Slack.SlackDeliverySchema.t()]
-  def list_deliveries(integration_id, opts \\ []) do
+  def list_deliveries(integration_id, opts) do
     SlackQueries.list_deliveries(integration_id, opts)
   end
 
   @spec get_delivery_stats(integer(), keyword()) :: map()
-  def get_delivery_stats(integration_id, opts \\ []) do
+  def get_delivery_stats(integration_id, opts) do
     SlackQueries.get_delivery_stats(integration_id, opts)
   end
 
   @doc """
-  Prunes Slack delivery log rows older than `days` (default 60). Called by the
+  Prunes Slack delivery log rows older than `days`. Called by the
   shared `DataRetentionWorker` so the per-attempt delivery log does not grow
   unbounded. Returns the `{deleted_count, nil}` tuple from `delete_all`.
   """
   @spec prune_deliveries(integer()) :: {non_neg_integer(), nil}
-  def prune_deliveries(days \\ 60) do
+  def prune_deliveries(days) do
     SlackQueries.cleanup_old_deliveries(days)
   end
 
@@ -423,7 +423,7 @@ defmodule Tymeslot.Slack do
   end
 
   @spec max_failure_count() :: integer()
-  def max_failure_count, do: 10
+  defp max_failure_count, do: 10
 
   # ============================================================================
   # Error translation for the UI

@@ -10,20 +10,6 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   @type cleanup_file ::
           %{required(:background_image_path) => String.t()}
           | %{required(:background_video_path) => String.t()}
-  @type preview_data ::
-          %{required(:css) => String.t()}
-          | %{
-              required(:url) => String.t(),
-              required(:kind) => :custom | :preset,
-              required(:name) => String.t() | nil
-            }
-          | %{
-              required(:thumbnail_url) => String.t() | nil,
-              required(:video_url) => String.t(),
-              required(:kind) => :custom | :preset,
-              required(:name) => String.t() | nil
-            }
-          | %{}
 
   @doc """
   Applies a background selection to a customization, updating type and value.
@@ -206,94 +192,6 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
     end
   end
 
-  @doc """
-  Resolves a preview source for the given customization and presets.
-  Returns one of:
-  - {:gradient, %{css: css}}
-  - {:color, %{css: css}}
-  - {:image, %{url: url, kind: :custom | :preset, name: String.t() | nil}}
-  - {:video, %{thumbnail_url: String.t() | nil, video_url: String.t() | nil, kind: :custom | :preset, name: String.t() | nil}}
-  - {:none, %{}}
-  """
-  @spec resolve_preview_source(term(), presets_map()) ::
-          {:gradient | :color | :image | :video | :none, preview_data()}
-  def resolve_preview_source(customization, presets) do
-    case customization.background_type do
-      "gradient" -> resolve_gradient(customization, presets)
-      "color" -> resolve_color(customization)
-      "image" -> resolve_image(customization, presets)
-      "video" -> resolve_video(customization, presets)
-      _unknown -> {:none, %{}}
-    end
-  end
-
-  defp resolve_gradient(customization, presets) do
-    case get_preset(presets, :gradients, customization.background_value) do
-      nil -> {:none, %{}}
-      gradient -> {:gradient, %{css: gradient.value}}
-    end
-  end
-
-  defp resolve_color(customization) do
-    if customization.background_value,
-      do: {:color, %{css: customization.background_value}},
-      else: {:none, %{}}
-  end
-
-  defp resolve_image(customization, presets) do
-    cond do
-      custom_image?(customization) ->
-        path = Validation.sanitize_path(customization.background_image_path)
-        {:image, %{url: "/uploads/#{path}", kind: :custom, name: nil}}
-
-      preset_image?(customization) ->
-        case get_preset(presets, :images, customization.background_value) do
-          nil ->
-            {:none, %{}}
-
-          preset ->
-            {:image,
-             %{url: "/images/ui/backgrounds/#{preset.file}", kind: :preset, name: preset.name}}
-        end
-
-      true ->
-        {:none, %{}}
-    end
-  end
-
-  defp resolve_video(customization, presets) do
-    cond do
-      custom_video?(customization) ->
-        path = Validation.sanitize_path(customization.background_video_path)
-
-        {:video,
-         %{
-           thumbnail_url: nil,
-           video_url: "/uploads/#{path}",
-           kind: :custom,
-           name: nil
-         }}
-
-      preset_video?(customization) ->
-        case get_preset(presets, :videos, customization.background_value) do
-          nil ->
-            {:none, %{}}
-
-          preset ->
-            {:video,
-             %{
-               thumbnail_url: "/videos/thumbnails/#{preset.thumbnail}",
-               video_url: "/videos/backgrounds/#{preset.file}",
-               kind: :preset,
-               name: preset.name
-             }}
-        end
-
-      true ->
-        {:none, %{}}
-    end
-  end
-
   defp get_preset_image_path(customization, presets) do
     preset = get_preset(presets, :images, customization.background_value)
     preset && "/images/ui/backgrounds/#{preset.file}"
@@ -302,40 +200,6 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   defp get_preset_video_path(customization, presets) do
     preset = get_preset(presets, :videos, customization.background_value)
     preset && "/videos/backgrounds/#{preset.file}"
-  end
-
-  @doc """
-  Checks if the current background is a custom upload.
-  """
-  @spec custom_background?(term()) :: boolean()
-  def custom_background?(customization) do
-    customization.background_value == "custom" and
-      (is_binary(customization.background_image_path) or
-         is_binary(customization.background_video_path))
-  end
-
-  @doc """
-  Gets the file path for a background asset.
-  """
-  @spec get_background_file_path(term(), presets_map()) :: String.t() | nil
-  def get_background_file_path(customization, presets) do
-    case {customization.background_type, customization.background_value} do
-      {"image", "custom"} -> customization.background_image_path
-      {"video", "custom"} -> customization.background_video_path
-      {"image", _preset_value} -> get_image_preset_file(customization, presets)
-      {"video", _preset_value} -> get_video_preset_file(customization, presets)
-      _other_type -> nil
-    end
-  end
-
-  defp get_image_preset_file(customization, presets) do
-    preset = get_preset(presets, :images, customization.background_value)
-    preset && preset.file
-  end
-
-  defp get_video_preset_file(customization, presets) do
-    preset = get_preset(presets, :videos, customization.background_value)
-    preset && preset.file
   end
 
   # Private helper functions

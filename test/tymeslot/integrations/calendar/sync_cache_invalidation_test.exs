@@ -61,18 +61,12 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
           nil
         )
 
-      month_key =
-        AvailabilityCache.month_availability_key(user.id, 2026, 6, "Europe/London", 30)
-
       stale_range = {:stale, :range}
-      stale_month = {:stale, :month}
 
       AvailabilityCache.put(range_key, stale_range)
-      AvailabilityCache.put(month_key, stale_month)
 
       # Sanity: the cache really is populated with the stale response.
       assert AvailabilityCache.get_or_compute(range_key, fn -> :recomputed end) == stale_range
-      assert AvailabilityCache.get_or_compute(month_key, fn -> :recomputed end) == stale_month
 
       # A provider sync persists a new blocking event for this user.
       event = build_timed_event(integration, uid: "cache-invalidation-evt-1")
@@ -84,9 +78,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncCacheInvalidationTest do
       # fresh result be served instead.
       assert AvailabilityCache.get_or_compute(range_key, fn -> :recomputed_range end) ==
                :recomputed_range
-
-      assert AvailabilityCache.get_or_compute(month_key, fn -> :recomputed_month end) ==
-               :recomputed_month
     end
 
     test "invalidation is scoped to the integration owner — other users' caches survive" do

@@ -397,11 +397,5 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     end
   end
 
-  @doc """
-  Returns all valid status values
-  """
-  @spec valid_statuses() :: [String.t()]
-  def valid_statuses, do: @valid_statuses
-
   defp supported_locale_codes, do: Locales.supported_codes()
 end

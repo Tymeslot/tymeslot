@@ -86,7 +86,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
   failures never propagate up and break the calling code path.
   """
   @spec send_alert(alert_type(), map()) :: :ok | {:error, any()}
-  def send_alert(type, metadata \\ %{}) do
+  def send_alert(type, metadata) do
     impl().send_alert(type, metadata)
   rescue
     exception ->

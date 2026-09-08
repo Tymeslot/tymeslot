@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def col_count(%{view: :agenda}), do: 1
 
   @spec day_header_class(Date.t(), String.t()) :: String.t()
-  def day_header_class(day, timezone \\ "Etc/UTC") do
+  def day_header_class(day, timezone) do
     today =
       DateTime.utc_now()
       |> DateTime.shift_zone!(timezone)
@@ -144,8 +144,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   }
 
   @spec safe_view_atom(String.t()) :: :week | :three_day | :day | :month | :agenda
-  def safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
-  def safe_view_atom(_view), do: :week
+  defp safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
+  defp safe_view_atom(_view), do: :week
 
   @spec assign_view_from_preferences(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_view_from_preferences(socket) do

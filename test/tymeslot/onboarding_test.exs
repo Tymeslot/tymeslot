@@ -142,11 +142,11 @@ defmodule Tymeslot.OnboardingTest do
   describe "dashboard setup widget helpers" do
     test "toggle_dashboard_setup_item/2 ticks an item and reflects in the predicate" do
       user = insert(:user)
-      refute Onboarding.dashboard_setup_item_done?(user, "theme")
+      refute "theme" in (user.dashboard_setup_done_items || [])
 
       {:ok, updated} = Onboarding.toggle_dashboard_setup_item(user, "theme")
 
-      assert Onboarding.dashboard_setup_item_done?(updated, "theme")
+      assert "theme" in (updated.dashboard_setup_done_items || [])
       assert "theme" in updated.dashboard_setup_done_items
     end
 
@@ -155,7 +155,7 @@ defmodule Tymeslot.OnboardingTest do
 
       {:ok, updated} = Onboarding.toggle_dashboard_setup_item(user, "theme")
 
-      refute Onboarding.dashboard_setup_item_done?(updated, "theme")
+      refute "theme" in (updated.dashboard_setup_done_items || [])
       assert updated.dashboard_setup_done_items == []
     end
 

@@ -10,75 +10,6 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
-  describe "credentials_change_kind/2" do
-    setup do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "caldav",
-          base_url: "https://caldav.example.com",
-          provider_account_id: "https://caldav.example.com||alice",
-          calendar_paths: ["/calendars/alice/default/"],
-          is_active: true,
-          username_encrypted: Encryption.encrypt("alice"),
-          password_encrypted: Encryption.encrypt("oldpass")
-        )
-
-      decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
-      %{integration: decrypted}
-    end
-
-    test "returns :password_only when url and username are unchanged", %{
-      integration: integration
-    } do
-      params = %{
-        "url" => "https://caldav.example.com",
-        "username" => "alice",
-        "password" => "newpass"
-      }
-
-      assert Reconnection.credentials_change_kind(integration, params) == :password_only
-    end
-
-    test "returns :account_change when url differs", %{integration: integration} do
-      params = %{
-        "url" => "https://caldav.other.example.com",
-        "username" => "alice",
-        "password" => "newpass"
-      }
-
-      assert Reconnection.credentials_change_kind(integration, params) == :account_change
-    end
-
-    test "returns :account_change when username differs", %{integration: integration} do
-      params = %{
-        "url" => "https://caldav.example.com",
-        "username" => "bob",
-        "password" => "newpass"
-      }
-
-      assert Reconnection.credentials_change_kind(integration, params) == :account_change
-    end
-
-    test "normalises trailing slash on url when comparing", %{integration: integration} do
-      params = %{
-        "url" => "https://caldav.example.com/",
-        "username" => "alice",
-        "password" => "newpass"
-      }
-
-      assert Reconnection.credentials_change_kind(integration, params) == :password_only
-    end
-
-    test "treats a nil url as an account change without crashing", %{integration: integration} do
-      params = %{"url" => nil, "username" => "alice", "password" => "newpass"}
-
-      assert Reconnection.credentials_change_kind(integration, params) == :account_change
-    end
-  end
-
   describe "reconnect/3" do
     setup do
       integration = insert_decrypted_caldav_integration(%{needs_reauth: true})
@@ -316,6 +247,56 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       assert reloaded.calendar_paths == ["/a/"]
       assert Enum.find(reloaded.calendar_list, &(&1.path == "/a/")).selected == true
       assert Enum.find(reloaded.calendar_list, &(&1.path == "/b/")).selected == false
+    end
+
+    test "matches a selected path that differs only by percent-encoding", %{
+      integration: integration
+    } do
+      payload = %{
+        credentials: %{
+          url: "https://caldav.new.example.com",
+          username: "bob",
+          password: "bobpass"
+        },
+        calendars: [
+          %{
+            "id" => "/cal/My%20Calendar/",
+            "path" => "/cal/My%20Calendar/",
+            "name" => "Mine",
+            "type" => "calendar"
+          }
+        ]
+      }
+
+      assert {:ok, updated} =
+               Reconnection.finalise_account_change(integration, payload, ["/cal/My Calendar/"])
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, updated.id)
+
+      assert reloaded.calendar_paths == ["/cal/My%20Calendar/"]
+    end
+
+    test "refuses when no submitted path matches a discovered calendar", %{
+      integration: integration
+    } do
+      payload = %{
+        credentials: %{
+          url: "https://caldav.new.example.com",
+          username: "bob",
+          password: "bobpass"
+        },
+        calendars: [
+          %{"id" => "/a/", "path" => "/a/", "name" => "A", "type" => "calendar"}
+        ]
+      }
+
+      # Persisting this would empty calendar_paths behind a success, leaving the
+      # integration active and syncing nothing.
+      assert {:error, :no_calendars_selected} =
+               Reconnection.finalise_account_change(integration, payload, ["/gone/"])
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.calendar_paths == ["/calendars/alice/default/"]
     end
   end
 

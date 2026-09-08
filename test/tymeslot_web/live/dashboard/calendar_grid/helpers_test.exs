@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
-  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting
 
   describe "all_day_events_for_day/2" do
     defp make_assigns(events) do
@@ -211,38 +210,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
       assert Helpers.format_hour(0, assigns) == "00:00"
       assert Helpers.format_hour(13, assigns) == "13:00"
       assert Helpers.format_hour(9, assigns) == "09:00"
-    end
-  end
-
-  describe "format_time_range/2" do
-    test "12-hour format" do
-      event = %{
-        all_day: false,
-        start_at: ~U[2026-03-12 14:00:00Z],
-        end_at: ~U[2026-03-12 15:30:00Z]
-      }
-
-      assert TimeFormatting.format_time_range(event, "12h") == "2:00 PM \u2013 3:30 PM"
-    end
-
-    test "24-hour format" do
-      event = %{
-        all_day: false,
-        start_at: ~U[2026-03-12 14:00:00Z],
-        end_at: ~U[2026-03-12 15:30:00Z]
-      }
-
-      assert TimeFormatting.format_time_range(event, "24h") == "14:00 \u2013 15:30"
-    end
-
-    test "all-day event returns 'All day' regardless of format" do
-      event = %{
-        all_day: true,
-        start_at: ~U[2026-03-12 00:00:00Z],
-        end_at: ~U[2026-03-13 00:00:00Z]
-      }
-
-      assert TimeFormatting.format_time_range(event, "24h") == "All day"
     end
   end
 

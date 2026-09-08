@@ -201,12 +201,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   # API response handling
   # ---------------------------------------------------------------------------
 
-  @doc false
-  @spec handle_join_api_response(
-          {:ok, Req.Response.t()} | {:error, term()},
-          :with_validation | :legacy
-        ) :: {:ok, String.t()} | {:error, term()}
-  def handle_join_api_response(http_result, mode) do
+  defp handle_join_api_response(http_result, mode) do
     case http_result do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do

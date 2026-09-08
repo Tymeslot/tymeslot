@@ -105,6 +105,75 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
       assert event.recurrence_exceptions == [~D[2026-04-15], ~D[2026-04-22]]
     end
 
+    test "raises created_by_tymeslot on a row that already exists" do
+      # `replace_fields/0` omits the column, so the ON CONFLICT clause cannot
+      # set it. Every row past a calendar's first sync is a conflict, so
+      # without a separate raise the flag could only ever land on a brand-new
+      # row — which is why no CalDAV cache row carried it.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      attrs = build_event_attrs(integration, %{uid: "claim-me"})
+      {:ok, 1} = ProviderCalendarEventQueries.upsert_batch([attrs])
+
+      {:ok, 1} =
+        ProviderCalendarEventQueries.upsert_batch([
+          Map.put(attrs, :created_by_tymeslot, true)
+        ])
+
+      assert %{created_by_tymeslot: true} =
+               Repo.one!(
+                 from(e in ProviderCalendarEventSchema,
+                   where: e.calendar_integration_id == ^integration.id and e.uid == "claim-me"
+                 )
+               )
+    end
+
+    test "never clears created_by_tymeslot on a row that already carries it" do
+      # The ownership lookup can legitimately miss — a meeting outside the
+      # queried window, say — and a false must not retract the flag
+      # `CalDAV.QueueWiring` raised when Tymeslot itself wrote the event.
+      # Clearing it would revoke OfflineQueue's `:keep_local` recovery.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      attrs = build_event_attrs(integration, %{uid: "ours", created_by_tymeslot: true})
+      {:ok, 1} = ProviderCalendarEventQueries.upsert_batch([attrs])
+
+      {:ok, 1} =
+        ProviderCalendarEventQueries.upsert_batch([
+          Map.put(attrs, :created_by_tymeslot, false)
+        ])
+
+      assert %{created_by_tymeslot: true} =
+               Repo.one!(
+                 from(e in ProviderCalendarEventSchema,
+                   where: e.calendar_integration_id == ^integration.id and e.uid == "ours"
+                 )
+               )
+    end
+
+    test "raises the flag only on the rows the batch claims" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      ours = build_event_attrs(integration, %{uid: "ours", created_by_tymeslot: true})
+      theirs = build_event_attrs(integration, %{uid: "theirs"})
+
+      {:ok, 2} = ProviderCalendarEventQueries.upsert_batch([ours, theirs])
+
+      flags =
+        Repo.all(
+          from(e in ProviderCalendarEventSchema,
+            where: e.calendar_integration_id == ^integration.id,
+            order_by: e.uid,
+            select: {e.uid, e.created_by_tymeslot}
+          )
+        )
+
+      assert flags == [{"ours", true}, {"theirs", false}]
+    end
+
     test "deduplicates entries with the same uid within a single batch" do
       # Regression: Google can return multiple instances of a recurring event
       # series (all sharing the same iCalUID) in one incremental sync response.

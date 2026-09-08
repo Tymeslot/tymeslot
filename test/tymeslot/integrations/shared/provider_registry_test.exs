@@ -2,8 +2,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Common.ProviderRegistry
-
   # Mock provider modules for testing the macro
   defmodule MockGoogleProvider do
     @spec provider_type() :: :google
@@ -88,34 +86,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
 
     test "provider_count/0 returns size" do
       assert TestRegistry.provider_count() == 2
-    end
-  end
-
-  describe "create_provider_map/1" do
-    test "builds map from modules" do
-      map = ProviderRegistry.create_provider_map([MockGoogleProvider, MockOutlookProvider])
-      assert map == %{google: MockGoogleProvider, outlook: MockOutlookProvider}
-    end
-  end
-
-  describe "validate_provider_implementations/2" do
-    test "returns :ok when all functions exist" do
-      providers = %{google: MockGoogleProvider}
-
-      assert :ok =
-               ProviderRegistry.validate_provider_implementations(providers, [
-                 {:display_name, 0},
-                 {:config_schema, 0}
-               ])
-    end
-
-    test "returns error when functions are missing" do
-      providers = %{google: MockGoogleProvider}
-
-      assert {:error, {:missing_functions, [{:google, MockGoogleProvider, [missing: 0]}]}} =
-               ProviderRegistry.validate_provider_implementations(providers, [
-                 {:missing, 0}
-               ])
     end
   end
 end

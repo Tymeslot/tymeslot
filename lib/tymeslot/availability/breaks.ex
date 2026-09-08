@@ -24,7 +24,7 @@ defmodule Tymeslot.Availability.Breaks do
   """
   @spec add_break(integer(), Time.t(), Time.t(), String.t() | nil) ::
           {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
-  def add_break(weekly_availability_id, start_time, end_time, label \\ nil) do
+  def add_break(weekly_availability_id, start_time, end_time, label) do
     # Get the next sort order
     next_sort_order = AvailabilityBreakQueries.get_next_sort_order(weekly_availability_id)
 
@@ -41,25 +41,6 @@ defmodule Tymeslot.Availability.Breaks do
     |> validate_break_within_work_hours(weekly_availability_id)
     |> validate_no_break_overlap(weekly_availability_id)
     |> AvailabilityBreakQueries.insert_changeset()
-  end
-
-  @doc """
-  Updates an existing break.
-  """
-  @spec update_break(integer(), map()) ::
-          {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t() | String.t()}
-  def update_break(break_id, attrs) when is_integer(break_id) and is_map(attrs) do
-    case AvailabilityBreakQueries.get_break(break_id) do
-      nil ->
-        {:error, "Break not found"}
-
-      break ->
-        break
-        |> AvailabilityBreakSchema.changeset(attrs)
-        |> validate_break_within_work_hours(break.weekly_availability_id)
-        |> validate_no_break_overlap(break.weekly_availability_id, break_id)
-        |> AvailabilityBreakQueries.update_changeset()
-    end
   end
 
   @doc """
@@ -82,14 +63,6 @@ defmodule Tymeslot.Availability.Breaks do
           %{schedule_id: _other} -> {:error, "Unauthorized"}
         end
     end
-  end
-
-  @doc """
-  Reorders breaks based on a list of break IDs.
-  """
-  @spec reorder_breaks(integer(), list(integer())) :: {:ok, integer()} | {:error, term()}
-  def reorder_breaks(weekly_availability_id, break_ids) when is_list(break_ids) do
-    AvailabilityBreakQueries.reorder_breaks(weekly_availability_id, break_ids)
   end
 
   @doc """

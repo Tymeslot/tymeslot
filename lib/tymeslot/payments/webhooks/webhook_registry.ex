@@ -3,21 +3,6 @@ defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
   Registry for webhook event handlers.
   """
 
-  @webhook_handlers [
-    Tymeslot.Payments.Webhooks.CheckoutSessionHandler,
-    Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler,
-    Tymeslot.Payments.Webhooks.ChargeHandler,
-    Tymeslot.Payments.Webhooks.PaymentMethodHandler,
-    Tymeslot.Payments.Webhooks.PaymentIntentHandler,
-    Tymeslot.Payments.Webhooks.CustomerHandler,
-    Tymeslot.Payments.Webhooks.SubscriptionHandler,
-    Tymeslot.Payments.Webhooks.SetupIntentHandler,
-    Tymeslot.Payments.Webhooks.InvoiceHandler,
-    Tymeslot.Payments.Webhooks.RefundHandler,
-    Tymeslot.Payments.Webhooks.TrialWillEndHandler,
-    Tymeslot.Payments.Webhooks.DisputeHandler
-  ]
-
   # Map of handler modules to their supported event types
   @event_types %{
     Tymeslot.Payments.Webhooks.CheckoutSessionHandler => ["checkout.session.completed"],
@@ -97,16 +82,6 @@ defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
   """
   @spec ignored?(String.t()) :: boolean()
   def ignored?(event_type), do: event_type in @ignored_event_types
-
-  @doc """
-  Returns a list of all event types handled by registered handlers.
-  """
-  @spec handled_event_types() :: [String.t()]
-  def handled_event_types do
-    Enum.flat_map(@webhook_handlers, fn handler ->
-      Map.get(@event_types, handler, [])
-    end)
-  end
 
   @doc """
   Validates an object using the appropriate handler.

@@ -14,14 +14,11 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   @type dashboard_reason :: :no_username | :no_calendar
   @type public_reason :: :no_calendar
 
-  @doc """
-  Determines whether the dashboard should allow viewing/copying the scheduling link.
-
-  Returns {:ok, :allowed} when allowed, otherwise {:error, reason}.
-  """
+  # Determines whether the dashboard should allow viewing/copying the scheduling
+  # link. Returns {:ok, :allowed} when allowed, otherwise {:error, reason}.
   @spec check_dashboard_allowed(map() | nil, map()) ::
           {:ok, :allowed} | {:error, dashboard_reason}
-  def check_dashboard_allowed(profile, integration_status) do
+  defp check_dashboard_allowed(profile, integration_status) do
     cond do
       not has_username?(profile) ->
         {:error, :no_username}

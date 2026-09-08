@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
   import Tymeslot.Factory
 
   alias Ecto.UUID
+  alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings
   alias Tymeslot.TestMocks
   import Tymeslot.AvailabilityTestHelpers
@@ -53,7 +54,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
 
       form_data = build_form_data()
 
-      result = Meetings.create_appointment_with_video_room(meeting_params, form_data)
+      result = Create.execute_with_video_room(meeting_params, form_data)
 
       assert {:ok, meeting} = result
       assert meeting.status == "confirmed"
@@ -65,7 +66,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
       meeting_params = build_meeting_params(user, %{date: Date.add(Date.utc_today(), 7)})
       form_data = build_form_data()
 
-      result = Meetings.create_appointment_with_video_room(meeting_params, form_data)
+      result = Create.execute_with_video_room(meeting_params, form_data)
 
       assert {:ok, meeting} = result
       assert meeting.status == "confirmed"

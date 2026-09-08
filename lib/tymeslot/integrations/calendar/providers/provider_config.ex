@@ -86,7 +86,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   # Providers whose module refuses every write. See `read_only?/1`.
   @read_only_providers [:ics_url]
 
-  @oauth_providers Families.members(@provider_families, :oauth)
   @caldav_based_providers Families.members(@provider_families, :caldav)
   @caldav_based_provider_strings Families.member_strings(@provider_families, :caldav)
   @ews_providers Families.members(@provider_families, :ews)
@@ -239,9 +238,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   }
 
   # Read provider settings from config
-  @doc false
   @spec provider_settings() :: %{atom() => term()}
-  def provider_settings do
+  defp provider_settings do
     Config.calendar_provider_settings()
   end
 
@@ -273,12 +271,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def all_providers_with_dev do
     effective_providers(true)
   end
-
-  @doc """
-  Returns OAuth-based providers.
-  """
-  @spec oauth_providers() :: list(atom())
-  def oauth_providers, do: @oauth_providers
 
   @doc """
   Returns CalDAV-based providers.

@@ -146,17 +146,6 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  @doc """
-  Validates if a meeting can be cancelled.
-  Delegates to Policy module for consistent validation.
-
-  Returns :ok or {:error, reason}
-  """
-  @spec validate_cancellation(Meeting.t()) :: :ok | {:error, String.t()}
-  def validate_cancellation(meeting) do
-    Policy.can_cancel_meeting?(meeting)
-  end
-
   # Private functions
 
   # Same split as `execute_permitted/1`: the host deleting the tentative hold

@@ -13,9 +13,8 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       real scheduling flow and asserts next-step stays disabled after
       the user re-selects the date.
     * **Handler unit** — exercises the timezone search handler's
-      boundary inputs (empty string, special characters) directly;
-      the existing handler test only covers the three valid param
-      shapes.
+      boundary inputs (empty string, unknown param shape, special
+      characters) directly.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -32,7 +31,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
-  alias TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent
+  alias TymeslotWeb.Themes.Shared.EventHandlers
 
   setup :verify_on_exit!
 
@@ -321,7 +320,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
     test "empty string search collapses to an empty search term without crashing" do
       socket = %Socket{assigns: %{__changed__: %{}, timezone_dropdown_open: false}}
 
-      {:ok, updated} = TimezoneHandlerComponent.handle_timezone_search(socket, %{"search" => ""})
+      {:noreply, updated} = EventHandlers.handle_timezone_search(socket, %{"search" => ""})
 
       assert updated.assigns.timezone_search == ""
       # Typing opens the dropdown even when the user clears the input —
@@ -336,8 +335,8 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       # must not crash the process.
       socket = %Socket{assigns: %{__changed__: %{}}}
 
-      {:ok, updated} =
-        TimezoneHandlerComponent.handle_timezone_search(socket, %{"nonsense" => "value"})
+      {:noreply, updated} =
+        EventHandlers.handle_timezone_search(socket, %{"nonsense" => "value"})
 
       assert updated.assigns.timezone_search == ""
       assert updated.assigns.timezone_dropdown_open == true
@@ -348,8 +347,8 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
       special = "São Paulo — <script>"
 
-      {:ok, updated} =
-        TimezoneHandlerComponent.handle_timezone_search(socket, %{"search" => special})
+      {:noreply, updated} =
+        EventHandlers.handle_timezone_search(socket, %{"search" => special})
 
       assert updated.assigns.timezone_search == special
     end

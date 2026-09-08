@@ -142,21 +142,6 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
-  Toggles the active status of a meeting type.
-  """
-  @spec toggle_meeting_type(integer(), integer()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
-  def toggle_meeting_type(id, user_id) do
-    case get_meeting_type(id, user_id) do
-      nil ->
-        {:error, :not_found}
-
-      meeting_type ->
-        update_meeting_type(meeting_type, %{is_active: !meeting_type.is_active})
-    end
-  end
-
-  @doc """
   Reorders meeting types for a user.
   """
   @spec reorder_meeting_types(integer(), [integer()]) :: {:ok, any()} | {:error, any()}
@@ -169,8 +154,6 @@ defmodule Tymeslot.MeetingTypes do
   # public API stable.
   defdelegate find_by_slug(user_id, slug), to: Slugs
   defdelegate effective_slug(meeting_type), to: Slugs
-  defdelegate to_slug(meeting_type), to: Slugs
-  defdelegate to_duration_string(meeting_type), to: Slugs
   defdelegate generate_random_slug(user_id), to: Slugs
   defdelegate update_slug(meeting_type, slug), to: Slugs
 
@@ -180,15 +163,6 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate normalize_duration_slug(duration), to: Duration
   defdelegate find_by_duration_string(user_id, slug), to: Duration
   defdelegate validate_duration_selection(duration, available_types), to: Duration
-  defdelegate duration_valid?(duration, available_types), to: Duration
-
-  @doc """
-  Lists all meeting types for a user.
-  """
-  @spec list_meeting_types(integer()) :: [Ecto.Schema.t()]
-  def list_meeting_types(user_id) do
-    get_all_meeting_types(user_id)
-  end
 
   @doc """
   Gets a meeting type by ID, raising if not found.

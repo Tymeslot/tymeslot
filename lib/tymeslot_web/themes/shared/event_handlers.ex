@@ -44,12 +44,9 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
     {:noreply, LiveView.redirect(socket, external: path)}
   end
 
-  @doc """
-  Handles common timezone change logic.
-  """
   @spec handle_timezone_change(LiveView.Socket.t(), map(), module()) ::
           {:noreply, LiveView.Socket.t()}
-  def handle_timezone_change(socket, data, timezone_handler_module) do
+  defp handle_timezone_change(socket, data, timezone_handler_module) do
     case timezone_handler_module.handle_timezone_change(socket, data) do
       {:ok, updated_socket} ->
         {:noreply, updated_socket}

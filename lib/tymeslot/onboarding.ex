@@ -7,11 +7,8 @@ defmodule Tymeslot.Onboarding do
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
 
-  @doc """
-  Creates a mock profile for development mode.
-  """
   @spec create_dev_profile() :: map()
-  def create_dev_profile do
+  defp create_dev_profile do
     %{
       id: 1,
       user_id: 1,
@@ -20,19 +17,6 @@ defmodule Tymeslot.Onboarding do
       timezone: Profiles.get_default_timezone(),
       avatar: nil,
       booking_theme: "1"
-    }
-  end
-
-  @doc """
-  Creates a mock user for development mode.
-  """
-  @spec create_dev_user() :: map()
-  def create_dev_user do
-    %{
-      id: 1,
-      email: "dev@example.com",
-      name: "Development User",
-      onboarding_completed_at: nil
     }
   end
 
@@ -104,15 +88,6 @@ defmodule Tymeslot.Onboarding do
   @spec dashboard_tour_seen?(Ecto.Schema.t()) :: boolean()
   def dashboard_tour_seen?(%{dashboard_tour_seen_at: nil}), do: false
   def dashboard_tour_seen?(_user), do: true
-
-  @doc """
-  Whether the host has manually ticked the given dashboard setup item off. The
-  set of valid keys is owned by the widget, not this context — callers validate
-  the key at the boundary before persisting.
-  """
-  @spec dashboard_setup_item_done?(Ecto.Schema.t(), String.t()) :: boolean()
-  def dashboard_setup_item_done?(user, key) when is_binary(key),
-    do: key in (user.dashboard_setup_done_items || [])
 
   @doc """
   Toggles a dashboard setup item's manually-done state and persists the result.

@@ -189,9 +189,6 @@ defmodule Tymeslot.Validation.Constraints do
   @spec password_length_range() :: Range.t()
   def password_length_range, do: 8..80
 
-  @spec message_length_range() :: Range.t()
-  def message_length_range, do: 10..2000
-
   @spec description_max_length() :: pos_integer()
   def description_max_length, do: 500
 

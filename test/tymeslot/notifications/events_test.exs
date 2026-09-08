@@ -61,39 +61,6 @@ defmodule Tymeslot.Notifications.EventsTest do
     end
   end
 
-  describe "get_event_metadata/2" do
-    test "returns correct metadata map" do
-      meeting = %{
-        id: "123",
-        uid: "UID-123",
-        status: "confirmed",
-        attendee_email: "a@test.com",
-        organizer_email: "o@test.com",
-        start_time: DateTime.utc_now()
-      }
-
-      meta = Events.get_event_metadata(:meeting_created, meeting)
-      assert meta.meeting_id == "123"
-      assert meta.event_type == :meeting_created
-      assert meta.attendee_email == "a@test.com"
-    end
-  end
-
-  describe "validate_event/2" do
-    test "returns :ok for valid event" do
-      assert Events.validate_event(:meeting_created, %{status: "confirmed"}) == :ok
-    end
-
-    test "returns error if meeting is nil" do
-      assert Events.validate_event(:meeting_created, nil) == {:error, "Meeting is required"}
-    end
-
-    test "returns error if event should not trigger" do
-      assert Events.validate_event(:meeting_created, %{status: "pending"}) ==
-               {:error, "Event should not trigger notifications"}
-    end
-  end
-
   describe "dispatch wiring" do
     setup do
       setup_config(:tymeslot,

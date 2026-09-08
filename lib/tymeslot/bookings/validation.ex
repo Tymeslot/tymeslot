@@ -141,7 +141,7 @@ defmodule Tymeslot.Bookings.Validation do
   """
   @spec validate_no_conflicts(DateTime.t(), DateTime.t(), [calendar_event()], scheduling_config()) ::
           :ok | {:error, :slot_unavailable}
-  def validate_no_conflicts(start_datetime, end_datetime, events, config \\ %{}) do
+  def validate_no_conflicts(start_datetime, end_datetime, events, config) do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)
     check_slot_availability(start_datetime, end_datetime, events, buffer_minutes)
   end

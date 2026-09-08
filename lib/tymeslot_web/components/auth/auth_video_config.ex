@@ -6,16 +6,12 @@ defmodule TymeslotWeb.Components.Auth.AuthVideoConfig do
   Separate from scheduling theme configurations.
   """
 
-  @doc """
-  Get video configuration for authentication flows.
-  Returns a map with video sources and poster information.
-  """
   @spec get_auth_video_config() :: %{
           required(:background_videos) => [map()],
           required(:poster) => String.t(),
           required(:video_ids) => [String.t()]
         }
-  def get_auth_video_config do
+  defp get_auth_video_config do
     %{
       background_videos: [
         %{

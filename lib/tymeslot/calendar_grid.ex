@@ -127,7 +127,7 @@ defmodule Tymeslot.CalendarGrid do
   start time and capped at a sensible limit. A blank term returns `[]`.
   """
   @spec search_events(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
-  def search_events(user_id, term, opts \\ []) do
+  def search_events(user_id, term, opts) do
     ProviderCalendarEventQueries.search(user_id, term, opts)
   end
 

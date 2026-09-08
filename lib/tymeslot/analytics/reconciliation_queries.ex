@@ -21,7 +21,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   never share a hash. Comparing them across days would systematically
   over-count "untracked" bookings.
 
-  `count_untracked_converting_visitors/2` therefore only flags a booking as
+  The untracked-converting query therefore only flags a booking as
   untracked when there is no page-view event whose hash matches **and** whose
   `inserted_at` falls on the **same UTC calendar day** as the booking. Within
   a single UTC day the salt is constant, so the match is reliable.
@@ -86,7 +86,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   end
 
   @spec count_visits(DateTime.t(), DateTime.t()) :: non_neg_integer()
-  def count_visits(%DateTime{} = from, %DateTime{} = to) do
+  defp count_visits(%DateTime{} = from, %DateTime{} = to) do
     EventSchema
     |> where([e], e.inserted_at >= ^from and e.inserted_at <= ^to)
     |> select([e], count(e.id))
@@ -95,7 +95,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   end
 
   @spec count_unique_visitors(DateTime.t(), DateTime.t()) :: non_neg_integer()
-  def count_unique_visitors(%DateTime{} = from, %DateTime{} = to) do
+  defp count_unique_visitors(%DateTime{} = from, %DateTime{} = to) do
     EventSchema
     |> where([e], e.inserted_at >= ^from and e.inserted_at <= ^to)
     |> select([e], count(e.visitor_hash, :distinct))
@@ -104,7 +104,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   end
 
   @spec count_converting_visitors(DateTime.t(), DateTime.t()) :: non_neg_integer()
-  def count_converting_visitors(%DateTime{} = from, %DateTime{} = to) do
+  defp count_converting_visitors(%DateTime{} = from, %DateTime{} = to) do
     MeetingSchema
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
     |> where([m], not is_nil(m.visitor_hash))
@@ -128,7 +128,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   # visitor may well have browsed the previous day and booked today — we simply
   # cannot confirm it either way; see moduledoc).
   @spec count_untracked_converting_visitors(DateTime.t(), DateTime.t()) :: non_neg_integer()
-  def count_untracked_converting_visitors(%DateTime{} = from, %DateTime{} = to) do
+  defp count_untracked_converting_visitors(%DateTime{} = from, %DateTime{} = to) do
     matching_event =
       from(e in EventSchema,
         where:

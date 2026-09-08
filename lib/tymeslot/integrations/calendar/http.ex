@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
           keyword()
         ) ::
           any()
-  def request_with_body(method, base_url, path, token, body, opts \\ []) do
+  def request_with_body(method, base_url, path, token, body, opts) do
     case normalize_method(method) do
       {:ok, normalized_method} ->
         encoder = Keyword.get(opts, :encoder, &Jason.encode!/1)

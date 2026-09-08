@@ -142,7 +142,7 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   # ============================================================================
 
   @spec list_deliveries(integer(), keyword()) :: [TelegramDeliverySchema.t()]
-  def list_deliveries(integration_id, opts \\ []) do
+  def list_deliveries(integration_id, opts) do
     limit = Keyword.get(opts, :limit, 50)
 
     TelegramDeliverySchema
@@ -161,7 +161,7 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   end
 
   @spec get_delivery_stats(integer(), keyword()) :: map()
-  def get_delivery_stats(integration_id, opts \\ []) do
+  def get_delivery_stats(integration_id, opts) do
     days_ago = Keyword.get(opts, :days, 7)
     IntegrationQueries.delivery_stats(TelegramDeliverySchema, integration_id, days_ago)
   end

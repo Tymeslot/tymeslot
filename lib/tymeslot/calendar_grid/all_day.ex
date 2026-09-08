@@ -72,22 +72,18 @@ defmodule Tymeslot.CalendarGrid.AllDay do
     }
   end
 
-  @doc """
-  The last day an all-day event actually covers, from its exclusive `end_date`.
-
-  Guards against a stored `end_date` that is not after `start_date`, which would
-  otherwise yield a last day before the event began.
-  """
+  # The last day an all-day event actually covers, from its exclusive
+  # `end_date`. Guards against a stored `end_date` that is not after
+  # `start_date`, which would otherwise yield a last day before the event
+  # began.
   @spec inclusive_last_day(Date.t(), Date.t()) :: Date.t()
-  def inclusive_last_day(start_date, end_date) do
+  defp inclusive_last_day(start_date, end_date) do
     last_day = Date.add(end_date, -1)
     if Date.compare(last_day, start_date) == :lt, do: start_date, else: last_day
   end
 
-  @doc """
-  The exclusive `end_date` to store for an event whose last covered day is
-  `last_day`.
-  """
+  # The exclusive `end_date` to store for an event whose last covered day is
+  # `last_day`.
   @spec exclusive_end_date(Date.t()) :: Date.t()
-  def exclusive_end_date(last_day), do: Date.add(last_day, 1)
+  defp exclusive_end_date(last_day), do: Date.add(last_day, 1)
 end

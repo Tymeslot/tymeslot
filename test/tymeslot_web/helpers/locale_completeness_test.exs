@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
       end
 
       test "number formatting uses locale-appropriate separators" do
-        result = LocaleFormat.format_number(1234.56, unquote(locale))
+        result = LocaleFormat.format_number(1234.56, unquote(locale), 2)
         assert is_binary(result), "#{unquote(locale)} number formatting should produce a string"
 
         case unquote(locale) do

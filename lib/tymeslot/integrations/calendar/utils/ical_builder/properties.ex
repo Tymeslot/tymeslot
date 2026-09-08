@@ -4,8 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
 
   Each public function maps one field of the canonical event map to its RFC
   5545 / RFC 7986 property line — or `nil` when the field is absent — for
-  assembly by `ICalBuilder.build_simple_event/2`. `build_dtstart/1` and
-  `build_dtend/1` are shared with the legacy `ICalBuilder.build_event/1` path.
+  assembly by `ICalBuilder.build_simple_event/2`.
   """
 
   import Tymeslot.Integrations.Calendar.ICalBuilder.Format,

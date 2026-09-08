@@ -64,12 +64,6 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
   defp determine_grid_cols(2), do: "sm:grid-cols-2"
   defp determine_grid_cols(_count), do: ""
 
-  @doc """
-  Renders a social authentication button for a given provider.
-  Usage:
-    <.social_auth_button provider="google" label="Log in with Google" href="/auth/google" />
-    <.social_auth_button provider="github" label="Log in with GitHub" href="/auth/github" />
-  """
   attr :provider, :string, required: true
   attr :label, :string, required: true
   attr :href, :string, required: true
@@ -77,7 +71,7 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
   attr :icon_size, :string, default: "compact", values: ["compact", "medium", "large", "mini"]
 
   @spec social_auth_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def social_auth_button(assigns) do
+  defp social_auth_button(assigns) do
     ~H"""
     <a
       href={@href}

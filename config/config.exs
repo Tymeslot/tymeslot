@@ -24,8 +24,6 @@ config :tymeslot,
   # Application fee charged on top of meeting payments, in basis points
   # (1 bp = 0.01%). 0 = no fee. SaaS may override per environment.
   payment_application_fee_bp: 0,
-  # Whether to show marketing-related links (Docs, etc) in navigation
-  show_marketing_links: false,
   # Whether the logo links to a marketing site or the login page
   logo_links_to_marketing: false,
   legal_terms_url: nil,

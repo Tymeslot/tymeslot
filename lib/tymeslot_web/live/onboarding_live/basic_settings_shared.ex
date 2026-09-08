@@ -40,7 +40,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   """
   @spec persist_basic_settings(Phoenix.LiveView.Socket.t(), map(), keyword()) ::
           {:ok, Tymeslot.Profiles.ProfileSchema.t()} | {:error, {:update_failed, term()}}
-  def persist_basic_settings(socket, sanitized_params, opts \\ []) do
+  def persist_basic_settings(socket, sanitized_params, opts) do
     params =
       if Keyword.get(opts, :preserve_timezone, false) do
         Map.put_new(sanitized_params, "timezone", socket.assigns.profile.timezone)

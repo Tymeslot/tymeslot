@@ -13,7 +13,7 @@ defmodule Tymeslot.ChangesetValidators.URL do
   alias Tymeslot.Validation.Constraints
 
   @spec validate_url(Ecto.Changeset.t(), atom(), keyword()) :: Ecto.Changeset.t()
-  def validate_url(changeset, field, validation_opts \\ []) do
+  def validate_url(changeset, field, validation_opts) do
     validate_change(changeset, field, fn ^field, value ->
       opts =
         Keyword.merge(

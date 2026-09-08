@@ -10,7 +10,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   require Logger
 
@@ -346,23 +345,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       nil -> :ok
       path -> Events.delete_calendar_event(client, path, uid, opts)
     end
-  end
-
-  @doc """
-  Expands recurring events (those with an RRULE) into individual occurrences
-  within the given date range. Non-recurring events pass through unchanged.
-
-  This is the CalDAV equivalent of Google Calendar's `singleEvents=true` —
-  the availability layer receives concrete occurrences instead of master
-  events with recurrence rules.
-  """
-  @spec expand_recurring_events([map()], DateTime.t() | Date.t(), DateTime.t() | Date.t()) ::
-          [map()]
-  def expand_recurring_events(events, range_start, range_end) do
-    Enum.flat_map(events, fn event ->
-      exdates = Map.get(event, :exdates, [])
-      RecurrenceExpander.expand(event, range_start, range_end, exdates: exdates)
-    end)
   end
 
   # Helpers

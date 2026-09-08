@@ -48,12 +48,10 @@ defmodule Tymeslot.Availability.WeeklySchedule do
     WeeklyAvailabilityQueries.create_weekly_availability(attrs)
   end
 
-  @doc """
-  Updates availability for a specific day.
-  """
+  # Updates availability for a specific day.
   @spec update_day_availability(WeeklyAvailabilitySchema.t(), map()) ::
           {:ok, WeeklyAvailabilitySchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_day_availability(%WeeklyAvailabilitySchema{} = weekly_availability, attrs) do
+  defp update_day_availability(%WeeklyAvailabilitySchema{} = weekly_availability, attrs) do
     WeeklyAvailabilityQueries.update_weekly_availability(weekly_availability, attrs)
   end
 
@@ -92,20 +90,6 @@ defmodule Tymeslot.Availability.WeeklySchedule do
     Repo.transaction(fn ->
       Enum.each(days, &upsert_day_availability(schedule_id, &1, config))
     end)
-  end
-
-  @doc """
-  Creates the seven default weekly days for a new schedule.
-  Weekdays 11AM-7:30PM, weekends unavailable.
-
-  Accepts an optional `repo` argument so callers inside an existing database
-  transaction can pass their transaction-scoped repo, ensuring the inserts are
-  part of the same transaction rather than a separate connection.
-  """
-  @spec create_default_weekly_days(integer(), Ecto.Repo.t()) ::
-          {:ok, non_neg_integer()} | {:error, term()}
-  def create_default_weekly_days(schedule_id, repo \\ Repo) do
-    WeeklyAvailabilityQueries.create_default_weekly_days(schedule_id, repo)
   end
 
   # Private functions

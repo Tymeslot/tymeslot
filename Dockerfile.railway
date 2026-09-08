@@ -74,6 +74,14 @@ ENV LANG=en_US.UTF-8 \
     PHX_SERVER=true \
     PORT=8080
 
+# Railway invokes the release directly, so there is no entrypoint to supply the
+# mail defaults that start-docker.sh sets. Without them a first deploy raises in
+# config/runtime.exs, one missing variable per restart. Override in the Railway
+# dashboard to send real mail; "test" discards it.
+ENV EMAIL_ADAPTER=test \
+    EMAIL_FROM_NAME=Tymeslot \
+    EMAIL_FROM_ADDRESS=hello@localhost
+
 WORKDIR /app
 
 RUN useradd --create-home --shell /bin/bash appuser && \

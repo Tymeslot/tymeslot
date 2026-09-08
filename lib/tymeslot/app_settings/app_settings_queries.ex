@@ -45,7 +45,7 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
   `FOR UPDATE` row lock, preventing two concurrent admin saves from
   overwriting each other's changes.
 
-  An optional `guard` function runs *inside* the same transaction, after the
+  A `guard` function runs *inside* the same transaction, after the
   changeset has been applied to the locked row but before the commit. It
   receives the merged settings struct (the exact state about to be committed)
   and must return `:ok` to allow the commit or `{:error, reason}` to roll it
@@ -56,7 +56,7 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
   """
   @spec update_settings(map(), (AppSettingsSchema.t() -> :ok | {:error, term()}), module()) ::
           {:ok, AppSettingsSchema.t()} | {:error, Changeset.t() | term()}
-  def update_settings(attrs, guard \\ fn _merged -> :ok end, repo \\ Repo)
+  def update_settings(attrs, guard, repo \\ Repo)
       when is_map(attrs) and is_function(guard, 1) do
     repo.transaction(fn ->
       query = from(s in AppSettingsSchema, where: s.id == @singleton_id, lock: "FOR UPDATE")

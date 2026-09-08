@@ -168,35 +168,6 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
     end
   end
 
-  describe "validate_token_scope/2" do
-    test "returns :ok for sufficient scopes" do
-      resp_body =
-        Jason.encode!(%{
-          "scope" =>
-            "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email"
-        })
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, headers, _opts ->
-        assert url == "https://www.googleapis.com/oauth2/v1/tokeninfo"
-        assert {"Authorization", "Bearer token"} in headers
-        {:ok, %{status: 200, body: resp_body}}
-      end)
-
-      assert {:ok, _result} = GoogleOAuthHelper.validate_token_scope("token", [:calendar])
-    end
-
-    test "returns error for missing scopes" do
-      resp_body = Jason.encode!(%{"scope" => "https://www.googleapis.com/auth/userinfo.email"})
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %{status: 200, body: resp_body}}
-      end)
-
-      assert {:error, msg} = GoogleOAuthHelper.validate_token_scope("token", [:calendar])
-      assert msg =~ "missing required scopes"
-    end
-  end
-
   describe "state management" do
     test "generates and validates state" do
       state = GoogleOAuthHelper.generate_state(456)

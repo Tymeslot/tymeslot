@@ -15,7 +15,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   @spec secret_key() :: String.t() | nil
-  def secret_key do
+  defp secret_key do
     System.get_env("RECAPTCHA_SECRET_KEY")
   end
 
@@ -43,7 +43,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   @spec signup_action() :: String.t()
-  def signup_action do
+  defp signup_action do
     recaptcha_cfg = Application.get_env(:tymeslot, :recaptcha, [])
     Keyword.get(recaptcha_cfg, :signup_action, "signup_form")
   end
@@ -128,8 +128,6 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   """
   @spec maybe_verify_signup_token(String.t(), map()) ::
           :ok | {:error, :recaptcha_failed} | {:error, :recaptcha_script_blocked}
-  def maybe_verify_signup_token(token, metadata \\ %{})
-
   def maybe_verify_signup_token(token, metadata) do
     # Check if signup reCAPTCHA is enabled and active
     enabled = signup_enabled?()
@@ -216,8 +214,6 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   """
   @spec maybe_verify_booking_token(String.t() | nil, map()) ::
           :ok | {:error, :recaptcha_failed} | {:error, :recaptcha_script_blocked}
-  def maybe_verify_booking_token(token, metadata \\ %{})
-
   def maybe_verify_booking_token(token, metadata) do
     # Check if booking reCAPTCHA is enabled and active
     enabled = booking_enabled?()

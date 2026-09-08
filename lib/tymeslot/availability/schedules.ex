@@ -72,14 +72,9 @@ defmodule Tymeslot.Availability.Schedules do
   @spec max_schedules() :: pos_integer()
   def max_schedules, do: @max_schedules
 
-  @doc """
-  Whether a profile has room for another schedule.
-
-  Callers use this to hide the actions that would fail, rather than offering a
-  button whose only outcome is an error.
-  """
+  # Whether a profile has room for another schedule.
   @spec can_create?(integer()) :: boolean()
-  def can_create?(profile_id) do
+  defp can_create?(profile_id) do
     AvailabilityScheduleQueries.count_by_profile(profile_id) < @max_schedules
   end
 

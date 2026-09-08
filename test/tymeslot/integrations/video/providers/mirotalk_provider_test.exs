@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
   @moduletag :integrations
 
   import Mox
+  alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Test.LogCapture
 
@@ -223,32 +224,32 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
   describe "sanitize_input/1" do
     test "removes special characters" do
-      assert MiroTalkProvider.sanitize_input("John<script>alert(1)</script>") ==
+      assert JoinUrlBuilder.sanitize_input("John<script>alert(1)</script>") ==
                "Johnscriptalert1script"
     end
 
     test "allows letters, numbers, spaces, dots, dashes, underscores, apostrophes, and @ symbols" do
-      assert MiroTalkProvider.sanitize_input("John O'Brien-Smith_123 @test.com") ==
+      assert JoinUrlBuilder.sanitize_input("John O'Brien-Smith_123 @test.com") ==
                "John O'Brien-Smith_123 @test.com"
     end
 
     test "truncates to 64 characters" do
       long_name = String.duplicate("a", 100)
-      result = MiroTalkProvider.sanitize_input(long_name)
+      result = JoinUrlBuilder.sanitize_input(long_name)
 
       assert String.length(result) == 64
     end
 
     test "preserves unicode letters" do
-      assert MiroTalkProvider.sanitize_input("José García") == "José García"
+      assert JoinUrlBuilder.sanitize_input("José García") == "José García"
     end
 
     test "handles nil by returning empty string" do
-      assert MiroTalkProvider.sanitize_input(nil) == ""
+      assert JoinUrlBuilder.sanitize_input(nil) == ""
     end
 
     test "handles non-string input by returning empty string" do
-      assert MiroTalkProvider.sanitize_input(123) == ""
+      assert JoinUrlBuilder.sanitize_input(123) == ""
     end
   end
 
@@ -261,7 +262,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       meeting_time = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       token =
-        MiroTalkProvider.generate_secure_token(config, room_id, user_name, role, meeting_time)
+        JoinUrlBuilder.generate_secure_token(config, room_id, user_name, role, meeting_time)
 
       # JWT has 3 parts separated by dots
       parts = String.split(token, ".")
@@ -293,7 +294,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       meeting_time = DateTime.utc_now()
 
       token =
-        MiroTalkProvider.generate_secure_token(
+        JoinUrlBuilder.generate_secure_token(
           config,
           "room123",
           "John<script>",
@@ -315,7 +316,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       room_id = "room123"
       participant_name = "John Doe"
 
-      url = MiroTalkProvider.create_direct_join_url(config, room_id, participant_name)
+      url = JoinUrlBuilder.create_direct_join_url(config, room_id, participant_name)
 
       assert String.starts_with?(url, "https://mirotalk.example.com/join?")
       assert String.contains?(url, "room=room123")
@@ -329,7 +330,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       config = %{base_url: "https://mirotalk.example.com"}
 
       url =
-        MiroTalkProvider.create_direct_join_url(
+        JoinUrlBuilder.create_direct_join_url(
           config,
           "room123",
           "John<script>alert(1)</script>"
@@ -349,7 +350,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       meeting_time = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       url =
-        MiroTalkProvider.create_secure_direct_join_url(
+        JoinUrlBuilder.create_secure_direct_join_url(
           config,
           room_id,
           participant_name,
@@ -370,7 +371,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       meeting_time = DateTime.utc_now()
 
       url =
-        MiroTalkProvider.create_secure_direct_join_url(
+        JoinUrlBuilder.create_secure_direct_join_url(
           config,
           "room123",
           "Guest User",

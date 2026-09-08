@@ -67,17 +67,6 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
     assert Engine.prev(s).current_index == 0
   end
 
-  test "complete?/1 true only when on last question and all required answered" do
-    [d1, d2] = [build_def("short_text"), build_def("short_text")]
-    s = Engine.init([d1, d2])
-    refute Engine.complete?(s)
-
-    s = Engine.answer(s, d1["id"], "Acme")
-    {:ok, s} = Engine.next(s)
-    s = Engine.answer(s, d2["id"], "Beta")
-    assert Engine.complete?(s)
-  end
-
   test "validate_all/1 returns ok with normalised answers" do
     [d1, d2] = [build_def("short_text"), build_def("short_text")]
 

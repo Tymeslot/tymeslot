@@ -34,11 +34,9 @@ defmodule TymeslotWeb.Themes.Core.Loader do
     end
   end
 
-  @doc """
-  Validates that a theme module implements all required callbacks.
-  """
+  # Validates that a theme module implements all required callbacks.
   @spec validate_theme_module(module()) :: :ok | {:error, term()}
-  def validate_theme_module(module) do
+  defp validate_theme_module(module) do
     required_functions = [
       {:states, 0},
       {:css_file, 0},

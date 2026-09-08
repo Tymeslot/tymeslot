@@ -1,8 +1,7 @@
 defmodule Tymeslot.MeetingsContext.QueriesTest do
   @moduledoc """
   Behaviour tests for the Meetings context covering read paths:
-  upcoming/past/cancelled listings, cursor pagination, single-meeting
-  lookup, and organizer-scoped update/delete.
+  upcoming/past/cancelled listings and cursor pagination.
   """
 
   use Tymeslot.DataCase, async: true
@@ -11,9 +10,9 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
   import Mox
   import Bitwise, only: [bxor: 2]
 
-  alias Ecto.UUID
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.Listing
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.TestMocks
   import Tymeslot.MeetingTestHelpers
   import Tymeslot.CursorPaginationTestCases
@@ -70,7 +69,7 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
 
       _upcoming = insert_meeting_for_user(user)
 
-      meetings = Meetings.list_past_meetings_for_user(user.email)
+      meetings = MeetingListQueries.list_past_meetings_for_user(user.email)
 
       assert length(meetings) == 1
       assert hd(meetings).id == past.id
@@ -88,7 +87,7 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
 
       _confirmed = insert_meeting_for_user(user)
 
-      meetings = Meetings.list_cancelled_meetings_for_user(user.email)
+      meetings = MeetingListQueries.list_cancelled_meetings_for_user(user.email, [])
 
       assert length(meetings) == 1
       assert hd(meetings).id == cancelled.id
@@ -105,10 +104,10 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
         insert_meeting_for_user(user, %{start_offset: 86_400 * i})
       end
 
-      {:ok, page1} = Meetings.list_user_meetings_cursor_page(user.email, per_page: 3)
+      {:ok, page1} = Listing.list_user_meetings_cursor_page(user.email, per_page: 3)
 
       {:ok, page2} =
-        Meetings.list_user_meetings_cursor_page(user.email,
+        Listing.list_user_meetings_cursor_page(user.email,
           per_page: 3,
           after: page1.next_cursor
         )
@@ -134,11 +133,11 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
         insert_meeting_for_user(user_b, %{start_offset: 86_400 * i})
       end
 
-      {:ok, page_a} = Meetings.list_user_meetings_cursor_page(user_a.email, per_page: 3)
+      {:ok, page_a} = Listing.list_user_meetings_cursor_page(user_a.email, per_page: 3)
       assert page_a.next_cursor
 
       {:ok, page_b_with_a_cursor} =
-        Meetings.list_user_meetings_cursor_page(user_b.email,
+        Listing.list_user_meetings_cursor_page(user_b.email,
           per_page: 3,
           after: page_a.next_cursor
         )
@@ -150,7 +149,7 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
       %{user: user} = create_user_with_profile()
       insert_meeting_for_user(user)
 
-      {:ok, page} = Meetings.list_user_meetings_cursor_page(user.email, per_page: 1)
+      {:ok, page} = Listing.list_user_meetings_cursor_page(user.email, per_page: 1)
       assert page.next_cursor
 
       # Flip a bit inside the payload segment of the signed token. Last-byte
@@ -161,78 +160,10 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
       tampered = Enum.join([header, <<bxor(first, 0xFF), rest::binary>>, sig], ".")
 
       assert {:error, :invalid_cursor} =
-               Meetings.list_user_meetings_cursor_page(user.email,
+               Listing.list_user_meetings_cursor_page(user.email,
                  per_page: 1,
                  after: tampered
                )
-    end
-  end
-
-  describe "when looking up a meeting by ID" do
-    test "returns meeting when it exists" do
-      %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user)
-
-      result = Meetings.get_meeting!(meeting.id)
-
-      assert result.id == meeting.id
-      assert result.uid == meeting.uid
-    end
-
-    test "raises when meeting does not exist" do
-      assert_raise Ecto.NoResultsError, fn ->
-        Meetings.get_meeting!(UUID.generate())
-      end
-    end
-  end
-
-  describe "when updating or deleting a meeting as a user" do
-    test "organizer can update meeting" do
-      meeting = insert(:meeting, organizer_email: "organizer@example.com")
-
-      assert {:ok, updated} =
-               Meetings.update_meeting_for_user(
-                 meeting,
-                 %{title: "New Title"},
-                 "organizer@example.com"
-               )
-
-      assert updated.title == "New Title"
-    end
-
-    test "attendee cannot update meeting" do
-      meeting =
-        insert(:meeting,
-          organizer_email: "organizer@example.com",
-          attendee_email: "attendee@example.com"
-        )
-
-      assert {:error, :unauthorized} =
-               Meetings.update_meeting_for_user(
-                 meeting,
-                 %{title: "New Title"},
-                 "attendee@example.com"
-               )
-    end
-
-    test "organizer can delete meeting" do
-      meeting = insert(:meeting, organizer_email: "organizer@example.com")
-
-      assert {:ok, _deleted_meeting} =
-               Meetings.delete_meeting_for_user(meeting, "organizer@example.com")
-
-      assert {:error, :not_found} = MeetingQueries.get_meeting(meeting.id)
-    end
-
-    test "attendee cannot delete meeting" do
-      meeting =
-        insert(:meeting,
-          organizer_email: "organizer@example.com",
-          attendee_email: "attendee@example.com"
-        )
-
-      assert {:error, :unauthorized} =
-               Meetings.delete_meeting_for_user(meeting, "attendee@example.com")
     end
   end
 end

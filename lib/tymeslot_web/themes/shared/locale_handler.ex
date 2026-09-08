@@ -12,17 +12,6 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   alias Tymeslot.Locales
 
   @doc """
-  Assigns the current locale to the socket from the connection assigns.
-  Sets the locale in Gettext for the current process.
-  """
-  @spec assign_locale(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def assign_locale(socket) do
-    locale = socket.assigns[:locale] || Locales.booking_default_locale()
-    Gettext.put_locale(locale)
-    Component.assign(socket, :locale, locale)
-  end
-
-  @doc """
   Changes the locale for the current socket.
   Validates that the new locale is supported before applying the change.
 

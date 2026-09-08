@@ -204,12 +204,6 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
   end
 
   @doc """
-  Returns the list of available `hero-*` icon names.
-  """
-  @spec available_icons() :: [String.t()]
-  def available_icons, do: Heroicons.names()
-
-  @doc """
   Filters a list of dashboard extensions down to only the valid ones,
   logging a warning for each extension that fails validation.
 

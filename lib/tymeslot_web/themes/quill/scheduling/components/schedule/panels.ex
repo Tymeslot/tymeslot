@@ -308,16 +308,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     """
   end
 
-  @doc """
-  Renders a time slot button.
-  """
+  # Renders a time slot button.
   attr :slot, :map, required: true
   attr :selected, :boolean, default: false
   attr :disabled, :boolean, default: false
   attr :rest, :global
 
   @spec time_slot_button(map()) :: Phoenix.LiveView.Rendered.t()
-  def time_slot_button(assigns) do
+  defp time_slot_button(assigns) do
     # Ensure @rest does not contain map values that Protocol.HTML.Safe cannot handle.
     # Specifically, phx-value-time might be a map if passed directly from slots.
     assigns =

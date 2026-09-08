@@ -11,7 +11,7 @@ defmodule Tymeslot.Auth.AuthActions do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Auth.{PasswordReset, Registration, Validation}
+  alias Tymeslot.Auth.{PasswordReset, Registration}
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -151,44 +151,6 @@ defmodule Tymeslot.Auth.AuthActions do
         {:error, normalize_auth_error(reason)}
     end
   end
-
-  # Validation Actions
-
-  @doc """
-  Validates signup form input.
-  """
-  @spec validate_signup_input(%{String.t() => term()}) ::
-          {:ok, %{String.t() => term()}} | {:error, %{atom() => [String.t()]}}
-  def validate_signup_input(params) do
-    Validation.validate_signup_input(params)
-  end
-
-  @doc """
-  Validates login form input.
-  """
-  @spec validate_login_input(%{String.t() => term()}) ::
-          {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
-  def validate_login_input(params) do
-    Validation.validate_login_input(params)
-  end
-
-  @doc """
-  Validates password reset form input.
-  """
-  @spec validate_password_reset_input(%{String.t() => term()}) ::
-          {:ok, %{String.t() => term()}} | {:error, %{atom() => [String.t()]}}
-  def validate_password_reset_input(%{"email" => _email} = params) do
-    Validation.validate_password_reset_input(params)
-  end
-
-  def validate_password_reset_input(
-        %{"password" => _password, "password_confirmation" => _confirmation} = params
-      ) do
-    Validation.validate_new_password_input(params)
-  end
-
-  def validate_password_reset_input(_params),
-    do: {:error, %{base: [dgettext("auth", "Invalid input format")]}}
 
   # State Management
 

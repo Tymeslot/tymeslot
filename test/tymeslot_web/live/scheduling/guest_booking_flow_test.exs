@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
     * Adding an invalid format shows the format error.
     * Removing a chip removes the guest from the list.
     * Submitting the booking persists the guests server-side
-      (verified via `Tymeslot.Meetings.list_meeting_guests/1`).
+      (verified via `Tymeslot.Meetings.Guests.list_for_meeting/1`).
     * The "Schedule another" confirmation action resets the guest list.
     * When `allow_guests: false`, the toggle is absent.
 
@@ -33,7 +33,6 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
   import Tymeslot.BookingTestHelpers
 
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Security.RateLimiter
@@ -285,7 +284,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
 
       guest_emails =
         meeting.id
-        |> Meetings.list_meeting_guests()
+        |> Guests.list_for_meeting()
         |> Enum.map(& &1.email)
         |> Enum.sort()
 

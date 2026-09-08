@@ -101,13 +101,4 @@ defmodule Tymeslot.Emails.Shared.Stage do
   defp dot do
     ~s(<span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; vertical-align: middle; margin-right: 8px; opacity: 0.6;"></span>)
   end
-
-  @doc """
-  Renders a compact stage band — shorter, no subtitle. Used for system emails
-  where the content is short and we want to keep the fold above the CTA.
-  """
-  @spec compact_stage(atom(), String.t(), String.t()) :: String.t()
-  def compact_stage(intent, eyebrow, title) do
-    stage_band(intent, eyebrow, title, nil)
-  end
 end
