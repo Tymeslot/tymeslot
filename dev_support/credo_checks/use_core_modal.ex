@@ -6,6 +6,20 @@ defmodule CredoChecks.UseCoreModal do
   for a custom modal backdrop. It should be replaced with `<CoreComponents.modal>` (or the
   `<.modal>` shorthand when imported), which provides consistent styling, keyboard handling,
   and accessibility across the application.
+
+  ## Known gaps
+
+  # TODO: the pattern is positional and line-based, so it catches the spelling this
+  #       codebase actually writes and little else. Not flagged: the tokens in another
+  #       order (`justify-center` before `fixed inset-0`, or `inset-0 fixed`);
+  #       `top-0 left-0 right-0 bottom-0` written out instead of `inset-0`;
+  #       `place-items-center` instead of `justify-center`; and a `class` attribute the
+  #       formatter has wrapped across two lines, since the check reads the file line by
+  #       line. The z-index is correctly irrelevant: any value matches, as does none.
+  #       Hardening it means matching the tokens in any order within one attribute and
+  #       joining wrapped attributes before the match. Deferred rather than dropped: the
+  #       current pattern has no false positives, and a hand-rolled backdrop is copied
+  #       from the last hand-rolled backdrop, so the copies share a spelling.
   """
 
   use Credo.Check,
