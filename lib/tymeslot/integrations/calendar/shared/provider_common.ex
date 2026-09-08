@@ -123,14 +123,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     not_found_msg = Keyword.fetch!(opts, :not_found_message)
     error_formatter = Keyword.fetch!(opts, :error_formatter)
 
-    client = %{
-      base_url: integration.base_url,
-      username: integration.username,
-      password: integration.password,
-      calendar_paths: integration.calendar_paths || [],
-      verify_ssl: true,
-      provider: normalize_provider(integration.provider)
-    }
+    client =
+      CaldavCommon.build_client(
+        %{
+          base_url: integration.base_url,
+          username: integration.username,
+          password: integration.password,
+          calendar_paths: integration.calendar_paths || []
+        },
+        provider: normalize_provider(integration.provider)
+      )
 
     case CaldavCommon.test_connection(client) do
       {:ok, _response} ->

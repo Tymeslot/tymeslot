@@ -545,5 +545,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       refute inspected =~ "secretchannel"
       refute inspected =~ "google_channel_secret"
     end
+
+    test "inspecting the integration itself hides the webhook channel secret" do
+      # Google and Outlook hand this struct to the availability fan-out as the
+      # provider client, so it reaches every crash report that prints a task's
+      # arguments. The virtual credential fields are already redacted; this
+      # one is persisted, and was not.
+      integration = %CalendarIntegrationSchema{google_channel_secret: "secretchannel"}
+
+      refute inspect(integration) =~ "secretchannel"
+    end
   end
 end
