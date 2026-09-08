@@ -181,7 +181,8 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
 
       options = ProxyConfig.build_req_proxy_options(proxy_config)
 
-      assert options[:connect_options][:proxy] == {:http, "proxy.example.com", 3128, []}
+      assert options[:connect_options][:proxy] ==
+               {:http, "proxy.example.com", 3128, [mode: :passive]}
     end
 
     test "builds proxy options with auth - CRITICAL STRUCTURE for Mint.TunnelProxy" do
@@ -199,15 +200,19 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
 
       options = ProxyConfig.build_req_proxy_options(proxy_config)
 
-      # CRITICAL: Verify proxy tuple has NO OPTIONS (4th element must be [])
-      # If this fails, proxy auth won't work - headers must be at connect_options level
+      # CRITICAL: the tuple's 4th element carries connection options ONLY.
+      # proxy_headers in here causes 407s — they must be at connect_options level.
+      # `mode: :passive` is the one option that belongs here: mint 1.10.0 opens the
+      # proxy socket from this tuple alone, so it is the only place Finch's
+      # required passive mode still reaches (see ProxyConfig.build_req_proxy_options/1).
       {scheme, host, port, proxy_tuple_opts} = options[:connect_options][:proxy]
       assert scheme == :http
       assert host == "proxy.example.com"
       assert port == 3128
 
-      assert proxy_tuple_opts == [],
-             "Proxy tuple options MUST be empty. Headers belong at connect_options level!"
+      assert proxy_tuple_opts == [mode: :passive],
+             "Proxy tuple must carry the connection mode and nothing else. " <>
+               "Headers belong at connect_options level!"
 
       # CRITICAL: Verify proxy_headers is at connect_options level
       # If this fails, authentication will fail with 407
@@ -245,7 +250,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       # Expected structure for Req with authenticated proxy:
       expected = [
         connect_options: [
-          proxy: {:http, "proxy.example.com", 3128, []},
+          proxy: {:http, "proxy.example.com", 3128, [mode: :passive]},
           proxy_headers: [
             {"Proxy-Authorization", "Basic " <> Base.encode64("testuser:testpass")}
           ],

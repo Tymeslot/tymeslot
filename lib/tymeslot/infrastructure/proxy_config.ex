@@ -218,8 +218,20 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   def build_req_proxy_options(proxy_config) do
     scheme = parse_scheme(proxy_config.scheme)
 
-    # Build proxy tuple WITHOUT headers (they go at connect_options level)
-    proxy_tuple = {scheme, proxy_config.host, proxy_config.port, []}
+    # Build proxy tuple WITHOUT headers (they go at connect_options level).
+    #
+    # `mode: :passive` is not ours to want — Finch already asks for it when it
+    # opens a connection (Finch.HTTP1.Conn puts it in the connect options). It is
+    # repeated here because mint 1.10.0 stopped forwarding the caller's options
+    # to the proxy socket on the plain-HTTP path: 1.9.3 did
+    # `Keyword.merge(opts, proxy_opts)` before calling `Mint.UnsafeProxy.connect/3`,
+    # whereas 1.10.0 opens that socket with the proxy tuple's own options alone.
+    # With an empty list here the socket lands in mint's default `:active` mode
+    # and Finch's `recv/3` raises ArgumentError on every proxied http:// request.
+    # This tuple element is the only place 1.10.0 still reads, so the option goes
+    # here. Harmless if mint restores the merge — passive is what Finch needs
+    # either way. HTTPS is unaffected: it goes through Mint.TunnelProxy.
+    proxy_tuple = {scheme, proxy_config.host, proxy_config.port, [mode: :passive]}
 
     # Build connect_options with proxy_headers at the correct level. These are
     # the connection options `Infrastructure.FinchPool` builds the request's
