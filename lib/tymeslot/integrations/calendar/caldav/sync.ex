@@ -120,11 +120,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
     paths = client.calendar_paths
 
     if Enum.empty?(paths) do
-      Logger.debug("No calendar paths configured; skipping forced full fetch",
-        calendar_integration_id: integration.id
-      )
-
-      :ok
+      {:error, :no_calendar_paths}
     else
       finish_forced_full_fetch(
         integration,
@@ -183,15 +179,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
 
   # Tiers 1 and 2 are single-collection protocols, so the primary path uses the
   # tier's own mechanism and every extra path falls back to a plain fetch.
-  defp with_extra_paths(integration, client, tier_name, primary_fun) do
+  defp with_extra_paths(integration, client, primary_fun) do
     case client.calendar_paths do
       [] ->
-        Logger.debug("No calendar path configured; skipping tiered sync",
-          calendar_integration_id: integration.id,
-          tier: tier_name
-        )
-
-        :ok
+        {:error, :no_calendar_paths}
 
       [primary_path] ->
         primary_fun.(primary_path)
@@ -208,7 +199,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # ---------------------------------------------------------------------------
 
   defp tier1(integration, client) do
-    with_extra_paths(integration, client, "Tier 1", &do_tier1(integration, client, &1))
+    with_extra_paths(integration, client, &do_tier1(integration, client, &1))
   end
 
   defp do_tier1(integration, client, primary_path) do
@@ -306,7 +297,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # ---------------------------------------------------------------------------
 
   defp tier2(integration, client) do
-    with_extra_paths(integration, client, "Tier 2", &do_tier2(integration, client, &1))
+    with_extra_paths(integration, client, &do_tier2(integration, client, &1))
   end
 
   defp do_tier2(integration, client, primary_path) do
@@ -357,11 +348,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
     paths = client.calendar_paths
 
     if Enum.empty?(paths) do
-      Logger.debug("No calendar paths configured for CalDAV sync",
-        calendar_integration_id: integration.id
-      )
-
-      :ok
+      {:error, :no_calendar_paths}
     else
       EventFetch.fetch_paths(integration, client, paths)
     end

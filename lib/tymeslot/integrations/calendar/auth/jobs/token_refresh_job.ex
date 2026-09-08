@@ -5,7 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   This job runs periodically to refresh OAuth tokens that are about to expire,
   ensuring continuous access to calendar APIs for both Google and Outlook.
 
-  Uses custom exponential backoff optimized for token refresh timing:
+  Overrides `c:Oban.Worker.backoff/1` with a schedule optimised for token refresh
+  timing:
   - Fast initial retries for transient issues
   - Longer backoffs to avoid rate limiting
   - Takes advantage of 2-hour refresh buffer
@@ -32,9 +33,13 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
 
   Since we start refreshing 2 hours before expiration, we can afford
   longer backoffs to avoid rate limiting while still having plenty of buffer time.
+
+  Oban's default would exhaust all eight attempts in roughly six minutes, abandoning
+  the refresh with almost the whole buffer unused.
   """
-  @spec custom_backoff(non_neg_integer()) :: non_neg_integer()
-  def custom_backoff(attempt) do
+  @impl Oban.Worker
+  @spec backoff(Oban.Job.t()) :: non_neg_integer()
+  def backoff(%Oban.Job{attempt: attempt}) do
     case attempt do
       # 1 second (network hiccup)
       1 -> 1

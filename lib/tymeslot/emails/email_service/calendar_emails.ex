@@ -28,9 +28,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   @spec send_calendar_sync_error(map(), any()) :: {:ok, any()} | {:error, any()}
   def send_calendar_sync_error(meeting, error_reason) do
     owner_email =
-      meeting.organizer_email ||
-        Application.get_env(:tymeslot, :email)[:from_email] ||
-        System.get_env("POSTMARK_FROM_EMAIL")
+      meeting.organizer_email || Application.get_env(:tymeslot, :email)[:from_email]
 
     Logger.info("Sending calendar sync error notification",
       meeting_id: meeting.id,

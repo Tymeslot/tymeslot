@@ -29,15 +29,4 @@ defmodule Tymeslot.Security.RateLimiter.OAuth do
       ip
     )
   end
-
-  @spec check_registration(String.t()) :: :ok | {:error, :rate_limited, String.t()}
-  def check_registration(ip) do
-    Helpers.check_with_logging(
-      "oauth_registration:#{ip}",
-      6,
-      1_200_000,
-      "OAuth registration",
-      ip
-    )
-  end
 end

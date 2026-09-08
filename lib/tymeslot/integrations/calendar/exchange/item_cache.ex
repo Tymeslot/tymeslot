@@ -230,13 +230,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
   # fetched, normalised and then classified out — and deleting last is what
   # makes the outcome the same either way.
   #
-  # Ownership is flagged here for the same reason `full_refresh_for_role/3`
-  # flags it on the other path: a booking Tymeslot wrote to the mailbox comes
-  # back through the feed as an ordinary create, and a row inserted unowned
-  # stays unowned — `replace_fields/0` leaves `created_by_tymeslot` alone on
-  # conflict — until the daily full read happens to rewrite it.
+  # Ownership needs no flagging call here: `Sync.upsert_cache/2` does it for
+  # every caller. A booking Tymeslot wrote to the mailbox comes back through
+  # the feed as an ordinary create, so without that the row would stay unowned
+  # until the daily full read happened to rewrite it.
   defp write_incremental(integration, events, deleted_ids) do
-    Sync.upsert_cache(integration, Sync.flag_tymeslot_owned(integration, events))
+    Sync.upsert_cache(integration, events)
 
     ProviderCalendarEventQueries.delete_by_provider_event_ids(
       integration.id,

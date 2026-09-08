@@ -3317,6 +3317,53 @@
       },
       "publishState": "published",
       "ts": "Sun, 06 Sep 2026 10:34:23 GMT"
+    },
+    "1.15.2": {
+      "creationDate": "Tue, 08 Sep 2026 05:50:46 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* Recognise Tymeslot's own bookings on CalDAV and Outlook calendars\n* Keep non-ASCII values readable when importing them into .env\n* Show the last sync time in calendar settings again\n* Stop a CalDAV calendar silently syncing nothing\n* Apply the intended retry schedule to calendar token refresh",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.2",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.2",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 08 Sep 2026 05:50:46 GMT"
     }
   }
 }

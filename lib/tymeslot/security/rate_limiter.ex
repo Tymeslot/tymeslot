@@ -122,14 +122,6 @@ defmodule Tymeslot.Security.RateLimiter do
           :ok | {:error, :rate_limited, String.t()}
   def check_oauth_completion_rate_limit(ip_address), do: OAuth.check_completion(ip_address)
 
-  @doc """
-  Rate limit OAuth registration completion in LiveView.
-  Returns :ok if allowed, {:error, :rate_limited} if exceeded.
-  """
-  @spec check_oauth_registration_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_oauth_registration_rate_limit(ip_address), do: OAuth.check_registration(ip_address)
-
   # Integrations
 
   @doc """

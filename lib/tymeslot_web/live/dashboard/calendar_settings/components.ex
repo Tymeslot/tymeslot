@@ -605,7 +605,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     end
   end
 
-  defp sync_segment(%{last_sync_at: %DateTime{} = synced_at}),
+  # `last_external_sync_at` is what every sync worker actually stamps, and what
+  # the staleness banner reads. `last_sync_at` is written by nothing, so reading
+  # it here silently dropped this segment for every integration.
+  defp sync_segment(%{last_external_sync_at: %DateTime{} = synced_at}),
     do:
       dgettext("dashboard_calendar_settings", "synced %{time}",
         time: TokenUtils.relative_time(synced_at)

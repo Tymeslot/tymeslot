@@ -211,4 +211,30 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
       assert "event-from-path2@test" in cached_uids
     end
   end
+
+  describe "no calendar selected" do
+    for tier <- [1, 2, 3] do
+      @tier tier
+
+      test "tier #{@tier} flags for reconnection when calendar_paths is empty" do
+        integration =
+          insert(:calendar_integration,
+            provider: "caldav",
+            is_active: true,
+            caldav_sync_tier: @tier,
+            calendar_paths: []
+          )
+
+        assert {:discard, _reason} =
+                 perform_job(SyncCalDavCalendarWorker, %{
+                   "calendar_integration_id" => integration.id
+                 })
+
+        reloaded = Repo.reload!(integration)
+        assert reloaded.needs_reauth
+        assert reloaded.sync_error =~ "No calendar is selected"
+        assert is_nil(reloaded.last_external_sync_at)
+      end
+    end
+  end
 end

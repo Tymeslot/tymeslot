@@ -1,4 +1,12 @@
 
+[1.15.2]
+* Recognise Tymeslot's own bookings on CalDAV and Outlook calendars
+* Keep non-ASCII values readable when importing them into .env
+* Show the last sync time in calendar settings again
+* Stop a CalDAV calendar silently syncing nothing
+* Apply the intended retry schedule to calendar token refresh
+
+
 [1.15.1]
 * Clear the external-calendar warning once the calendar agrees
 * Stop flagging meetings that have already happened as changed

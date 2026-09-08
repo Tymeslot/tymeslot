@@ -38,6 +38,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
+  alias Tymeslot.Integrations.Calendar.CalDAV.QueueQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
 
@@ -51,7 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   @spec flush(map(), CalDAVBase.client()) :: :ok
   def flush(integration, client) do
     integration.id
-    |> ProviderCalendarEventQueries.list_pending()
+    |> QueueQueries.list_pending()
     |> Enum.each(&flush_row(&1, integration, client))
 
     :ok
@@ -70,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          {:ok, event_data} <- sendable_event_data(row) do
       case Events.create_calendar_event(client, path, event_data, events_opts()) do
         {:ok, _uid} ->
-          ProviderCalendarEventQueries.mark_synced(integration.id, row.uid, nil)
+          QueueQueries.mark_synced(integration.id, row.uid, nil)
           log_success(row, :created)
 
         {:error, reason} ->
@@ -97,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
       case Events.update_calendar_event(client, path, row.uid, event_data, opts) do
         :ok ->
-          ProviderCalendarEventQueries.mark_synced(integration.id, row.uid, nil)
+          QueueQueries.mark_synced(integration.id, row.uid, nil)
           log_success(row, :modified)
 
         {:error, reason} ->
@@ -144,7 +145,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       sync_state: inspect(other)
     )
 
-    ProviderCalendarEventQueries.mark_sync_failed(
+    QueueQueries.mark_sync_failed(
       integration.id,
       row.uid,
       unsendable_change_message()
@@ -246,7 +247,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       error: format_reason(reason)
     )
 
-    ProviderCalendarEventQueries.mark_sync_failed(
+    QueueQueries.mark_sync_failed(
       integration.id,
       row.uid,
       CalDAVErrors.describe_error(reason)
@@ -260,7 +261,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       reason: reason
     )
 
-    ProviderCalendarEventQueries.mark_sync_failed(integration.id, row.uid, skip_message(reason))
+    QueueQueries.mark_sync_failed(integration.id, row.uid, skip_message(reason))
   end
 
   defp log_success(row, operation) do

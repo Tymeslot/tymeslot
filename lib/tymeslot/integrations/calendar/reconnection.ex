@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Utils.UriUtils
 
   @type integration :: CalendarIntegrationSchema.t()
   @type params :: %{optional(String.t()) => term()}
@@ -95,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
     calendar_list =
       Enum.map(calendars, fn cal ->
         entry = CalendarEntry.normalize(cal)
-        %{entry | selected: entry.path in selected_paths}
+        %{entry | selected: Enum.any?(selected_paths, &UriUtils.uri_safe_match?(entry.path, &1))}
       end)
 
     credential_attrs = %{
@@ -110,6 +111,18 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
     attrs = Map.merge(credential_attrs, Selection.calendar_list_attrs(calendar_list))
 
+    # A submitted path that matches no discovered calendar would persist an
+    # empty `calendar_paths` behind a successful "reconnected" flash, leaving
+    # the integration syncing nothing. Refuse on the derived selection, not on
+    # the submitted list, which was already checked by the caller.
+    if attrs.calendar_paths == [] do
+      {:error, :no_calendars_selected}
+    else
+      persist_account_change(integration, attrs)
+    end
+  end
+
+  defp persist_account_change(integration, attrs) do
     case CalendarManagement.update_calendar_integration(integration, attrs) do
       {:ok, updated} -> {:ok, updated}
       {:error, %Ecto.Changeset{} = cs} -> {:error, {:changeset, cs}}

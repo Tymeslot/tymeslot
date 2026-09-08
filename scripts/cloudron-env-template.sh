@@ -100,12 +100,72 @@ print_template() {
 # the escapes load_env_file understands, and Dotenvy resolves them the same
 # way. Escaping $ is what keeps Dotenvy from treating ${...} or $(...) in a
 # secret as something to expand.
+# Rewrites the non-ASCII characters of a value as the \uXXXX escapes both
+# readers of the file resolve identically. This is the inverse of start.sh's
+# dotenv_utf8, and it is not cosmetic: the release's dotenv parser truncates a
+# raw multi-byte character to one byte, so an imported value carrying one would
+# be skipped at boot and the setting would silently fall back to its default.
+# Returns 1 for a codepoint outside the BMP, which \uXXXX cannot express and
+# the reader cannot decode, so the caller can leave the value alone rather than
+# write something wrong.
+dotenv_escape_utf8() {
+  local value="$1" out="" i=0 len b1 b2 b3 cp
+  local LC_ALL=C LANG=C
+
+  len=${#value}
+
+  while [ "$i" -lt "$len" ]; do
+    printf -v b1 '%d' "'${value:i:1}"
+    b1=$(( b1 & 255 ))
+
+    if [ "$b1" -lt 128 ]; then
+      out="${out}${value:i:1}"
+      i=$(( i + 1 ))
+    elif [ "$b1" -ge 240 ]; then
+      return 1
+    elif [ "$b1" -ge 224 ]; then
+      printf -v b2 '%d' "'${value:i+1:1}"
+      printf -v b3 '%d' "'${value:i+2:1}"
+      cp=$(( (b1 - 224) * 4096 + ((b2 & 255) - 128) * 64 + ((b3 & 255) - 128) ))
+      printf -v out '%s\\u%04X' "$out" "$cp"
+      i=$(( i + 3 ))
+    elif [ "$b1" -ge 192 ]; then
+      printf -v b2 '%d' "'${value:i+1:1}"
+      cp=$(( (b1 - 192) * 64 + ((b2 & 255) - 128) ))
+      printf -v out '%s\\u%04X' "$out" "$cp"
+      i=$(( i + 2 ))
+    else
+      return 1
+    fi
+  done
+
+  printf '%s' "$out"
+}
+
 format_assignment() {
   local key="$1" value="$2" escaped
 
   case "$value" in
     *[!A-Za-z0-9_/.:@+=-]*)
       case "$value" in
+        # A non-ASCII value must be double-quoted with \uXXXX escapes, or the
+        # release's parser mangles it. Single quotes are literal and cannot
+        # carry the escapes, so this case comes first.
+        *[!$'\001'-$'\177']*)
+          # Escape the backslash first: doing it after encoding would double
+          # the backslash of every \uXXXX sequence and break them all.
+          escaped="${value//\\/\\\\}"
+          escaped="${escaped//\"/\\\"}"
+          escaped="${escaped//\$/\\\$}"
+
+          if escaped=$(dotenv_escape_utf8 "$escaped"); then
+            printf '%s="%s"\n' "$key" "$escaped"
+          else
+            # Outside the BMP: neither form is readable, so emit it unchanged
+            # and let the boot warning name the key.
+            printf "%s='%s'\n" "$key" "$value"
+          fi
+          ;;
         *\'*)
           escaped="${value//\\/\\\\}"
           escaped="${escaped//\"/\\\"}"

@@ -45,7 +45,9 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
               # Merge with existing selection so refreshing the list doesn't
               # silently un-select calendars the user previously enabled.
               merged =
-                Selection.unify_discovered_with_existing(calendars, integration.calendar_list)
+                calendars
+                |> Selection.unify_discovered_with_existing(integration.calendar_list)
+                |> keep_selection_if_emptied(integration.calendar_list)
 
               case Selection.persist_calendar_list(integration, merged) do
                 {:ok, _integration} ->
@@ -103,17 +105,8 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   def update_integration_with_discovery(integration) do
     with {:ok, refreshed_integration} <- refresh_integration(integration),
          {:ok, merged} <- Selection.discover_with_selection(refreshed_integration) do
-      # If discovery returned empty but we had existing selection, preserve it
-      # to prevent accidental data loss from transient provider issues
-      existing_calendar_list = refreshed_integration.calendar_list
-      had_existing_selection = existing_calendar_list != []
-
       final_calendar_list =
-        if merged == [] && had_existing_selection do
-          existing_calendar_list
-        else
-          merged
-        end
+        keep_selection_if_emptied(merged, refreshed_integration.calendar_list)
 
       case Selection.persist_calendar_list(refreshed_integration, final_calendar_list) do
         {:ok, updated} -> {:ok, updated}
@@ -176,4 +169,22 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   end
 
   defp refresh_integration(integration), do: {:ok, integration}
+
+  # `calendar_paths` is derived from the `selected` flags on `calendar_list`, so
+  # a re-discovery that matches nothing — an empty result, or a server that
+  # changed the shape of the hrefs it returns — silently deselects everything
+  # and leaves the integration syncing no calendars at all. Discovery is
+  # triggered by opening a meeting-type form, so this can happen without the
+  # owner touching their calendar settings. Keep the stored list whenever the
+  # merge would empty a selection that was not empty before; deselecting every
+  # calendar deliberately still works, because that goes through
+  # `Selection.persist_calendar_list/2` directly rather than through discovery.
+  defp keep_selection_if_emptied(merged, existing) do
+    if Selection.derive_selected_paths(merged) == [] and
+         Selection.derive_selected_paths(existing) != [] do
+      existing
+    else
+      merged
+    end
+  end
 end

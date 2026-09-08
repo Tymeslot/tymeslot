@@ -136,5 +136,27 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       # explicit path in the fixture, so derive_selected_paths falls back to its id
       assert updated.calendar_paths == ["cal_1"]
     end
+
+    test "preserves the existing selection when discovery matches none of it" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "cal_1", "selected" => true, "path" => "p1"}]
+        )
+
+      # The server now reports the calendar under a different id, so the merge
+      # would deselect everything and leave the integration syncing nothing.
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok, [%{"id" => "cal_renamed", "summary" => "Renamed"}]}
+      end)
+
+      assert {:ok, updated} = Workflows.update_integration_with_discovery(integration)
+
+      assert updated.calendar_paths == ["p1"]
+      assert [%CalendarEntry{id: "cal_1", selected: true}] = updated.calendar_list
+    end
   end
 end

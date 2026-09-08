@@ -66,8 +66,6 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def persist_normalised_events(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
-    calendar_events = flag_tymeslot_owned(integration, calendar_events)
-
     with {:ok, _count} <- upsert_cache(integration, calendar_events) do
       post_commit_reconciliation(integration, calendar_events)
       :ok
@@ -87,6 +85,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   That flag is load-bearing: `CalDAV.OfflineQueue` grants the `:keep_local`
   force-write only to rows carrying it, so the recovery a conflicting write
   depends on was inert for exactly the events it was written for.
+
+  Callers writing through `upsert_cache/2` get this for free and must not call
+  it themselves; the one caller that needs it explicitly is
+  `full_refresh_for_role/3`, which writes by a different query.
 
   Ownership does not have to be inferred from the payload at all. A mirrored
   booking shares an identifier with the meeting it came from, which is the
@@ -174,8 +176,20 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   @doc """
   Writes a batch of normalised events to the local cache.
 
-  Pure DB write — no broadcast, no meeting reconciliation. Safe to call
-  inside a `Repo.transaction`; a rollback unwinds the upsert cleanly.
+  No broadcast and no meeting reconciliation. Safe to call inside a
+  `Repo.transaction`; a rollback unwinds the upsert cleanly.
+
+  Ownership is flagged here rather than by the caller, because every sync path
+  writes through this function. It used to be flagged a level up in
+  `persist_normalised_events/2`, which the CalDAV reconciler does not call:
+  it writes under a transaction and so goes to this function directly
+  (`SyncReconciler.run_atomic_full_fetch/6` and `run_atomic_tier1/3`), and
+  those are every tier CalDAV runs. The result was that no CalDAV row ever
+  carried `created_by_tymeslot`, and the `:keep_local` recovery
+  `CalDAV.OfflineQueue` grants on the strength of it applied to nothing.
+
+  The cost is one meeting lookup per batch; `flag_tymeslot_owned/2` reads
+  only, so it is safe inside the caller's transaction.
   """
   @spec upsert_cache(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
           {:ok, non_neg_integer()} | {:error, term()}
@@ -183,7 +197,11 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def upsert_cache(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
-    attrs_list = Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
+    attrs_list =
+      integration
+      |> flag_tymeslot_owned(calendar_events)
+      |> Enum.map(&ProviderCalendarEventSchema.from_calendar_event/1)
+
     ProviderCalendarEventQueries.upsert_batch(attrs_list)
   rescue
     e ->

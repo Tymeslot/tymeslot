@@ -129,7 +129,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
       assert reloaded.last_full_sync_at == ~U[2026-01-01 00:00:00Z]
     end
 
-    test "returns :ok without advancing last_full_sync_at when calendar_paths is empty" do
+    test "flags for reconnection instead of reporting success when calendar_paths is empty" do
       integration =
         insert(:calendar_integration,
           provider: "caldav",
@@ -137,7 +137,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
           calendar_paths: []
         )
 
-      assert :ok =
+      assert {:discard, _reason} =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id,
                  "force_full_fetch" => true
@@ -146,6 +146,11 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
       reloaded = Repo.reload!(integration)
       assert is_nil(reloaded.last_full_sync_at)
       assert is_nil(reloaded.last_external_sync_at)
+
+      # Without the flag the fallback sweep re-enqueues this same no-op every
+      # cycle, because the timestamps it keys off never advance.
+      assert reloaded.needs_reauth
+      assert reloaded.sync_error =~ "No calendar is selected"
     end
 
     test "skips tier detection when forced, even if caldav_sync_tier is nil" do

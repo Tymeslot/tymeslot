@@ -248,6 +248,56 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       assert Enum.find(reloaded.calendar_list, &(&1.path == "/a/")).selected == true
       assert Enum.find(reloaded.calendar_list, &(&1.path == "/b/")).selected == false
     end
+
+    test "matches a selected path that differs only by percent-encoding", %{
+      integration: integration
+    } do
+      payload = %{
+        credentials: %{
+          url: "https://caldav.new.example.com",
+          username: "bob",
+          password: "bobpass"
+        },
+        calendars: [
+          %{
+            "id" => "/cal/My%20Calendar/",
+            "path" => "/cal/My%20Calendar/",
+            "name" => "Mine",
+            "type" => "calendar"
+          }
+        ]
+      }
+
+      assert {:ok, updated} =
+               Reconnection.finalise_account_change(integration, payload, ["/cal/My Calendar/"])
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, updated.id)
+
+      assert reloaded.calendar_paths == ["/cal/My%20Calendar/"]
+    end
+
+    test "refuses when no submitted path matches a discovered calendar", %{
+      integration: integration
+    } do
+      payload = %{
+        credentials: %{
+          url: "https://caldav.new.example.com",
+          username: "bob",
+          password: "bobpass"
+        },
+        calendars: [
+          %{"id" => "/a/", "path" => "/a/", "name" => "A", "type" => "calendar"}
+        ]
+      }
+
+      # Persisting this would empty calendar_paths behind a success, leaving the
+      # integration active and syncing nothing.
+      assert {:error, :no_calendars_selected} =
+               Reconnection.finalise_account_change(integration, payload, ["/gone/"])
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.calendar_paths == ["/calendars/alice/default/"]
+    end
   end
 
   defp insert_decrypted_caldav_integration(overrides) do
