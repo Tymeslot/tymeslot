@@ -77,55 +77,6 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
     end
   end
 
-  @doc """
-  Handles the OAuth request initiation with state generation and rate limiting.
-
-  ## Options
-  - `:service_name` - The name of the OAuth service
-  - `:authorize_url_fun` - Function to generate the authorization URL
-  - `:rate_limit_key` - Key for rate limiting (default: "oauth_initiation")
-  - `:rate_limit_max` - Maximum attempts allowed (default: 5)
-  - `:rate_limit_window` - Rate limit window in ms (default: 300_000)
-  - `:error_redirect` - Path to redirect on error (default: "/")
-  """
-  @spec initiate_oauth(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
-  def initiate_oauth(conn, opts) do
-    service_name = Keyword.fetch!(opts, :service_name)
-    authorize_url_fun = Keyword.fetch!(opts, :authorize_url_fun)
-
-    error_redirect = Keyword.get(opts, :error_redirect, "/")
-
-    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        case authorize_url_fun.(conn) do
-          {:ok, updated_conn, authorize_url} ->
-            Controller.redirect(updated_conn, external: authorize_url)
-
-          {:error, reason} ->
-            Logger.error("Failed to generate OAuth URL",
-              service: service_name,
-              reason: inspect(reason)
-            )
-
-            conn
-            |> Controller.put_flash(
-              :error,
-              dgettext("dashboard_integrations", "Failed to initiate %{service} authentication.",
-                service: service_name
-              )
-            )
-            |> Controller.redirect(to: error_redirect)
-        end
-
-      {:error, :rate_limited, _message} ->
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          ErrorFormatter.format_rate_limit_error("OAuth"),
-          error_redirect
-        )
-    end
-  end
-
   # Private functions
 
   defp process_oauth_callback(

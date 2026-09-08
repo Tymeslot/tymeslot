@@ -6,10 +6,8 @@ defmodule TymeslotWeb.Components.UITest do
   import Phoenix.LiveViewTest
   import Phoenix.Component
   alias TymeslotWeb.Components.CoreComponents.Buttons
-  alias TymeslotWeb.Components.UI.CloseButton
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Components.UI.Toggle
-  alias TymeslotWeb.Components.UI.ToggleGroup
 
   # The class attribute of the single element matching `selector`. Raises when
   # the selector matches none, so a renamed element fails loudly rather than
@@ -17,35 +15,6 @@ defmodule TymeslotWeb.Components.UITest do
   defp class_of(doc, selector) do
     [class] = Floki.attribute(doc, selector, "class")
     class
-  end
-
-  describe "CloseButton" do
-    test "renders correctly with default attributes" do
-      assigns = %{phx_click: "close"}
-      html = render_component(&CloseButton.close_button/1, assigns)
-
-      assert html =~ "Close"
-      assert html =~ "phx-click=\"close\""
-      assert html =~ "title=\"Close\""
-    end
-
-    test "renders without label when show_label is false" do
-      assigns = %{phx_click: "close", show_label: false}
-      html = render_component(&CloseButton.close_button/1, assigns)
-
-      # Should not contain the label text in a span
-      refute html =~ "<span"
-      # But title still exists
-      assert html =~ "title=\"Close\""
-    end
-
-    test "renders with custom title and class" do
-      assigns = %{phx_click: "close", title: "Dismiss", class: "custom-class"}
-      html = render_component(&CloseButton.close_button/1, assigns)
-
-      assert html =~ "title=\"Dismiss\""
-      assert html =~ "custom-class"
-    end
   end
 
   describe "StatusSwitch" do
@@ -170,39 +139,6 @@ defmodule TymeslotWeb.Components.UITest do
       html = render_component(&Toggle.toggle/1, assigns)
 
       assert html =~ "View Mode"
-    end
-  end
-
-  describe "ToggleGroup" do
-    setup do
-      options = [
-        %{value: :all, label: "All Items", short_label: "All"},
-        %{value: :pending, label: "Pending Items", short_label: "Pending"}
-      ]
-
-      {:ok, options: options}
-    end
-
-    test "renders with labels and short labels", %{options: options} do
-      assigns = %{id: "group-1", active_option: :all, options: options, on_change: "filter"}
-      html = render_component(&ToggleGroup.toggle_group/1, assigns)
-
-      assert html =~ "All Items"
-      assert html =~ "Pending Items"
-      assert html =~ "All"
-      assert html =~ "Pending"
-    end
-
-    test "highlights the active option and only that one", %{options: options} do
-      assigns = %{id: "group-1", active_option: :pending, options: options, on_change: "filter"}
-
-      html = render_component(&ToggleGroup.toggle_group/1, assigns)
-      doc = Floki.parse_fragment!(html)
-
-      # The buttons carry no id, so they are identified by the value they send.
-      assert class_of(doc, ~s(button[phx-value-option="pending"])) =~ "btn-primary"
-      refute class_of(doc, ~s(button[phx-value-option="all"])) =~ "btn-primary"
-      assert class_of(doc, ~s(button[phx-value-option="all"])) =~ "btn-ghost"
     end
   end
 

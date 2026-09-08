@@ -36,7 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
   never be silently treated as an empty diary.
   """
   @spec list_events(user_id() | nil) :: {:ok, list(map())} | {:error, term()}
-  def list_events(user_id \\ nil) do
+  def list_events(user_id) do
     all_clients = ClientManager.clients(user_id)
 
     if all_clients == [] do

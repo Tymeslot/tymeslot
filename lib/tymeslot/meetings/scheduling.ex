@@ -123,24 +123,6 @@ defmodule Tymeslot.Meetings.Scheduling do
       )
   end
 
-  @doc """
-  Checks if a meeting time slot conflicts with existing meetings.
-  Returns true if there's a conflict, false otherwise.
-
-  ## Examples
-
-      iex> has_time_conflict?(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 11:00:00Z])
-      false
-
-      iex> has_time_conflict?(~U[2024-01-01 10:00:00Z], ~U[2024-01-01 11:00:00Z], "existing-uid")
-      false
-
-  """
-  @spec has_time_conflict?(DateTime.t(), DateTime.t(), String.t() | nil) :: boolean()
-  def has_time_conflict?(%DateTime{} = start_time, %DateTime{} = end_time, exclude_uid \\ nil) do
-    MeetingConflictQueries.time_conflict_exists?(start_time, end_time, exclude_uid)
-  end
-
   # Private functions
 
   defp execute_conflict_checked_transaction(

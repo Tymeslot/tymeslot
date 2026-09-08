@@ -34,5 +34,18 @@ defmodule TymeslotWeb.Live.Scheduling.BookingConfigTest do
       assert {:ok, _sanitized} =
                InputProcessor.validate_form(params, BookingConfig.booking_field_spec())
     end
+
+    # Regression: issue #83. The shipped TLD snapshot was missing .homes, so a
+    # visitor with that address could not book. The snapshot is synced from IANA
+    # now (mix tymeslot.sync_tlds).
+    test "accepts an email on a TLD delegated after the list was first written" do
+      email = "owner@eastvalleyliving.homes"
+      params = %{"name" => "Test Attendee", "email" => email}
+
+      assert {:ok, sanitized} =
+               InputProcessor.validate_form(params, BookingConfig.booking_field_spec())
+
+      assert sanitized["email"] == email
+    end
   end
 end

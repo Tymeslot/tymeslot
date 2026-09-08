@@ -142,7 +142,6 @@ msgstr "Autenticazione con %{provider} non riuscita."
 msgid "Failed to create session. Please try again."
 msgstr "Creazione della sessione non riuscita. Riprova."
 
-#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/live/auth_live/verification_events.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to send verification email. Please try again later."
@@ -399,7 +398,6 @@ msgstr "Troppi tentativi di autenticazione. Riprova più tardi."
 msgid "Too many registration attempts. Please try again later."
 msgstr "Troppi tentativi di registrazione. Riprova più tardi."
 
-#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Too many verification attempts. Please try again later."
@@ -583,7 +581,6 @@ msgstr "Questo indirizzo email è già associato a un altro account. Usa un'emai
 
 #: lib/tymeslot/auth/auth_actions.ex
 #: lib/tymeslot/auth/error_formatter.ex
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
 msgstr "Troppi tentativi. Riprova più tardi."
@@ -648,11 +645,6 @@ msgstr "Account creato, ma la creazione del profilo non è riuscita: %{reason}"
 #, elixir-autogen, elixir-format
 msgid "Account created but verification failed: %{reason}"
 msgstr "Account creato, ma la verifica non è riuscita: %{reason}"
-
-#: lib/tymeslot/auth/auth_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid input format"
-msgstr "Formato dei dati inseriti non valido"
 
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
@@ -781,7 +773,6 @@ msgid "Invalid email or password."
 msgstr "Email o password non validi."
 
 #: lib/tymeslot/auth/error_formatter.ex
-#: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid input provided."
 msgstr "Dati inseriti non validi."
@@ -801,11 +792,6 @@ msgstr "Link di verifica non valido o scaduto"
 #, elixir-autogen, elixir-format
 msgid "Invalid response from %{provider}. Please try again."
 msgstr "Risposta non valida da %{provider}. Riprova."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid verification token. Please request a new verification email."
-msgstr "Token di verifica non valido. Richiedi una nuova email di verifica."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
@@ -962,11 +948,6 @@ msgstr "Impossibile reimpostare la password. Riprova."
 msgid "Unable to send password reset email. Please try again later."
 msgstr "Impossibile inviare l'email per reimpostare la password. Riprova più tardi."
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Verification failed. Please try again."
-msgstr "Verifica non riuscita. Riprova."
-
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
 msgid "Verification link has expired"
@@ -986,11 +967,6 @@ msgstr "La tua password è stata reimpostata"
 #, elixir-autogen, elixir-format
 msgid "Your reset token has expired. Please request a new password reset."
 msgstr "Il token per la reimpostazione è scaduto. Richiedi una nuova reimpostazione della password."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Your verification token has expired. Please request a new verification email."
-msgstr "Il token di verifica è scaduto. Richiedi una nuova email di verifica."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format

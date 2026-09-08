@@ -3,11 +3,12 @@ defmodule TymeslotWeb.Components.TimezoneDropdownAccessibilityTest do
   Accessibility contract for the shared timezone dropdown used by onboarding
   and profile settings.
 
-  The booking page carried the same three defects in its own copies of this
-  control, and they are pinned there by
+  The booking page carried the same defects in its own copies of this control,
+  and they are pinned there by
   `TymeslotWeb.Live.Scheduling.BookingAccessibilityTest`. This module covers the
   dashboard-side component, which is a separate implementation and can regress
-  independently.
+  independently; the assertions themselves are shared between the two, in
+  `TymeslotWeb.AccessibilityAssertions`.
   """
 
   use TymeslotWeb.ConnCase, async: true
@@ -17,6 +18,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdownAccessibilityTest do
 
   import Phoenix.Component
   import Phoenix.LiveViewTest
+  import TymeslotWeb.AccessibilityAssertions
 
   alias TymeslotWeb.Components.TimezoneDropdown
 
@@ -42,56 +44,38 @@ defmodule TymeslotWeb.Components.TimezoneDropdownAccessibilityTest do
 
   describe "trigger" do
     test "its accessible name contains its visible text" do
-      doc = render_dropdown(false)
-
-      [trigger] = Floki.find(doc, "button[aria-haspopup]")
-
-      # WCAG 2.5.3 Label in Name: an aria-label of "Select timezone" replaced
-      # the visible timezone, leaving speech-input users unable to activate the
-      # control by what they can see.
-      assert Floki.attribute([trigger], "aria-label") == []
-
-      name = trigger |> Floki.text() |> String.replace(~r/\s+/, " ")
-      assert name =~ "Your Timezone"
-      assert name =~ "Berlin"
+      assert_named_by_visible_text(render_dropdown(false), "button[aria-haspopup]", [
+        "Your Timezone",
+        "Berlin"
+      ])
     end
 
     test "it announces the dialog it opens, not a menu" do
-      doc = render_dropdown(false)
-
-      assert Floki.attribute(doc, "button[aria-haspopup]", "aria-haspopup") == ["dialog"]
+      assert_announces_dialog(render_dropdown(false), "button[aria-haspopup]")
     end
   end
 
   describe "search box" do
     test "it has an accessible name" do
-      doc = render_dropdown(true)
-
-      inputs = Floki.find(doc, "#timezone-search")
-
-      # Anchored: an empty list would pass the check below vacuously.
-      assert length(inputs) == 1
-
-      # A placeholder is not an accessible name: it disappears on input and
-      # several screen readers never announce it.
-      assert [label] = Floki.attribute(inputs, "aria-label")
-      assert label != ""
+      assert_input_named(render_dropdown(true), "#timezone-search")
     end
   end
 
   describe "labels" do
-    test "no label element is bound to nothing" do
+    # The orphan-label sweep the booking page runs cannot apply here: this
+    # component renders no `<label>` at all, and an "are any labels orphaned"
+    # check over an empty list passes however the component breaks.
+    #
+    # What is worth pinning is the decision that produced that emptiness. The
+    # visible "Your Timezone" heading names no control — the trigger below it
+    # carries its own accessible name — so it is a styled `<div>`. As a
+    # `<label>` it would be exactly the orphan the audit reported.
+    test "the visual heading is not a label element" do
       doc = render_dropdown(true)
 
-      orphans =
-        doc
-        |> Floki.find("label")
-        |> Enum.reject(fn label ->
-          Floki.attribute([label], "for") != [] or
-            Floki.find([label], "input, select, textarea") != []
-        end)
+      assert Floki.find(doc, "label") == []
 
-      assert orphans == []
+      assert doc |> Floki.find("div.label") |> Floki.text() =~ "Your Timezone"
     end
   end
 end

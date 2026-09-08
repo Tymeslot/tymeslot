@@ -82,7 +82,7 @@ defmodule Tymeslot.Demo.NoOp do
   end
 
   @impl Tymeslot.Demo.Behaviour
-  def avatar_url(profile, version \\ :original) do
+  def avatar_url(profile, version) do
     Profiles.avatar_url(profile, version)
   end
 
@@ -126,8 +126,8 @@ defmodule Tymeslot.Demo.NoOp do
         _end_date,
         _user_timezone,
         _organizer_profile,
-        _context \\ nil,
-        _duration_minutes \\ nil
+        _context,
+        _duration_minutes
       ) do
     {:ok, %{}}
   end
@@ -140,7 +140,7 @@ defmodule Tymeslot.Demo.NoOp do
         _user_timezone,
         _organizer_profile,
         _context,
-        _duration_minutes \\ nil
+        _duration_minutes
       ) do
     # NoOp implementation returns empty map; caller should fall back to real logic
     {:ok, %{}}

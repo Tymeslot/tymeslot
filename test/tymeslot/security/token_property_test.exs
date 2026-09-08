@@ -83,46 +83,6 @@ defmodule Tymeslot.Security.TokenPropertyTest do
     end
   end
 
-  describe "verify_token_secure/3" do
-    test "returns {:ok, token} when token matches and not expired" do
-      future = DateTime.add(DateTime.utc_now(), 3600, :second)
-
-      assert {:ok, "correct_token"} =
-               Token.verify_token_secure("correct_token", "correct_token", future)
-    end
-
-    test "returns {:error, :token_invalid} when token does not match" do
-      future = DateTime.add(DateTime.utc_now(), 3600, :second)
-      assert {:error, :token_invalid} = Token.verify_token_secure("wrong", "correct", future)
-    end
-
-    test "returns {:error, :token_invalid} when expired even if token matches" do
-      past = DateTime.add(DateTime.utc_now(), -3600, :second)
-      assert {:error, :token_invalid} = Token.verify_token_secure("token", "token", past)
-    end
-
-    test "returns {:error, :token_invalid} when both wrong and expired" do
-      past = DateTime.add(DateTime.utc_now(), -3600, :second)
-      assert {:error, :token_invalid} = Token.verify_token_secure("wrong", "correct", past)
-    end
-  end
-
-  describe "secure_compare_tokens/2" do
-    test "returns true for identical tokens" do
-      assert Token.secure_compare_tokens("abc123", "abc123")
-    end
-
-    test "returns false for different tokens" do
-      refute Token.secure_compare_tokens("abc123", "xyz789")
-    end
-
-    test "returns false for non-binary arguments" do
-      refute Token.secure_compare_tokens(nil, "token")
-      refute Token.secure_compare_tokens("token", nil)
-      refute Token.secure_compare_tokens(123, 456)
-    end
-  end
-
   describe "password reset token properties" do
     property "password reset tokens are valid base64url without padding" do
       check all(_run <- constant(nil), max_runs: 50) do

@@ -46,11 +46,9 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reconnection
   alias Tymeslot.Integrations.Calendar.Selection
-  alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Shared.InputValidators
-  alias Tymeslot.Profiles.ProfileQueries
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -135,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar do
   """
   @spec rename_integration(integration(), term(), map()) ::
           {:ok, integration()} | {:error, Ecto.Changeset.t() | %{name: String.t()}}
-  def rename_integration(integration, name, metadata \\ %{}) do
+  def rename_integration(integration, name, metadata) do
     with {:ok, sanitised} <- InputValidators.validate_integration_name(name, metadata) do
       CalendarManagement.update_calendar_integration(integration, %{name: sanitised})
     end
@@ -152,31 +150,6 @@ defmodule Tymeslot.Integrations.Calendar do
     end
   end
 
-  @doc """
-  Deletes an integration by ID for a user. Handles primary reassignment internally.
-  """
-  @spec delete_integration(integration_id(), user_id()) :: {:ok, any()} | {:error, any()}
-  def delete_integration(id, user_id) do
-    with {:ok, integration} <- CalendarManagement.get_calendar_integration(id, user_id) do
-      CalendarManagement.delete_calendar_integration(integration)
-    end
-  end
-
-  @doc """
-  Sets the primary calendar integration for a user.
-  """
-  @spec set_primary(user_id(), integration_id()) :: {:ok, integration()} | {:error, any()}
-  def set_primary(user_id, integration_id),
-    do: CalendarPrimary.set_primary_calendar_integration(user_id, integration_id)
-
-  @doc """
-  Clears the primary calendar integration for a user.
-  """
-  @spec clear_primary(user_id()) :: {:ok, any()} | {:error, any()}
-  def clear_primary(user_id) do
-    ProfileQueries.clear_primary_calendar_integration(user_id)
-  end
-
   # ---------------------------
   # Public API: Discovery/Selection
   # ---------------------------
@@ -188,15 +161,6 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec discover_calendars_for_integration(integration()) :: {:ok, list()} | {:error, any()}
   def discover_calendars_for_integration(integration) do
     Discovery.discover_calendars_for_integration(integration)
-  end
-
-  @doc """
-  Updates the calendar selection for an integration, optionally setting explicit default.
-  """
-  @spec update_calendar_selection(integration(), %{String.t() => term()}) ::
-          {:ok, integration()} | {:error, any()}
-  def update_calendar_selection(integration, params) do
-    Selection.update_calendar_selection(integration, params)
   end
 
   @doc """
@@ -214,6 +178,12 @@ defmodule Tymeslot.Integrations.Calendar do
       end)
 
     update_calendar_selection(integration, %{"selected_calendars" => current_selection})
+  end
+
+  @spec update_calendar_selection(integration(), %{String.t() => term()}) ::
+          {:ok, integration()} | {:error, any()}
+  defp update_calendar_selection(integration, params) do
+    Selection.update_calendar_selection(integration, params)
   end
 
   @doc """
@@ -292,15 +262,6 @@ defmodule Tymeslot.Integrations.Calendar do
   # ---------------------------
 
   @doc """
-  Validates that an integration can connect to its provider.
-  Returns {:ok, integration} or {:error, reason}.
-  """
-  @spec validate_connection(integration(), user_id()) :: {:ok, integration()} | {:error, any()}
-  def validate_connection(integration, user_id) do
-    Connection.validate_connection(integration, user_id)
-  end
-
-  @doc """
   Tests connectivity to an integration's provider and returns a
   display-friendly message.
 
@@ -374,7 +335,7 @@ defmodule Tymeslot.Integrations.Calendar do
              | {:rate_limited, String.t()}
              | :unattributable
              | :duplicate_integration}
-  def create_exchange_with_validation(user_id, params, opts \\ []) do
+  def create_exchange_with_validation(user_id, params, opts) do
     ExchangeCreation.create_with_validation(user_id, params, opts)
   end
 
@@ -385,15 +346,6 @@ defmodule Tymeslot.Integrations.Calendar do
           %{required(String.t()) => [String.t()] | [CalendarEntry.t()]}
   def prepare_selection_params(selected_paths, discovered) do
     Selection.prepare_selected_params(selected_paths, discovered)
-  end
-
-  @doc """
-  Delete integration while reassigning/clearing primary as needed.
-  """
-  @spec delete_with_primary_reassignment(user_id(), integration_id()) ::
-          {:ok, any()} | {:error, any()}
-  def delete_with_primary_reassignment(user_id, id) do
-    Deletion.delete_with_primary_reassignment(user_id, id)
   end
 
   @doc """
@@ -411,6 +363,12 @@ defmodule Tymeslot.Integrations.Calendar do
       error ->
         error
     end
+  end
+
+  @spec delete_with_primary_reassignment(user_id(), integration_id()) ::
+          {:ok, any()} | {:error, any()}
+  defp delete_with_primary_reassignment(user_id, id) do
+    Deletion.delete_with_primary_reassignment(user_id, id)
   end
 
   # ---------------------------
@@ -462,16 +420,6 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
-  Formats token expiry info into a human-readable string.
-  """
-  @spec format_token_expiry(integration()) :: String.t()
-  def format_token_expiry(integration) do
-    case TokenUtils.format_token_expiry(integration) do
-      {_status, message} -> message
-    end
-  end
-
-  @doc """
   Checks if a Google integration needs scope upgrade.
   """
   @spec needs_scope_upgrade?(integration()) :: boolean()
@@ -487,7 +435,7 @@ defmodule Tymeslot.Integrations.Calendar do
   List available providers for calendar integrations.
   """
   @spec list_available_providers(atom()) :: list()
-  def list_available_providers(type \\ :calendar) do
+  def list_available_providers(type) do
     Directory.list(type)
   end
 
@@ -502,23 +450,6 @@ defmodule Tymeslot.Integrations.Calendar do
           {:ok, integration()} | {:error, term()}
   def update_integration_with_discovery(integration) do
     Workflows.update_integration_with_discovery(integration)
-  end
-
-  @doc """
-  Discovers calendars for raw credentials before creating an integration.
-  Delegates to Tymeslot.Integrations.Calendar.Discovery for a single source of truth.
-  """
-  @spec discover_calendars_for_credentials(
-          atom() | String.t(),
-          String.t(),
-          String.t(),
-          String.t(),
-          keyword()
-        ) ::
-          {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
-          | {:error, {Discovery.error_category(), String.t()}}
-  def discover_calendars_for_credentials(provider, url, username, password, opts \\ []) do
-    Discovery.discover_calendars_for_credentials(provider, url, username, password, opts)
   end
 
   @doc """

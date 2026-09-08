@@ -228,13 +228,11 @@ defmodule Tymeslot.Availability.BusinessHours do
     |> TimeSlots.resolve_breaks(date, owner_timezone)
   end
 
-  @doc """
-  Fallback for callers with no resolvable availability schedule.
-  Uses the hard-coded fallback hours when no schedule is resolvable.
-  """
+  # Fallback for callers with no resolvable availability schedule.
+  # Uses the hard-coded fallback hours when no schedule is resolvable.
   @spec get_business_hours_in_timezone_fallback(Date.t(), String.t(), String.t()) ::
           {:ok, business_hours_result()}
-  def get_business_hours_in_timezone_fallback(date, owner_timezone, user_timezone) do
+  defp get_business_hours_in_timezone_fallback(date, owner_timezone, user_timezone) do
     case Date.day_of_week(date) do
       day when day in @fallback_working_days ->
         convert_business_hours_to_user_timezone(
@@ -290,17 +288,16 @@ defmodule Tymeslot.Availability.BusinessHours do
     AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule_id, date)
   end
 
-  @doc false
   @spec lookup_day_availability(integer(), integer() | nil, Calculate.availability_config()) ::
           day_availability() | nil
-  def lookup_day_availability(_day_of_week, nil, _config), do: nil
+  defp lookup_day_availability(_day_of_week, nil, _config), do: nil
 
-  def lookup_day_availability(day_of_week, _schedule_id, %{weekly_schedule: schedule})
-      when is_list(schedule) do
+  defp lookup_day_availability(day_of_week, _schedule_id, %{weekly_schedule: schedule})
+       when is_list(schedule) do
     Enum.find(schedule, &(&1.day_of_week == day_of_week))
   end
 
-  def lookup_day_availability(day_of_week, schedule_id, _config) do
+  defp lookup_day_availability(day_of_week, schedule_id, _config) do
     WeeklySchedule.get_day_availability(schedule_id, day_of_week)
   end
 

@@ -403,27 +403,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
     end
   end
 
-  describe "count_for_user/1" do
-    test "returns count of meeting types for user" do
-      user1 = insert(:user)
-      user2 = insert(:user)
-
-      insert(:meeting_type, user: user1)
-      insert(:meeting_type, user: user1)
-      insert(:meeting_type, user: user2)
-
-      count = MeetingTypeQueries.count_for_user(user1.id)
-      assert count == 2
-    end
-
-    test "returns zero when user has no meeting types" do
-      user = insert(:user)
-
-      count = MeetingTypeQueries.count_for_user(user.id)
-      assert count == 0
-    end
-  end
-
   describe "get_meeting_type!/1" do
     test "returns meeting type when it exists" do
       user = insert(:user)

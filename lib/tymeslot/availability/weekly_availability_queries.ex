@@ -37,7 +37,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   """
   @spec create_weekly_availability(map()) ::
           {:ok, WeeklyAvailabilitySchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_weekly_availability(attrs \\ %{}) when is_map(attrs) do
+  def create_weekly_availability(attrs) when is_map(attrs) do
     %WeeklyAvailabilitySchema{}
     |> WeeklyAvailabilitySchema.changeset(attrs)
     |> Repo.insert()

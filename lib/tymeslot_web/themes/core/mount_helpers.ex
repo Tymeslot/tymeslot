@@ -22,9 +22,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   @doc """
   Mounts the socket when an organizer profile is present.
 
-  Delegates to either `mount_meeting_management/5` or `mount_scheduling_flow/4` depending on
-  the live action and params. Accepts `delegate_fn` — a `(theme_id, function, args -> result)`
-  function — for delegating scheduling-flow mounts to the theme module.
+  Delegates to the meeting-management, poll-voting or scheduling-flow mount
+  depending on the live action and params. Accepts `delegate_fn` — a
+  `(theme_id, function, args -> result)` function — for delegating
+  scheduling-flow mounts to the theme module.
   """
   @spec mount_with_profile(map(), map(), map(), Phoenix.LiveView.Socket.t(), function()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
@@ -70,15 +71,12 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
-  @doc """
-  Mounts a scheduling flow for a known organizer profile.
-
-  Accepts `delegate_fn` — a `(theme_id, function, args -> result)` function — for delegating
-  to the theme module.
-  """
+  # Mounts a scheduling flow for a known organizer profile. `delegate_fn` — a
+  # `(theme_id, function, args -> result)` function — delegates to the theme
+  # module.
   @spec mount_scheduling_flow(map(), map(), map(), Phoenix.LiveView.Socket.t(), function()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def mount_scheduling_flow(profile, params, session, socket, delegate_fn) do
+  defp mount_scheduling_flow(profile, params, session, socket, delegate_fn) do
     case LinkAccessPolicy.check_public_readiness(profile) do
       {:ok, :ready} ->
         case prepare_theme_context(profile, params, socket) do
@@ -108,10 +106,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
-  @doc "Loads a meeting and prepares the socket for the cancel/reschedule/cancel_confirmed flow."
+  # Loads a meeting and prepares the socket for the cancel/reschedule/cancel_confirmed flow.
   @spec mount_meeting_management(map(), map(), Phoenix.LiveView.Socket.t(), atom()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def mount_meeting_management(profile, params, socket, action) do
+  defp mount_meeting_management(profile, params, socket, action) do
     theme_id = profile.booking_theme || socket.assigns[:theme_id] || Registry.default_theme_id()
     meeting_uid = params["meeting_uid"]
 
@@ -138,18 +136,16 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
-  @doc """
-  Mounts the public poll voting page for a known organizer profile.
-
-  Applies the same public-readiness gate as the scheduling flow, then loads the
-  poll by its public token. A missing token, or one whose poll belongs to a
-  different host than the resolved username, redirects to `/` exactly as a failed
-  meeting-management load does — a poll must never render under the wrong host's
-  theme.
-  """
+  # Mounts the public poll voting page for a known organizer profile.
+  #
+  # Applies the same public-readiness gate as the scheduling flow, then loads the
+  # poll by its public token. A missing token, or one whose poll belongs to a
+  # different host than the resolved username, redirects to `/` exactly as a failed
+  # meeting-management load does — a poll must never render under the wrong host's
+  # theme.
   @spec mount_poll_voting(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def mount_poll_voting(profile, params, socket) do
+  defp mount_poll_voting(profile, params, socket) do
     case LinkAccessPolicy.check_public_readiness(profile) do
       {:ok, :ready} ->
         load_and_mount_poll(profile, params, socket)
@@ -178,10 +174,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     assign(socket, :user_timezone, validated_timezone)
   end
 
-  @doc "Builds the theme context from params and profile, assigns it to the socket."
+  # Builds the theme context from params and profile, assigns it to the socket.
   @spec prepare_theme_context(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Context.t(), Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
-  def prepare_theme_context(profile, params, socket) do
+  defp prepare_theme_context(profile, params, socket) do
     case Context.from_params(params, profile) do
       %Context{} = context ->
         socket =

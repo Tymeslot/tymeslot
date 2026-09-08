@@ -8,6 +8,10 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
   timezone search box, a `<label>` bound to nothing, a trigger whose
   `aria-label` replaced its own visible text, and an autoplaying background
   video with no way to stop it.
+
+  The contracts themselves live in `TymeslotWeb.AccessibilityAssertions`, which
+  the dashboard timezone dropdown shares. This module owns reaching each step
+  of the booking flow and saying which contract applies there.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -19,6 +23,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
   import Tymeslot.ThemeBookingFlowHelpers
+  import TymeslotWeb.AccessibilityAssertions
 
   alias Tymeslot.TestMocks
 
@@ -59,15 +64,6 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
 
   defp document(view), do: view |> render() |> Floki.parse_document!()
 
-  # Approximates the accessible name for a button: aria-label wins outright if
-  # present, otherwise the name comes from the element's own text.
-  defp accessible_name(element) do
-    case Floki.attribute(element, "aria-label") do
-      [label | _rest] -> label
-      [] -> element |> Floki.text() |> String.replace(~r/\s+/, " ") |> String.trim()
-    end
-  end
-
   describe "timezone selector" do
     for {theme_id, theme} <- @themes do
       @tag :capture_log
@@ -78,16 +74,10 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
           |> advance_to_schedule_step()
           |> document()
 
-        [trigger] = Floki.find(doc, "button.timezone-trigger")
-
-        # WCAG 2.5.3 Label in Name: an aria-label of "Select timezone" replaced
-        # the visible timezone, leaving speech-input users unable to activate
-        # the control by what they can see.
-        assert Floki.attribute(trigger, "aria-label") == []
-
-        name = accessible_name(trigger)
-        assert name =~ "Your timezone"
-        assert name =~ "New York"
+        assert_named_by_visible_text(doc, "button.timezone-trigger", [
+          "Your timezone",
+          "New York"
+        ])
       end
 
       @tag :capture_log
@@ -98,10 +88,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
           |> advance_to_schedule_step()
           |> document()
 
-        [trigger] = Floki.find(doc, "button.timezone-trigger")
-
-        # aria-haspopup="true" means "menu"; the panel is a dialog.
-        assert Floki.attribute(trigger, "aria-haspopup") == ["dialog"]
+        assert_announces_dialog(doc, "button.timezone-trigger")
       end
 
       @tag :capture_log
@@ -113,38 +100,24 @@ defmodule TymeslotWeb.Live.Scheduling.BookingAccessibilityTest do
 
         view |> element("button.timezone-trigger") |> render_click()
 
-        inputs = view |> document() |> Floki.find(".timezone-search")
-
-        # Anchored: an empty list would otherwise pass the check below.
-        assert length(inputs) == 1
-
-        # A placeholder is not an accessible name — it disappears on input and
-        # several screen readers never announce it.
-        assert [label] = Floki.attribute(inputs, "aria-label")
-        assert label != ""
+        assert_input_named(document(view), ".timezone-search")
       end
     end
   end
 
   describe "form labels" do
     for {theme_id, theme} <- @themes do
+      # The booking form is the step that carries the labels worth checking:
+      # name, email, message and any custom questions. The schedule step it
+      # used to be checked on renders almost none, so the sweep there passed
+      # without ever seeing the form it was written for.
       @tag :capture_log
-      test "#{theme}: no label element is bound to nothing", %{conn: conn} do
-        doc =
-          conn
-          |> mount_booking_page(unquote(theme_id), "labels-#{unquote(theme)}")
-          |> advance_to_schedule_step()
-          |> document()
+      test "#{theme}: no label on the booking form is bound to nothing", %{conn: conn} do
+        view = mount_booking_page(conn, unquote(theme_id), "labels-#{unquote(theme)}")
 
-        labels = Floki.find(doc, "label")
+        advance_to_booking_form(view, unquote(theme))
 
-        orphans =
-          Enum.reject(labels, fn label ->
-            Floki.attribute([label], "for") != [] or
-              Floki.find([label], "input, select, textarea") != []
-          end)
-
-        assert orphans == []
+        assert_no_orphan_labels(document(view), "#{unquote(theme)} booking form")
       end
     end
   end

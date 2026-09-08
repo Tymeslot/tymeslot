@@ -123,13 +123,9 @@ defmodule TymeslotWeb.Themes.Core.Registry do
     Map.has_key?(@id_to_theme_map, id)
   end
 
-  @doc """
-  Gets the default theme definition.
-
-  Returns the Quill theme as the default.
-  """
+  # Gets the default theme definition: the Quill theme.
   @spec default_theme() :: theme_definition()
-  def default_theme do
+  defp default_theme do
     @themes.quill
   end
 

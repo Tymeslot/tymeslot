@@ -93,12 +93,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     end
   end
 
-  @doc """
-  Builds the UI-state map the context uses to resolve the icon from the
-  submitted params.
-  """
+  # Builds the UI-state map the context uses to resolve the icon from the
+  # submitted params.
   @spec build_ui_state(map(), map()) :: map()
-  def build_ui_state(_params, sanitized_params) do
+  defp build_ui_state(_params, sanitized_params) do
     %{selected_icon: Map.get(sanitized_params, "icon", "none")}
   end
 

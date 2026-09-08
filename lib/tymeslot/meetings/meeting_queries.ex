@@ -18,7 +18,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   @doc "Creates a meeting."
   @spec create_meeting(map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
-  def create_meeting(attrs \\ %{}) when is_map(attrs) do
+  def create_meeting(attrs) when is_map(attrs) do
     %Meeting{}
     |> Meeting.changeset(attrs)
     |> Repo.insert()
@@ -403,18 +403,12 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     end
   end
 
-  @doc """
-  Whether a `reminders_sent` entry matches the given `(value, unit)` reminder
-  config.
-
-  Public because it is the single authority on entry-matching, shared with
-  `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, which reads
-  `reminders_sent` to decide whether a reminder still needs sending: writer
-  and reader must never disagree about which entry a `(value, unit)` config
-  identifies.
-  """
-  @spec reminder_entry_match?(map(), integer(), String.t()) :: boolean()
-  def reminder_entry_match?(entry, val, unit) do
+  # Whether a `reminders_sent` entry matches the given `(value, unit)` reminder
+  # config. The single authority on entry-matching: `Tymeslot.Workers.
+  # EmailWorkerHandlers.MeetingEmails` reads `reminders_sent` to decide whether
+  # a reminder still needs sending, so writer and reader must never disagree
+  # about which entry a `(value, unit)` config identifies.
+  defp reminder_entry_match?(entry, val, unit) do
     case entry do
       %{"value" => v, "unit" => u} -> v == val and u == unit
       %{value: v, unit: u} -> v == val and u == unit
@@ -433,18 +427,15 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     }
   end
 
-  @doc """
-  Whether a `reminders_sent` entry records the recipient identified by
-  `string_key`/`atom_key` as sent.
-
-  Missing keys mean a pre-upsert entry; treated as already sent rather than
-  guessing, so old rows never trigger a fresh send. Public and shared with
-  `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, the reader of this
-  field: this is the single authority on legacy-entry semantics, so the
-  default here cannot silently diverge from what the reader assumes.
-  """
-  @spec reminder_entry_flag(map(), String.t(), atom()) :: boolean()
-  def reminder_entry_flag(entry, string_key, atom_key) do
+  # Whether a `reminders_sent` entry records the recipient identified by
+  # `string_key`/`atom_key` as sent.
+  #
+  # Missing keys mean a pre-upsert entry; treated as already sent rather than
+  # guessing, so old rows never trigger a fresh send. This is the authority on
+  # legacy-entry semantics, and the default here cannot silently diverge from
+  # what `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, the reader of
+  # this field, assumes.
+  defp reminder_entry_flag(entry, string_key, atom_key) do
     case entry do
       %{^string_key => sent} when is_boolean(sent) -> sent
       %{^atom_key => sent} when is_boolean(sent) -> sent
@@ -490,6 +481,11 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   cancelled, completed and expired bookings are excluded. Used by the booking
   limits feature to bucket bookings into host-timezone periods.
 
+  Nothing writes the `"completed"` status, so a booking that has already
+  happened is still `"confirmed"` and still counts towards its period's cap.
+  That is what the caps are meant to measure — a day's load, not what is left
+  of it — but it does mean the exclusion above is latent, not observed.
+
   Options:
     * `:exclude_uid` — omit one meeting by UID (self-exclusion on reschedule).
   """
@@ -500,7 +496,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
         organizer_user_id,
         %DateTime{} = from_utc,
         %DateTime{} = to_utc,
-        opts \\ []
+        opts
       ) do
     query =
       Meeting

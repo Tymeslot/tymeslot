@@ -136,16 +136,6 @@ msgstr ""
 msgid "%{start_month} - %{end_month} %{year}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{time} %{timezone}"
-msgstr ""
-
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "%{time} UTC"
-msgstr ""
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "%{time} local time"
@@ -524,7 +514,6 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/shared/meeting_ticket.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
 msgid "Date"
@@ -869,7 +858,6 @@ msgstr ""
 msgid "Meeting rescheduled successfully!"
 msgstr ""
 
-#: lib/tymeslot_web/themes/rhythm/shared/meeting_ticket.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting with"

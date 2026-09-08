@@ -102,16 +102,6 @@ defmodule Tymeslot.Slack.API do
     |> parse_web_api_response()
   end
 
-  @doc "Verifies a bot token is still valid."
-  @spec auth_test(String.t()) :: {:ok, map()} | {:error, term()}
-  def auth_test(bot_token) do
-    headers = [{"authorization", "Bearer #{bot_token}"}]
-
-    "#{@base_url}/auth.test"
-    |> http_post("", headers)
-    |> parse_web_api_response()
-  end
-
   # ============================================================================
   # Private helpers
   # ============================================================================

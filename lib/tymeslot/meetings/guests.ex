@@ -96,17 +96,6 @@ defmodule Tymeslot.Meetings.Guests do
   @spec list_for_meeting(binary()) :: [GuestSchema.t()]
   def list_for_meeting(meeting_id), do: GuestQueries.list_for_meeting(meeting_id)
 
-  @doc "Lists the guests for a meeting whose confirmation email has not yet been sent."
-  @spec list_unsent_for_meeting(binary()) :: [GuestSchema.t()]
-  def list_unsent_for_meeting(meeting_id), do: GuestQueries.list_unsent_for_meeting(meeting_id)
-
-  @doc "Stamps `confirmation_sent_at` on the given guest."
-  @spec mark_confirmation_sent(GuestSchema.t()) ::
-          {:ok, GuestSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_confirmation_sent(%GuestSchema{} = guest) do
-    GuestQueries.mark_confirmation_sent(guest, now())
-  end
-
   @doc "Aggregates RSVP counts for a list of guests."
   @spec summarize([GuestSchema.t()]) :: summary()
   def summarize(guests) when is_list(guests) do

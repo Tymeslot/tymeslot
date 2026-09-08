@@ -12,17 +12,6 @@ defmodule Tymeslot.Notifications.Recipients do
            required(:timezone) => String.t()
          }
 
-  @typep notification_context :: %{
-           required(:meeting_id) => term(),
-           required(:meeting_uid) => String.t() | nil,
-           required(:organizer_email) => String.t() | nil,
-           required(:attendee_email) => String.t() | nil,
-           required(:meeting_status) => atom() | nil,
-           required(:has_video_room) => boolean() | nil,
-           required(:meeting_start) => DateTime.t() | nil,
-           required(:meeting_end) => DateTime.t() | nil
-         }
-
   @doc """
   Determines the recipients for a given notification type and meeting.
 
@@ -52,22 +41,6 @@ defmodule Tymeslot.Notifications.Recipients do
         name: meeting.attendee_name,
         timezone: meeting.attendee_timezone || get_organizer_timezone(meeting)
       }
-    }
-  end
-
-  # Meeting-level context shared by both recipient variants of
-  # `build_recipient_context/2`, which is its only caller.
-  @spec notification_context(term()) :: notification_context()
-  defp notification_context(meeting) do
-    %{
-      meeting_id: meeting.id,
-      meeting_uid: meeting.uid,
-      organizer_email: meeting.organizer_email,
-      attendee_email: meeting.attendee_email,
-      meeting_status: meeting.status,
-      has_video_room: meeting.video_room_enabled,
-      meeting_start: meeting.start_time,
-      meeting_end: meeting.end_time
     }
   end
 
@@ -112,45 +85,6 @@ defmodule Tymeslot.Notifications.Recipients do
 
       timezone ->
         timezone
-    end
-  end
-
-  @doc """
-  Builds recipient-specific context for email templates.
-  """
-  @spec build_recipient_context(term(), atom()) :: %{
-          required(:meeting_id) => term(),
-          required(:meeting_uid) => String.t() | nil,
-          required(:organizer_email) => String.t() | nil,
-          required(:attendee_email) => String.t() | nil,
-          required(:meeting_status) => atom() | nil,
-          required(:has_video_room) => boolean() | nil,
-          required(:meeting_start) => DateTime.t() | nil,
-          required(:meeting_end) => DateTime.t() | nil,
-          required(:recipient_name) => String.t() | nil,
-          required(:recipient_email) => String.t() | nil,
-          required(:recipient_timezone) => String.t(),
-          required(:recipient_type) => atom()
-        }
-  def build_recipient_context(meeting, recipient_type) do
-    base_context = notification_context(meeting)
-
-    case recipient_type do
-      :organizer ->
-        Map.merge(base_context, %{
-          recipient_name: meeting.organizer_name,
-          recipient_email: meeting.organizer_email,
-          recipient_timezone: get_organizer_timezone(meeting),
-          recipient_type: :organizer
-        })
-
-      :attendee ->
-        Map.merge(base_context, %{
-          recipient_name: meeting.attendee_name,
-          recipient_email: meeting.attendee_email,
-          recipient_timezone: get_attendee_timezone(meeting),
-          recipient_type: :attendee
-        })
     end
   end
 

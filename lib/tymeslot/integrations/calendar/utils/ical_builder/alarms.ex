@@ -2,8 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Alarms do
   @moduledoc """
   VALARM (reminder) serialisation for iCalendar events.
 
-  Shared by both the legacy `ICalBuilder.build_event/1` path and the canonical
-  `ICalBuilder.build_simple_event/2` CalDAV write path.
+  Used by the `ICalBuilder.build_simple_event/2` CalDAV write path.
   """
 
   alias Tymeslot.Integrations.Calendar.Reminder

@@ -30,7 +30,7 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
   ]
 
   @spec check_auth(String.t(), String.t() | nil) :: :ok | {:error, :rate_limited, String.t()}
-  def check_auth(email, ip \\ nil) do
+  def check_auth(email, ip) do
     # Normalise so whitespace-padded and case-variant emails share one bucket,
     # preventing " User@X.com " / "user@x.com" bypasses of the login limit.
     downcased_email = email |> String.trim() |> String.downcase()

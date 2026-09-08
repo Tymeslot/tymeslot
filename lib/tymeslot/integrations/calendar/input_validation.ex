@@ -78,7 +78,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   server issues, and the form has no path input to validate.
   """
   @spec validate_exchange_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
-  def validate_exchange_form(params, opts \\ []) do
+  def validate_exchange_form(params, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
     with {:ok, sanitized_name} <-
@@ -277,7 +277,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   to it.
   """
   @spec validate_calendar_discovery(map(), keyword()) :: {:ok, map()} | {:error, map()}
-  def validate_calendar_discovery(params, opts \\ []) do
+  def validate_calendar_discovery(params, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
     provider = Keyword.get(opts, :provider, :caldav)
 

@@ -7,8 +7,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
   through configuration options.
   """
 
-  require Logger
-
   # Type definitions
   @type provider_type :: atom()
   @type provider_module :: module()
@@ -184,72 +182,6 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
                      default_provider: 0,
                      provider_supported?: 1,
                      provider_count: 0
-    end
-  end
-
-  @doc """
-  Helper function to create a provider map from a list of modules.
-
-  Automatically derives the provider type from each module's `provider_type/0` function.
-
-  ## Example
-
-      providers = create_provider_map([
-        MyApp.GoogleProvider,
-        MyApp.OutlookProvider
-      ])
-      # Returns: %{google: MyApp.GoogleProvider, outlook: MyApp.OutlookProvider}
-  """
-  @spec create_provider_map([provider_module()]) :: %{provider_type() => provider_module()}
-  def create_provider_map(modules) when is_list(modules) do
-    Enum.reduce(modules, %{}, fn module, acc ->
-      try do
-        provider_type = module.provider_type()
-        Map.put(acc, provider_type, module)
-      rescue
-        exception ->
-          Logger.warning("Skipping provider module without a usable provider_type/0",
-            provider_module: module,
-            error: Exception.message(exception)
-          )
-
-          acc
-      end
-    end)
-  end
-
-  @doc """
-  Validates that all providers in a registry implement required functions.
-
-  ## Example
-
-      validate_provider_implementations(
-        %{google: GoogleProvider, outlook: OutlookProvider},
-        [{:display_name, 0}, {:config_schema, 0}, {:validate_config, 1}]
-      )
-  """
-  @spec validate_provider_implementations(
-          %{provider_type() => provider_module()},
-          [{atom(), non_neg_integer()}]
-        ) :: :ok | {:error, {:missing_functions, list()}}
-  def validate_provider_implementations(providers, required_functions)
-      when is_map(providers) and is_list(required_functions) do
-    errors_acc =
-      Enum.reduce(providers, [], fn {type, module}, errors ->
-        missing_functions =
-          Enum.reject(required_functions, fn {function, arity} ->
-            function_exported?(module, function, arity)
-          end)
-
-        case missing_functions do
-          [] -> errors
-          missing -> [{type, module, missing} | errors]
-        end
-      end)
-
-    case errors_acc do
-      [] -> :ok
-      errors -> {:error, {:missing_functions, errors}}
     end
   end
 end

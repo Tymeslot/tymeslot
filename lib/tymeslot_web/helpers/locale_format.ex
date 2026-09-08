@@ -209,8 +209,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   Formats a weekday name based on weekday number (1=Monday, 7=Sunday) and locale.
   """
   @spec format_weekday_name(1..7, String.t(), :full | :short | :narrow) :: String.t()
-  def format_weekday_name(weekday_num, locale, format \\ :short)
-
   def format_weekday_name(weekday_num, locale, format)
       when weekday_num in 1..7 do
     weekday_names = get_weekday_names(locale, format)
@@ -241,14 +239,12 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @doc """
   Formats a number according to locale conventions, to `decimals` decimal
-  places (two by default).
+  places.
   - en: 1,234.56
   - de: 1.234,56
   - uk: 1 234,56
   """
   @spec format_number(number(), String.t(), non_neg_integer()) :: String.t()
-  def format_number(number, locale, decimals \\ 2)
-
   # `float_to_binary/2` emits no decimal point at all for `decimals: 0`, so
   # there is no fractional part to separate.
   def format_number(number, locale, 0) do
@@ -264,7 +260,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   @doc """
   Formats a whole number according to locale grouping conventions, with no
-  decimal part. Use this rather than `format_number/2` for quantities that are
+  decimal part. Use this rather than `format_number/3` for quantities that are
   meaningless below the unit — whole-currency amounts, counts, durations.
   - en: 1,500
   - de: 1.500

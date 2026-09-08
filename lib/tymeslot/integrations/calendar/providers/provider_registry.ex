@@ -62,14 +62,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
   end
 
   @doc """
-  Returns a list of all valid provider types.
-  Delegates to `ProviderConfig.all_providers_with_dev/0`, so the result reflects
-  whichever providers are enabled at runtime.
-  """
-  @spec valid_providers() :: list(atom())
-  defdelegate valid_providers(), to: ProviderConfig, as: :all_providers_with_dev
-
-  @doc """
   Validates and normalizes a provider type.
   Delegates to ProviderConfig for consistency.
 

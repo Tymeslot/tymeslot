@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   - `skip_validation`: Skip config validation for operational client creation (default: false)
   """
   @spec new_client(atom(), map() | term(), keyword()) :: adapter_client() | {:error, term()}
-  def new_client(provider_type, config, opts \\ []) do
+  def new_client(provider_type, config, opts) do
     case ProviderRegistry.create_client(provider_type, config, opts) do
       {:ok, client} ->
         %{

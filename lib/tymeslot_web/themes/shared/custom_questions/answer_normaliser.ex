@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser do
 
   """
   @spec normalise(any(), String.t() | nil) :: any()
-  def normalise(value, type \\ nil)
+  def normalise(value, type)
 
   def normalise("true", "yes_no"), do: true
   def normalise("false", "yes_no"), do: false

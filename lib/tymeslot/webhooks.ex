@@ -347,7 +347,7 @@ defmodule Tymeslot.Webhooks do
   Lists webhook deliveries with pagination.
   """
   @spec list_deliveries(integer(), keyword()) :: [WebhookDeliverySchema.t()]
-  def list_deliveries(webhook_id, opts \\ []) do
+  def list_deliveries(webhook_id, opts) do
     WebhookQueries.list_deliveries(webhook_id, opts)
   end
 
@@ -361,7 +361,7 @@ defmodule Tymeslot.Webhooks do
           required(:success_rate) => float(),
           required(:period_days) => non_neg_integer()
         }
-  def get_delivery_stats(webhook_id, opts \\ []) do
+  def get_delivery_stats(webhook_id, opts) do
     WebhookQueries.get_delivery_stats(webhook_id, opts)
   end
 

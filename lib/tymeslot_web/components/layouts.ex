@@ -100,11 +100,8 @@ defmodule TymeslotWeb.Layouts do
     end
   end
 
-  @doc """
-  Renders the appropriate theme CSS link tag based on theme ID.
-  """
   @spec render_theme_css(String.t()) :: Phoenix.LiveView.Rendered.t()
-  def render_theme_css(theme_id) do
+  defp render_theme_css(theme_id) do
     theme_css_path =
       case theme_id do
         "1" -> ~p"/assets/scheduling-theme-quill.css"
@@ -194,12 +191,8 @@ defmodule TymeslotWeb.Layouts do
   defp context_to_string(:application), do: dgettext("common", "application")
   defp context_to_string(:scheduling_page), do: dgettext("common", "scheduling page")
 
-  @doc """
-  Returns the theme-specific class name based on theme ID.
-  Maps numeric IDs to semantic theme class names.
-  """
   @spec theme_class(String.t()) :: String.t()
-  def theme_class(theme_id) do
+  defp theme_class(theme_id) do
     case theme_id do
       "1" -> "quill-theme"
       "2" -> "rhythm-theme"

@@ -96,7 +96,7 @@ defmodule Tymeslot.ConfigTestHelpers do
       ])
 
       # Can be called multiple times in a test
-      with_config(:tymeslot, show_marketing_links: false)
+      with_config(:tymeslot, logo_links_to_marketing: false)
       with_config(:tymeslot_saas, subscription_required: true)
   """
   @spec with_config(atom(), keyword()) :: :ok
@@ -143,7 +143,7 @@ defmodule Tymeslot.ConfigTestHelpers do
 
       setup do
         setup_config(:tymeslot, [
-          show_marketing_links: false,
+          logo_links_to_marketing: false,
           test_mode: true
         ])
       end

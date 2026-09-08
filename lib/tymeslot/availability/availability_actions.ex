@@ -138,17 +138,6 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   end
 
   @doc """
-  Applies a preset schedule to specified days.
-  """
-  @spec apply_preset(integer(), String.t(), list(integer())) ::
-          {:ok, term()} | {:error, String.t()}
-  def apply_preset(schedule_id, preset, days) do
-    with_cache_invalidation(schedule_id, fn ->
-      WeeklySchedule.set_preset_schedule(schedule_id, preset, days)
-    end)
-  end
-
-  @doc """
   Clears all settings for a specific day (sets to unavailable and removes all breaks).
   """
   @spec clear_day_settings(integer(), integer()) :: {:ok, term()} | {:error, term()}
@@ -169,16 +158,6 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   end
 
   @doc """
-  Formats a changeset error for display.
-  """
-  @spec format_changeset_error(Ecto.Changeset.t() | term()) :: String.t()
-  def format_changeset_error(%Ecto.Changeset{errors: [{field, {message, _opts}} | _rest]}) do
-    "#{humanize_field(field)}: #{message}"
-  end
-
-  def format_changeset_error(_changeset), do: "An error occurred"
-
-  @doc """
   Gets the display name for a day of the week.
   """
   @spec day_name(integer()) :: String.t()
@@ -192,12 +171,6 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   def day_name(_day), do: "Unknown"
 
   # Private Helper Functions
-
-  defp humanize_field(:start_time), do: "Start time"
-  defp humanize_field(:end_time), do: "End time"
-
-  defp humanize_field(field),
-    do: field |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
   defp with_cache_invalidation(schedule_id, fun) do
     result = fun.()

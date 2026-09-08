@@ -295,16 +295,6 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
-  Handles meeting reminder trigger event.
-  """
-  @spec reminder_triggered(term()) :: {:ok, atom()}
-  def reminder_triggered(_meeting) do
-    # This would be called by the reminder job
-    # The actual email sending is handled by the EmailWorker
-    {:ok, :reminder_processed}
-  end
-
-  @doc """
   Determines if an event should trigger notifications.
   """
   @spec should_trigger_notifications?(atom(), term()) :: boolean()
@@ -325,40 +315,6 @@ defmodule Tymeslot.Notifications.Events do
 
       _unknown_event ->
         false
-    end
-  end
-
-  @doc """
-  Gets event metadata for logging and tracking.
-  """
-  @spec get_event_metadata(atom(), term()) :: map()
-  def get_event_metadata(event_type, meeting) do
-    %{
-      event_type: event_type,
-      meeting_id: meeting.id,
-      meeting_uid: meeting.uid,
-      meeting_status: meeting.status,
-      attendee_email: meeting.attendee_email,
-      organizer_email: meeting.organizer_email,
-      meeting_start: meeting.start_time,
-      event_timestamp: DateTime.utc_now()
-    }
-  end
-
-  @doc """
-  Validates that an event can be processed.
-  """
-  @spec validate_event(atom(), term()) :: :ok | {:error, String.t()}
-  def validate_event(event_type, meeting) do
-    cond do
-      is_nil(meeting) ->
-        {:error, "Meeting is required"}
-
-      not should_trigger_notifications?(event_type, meeting) ->
-        {:error, "Event should not trigger notifications"}
-
-      true ->
-        :ok
     end
   end
 end

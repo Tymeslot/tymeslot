@@ -33,7 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   Returns a list of adapter clients, one for each configured calendar path.
   """
   @spec clients(user_id() | nil) :: [client()]
-  def clients(user_id \\ nil) do
+  def clients(user_id) do
     case fetch_active_integrations(user_id) do
       {:ok, integrations} ->
         Enum.flat_map(integrations, &create_clients_from_integration/1)

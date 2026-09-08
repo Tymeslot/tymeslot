@@ -12,6 +12,7 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
   @moduletag :integration
 
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.Breaks
@@ -22,8 +23,12 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.Validation
 
-  # A Wednesday, far enough ahead that minimum notice never trims the day.
+  # A Wednesday, far enough ahead of `@now` that minimum notice never trims the
+  # day. Both are fixed: `available_slots/6` drops slots that have already
+  # passed, so a named date without a named "now" only holds until that date
+  # arrives.
   @date ~D[2026-09-16]
+  @now ~U[2026-09-09 00:00:00Z]
 
   setup do
     user = insert(:user)
@@ -80,7 +85,9 @@ defmodule Tymeslot.Availability.ScheduleSlotsIntegrationTest do
     }
 
     {:ok, slots} =
-      Calculate.available_slots(@date, duration_minutes, "Etc/UTC", "Etc/UTC", [], config)
+      with_frozen_clock(@now, fn ->
+        Calculate.available_slots(@date, duration_minutes, "Etc/UTC", "Etc/UTC", [], config)
+      end)
 
     slots
   end

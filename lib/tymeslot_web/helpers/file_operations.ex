@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Helpers.FileOperations do
   Never fails the calling operation - always returns :ok.
   """
   @spec safe_delete_file(String.t(), map()) :: :ok
-  def safe_delete_file(file_path, context \\ %{}) do
+  def safe_delete_file(file_path, context) do
     case delete_file_with_retry(file_path, @max_retries) do
       :ok ->
         Logger.info("File deleted successfully", file_path: file_path, context: context)
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Helpers.FileOperations do
   """
   @spec atomic_file_move(String.t(), String.t(), map()) ::
           {:ok, String.t()} | {:error, atom()}
-  def atomic_file_move(source_path, dest_path, rollback_info \\ %{}) do
+  def atomic_file_move(source_path, dest_path, rollback_info) do
     # Try rename first (fastest)
     case File.rename(source_path, dest_path) do
       :ok ->

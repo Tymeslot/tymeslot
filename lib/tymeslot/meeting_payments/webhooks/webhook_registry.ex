@@ -35,7 +35,4 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookRegistry do
 
   @spec handler_for(String.t()) :: module() | nil
   def handler_for(event_type), do: Map.get(@handlers, event_type)
-
-  @spec handled_event_types() :: [String.t()]
-  def handled_event_types, do: Map.keys(@handlers)
 end

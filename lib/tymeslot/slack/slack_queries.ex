@@ -145,7 +145,7 @@ defmodule Tymeslot.Slack.SlackQueries do
   # ============================================================================
 
   @spec list_deliveries(integer(), keyword()) :: [SlackDeliverySchema.t()]
-  def list_deliveries(integration_id, opts \\ []) do
+  def list_deliveries(integration_id, opts) do
     limit = Keyword.get(opts, :limit, 50)
 
     SlackDeliverySchema

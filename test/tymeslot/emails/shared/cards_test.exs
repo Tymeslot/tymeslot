@@ -4,39 +4,6 @@ defmodule Tymeslot.Emails.Shared.CardsTest do
 
   alias Tymeslot.Emails.Shared.Cards
 
-  describe "quick_info_grid/1" do
-    test "sanitizes item labels" do
-      items = [
-        %{label: "<script>XSS</script>Label", value: "Value 1"},
-        %{label: "Label 2", value: "Value 2"}
-      ]
-
-      html = Cards.quick_info_grid(items)
-
-      refute html =~ "<script>"
-      assert html =~ "&lt;script&gt;"
-      assert html =~ "Value 1"
-      assert html =~ "Value 2"
-    end
-
-    test "sanitizes item values" do
-      items = [
-        %{label: "Duration", value: "<img src=x onerror=alert(1)>30 min"},
-        %{label: "Location", value: "Virtual"}
-      ]
-
-      html = Cards.quick_info_grid(items)
-
-      refute html =~ "<img src=x"
-      assert html =~ "30 min"
-      assert html =~ "Virtual"
-    end
-
-    test "handles empty list gracefully" do
-      assert Cards.quick_info_grid([]) == ""
-    end
-  end
-
   describe "contact_details_card/2" do
     test "sanitizes row values by default" do
       rows = [

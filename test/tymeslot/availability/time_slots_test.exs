@@ -139,63 +139,6 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
   end
 
-  describe "generate_slots_for_range/4" do
-    test "generates correct number of 30-minute slots" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
-
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 30, date)
-
-      # 3 hours = 6 slots of 30 min each
-      assert length(slots) == 6
-      assert "9:00 AM" in slots
-      assert "9:30 AM" in slots
-      assert "10:00 AM" in slots
-      assert "10:30 AM" in slots
-      assert "11:00 AM" in slots
-      assert "11:30 AM" in slots
-    end
-
-    test "generates correct number of 60-minute slots" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
-
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 60, date)
-
-      # 3 hours = 3 slots of 60 min each
-      assert length(slots) == 3
-      assert "9:00 AM" in slots
-      assert "10:00 AM" in slots
-      assert "11:00 AM" in slots
-    end
-
-    test "generates correct number of 15-minute slots" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[10:00:00])
-
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 15, date)
-
-      # 1 hour = 4 slots of 15 min each
-      assert length(slots) == 4
-    end
-
-    test "returns empty list when duration exceeds available time" do
-      {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[09:15:00])
-
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 30, date)
-
-      assert slots == []
-    end
-
-    test "handles afternoon slots" do
-      {start_dt, end_dt, date} = slot_range(~T[14:00:00], ~T[16:00:00])
-
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 30, date)
-
-      assert "2:00 PM" in slots
-      assert "2:30 PM" in slots
-      assert "3:00 PM" in slots
-      assert "3:30 PM" in slots
-    end
-  end
-
   describe "generate_slots_for_range_with_breaks/5" do
     test "generates slots without breaks" do
       {start_dt, end_dt, date} = slot_range(~T[09:00:00], ~T[12:00:00])
@@ -376,7 +319,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       end_dt = DateTime.new!(~D[2025-06-16], ~T[12:00:00], "Etc/UTC")
       date = ~D[2025-06-15]
 
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 30, date)
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
 
       # No slots should be generated since selected date is before the range
       assert slots == []
@@ -387,7 +330,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       end_dt = DateTime.new!(~D[2025-06-14], ~T[12:00:00], "Etc/UTC")
       date = ~D[2025-06-15]
 
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 30, date)
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
 
       # No slots should be generated since selected date is after the range
       assert slots == []
@@ -399,7 +342,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       end_dt = DateTime.new!(~D[2025-06-15], ~T[02:00:00], "Etc/UTC")
       date = ~D[2025-06-15]
 
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 30, date)
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
 
       # Should only include slots from midnight to 2:00 AM on June 15
       assert "12:00 AM" in slots
@@ -416,7 +359,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       end_dt = DateTime.new!(~D[2025-06-16], ~T[02:00:00], "Etc/UTC")
       date = ~D[2025-06-15]
 
-      slots = TimeSlots.generate_slots_for_range(start_dt, end_dt, 30, date)
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
 
       # Should include slots from 10 PM until end of day
       # Note: slots are limited to the selected date (up to 23:59:59)

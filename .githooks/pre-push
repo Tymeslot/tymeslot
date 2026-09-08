@@ -1,19 +1,79 @@
 #!/bin/bash
-# Pre-push gate: compile with warnings-as-errors before publishing, but only
-# when the outgoing commits actually touch Elixir code. Docs-only pushes go
-# straight through. CI remains the authoritative gate; this is the fast local
-# safety net.
+# Pre-push gate. Two jobs, in order:
+#
+#   1. Keep private work off the public remote. Branches and worktrees are
+#      private work in progress until they merge; GitHub is the publication
+#      surface, so anything landing there is a deliberate act. Git runs this
+#      hook once per push URL, so origin's GitHub and Gitea URLs are gated
+#      independently: one push publishes a branch to the internal Gitea backup
+#      and is refused for GitHub. Publishing a branch anyway is a conscious
+#      opt-in, TYMESLOT_PUBLISH=1, never --no-verify (which would also skip the
+#      compile gate below).
+#   2. Compile with warnings-as-errors before publishing, but only when the
+#      outgoing commits actually touch Elixir code. Docs-only pushes go straight
+#      through. CI remains the authoritative gate; this is the fast local safety
+#      net.
 #
 # The sibling repository carries a byte-identical copy of this hook. Each repo
 # must be self-contained (Core is cloned standalone by contributors, so it
 # cannot source a shared file from the workspace root), so keep the two in sync
-# by hand when editing either.
+# by hand when editing either. The publication guard is inert in the SaaS repo,
+# which is internal and has no public remote; that is deliberate, so the copies
+# stay identical.
 set -euo pipefail
+
+remote_name="${1:-}"
+remote_url="${2:-}"
 
 zero=0000000000000000000000000000000000000000
 needs_compile=0
 
+is_public=0
+case "$remote_url$remote_name" in
+  *github.com*|*github:*) is_public=1 ;;
+esac
+
+# The ref list arrives on stdin and is consumed once; keep it for both checks.
+refs=$(cat)
+
+if [ "$is_public" -eq 1 ]; then
+  # main and release tags are the repo's published history by definition and
+  # need no opt-in; everything else is private work until someone says
+  # otherwise.
+  private=()
+  while read -r _local_ref local_sha remote_ref _remote_sha; do
+    [ -z "${remote_ref:-}" ] && continue
+    # Deleting a remote ref is always allowed: it can only ever unpublish.
+    [ "$local_sha" = "$zero" ] && continue
+
+    # Gate on the destination ref, not the source: "git push origin HEAD" and
+    # "git push origin foo:main" both name their target only in remote_ref.
+    case "$remote_ref" in
+      refs/heads/main|refs/tags/v*) ;;
+      *) private+=("$remote_ref") ;;
+    esac
+  done <<<"$refs"
+
+  if [ "${#private[@]}" -gt 0 ]; then
+    if [ "${TYMESLOT_PUBLISH:-0}" = "1" ]; then
+      echo "pre-push: TYMESLOT_PUBLISH=1, publishing to $remote_url:" >&2
+      printf 'pre-push:   %s\n' "${private[@]}" >&2
+      echo "pre-push: these refs become public and stay in the public history." >&2
+    else
+      echo "pre-push: refusing to publish private work to $remote_url." >&2
+      echo "pre-push: branches are private work in progress until they merge; the public repo takes main and vX.Y.Z tags without asking." >&2
+      printf 'pre-push:   %s\n' "${private[@]}" >&2
+      echo "pre-push: only the public half is refused. Git continues to this remote's other push URLs," >&2
+      echo "pre-push: so on Core's origin the internal Gitea backup still receives these refs from this" >&2
+      echo "pre-push: same command, and the non-zero exit reports the public half alone." >&2
+      echo "pre-push: to publish them on purpose: TYMESLOT_PUBLISH=1 git push origin <branch>" >&2
+      exit 1
+    fi
+  fi
+fi
+
 while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -z "${local_sha:-}" ] && continue
   # Deleting a remote ref: nothing to verify.
   [ "$local_sha" = "$zero" ] && continue
 
@@ -36,7 +96,7 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
     echo "pre-push: cannot resolve '$range', compiling rather than skipping the gate." >&2
     needs_compile=1
   fi
-done
+done <<<"$refs"
 
 if [ "$needs_compile" -eq 1 ]; then
   echo "pre-push: outgoing commits touch code, compiling with --warnings-as-errors..."

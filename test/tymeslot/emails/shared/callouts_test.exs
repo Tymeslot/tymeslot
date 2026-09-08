@@ -36,26 +36,4 @@ defmodule Tymeslot.Emails.Shared.CalloutsTest do
       assert String.length(html_without) < String.length(html_with)
     end
   end
-
-  describe "preparation_checklist/3" do
-    test "includes all items in the output" do
-      items = ["Bring your ID", "Arrive 10 minutes early", "Wear comfortable clothes"]
-
-      html = Callouts.preparation_checklist(:confirmed, items)
-
-      assert html =~ "Bring your ID"
-      assert html =~ "Arrive 10 minutes early"
-      assert html =~ "Wear comfortable clothes"
-    end
-
-    test "returns empty string for an empty item list" do
-      assert Callouts.preparation_checklist(:confirmed, []) == ""
-    end
-
-    test "uses provided :title option" do
-      html = Callouts.preparation_checklist(:confirmed, ["Item one"], title: "What to bring")
-
-      assert html =~ "What to bring"
-    end
-  end
 end

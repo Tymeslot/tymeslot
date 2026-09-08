@@ -1278,3 +1278,8 @@ msgstr "Synchroniser les périodes occupées et les réservations avec un serveu
 #, elixir-autogen, elixir-format
 msgid "This mailbox is read from and written to: it blocks the times you're already busy, and confirmed bookings are added to the calendar you choose as your booking destination. Exchange does not report which calendars your account may write to, so if you choose one it cannot write to, the first booking sent there fails."
 msgstr "Cette boîte aux lettres est lue et écrite : elle bloque les périodes où vous êtes déjà occupé et les réservations confirmées sont ajoutées au calendrier que vous choisissez comme destination de vos réservations. Exchange n’indique pas dans quels calendriers votre compte peut écrire : si vous en choisissez un où il ne peut pas écrire, la première réservation qui y est envoyée échoue."
+
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
+msgstr "Aucun calendrier n’est sélectionné pour cette intégration, rien ne peut donc être synchronisé. Veuillez reconnecter l’intégration et sélectionner un calendrier."

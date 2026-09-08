@@ -277,21 +277,19 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     end
   end
 
-  @doc """
-  Resolves the entry in `calendar_list` that `event` came from, or `nil` when
-  no entry matches.
-
-  Picks the same matching signal `event_visible?/2` documents: a CalDAV event
-  (whose `provider_event_id` is an href rooted at its collection) matches by
-  path prefix, everything else by the `provider_calendar_id` the sync tagged
-  the row with. Callers asking a per-calendar question about an event — is it
-  visible, is it writable — must go through here rather than re-deriving the
-  match, since the two signals disagree on CalDAV.
-  """
+  # Resolves the entry in `calendar_list` that `event` came from, or `nil` when
+  # no entry matches.
+  #
+  # Picks the same matching signal `event_visible?/2` documents: a CalDAV event
+  # (whose `provider_event_id` is an href rooted at its collection) matches by
+  # path prefix, everything else by the `provider_calendar_id` the sync tagged
+  # the row with. Callers asking a per-calendar question about an event — is it
+  # visible, is it writable — must go through here rather than re-deriving the
+  # match, since the two signals disagree on CalDAV.
   @spec calendar_for_event(map(), [CalendarEntry.t()] | nil) :: CalendarEntry.t() | nil
-  def calendar_for_event(_event, nil), do: nil
+  defp calendar_for_event(_event, nil), do: nil
 
-  def calendar_for_event(event, calendar_list) when is_list(calendar_list) do
+  defp calendar_for_event(event, calendar_list) when is_list(calendar_list) do
     if caldav_event?(event) do
       find_calendar_by_path(calendar_list, event.provider_event_id)
     else

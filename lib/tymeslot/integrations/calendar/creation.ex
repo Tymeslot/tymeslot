@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
              | {:changeset, Ecto.Changeset.t()}
              | {:rate_limited, String.t()}
              | :unattributable}
-  def create_subscription_with_validation(user_id, params, opts \\ [])
+  def create_subscription_with_validation(user_id, params, opts)
       when is_integer(user_id) and is_map(params) do
     metadata = Keyword.get(opts, :metadata, %{})
 

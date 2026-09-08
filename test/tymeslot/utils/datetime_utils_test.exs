@@ -176,20 +176,6 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     end
   end
 
-  describe "format_date_string/1" do
-    test "formats ISO date string" do
-      assert Display.format_date_string("2024-11-25") == "November 25, 2024"
-    end
-
-    test "returns input for invalid date" do
-      assert Display.format_date_string("not-a-date") == "not-a-date"
-    end
-
-    test "returns fallback for non-string" do
-      assert Display.format_date_string(nil) == "Invalid date"
-    end
-  end
-
   describe "group_slots_by_period/1" do
     test "sorts slots within a period chronologically, not lexicographically" do
       # "7:30 AM" lexicographically sorts after "11:30 AM" because "7" > "1",

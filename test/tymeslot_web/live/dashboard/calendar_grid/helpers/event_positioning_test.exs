@@ -8,10 +8,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioningTest do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning
 
   describe "top_rem/2" do
-    test "positions event using UTC hours when no timezone given" do
+    test "positions event using UTC hours" do
       dt = ~U[2026-03-12 06:00:00Z]
       # 6h * 60 / 60 * 4 = 24.0
-      assert EventPositioning.top_rem(dt) == 24.0
+      assert EventPositioning.top_rem(dt, "Etc/UTC") == 24.0
     end
 
     test "converts to user timezone before computing position" do
@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioningTest do
 
     test "midnight UTC renders at top of grid" do
       dt = ~U[2026-03-12 00:00:00Z]
-      assert EventPositioning.top_rem(dt) == 0.0
+      assert EventPositioning.top_rem(dt, "Etc/UTC") == 0.0
     end
   end
 

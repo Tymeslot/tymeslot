@@ -27,9 +27,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp for_attendee_email(query, email),
     do: from(m in query, where: m.attendee_email == ^email)
 
-  defp for_organizer_email(query, email),
-    do: from(m in query, where: m.organizer_email == ^email)
-
   defp with_status(query, nil), do: query
   defp with_status(query, status), do: from(m in query, where: m.status == ^status)
 
@@ -67,41 +64,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
 
   @doc """
-  Returns the list of all meetings.
-  """
-  @spec list_meetings() :: [Meeting.t()]
-  def list_meetings do
-    Meeting
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the list of meetings with a specific status.
-  """
-  @spec list_meetings_by_status(String.t()) :: [Meeting.t()]
-  def list_meetings_by_status(status) do
-    Meeting
-    |> with_status(status)
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the list of meetings within a date range.
-  """
-  @spec list_meetings_by_date_range(DateTime.t(), DateTime.t()) :: [Meeting.t()]
-  def list_meetings_by_date_range(%DateTime{} = start_date, %DateTime{} = end_date) do
-    query =
-      from(m in Meeting,
-        where: m.start_time >= ^start_date and m.start_time <= ^end_date,
-        order_by: [asc: m.start_time]
-      )
-
-    Repo.all(query)
-  end
-
-  @doc """
   Returns the list of upcoming meetings (future meetings only).
   """
   @spec list_upcoming_meetings() :: [Meeting.t()]
@@ -127,23 +89,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   def list_meetings_by_attendee_email(email) do
     Meeting
     |> for_attendee_email(email)
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the list of meetings for a specific organizer email.
-
-  ## Examples
-
-      iex> list_meetings_by_organizer_email("organizer@example.com")
-      [%Meeting{}, ...]
-
-  """
-  @spec list_meetings_by_organizer_email(String.t()) :: [Meeting.t()]
-  def list_meetings_by_organizer_email(email) do
-    Meeting
-    |> for_organizer_email(email)
     |> order_by_start_desc()
     |> Repo.all()
   end
@@ -206,7 +151,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
           DateTime.t(),
           pos_integer()
         ) :: [Meeting.t()]
-  def list_upcoming_with_video_room_for_integration(integration_id, now, limit \\ 500) do
+  def list_upcoming_with_video_room_for_integration(integration_id, now, limit) do
     Meeting
     |> MeetingState.where_live_booking()
     |> upcoming(now)
@@ -246,27 +191,11 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
-  Get upcoming meetings with preloaded associations.
-  Limits results and orders by start time.
-  """
-  @spec upcoming_meetings(non_neg_integer()) :: [Meeting.t()]
-  def upcoming_meetings(limit \\ 3) do
-    now = DateTime.utc_now()
-
-    Meeting
-    |> MeetingState.where_live_booking()
-    |> upcoming(now)
-    |> order_by_start_asc()
-    |> apply_limit(limit)
-    |> Repo.all()
-  end
-
-  @doc """
   Get upcoming meetings for a specific user with limit.
   Filters by user email as either organizer or attendee.
   """
   @spec upcoming_meetings_for_user(String.t(), non_neg_integer()) :: [Meeting.t()]
-  def upcoming_meetings_for_user(user_email, limit \\ 3) do
+  def upcoming_meetings_for_user(user_email, limit) do
     now = DateTime.utc_now()
 
     Meeting
@@ -335,7 +264,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   never unbounded as cancelled meetings accrue over time.
   """
   @spec list_cancelled_meetings_for_user(String.t(), keyword()) :: [Meeting.t()]
-  def list_cancelled_meetings_for_user(user_email, opts \\ []) do
+  def list_cancelled_meetings_for_user(user_email, opts) do
     limit = Keyword.get(opts, :limit, @default_cancelled_limit)
 
     Meeting
@@ -352,7 +281,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   Returns a list limited to per_page.
   """
   @spec list_meetings_for_user_paginated_cursor(String.t(), Keyword.t()) :: [Meeting.t()]
-  def list_meetings_for_user_paginated_cursor(user_email, opts \\ []) do
+  def list_meetings_for_user_paginated_cursor(user_email, opts) do
     after_start = Keyword.get(opts, :after_start)
     after_id = Keyword.get(opts, :after_id)
     per_page = Keyword.get(opts, :per_page, 20)

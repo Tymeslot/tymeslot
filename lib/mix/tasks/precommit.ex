@@ -71,7 +71,12 @@ defmodule Mix.Tasks.Precommit do
     # English-only in every other locale. It sits here because it is a compile
     # (the extractor is a compiler pass), so it belongs behind the two compile
     # barriers and in front of the steps that only read the build.
-    {"gettext", ~w[gettext.extract --check-up-to-date], :dev},
+    #
+    # `gettext.check` is `gettext.extract --check-up-to-date` with a digest of
+    # the inputs that can change its answer, so a diff that cannot carry a
+    # translatable string skips the recompile the extractor needs. CI runs the
+    # extract task directly.
+    {"gettext", ~w[gettext.check], :dev},
     {"credo", ~w[credo --strict], :dev},
     {"sobelow", ~w[sobelow], :dev},
     {"deps.audit", ~w[deps.audit], :dev},

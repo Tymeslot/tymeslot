@@ -8,9 +8,8 @@ defmodule Tymeslot.Utils.DateTimeUtilsEnsureUtcTest do
   downstream as a wrong-zone iCal/CalDAV string — the reader assumed a UTC
   datetime per `Z` suffix when it was actually the source zone's wall clock.
   The fix changes the signature to `{:ok, DateTime.t()} | {:error, term()}`
-  and introduces `ensure_utc!/1` for callers whose contract is
-  `DateTime.t() -> String.t()` (iCal/CalDAV formatters) — they raise loudly
-  rather than produce a wrong-zone string.
+  so a tz-database failure surfaces as an explicit error rather than a
+  wrong-zone string.
 
   `async: false` because these tests mutate the application-wide default via
   `Calendar.put_time_zone_database/1`.
@@ -63,22 +62,6 @@ defmodule Tymeslot.Utils.DateTimeUtilsEnsureUtcTest do
       Calendar.put_time_zone_database(AlwaysErrorTzDb)
 
       assert {:error, :stubbed_tz_db_failure} = DateTimeUtils.ensure_utc(ny)
-    end
-  end
-
-  describe "ensure_utc!/1" do
-    test "unwraps the tuple on success" do
-      ny = DateTime.new!(~D[2024-06-01], ~T[12:00:00], "America/New_York")
-      assert %DateTime{time_zone: "Etc/UTC"} = DateTimeUtils.ensure_utc!(ny)
-    end
-
-    test "raises ArgumentError on shift_zone failure rather than silently passing through" do
-      ny = DateTime.new!(~D[2024-06-01], ~T[12:00:00], "America/New_York")
-      Calendar.put_time_zone_database(AlwaysErrorTzDb)
-
-      assert_raise ArgumentError, ~r/failed to shift .* to UTC/, fn ->
-        DateTimeUtils.ensure_utc!(ny)
-      end
     end
   end
 end

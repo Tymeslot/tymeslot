@@ -126,30 +126,6 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Creates a new session for an authenticated user.
-
-  This handles:
-  - Session token generation
-  - Cookie management
-  - Session persistence
-  """
-  @spec create_session(Plug.Conn.t(), Ecto.Schema.t()) ::
-          {:ok, Plug.Conn.t(), String.t()} | {:error, atom(), any()}
-  def create_session(conn, user) do
-    Session.create_session(conn, user)
-  end
-
-  @doc """
-  Gets the current user ID from session.
-
-  Returns the user ID if session is valid, nil otherwise.
-  """
-  @spec get_current_user_id(Plug.Conn.t()) :: integer() | nil
-  def get_current_user_id(conn) do
-    Session.get_current_user_id(conn)
-  end
-
-  @doc """
   Terminates a user session.
   """
   @spec delete_session(Plug.Conn.t()) :: Plug.Conn.t()
@@ -178,15 +154,6 @@ defmodule Tymeslot.Auth do
           {:ok, term(), String.t()} | {:error, atom(), String.t()}
   def reset_password(token, new_password, password_confirmation, opts \\ []) do
     PasswordReset.reset_password(token, new_password, password_confirmation, opts)
-  end
-
-  @doc """
-  Validates a password reset token.
-  """
-  @spec validate_reset_token(String.t(), keyword()) ::
-          {:ok, map(), String.t()} | {:error, atom(), String.t()}
-  def validate_reset_token(token, opts \\ []) do
-    PasswordReset.verify_token(token, opts)
   end
 
   @doc """
@@ -241,14 +208,6 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Gets user by session token.
-  """
-  @spec get_user_by_session_token(String.t()) :: Ecto.Schema.t() | nil
-  def get_user_by_session_token(token) do
-    Authentication.get_user_by_session_token(token)
-  end
-
-  @doc """
   Returns the Google account email to use as an OAuth `login_hint` when the user
   signed up (or linked an account) via Google, or `nil` otherwise.
 
@@ -293,14 +252,6 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Gets a user by ID and raises if not found.
-  """
-  @spec get_user!(integer()) :: Ecto.Schema.t()
-  def get_user!(id) do
-    UserQueries.get_user!(id)
-  end
-
-  @doc """
   Deletes a user account.
 
   Runs the configured account-deletion hook (e.g. SaaS subscription
@@ -339,7 +290,7 @@ defmodule Tymeslot.Auth do
   See `Tymeslot.Auth.UserQueries.count_signin_capable_admins_excluding/3`.
   """
   @spec count_signin_capable_admins_excluding(integer(), [atom()]) :: non_neg_integer()
-  def count_signin_capable_admins_excluding(user_id, usable_sso_providers \\ []) do
+  def count_signin_capable_admins_excluding(user_id, usable_sso_providers) do
     UserQueries.count_signin_capable_admins_excluding(user_id, usable_sso_providers)
   end
 

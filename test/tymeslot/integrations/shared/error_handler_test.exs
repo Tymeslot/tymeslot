@@ -5,7 +5,6 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
 
   import ExUnit.CaptureLog
 
-  alias Ecto.Changeset
   alias Tymeslot.Integrations.Common.ErrorHandler
   alias Tymeslot.Test.LogCapture
 
@@ -117,60 +116,6 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
 
         assert translated.category == :unknown
       end)
-    end
-  end
-
-  describe "handle_database_error/1" do
-    test "handles changeset errors" do
-      changeset = Changeset.change({%{}, %{name: :string}}, %{name: "test"})
-      changeset = Changeset.add_error(changeset, :name, "too short")
-
-      assert {:error, message} = ErrorHandler.handle_database_error({:error, changeset})
-      assert message =~ "Database validation failed"
-      assert message =~ "name: too short"
-    end
-
-    test "handles other database errors" do
-      assert {:error, message} = ErrorHandler.handle_database_error({:error, :not_found})
-      assert message =~ "Database operation failed: :not_found"
-    end
-
-    test "passes through ok result" do
-      assert {:ok, :res} = ErrorHandler.handle_database_error({:ok, :res})
-    end
-  end
-
-  describe "handle_http_error/2" do
-    test "handles status >= 400" do
-      resp = %{status: 404, body: "Not found"}
-      assert {:error, "HTTP 404: Not found"} = ErrorHandler.handle_http_error({:ok, resp})
-    end
-
-    test "handles 2xx status" do
-      resp = %{status: 200, body: "OK"}
-      assert {:ok, ^resp} = ErrorHandler.handle_http_error({:ok, resp})
-    end
-
-    test "handles Finch/HTTPoison errors" do
-      error = %Finch.Error{reason: :timeout}
-      assert {:error, message} = ErrorHandler.handle_http_error({:error, error})
-      assert message =~ "HTTP request failed: timeout"
-    end
-
-    test "parses google-specific error body" do
-      body = %{"error" => %{"message" => "Google error message"}}
-      resp = %{status: 401, body: body}
-
-      assert {:error, "HTTP 401: Google error message"} =
-               ErrorHandler.handle_http_error({:ok, resp}, :google)
-    end
-
-    test "parses microsoft-specific error body" do
-      body = %{"error" => %{"message" => "Microsoft error message"}}
-      resp = %{status: 403, body: body}
-
-      assert {:error, "HTTP 403: Microsoft error message"} =
-               ErrorHandler.handle_http_error({:ok, resp}, :outlook)
     end
   end
 

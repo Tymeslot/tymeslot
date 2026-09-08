@@ -31,10 +31,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.Sync
 
   @max_delta_pages 50
 
@@ -61,9 +60,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
     AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
       with {:ok, {events, delta_link}} <- fetch_initial_delta(token),
            {:ok, calendar_events} <- normalise_delta_events(events, integration),
-           cache_attrs =
-             Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1),
-           {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs) do
+           # Through `Sync.upsert_cache/2` for the ownership flagging it adds;
+           # see the note in `DeltaSync.apply_delta/3`.
+           {:ok, _count} <- Sync.upsert_cache(integration, calendar_events) do
         persist_subscription(integration, %{graph_delta_link: delta_link})
       end
     end)

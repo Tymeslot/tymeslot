@@ -85,7 +85,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   separate Logger metadata keys.
   """
   @spec log_blocked_input(atom() | String.t(), String.t(), security_metadata()) :: :ok
-  def log_blocked_input(field, check, metadata \\ %{}) do
+  def log_blocked_input(field, check, metadata) do
     sanitized_metadata = sanitize_metadata(metadata)
 
     Logger.warning("Suspicious input sanitised",
@@ -152,7 +152,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   `:additional_data`.
   """
   @spec log_security_event(String.t(), event_metadata()) :: :ok
-  def log_security_event(event_type, details \\ %{}) do
+  def log_security_event(event_type, details) do
     canonical = %{
       user_id: details[:user_id],
       email_masked: mask_email(details[:email]),
@@ -224,7 +224,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   """
   @spec log_authentication_attempt(String.t(), boolean(), String.t() | nil, event_metadata()) ::
           :ok
-  def log_authentication_attempt(email, success, reason \\ nil, metadata \\ %{}) do
+  def log_authentication_attempt(email, success, reason, metadata) do
     event_details = %{
       email: email,
       success: success,
@@ -244,7 +244,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   Logs session-related events (creation, deletion, validation).
   """
   @spec log_session_event(String.t(), integer(), String.t(), event_metadata()) :: :ok
-  def log_session_event(event_type, user_id, session_id, metadata \\ %{}) do
+  def log_session_event(event_type, user_id, session_id, metadata) do
     event_details = %{
       user_id: user_id,
       # Never log raw session tokens. Redact to last 8 chars.
@@ -280,7 +280,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   """
   @spec log_rate_limit_violation(String.t() | integer() | nil, String.t(), event_metadata()) ::
           :ok
-  def log_rate_limit_violation(identifier, limit_type, metadata \\ %{}) do
+  def log_rate_limit_violation(identifier, limit_type, metadata) do
     base_details = %{
       limit_type: limit_type,
       ip_address: metadata[:ip_address],
@@ -315,7 +315,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   masked before it reaches Logger.
   """
   @spec log_account_lockout(String.t(), String.t(), event_metadata()) :: :ok
-  def log_account_lockout(identifier, lockout_type, metadata \\ %{}) do
+  def log_account_lockout(identifier, lockout_type, metadata) do
     event_details = %{
       email: identifier,
       lockout_type: lockout_type,
@@ -335,7 +335,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   Logs CSRF token validation failures for authentication forms.
   """
   @spec log_csrf_violation(integer() | nil, String.t(), event_metadata()) :: :ok
-  def log_csrf_violation(user_id, action, metadata \\ %{}) do
+  def log_csrf_violation(user_id, action, metadata) do
     event_details = %{
       user_id: user_id,
       action: action,
@@ -354,7 +354,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   Logs password change events.
   """
   @spec log_password_change(integer(), event_metadata()) :: :ok
-  def log_password_change(user_id, metadata \\ %{}) do
+  def log_password_change(user_id, metadata) do
     event_details = %{
       user_id: user_id,
       ip_address: metadata[:ip_address],
@@ -371,7 +371,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   Logs social authentication events.
   """
   @spec log_social_auth_event(String.t(), boolean(), event_metadata()) :: :ok
-  def log_social_auth_event(provider, success, details \\ %{}) do
+  def log_social_auth_event(provider, success, details) do
     event_type = if success, do: "social_auth_success", else: "social_auth_failure"
 
     event_details = %{

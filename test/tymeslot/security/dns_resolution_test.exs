@@ -4,13 +4,13 @@ defmodule Tymeslot.Security.DnsResolutionTest do
 
   alias Tymeslot.Security.DnsResolution
 
-  describe "check_private_ip/1" do
+  describe "check_private_ip/2" do
     test "rejects localhost by hostname" do
-      assert {:error, _msg} = DnsResolution.check_private_ip("https://localhost/hook")
+      assert {:error, _msg} = DnsResolution.check_private_ip("https://localhost/hook", [])
     end
 
     test "rejects loopback IP literal" do
-      assert {:error, _msg} = DnsResolution.check_private_ip("https://127.0.0.1/hook")
+      assert {:error, _msg} = DnsResolution.check_private_ip("https://127.0.0.1/hook", [])
     end
 
     test "rejects private IPv4 literals" do
@@ -20,23 +20,24 @@ defmodule Tymeslot.Security.DnsResolutionTest do
             "https://192.168.1.1/hook",
             "https://169.254.169.254/hook"
           ] do
-        assert {:error, _msg} = DnsResolution.check_private_ip(url),
+        assert {:error, _msg} = DnsResolution.check_private_ip(url, []),
                "expected #{url} to be rejected"
       end
     end
 
     test "allows public IP literals" do
-      assert :ok = DnsResolution.check_private_ip("https://8.8.8.8/hook")
+      assert :ok = DnsResolution.check_private_ip("https://8.8.8.8/hook", [])
     end
 
     test "returns error for URLs with no host" do
-      assert {:error, _msg} = DnsResolution.check_private_ip("https:///path")
+      assert {:error, _msg} = DnsResolution.check_private_ip("https:///path", [])
     end
 
     test "returns error when DNS resolution fails" do
       assert {:error, _msg} =
                DnsResolution.check_private_ip(
-                 "https://this-host-definitely-does-not-exist.invalid/hook"
+                 "https://this-host-definitely-does-not-exist.invalid/hook",
+                 []
                )
     end
   end
