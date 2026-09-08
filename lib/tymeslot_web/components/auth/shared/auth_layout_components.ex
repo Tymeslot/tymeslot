@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
   import TymeslotWeb.Components.CoreComponents, only: [flash_group: 1]
 
   @spec auth_logo_header(map()) :: Phoenix.LiveView.Rendered.t()
-  def auth_logo_header(assigns) do
+  defp auth_logo_header(assigns) do
     assigns = assign_new(assigns, :subtitle, fn -> nil end)
 
     ~H"""
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
   end
 
   @spec auth_back_link(map()) :: Phoenix.LiveView.Rendered.t()
-  def auth_back_link(assigns) do
+  defp auth_back_link(assigns) do
     ~H"""
     <%= if Config.logo_links_to_marketing?() do %>
       <a

@@ -102,33 +102,6 @@ defmodule Tymeslot.Security.EncryptionTest do
     end
   end
 
-  describe "generate_api_key/0" do
-    test "generates a random API key" do
-      key = Encryption.generate_api_key()
-
-      # 32 random bytes, url-safe base64 encoded without padding
-      assert String.length(key) == 43
-    end
-
-    test "generates unique keys on each call" do
-      key1 = Encryption.generate_api_key()
-      key2 = Encryption.generate_api_key()
-
-      assert key1 != key2
-    end
-
-    test "generates URL-safe base64 keys" do
-      key = Encryption.generate_api_key()
-
-      # Should not contain padding characters
-      refute String.contains?(key, "=")
-
-      # Should be URL-safe (no +, /)
-      refute String.contains?(key, "+")
-      refute String.contains?(key, "/")
-    end
-  end
-
   describe "encryption security properties" do
     test "lays the envelope out as version <> nonce(12) <> tag(16) <> ciphertext" do
       plaintext = "test_password"

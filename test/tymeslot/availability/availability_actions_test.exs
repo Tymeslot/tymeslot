@@ -360,52 +360,6 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
     end
   end
 
-  describe "when applying preset schedules" do
-    setup do
-      schedule = insert(:availability_schedule)
-      %{schedule: schedule}
-    end
-
-    test "applies 9-5 workday preset", %{schedule: schedule} do
-      assert {:ok, _result} = AvailabilityActions.apply_preset(schedule.id, "9-5", [1, 2, 3])
-
-      monday = WeeklySchedule.get_day_availability(schedule.id, 1)
-      assert monday.is_available == true
-      assert monday.start_time == ~T[09:00:00]
-      assert monday.end_time == ~T[17:00:00]
-    end
-
-    test "applies 8-6 preset", %{schedule: schedule} do
-      assert {:ok, _result} = AvailabilityActions.apply_preset(schedule.id, "8-6", [1])
-
-      monday = WeeklySchedule.get_day_availability(schedule.id, 1)
-      assert monday.start_time == ~T[08:00:00]
-      assert monday.end_time == ~T[18:00:00]
-    end
-
-    test "applies 10-6 preset", %{schedule: schedule} do
-      assert {:ok, _result} = AvailabilityActions.apply_preset(schedule.id, "10-6", [1])
-
-      monday = WeeklySchedule.get_day_availability(schedule.id, 1)
-      assert monday.start_time == ~T[10:00:00]
-      assert monday.end_time == ~T[18:00:00]
-    end
-
-    test "applies unavailable preset", %{schedule: schedule} do
-      assert {:ok, _result} = AvailabilityActions.apply_preset(schedule.id, "unavailable", [1])
-
-      monday = WeeklySchedule.get_day_availability(schedule.id, 1)
-      assert monday.is_available == false
-    end
-
-    test "returns error for unknown preset", %{schedule: schedule} do
-      result = AvailabilityActions.apply_preset(schedule.id, "nonexistent", [1])
-
-      assert {:error, message} = result
-      assert message =~ "Unknown preset"
-    end
-  end
-
   describe "when clearing day settings" do
     setup do
       %{schedule: schedule, day: day} = create_profile_with_day()
@@ -489,38 +443,6 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
     test "returns Unknown for out-of-range day" do
       assert AvailabilityActions.day_name(0) == "Unknown"
       assert AvailabilityActions.day_name(8) == "Unknown"
-    end
-  end
-
-  describe "when formatting changeset errors" do
-    test "formats start_time error" do
-      changeset = %Ecto.Changeset{
-        errors: [{:start_time, {"must be before end time", []}}],
-        valid?: false
-      }
-
-      result = AvailabilityActions.format_changeset_error(changeset)
-
-      assert result =~ "Start time"
-      assert result =~ "must be before end time"
-    end
-
-    test "formats end_time error" do
-      changeset = %Ecto.Changeset{
-        errors: [{:end_time, {"is invalid", []}}],
-        valid?: false
-      }
-
-      result = AvailabilityActions.format_changeset_error(changeset)
-
-      assert result =~ "End time"
-      assert result =~ "is invalid"
-    end
-
-    test "returns default message for non-changeset" do
-      result = AvailabilityActions.format_changeset_error("some error")
-
-      assert result == "An error occurred"
     end
   end
 end

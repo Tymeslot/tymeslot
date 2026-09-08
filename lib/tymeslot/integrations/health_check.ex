@@ -127,15 +127,6 @@ defmodule Tymeslot.Integrations.HealthCheck do
   end
 
   @doc """
-  Gets health report for all integrations of a user.
-  Queries the database directly; does not go through the GenServer.
-  """
-  @spec get_user_health_report(integer()) :: map()
-  def get_user_health_report(user_id) do
-    Monitor.build_user_report(user_id)
-  end
-
-  @doc """
   Lists unhealthy health-state records for a user's active integrations.
   Queries the database directly; does not go through the GenServer.
   """

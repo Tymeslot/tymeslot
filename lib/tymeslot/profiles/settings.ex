@@ -27,11 +27,9 @@ defmodule Tymeslot.Profiles.Settings do
   @doc """
   Updates basic profile settings (name, username, timezone) with input validation.
   """
-  @spec update_basic_settings(ProfileSchema.t(), %{String.t() => term()}, keyword()) ::
+  @spec update_basic_settings(ProfileSchema.t(), %{String.t() => term()}) ::
           {:ok, ProfileSchema.t()} | {:error, term()}
-  def update_basic_settings(profile, params, opts \\ []) do
-    dev_mode = Keyword.get(opts, :dev_mode, false)
-
+  def update_basic_settings(profile, params) do
     # Extract the form fields, providing defaults if not present
     full_name = Map.get(params, "full_name", profile.full_name || "")
     username = Map.get(params, "username", profile.username || "")
@@ -43,7 +41,7 @@ defmodule Tymeslot.Profiles.Settings do
     else
       # Validate username format if it changed
       with :ok <- validate_username_if_changed(profile, username) do
-        perform_basic_update(profile, full_name, username, timezone, dev_mode)
+        perform_basic_update(profile, full_name, username, timezone)
       end
     end
   end
@@ -56,12 +54,7 @@ defmodule Tymeslot.Profiles.Settings do
     end
   end
 
-  defp perform_basic_update(profile, full_name, username, timezone, true) do
-    updated_profile = %{profile | full_name: full_name, username: username, timezone: timezone}
-    {:ok, updated_profile}
-  end
-
-  defp perform_basic_update(profile, full_name, username, timezone, false) do
+  defp perform_basic_update(profile, full_name, username, timezone) do
     attrs = %{
       full_name: full_name,
       username: username,
@@ -97,16 +90,9 @@ defmodule Tymeslot.Profiles.Settings do
   @doc """
   Updates profile timezone.
   """
-  @spec update_timezone(ProfileSchema.t(), String.t(), keyword()) ::
+  @spec update_timezone(ProfileSchema.t(), String.t()) ::
           {:ok, ProfileSchema.t()} | {:error, term()}
-  def update_timezone(profile, timezone, opts \\ []) do
-    dev_mode = Keyword.get(opts, :dev_mode, false)
-
-    if dev_mode do
-      updated_profile = Map.put(profile, :timezone, timezone)
-      {:ok, updated_profile}
-    else
-      Profiles.update_timezone(profile, timezone)
-    end
+  def update_timezone(profile, timezone) do
+    Profiles.update_timezone(profile, timezone)
   end
 end

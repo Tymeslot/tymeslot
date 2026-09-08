@@ -101,7 +101,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   """
   @spec put(String.t(), any(), list(), keyword()) ::
           {:ok, Response.t()} | {:error, Exception.t()}
-  def put(url, body, headers \\ [], options \\ []) do
+  def put(url, body, headers, options) do
     request(:put, url, body, headers, options)
   end
 
@@ -110,7 +110,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   """
   @spec delete(String.t(), list(), keyword()) ::
           {:ok, Response.t()} | {:error, Exception.t()}
-  def delete(url, headers \\ [], options \\ []) do
+  def delete(url, headers, options) do
     request(:delete, url, "", headers, options)
   end
 
@@ -128,7 +128,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   """
   @spec report(String.t(), any(), list(), keyword()) ::
           {:ok, Response.t()} | {:error, Exception.t()}
-  def report(url, body, headers \\ [], options \\ []) do
+  def report(url, body, headers, options) do
     request(:report, url, body, headers, options)
   end
 

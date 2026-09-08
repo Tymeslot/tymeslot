@@ -103,6 +103,46 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
     end
   end
 
+  describe "fetch_and_apply/1 - ownership flagging" do
+    test "marks a delta event that mirrors one of our meetings" do
+      # The delta sweep used to write straight to the queries module, skipping
+      # the ownership flagging every other cache write gets. A booking Tymeslot
+      # wrote to an Outlook calendar carries a bare UUID uid, which the
+      # payload-level origin check cannot recognise, so it cached as
+      # server-owned and OfflineQueue-style recovery never applied to it.
+      integration =
+        outlook_integration(
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
+        )
+
+      insert(:meeting, calendar_integration_id: integration.id, uid: "uid-ours")
+
+      ours = graph_event(%{"iCalUId" => "uid-ours"})
+      theirs = graph_event(%{"iCalUId" => "uid-theirs"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [ours, theirs],
+               "@odata.deltaLink" => "https://graph.microsoft.com/v1.0/me/calendarView/delta"
+             })
+         }}
+      end)
+
+      assert :ok = DeltaSync.fetch_and_apply(integration)
+
+      assert {:ok, %{created_by_tymeslot: true}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-ours")
+
+      assert {:ok, %{created_by_tymeslot: false}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "uid-theirs")
+    end
+  end
+
   describe "fetch_and_apply/1 - empty events" do
     test "persists new delta link without upserting any events" do
       integration =

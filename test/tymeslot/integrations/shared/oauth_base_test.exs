@@ -2,7 +2,6 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Common.OAuthBase
 
   describe "validate_config/2" do
@@ -87,66 +86,6 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
                OAuthBase.handle_api_call(fn ->
                  {:error, :unauthorized, "Token expired or invalid"}
                end)
-    end
-  end
-
-  describe "create_or_update_integration/4" do
-    test "creates a new integration if none exists" do
-      user = insert(:user)
-      insert(:profile, user: user)
-
-      tokens = %{
-        access_token: "at",
-        refresh_token: "rt",
-        expires_at: DateTime.utc_now(),
-        scope: "scope"
-      }
-
-      assert {:ok, integration} =
-               OAuthBase.create_or_update_integration(
-                 user.id,
-                 "google",
-                 %{name: "My Cal", base_url: "https://google.com"},
-                 tokens
-               )
-
-      assert integration.user_id == user.id
-      assert integration.provider == "google"
-
-      # Decrypt to check virtual fields
-      integration =
-        CalendarIntegrationSchema.decrypt_oauth_tokens(integration)
-
-      assert integration.access_token == "at"
-    end
-
-    test "updates existing integration" do
-      user = insert(:user)
-      insert(:profile, user: user)
-
-      existing =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          access_token: "old",
-          base_url: "https://google.com"
-        )
-
-      tokens = %{
-        access_token: "new",
-        refresh_token: "rt",
-        expires_at: DateTime.utc_now(),
-        scope: "scope"
-      }
-
-      assert {:ok, updated} =
-               OAuthBase.create_or_update_integration(user.id, "google", %{}, tokens)
-
-      assert updated.id == existing.id
-
-      # Decrypt to check virtual fields
-      updated = CalendarIntegrationSchema.decrypt_oauth_tokens(updated)
-      assert updated.access_token == "new"
     end
   end
 end

@@ -11,8 +11,6 @@ defmodule Tymeslot.Emails.Shared.Cards do
   alias Tymeslot.Emails.Shared.{Sanitise, Styles}
   alias Tymeslot.Security.UniversalSanitizer
 
-  @type info_item :: %{required(:label) => String.t(), required(:value) => String.t()}
-
   @type contact_row :: %{
           required(:label) => String.t(),
           required(:value) => String.t() | {:safe, String.t()},
@@ -116,61 +114,6 @@ defmodule Tymeslot.Emails.Shared.Cards do
     </mj-section>
     """
   end
-
-  @doc """
-  A compact row of label/value pairs, separated by a hairline above and
-  between columns. Each item `%{label:, value:}`. Both are sanitised.
-  """
-  @spec quick_info_grid(list(info_item())) :: String.t()
-  def quick_info_grid([_head | _tail] = items) do
-    columns =
-      Enum.map_join(items, "\n", fn item ->
-        safe_label = Sanitise.sanitize_for_email(item.label)
-        safe_value = Sanitise.sanitize_for_email(item.value)
-
-        """
-        <mj-column>
-          <mj-text
-            align="left"
-            font-size="11px"
-            color="#{Styles.ink_muted()}"
-            padding="0 0 4px 0"
-            font-weight="700"
-            letter-spacing="0.1em"
-            text-transform="uppercase"
-            css-class="mobile-eyebrow"
-          >
-            #{safe_label}
-          </mj-text>
-          <mj-text
-            align="left"
-            font-weight="600"
-            font-size="15px"
-            padding="0"
-            color="#{Styles.ink()}"
-            line-height="1.4"
-          >
-            #{safe_value}
-          </mj-text>
-        </mj-column>
-        """
-      end)
-
-    """
-    <mj-section padding="16px 0 4px 0">
-      <mj-column>
-        <mj-divider border-color="#{Styles.hairline()}" border-width="1px" padding="0 0 14px 0" />
-      </mj-column>
-    </mj-section>
-    <mj-section padding="0 0 8px 0" css-class="mobile-card">
-      <mj-group>
-        #{columns}
-      </mj-group>
-    </mj-section>
-    """
-  end
-
-  def quick_info_grid(_items), do: ""
 
   defp resolve_row_value(%{value: {:safe, html}}), do: html
   defp resolve_row_value(%{value: value, safe_html: true}), do: value

@@ -163,28 +163,6 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
     end
   end
 
-  describe "track_pool_usage/2" do
-    test "emits pool usage metrics", %{handler_id: handler_id} do
-      ref = make_ref()
-      parent = self()
-
-      :telemetry.attach(
-        handler_id,
-        [:tymeslot, :connection_pool, :usage],
-        fn _event, measurements, metadata, _config ->
-          send(parent, {:telemetry, ref, measurements, metadata})
-        end,
-        nil
-      )
-
-      on_exit(fn -> :telemetry.detach(handler_id) end)
-
-      Metrics.track_pool_usage(:db_pool, in_use_count: 5, free_count: 3, queue_count: 0)
-
-      assert_receive {:telemetry, ^ref, %{in_use: 5, free: 3, queue: 0}, %{pool: :db_pool}}
-    end
-  end
-
   describe "track_parsing_performance/4" do
     test "emits parser metrics with events_per_second calculation", %{handler_id: handler_id} do
       ref = make_ref()

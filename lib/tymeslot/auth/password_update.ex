@@ -31,7 +31,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
         current_password,
         new_password,
         new_password_confirmation,
-        opts \\ []
+        opts
       ) do
     with :ok <- verify_current_password(user, current_password),
          :ok <- ensure_not_same_as_old(user, new_password),

@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
     insert(:calendar_integration, user: user, is_active: true)
 
-    slug = MeetingTypes.to_slug(meeting_type)
+    slug = Slugs.to_slug(meeting_type)
 
     %{
       user: user,

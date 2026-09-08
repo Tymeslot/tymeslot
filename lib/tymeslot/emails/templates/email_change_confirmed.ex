@@ -74,7 +74,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
           DateTime.t() | nil,
           boolean()
         ) :: String.t()
-  def render_text(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
+  def render_text(user, old_email, new_email, confirmed_time, is_old_email) do
     intro =
       if is_old_email do
         dgettext(

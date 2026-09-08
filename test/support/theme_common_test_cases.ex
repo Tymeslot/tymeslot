@@ -69,6 +69,34 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   end
 
   @doc """
+  Tests that every module in `components/0` is a real `Phoenix.LiveComponent`.
+
+  A module listed as a component but never declared with
+  `use Phoenix.LiveComponent` compiles fine and fails only when its step is
+  first rendered, so the shape is checked here for every theme rather than left
+  to whichever flow happens to reach it. `update/2` is an optional callback, so
+  the `__live__/0` marker the `use` defines is what identifies one.
+  """
+  @spec test_components_are_live_components(module()) :: :ok
+  def test_components_are_live_components(theme_module) do
+    components = theme_module.components()
+
+    assert components != %{}, "theme declares no components"
+
+    not_live_components =
+      Enum.reject(components, fn {_state, module} ->
+        match?({:module, ^module}, Code.ensure_loaded(module)) and
+          function_exported?(module, :__live__, 0) and
+          match?(%{kind: :component}, module.__live__())
+      end)
+
+    assert not_live_components == [],
+           "not Phoenix.LiveComponents: #{inspect(not_live_components)}"
+
+    :ok
+  end
+
+  @doc """
   Tests the `initial_state_for_action/1` function common to all themes.
   Expects the theme module as the first argument.
   """

@@ -118,7 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
           | {:error, {:rate_limited, String.t()}}
           | {:error, :unattributable}
           | {:error, {ErrorHandler.error_category(), String.t()}}
-  def discover_calendars(provider_atom, config, opts \\ []) do
+  def discover_calendars(provider_atom, config, opts) do
     case Keyword.fetch(opts, :actor) do
       {:ok, actor} ->
         cache_key = DiscoveryService.build_cache_key(provider_atom, config)

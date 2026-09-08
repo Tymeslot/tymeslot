@@ -75,20 +75,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
     end
   end
 
-  @doc """
-  Fetches and reconciles a single calendar path.
-
-  Returns the bare `:not_found` sentinel when the collection is missing so
-  callers can decide between dropping the path and flagging the integration.
-
-  ## Options
-
-    * `:new_ctag` — a `getctag` value to store as the sync token once the
-      events have been reconciled. Only written on success: a failed
-      reconciliation must not advance the token past changes it never applied.
-  """
+  # Fetches and reconciles a single calendar path.
+  #
+  # Returns the bare `:not_found` sentinel when the collection is missing so
+  # callers can decide between dropping the path and flagging the integration.
+  #
+  # Options:
+  #
+  #   * `:new_ctag` — a `getctag` value to store as the sync token once the
+  #     events have been reconciled. Only written on success: a failed
+  #     reconciliation must not advance the token past changes it never applied.
   @spec fetch_path(struct(), map(), String.t(), keyword()) :: result() | :not_found
-  def fetch_path(integration, client, calendar_path, opts) do
+  defp fetch_path(integration, client, calendar_path, opts) do
     range_now = DateTime.utc_now()
     start_time = DateTime.add(range_now, -@sync_window_past_days, :day)
     end_time = DateTime.add(range_now, @sync_window_future_days, :day)

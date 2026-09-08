@@ -11,12 +11,6 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @doc """
   Formats basic meeting details for text body.
   """
-  @spec format_meeting_details(map()) :: String.t()
-  def format_meeting_details(appointment_details) do
-    locale = Map.get(appointment_details, :attendee_locale, "en")
-    format_meeting_details(appointment_details, locale)
-  end
-
   @spec format_meeting_details(map(), String.t()) :: String.t()
   def format_meeting_details(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -37,8 +31,6 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   Formats video meeting section for text body.
   """
   @spec format_video_section(String.t() | nil, String.t()) :: String.t()
-  def format_video_section(meeting_url, locale \\ "en")
-
   def format_video_section(meeting_url, locale) when is_binary(meeting_url) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       """
@@ -55,14 +47,6 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @doc """
   Formats action links for text body.
   """
-  @spec format_action_links(Tymeslot.Emails.EmailService.appointment_details()) :: String.t()
-  def format_action_links(appointment_details),
-    do:
-      format_action_links(
-        appointment_details,
-        Map.get(appointment_details, :attendee_locale, "en")
-      )
-
   @spec format_action_links(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
           String.t()
   def format_action_links(appointment_details, locale) do
@@ -98,14 +82,6 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @doc """
   Formats attendee information for text body.
   """
-  @spec format_attendee_info(Tymeslot.Emails.EmailService.appointment_details()) :: String.t()
-  def format_attendee_info(appointment_details),
-    do:
-      format_attendee_info(
-        appointment_details,
-        Map.get(appointment_details, :attendee_locale, "en")
-      )
-
   @spec format_attendee_info(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
           String.t()
   def format_attendee_info(appointment_details, locale) do
@@ -136,14 +112,6 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   Returns an empty string when there are no fields, or when every field
   renders as an empty value.
   """
-  @spec format_custom_answers(map()) :: String.t()
-  def format_custom_answers(appointment_details),
-    do:
-      format_custom_answers(
-        appointment_details,
-        Map.get(appointment_details, :attendee_locale, "en")
-      )
-
   @spec format_custom_answers(map(), String.t()) :: String.t()
   def format_custom_answers(appointment_details, locale) do
     snapshot = Map.get(appointment_details, :custom_fields_snapshot) || []
@@ -201,7 +169,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
 
   @doc "Formats a list of event field changes as plain text lines."
   @spec format_event_changes([{atom(), term(), term()}], String.t()) :: String.t()
-  def format_event_changes(changes, locale \\ "en") do
+  def format_event_changes(changes, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       changes
       |> Enum.map(&format_single_change(&1, locale))

@@ -8,6 +8,8 @@ defmodule Tymeslot.MeetingTypes.LookupsTest do
   @moduletag :meeting_types
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Duration
+  alias Tymeslot.MeetingTypes.Slugs
 
   # =====================================
   # Duration String Behaviors
@@ -18,7 +20,7 @@ defmodule Tymeslot.MeetingTypes.LookupsTest do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user, name: "30 Minutes", duration_minutes: 30)
 
-      result = MeetingTypes.to_duration_string(meeting_type)
+      result = Slugs.to_duration_string(meeting_type)
 
       assert result == "30-minutes"
     end
@@ -35,9 +37,9 @@ defmodule Tymeslot.MeetingTypes.LookupsTest do
       meeting_type_90 =
         insert(:meeting_type, user: user, name: "90 Minutes", duration_minutes: 90)
 
-      assert MeetingTypes.to_duration_string(meeting_type_15) == "15-minutes"
-      assert MeetingTypes.to_duration_string(meeting_type_60) == "60-minutes"
-      assert MeetingTypes.to_duration_string(meeting_type_90) == "90-minutes"
+      assert Slugs.to_duration_string(meeting_type_15) == "15-minutes"
+      assert Slugs.to_duration_string(meeting_type_60) == "60-minutes"
+      assert Slugs.to_duration_string(meeting_type_90) == "90-minutes"
     end
   end
 
@@ -164,7 +166,7 @@ defmodule Tymeslot.MeetingTypes.LookupsTest do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user, name: "Quick", duration_minutes: 45)
 
-      result = MeetingTypes.duration_valid?("quick", [meeting_type])
+      result = Duration.duration_valid?("quick", [meeting_type])
 
       assert result == true
     end
@@ -173,7 +175,7 @@ defmodule Tymeslot.MeetingTypes.LookupsTest do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user, name: "Intro")
 
-      result = MeetingTypes.duration_valid?("other", [meeting_type])
+      result = Duration.duration_valid?("other", [meeting_type])
 
       assert result == false
     end
@@ -182,13 +184,13 @@ defmodule Tymeslot.MeetingTypes.LookupsTest do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user)
 
-      result = MeetingTypes.duration_valid?(123, [meeting_type])
+      result = Duration.duration_valid?(123, [meeting_type])
 
       assert result == false
     end
 
     test "returns false for non-list available types" do
-      result = MeetingTypes.duration_valid?("30min", nil)
+      result = Duration.duration_valid?("30min", nil)
 
       assert result == false
     end

@@ -53,7 +53,4 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     |> unique_constraint(:user_id, name: :connect_accounts_user_id_live_unique_index)
     |> foreign_key_constraint(:user_id)
   end
-
-  @spec valid_statuses() :: [String.t()]
-  def valid_statuses, do: @valid_statuses
 end

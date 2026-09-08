@@ -20,9 +20,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
   ## Available Functions
 
   - `handle_timezone_change/2` - Process timezone updates and reload slots
-  - `handle_timezone_search/2` - Filter timezone search results
-  - `handle_timezone_dropdown_toggle/1` - Toggle dropdown state
-  - `handle_timezone_dropdown_close/1` - Close dropdown
   """
 
   import Phoenix.Component, only: [assign: 3]
@@ -86,65 +83,5 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
           send(self(), {:fetch_available_slots, selected_date, duration, new_timezone})
         end)
     end
-  end
-
-  @doc """
-  Handles timezone search functionality.
-
-  Processes search input and updates the timezone search state.
-
-  ## Examples
-
-      case TimezoneHandlerComponent.handle_timezone_search(socket, %{"search" => "New York"}) do
-        {:ok, updated_socket} -> {:noreply, updated_socket}
-        {:error, error_socket} -> {:noreply, error_socket}
-      end
-  """
-  @spec handle_timezone_search(Phoenix.LiveView.Socket.t(), map()) ::
-          {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_timezone_search(socket, params) do
-    search_term =
-      case params do
-        %{"search" => term} -> term
-        %{"value" => term} -> term
-        %{"_target" => ["search"], "search" => term} -> term
-        _other -> ""
-      end
-
-    socket =
-      socket
-      |> assign(:timezone_search, search_term)
-      |> assign(:timezone_dropdown_open, true)
-
-    {:ok, socket}
-  end
-
-  @doc """
-  Toggles the timezone dropdown state.
-
-  ## Examples
-
-      {:ok, socket} = TimezoneHandlerComponent.handle_timezone_dropdown_toggle(socket)
-  """
-  @spec handle_timezone_dropdown_toggle(Phoenix.LiveView.Socket.t()) ::
-          {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_timezone_dropdown_toggle(socket) do
-    current_state = socket.assigns[:timezone_dropdown_open] || false
-    socket = assign(socket, :timezone_dropdown_open, !current_state)
-    {:ok, socket}
-  end
-
-  @doc """
-  Closes the timezone dropdown.
-
-  ## Examples
-
-      {:ok, socket} = TimezoneHandlerComponent.handle_timezone_dropdown_close(socket)
-  """
-  @spec handle_timezone_dropdown_close(Phoenix.LiveView.Socket.t()) ::
-          {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_timezone_dropdown_close(socket) do
-    socket = assign(socket, :timezone_dropdown_open, false)
-    {:ok, socket}
   end
 end

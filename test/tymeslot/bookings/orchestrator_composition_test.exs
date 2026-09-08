@@ -11,8 +11,6 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     * the rescheduling branch (`is_rescheduling: true`) delegates to
       `Reschedule.execute/4` and enqueues the expected CalendarEvent /
       webhook / Telegram jobs,
-    * `validate_booking_time/3` surfaces the downstream validator's
-      answer for both a valid and an invalid input,
     * `get_meeting_for_reschedule/2` rejects meetings that policy
       disallows even for the correct organiser.
 
@@ -180,21 +178,6 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     end
   end
 
-  describe "validate_booking_time/3" do
-    test "returns :ok for a valid future slot" do
-      {date, time} = tomorrow_in_berlin("14:00")
-
-      assert :ok = Orchestrator.validate_booking_time(date, time, "Europe/Berlin")
-    end
-
-    test "returns an error for a date in the past" do
-      past = Date.to_iso8601(Date.add(Date.utc_today(), -1))
-
-      assert {:error, _reason} =
-               Orchestrator.validate_booking_time(past, "10:00", "Europe/Berlin")
-    end
-  end
-
   describe "get_meeting_for_reschedule/2" do
     test "returns the meeting when the organiser matches and policy allows it", %{user: user} do
       meeting = insert_future_meeting(user, nil)
@@ -253,9 +236,5 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
 
   defp future_datetime(amount, unit) do
     DateTime.utc_now() |> DateTime.add(amount, unit) |> DateTime.truncate(:second)
-  end
-
-  defp tomorrow_in_berlin(time) do
-    {Date.to_iso8601(Date.add(Date.utc_today(), 1)), time}
   end
 end

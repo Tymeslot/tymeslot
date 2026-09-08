@@ -12,9 +12,12 @@ defmodule Tymeslot.MeetingsTest do
   alias Ecto.UUID
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Listing
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias Tymeslot.Utils.DateTimeUtils
   import Tymeslot.MeetingTestHelpers
 
   setup :verify_on_exit!
@@ -30,7 +33,7 @@ defmodule Tymeslot.MeetingsTest do
       time = ~T[14:30:00]
       timezone = "America/New_York"
 
-      result = Meetings.create_datetime_safe(date, time, timezone)
+      result = DateTimeUtils.create_datetime_safe(date, time, timezone)
 
       assert %DateTime{} = result
       assert result.year == 2025
@@ -46,7 +49,7 @@ defmodule Tymeslot.MeetingsTest do
       time = ~T[14:30:00]
       invalid_timezone = "Invalid/Timezone"
 
-      result = Meetings.create_datetime_safe(date, time, invalid_timezone)
+      result = DateTimeUtils.create_datetime_safe(date, time, invalid_timezone)
 
       assert %DateTime{} = result
       assert result.time_zone == "Etc/UTC"
@@ -56,7 +59,7 @@ defmodule Tymeslot.MeetingsTest do
       date = ~D[2025-06-15]
       time = ~T[14:30:00]
 
-      result = Meetings.create_datetime_safe(date, time, "Etc/UTC")
+      result = DateTimeUtils.create_datetime_safe(date, time, "Etc/UTC")
 
       assert %DateTime{} = result
       assert result.time_zone == "Etc/UTC"
@@ -67,7 +70,7 @@ defmodule Tymeslot.MeetingsTest do
     test "returns empty list for user with no past meetings" do
       %{user: user} = create_user_with_profile()
 
-      result = Meetings.list_past_meetings_for_user(user.email)
+      result = MeetingListQueries.list_past_meetings_for_user(user.email)
 
       assert result == []
     end
@@ -87,7 +90,8 @@ defmodule Tymeslot.MeetingsTest do
         )
       end
 
-      assert length(Meetings.list_cancelled_meetings_for_user(user.email, limit: 2)) == 2
+      assert length(MeetingListQueries.list_cancelled_meetings_for_user(user.email, limit: 2)) ==
+               2
     end
   end
 
@@ -326,7 +330,7 @@ defmodule Tymeslot.MeetingsTest do
 
       insert_meeting_for_user(user)
 
-      assert {:ok, page} = Meetings.list_user_meetings_cursor_page_by_id(user.id)
+      assert {:ok, page} = Listing.list_user_meetings_cursor_page_by_id(user.id, [])
 
       assert length(page.items) == 1
     end
@@ -334,7 +338,7 @@ defmodule Tymeslot.MeetingsTest do
     test "returns empty page for non-existent user" do
       non_existent_id = 999_999_999
 
-      assert {:ok, page} = Meetings.list_user_meetings_cursor_page_by_id(non_existent_id)
+      assert {:ok, page} = Listing.list_user_meetings_cursor_page_by_id(non_existent_id, [])
 
       assert page.items == []
       assert page.has_more == false

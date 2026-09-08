@@ -44,12 +44,6 @@ defmodule TymeslotWeb.Themes.Shared.BookingTextTest do
 
       assert BookingText.greeting(profile, nil) == "Hi! I'm the team."
     end
-
-    test "customized? reports the switch, not the presence of stored wording" do
-      assert BookingText.customized?(customized(booking_heading: "x"))
-      refute BookingText.customized?(build(:profile, booking_heading: "x"))
-      refute BookingText.customized?(nil)
-    end
   end
 
   describe "defaults" do

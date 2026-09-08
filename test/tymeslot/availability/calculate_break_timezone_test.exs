@@ -13,11 +13,21 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
 
   @moduletag :availability
 
+  import Tymeslot.Test.ClockHelpers
+
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.Conflicts
 
   # 2026-09-07 is a Monday.
   @monday ~D[2026-09-07]
+  @now DateTime.new!(~D[2026-09-01], ~T[00:00:00], "Etc/UTC")
+
+  # `Conflicts` takes "now" as an argument, but `Calculate.available_slots/6`
+  # reads it from the clock and drops slots that have already passed. Pinning it
+  # keeps a test that names a fixed Monday from expiring on that Monday.
+  setup do
+    freeze_clock(@now)
+  end
 
   defp schedule(breaks) do
     [
@@ -153,8 +163,6 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
         buffer_minutes: 0
       }
     end
-
-    @now DateTime.new!(~D[2026-09-01], ~T[00:00:00], "Etc/UTC")
 
     test "marks the day unavailable when the owner's break covers the only hour" do
       covering = [%{start_time: ~T[12:00:00], end_time: ~T[13:00:00]}]

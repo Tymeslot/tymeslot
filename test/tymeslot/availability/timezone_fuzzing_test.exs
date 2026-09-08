@@ -9,6 +9,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   use ExUnitProperties
 
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Tymeslot.Availability.Calculate
@@ -41,6 +42,13 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   end
 
   @timezones Enum.map(Timezones.all_options(), &elem(&1, 1))
+
+  # The two DST-gap tests below name a fixed calendar date, so they have to name
+  # a fixed "now" as well: availability drops slots that have already passed and
+  # days outside the booking window, both measured against the wall clock. Left
+  # unpinned, they pass only while the date they name is still in the future and
+  # then fail on the day itself.
+  @before_santiago_gap ~U[2026-09-01 12:00:00Z]
 
   property "month_availability returns valid map for any timezone pair", %{schedule: schedule} do
     check all(
@@ -89,12 +97,14 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
       schedule_id: schedule.id
     }
 
-    assert {:ok, availability} =
-             Calculate.month_availability(2026, 9, "Asia/Macau", "America/Santiago", [], config)
+    with_frozen_clock(@before_santiago_gap, fn ->
+      assert {:ok, availability} =
+               Calculate.month_availability(2026, 9, "Asia/Macau", "America/Santiago", [], config)
 
-    assert map_size(availability) == 30
-    # The owner's window still lands on the attendee's DST-gap day, so it stays bookable.
-    assert availability["2026-09-06"] == true
+      assert map_size(availability) == 30
+      # The owner's window still lands on the attendee's DST-gap day, so it stays bookable.
+      assert availability["2026-09-06"] == true
+    end)
   end
 
   property "available_slots returns valid sorted unique strings for any timezone pair", %{
@@ -139,40 +149,42 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
       schedule_id: schedule.id
     }
 
-    # America/Santiago springs forward at 2026-09-06 00:00, so 00:00-00:59 does
-    # not exist locally that day. An Asia/Macau owner's window covers it, so the
-    # midnight slots must simply be dropped rather than offered or duplicated.
-    assert {:ok, gap_day_slots} =
-             Calculate.available_slots(
-               ~D[2026-09-06],
-               30,
-               "America/Santiago",
-               "Asia/Macau",
-               [],
-               config
-             )
+    with_frozen_clock(@before_santiago_gap, fn ->
+      # America/Santiago springs forward at 2026-09-06 00:00, so 00:00-00:59 does
+      # not exist locally that day. An Asia/Macau owner's window covers it, so the
+      # midnight slots must simply be dropped rather than offered or duplicated.
+      assert {:ok, gap_day_slots} =
+               Calculate.available_slots(
+                 ~D[2026-09-06],
+                 30,
+                 "America/Santiago",
+                 "Asia/Macau",
+                 [],
+                 config
+               )
 
-    refute "12:00 AM" in gap_day_slots
-    refute "12:30 AM" in gap_day_slots
-    assert "1:00 AM" in gap_day_slots
-    assert gap_day_slots == Enum.uniq(gap_day_slots)
+      refute "12:00 AM" in gap_day_slots
+      refute "12:30 AM" in gap_day_slots
+      assert "1:00 AM" in gap_day_slots
+      assert gap_day_slots == Enum.uniq(gap_day_slots)
 
-    assert gap_day_slots ==
-             Enum.sort_by(gap_day_slots, &TimeSlots.parse_time_slot/1, Time)
+      assert gap_day_slots ==
+               Enum.sort_by(gap_day_slots, &TimeSlots.parse_time_slot/1, Time)
 
-    # The following week has no gap, so midnight is offered as normal.
-    assert {:ok, normal_day_slots} =
-             Calculate.available_slots(
-               ~D[2026-09-13],
-               30,
-               "America/Santiago",
-               "Asia/Macau",
-               [],
-               config
-             )
+      # The following week has no gap, so midnight is offered as normal.
+      assert {:ok, normal_day_slots} =
+               Calculate.available_slots(
+                 ~D[2026-09-13],
+                 30,
+                 "America/Santiago",
+                 "Asia/Macau",
+                 [],
+                 config
+               )
 
-    assert "12:00 AM" in normal_day_slots
-    assert "12:30 AM" in normal_day_slots
+      assert "12:00 AM" in normal_day_slots
+      assert "12:30 AM" in normal_day_slots
+    end)
   end
 
   property "month_availability respects min_advance_hours in any timezone", %{schedule: schedule} do

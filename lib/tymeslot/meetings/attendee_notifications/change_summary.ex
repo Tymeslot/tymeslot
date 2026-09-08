@@ -18,11 +18,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeSummary do
             retained_attendees: [],
             next_sequence: 0
 
-  @spec new(map) :: t
-  def new(attrs) when is_map(attrs) do
-    struct(__MODULE__, attrs)
-  end
-
   @spec any_changes?(t) :: boolean
   def any_changes?(%__MODULE__{changed_fields: [], added_attendees: [], removed_attendees: []}),
     do: false

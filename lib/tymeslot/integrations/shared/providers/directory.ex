@@ -121,18 +121,6 @@ defmodule Tymeslot.Integrations.Providers.Directory do
     end
   end
 
-  @doc """
-  Returns a setup component module for a provider if one is declared.
-  Falls back to nil to use a generic schema-driven form.
-  """
-  @spec setup_component(domain(), atom()) :: module() | nil | {:error, :unknown_provider}
-  def setup_component(domain, type) do
-    case get(domain, type) do
-      %Descriptor{setup_component: comp} -> comp
-      _other -> {:error, :unknown_provider}
-    end
-  end
-
   # Internal helpers
 
   # function_exported?/3 returns false for modules that haven't been loaded yet,

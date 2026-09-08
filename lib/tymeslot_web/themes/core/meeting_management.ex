@@ -33,17 +33,17 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     end
   end
 
-  @doc "Validates whether the given action is permitted for the meeting."
+  # Validates whether the given action is permitted for the meeting.
   @spec validate_meeting_action(map(), atom()) :: :ok | {:error, String.t()}
-  def validate_meeting_action(meeting, :cancel) do
+  defp validate_meeting_action(meeting, :cancel) do
     Policy.can_cancel_meeting?(meeting)
   end
 
-  def validate_meeting_action(meeting, :reschedule) do
+  defp validate_meeting_action(meeting, :reschedule) do
     Policy.can_reschedule_meeting?(meeting)
   end
 
-  def validate_meeting_action(_unused_meeting, :cancel_confirmed) do
+  defp validate_meeting_action(_unused_meeting, :cancel_confirmed) do
     :ok
   end
 
@@ -104,9 +104,9 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   def assign_action_specific_data(socket, _other_action, _unused_meeting, _unused_params),
     do: socket
 
-  @doc "Builds the URL to redirect to after a meeting is cancelled."
+  # Builds the URL to redirect to after a meeting is cancelled.
   @spec build_cancel_confirmed_url(Phoenix.LiveView.Socket.t(), map()) :: String.t()
-  def build_cancel_confirmed_url(socket, meeting) do
+  defp build_cancel_confirmed_url(socket, meeting) do
     case socket.assigns[:organizer_profile] do
       %{username: username} when is_binary(username) and byte_size(username) > 0 ->
         "/#{username}/meeting/#{meeting.uid}/cancel-confirmed"

@@ -60,11 +60,4 @@ defmodule Tymeslot.Slack.SlackDeliverySchema do
     |> validate_required(@required_fields)
     |> foreign_key_constraint(:integration_id)
   end
-
-  @spec successful?(t()) :: boolean()
-  def successful?(%__MODULE__{response_status: status, error_message: err})
-      when is_integer(status) and status in 200..299 and is_nil(err),
-      do: true
-
-  def successful?(%__MODULE__{}), do: false
 end

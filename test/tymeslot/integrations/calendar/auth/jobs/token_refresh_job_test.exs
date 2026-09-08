@@ -142,11 +142,21 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
     end
   end
 
-  describe "custom_backoff/1" do
+  describe "backoff/1" do
     test "returns expected backoff times" do
-      assert TokenRefreshJob.custom_backoff(1) == 1
-      assert TokenRefreshJob.custom_backoff(4) == 300
-      assert TokenRefreshJob.custom_backoff(7) == 3600
+      assert TokenRefreshJob.backoff(%Oban.Job{attempt: 1}) == 1
+      assert TokenRefreshJob.backoff(%Oban.Job{attempt: 4}) == 300
+      assert TokenRefreshJob.backoff(%Oban.Job{attempt: 7}) == 3600
+    end
+
+    test "caps at one hour past the final attempt" do
+      assert TokenRefreshJob.backoff(%Oban.Job{attempt: 8}) == 3600
+    end
+
+    test "keeps the whole schedule inside the 2-hour refresh buffer" do
+      total = Enum.sum(Enum.map(1..7, &TokenRefreshJob.backoff(%Oban.Job{attempt: &1})))
+
+      assert total < 2 * 60 * 60
     end
   end
 end

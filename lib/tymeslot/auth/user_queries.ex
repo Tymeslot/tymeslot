@@ -7,7 +7,6 @@ defmodule Tymeslot.Auth.UserQueries do
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Password
 
   @doc """
   Gets a single user.
@@ -49,27 +48,6 @@ defmodule Tymeslot.Auth.UserQueries do
     case repo.get_by(UserSchema, email: normalised) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
-    end
-  end
-
-  @doc """
-  Gets a user by email and password.
-  Returns {:ok, user} if found and password matches, {:error, :invalid_credentials} otherwise.
-  """
-  @spec get_user_by_email_and_password(String.t(), String.t()) ::
-          {:ok, UserSchema.t()} | {:error, :invalid_credentials}
-  def get_user_by_email_and_password(email, password)
-      when is_binary(email) and is_binary(password) do
-    case Repo.get_by(UserSchema, email: email) do
-      nil ->
-        {:error, :invalid_credentials}
-
-      user ->
-        if Password.verify_password(password, user.password_hash) do
-          {:ok, user}
-        else
-          {:error, :invalid_credentials}
-        end
     end
   end
 
@@ -162,19 +140,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Updates a user.
-
-  Accepts an optional `repo` argument for use within transactions.
-  """
-  @spec update_user(UserSchema.t(), map(), module()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_user(%UserSchema{} = user, attrs, repo \\ Repo) do
-    user
-    |> UserSchema.changeset(attrs)
-    |> repo.update()
-  end
-
-  @doc """
   Updates the user's interface language preference. Pass `nil` (or an empty
   string) to clear it and fall back to browser/session locale detection.
   """
@@ -189,9 +154,9 @@ defmodule Tymeslot.Auth.UserQueries do
   @doc """
   Returns `true` if `user` is the only row in the `users` table.
 
-  Accepts an optional `repo` argument for use within transactions — the call
-  site runs this inside the same transaction as the insert it is gating, so
-  the visibility check happens against the just-inserted row.
+  Requires an explicit `repo` argument: the call site runs this inside the
+  same transaction as the insert it is gating, so the visibility check happens
+  against the just-inserted row.
 
   Note: this does **not** make the "first user becomes admin" bootstrap fully
   race-free. Under PostgreSQL's default READ COMMITTED isolation two signups
@@ -202,7 +167,7 @@ defmodule Tymeslot.Auth.UserQueries do
   advisory lock around the first insert.
   """
   @spec only_user?(UserSchema.t(), module()) :: boolean()
-  def only_user?(%UserSchema{id: id}, repo \\ Repo) do
+  def only_user?(%UserSchema{id: id}, repo) do
     not repo.exists?(from(u in UserSchema, where: u.id != ^id, select: 1, limit: 1))
   end
 
@@ -263,7 +228,7 @@ defmodule Tymeslot.Auth.UserQueries do
   @spec count_signin_capable_admins_excluding(integer(), [atom()], module()) :: non_neg_integer()
   def count_signin_capable_admins_excluding(
         excluded_user_id,
-        usable_sso_providers \\ [],
+        usable_sso_providers,
         repo \\ Repo
       ) do
     password_capable =
@@ -359,7 +324,7 @@ defmodule Tymeslot.Auth.UserQueries do
   """
   @spec update_changeset(Changeset.t(), module()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_changeset(changeset, repo \\ Repo) do
+  def update_changeset(changeset, repo) do
     repo.update(changeset)
   end
 

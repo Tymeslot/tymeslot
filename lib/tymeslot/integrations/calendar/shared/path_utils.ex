@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
       "https://radicale.example.com:5232"
   """
   @spec normalize_url(String.t(), keyword()) :: String.t()
-  def normalize_url(url, opts \\ []) do
+  def normalize_url(url, opts) do
     ensure_trailing_slash = Keyword.get(opts, :ensure_trailing_slash, true)
     provider = Keyword.get(opts, :provider, :caldav)
 
@@ -137,22 +137,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
     end
   end
 
-  @doc """
-  Extracts the base URL from a full CalDAV URL.
-
-  ## Parameters
-  - `full_url` - The full CalDAV URL
-
-  ## Returns
-  - Base URL (scheme + host + optional port)
-
-  ## Examples
-      
-      iex> PathUtils.extract_base_url("https://example.com:5232/caldav/user/calendar/")
-      "https://example.com:5232"
-  """
+  # Extracts the base URL (scheme + host + optional port) from a full CalDAV URL.
   @spec extract_base_url(String.t()) :: String.t()
-  def extract_base_url(full_url) do
+  defp extract_base_url(full_url) do
     uri = URI.parse(full_url)
     port_suffix = if uri.port && uri.port not in [80, 443], do: ":#{uri.port}", else: ""
     "#{uri.scheme}://#{uri.host}#{port_suffix}"

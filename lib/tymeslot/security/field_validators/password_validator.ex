@@ -101,22 +101,20 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
   @doc """
   Validates password confirmation matches original password.
   """
-  @spec validate_confirmation(any(), any(), keyword()) :: :ok | {:error, String.t()}
-  def validate_confirmation(password, confirmation, opts \\ [])
-
-  def validate_confirmation(password, password, _opts) when is_binary(password) do
+  @spec validate_confirmation(String.t(), String.t()) :: :ok | {:error, String.t()}
+  def validate_confirmation(password, password) when is_binary(password) do
     :ok
   end
 
-  def validate_confirmation(_password, nil, _opts) do
+  def validate_confirmation(_password, nil) do
     {:error, dgettext("auth", "Password confirmation is required")}
   end
 
-  def validate_confirmation(_password, "", _opts) do
+  def validate_confirmation(_password, "") do
     {:error, dgettext("auth", "Password confirmation is required")}
   end
 
-  def validate_confirmation(_password, _confirmation, _opts) do
+  def validate_confirmation(_password, _confirmation) do
     {:error, dgettext("auth", "Password confirmation does not match")}
   end
 

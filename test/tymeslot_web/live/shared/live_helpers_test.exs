@@ -36,66 +36,11 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpersTest do
     end
   end
 
-  describe "assign_user_timezone/2" do
-    test "assigns from params" do
-      socket = mock_socket()
-      socket = LiveHelpers.assign_user_timezone(socket, %{"timezone" => "America/New_York"})
-      assert socket.assigns.user_timezone == "America/New_York"
-    end
-
-    # Skipping the default test because it calls get_connect_params which is hard to mock in unit tests
-  end
-
-  describe "setup_form_state/2" do
-    test "sets up initial assigns" do
-      socket = mock_socket()
-      socket = LiveHelpers.setup_form_state(socket, %{"name" => "test"})
-      assert socket.assigns.form.params["name"] == "test"
-      assert socket.assigns.touched_fields == MapSet.new()
-      assert socket.assigns.validation_errors == []
-      refute socket.assigns.submitting
-    end
-  end
-
-  describe "mark_field_touched/2" do
-    test "adds field to touched_fields" do
-      socket = mock_socket(%{touched_fields: MapSet.new()})
-      socket = LiveHelpers.mark_field_touched(socket, :email)
-      assert MapSet.member?(socket.assigns.touched_fields, :email)
-    end
-
-    test "handles string field names" do
-      socket = mock_socket(%{touched_fields: MapSet.new()})
-      # Use an existing atom
-      socket = LiveHelpers.mark_field_touched(socket, "email")
-      assert MapSet.member?(socket.assigns.touched_fields, :email)
-    end
-  end
-
   describe "ok/1 and noreply/1" do
     test "return correct tuples" do
       socket = mock_socket()
       assert LiveHelpers.ok(socket) == {:ok, socket}
       assert LiveHelpers.noreply(socket) == {:noreply, socket}
-    end
-  end
-
-  describe "with_submission_state/2" do
-    test "handles successful submission" do
-      socket = mock_socket()
-      {:ok, socket, result} = LiveHelpers.with_submission_state(socket, fn -> {:ok, :success} end)
-      assert result == :success
-      refute socket.assigns.submitting
-    end
-
-    test "handles failed submission" do
-      socket = mock_socket()
-
-      {:error, socket, reason} =
-        LiveHelpers.with_submission_state(socket, fn -> {:error, :fail} end)
-
-      assert reason == :fail
-      refute socket.assigns.submitting
     end
   end
 end

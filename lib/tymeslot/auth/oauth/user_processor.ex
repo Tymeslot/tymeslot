@@ -115,11 +115,9 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     end
   end
 
-  @doc """
-  Fetches the authenticated user's email addresses from the GitHub API.
-  """
+  # Fetches the authenticated user's email addresses from the GitHub API.
   @spec get_github_user_emails(OAuth2.Client.t()) :: {:ok, list(map())} | {:error, any()}
-  def get_github_user_emails(client) do
+  defp get_github_user_emails(client) do
     client = Client.with_auth_header(client, :github)
 
     case OAuth2.Client.get(client, "https://api.github.com/user/emails") do

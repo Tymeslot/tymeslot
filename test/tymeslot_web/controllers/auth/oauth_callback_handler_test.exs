@@ -97,32 +97,4 @@ defmodule TymeslotWeb.OAuthCallbackHandlerTest do
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many authentication attempts"
     end
   end
-
-  describe "initiate_oauth/2" do
-    test "redirects to external authorize URL", %{conn: conn} do
-      opts = [
-        service_name: "TestService",
-        authorize_url_fun: fn conn -> {:ok, conn, "https://example.com/auth"} end
-      ]
-
-      conn = OAuthCallbackHandler.initiate_oauth(conn, opts)
-
-      assert redirected_to(conn) == "https://example.com/auth"
-    end
-
-    test "handles generation failure", %{conn: conn} do
-      opts = [
-        service_name: "TestService",
-        authorize_url_fun: fn _conn -> {:error, :config_missing} end,
-        error_redirect: "/error-page"
-      ]
-
-      conn = OAuthCallbackHandler.initiate_oauth(conn, opts)
-
-      assert redirected_to(conn) == "/error-page"
-
-      assert Flash.get(conn.assigns.flash, :error) =~
-               "Failed to initiate TestService authentication"
-    end
-  end
 end

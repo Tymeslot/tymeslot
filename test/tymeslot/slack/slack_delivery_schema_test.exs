@@ -35,16 +35,4 @@ defmodule Tymeslot.Slack.SlackDeliverySchemaTest do
       assert cs.valid?
     end
   end
-
-  describe "successful?/1" do
-    test "true when response_status is 2xx and error_message is nil" do
-      assert SlackDeliverySchema.successful?(%SlackDeliverySchema{response_status: 200})
-      refute SlackDeliverySchema.successful?(%SlackDeliverySchema{response_status: 500})
-
-      refute SlackDeliverySchema.successful?(%SlackDeliverySchema{
-               response_status: 200,
-               error_message: "channel_not_found"
-             })
-    end
-  end
 end

@@ -97,14 +97,9 @@ defmodule Tymeslot.Meetings.MeetingState do
     |> exclude_voided_slots()
   end
 
-  @doc """
-  Query-side counterpart of `awaiting_new_time?/1`: excludes meetings whose
-  slot is currently voided by a pending reschedule request. Compose this
-  directly (rather than `where_slot_live/1`) when the caller applies its own
-  status filter, e.g. reminder eligibility only ever considers `"confirmed"`.
-  """
-  @spec exclude_voided_slots(Ecto.Queryable.t()) :: Ecto.Query.t()
-  def exclude_voided_slots(query) do
+  # Query-side counterpart of `awaiting_new_time?/1`: excludes meetings whose
+  # slot is currently voided by a pending reschedule request.
+  defp exclude_voided_slots(query) do
     where(query, [m], is_nil(m.reschedule_requested_at))
   end
 

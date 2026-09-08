@@ -31,14 +31,6 @@ defmodule TymeslotWeb.AdminLive.Tabs do
   @spec all() :: [t()]
   def all, do: @settings_tab_names ++ [:users]
 
-  @doc "The tabs that render settings sections."
-  @spec settings_tabs() :: [t()]
-  def settings_tabs, do: @settings_tab_names
-
-  @doc "Whether `tab` renders settings sections (as opposed to the users tab)."
-  @spec settings_tab?(atom()) :: boolean()
-  def settings_tab?(tab), do: tab in @settings_tab_names
-
   @doc """
   The settings sections `tab` renders, in order. A tab with no sections (the
   users tab) returns an empty list.

@@ -115,9 +115,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     }
   end
 
-  @doc false
   @spec extract_meet_url(map()) :: String.t() | nil
-  def extract_meet_url(google_event) when is_map(google_event) do
+  defp extract_meet_url(google_event) when is_map(google_event) do
     case get_in(google_event, ["conferenceData", "entryPoints"]) do
       entry_points when is_list(entry_points) ->
         video_entry_point_uri(entry_points)
@@ -127,7 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     end
   end
 
-  def extract_meet_url(_other), do: nil
+  defp extract_meet_url(_other), do: nil
 
   defp video_entry_point_uri(entry_points) do
     case Enum.find(entry_points, fn ep -> ep["entryPointType"] == "video" end) do

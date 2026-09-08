@@ -181,7 +181,7 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   Lists webhook deliveries for a specific webhook with pagination.
   """
   @spec list_deliveries(integer(), keyword()) :: [WebhookDeliverySchema.t()]
-  def list_deliveries(webhook_id, opts \\ []) do
+  def list_deliveries(webhook_id, opts) do
     limit = Keyword.get(opts, :limit, 50)
     offset = Keyword.get(opts, :offset, 0)
 
@@ -191,18 +191,6 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
     |> limit(^limit)
     |> offset(^offset)
     |> Repo.all()
-  end
-
-  @doc """
-  Gets a single delivery by ID.
-  """
-  @spec get_delivery(binary()) ::
-          {:ok, WebhookDeliverySchema.t()} | {:error, :not_found}
-  def get_delivery(id) do
-    case Repo.get(WebhookDeliverySchema, id) do
-      nil -> {:error, :not_found}
-      delivery -> {:ok, delivery}
-    end
   end
 
   @doc """
@@ -220,7 +208,7 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   Gets delivery statistics for a webhook.
   """
   @spec get_delivery_stats(integer(), keyword()) :: map()
-  def get_delivery_stats(webhook_id, opts \\ []) do
+  def get_delivery_stats(webhook_id, opts) do
     days_ago = Keyword.get(opts, :days, 7)
     since = DateTime.add(DateTime.utc_now(), -days_ago, :day)
 
@@ -250,15 +238,13 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   end
 
   @doc """
-  Cleans up old webhook deliveries. Defaults to 30 days but can be
-  overridden. Deletes in bounded batches (see `BatchDeleteQueries`) so a
-  large backlog can't blow past the database timeout in a single
-  transaction. A zero, negative, or non-integer retention is treated as a
-  no-op so a misconfigured value can never wipe the whole table.
+  Deletes webhook delivery log rows older than `days`. Deletes in bounded
+  batches (see `BatchDeleteQueries`) so a large backlog can't blow past the
+  database timeout in a single transaction. A zero, negative, or non-integer
+  retention is treated as a no-op so a misconfigured value can never wipe the
+  whole table.
   """
   @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
-  def cleanup_old_deliveries(days \\ 30)
-
   def cleanup_old_deliveries(days) when is_integer(days) and days > 0 do
     cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
 

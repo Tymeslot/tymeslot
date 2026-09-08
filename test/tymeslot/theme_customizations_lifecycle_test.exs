@@ -4,6 +4,7 @@ defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
 
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "ThemeCustomizations lifecycle" do
@@ -58,27 +59,9 @@ defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
           "background_value" => "preset:rhythm-default"
         })
 
-      customizations = ThemeCustomizations.get_all_by_profile_id(profile.id)
+      customizations = ThemeCustomizationQueries.get_all_by_profile_id(profile.id)
 
       assert length(customizations) == 2
-    end
-
-    test "reset_to_defaults/2 removes customization", %{profile: profile} do
-      {:ok, _result} =
-        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
-          "color_scheme" => "sunset",
-          "background_type" => "gradient",
-          "background_value" => "gradient_3"
-        })
-
-      assert {:ok, _result} = ThemeCustomizations.reset_to_defaults(profile.id, "1")
-      assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
-    end
-
-    test "reset_to_defaults/2 returns :no_customization when nothing to reset", %{
-      profile: profile
-    } do
-      assert {:ok, :no_customization} = ThemeCustomizations.reset_to_defaults(profile.id, "1")
     end
 
     test "get_for_user/2 returns customization by user_id", %{user: user, profile: profile} do

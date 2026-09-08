@@ -26,9 +26,6 @@ defmodule TymeslotWeb.Live.Shared.Flash do
       Flash.info("Settings saved successfully!")
       Flash.error("Failed to save settings")
       Flash.warning("This action cannot be undone")
-
-      # Generic notify for dynamic types.
-      Flash.notify(:info, "Custom message")
   """
 
   @type flash_type :: :info | :error | :warning
@@ -52,13 +49,10 @@ defmodule TymeslotWeb.Live.Shared.Flash do
     socket
   end
 
-  @doc """
-  Sends a flash message of the specified type to the current process.
-
-  The message will be handled by the parent LiveView's handle_info/2 callback.
-  """
+  # Sends a flash message of the specified type to the current process. The
+  # message is handled by the parent LiveView's handle_info/2 callback.
   @spec notify(flash_type(), String.t()) :: {:flash, {flash_type(), String.t()}}
-  def notify(type, message) when type in [:info, :error, :warning] and is_binary(message) do
+  defp notify(type, message) when type in [:info, :error, :warning] and is_binary(message) do
     send(self(), {:flash, {type, message}})
   end
 

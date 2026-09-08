@@ -39,29 +39,12 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     {:ok, %{stuck_cleaned: stuck_count}}
   end
 
-  @doc """
-  Schedules the next maintenance run in 30 minutes.
-  """
   @spec schedule_next_run() :: {:ok, Oban.Job.t()} | {:error, term()}
-  def schedule_next_run do
+  defp schedule_next_run do
     %{}
     # 30 minutes
     |> new(schedule_in: 1800)
     |> Oban.insert()
-  end
-
-  @doc """
-  Starts the maintenance worker if not already scheduled.
-  """
-  @spec start_if_not_scheduled() :: :ok | {:ok, Oban.Job.t()} | {:error, term()}
-  def start_if_not_scheduled do
-    # Check if a maintenance job is already scheduled
-    scheduled_count = Jobs.count_active_maintenance_jobs(__MODULE__)
-
-    if scheduled_count == 0 do
-      Logger.info("Scheduling initial Oban maintenance job")
-      schedule_next_run()
-    end
   end
 
   # Private functions

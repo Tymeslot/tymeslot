@@ -18,18 +18,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
   end
 
   @doc """
-  Tagged-tuple variant: returns {:ok, customization} | {:error, :not_found}.
-  """
-  @spec get_by_profile_and_theme_t(integer(), String.t()) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, :not_found}
-  def get_by_profile_and_theme_t(profile_id, theme_id) do
-    case get_by_profile_and_theme(profile_id, theme_id) do
-      nil -> {:error, :not_found}
-      customization -> {:ok, customization}
-    end
-  end
-
-  @doc """
   Gets all theme customizations for a profile.
   """
   @spec get_all_by_profile_id(integer()) :: [ThemeCustomizationSchema.t()]
@@ -76,17 +64,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
   @spec get_profile_by_user_id(integer()) :: ProfileSchema.t() | nil
   def get_profile_by_user_id(user_id) do
     Repo.get_by(ProfileSchema, user_id: user_id)
-  end
-
-  @doc """
-  Tagged-tuple variant: returns {:ok, profile} | {:error, :not_found}.
-  """
-  @spec get_profile_by_user_id_t(integer()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
-  def get_profile_by_user_id_t(user_id) do
-    case get_profile_by_user_id(user_id) do
-      nil -> {:error, :not_found}
-      profile -> {:ok, profile}
-    end
   end
 
   @doc """

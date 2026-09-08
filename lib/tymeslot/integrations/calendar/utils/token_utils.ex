@@ -42,19 +42,6 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtils do
   end
 
   @doc """
-  Returns the status of a token as an atom.
-  """
-  @spec token_status(map()) :: :expired | :valid | :no_expiry | :unknown
-  def token_status(integration) do
-    case format_token_expiry(integration) do
-      {:expired, _message} -> :expired
-      {:valid, _message} -> :valid
-      {:no_expiry, _message} -> :no_expiry
-      {:unknown, _message} -> :unknown
-    end
-  end
-
-  @doc """
   Converts a DateTime to a human-readable relative time string.
   """
   @spec relative_time(DateTime.t()) :: String.t()
@@ -95,18 +82,5 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtils do
     else
       "#{count} #{unit} ago"
     end
-  end
-
-  @doc """
-  Checks if a token needs to be refreshed soon.
-  Returns true if token expires within the specified minutes (default 5).
-  """
-  @spec needs_refresh?(map(), non_neg_integer()) :: boolean()
-  def needs_refresh?(integration, minutes \\ 5)
-  def needs_refresh?(%{token_expires_at: nil}, _threshold_minutes), do: false
-
-  def needs_refresh?(%{token_expires_at: expires_at}, minutes) do
-    threshold = DateTime.add(DateTime.utc_now(), minutes * 60, :second)
-    DateTime.compare(expires_at, threshold) == :lt
   end
 end

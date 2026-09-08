@@ -49,7 +49,7 @@ defmodule Tymeslot.Security.DnsResolution do
 
   @impl Tymeslot.Security.DnsResolutionBehaviour
   @spec check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
-  def check_private_ip(url, opts \\ []) do
+  def check_private_ip(url, opts) do
     case resolve_public(url, opts) do
       {:ok, _addresses} -> :ok
       {:error, message} -> {:error, message}
@@ -68,7 +68,7 @@ defmodule Tymeslot.Security.DnsResolution do
   @impl Tymeslot.Security.DnsResolutionBehaviour
   @spec resolve_public(String.t(), keyword()) ::
           {:ok, [:inet.ip_address()]} | {:error, String.t()}
-  def resolve_public(url, opts \\ []) do
+  def resolve_public(url, opts) do
     error_message = Keyword.get(opts, :error_message, @default_error)
 
     case URI.parse(url).host do

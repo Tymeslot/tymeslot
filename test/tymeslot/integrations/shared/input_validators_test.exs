@@ -5,34 +5,6 @@ defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
 
   alias Tymeslot.Integrations.Shared.InputValidators
 
-  describe "validate_integration_name/1" do
-    test "accepts valid name" do
-      assert {:ok, "My Calendar"} = InputValidators.validate_integration_name("My Calendar")
-    end
-
-    test "trims whitespace" do
-      assert {:ok, "My Calendar"} = InputValidators.validate_integration_name("  My Calendar  ")
-    end
-
-    test "rejects empty string" do
-      assert {:error, %{name: _error}} = InputValidators.validate_integration_name("")
-    end
-
-    test "rejects whitespace-only string" do
-      assert {:error, %{name: _error}} = InputValidators.validate_integration_name("   ")
-    end
-
-    test "rejects name exceeding 120 characters" do
-      long_name = String.duplicate("a", 121)
-      assert {:error, %{name: _error}} = InputValidators.validate_integration_name(long_name)
-    end
-
-    test "rejects non-string values" do
-      assert {:error, %{name: _error}} = InputValidators.validate_integration_name(123)
-      assert {:error, %{name: _error}} = InputValidators.validate_integration_name(nil)
-    end
-  end
-
   describe "validate_integration_name/2 (with metadata)" do
     test "accepts valid name with metadata" do
       assert {:ok, "My Calendar"} =

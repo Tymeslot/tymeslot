@@ -144,40 +144,6 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
     end
   end
 
-  describe "with_correlation_id/2" do
-    test "sets process dict and logger metadata, executes function" do
-      id = CorrelationId.generate()
-
-      result =
-        Task.await(
-          Task.async(fn ->
-            CorrelationId.with_correlation_id(id, fn ->
-              {CorrelationId.get_from_process(), Logger.metadata()[:correlation_id]}
-            end)
-          end)
-        )
-
-      assert result == {id, id}
-    end
-
-    test "auto-generates ID when nil" do
-      result =
-        Task.await(
-          Task.async(fn ->
-            CorrelationId.with_correlation_id(nil, fn ->
-              CorrelationId.get_from_process()
-            end)
-          end)
-        )
-
-      assert result =~ @uuid_v4
-    end
-
-    test "returns function result" do
-      assert :my_result = CorrelationId.with_correlation_id(fn -> :my_result end)
-    end
-  end
-
   describe "Plug behavior" do
     test "call/2 on a bare conn generates and sets correlation ID" do
       conn = CorrelationId.call(PlugTest.conn(:get, "/"), [])

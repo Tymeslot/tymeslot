@@ -100,7 +100,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
   given.
   """
   @spec with_breaker(atom(), keyword(), (-> any())) :: any()
-  def with_breaker(provider, opts \\ [], fun) do
+  def with_breaker(provider, opts, fun) do
     host = Keyword.get(opts, :host)
 
     if is_binary(host) and host != "" do

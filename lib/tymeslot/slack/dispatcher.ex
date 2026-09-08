@@ -40,5 +40,5 @@ defmodule Tymeslot.Slack.Dispatcher do
   end
 
   @spec atom_to_event_type(atom()) :: String.t()
-  defdelegate atom_to_event_type(event_atom), to: EventTypes, as: :to_event_type
+  defp atom_to_event_type(event_atom), do: EventTypes.to_event_type(event_atom)
 end

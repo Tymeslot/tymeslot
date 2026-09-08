@@ -9,7 +9,8 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
   alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Bookings.CreateAdHoc
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Endpoint
 
@@ -205,7 +206,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
 
       assert {:ok, meeting} = CreateAdHoc.execute(params)
 
-      emails = meeting.id |> Meetings.list_meeting_guests() |> Enum.map(& &1.email) |> Enum.sort()
+      emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email) |> Enum.sort()
       assert emails == ["g1@example.com", "g2@example.com"]
 
       assert_enqueued(worker: Tymeslot.Workers.EmailWorker)
@@ -215,12 +216,12 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       params = Map.put(params, :guest_emails, [])
 
       assert {:ok, meeting} = CreateAdHoc.execute(params)
-      assert Meetings.list_meeting_guests(meeting.id) == []
+      assert Guests.list_for_meeting(meeting.id) == []
     end
 
     test "creates zero guests when guest_emails key is absent", %{base_params: params} do
       assert {:ok, meeting} = CreateAdHoc.execute(params)
-      assert Meetings.list_meeting_guests(meeting.id) == []
+      assert Guests.list_for_meeting(meeting.id) == []
     end
 
     test "rolls the whole meeting back when a guest email is invalid", %{base_params: params} do
@@ -229,7 +230,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert {:error, _reason} = CreateAdHoc.execute(params)
 
       # No meeting persisted (transaction rolled back), so no guests either
-      assert Meetings.list_upcoming_meetings() == []
+      assert MeetingListQueries.list_upcoming_meetings() == []
     end
 
     test "returns error when attendee_email is missing", %{base_params: params} do

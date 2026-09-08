@@ -52,7 +52,7 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
     end
   end
 
-  describe "get_break/1 and get_break_t/1" do
+  describe "get_break/1" do
     test "retrieves an existing break" do
       break = insert(:availability_break)
 
@@ -63,17 +63,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
     test "returns nil when break does not exist" do
       result = AvailabilityBreakQueries.get_break(999_999)
       assert result == nil
-    end
-
-    test "get_break_t returns tagged tuple for existing break" do
-      break = insert(:availability_break)
-
-      assert {:ok, result} = AvailabilityBreakQueries.get_break_t(break.id)
-      assert result.id == break.id
-    end
-
-    test "get_break_t returns error tuple when break does not exist" do
-      assert {:error, :not_found} = AvailabilityBreakQueries.get_break_t(999_999)
     end
   end
 
@@ -122,37 +111,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
     end
   end
 
-  describe "update_break/2" do
-    test "updates break attributes" do
-      break = insert(:availability_break, label: "Old Label")
-
-      attrs = %{label: "New Label"}
-
-      assert {:ok, updated} = AvailabilityBreakQueries.update_break(break, attrs)
-      assert updated.label == "New Label"
-      assert updated.id == break.id
-    end
-
-    test "updates break times" do
-      break = insert(:availability_break, start_time: ~T[10:00:00], end_time: ~T[11:00:00])
-
-      attrs = %{start_time: ~T[14:00:00], end_time: ~T[15:00:00]}
-
-      assert {:ok, updated} = AvailabilityBreakQueries.update_break(break, attrs)
-      assert updated.start_time == ~T[14:00:00]
-      assert updated.end_time == ~T[15:00:00]
-    end
-
-    test "fails with invalid time ordering" do
-      break = insert(:availability_break)
-
-      attrs = %{start_time: ~T[15:00:00], end_time: ~T[14:00:00]}
-
-      assert {:error, changeset} = AvailabilityBreakQueries.update_break(break, attrs)
-      assert "must be after start time" in errors_on(changeset).end_time
-    end
-  end
-
   describe "delete_break/1" do
     test "deletes an existing break" do
       break = insert(:availability_break)
@@ -160,164 +118,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
       assert {:ok, deleted} = AvailabilityBreakQueries.delete_break(break)
       assert deleted.id == break.id
       assert AvailabilityBreakQueries.get_break(break.id) == nil
-    end
-  end
-
-  describe "delete_breaks_by_weekly_availability/1" do
-    test "deletes all breaks for a weekly availability" do
-      weekly_availability = insert(:weekly_availability)
-      break1 = insert(:availability_break, weekly_availability: weekly_availability)
-      break2 = insert(:availability_break, weekly_availability: weekly_availability)
-      other_break = insert(:availability_break)
-
-      {count, _deleted_ids} =
-        AvailabilityBreakQueries.delete_breaks_by_weekly_availability(weekly_availability.id)
-
-      assert count == 2
-      assert AvailabilityBreakQueries.get_break(break1.id) == nil
-      assert AvailabilityBreakQueries.get_break(break2.id) == nil
-
-      assert %AvailabilityBreakSchema{id: other_id} =
-               AvailabilityBreakQueries.get_break(other_break.id)
-
-      assert other_id == other_break.id
-    end
-
-    test "returns zero count when no breaks exist" do
-      weekly_availability = insert(:weekly_availability)
-
-      {count, _deleted_ids} =
-        AvailabilityBreakQueries.delete_breaks_by_weekly_availability(weekly_availability.id)
-
-      assert count == 0
-    end
-  end
-
-  describe "get_breaks_in_time_range/3" do
-    test "finds breaks that overlap with the given time range" do
-      weekly_availability = insert(:weekly_availability)
-
-      # Overlapping breaks
-      break1 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[09:00:00],
-          end_time: ~T[10:00:00]
-        )
-
-      break2 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[12:00:00],
-          end_time: ~T[13:00:00]
-        )
-
-      # Non-overlapping break
-      _break3 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[15:00:00],
-          end_time: ~T[16:00:00]
-        )
-
-      # Query for range 08:00 - 14:00
-      result =
-        AvailabilityBreakQueries.get_breaks_in_time_range(
-          weekly_availability.id,
-          ~T[08:00:00],
-          ~T[14:00:00]
-        )
-
-      assert length(result) == 2
-      assert Enum.map(result, & &1.id) == [break1.id, break2.id]
-    end
-
-    test "finds breaks that partially overlap" do
-      weekly_availability = insert(:weekly_availability)
-
-      # Break that starts before range but ends during range
-      break1 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[08:00:00],
-          end_time: ~T[10:00:00]
-        )
-
-      # Break that starts during range but ends after range
-      break2 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[11:00:00],
-          end_time: ~T[14:00:00]
-        )
-
-      # Query for range 09:00 - 12:00
-      result =
-        AvailabilityBreakQueries.get_breaks_in_time_range(
-          weekly_availability.id,
-          ~T[09:00:00],
-          ~T[12:00:00]
-        )
-
-      assert length(result) == 2
-      assert Enum.sort(Enum.map(result, & &1.id)) == Enum.sort([break1.id, break2.id])
-    end
-
-    test "excludes breaks outside the time range" do
-      weekly_availability = insert(:weekly_availability)
-
-      # Break completely before range
-      _break1 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[08:00:00],
-          end_time: ~T[09:00:00]
-        )
-
-      # Break completely after range
-      _break2 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[15:00:00],
-          end_time: ~T[16:00:00]
-        )
-
-      # Query for range 10:00 - 14:00
-      result =
-        AvailabilityBreakQueries.get_breaks_in_time_range(
-          weekly_availability.id,
-          ~T[10:00:00],
-          ~T[14:00:00]
-        )
-
-      assert result == []
-    end
-
-    test "returns breaks in chronological order by start_time" do
-      weekly_availability = insert(:weekly_availability)
-
-      break1 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[12:00:00],
-          end_time: ~T[13:00:00]
-        )
-
-      break2 =
-        insert(:availability_break,
-          weekly_availability: weekly_availability,
-          start_time: ~T[09:00:00],
-          end_time: ~T[10:00:00]
-        )
-
-      result =
-        AvailabilityBreakQueries.get_breaks_in_time_range(
-          weekly_availability.id,
-          ~T[08:00:00],
-          ~T[14:00:00]
-        )
-
-      assert Enum.map(result, & &1.id) == [break2.id, break1.id]
     end
   end
 

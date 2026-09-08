@@ -372,37 +372,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     end
   end
 
-  @spec create_join_url(String.t(), term(), term()) ::
-          {:error, :missing_room_id | :missing_participant_name}
-  def create_join_url("", _participant_name, _participant_email), do: {:error, :missing_room_id}
-
-  @spec create_join_url(term(), String.t(), term()) ::
-          {:error, :missing_room_id | :missing_participant_name}
-  def create_join_url(_room_id, "", _participant_email), do: {:error, :missing_participant_name}
-
-  defdelegate create_join_url_via_api(config, room_id, participant_name, participant_email, role),
-    to: JoinUrlBuilder
-
-  defdelegate create_join_url_legacy(config, room_id, participant_name, participant_email),
-    to: JoinUrlBuilder
-
-  defdelegate create_direct_join_url(config, room_id, participant_name),
-    to: JoinUrlBuilder
-
-  defdelegate create_secure_direct_join_url(
-                config,
-                room_id,
-                participant_name,
-                role,
-                meeting_time
-              ),
-              to: JoinUrlBuilder
-
-  defdelegate generate_secure_token(config, room_id, user_name, role, meeting_time),
-    to: JoinUrlBuilder
-
-  defdelegate sanitize_input(text), to: JoinUrlBuilder
-
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) and meeting_url != "" do
     # MiroTalk API returns the full meeting URL, but the 'room' parameter

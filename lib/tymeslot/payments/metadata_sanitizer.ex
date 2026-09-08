@@ -14,16 +14,6 @@ defmodule Tymeslot.Payments.MetadataSanitizer do
   # Maximum length for any metadata value
   @max_value_length 500
 
-  # System-reserved keys that cannot be overwritten by user input
-  @system_reserved_keys ~w(
-    user_id
-    product_identifier
-    payment_type
-    transaction_id
-    subscription_id
-    checkout_request_id
-  )
-
   # Whitelisted keys that users can provide
   @allowed_user_keys ~w(
     billing_interval
@@ -71,17 +61,6 @@ defmodule Tymeslot.Payments.MetadataSanitizer do
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  @doc """
-  Sanitizes metadata, raising on error.
-  """
-  @spec sanitize!(map(), map()) :: map()
-  def sanitize!(metadata, system_metadata \\ %{}) do
-    case sanitize(metadata, system_metadata) do
-      {:ok, sanitized} -> sanitized
-      {:error, reason} -> raise ArgumentError, "Metadata sanitization failed: #{reason}"
     end
   end
 
@@ -163,17 +142,4 @@ defmodule Tymeslot.Payments.MetadataSanitizer do
     # Then remove all other HTML tags
     |> String.replace(~r/<[^>]*>/, "")
   end
-
-  @doc """
-  Checks if a key is system-reserved and should not be overwritten by user input.
-  """
-  @spec system_reserved?(String.t() | atom()) :: boolean()
-  def system_reserved?(key) when is_atom(key), do: system_reserved?(Atom.to_string(key))
-  def system_reserved?(key) when is_binary(key), do: key in @system_reserved_keys
-
-  @doc """
-  Returns the list of allowed user metadata keys.
-  """
-  @spec allowed_keys() :: [String.t()]
-  def allowed_keys, do: @allowed_user_keys
 end

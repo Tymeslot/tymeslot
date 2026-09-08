@@ -62,7 +62,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
-  def delete_event(_client, uid, _opts \\ []) do
+  def delete_event(_client, uid, _opts) do
     DebugStore.delete_event(uid)
     :ok
   end

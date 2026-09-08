@@ -11,7 +11,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
   import Mox
 
   alias Tymeslot.Bookings.Create
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Guests
 
   import Tymeslot.AvailabilityTestHelpers
 
@@ -58,7 +58,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
 
     assert {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
 
-    emails = meeting.id |> Meetings.list_meeting_guests() |> Enum.map(& &1.email) |> Enum.sort()
+    emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email) |> Enum.sort()
 
     # de-duplicated + downcased, primary attendee excluded, invalid dropped
     assert emails == ["guest.one@example.com", "guest2@example.com"]
@@ -69,7 +69,7 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
       booking_setup(allow_guests: true)
 
     {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
-    [guest | _rest] = Meetings.list_meeting_guests(meeting.id)
+    [guest | _rest] = Guests.list_for_meeting(meeting.id)
 
     assert guest.status == "pending"
     assert byte_size(guest.rsvp_token) >= 20
@@ -80,6 +80,6 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
       booking_setup(allow_guests: false)
 
     assert {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
-    assert Meetings.list_meeting_guests(meeting.id) == []
+    assert Guests.list_for_meeting(meeting.id) == []
   end
 end

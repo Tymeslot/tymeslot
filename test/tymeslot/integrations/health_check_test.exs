@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
@@ -287,7 +288,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       run_health_checks()
       sync_with_server()
 
-      report = HealthCheck.get_user_health_report(user.id)
+      report = Monitor.build_user_report(user.id)
 
       assert [%{id: calendar_id, provider: "google", health: %{status: :healthy, successes: 2}}] =
                report.calendar_integrations

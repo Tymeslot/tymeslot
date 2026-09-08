@@ -24,7 +24,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   alias Ecto.Changeset
   alias Phoenix.ConnTest
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.PollParticipantSchema
@@ -167,7 +167,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       assert meeting.organizer_user_id == user.id
       assert meeting.attendee_email == "ada@example.com"
 
-      assert [guest] = Meetings.list_meeting_guests(meeting.id)
+      assert [guest] = Guests.list_for_meeting(meeting.id)
       assert guest.email == "bob@example.com"
 
       # The calendar-event job is enqueued for the newly minted meeting.

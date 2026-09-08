@@ -7,22 +7,6 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
   alias Tymeslot.Availability.AvailabilityOverrideQueries
 
   describe "availability override queries" do
-    test "get_override/1 returns the override by id" do
-      override = insert(:availability_override)
-      found = AvailabilityOverrideQueries.get_override(override.id)
-      assert found.id == override.id
-    end
-
-    test "get_override_t/1 returns {:ok, override} when found" do
-      override = insert(:availability_override)
-      assert {:ok, found} = AvailabilityOverrideQueries.get_override_t(override.id)
-      assert found.id == override.id
-    end
-
-    test "get_override_t/1 returns {:error, :not_found} when not found" do
-      assert AvailabilityOverrideQueries.get_override_t(-1) == {:error, :not_found}
-    end
-
     test "get_override_by_schedule_and_date/2 returns the override" do
       schedule = insert(:availability_schedule)
       date = Date.add(Date.utc_today(), 5)
@@ -75,21 +59,6 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
         )
 
       assert length(overrides) == 1
-    end
-
-    test "update_override/2 updates the override" do
-      override = insert(:availability_override, reason: "Old Reason")
-
-      {:ok, updated} =
-        AvailabilityOverrideQueries.update_override(override, %{reason: "New Reason"})
-
-      assert updated.reason == "New Reason"
-    end
-
-    test "delete_override/1 deletes the override" do
-      override = insert(:availability_override)
-      {:ok, _result} = AvailabilityOverrideQueries.delete_override(override)
-      assert Repo.get(Tymeslot.Availability.AvailabilityOverrideSchema, override.id) == nil
     end
   end
 

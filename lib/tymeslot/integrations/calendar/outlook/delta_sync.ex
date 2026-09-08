@@ -22,8 +22,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
@@ -133,12 +131,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
 
   defp apply_delta(integration, events, new_delta_link) do
     {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
-    cache_attrs = build_cache_attrs_batch(changed, integration.id)
+    calendar_events = build_calendar_events(changed, integration.id)
     removed_uids = process_removed(removed, integration)
 
-    with {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs),
+    # Writes through `Sync.upsert_cache/2` rather than straight to the queries
+    # module so this path gets ownership flagging like every other. A booking
+    # Tymeslot wrote to an Outlook calendar carries a bare UUID uid, which the
+    # payload-level `tymeslot_origin?/1` check cannot recognise, so without
+    # this the delta sweep cached every one of them as server-owned.
+    with {:ok, _count} <- Sync.upsert_cache(integration, calendar_events),
          :ok <- persist_delta_link(integration, new_delta_link) do
-      uids = Enum.map(cache_attrs, & &1.uid) ++ removed_uids
+      uids = Enum.map(calendar_events, & &1.uid) ++ removed_uids
       SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
       :ok
     else
@@ -204,7 +207,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     end
   end
 
-  defp build_cache_attrs_batch(events, calendar_integration_id) do
+  defp build_calendar_events(events, calendar_integration_id) do
     context = %{
       calendar_integration_id: calendar_integration_id,
       # Microsoft Graph /me/events/delta returns events from the user's primary
@@ -216,7 +219,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     }
 
     {:ok, calendar_events} = OutlookProvider.normalise_events(events, context)
-    Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
+    calendar_events
   end
 
   defp persist_delta_link(_integration, nil), do: :ok

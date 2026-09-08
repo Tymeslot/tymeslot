@@ -47,7 +47,7 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.DashboardCache
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.CalendarManagement
 
   setup_all do
     case Process.whereis(DashboardCache) do
@@ -142,7 +142,8 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
       # remains in the rendered HTML. When the click fires the async
       # task, `CalendarManagement.get_calendar_integration/2` will
       # return `{:error, :not_found}`.
-      {:ok, _deleted} = Calendar.delete_integration(integration.id, user.id)
+      {:ok, to_delete} = CalendarManagement.get_calendar_integration(integration.id, user.id)
+      {:ok, _deleted} = CalendarManagement.delete_calendar_integration(to_delete)
 
       # Click the calendar integration button — the real UI path for
       # `select_calendar_integration`. This sets

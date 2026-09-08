@@ -181,7 +181,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   #       that requires threading a locale through all call sites and is a larger refactor.
   """
   @spec format_currency(integer(), String.t() | nil) :: String.t()
-  def format_currency(cents, currency \\ "eur") do
+  def format_currency(cents, currency) do
     normalised = String.downcase(currency || "eur")
 
     symbol =

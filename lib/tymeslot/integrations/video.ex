@@ -291,9 +291,6 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # Provider discovery helpers
   # ---------------
-  @spec list_available_providers() :: list()
-  def list_available_providers, do: Discovery.list_available_providers()
-
   @spec default_provider() :: atom()
   def default_provider, do: Discovery.default_provider()
 
@@ -325,7 +322,7 @@ defmodule Tymeslot.Integrations.Video do
   # Meeting room operations
   # ---------------
   @spec create_meeting_room(pos_integer() | nil, keyword()) :: {:ok, map()} | {:error, any()}
-  defdelegate create_meeting_room(user_id \\ nil, opts \\ []), to: Rooms
+  defdelegate create_meeting_room(user_id, opts), to: Rooms
 
   @spec create_join_url(map(), String.t(), String.t(), String.t(), DateTime.t()) ::
           {:ok, String.t()} | {:error, any()}
@@ -338,26 +335,17 @@ defmodule Tymeslot.Integrations.Video do
               ),
               to: Rooms
 
-  @spec handle_meeting_event(map(), atom(), map()) :: :ok | {:error, any()}
-  defdelegate handle_meeting_event(meeting_context, event, additional_data \\ %{}), to: Rooms
-
   @spec update_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
   defdelegate update_meeting_room(user_id, opts), to: Rooms
 
   @spec delete_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
   defdelegate delete_meeting_room(user_id, opts), to: Rooms
 
-  @spec generate_meeting_metadata(map()) :: map()
-  defdelegate generate_meeting_metadata(meeting_context), to: Rooms
-
   # ---------------
   # URL helpers
   # ---------------
   @spec extract_room_id(String.t() | map()) :: String.t() | nil
   defdelegate extract_room_id(input), to: Urls
-
-  @spec valid_meeting_url?(String.t()) :: boolean()
-  defdelegate valid_meeting_url?(url), to: Urls
 
   # ---------------
   # OAuth create-or-update

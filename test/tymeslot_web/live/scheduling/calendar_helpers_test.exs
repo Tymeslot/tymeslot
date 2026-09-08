@@ -143,18 +143,18 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
 
   describe "display_range/2" do
     test "returns range covering 42-day calendar grid" do
-      {start_date, end_date} = CalendarHelpers.display_range(2027, 6)
+      {start_date, end_date} = Calculate.display_range(2027, 6)
       assert Date.diff(end_date, start_date) + 1 == 42
     end
 
     test "start date is a Sunday" do
-      {start_date, _end_date} = CalendarHelpers.display_range(2027, 6)
+      {start_date, _end_date} = Calculate.display_range(2027, 6)
       # Date.day_of_week returns 7 for Sunday
       assert Date.day_of_week(start_date) == 7
     end
 
     test "matches Calculate.get_calendar_days range exactly" do
-      {start_date, end_date} = CalendarHelpers.display_range(2027, 3)
+      {start_date, end_date} = Calculate.display_range(2027, 3)
       calendar_days = Calculate.get_calendar_days("Etc/UTC", 2027, 3, %{})
       assert Date.to_string(start_date) == List.first(calendar_days).date
       assert Date.to_string(end_date) == List.last(calendar_days).date
@@ -220,7 +220,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
       # August 2026 is the shape: a 31-day month whose 1st is a Saturday. The
       # fetch is Sunday-anchored and the strip is Monday-anchored, so the week
       # of the 31st runs one day past the block. Next occurrence 2027-05.
-      {_start_date, end_date} = CalendarHelpers.display_range(2026, 8)
+      {_start_date, end_date} = Calculate.display_range(2026, 8)
       week_start = Date.beginning_of_week(~D[2026-08-31], :monday)
 
       assert end_date == ~D[2026-09-05]

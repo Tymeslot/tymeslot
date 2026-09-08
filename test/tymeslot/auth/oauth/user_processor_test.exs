@@ -179,24 +179,6 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
     end
   end
 
-  describe "UserRegistration.registration_complete? edge cases" do
-    alias Tymeslot.Auth.OAuth.UserRegistration
-
-    test ":oauth rejects nil email" do
-      refute UserRegistration.registration_complete?(:oauth, %{
-               email: nil,
-               provider_uid: "sub-123"
-             })
-    end
-
-    test ":oauth rejects nil provider_uid" do
-      refute UserRegistration.registration_complete?(:oauth, %{
-               email: "test@example.com",
-               provider_uid: nil
-             })
-    end
-  end
-
   describe "extract_email edge cases" do
     test "nil email in user_info" do
       assert {:ok, user} =

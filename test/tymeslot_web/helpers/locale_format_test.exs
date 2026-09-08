@@ -276,11 +276,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_weekday_name(nil, "en", :full) == ""
       assert LocaleFormat.format_weekday_name("invalid", "en", :full) == ""
     end
-
-    test "defaults to short format when not specified" do
-      result = LocaleFormat.format_weekday_name(1, "en")
-      assert result == "Mon"
-    end
   end
 
   describe "DST transition handling" do
@@ -315,7 +310,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "formats numbers with space thousand separator and comma decimal" do
-      assert LocaleFormat.format_number(1234.56, "fr") == "1#{@nbsp}234,56"
+      assert LocaleFormat.format_number(1234.56, "fr", 2) == "1#{@nbsp}234,56"
     end
 
     test "formats month name in French" do
@@ -350,7 +345,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
 
     test "formats numbers with period thousand separator and comma decimal" do
-      assert LocaleFormat.format_number(1234.56, "it") == "1.234,56"
+      assert LocaleFormat.format_number(1234.56, "it", 2) == "1.234,56"
     end
 
     test "formats month name in Italian" do
@@ -404,8 +399,8 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
   end
 
   describe "format_number/3 decimal places" do
-    test "defaults to two decimals" do
-      assert LocaleFormat.format_number(1234.5, "en") == "1,234.50"
+    test "formats to two decimal places" do
+      assert LocaleFormat.format_number(1234.5, "en", 2) == "1,234.50"
     end
 
     test "honours an explicit decimal count" do

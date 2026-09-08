@@ -15,23 +15,44 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
 
   alias Tymeslot.Mailer.SMTPConfig
 
+  # Generous on purpose. A tight budget here does not test anything: the
+  # relay is an ordinary Erlang process, and if the suite is busy enough that
+  # it is not scheduled into `:ssl.transport_accept/2` before the client gives
+  # up, the client fails with `{:network_failure, _host, {:error, :timeout}}` —
+  # indistinguishable from the relay refusing the certificate, and green or red
+  # depending on machine load. Every outcome under test (a completed handshake,
+  # a TLS alert) is reached in milliseconds once both sides are running, so
+  # nothing waits for this bound except a genuine stall.
+  @timeout 30_000
+
+  # Certificate generation is the expensive part of this module — four RSA-2048
+  # keypairs per chain — so both chains are built once for the module rather
+  # than per test. Beyond the runtime saved, it keeps that work out of the
+  # window in which the relay has to be scheduled.
+  setup_all do
+    %{
+      trusted: relay_certificates(~c"localhost"),
+      mismatched: relay_certificates(~c"elsewhere.example.com")
+    }
+  end
+
   describe "implicit TLS (port 465)" do
-    test "connects when the relay's certificate chains to a trusted CA" do
-      relay = start_tls_relay()
+    test "connects when the relay's certificate chains to a trusted CA", %{trusted: certs} do
+      relay = start_tls_relay(certs)
 
       assert {:ok, socket} = open(relay, cacertfile: relay.cacertfile)
       :gen_smtp_client.close(socket)
     end
 
-    test "connects to an untrusted relay when verification is disabled" do
-      relay = start_tls_relay()
+    test "connects to an untrusted relay when verification is disabled", %{trusted: certs} do
+      relay = start_tls_relay(certs)
 
       assert {:ok, socket} = open(relay, tls_verify: :none)
       :gen_smtp_client.close(socket)
     end
 
-    test "rejects a relay no trust store validates" do
-      relay = start_tls_relay()
+    test "rejects a relay no trust store validates", %{trusted: certs} do
+      relay = start_tls_relay(certs)
 
       # A TLS alert, specifically: before the `:sockopts` fix this failed with
       # `{:options, :incompatible, [verify: :verify_peer, cacerts: :undefined]}`,
@@ -40,8 +61,10 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
               {:network_failure, _host, {:error, {:tls_alert, _alert}}}} = open(relay, [])
     end
 
-    test "rejects a trusted CA's certificate issued for a different hostname" do
-      relay = start_tls_relay(dns_name: ~c"elsewhere.example.com")
+    test "rejects a trusted CA's certificate issued for a different hostname", %{
+      mismatched: certs
+    } do
+      relay = start_tls_relay(certs)
 
       assert {:error, :retries_exceeded,
               {:network_failure, _host, {:error, {:tls_alert, _alert}}}} =
@@ -58,14 +81,17 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
     |> Keyword.merge(extra)
     |> SMTPConfig.build()
     |> Keyword.drop([:adapter])
-    |> Keyword.merge(port: relay.port, auth: :never, retries: 0, timeout: 5_000)
+    |> Keyword.merge(port: relay.port, auth: :never, retries: 0, timeout: @timeout)
     |> :gen_smtp_client.open()
   end
 
-  defp start_tls_relay(opts \\ []) do
-    dns_name = Keyword.get(opts, :dns_name, ~c"localhost")
+  defp relay_certificates(dns_name) do
     %{cert: cert, key: key, cacerts: cacerts} = certificates(dns_name)
 
+    %{cert: cert, key: key, cacertfile: write_cacertfile(cacerts)}
+  end
+
+  defp start_tls_relay(%{cert: cert, key: key, cacertfile: cacertfile}) do
     {:ok, listen} =
       :ssl.listen(0, [
         :binary,
@@ -82,19 +108,19 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
     spawn(fn -> serve(listen) end)
     on_exit(fn -> :ssl.close(listen) end)
 
-    %{port: port, cacertfile: write_cacertfile(cacerts)}
+    %{port: port, cacertfile: cacertfile}
   end
 
   defp serve(listen) do
-    with {:ok, socket} <- :ssl.transport_accept(listen, 5_000),
-         {:ok, connection} <- :ssl.handshake(socket, 5_000) do
+    with {:ok, socket} <- :ssl.transport_accept(listen, @timeout),
+         {:ok, connection} <- :ssl.handshake(socket, @timeout) do
       :ssl.send(connection, "220 localhost ESMTP test\r\n")
       dialogue(connection)
     end
   end
 
   defp dialogue(connection) do
-    case :ssl.recv(connection, 0, 5_000) do
+    case :ssl.recv(connection, 0, @timeout) do
       {:ok, "EHLO" <> _rest} ->
         :ssl.send(connection, "250-localhost\r\n250 SIZE 10240000\r\n")
         dialogue(connection)

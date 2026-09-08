@@ -22,7 +22,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
   Times and tracks a calendar operation.
   """
   @spec time_operation(atom(), map(), (-> term())) :: term()
-  def time_operation(operation, metadata \\ %{}, fun) when is_function(fun, 0) do
+  def time_operation(operation, metadata, fun) when is_function(fun, 0) do
     start_time = System.monotonic_time()
 
     try do
@@ -89,22 +89,6 @@ defmodule Tymeslot.Infrastructure.Metrics do
         old_state: old_state,
         new_state: new_state
       }
-    )
-  end
-
-  @doc """
-  Tracks connection pool usage.
-  """
-  @spec track_pool_usage(atom(), keyword()) :: :ok
-  def track_pool_usage(pool_name, stats) do
-    :telemetry.execute(
-      [:tymeslot, :connection_pool, :usage],
-      %{
-        in_use: stats[:in_use_count] || 0,
-        free: stats[:free_count] || 0,
-        queue: stats[:queue_count] || 0
-      },
-      %{pool: pool_name}
     )
   end
 

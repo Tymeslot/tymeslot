@@ -214,7 +214,7 @@ defmodule Tymeslot.LocalesTest do
 
     test "the pseudo locale is never a supported locale" do
       Application.put_env(:tymeslot, :pseudo_locale_enabled, true)
-      refute Locales.pseudo_locale() in Locales.supported_codes()
+      refute "pseudo" in Locales.supported_codes()
     end
   end
 

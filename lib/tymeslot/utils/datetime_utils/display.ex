@@ -18,19 +18,6 @@ defmodule Tymeslot.Utils.DateTimeUtils.Display do
   end
 
   @doc """
-  Formats date string for display.
-  """
-  @spec format_date_string(term()) :: String.t()
-  def format_date_string(date_string) when is_binary(date_string) do
-    case Date.from_iso8601(date_string) do
-      {:ok, date} -> Calendar.strftime(date, "%B %d, %Y")
-      _result -> date_string
-    end
-  end
-
-  def format_date_string(_value), do: "Invalid date"
-
-  @doc """
   Groups time slots by time period (Early Morning, Morning, Afternoon, Evening, Late Night).
 
   Slots within each period are sorted chronologically by their parsed time value,

@@ -57,9 +57,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugStore do
     Agent.start_link(fn -> %{@empty_state | pattern: pattern} end, name: __MODULE__)
   end
 
-  @doc "Returns `true` when the store process is alive."
+  # Returns `true` when the store process is alive.
   @spec running?() :: boolean()
-  def running?, do: Process.whereis(__MODULE__) != nil
+  defp running?, do: Process.whereis(__MODULE__) != nil
 
   @doc """
   Returns the current pattern, rules and stored events. Returns an empty default

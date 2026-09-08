@@ -45,9 +45,7 @@ defmodule Tymeslot.Webhooks.Dispatcher do
     end
   end
 
-  @doc """
-  Converts internal event atoms to webhook event type strings.
-  """
+  # Converts internal event atoms to webhook event type strings.
   @spec atom_to_event_type(atom()) :: String.t()
-  defdelegate atom_to_event_type(event_atom), to: EventTypes, as: :to_event_type
+  defp atom_to_event_type(event_atom), do: EventTypes.to_event_type(event_atom)
 end

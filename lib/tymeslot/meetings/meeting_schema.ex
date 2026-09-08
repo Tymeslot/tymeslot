@@ -472,12 +472,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   end
 
   @doc """
-  Returns all valid status values
-  """
-  @spec valid_statuses() :: [String.t()]
-  def valid_statuses, do: @valid_statuses
-
-  @doc """
   Whether the meeting was booked with room for more than one seat.
 
   The single owner of this predicate: `capacity` is snapshotted onto the

@@ -18,19 +18,6 @@ defmodule Tymeslot.Meetings.BookingLimitsTest do
       assert BookingLimits.day_key(~U[2026-07-18 12:30:00Z], @host_plus12) == ~D[2026-07-19]
       assert BookingLimits.day_key(~U[2026-07-18 11:30:00Z], @host_plus12) == ~D[2026-07-18]
     end
-
-    test "weeks start on Monday" do
-      # 2026-07-19 is a Sunday; its week began Monday 2026-07-13
-      assert BookingLimits.week_key(~U[2026-07-19 10:00:00Z], "Etc/UTC") == ~D[2026-07-13]
-      # A Monday is its own week key
-      assert BookingLimits.week_key(~U[2026-07-13 10:00:00Z], "Etc/UTC") == ~D[2026-07-13]
-    end
-
-    test "month key is the first of the host-timezone month" do
-      # 23:30 UTC on 31 July is already 1 August in Berlin (UTC+2 in summer)
-      assert BookingLimits.month_key(~U[2026-07-31 23:30:00Z], "Europe/Berlin") == ~D[2026-08-01]
-      assert BookingLimits.month_key(~U[2026-07-31 23:30:00Z], "Etc/UTC") == ~D[2026-07-01]
-    end
   end
 
   describe "expanded_query_window/3" do

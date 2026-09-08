@@ -124,11 +124,9 @@ defmodule Tymeslot.Security.ConnectionPinning do
     end)
   end
 
-  @doc """
-  Whether `host` is already an IP address rather than a name.
-  """
+  # Whether `host` is already an IP address rather than a name.
   @spec ip_literal?(String.t()) :: boolean()
-  def ip_literal?(host) do
+  defp ip_literal?(host) do
     unbracketed = host |> String.trim_leading("[") |> String.trim_trailing("]")
 
     case :inet.parse_address(to_charlist(unbracketed)) do

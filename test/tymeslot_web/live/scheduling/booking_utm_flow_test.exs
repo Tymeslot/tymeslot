@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingListQueries
-  alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
   # arrives on.
   defp navigate_to_booking_form_with_tracking(conn, profile, meeting_type) do
     timezone = profile.timezone
-    slug = MeetingTypes.to_slug(meeting_type)
+    slug = Slugs.to_slug(meeting_type)
 
     # Drive the landing URL the way a campaign would: only UTM and a
     # custom tracking param, no scheduling-internal query string. The

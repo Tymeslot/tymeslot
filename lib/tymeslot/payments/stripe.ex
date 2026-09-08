@@ -169,7 +169,7 @@ defmodule Tymeslot.Payments.Stripe do
   """
   @impl StripeProvider
   @spec cancel_subscription(String.t(), keyword()) :: stripe_result()
-  def cancel_subscription(subscription_id, opts \\ []) when is_binary(subscription_id) do
+  def cancel_subscription(subscription_id, opts) when is_binary(subscription_id) do
     Logger.info("Canceling Stripe subscription", subscription_id: subscription_id)
 
     at_period_end = Keyword.get(opts, :at_period_end, true)
@@ -264,7 +264,7 @@ defmodule Tymeslot.Payments.Stripe do
   """
   @impl StripeProvider
   @spec list_subscriptions(map()) :: stripe_result()
-  def list_subscriptions(params \\ %{}) when is_map(params) do
+  def list_subscriptions(params) when is_map(params) do
     Logger.info("Listing Stripe subscriptions", params: inspect(params))
 
     RetryHelper.execute_with_retry(fn ->

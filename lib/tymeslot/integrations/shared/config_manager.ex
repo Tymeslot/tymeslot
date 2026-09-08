@@ -109,84 +109,7 @@ defmodule Tymeslot.Integrations.Common.ConfigManager do
     }
   end
 
-  @doc """
-  Returns the common provider metadata schema.
-  """
-  @spec provider_metadata_schema() :: schema()
-  def provider_metadata_schema do
-    %{
-      name: %{type: :string, required: true},
-      display_name: %{type: :string, required: true},
-      provider: %{type: :string, required: true},
-      is_active: %{type: :boolean, default: true}
-    }
-  end
-
-  @doc """
-  Merges multiple schemas into a single schema.
-
-  Later schemas override fields from earlier schemas.
-
-  ## Examples
-
-      merge_schemas([oauth_schema(), http_client_schema()])
-  """
-  @spec merge_schemas(list(schema())) :: schema()
-  def merge_schemas(schemas) when is_list(schemas) do
-    Enum.reduce(schemas, %{}, &Map.merge(&2, &1))
-  end
-
-  @doc """
-  Extracts configuration for a specific provider from user settings.
-
-  Handles the common pattern of retrieving provider-specific configuration
-  from larger configuration maps.
-  """
-  @spec extract_provider_config(config(), String.t(), schema()) ::
-          {:ok, config()} | {:error, String.t()}
-  def extract_provider_config(user_config, provider_name, schema) do
-    provider_config =
-      user_config
-      |> Map.get(:integrations, %{})
-      |> Map.get(provider_name, %{})
-
-    process_config(provider_config, schema)
-  end
-
-  @doc """
-  Validates that sensitive configuration fields are properly encrypted.
-
-  Checks that fields marked as `:encrypted` in the schema contain encrypted values.
-  An optional `:encryption_validator` can be provided in the field schema to
-  override the default encryption heuristic.
-  """
-  @spec validate_encryption(config(), schema()) :: validation_result()
-  def validate_encryption(config, schema) do
-    unencrypted_fields =
-      for {field, field_schema} <- schema,
-          Map.get(field_schema, :encrypted, false),
-          value = Map.get(config, field),
-          value && is_binary(value) && not value_encrypted?(value, field_schema) do
-        field
-      end
-
-    case unencrypted_fields do
-      [] -> :ok
-      fields -> {:error, "Unencrypted sensitive fields: #{Enum.join(fields, ", ")}"}
-    end
-  end
-
   # Private functions
-
-  defp value_encrypted?(value, field_schema) do
-    case Map.get(field_schema, :encryption_validator) do
-      validator_fn when is_function(validator_fn, 1) ->
-        validator_fn.(value)
-
-      _other ->
-        encrypted?(value)
-    end
-  end
 
   defp validate_required_fields(config, schema) do
     required_fields =
@@ -311,15 +234,4 @@ defmodule Tymeslot.Integrations.Common.ConfigManager do
   defp coerce_type("true", :boolean), do: true
   defp coerce_type("false", :boolean), do: false
   defp coerce_type(value, _type), do: value
-
-  defp encrypted?(value) when is_binary(value) do
-    # Stricter heuristic:
-    # 1. Check for explicit encryption prefix (optional but recommended)
-    # 2. Otherwise require a longer string that matches base64 pattern
-    #    AES-256-GCM (28 bytes min) base64 encoded is at least 40 chars
-    String.starts_with?(value, "TYS.ENC:") or
-      (String.length(value) >= 40 and String.match?(value, ~r/^[A-Za-z0-9+\/=]+$/))
-  end
-
-  defp encrypted?(_value), do: false
 end

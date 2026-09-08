@@ -142,7 +142,6 @@ msgstr ""
 msgid "Failed to create session. Please try again."
 msgstr ""
 
-#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/live/auth_live/verification_events.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to send verification email. Please try again later."
@@ -399,7 +398,6 @@ msgstr ""
 msgid "Too many registration attempts. Please try again later."
 msgstr ""
 
-#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Too many verification attempts. Please try again later."
@@ -583,7 +581,6 @@ msgstr ""
 
 #: lib/tymeslot/auth/auth_actions.ex
 #: lib/tymeslot/auth/error_formatter.ex
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
 msgstr ""
@@ -647,11 +644,6 @@ msgstr ""
 #: lib/tymeslot/auth/registration.ex
 #, elixir-autogen, elixir-format
 msgid "Account created but verification failed: %{reason}"
-msgstr ""
-
-#: lib/tymeslot/auth/auth_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid input format"
 msgstr ""
 
 #: lib/tymeslot/auth/auth_actions.ex
@@ -781,7 +773,6 @@ msgid "Invalid email or password."
 msgstr ""
 
 #: lib/tymeslot/auth/error_formatter.ex
-#: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid input provided."
 msgstr ""
@@ -800,11 +791,6 @@ msgstr ""
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid response from %{provider}. Please try again."
-msgstr ""
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid verification token. Please request a new verification email."
 msgstr ""
 
 #: lib/tymeslot/auth/email_change.ex
@@ -962,11 +948,6 @@ msgstr ""
 msgid "Unable to send password reset email. Please try again later."
 msgstr ""
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Verification failed. Please try again."
-msgstr ""
-
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
 msgid "Verification link has expired"
@@ -985,11 +966,6 @@ msgstr ""
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your reset token has expired. Please request a new password reset."
-msgstr ""
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Your verification token has expired. Please request a new verification email."
 msgstr ""
 
 #: lib/tymeslot/auth/error_formatter.ex

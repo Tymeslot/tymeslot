@@ -195,36 +195,6 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   end
 
   @doc """
-  Updates the last sync timestamp for an integration.
-
-  A completed sync also ends whatever streak of failed sync cycles the health
-  state was accumulating, so the success is recorded there too. It clears that
-  streak only — see `HealthCheck.mark_synced_successfully/2` for why one
-  successful cycle is not enough to declare the integration recovered.
-  """
-  @spec mark_sync_success(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_sync_success(integration) do
-    case CalendarIntegrationQueries.mark_sync_success(integration) do
-      {:ok, updated} = ok ->
-        HealthCheck.mark_synced_successfully(:calendar, updated.id)
-        ok
-
-      error ->
-        error
-    end
-  end
-
-  @doc """
-  Records a sync error for an integration.
-  """
-  @spec mark_sync_error(CalendarIntegrationSchema.t(), String.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_sync_error(integration, error_message) do
-    CalendarIntegrationQueries.mark_sync_error(integration, error_message)
-  end
-
-  @doc """
   Flags an integration as needing reauthentication when its stored credentials
   can no longer be decrypted. Also records the sync error so the dashboard
   shows the same message the worker logged.

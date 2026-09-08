@@ -37,7 +37,6 @@ defmodule TymeslotWeb.Dashboard.AgendaTimeline do
   the caller (they are not points in time).
   """
   @spec spine([Entry.t()], DateTime.t(), String.t() | nil) :: [row()]
-  def spine(entries, now, next_id \\ nil)
 
   # An empty day carries no now-line — a lone marker under a "Today" heading reads
   # as noise, not information.

@@ -13,7 +13,6 @@ defmodule Tymeslot.AppSettingsTest do
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AuthActions
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
-  alias Tymeslot.Infrastructure.Config, as: InfraConfig
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Locales
 
@@ -220,26 +219,11 @@ defmodule Tymeslot.AppSettingsTest do
   # changes what the consuming module returns. Each test exercises the real
   # read site, not Application.env — that's what makes these bridge tests.
   describe "settings flow through to call sites" do
-    test "google_auth_enabled controls any_social_auth_enabled? via the social_auth list" do
-      original = Application.get_env(:tymeslot, :social_auth) || []
-
-      on_exit(fn -> Application.put_env(:tymeslot, :social_auth, original) end)
-
-      Application.put_env(
-        :tymeslot,
-        :social_auth,
-        Keyword.merge(original,
-          google_enabled: false,
-          github_enabled: false,
-          oauth_enabled: false
-        )
-      )
-
-      refute InfraConfig.any_social_auth_enabled?()
-
+    test "google_auth_enabled flows through to the social_auth keyword list" do
       {:ok, _settings} = AppSettings.update(%{google_auth_enabled: true})
 
-      assert InfraConfig.any_social_auth_enabled?()
+      social_auth = Application.get_env(:tymeslot, :social_auth, [])
+      assert Keyword.get(social_auth, :google_enabled) == true
     end
 
     test "github_auth_enabled flows through to the social_auth keyword list" do

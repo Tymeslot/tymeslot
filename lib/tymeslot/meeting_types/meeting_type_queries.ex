@@ -256,20 +256,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Counts meeting types for a user.
-  """
-  @spec count_for_user(integer()) :: non_neg_integer()
-  def count_for_user(user_id) do
-    query =
-      from(mt in MeetingTypeSchema,
-        where: mt.user_id == ^user_id,
-        select: count(mt.id)
-      )
-
-    Repo.one(query) || 0
-  end
-
-  @doc """
   Gets a meeting type by ID, raising if not found.
   """
   @spec get_meeting_type!(integer()) :: MeetingTypeSchema.t()

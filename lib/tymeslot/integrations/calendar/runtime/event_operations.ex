@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   """
   @spec create_event(event_data(), context()) ::
           {:ok, map()} | {:error, term()}
-  def create_event(event_data, context \\ nil) do
+  def create_event(event_data, context) do
     Metrics.time_operation(:create_event, %{}, fn ->
       Logger.info("Creating new calendar event")
 
@@ -84,7 +84,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   """
   @spec update_event(event_uid(), event_data(), context() | {integration_id(), user_id()}) ::
           :ok | {:error, term()}
-  def update_event(uid, event_data, context \\ nil) do
+  def update_event(uid, event_data, context) do
     Metrics.time_operation(:update_event, %{uid: uid}, fn ->
       Logger.info("Updating calendar event", uid: uid)
 
@@ -119,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   """
   @spec delete_event(event_uid(), context() | {integration_id(), user_id()}, keyword()) ::
           :ok | {:error, term()}
-  def delete_event(uid, context \\ nil, opts \\ []) do
+  def delete_event(uid, context, opts) do
     Metrics.time_operation(:delete_event, %{uid: uid}, fn ->
       Logger.info("Deleting calendar event", uid: uid)
 
@@ -173,7 +173,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
         uid,
         provider_event_id,
         {integration_id, _user_id} = context,
-        opts \\ []
+        opts
       ) do
     # Look up linked meeting before deletion for caller context
     meeting_info =
@@ -215,7 +215,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   Searches across all calendars for the event for a specific user.
   """
   @spec get_event(event_uid(), user_id() | nil) :: {:ok, map()} | {:error, :not_found | term()}
-  def get_event(uid, user_id \\ nil) do
+  def get_event(uid, user_id) do
     Logger.debug("Getting calendar event", uid: uid, user_id: user_id)
 
     case EventFetcher.list_events(user_id) do

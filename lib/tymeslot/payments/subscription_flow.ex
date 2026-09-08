@@ -30,7 +30,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
         user_id,
         email,
         urls,
-        metadata \\ %{}
+        metadata
       ) do
     manager = subscription_manager()
 

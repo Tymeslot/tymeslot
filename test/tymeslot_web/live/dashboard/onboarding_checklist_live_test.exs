@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
     # Greyed immediately in the live view...
     assert has_element?(view, "button[phx-value-id='share'][aria-checked='true']")
     # ...and persisted on the user.
-    assert Onboarding.dashboard_setup_item_done?(Repo.get!(UserSchema, user.id), "share")
+    assert "share" in (Repo.get!(UserSchema, user.id).dashboard_setup_done_items || [])
   end
 
   test "dismissing the widget hides it permanently", %{conn: conn} do

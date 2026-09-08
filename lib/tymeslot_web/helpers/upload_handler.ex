@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   """
   @spec store_file_atomically(String.t(), String.t(), String.t(), map()) ::
           {:ok, String.t()} | {:error, term()}
-  def store_file_atomically(source_path, dest_dir, filename, context \\ %{}) do
+  def store_file_atomically(source_path, dest_dir, filename, context) do
     with {:ok, secure_dest_dir} <-
            FileOperations.validate_and_sanitize_path(get_upload_base_dir(), dest_dir),
          :ok <- FileOperations.ensure_secure_directory(secure_dest_dir),
@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   Safely deletes a file using robust error handling.
   """
   @spec delete_file_safely(String.t(), map()) :: :ok | {:error, term()}
-  def delete_file_safely(file_path, context \\ %{}) do
+  def delete_file_safely(file_path, context) do
     FileOperations.safe_delete_file(file_path, context)
   end
 

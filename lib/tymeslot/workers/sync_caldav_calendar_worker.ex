@@ -125,6 +125,28 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     )
   end
 
+  # No calendar is selected, so there is nothing to sync into. This used to
+  # return :ok, which reported a successful sync of nothing: the failure streak
+  # reset every cycle, no badge or notification ever fired, and the fallback
+  # sweep re-enqueued the same no-op indefinitely because the timestamps it
+  # keys off never advanced. Flagging it stops the loop, since the sweep's
+  # population excludes integrations awaiting reconnection.
+  defp handle_sync_result({:error, :no_calendar_paths}, integration) do
+    Logger.warning(
+      "CalDAV integration has no calendar selected; flagging integration for reconnection",
+      calendar_integration_id: integration.id
+    )
+
+    CalendarManagement.flag_for_reconnection(
+      integration,
+      dgettext(
+        "dashboard_calendar_providers",
+        "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
+      ),
+      "CalDAV integration has no calendar selected — user action required"
+    )
+  end
+
   # The deletion circuit breaker refuses a listing, not an attempt: a retry
   # within the same cycle re-fetches the same data and refuses identically, so
   # retrying costs three times the work for a guaranteed identical outcome and

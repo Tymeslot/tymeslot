@@ -240,14 +240,6 @@ defmodule TymeslotWeb.Components.CoreComponents do
   def detail_row(assigns), do: Navigation.detail_row(assigns)
 
   @doc """
-  Renders a styled back link.
-  """
-  attr :to, :string, required: true
-  slot :inner_block, required: true
-  @spec back_link(map()) :: Phoenix.LiveView.Rendered.t()
-  def back_link(assigns), do: Navigation.back_link(assigns)
-
-  @doc """
   Renders a tabbed navigation interface.
 
   ## Usage

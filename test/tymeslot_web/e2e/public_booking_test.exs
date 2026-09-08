@@ -2,6 +2,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
   use TymeslotWeb.BrowserCase, async: false
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
   alias Wallaby.Element
 
@@ -24,7 +25,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
         is_active: true
       })
 
-    slug = MeetingTypes.to_slug(meeting_type)
+    slug = Slugs.to_slug(meeting_type)
 
     # Visit the public booking page
     session =

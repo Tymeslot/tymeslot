@@ -38,12 +38,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
   defdelegate valid_provider?(provider), to: ProviderConfig
 
   @doc """
-  Returns a list of valid provider types (includes dev providers in dev/test envs).
-  """
-  @spec valid_providers() :: list(atom())
-  defdelegate valid_providers(), to: ProviderConfig, as: :all_providers_with_dev
-
-  @doc """
   Validates and normalizes a provider type.
   Returns {:ok, provider} or {:error, reason}.
   """

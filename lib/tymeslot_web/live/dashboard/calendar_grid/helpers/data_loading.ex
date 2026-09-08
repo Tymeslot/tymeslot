@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   end
 
   @spec check_staleness(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def check_staleness(socket) do
+  defp check_staleness(socket) do
     integrations = socket.assigns.integrations
     stale = CalendarGrid.stale_integrations(integrations)
     oldest = CalendarGrid.oldest_sync_at(stale)

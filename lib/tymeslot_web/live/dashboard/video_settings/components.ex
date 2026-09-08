@@ -120,13 +120,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     """
   end
 
-  @doc """
-  Builds a one-line human summary for a video integration — the account,
-  host, or custom link plus the provider-type descriptor — dropping absent
-  segments gracefully.
-  """
+  # Builds a one-line human summary for a video integration — the account,
+  # host, or custom link plus the provider-type descriptor — dropping absent
+  # segments gracefully.
   @spec video_summary(map()) :: String.t()
-  def video_summary(integration) do
+  defp video_summary(integration) do
     integration
     |> summary_segments()
     |> Enum.reject(&is_nil/1)

@@ -5,17 +5,6 @@ defmodule Tymeslot.Availability.TimeSlots do
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   @doc """
-  Generates time slots for a date range, handling timezone boundaries.
-
-  Returns a list of formatted time strings like "9:00 AM".
-  """
-  @spec generate_slots_for_range(DateTime.t(), DateTime.t(), integer(), Date.t()) ::
-          list(String.t())
-  def generate_slots_for_range(start_dt, end_dt, duration_minutes, selected_date) do
-    generate_slots_for_range_with_breaks(start_dt, end_dt, duration_minutes, selected_date, [])
-  end
-
-  @doc """
   Resolves a day's breaks into absolute instants on the owner's clock.
 
   Break times are stored as the owner's local wall-clock times with no date

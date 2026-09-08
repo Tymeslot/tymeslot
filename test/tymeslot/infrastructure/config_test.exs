@@ -20,10 +20,6 @@ defmodule Tymeslot.Infrastructure.ConfigTest.SingleFlagStub do
   def enforce_legal_agreements?, do: on?(:enforce_legal_agreements)
 
   @impl Tymeslot.Infrastructure.AppConfigBehaviour
-  @spec show_marketing_links?() :: boolean()
-  def show_marketing_links?, do: on?(:show_marketing_links)
-
-  @impl Tymeslot.Infrastructure.AppConfigBehaviour
   @spec logo_links_to_marketing?() :: boolean()
   def logo_links_to_marketing?, do: on?(:logo_links_to_marketing)
 
@@ -65,12 +61,6 @@ defmodule Tymeslot.Infrastructure.ConfigTest do
       refute without_key(:enforce_legal_agreements, &AppConfig.enforce_legal_agreements?/0)
     end
 
-    test "show_marketing_links? reads its key and defaults to off" do
-      assert with_key(:show_marketing_links, true, &AppConfig.show_marketing_links?/0)
-      refute with_key(:show_marketing_links, false, &AppConfig.show_marketing_links?/0)
-      refute without_key(:show_marketing_links, &AppConfig.show_marketing_links?/0)
-    end
-
     test "logo_links_to_marketing? reads its key and defaults to off" do
       assert with_key(:logo_links_to_marketing, true, &AppConfig.logo_links_to_marketing?/0)
       refute with_key(:logo_links_to_marketing, false, &AppConfig.logo_links_to_marketing?/0)
@@ -99,15 +89,6 @@ defmodule Tymeslot.Infrastructure.ConfigTest do
       Application.put_env(:tymeslot, :stub_flag, :enforce_legal_agreements)
 
       assert Config.enforce_legal_agreements?()
-      refute Config.show_marketing_links?()
-      refute Config.logo_links_to_marketing?()
-    end
-
-    test "show_marketing_links? delegates to the matching callback" do
-      Application.put_env(:tymeslot, :stub_flag, :show_marketing_links)
-
-      assert Config.show_marketing_links?()
-      refute Config.enforce_legal_agreements?()
       refute Config.logo_links_to_marketing?()
     end
 
@@ -116,7 +97,6 @@ defmodule Tymeslot.Infrastructure.ConfigTest do
 
       assert Config.logo_links_to_marketing?()
       refute Config.enforce_legal_agreements?()
-      refute Config.show_marketing_links?()
     end
 
     test "registration_enabled? and password_auth_enabled? delegate to their own callbacks" do

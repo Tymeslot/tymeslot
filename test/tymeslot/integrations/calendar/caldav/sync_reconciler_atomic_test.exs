@@ -123,6 +123,67 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
     # place to regain rollback coverage.
   end
 
+  describe "ownership flagging on the atomic paths" do
+    # Both atomic paths call `Sync.upsert_cache/2` directly rather than
+    # `persist_normalised_events/2`, and they are every tier CalDAV runs in
+    # production. While the flagging sat in `persist_normalised_events/2`,
+    # that meant no CalDAV row was ever marked as Tymeslot's own, and the
+    # `:keep_local` recovery `CalDAV.OfflineQueue` grants on the strength of
+    # the flag applied to nothing.
+    test "process_full_fetch/6 marks a row mirroring one of our meetings", %{
+      integration: integration
+    } do
+      insert(:meeting, calendar_integration_id: integration.id, uid: "ours-uid")
+
+      assert :ok =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 [raw_event("ours-uid"), raw_event("theirs-uid")],
+                 ~U[2026-04-01 00:00:00Z],
+                 ~U[2026-04-30 00:00:00Z],
+                 ~U[2026-04-15 12:00:00.000000Z],
+                 "/cal/"
+               )
+
+      assert {:ok, %ProviderCalendarEventSchema{created_by_tymeslot: true}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "ours-uid")
+
+      assert {:ok, %ProviderCalendarEventSchema{created_by_tymeslot: false}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "theirs-uid")
+    end
+
+    test "process_tier1/3 marks a row mirroring one of our meetings", %{
+      integration: integration
+    } do
+      insert(:meeting, calendar_integration_id: integration.id, uid: "ours-uid")
+
+      assert :ok = SyncReconciler.process_tier1(integration, [raw_event("ours-uid")], [])
+
+      assert {:ok, %ProviderCalendarEventSchema{created_by_tymeslot: true}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "ours-uid")
+    end
+
+    test "flags a row that was already cached from an earlier sync", %{
+      integration: integration
+    } do
+      # The realistic shape: the booking is written to the calendar, comes back
+      # through a sync before anything links it, and only then does the meeting
+      # become matchable. The row is a conflict by that point, so this is the
+      # case the ON CONFLICT clause alone cannot reach.
+      assert :ok = SyncReconciler.process_tier1(integration, [raw_event("ours-uid")], [])
+
+      assert {:ok, %ProviderCalendarEventSchema{created_by_tymeslot: false}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "ours-uid")
+
+      insert(:meeting, calendar_integration_id: integration.id, uid: "ours-uid")
+
+      assert :ok = SyncReconciler.process_tier1(integration, [raw_event("ours-uid")], [])
+
+      assert {:ok, %ProviderCalendarEventSchema{created_by_tymeslot: true}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "ours-uid")
+    end
+  end
+
   describe "process_full_fetch/6 deletion circuit breaker" do
     @start_time ~U[2026-04-01 00:00:00Z]
     @end_time ~U[2026-04-30 00:00:00Z]

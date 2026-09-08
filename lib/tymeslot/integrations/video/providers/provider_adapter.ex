@@ -248,7 +248,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   Handles meeting lifecycle events.
   """
   @spec handle_meeting_event(MeetingContext.t(), atom(), map()) :: :ok | {:error, term()}
-  def handle_meeting_event(meeting_context, event, additional_data \\ %{}) do
+  def handle_meeting_event(meeting_context, event, additional_data) do
     %{
       provider_type: provider_type,
       room_data: room_data,

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Security.Encryption
 
   @moduletag :calendar_integration
@@ -198,7 +199,8 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       assert toggled.is_active == false
 
       # Delete integration
-      {:ok, _deleted} = Calendar.delete_integration(integration.id, user.id)
+      {:ok, to_delete} = CalendarManagement.get_calendar_integration(integration.id, user.id)
+      {:ok, _deleted} = CalendarManagement.delete_calendar_integration(to_delete)
       assert Calendar.list_integrations(user.id) == []
     end
 

@@ -19,7 +19,6 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   @type save_attributes_map :: %{
           optional(String.t()) => String.t() | nil
         }
-  @type customization_diff :: %{optional(String.t()) => %{from: term(), to: term()}}
 
   @doc """
   Extracts save attributes from a customization struct.
@@ -126,23 +125,6 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   defp normalize_value_by_type(_type, value), do: value
 
   @doc """
-  Builds customization from LiveView assigns.
-  """
-  @spec build_customization_from_assigns(map(), String.t()) :: customization_struct()
-  def build_customization_from_assigns(assigns, theme_id) do
-    %ThemeCustomizationSchema{
-      profile_id: assigns.profile.id,
-      theme_id: theme_id,
-      color_scheme: assigns[:color_scheme] || "default",
-      custom_palette_seed: assigns[:custom_palette_seed],
-      background_type: assigns[:background_type] || "gradient",
-      background_value: assigns[:background_value] || "gradient_1",
-      background_image_path: assigns[:background_image_path],
-      background_video_path: assigns[:background_video_path]
-    }
-  end
-
-  @doc """
   Converts a customization struct to a map for JSON serialization.
   """
   @spec convert_to_map(nil | customization_struct() | customization_map()) :: map()
@@ -165,141 +147,4 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
       Map.put(acc, string_key, value)
     end)
   end
-
-  @doc """
-  Converts string keys to atom keys for internal processing.
-  """
-  @spec atomize_keys(%{String.t() => term()}) :: %{(atom() | String.t()) => term()}
-  def atomize_keys(map) when is_map(map) do
-    Enum.reduce(map, %{}, fn {key, value}, acc ->
-      atom_key =
-        case key do
-          "color_scheme" -> :color_scheme
-          "custom_palette_seed" -> :custom_palette_seed
-          "background_type" -> :background_type
-          "background_value" -> :background_value
-          "background_image_path" -> :background_image_path
-          "background_video_path" -> :background_video_path
-          key when is_atom(key) -> key
-          key -> key
-        end
-
-      Map.put(acc, atom_key, value)
-    end)
-  end
-
-  @doc """
-  Prepares upload attributes for file storage.
-  """
-  @spec prepare_upload_attributes(
-          customization_struct() | customization_map(),
-          atom(),
-          String.t() | nil
-        ) :: customization_struct() | customization_map()
-  def prepare_upload_attributes(customization, upload_type, file_path) do
-    case upload_type do
-      :image ->
-        merge_customization_changes(customization, %{
-          background_type: "image",
-          background_value: "custom",
-          background_image_path: file_path,
-          background_video_path: nil
-        })
-
-      :video ->
-        merge_customization_changes(customization, %{
-          background_type: "video",
-          background_value: "custom",
-          background_video_path: file_path,
-          background_image_path: nil
-        })
-
-      _other ->
-        customization
-    end
-  end
-
-  @doc """
-  Creates a diff between two customizations.
-  """
-  @spec create_customization_diff(
-          customization_struct() | customization_map(),
-          customization_struct() | customization_map()
-        ) :: customization_diff()
-  def create_customization_diff(old_customization, new_customization) do
-    old_attrs = extract_save_attributes(old_customization)
-    new_attrs = extract_save_attributes(new_customization)
-
-    Enum.reduce(new_attrs, %{}, fn {key, new_value}, acc ->
-      old_value = Map.get(old_attrs, key)
-
-      if old_value != new_value do
-        Map.put(acc, key, %{from: old_value, to: new_value})
-      else
-        acc
-      end
-    end)
-  end
-
-  @doc """
-  Validates and cleans customization attributes.
-  """
-  @spec clean_customization_attributes(map()) :: map()
-  def clean_customization_attributes(attrs) do
-    Enum.reduce(attrs, %{}, fn {key, value}, acc ->
-      cleaned_value = clean_attribute_value(key, value)
-
-      if cleaned_value != nil do
-        Map.put(acc, key, cleaned_value)
-      else
-        acc
-      end
-    end)
-  end
-
-  @doc """
-  Checks if customization has any background files.
-  """
-  @spec has_background_files?(customization_struct()) :: boolean()
-  def has_background_files?(%ThemeCustomizationSchema{} = customization) do
-    customization.background_image_path != nil or customization.background_video_path != nil
-  end
-
-  @spec has_background_files?(customization_map()) :: boolean()
-  def has_background_files?(customization) when is_map(customization) do
-    Map.get(customization, :background_image_path) != nil or
-      Map.get(customization, :background_video_path) != nil
-  end
-
-  @doc """
-  Gets the active background file path from customization.
-  """
-  @spec get_active_background_file(customization_struct()) :: String.t() | nil
-  def get_active_background_file(%ThemeCustomizationSchema{} = customization) do
-    case customization.background_type do
-      "image" when customization.background_value == "custom" ->
-        customization.background_image_path
-
-      "video" when customization.background_value == "custom" ->
-        customization.background_video_path
-
-      _other ->
-        nil
-    end
-  end
-
-  # Private helper functions
-
-  defp clean_attribute_value(key, value)
-       when key in ["color_scheme", "background_type", "background_value"] and is_binary(value) do
-    trimmed = String.trim(value)
-    if trimmed != "", do: trimmed, else: nil
-  end
-
-  defp clean_attribute_value(_key, value) when is_binary(value) do
-    trimmed = String.trim(value)
-    if trimmed != "", do: trimmed, else: nil
-  end
-
-  defp clean_attribute_value(_key, value), do: value
 end

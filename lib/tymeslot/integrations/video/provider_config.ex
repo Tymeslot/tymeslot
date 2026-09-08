@@ -30,8 +30,6 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   # predicates below.
   @family_index Families.build_index(@provider_families, @providers ++ @dev_only_providers)
 
-  @oauth_providers Families.members(@provider_families, :oauth)
-
   # Compile-time lookup from the provider's string form to its atom, covering
   # every statically known provider regardless of runtime toggles. Parsing
   # through this table keeps the string entry points total: no
@@ -93,9 +91,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   }
 
   # Read provider settings from config
-  @doc false
-  @spec provider_settings() :: %{atom() => term()}
-  def provider_settings do
+  defp provider_settings do
     Config.video_provider_settings()
   end
 
@@ -125,12 +121,6 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   """
   @spec all_providers_with_dev() :: list(atom())
   def all_providers_with_dev, do: effective_providers(true)
-
-  @doc """
-  Returns OAuth-based providers.
-  """
-  @spec oauth_providers() :: list(atom())
-  def oauth_providers, do: @oauth_providers
 
   @doc """
   Checks if a provider is valid.

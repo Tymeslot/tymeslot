@@ -55,40 +55,5 @@ defmodule Tymeslot.ThemeCustomizationsDefaultsTest do
       assert fallback.theme_id == "1"
       assert fallback.color_scheme == "default"
     end
-
-    test "merge_with_defaults/2 fills in nil values" do
-      partial = %ThemeCustomizationSchema{
-        profile_id: 1,
-        theme_id: "1",
-        color_scheme: nil,
-        background_type: nil,
-        background_value: nil
-      }
-
-      merged = Defaults.merge_with_defaults(partial, "1")
-
-      assert merged.color_scheme == "default"
-      assert merged.background_type == "gradient"
-      assert merged.background_value == "gradient_1"
-    end
-
-    test "theme_supports_feature?/2 checks Quill features" do
-      assert Defaults.theme_supports_feature?("1", :video_backgrounds) == true
-      assert Defaults.theme_supports_feature?("1", :image_backgrounds) == true
-      assert Defaults.theme_supports_feature?("1", :gradient_backgrounds) == true
-    end
-
-    test "theme_supports_feature?/2 checks Rhythm features" do
-      assert Defaults.theme_supports_feature?("2", :video_backgrounds) == true
-    end
-
-    test "theme_supports_feature?/2 returns false for unknown theme" do
-      assert Defaults.theme_supports_feature?("999", :video_backgrounds) == false
-    end
-
-    test "get_recommended_background_type/1 returns theme-appropriate type" do
-      assert Defaults.get_recommended_background_type("1") == "gradient"
-      assert Defaults.get_recommended_background_type("2") == "video"
-    end
   end
 end

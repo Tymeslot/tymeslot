@@ -138,24 +138,6 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   end
 
   @doc """
-  Checks if the registration is complete for the given provider and user.
-  """
-  @spec registration_complete?(provider(), oauth_registration_data()) :: boolean()
-  def registration_complete?(:github, %{email: email, github_user_id: id})
-      when is_binary(email) and email != "" and is_binary(id) and id != "",
-      do: true
-
-  def registration_complete?(:google, %{email: email, google_user_id: id})
-      when is_binary(email) and email != "" and is_binary(id) and id != "",
-      do: true
-
-  def registration_complete?(:oauth, %{email: email, provider_uid: uid})
-      when is_binary(email) and is_binary(uid) and email != "" and uid != "",
-      do: true
-
-  def registration_complete?(_provider, _user_data), do: false
-
-  @doc """
   Determines what information is missing for OAuth registration completion.
   """
   @spec check_oauth_requirements(provider(), oauth_registration_data()) ::

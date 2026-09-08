@@ -90,7 +90,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   @spec for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
-  def for_host(host_user_id, opts \\ []) do
+  def for_host(host_user_id, opts) do
     limit = Keyword.get(opts, :limit, 25)
 
     query =

@@ -13,13 +13,13 @@ defmodule Tymeslot.Integrations.Shared.OAuth.TokenFlow do
 
   @spec exchange_code(String.t(), map(), keyword()) ::
           {:ok, map()} | {:error, token_error()}
-  def exchange_code(token_url, params, opts \\ []) do
+  def exchange_code(token_url, params, opts) do
     request_tokens(token_url, params, opts)
   end
 
   @spec refresh_token(String.t(), map(), keyword()) ::
           {:ok, map()} | {:error, token_error()}
-  def refresh_token(token_url, params, opts \\ []) do
+  def refresh_token(token_url, params, opts) do
     request_tokens(token_url, params, opts)
   end
 

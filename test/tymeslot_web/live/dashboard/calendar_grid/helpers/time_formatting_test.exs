@@ -114,14 +114,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormattingTest do
                "All day"
     end
 
-    test "formats in 12h mode by default" do
+    test "formats in 12h mode" do
       event = %{
         all_day: false,
         start_at: ~U[2026-04-10 14:00:00Z],
         end_at: ~U[2026-04-10 15:30:00Z]
       }
 
-      result = TimeFormatting.format_time_range_in_tz(event, "Etc/UTC")
+      result = TimeFormatting.format_time_range_in_tz(event, "Etc/UTC", "12h")
       assert result == "2:00 PM – 3:30 PM"
     end
   end

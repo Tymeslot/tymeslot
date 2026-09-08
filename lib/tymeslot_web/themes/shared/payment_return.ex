@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           theme_slug :: String.t(),
           session_id :: String.t() | nil
         ) :: {:ok, ctx()} | {:error, atom()}
-  def authorize(meeting_id, theme_slug, session_id) do
+  defp authorize(meeting_id, theme_slug, session_id) do
     with {:ok, meeting} <- get_meeting(meeting_id),
          {:ok, profile} <- get_profile(meeting),
          :ok <- validate_theme(profile, theme_slug),

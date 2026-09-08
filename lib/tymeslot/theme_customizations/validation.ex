@@ -27,19 +27,8 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   @type scheme_id :: String.t() | atom()
   @type background_type :: String.t()
   @type background_value :: String.t() | nil
-  @type field_error :: {atom(), String.t()}
-  @type field_errors :: [field_error()]
   @type file_kind :: :image | :video
-  @type file_upload_params :: %{
-          required(:path) => Path.t(),
-          required(:filename) => String.t(),
-          optional(atom()) => term()
-        }
   @type presets_map :: Presets.all_presets()
-  @type customization_changes :: %{
-          optional(:color_scheme) => scheme_id(),
-          optional(:background_type) => background_type()
-        }
 
   @doc """
   Validates a color scheme selection.
@@ -131,62 +120,6 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   end
 
   @doc """
-  Validates customization change attributes.
-  """
-  @spec validate_customization_changes(customization_changes()) :: :ok | {:error, field_errors()}
-  def validate_customization_changes(changes) do
-    errors = []
-
-    # Validate color scheme if present
-    errors =
-      case Map.get(changes, :color_scheme) do
-        nil ->
-          errors
-
-        scheme ->
-          validate_field_and_collect_error(
-            errors,
-            :color_scheme,
-            &validate_color_scheme/1,
-            scheme
-          )
-      end
-
-    # Validate background type if present
-    errors =
-      case Map.get(changes, :background_type) do
-        nil ->
-          errors
-
-        type ->
-          validate_field_and_collect_error(
-            errors,
-            :background_type,
-            &validate_background_type/1,
-            type
-          )
-      end
-
-    # Return validation result
-    case errors do
-      [] -> :ok
-      errors -> {:error, errors}
-    end
-  end
-
-  @doc """
-  Sanitizes customization input attributes.
-  """
-  @spec sanitize_customization_input(term()) :: {:ok, map()} | {:error, String.t()}
-  def sanitize_customization_input(attrs) when is_map(attrs) do
-    attrs
-    |> sanitize_string_fields()
-    |> validate_required_fields()
-  end
-
-  def sanitize_customization_input(_value), do: {:error, "Attributes must be a map"}
-
-  @doc """
   Sanitizes a file path to prevent directory traversal and other injection attacks.
   Only allows alphanumeric, dots, dashes, and underscores in each segment.
   """
@@ -253,54 +186,6 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   end
 
   @doc """
-  Validates file upload parameters.
-  """
-  @spec validate_file_upload(file_upload_params() | term()) :: validation_result()
-  def validate_file_upload(%{path: path, filename: filename})
-      when is_binary(path) and is_binary(filename) do
-    cond do
-      not File.exists?(path) ->
-        {:error, "Uploaded file does not exist"}
-
-      String.trim(filename) == "" ->
-        {:error, "Filename cannot be empty"}
-
-      true ->
-        :ok
-    end
-  end
-
-  def validate_file_upload(_params), do: {:error, "Invalid file upload parameters"}
-
-  @doc """
-  Validates that a file extension is allowed for the given type.
-  """
-  @spec validate_file_extension(String.t(), file_kind() | atom()) :: validation_result()
-  def validate_file_extension(filename, :image) do
-    allowed_extensions = UploadConstraints.allowed_extensions(:image)
-    extension = String.downcase(Path.extname(filename))
-
-    if extension in allowed_extensions do
-      :ok
-    else
-      {:error, "Invalid image file extension. Allowed: #{Enum.join(allowed_extensions, ", ")}"}
-    end
-  end
-
-  def validate_file_extension(filename, :video) do
-    allowed_extensions = UploadConstraints.allowed_extensions(:video)
-    extension = String.downcase(Path.extname(filename))
-
-    if extension in allowed_extensions do
-      :ok
-    else
-      {:error, "Invalid video file extension. Allowed: #{Enum.join(allowed_extensions, ", ")}"}
-    end
-  end
-
-  def validate_file_extension(_filename, type), do: {:error, "Unknown file type: #{type}"}
-
-  @doc """
   Validates file size limits.
 
   The caps come from `UploadConstraints`, which is also what the background
@@ -319,29 +204,6 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   end
 
   # Private helper functions
-
-  defp validate_field_and_collect_error(errors, field, validator, value) do
-    case validator.(value) do
-      :ok -> errors
-      {:error, message} -> [{field, message} | errors]
-    end
-  end
-
-  defp sanitize_string_fields(attrs) do
-    Enum.reduce(attrs, %{}, fn
-      {key, value}, acc when is_binary(value) ->
-        Map.put(acc, key, String.trim(value))
-
-      {key, value}, acc ->
-        Map.put(acc, key, value)
-    end)
-  end
-
-  defp validate_required_fields(attrs) do
-    # For now, no fields are strictly required during updates
-    # This can be extended based on business rules
-    {:ok, attrs}
-  end
 
   defp validate_file_size_limit(file_path, max_size, file_type) do
     case File.stat(file_path) do

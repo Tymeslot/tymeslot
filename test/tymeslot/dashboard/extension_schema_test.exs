@@ -80,7 +80,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
     end
 
     test "accepts a real heroicon name in each of the four styles" do
-      # Named rather than read back from `available_icons/0`, which is the same
+      # Named rather than read back from `Heroicons.names/0`, which is the same
       # source the validation consults: an icon set that lost the mini or micro
       # style would still agree with itself.
       for icon <- [
@@ -230,44 +230,6 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       assert 0 in error_indices
       assert 1 in error_indices
       refute 2 in error_indices
-    end
-  end
-
-  describe "available_icons/0" do
-    test "returns a list of hero-* icon name strings" do
-      icons = ExtensionSchema.available_icons()
-
-      assert Enum.all?(icons, &(is_binary(&1) and String.starts_with?(&1, "hero-")))
-      assert icons == Enum.uniq(icons)
-      assert "hero-home" in icons
-      assert "hero-credit-card" in icons
-      assert "hero-chat-bubble-left-right" in icons
-    end
-
-    test "includes all expected icons" do
-      icons = ExtensionSchema.available_icons()
-
-      expected_icons = [
-        "hero-arrow-left",
-        "hero-bell",
-        "hero-calendar-days",
-        "hero-chat-bubble-left-right",
-        "hero-clock",
-        "hero-code-bracket",
-        "hero-credit-card",
-        "hero-squares-2x2",
-        "hero-home",
-        "hero-lock-closed",
-        "hero-paint-brush",
-        "hero-puzzle-piece",
-        "hero-user",
-        "hero-video-camera"
-      ]
-
-      for expected <- expected_icons do
-        assert expected in icons,
-               "Expected icon #{expected} to be in available icons, but it wasn't"
-      end
     end
   end
 

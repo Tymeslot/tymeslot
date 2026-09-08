@@ -12,10 +12,10 @@ defmodule TymeslotWeb.Themes.Core.Behaviour do
 
   Declarative only: the *runtime* flow comes from the shared
   `Shared.StateMachineHelpers.states_for/1`, not from this callback. No
-  production code calls `states/0` today — `Loader`/`Validator` still enforce
-  it via `function_exported?/3`, and `ThemeCommonTestCases` exercises it
-  directly, so it stays part of the contract as a documented, tested
-  declaration of each theme's step shape.
+  production code calls `states/0` today — `Loader` still enforces it via
+  `function_exported?/3`, and `ThemeCommonTestCases` exercises it directly, so
+  it stays part of the contract as a documented, tested declaration of each
+  theme's step shape.
   """
   @callback states() :: map()
 
@@ -50,9 +50,9 @@ defmodule TymeslotWeb.Themes.Core.Behaviour do
   Returns the initial state for a given live_action.
   Allows themes to customize how routes map to states.
 
-  No production code calls this today — `Loader`/`Validator` still enforce
-  it via `function_exported?/3`, and `ThemeCommonTestCases` exercises it
-  directly, so it stays part of the contract as documented, tested behaviour.
+  No production code calls this today — `Loader` still enforces it via
+  `function_exported?/3`, and `ThemeCommonTestCases` exercises it directly, so
+  it stays part of the contract as documented, tested behaviour.
   """
   @callback initial_state_for_action(atom()) :: atom()
 

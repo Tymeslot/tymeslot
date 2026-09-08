@@ -144,7 +144,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   """
   @spec update_calendar_event(Base.client(), String.t(), String.t(), map(), keyword()) ::
           :ok | {:error, Base.error_reason()}
-  def update_calendar_event(client, calendar_path, uid, event_data, opts \\ []) do
+  def update_calendar_event(client, calendar_path, uid, event_data, opts) do
     policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
 
     if ConflictResolution.valid?(policy) do
@@ -177,7 +177,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   """
   @spec update_event_colour(Base.client(), String.t(), String.t(), String.t(), keyword()) ::
           :ok | {:error, Base.error_reason() | :raw_ical_unavailable}
-  def update_event_colour(client, calendar_path, uid, colour, opts \\ []) do
+  def update_event_colour(client, calendar_path, uid, colour, opts) do
     case Keyword.get(opts, :raw_ical) do
       raw_ical when is_binary(raw_ical) and raw_ical != "" ->
         do_update_event_colour(client, calendar_path, uid, colour, raw_ical, opts)
@@ -302,7 +302,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   """
   @spec delete_calendar_event(Base.client(), String.t(), String.t(), keyword()) ::
           :ok | {:error, Base.error_reason()}
-  def delete_calendar_event(client, calendar_path, uid, opts \\ []) do
+  def delete_calendar_event(client, calendar_path, uid, opts) do
     with_events_breaker(client, opts, fn ->
       url = delete_url_from_opts(client, calendar_path, uid, opts)
       delete_opts = Keyword.take(opts, [:timeout])

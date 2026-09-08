@@ -118,9 +118,8 @@ defmodule Tymeslot.Utils.Colour do
     end
   end
 
-  @doc "Converts RGB channels to HSL."
   @spec rgb_to_hsl(rgb()) :: hsl()
-  def rgb_to_hsl({r, g, b}) do
+  defp rgb_to_hsl({r, g, b}) do
     {rf, gf, bf} = {r / 255, g / 255, b / 255}
     max_c = max(max(rf, gf), bf)
     min_c = min(min(rf, gf), bf)
@@ -150,9 +149,8 @@ defmodule Tymeslot.Utils.Colour do
     {wrap_hue(hue_sextant * 60), saturation}
   end
 
-  @doc "Converts HSL to RGB channels."
   @spec hsl_to_rgb(hsl()) :: rgb()
-  def hsl_to_rgb({h, s, l}) do
+  defp hsl_to_rgb({h, s, l}) do
     chroma = (1 - abs(2 * l - 1)) * s
     hue_prime = wrap_hue(h) / 60
     x = chroma * (1 - abs(rem_float(hue_prime, 2.0) - 1))

@@ -16,9 +16,6 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   The caller is responsible for pre-ticking the user's existing selections
   (typically `integration.calendar_paths`) in the picker UI so a same-
   account reconnect keeps the prior choices unless the user changes them.
-
-  `credentials_change_kind/2` is exposed as a hint so the UI can flavour
-  copy ("same account" vs "different account") without affecting flow.
   """
 
   alias Tymeslot.Integrations.Calendar
@@ -27,10 +24,10 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Utils.UriUtils
 
   @type integration :: CalendarIntegrationSchema.t()
   @type params :: %{optional(String.t()) => term()}
-  @type change_kind :: :password_only | :account_change
 
   @type reconnect_ok ::
           {:ok, :needs_calendar_selection, %{calendars: [map()], credentials: map()}}
@@ -39,27 +36,6 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
           {:error, :invalid_credentials}
           | {:error, {:changeset, Ecto.Changeset.t()}}
           | {:error, term()}
-
-  @doc """
-  Returns whether the proposed url/username are the same account
-  (`:password_only`) or a different one (`:account_change`). Used purely
-  to flavour UI copy — both cases follow the same flow. Accepts a
-  decrypted integration struct (virtual `username` populated).
-  """
-  @spec credentials_change_kind(integration(), params()) :: change_kind()
-  def credentials_change_kind(%CalendarIntegrationSchema{} = integration, params) do
-    new_url = params |> Map.get("url") |> to_string() |> PathUtils.normalize_base_url()
-    current_url = PathUtils.normalize_base_url(integration.base_url || "")
-
-    new_username = params |> Map.get("username", "") |> to_string() |> String.trim()
-    current_username = integration.username |> to_string() |> String.trim()
-
-    if new_url == current_url and new_username == current_username do
-      :password_only
-    else
-      :account_change
-    end
-  end
 
   @doc """
   Reconnect an existing CalDAV-family integration.
@@ -120,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
     calendar_list =
       Enum.map(calendars, fn cal ->
         entry = CalendarEntry.normalize(cal)
-        %{entry | selected: entry.path in selected_paths}
+        %{entry | selected: Enum.any?(selected_paths, &UriUtils.uri_safe_match?(entry.path, &1))}
       end)
 
     credential_attrs = %{
@@ -135,6 +111,18 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
     attrs = Map.merge(credential_attrs, Selection.calendar_list_attrs(calendar_list))
 
+    # A submitted path that matches no discovered calendar would persist an
+    # empty `calendar_paths` behind a successful "reconnected" flash, leaving
+    # the integration syncing nothing. Refuse on the derived selection, not on
+    # the submitted list, which was already checked by the caller.
+    if attrs.calendar_paths == [] do
+      {:error, :no_calendars_selected}
+    else
+      persist_account_change(integration, attrs)
+    end
+  end
+
+  defp persist_account_change(integration, attrs) do
     case CalendarManagement.update_calendar_integration(integration, attrs) do
       {:ok, updated} -> {:ok, updated}
       {:error, %Ecto.Changeset{} = cs} -> {:error, {:changeset, cs}}

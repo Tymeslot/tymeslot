@@ -52,14 +52,6 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
     end)
   end
 
-  @doc """
-  Renders an error view for theme failures.
-  """
-  @spec render_error(map()) :: map()
-  def render_error(assigns) do
-    Component.assign(assigns, :formatted_error, format_error(assigns[:theme_error]))
-  end
-
   # Private functions
 
   defp call_with_fallback(theme_id, module, function, args, fallback_fn) do

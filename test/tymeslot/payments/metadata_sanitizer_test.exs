@@ -79,35 +79,4 @@ defmodule Tymeslot.Payments.MetadataSanitizerTest do
       assert sanitized == %{}
     end
   end
-
-  describe "sanitize!/2" do
-    test "returns sanitized metadata on success" do
-      metadata = %{"referral_code" => "ABC123"}
-      sanitized = MetadataSanitizer.sanitize!(metadata)
-      assert sanitized["referral_code"] == "ABC123"
-    end
-
-    test "raises on error" do
-      long_value = String.duplicate("A", 501)
-      metadata = %{"referral_code" => long_value}
-
-      assert_raise ArgumentError, ~r/Metadata sanitization failed/, fn ->
-        MetadataSanitizer.sanitize!(metadata)
-      end
-    end
-  end
-
-  describe "system_reserved?/1" do
-    test "returns true for system-reserved keys" do
-      assert MetadataSanitizer.system_reserved?("user_id")
-      assert MetadataSanitizer.system_reserved?("product_identifier")
-      assert MetadataSanitizer.system_reserved?("payment_type")
-      assert MetadataSanitizer.system_reserved?(:user_id)
-    end
-
-    test "returns false for non-reserved keys" do
-      refute MetadataSanitizer.system_reserved?("referral_code")
-      refute MetadataSanitizer.system_reserved?("custom_field_1")
-    end
-  end
 end

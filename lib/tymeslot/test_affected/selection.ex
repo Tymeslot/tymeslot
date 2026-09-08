@@ -107,16 +107,14 @@ defmodule Tymeslot.TestAffected.Selection do
     end
   end
 
-  @doc """
-  Maps a lib path to the deepest existing mirror test directory.
-
-  `lib/tymeslot/auth/oauth/google.ex` mirrors to `test/tymeslot/auth/oauth`,
-  walking up a segment at a time when a directory has no counterpart. Around a
-  third of lib directories do not mirror exactly, so the walk matters; it stops
-  at `test/` rather than selecting the whole suite by accident.
-  """
+  # Maps a lib path to the deepest existing mirror test directory.
+  #
+  # `lib/tymeslot/auth/oauth/google.ex` mirrors to `test/tymeslot/auth/oauth`,
+  # walking up a segment at a time when a directory has no counterpart. Around a
+  # third of lib directories do not mirror exactly, so the walk matters; it stops
+  # at `test/` rather than selecting the whole suite by accident.
   @spec mirror_dir(String.t(), index()) :: String.t() | nil
-  def mirror_dir(path, index) do
+  defp mirror_dir(path, index) do
     path
     |> Path.dirname()
     |> String.replace_prefix("lib/", "test/")

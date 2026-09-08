@@ -1,12 +1,11 @@
 defmodule Tymeslot.Security.RateLimiterOAuthTest do
   @moduledoc """
-  Direct coverage for the four OAuth rate-limit buckets exposed by
+  Direct coverage for the three OAuth rate-limit buckets exposed by
   `Tymeslot.Security.RateLimiter`:
 
     * initiation  — 10 per 10 minutes per IP
     * callback    — 20 per 2 minutes per IP
     * completion  —  6 per 20 minutes per IP
-    * registration —  6 per 20 minutes per IP
 
   Each bucket is keyed separately so exhausting one does not trip another.
   This is not the composition test for the OAuth flow itself — that is in
@@ -70,23 +69,8 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
     end
   end
 
-  describe "registration bucket (6 per 20 minutes)" do
-    test "allows 6 attempts then rate-limits the 7th" do
-      ip = unique_ip()
-
-      for _i <- 1..6 do
-        assert :ok = RateLimiter.check_oauth_registration_rate_limit(ip)
-      end
-
-      assert {:error, :rate_limited, message} =
-               RateLimiter.check_oauth_registration_rate_limit(ip)
-
-      assert message =~ "OAuth registration"
-    end
-  end
-
   describe "bucket isolation" do
-    test "exhausting initiation does not impact callback, completion, or registration" do
+    test "exhausting initiation does not impact callback or completion" do
       ip = unique_ip()
 
       for _i <- 1..10 do
@@ -98,21 +82,19 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       # Every other bucket still has its full budget for this IP.
       assert :ok = RateLimiter.check_oauth_callback_rate_limit(ip)
       assert :ok = RateLimiter.check_oauth_completion_rate_limit(ip)
-      assert :ok = RateLimiter.check_oauth_registration_rate_limit(ip)
     end
 
-    test "exhausting registration does not impact initiation, callback, or completion" do
+    test "exhausting completion does not impact initiation or callback" do
       ip = unique_ip()
 
       for _i <- 1..6 do
-        assert :ok = RateLimiter.check_oauth_registration_rate_limit(ip)
+        assert :ok = RateLimiter.check_oauth_completion_rate_limit(ip)
       end
 
-      assert {:error, :rate_limited, _msg} = RateLimiter.check_oauth_registration_rate_limit(ip)
+      assert {:error, :rate_limited, _msg} = RateLimiter.check_oauth_completion_rate_limit(ip)
 
       assert :ok = RateLimiter.check_oauth_initiation_rate_limit(ip)
       assert :ok = RateLimiter.check_oauth_callback_rate_limit(ip)
-      assert :ok = RateLimiter.check_oauth_completion_rate_limit(ip)
     end
 
     test "two different IPs on the same bucket have independent budgets" do

@@ -1279,3 +1279,8 @@ msgstr "Synchronizujte obsazený čas a rezervace s místním serverem Exchange"
 #, elixir-autogen, elixir-format
 msgid "This mailbox is read from and written to: it blocks the times you're already busy, and confirmed bookings are added to the calendar you choose as your booking destination. Exchange does not report which calendars your account may write to, so if you choose one it cannot write to, the first booking sent there fails."
 msgstr "Tato schránka se čte i zapisuje: blokuje časy, které už máte obsazené, a potvrzené rezervace se přidávají do kalendáře, který zvolíte jako cíl pro rezervace. Exchange neuvádí, do kterých kalendářů může váš účet zapisovat, takže pokud zvolíte kalendář, do něhož zapisovat nelze, první rezervace odeslaná do něj selže."
+
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
+msgstr "Pro tuto integraci není vybrán žádný kalendář, takže nelze nic synchronizovat. Připojte prosím integraci znovu a vyberte kalendář."
