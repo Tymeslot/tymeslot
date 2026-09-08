@@ -11,8 +11,10 @@ defmodule Tymeslot.ProfilesContextTest do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Locales
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ReservedPaths
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   # =====================================
@@ -103,8 +105,8 @@ defmodule Tymeslot.ProfilesContextTest do
       assert updated.full_name == "Test User"
     end
 
-    test "update_profile_field updates single field", %{profile: profile} do
-      assert {:ok, updated} = Profiles.update_profile_field(profile, :timezone, "Europe/London")
+    test "update_field updates a single profile field", %{profile: profile} do
+      assert {:ok, updated} = ProfileQueries.update_field(profile, :timezone, "Europe/London")
       assert updated.timezone == "Europe/London"
     end
   end
@@ -142,20 +144,22 @@ defmodule Tymeslot.ProfilesContextTest do
       assert {:ok, _result} = Profiles.update_username(profile, new_username, user.id)
     end
 
-    test "validate_username_format rejects invalid formats" do
+    test "username validation rejects invalid formats" do
+      reserved = [reserved_words: ReservedPaths.list()]
+
       # too short
-      assert {:error, _reason} = Profiles.validate_username_format("ab")
+      assert {:error, _reason} = UsernameValidator.validate("ab", reserved)
       # reserved
-      assert {:error, _reason} = Profiles.validate_username_format("admin")
+      assert {:error, _reason} = UsernameValidator.validate("admin", reserved)
       # spaces/caps
-      assert {:error, _reason} = Profiles.validate_username_format("Invalid User")
-      assert Profiles.validate_username_format("valid_user-123") == :ok
+      assert {:error, _reason} = UsernameValidator.validate("Invalid User", reserved)
+      assert UsernameValidator.validate("valid_user-123", reserved) == :ok
     end
 
     test "username_available? returns true for reserved usernames (DB-only check)" do
       # username_available? only queries the DB — it has no knowledge of reserved names.
       # Reserved names ARE "available" in the DB sense; rejection happens upstream in
-      # validate_username_format / InputProcessor before this function is ever reached.
+      # UsernameValidator.validate / InputProcessor before this function is ever reached.
       assert Profiles.username_available?("admin") == true
     end
 
@@ -255,7 +259,7 @@ defmodule Tymeslot.ProfilesContextTest do
         client_name: "fake.jpg"
       }
 
-      assert {:error, :invalid_image_format} = Profiles.update_avatar(profile, entry)
+      assert {:error, :invalid_image_format} = Avatars.update_avatar(profile, entry)
     end
 
     test "update_avatar accepts valid image content" do
@@ -282,7 +286,7 @@ defmodule Tymeslot.ProfilesContextTest do
         client_name: "valid.png"
       }
 
-      assert {:ok, updated_profile} = Profiles.update_avatar(profile, entry)
+      assert {:ok, updated_profile} = Avatars.update_avatar(profile, entry)
       assert updated_profile.avatar =~ "_avatar_"
     end
 

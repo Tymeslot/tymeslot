@@ -178,8 +178,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   `DateTime.shift_zone/2` fails — typically because the source DateTime's
   time zone is unknown to the loaded tzdata. Prior versions silently
   returned the original (non-UTC) DateTime on failure, which produced
-  downstream iCal/CalDAV strings in the wrong zone. Callers that must
-  have a UTC DateTime should use `ensure_utc!/1`.
+  downstream iCal/CalDAV strings in the wrong zone.
   """
   @spec ensure_utc(DateTime.t()) :: {:ok, DateTime.t()} | {:error, term()}
   def ensure_utc(%DateTime{time_zone: "Etc/UTC"} = dt), do: {:ok, dt}
@@ -196,25 +195,6 @@ defmodule Tymeslot.Utils.DateTimeUtils do
         )
 
         {:error, reason}
-    end
-  end
-
-  @doc """
-  Same as `ensure_utc/1` but unwraps `{:ok, utc_dt}` and raises on error.
-
-  Use this in internal callers whose contract is `DateTime.t() -> String.t()`
-  (iCal/CalDAV formatters) where falling back to the original non-UTC
-  DateTime would silently produce a wrong-zone output string.
-  """
-  @spec ensure_utc!(DateTime.t()) :: DateTime.t()
-  def ensure_utc!(%DateTime{} = dt) do
-    case ensure_utc(dt) do
-      {:ok, utc_dt} ->
-        utc_dt
-
-      {:error, reason} ->
-        raise ArgumentError,
-              "DateTimeUtils.ensure_utc!/1 failed to shift #{inspect(dt)} to UTC: #{inspect(reason)}"
     end
   end
 

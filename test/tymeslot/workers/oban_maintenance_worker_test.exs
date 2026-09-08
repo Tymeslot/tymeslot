@@ -7,7 +7,6 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
 
   alias Tymeslot.Repo
   alias Tymeslot.Workers.ObanMaintenanceWorker
-  import Ecto.Query
 
   describe "perform/1 - stuck job cleanup" do
     test "cleans up stuck executing jobs" do
@@ -116,43 +115,6 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
       # Job with extra fields from future version
       assert {:ok, _cleanup_result} =
                perform_job(ObanMaintenanceWorker, %{"future_option" => true})
-    end
-  end
-
-  describe "start_if_not_scheduled/0" do
-    test "schedules a job if none exists" do
-      ObanMaintenanceWorker.start_if_not_scheduled()
-
-      assert_enqueued(
-        worker: ObanMaintenanceWorker,
-        args: %{}
-      )
-    end
-
-    test "does not schedule a job if one already exists" do
-      # First one
-      ObanMaintenanceWorker.start_if_not_scheduled()
-
-      initial_count =
-        Repo.one(
-          from j in Oban.Job,
-            where: j.worker == "Tymeslot.Workers.ObanMaintenanceWorker",
-            select: count(j.id)
-        )
-
-      assert initial_count == 1
-
-      # Second call
-      ObanMaintenanceWorker.start_if_not_scheduled()
-
-      final_count =
-        Repo.one(
-          from j in Oban.Job,
-            where: j.worker == "Tymeslot.Workers.ObanMaintenanceWorker",
-            select: count(j.id)
-        )
-
-      assert final_count == 1
     end
   end
 end

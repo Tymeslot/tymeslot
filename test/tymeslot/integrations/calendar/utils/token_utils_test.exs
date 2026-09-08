@@ -52,22 +52,6 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtilsTest do
     end
   end
 
-  describe "token_status/1" do
-    test "returns correct atoms" do
-      assert TokenUtils.token_status(%{token_expires_at: nil}) == :no_expiry
-
-      assert TokenUtils.token_status(%{
-               token_expires_at: DateTime.add(DateTime.utc_now(), -3700, :second)
-             }) == :expired
-
-      assert TokenUtils.token_status(%{
-               token_expires_at: DateTime.add(DateTime.utc_now(), 3700, :second)
-             }) == :valid
-
-      assert TokenUtils.token_status(%{}) == :unknown
-    end
-  end
-
   describe "relative_time/1" do
     test "formats various time diffs" do
       now = DateTime.utc_now()
@@ -77,22 +61,6 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtilsTest do
       assert TokenUtils.relative_time(DateTime.add(now, 7500, :second)) == "in 2 hours"
       assert TokenUtils.relative_time(DateTime.add(now, 180_000, :second)) == "in 2 days"
       assert TokenUtils.relative_time(DateTime.add(now, 6_000_000, :second)) == "in 2 months"
-    end
-  end
-
-  describe "needs_refresh?/2" do
-    test "returns true if expiring soon" do
-      soon = DateTime.add(DateTime.utc_now(), 120, :second)
-      assert TokenUtils.needs_refresh?(%{token_expires_at: soon}, 5)
-    end
-
-    test "returns false if expires later" do
-      future = DateTime.add(DateTime.utc_now(), 600, :second)
-      refute TokenUtils.needs_refresh?(%{token_expires_at: future}, 5)
-    end
-
-    test "returns false if no expiry" do
-      refute TokenUtils.needs_refresh?(%{token_expires_at: nil}, 5)
     end
   end
 end

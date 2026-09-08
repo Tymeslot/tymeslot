@@ -15,17 +15,11 @@ defmodule Tymeslot.Demo do
 
   # Delegate all behavior functions to the provider
 
-  @spec get_profile_by_id(integer()) :: map() | nil
-  def get_profile_by_id(profile_id), do: provider().get_profile_by_id(profile_id)
-
   @spec get_user_by_id(integer()) :: map() | nil
   def get_user_by_id(user_id), do: provider().get_user_by_id(user_id)
 
   @spec get_profile_by_user_id(integer()) :: map() | nil
   def get_profile_by_user_id(user_id), do: provider().get_profile_by_user_id(user_id)
-
-  @spec demo_username?(String.t() | any()) :: boolean()
-  def demo_username?(username), do: provider().demo_username?(username)
 
   @spec demo_profile?(map() | nil) :: boolean()
   def demo_profile?(profile), do: provider().demo_profile?(profile)
@@ -33,16 +27,8 @@ defmodule Tymeslot.Demo do
   @spec demo_mode?(map()) :: boolean()
   def demo_mode?(context), do: provider().demo_mode?(context)
 
-  @spec get_profile_by_username(String.t()) :: map() | nil
-  def get_profile_by_username(username), do: provider().get_profile_by_username(username)
-
   @spec resolve_organizer_context(String.t()) :: {:ok, map()} | {:error, :profile_not_found}
   def resolve_organizer_context(username), do: provider().resolve_organizer_context(username)
-
-  @spec resolve_organizer_context_optimized(String.t()) ::
-          {:ok, map()} | {:error, :profile_not_found}
-  def resolve_organizer_context_optimized(username),
-    do: provider().resolve_organizer_context_optimized(username)
 
   @spec get_theme_customization(integer(), String.t()) :: any()
   def get_theme_customization(profile_id, theme_id),
@@ -50,17 +36,6 @@ defmodule Tymeslot.Demo do
 
   @spec booking_window_days(map()) :: non_neg_integer()
   def booking_window_days(profile), do: provider().booking_window_days(profile)
-
-  @spec list_active_meeting_types(integer()) :: [map()]
-  def list_active_meeting_types(user_id), do: provider().list_active_meeting_types(user_id)
-
-  @spec get_active_video_integration(integer()) :: map() | nil
-  def get_active_video_integration(user_id),
-    do: provider().get_active_video_integration(user_id)
-
-  @spec list_calendar_integrations(integer()) :: [map()]
-  def list_calendar_integrations(user_id),
-    do: provider().list_calendar_integrations(user_id)
 
   @spec avatar_url(map() | nil, atom()) :: String.t()
   def avatar_url(profile, version \\ :original), do: provider().avatar_url(profile, version)
@@ -87,7 +62,7 @@ defmodule Tymeslot.Demo do
         user_timezone,
         organizer_user_id,
         organizer_profile,
-        context \\ nil
+        context
       ),
       do:
         provider().get_available_slots(
@@ -114,43 +89,14 @@ defmodule Tymeslot.Demo do
         end_date,
         user_timezone,
         organizer_profile,
-        context \\ nil,
-        duration_minutes \\ nil
+        context,
+        duration_minutes
       ),
       do:
         provider().get_range_availability(
           user_id,
           start_date,
           end_date,
-          user_timezone,
-          organizer_profile,
-          context,
-          duration_minutes
-        )
-
-  @spec get_month_availability(
-          integer(),
-          integer(),
-          integer(),
-          String.t(),
-          map(),
-          map() | nil,
-          integer() | nil
-        ) :: {:ok, map()} | {:error, any()}
-  def get_month_availability(
-        user_id,
-        year,
-        month,
-        user_timezone,
-        organizer_profile,
-        context \\ nil,
-        duration_minutes \\ nil
-      ),
-      do:
-        provider().get_month_availability(
-          user_id,
-          year,
-          month,
           user_timezone,
           organizer_profile,
           context,
@@ -164,7 +110,7 @@ defmodule Tymeslot.Demo do
         year,
         month,
         organizer_profile,
-        availability_map \\ nil
+        availability_map
       ),
       do:
         provider().get_calendar_days(

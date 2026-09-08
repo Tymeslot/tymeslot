@@ -6,7 +6,6 @@ defmodule Tymeslot.Infrastructure.AppConfigBehaviour do
   @callback registration_enabled?() :: boolean()
   @callback password_auth_enabled?() :: boolean()
   @callback enforce_legal_agreements?() :: boolean()
-  @callback show_marketing_links?() :: boolean()
   @callback logo_links_to_marketing?() :: boolean()
   @callback site_home_path() :: String.t()
 end
@@ -30,11 +29,6 @@ defmodule Tymeslot.Infrastructure.AppConfig do
   @impl Tymeslot.Infrastructure.AppConfigBehaviour
   def enforce_legal_agreements? do
     Application.get_env(:tymeslot, :enforce_legal_agreements, false)
-  end
-
-  @impl Tymeslot.Infrastructure.AppConfigBehaviour
-  def show_marketing_links? do
-    Application.get_env(:tymeslot, :show_marketing_links, false)
   end
 
   @impl Tymeslot.Infrastructure.AppConfigBehaviour

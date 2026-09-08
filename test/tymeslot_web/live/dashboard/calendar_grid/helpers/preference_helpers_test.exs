@@ -31,9 +31,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpersTest do
       refute PreferenceHelpers.day_header_class(tomorrow, "Etc/UTC") =~ "turquoise"
     end
 
-    test "defaults to UTC when no timezone is supplied (arity-1)" do
+    test "highlights today when the timezone is UTC" do
       today_utc = Date.utc_today()
-      assert PreferenceHelpers.day_header_class(today_utc) =~ "turquoise"
+      assert PreferenceHelpers.day_header_class(today_utc, "Etc/UTC") =~ "turquoise"
     end
 
     test "UTC+14 (Pacific/Kiritimati) today is highlighted there and not in UTC-12" do

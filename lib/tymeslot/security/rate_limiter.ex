@@ -65,7 +65,7 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec check_auth_rate_limit(String.t(), String.t() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
-  def check_auth_rate_limit(email, ip \\ nil), do: Auth.check_auth(email, ip)
+  def check_auth_rate_limit(email, ip), do: Auth.check_auth(email, ip)
 
   @doc """
   Record authentication attempt result for lockout tracking.

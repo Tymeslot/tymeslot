@@ -32,18 +32,4 @@ defmodule Tymeslot.Emails.Shared.LayoutsTest do
       refute mjml =~ "R&amp;amp;D Update"
     end
   end
-
-  describe "simple_layout/2" do
-    test "escapes ampersand in title exactly once" do
-      mjml =
-        Layouts.simple_layout("<p>Body</p>",
-          intent: :confirmed,
-          eyebrow: "Notice",
-          title: "Terms & Conditions"
-        )
-
-      assert mjml =~ "Terms &amp; Conditions"
-      refute mjml =~ "Terms &amp;amp; Conditions"
-    end
-  end
 end

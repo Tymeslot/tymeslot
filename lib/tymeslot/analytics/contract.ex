@@ -9,7 +9,7 @@ defmodule Tymeslot.Analytics.Contract do
   server-side events and calls `validate_with!/3` with the shared validator.
 
   Validation raises in strict mode (dev/test) so a malformed or PII-carrying
-  event is caught at the source. In prod, `strict?/0` is false: callers receive
+  event is caught at the source. In prod, strict mode is off: callers receive
   `{:error, reason}` on a violation, log a warning, and drop the event rather
   than crashing a live user flow.
   """
@@ -107,11 +107,9 @@ defmodule Tymeslot.Analytics.Contract do
   defp categorical?(value),
     do: is_binary(value) or is_atom(value) or is_number(value) or is_boolean(value)
 
-  @doc """
-  Whether validation raises (dev/test) or logs-and-drops (prod). Set
-  `config :tymeslot, :analytics_strict, false` in prod so a contract bug logs
-  and drops rather than crashing a live user flow.
-  """
+  # Whether validation raises (dev/test) or logs-and-drops (prod). Set
+  # `config :tymeslot, :analytics_strict, false` in prod so a contract bug logs
+  # and drops rather than crashing a live user flow.
   @spec strict?() :: boolean()
-  def strict?, do: Application.get_env(:tymeslot, :analytics_strict, true)
+  defp strict?, do: Application.get_env(:tymeslot, :analytics_strict, true)
 end

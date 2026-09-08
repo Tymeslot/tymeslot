@@ -11,7 +11,7 @@ defmodule Tymeslot.Telegram.InputValidation do
   @chat_id_username_regex ~r/^@[a-zA-Z][a-zA-Z0-9_]{4,31}$/
 
   @spec validate_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
-  def validate_form(params, opts \\ []) do
+  def validate_form(params, opts) do
     bot_mode = Keyword.get(opts, :bot_mode, "own")
     mode = Keyword.get(opts, :mode, :create)
     errors = %{}

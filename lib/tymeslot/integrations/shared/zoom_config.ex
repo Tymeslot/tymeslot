@@ -60,12 +60,9 @@ defmodule Tymeslot.Integrations.Shared.ZoomConfig do
     end
   end
 
-  @doc """
-  Returns the Secret Token used to sign Zoom webhook requests
-  (deauthorization events).
-  """
+  # The Secret Token used to sign Zoom webhook requests (deauthorization events).
   @spec deauth_secret() :: String.t() | nil
-  def deauth_secret do
+  defp deauth_secret do
     Application.get_env(:tymeslot, :zoom_oauth)[:deauth_secret] ||
       System.get_env("ZOOM_DEAUTH_SECRET")
   end

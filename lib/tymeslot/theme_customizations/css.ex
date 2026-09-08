@@ -112,13 +112,10 @@ defmodule Tymeslot.ThemeCustomizations.Css do
     Map.get(map, :custom_palette_seed) || Map.get(map, "custom_palette_seed")
   end
 
-  @doc """
-  Extracts the colour scheme ID from a customisation schema or map.
-  """
   @spec get_scheme_id(ThemeCustomizationSchema.t() | map()) :: String.t() | nil
-  def get_scheme_id(%ThemeCustomizationSchema{color_scheme: s}), do: s
+  defp get_scheme_id(%ThemeCustomizationSchema{color_scheme: s}), do: s
 
-  def get_scheme_id(map) when is_map(map) do
+  defp get_scheme_id(map) when is_map(map) do
     Map.get(map, :color_scheme) || Map.get(map, "color_scheme")
   end
 

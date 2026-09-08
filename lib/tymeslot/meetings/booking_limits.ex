@@ -61,22 +61,6 @@ defmodule Tymeslot.Meetings.BookingLimits do
     |> DateTime.to_date()
   end
 
-  @doc "The Monday starting the host-timezone week containing the instant."
-  @spec week_key(DateTime.t(), String.t()) :: Date.t()
-  def week_key(%DateTime{} = instant, host_timezone) do
-    instant
-    |> day_key(host_timezone)
-    |> Date.beginning_of_week(@week_start)
-  end
-
-  @doc "The first day of the host-timezone month containing the instant."
-  @spec month_key(DateTime.t(), String.t()) :: Date.t()
-  def month_key(%DateTime{} = instant, host_timezone) do
-    instant
-    |> day_key(host_timezone)
-    |> Date.beginning_of_month()
-  end
-
   @doc """
   The UTC window whose bookings can affect any day/week/month cap that a
   date in `start_date..end_date` falls under.

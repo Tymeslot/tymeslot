@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollList do
   attr :myself, :any, required: true
 
   @spec poll_card(map()) :: Phoenix.LiveView.Rendered.t()
-  def poll_card(assigns) do
+  defp poll_card(assigns) do
     tallies = Polls.tallies(assigns.poll)
 
     assigns =

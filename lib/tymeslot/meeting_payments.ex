@@ -71,15 +71,6 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate disconnect(user), to: ConnectAccounts
 
   @doc """
-  Reconciles a local `connect_accounts` row from a Stripe account snapshot.
-  Guards against out-of-order delivery by comparing `event_at` (the event
-  emission time for webhooks; the fetch time for a resync) against
-  `last_account_event_at`.
-  """
-  @spec apply_account_event(map(), DateTime.t()) :: :ok
-  defdelegate apply_account_event(account, event_at), to: ConnectAccounts
-
-  @doc """
   Fetches a Connect account by its row ID, or `nil` if not found.
   """
   @spec get_connect_account(Ecto.UUID.t()) :: account() | nil

@@ -8,34 +8,6 @@ defmodule Tymeslot.Auth.UserQueriesTest do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Password
-
-  describe "authentication security (protects user accounts)" do
-    test "validates password correctly for legitimate users" do
-      user =
-        insert(:user,
-          email: "secure@example.com",
-          password_hash: Password.hash_password("SecurePassword123!")
-        )
-
-      {:ok, authenticated_user} =
-        UserQueries.get_user_by_email_and_password("secure@example.com", "SecurePassword123!")
-
-      assert authenticated_user.id == user.id
-    end
-
-    test "prevents unauthorized access with wrong password" do
-      insert(:user,
-        email: "secure@example.com",
-        password_hash: Password.hash_password("SecurePassword123!")
-      )
-
-      unauthorized_attempt =
-        UserQueries.get_user_by_email_and_password("secure@example.com", "WrongPassword!")
-
-      assert unauthorized_attempt == {:error, :invalid_credentials}
-    end
-  end
 
   describe "social authentication security" do
     test "prevents provider impersonation with strict matching" do
@@ -157,9 +129,6 @@ defmodule Tymeslot.Auth.UserQueriesTest do
       # Tokens should be cleared to prevent token reuse attacks
       assert updated.reset_token_hash == nil
       assert updated.reset_sent_at == nil
-
-      # New password should work
-      assert UserQueries.get_user_by_email_and_password(user.email, "NewSecurePassword123!")
     end
 
     test "enforces strong password requirements" do

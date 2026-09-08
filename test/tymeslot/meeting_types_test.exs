@@ -13,6 +13,7 @@ defmodule Tymeslot.MeetingTypesTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
 
   setup do
@@ -320,48 +321,6 @@ defmodule Tymeslot.MeetingTypesTest do
   end
 
   # =====================================
-  # Toggling Meeting Type Status Behaviors
-  # =====================================
-
-  describe "when toggling meeting type status" do
-    test "activates an inactive meeting type" do
-      user = insert(:user)
-      meeting_type = insert(:meeting_type, user: user, is_active: false)
-
-      assert {:ok, toggled} = MeetingTypes.toggle_meeting_type(meeting_type.id, user.id)
-
-      assert toggled.is_active == true
-    end
-
-    test "deactivates an active meeting type" do
-      user = insert(:user)
-      meeting_type = insert(:meeting_type, user: user, is_active: true)
-
-      assert {:ok, toggled} = MeetingTypes.toggle_meeting_type(meeting_type.id, user.id)
-
-      assert toggled.is_active == false
-    end
-
-    test "returns not found for non-existent meeting type" do
-      user = insert(:user)
-
-      result = MeetingTypes.toggle_meeting_type(999_999, user.id)
-
-      assert {:error, :not_found} = result
-    end
-
-    test "returns not found when meeting type belongs to different user" do
-      user1 = insert(:user)
-      user2 = insert(:user)
-      meeting_type = insert(:meeting_type, user: user1)
-
-      result = MeetingTypes.toggle_meeting_type(meeting_type.id, user2.id)
-
-      assert {:error, :not_found} = result
-    end
-  end
-
-  # =====================================
   # Deleting Meeting Types Behaviors
   # =====================================
 
@@ -389,7 +348,7 @@ defmodule Tymeslot.MeetingTypesTest do
       _type1 = insert(:meeting_type, user: user, is_active: true)
       _type2 = insert(:meeting_type, user: user, is_active: false)
 
-      result = MeetingTypes.list_meeting_types(user.id)
+      result = MeetingTypes.get_all_meeting_types(user.id)
 
       assert length(result) == 2
     end
@@ -397,7 +356,7 @@ defmodule Tymeslot.MeetingTypesTest do
     test "creates defaults if user has no meeting types" do
       user = insert(:user)
 
-      result = MeetingTypes.list_meeting_types(user.id)
+      result = MeetingTypes.get_all_meeting_types(user.id)
 
       assert result != []
     end
@@ -482,7 +441,7 @@ defmodule Tymeslot.MeetingTypesTest do
           user_id: user.id
         })
 
-      assert MeetingTypes.to_slug(mt) == ""
+      assert Slugs.to_slug(mt) == ""
     end
   end
 end

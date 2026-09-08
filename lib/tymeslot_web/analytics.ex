@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Analytics do
   require Logger
 
   @spec push(Phoenix.LiveView.Socket.t(), String.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def push(socket, name, props \\ %{}) when is_binary(name) and is_map(props) do
+  def push(socket, name, props) when is_binary(name) and is_map(props) do
     # Validation runs OUTSIDE the rescue so strict mode (dev/test) actually raises
     # on a PII/malformed event — the whole point of strict mode is to catch it at
     # source. In non-strict mode (prod) it returns {:error, _} and we drop quietly.

@@ -6,7 +6,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   - IP address extraction
   - Rate limiting logic
   - Common error handling patterns
-  - Validation error formatting
+  - OAuth error formatting
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -20,71 +20,15 @@ defmodule TymeslotWeb.AuthControllerHelpers do
 
   ## Parameters
   - `conn`: The Plug connection
-  - `message`: Optional custom error message
-  - `redirect_path`: Path to redirect to (defaults to "/")
+  - `message`: Error message to show
+  - `redirect_path`: Path to redirect to
   """
   @spec handle_rate_limited(Plug.Conn.t(), String.t(), String.t()) :: Plug.Conn.t()
-  def handle_rate_limited(
-        conn,
-        message \\ dgettext("auth", "Too many attempts. Please try again later."),
-        redirect_path \\ "/"
-      ) do
+  def handle_rate_limited(conn, message, redirect_path) do
     conn
     |> put_flash(:error, message)
     |> redirect(to: redirect_path)
   end
-
-  @doc """
-  Formats validation errors into a readable string.
-
-  ## Parameters
-  - `errors`: Map of field errors
-
-  ## Returns
-  - Formatted error string
-  """
-  @spec format_validation_errors(map()) :: String.t()
-  def format_validation_errors(errors) when is_map(errors) do
-    Enum.map_join(errors, ". ", fn {field, message} ->
-      field_name = field |> to_string() |> String.replace("_", " ") |> String.capitalize()
-      "#{field_name} #{message}"
-    end)
-  end
-
-  @doc """
-  Handles generic errors with consistent logging and response.
-
-  ## Parameters
-  - `conn`: The Plug connection
-  - `reason`: Error reason for logging
-  - `user_message`: Message to show to user
-  - `redirect_path`: Path to redirect to
-  """
-  @spec handle_generic_error(Plug.Conn.t(), any(), String.t(), String.t()) :: Plug.Conn.t()
-  def handle_generic_error(conn, reason, user_message, redirect_path \\ "/") do
-    require Logger
-    Logger.error("Authentication error", reason: inspect(reason))
-
-    conn
-    |> put_flash(:error, user_message)
-    |> redirect(to: redirect_path)
-  end
-
-  @doc """
-  Converts boolean-like string values to actual booleans.
-  Useful for form checkbox processing.
-
-  ## Parameters
-  - `value`: String value to convert
-
-  ## Returns
-  - Boolean value
-  """
-  @spec convert_to_boolean(String.t() | boolean()) :: boolean()
-  def convert_to_boolean("true"), do: true
-  def convert_to_boolean("on"), do: true
-  def convert_to_boolean(true), do: true
-  def convert_to_boolean(_other), do: false
 
   # -------------------------------------------------------------------
   # OAuth error formatting

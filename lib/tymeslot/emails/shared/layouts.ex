@@ -27,7 +27,7 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   """
   @spec transactional_layout(String.t(), MjmlEmail.organizer_details() | keyword()) ::
           String.t()
-  def transactional_layout(content, opts \\ []) do
+  def transactional_layout(content, opts) do
     organizer_details =
       case opts do
         list when is_list(list) -> Map.new(list)
@@ -74,51 +74,6 @@ defmodule Tymeslot.Emails.Shared.Layouts do
       stage: Stage.stage_band(intent, eyebrow, stage_title, stage_subtitle),
       header: "",
       body: content,
-      footer: system_footer()
-    })
-  end
-
-  @doc """
-  A simple, content-focused layout for administrative or internal notifications.
-
-  Required opts:
-  - `:intent` — the email's intent
-  - `:eyebrow` — the stage-band label
-  - `:title` — the HTML title and stage headline
-  """
-  @spec simple_layout(String.t(), keyword()) :: String.t()
-  def simple_layout(content, opts) do
-    intent = fetch_required!(opts, :intent)
-    eyebrow = fetch_required!(opts, :eyebrow)
-    raw_title = fetch_required!(opts, :title)
-    safe_title = Sanitise.sanitize_for_email(raw_title)
-
-    header_block =
-      case Keyword.get(opts, :header) do
-        nil ->
-          ""
-
-        h ->
-          ~s(<mj-text font-size="18px" font-weight="700" padding-bottom="12px" color="#{Styles.ink()}">#{Sanitise.sanitize_for_email(h)}</mj-text>)
-      end
-
-    body = """
-    <mj-section padding="0">
-      <mj-column>
-        #{header_block}
-        <mj-text line-height="1.6" color="#{Styles.ink_soft()}">
-          #{content}
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    """
-
-    Frame.wrap(%{
-      title: safe_title,
-      preview: safe_title,
-      stage: Stage.stage_band(intent, eyebrow, raw_title, nil),
-      header: "",
-      body: body,
       footer: system_footer()
     })
   end

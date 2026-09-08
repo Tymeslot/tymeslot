@@ -100,23 +100,6 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
     end
   end
 
-  describe "paused?/2" do
-    test "returns false for a healthy integration", %{integration: integration} do
-      refute SyncGating.paused?(:calendar, integration.id)
-    end
-
-    test "returns true once the integration's consecutive hard failures exceed the threshold",
-         %{user: user, integration: integration} do
-      upsert_health(user.id, integration.id,
-        failures: SyncGating.threshold() + 1,
-        consecutive_hard_failures: SyncGating.threshold() + 1,
-        last_error_class: "hard"
-      )
-
-      assert SyncGating.paused?(:calendar, integration.id)
-    end
-  end
-
   defp upsert_health(user_id, integration_id, fields) do
     attrs =
       Map.merge(

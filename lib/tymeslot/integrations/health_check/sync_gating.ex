@@ -42,15 +42,6 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGating do
   end
 
   @doc """
-  Predicate form: returns true when the integration (given its id and type)
-  should be sync-paused according to its current health state.
-  """
-  @spec paused?(integration_type(), integer()) :: boolean()
-  def paused?(type, integration_id) do
-    type |> paused_integration_ids() |> MapSet.member?(integration_id)
-  end
-
-  @doc """
   The threshold (count of consecutive hard failures) above which an
   integration is considered sync-paused. Configurable for test scenarios.
   """

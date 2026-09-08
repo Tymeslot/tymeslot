@@ -21,8 +21,8 @@ defmodule TymeslotWeb.Live.Shared.FormValidationHelpers do
       `changeset_errors_map/1`, `sync_changeset_field_error/3`,
       `clear_target_error/3`.
 
-  Both styles share the generic primitives `delete_field_error/2` and
-  `errors_for_field/2`. Render every input with an explicit `errors=`
+  Both styles share the generic primitive `delete_field_error/2`.
+  Render every input with an explicit `errors=`
   attribute built from `field_errors/2` — never let the form helpers
   derive errors from the underlying changeset directly, or the
   "clear-on-type" behaviour will not work.
@@ -74,9 +74,8 @@ defmodule TymeslotWeb.Live.Shared.FormValidationHelpers do
     |> Enum.into(%{})
   end
 
-  @spec errors_for_field(map(), atom() | nil) :: map()
-  def errors_for_field(_errors, nil), do: %{}
-  def errors_for_field(errors, field) when is_atom(field), do: Map.take(errors, [field])
+  @spec errors_for_field(map(), atom()) :: map()
+  defp errors_for_field(errors, field) when is_atom(field), do: Map.take(errors, [field])
 
   @spec delete_field_error(map(), atom() | nil) :: map()
   def delete_field_error(errors, nil), do: errors

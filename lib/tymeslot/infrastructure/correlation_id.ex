@@ -127,37 +127,6 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   end
 
   @doc """
-  Wraps a function call with correlation ID tracking.
-
-  Useful for background jobs and async operations.
-
-  ## Examples
-
-      CorrelationId.with_correlation_id(fn ->
-        # Your code here - all logs will include the correlation ID
-        process_order(order)
-      end)
-
-      # With existing correlation ID
-      CorrelationId.with_correlation_id(correlation_id, fn ->
-        send_email(user)
-      end)
-  """
-  @spec with_correlation_id(String.t() | nil, function()) :: any()
-  def with_correlation_id(correlation_id \\ nil, fun) do
-    correlation_id = correlation_id || generate()
-
-    # Store in process dictionary
-    put_in_process(correlation_id)
-
-    # Add to logger metadata
-    add_to_logger_metadata(correlation_id)
-
-    # Execute the function
-    fun.()
-  end
-
-  @doc """
   Creates a plug for automatically handling correlation IDs.
 
   Add this to your endpoint or router pipeline:

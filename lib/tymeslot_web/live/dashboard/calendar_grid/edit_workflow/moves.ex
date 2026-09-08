@@ -19,11 +19,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   Moves an event from one integration to another via delete + create.
   Runs asynchronously; sends `{:event_move_result, ...}` to the LiveView.
   """
-  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), integer()) ::
-          Phoenix.LiveView.Socket.t()
   @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), integer(), keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def move_event_async(socket, event, new_integration_id, opts \\ []) do
+  def move_event_async(socket, event, new_integration_id, opts) do
     user_id = socket.assigns.current_user.id
     lv_pid = self()
     new_calendar_id = opts[:calendar_id]

@@ -748,11 +748,6 @@ msgstr "API-Schlüssel"
 msgid "Failed to connect %{service}. Please try again."
 msgstr "%{service} konnte nicht verbunden werden. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to initiate %{service} authentication."
-msgstr "%{service}-Authentifizierung konnte nicht gestartet werden."
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
 #, elixir-autogen, elixir-format
 msgid "My Custom Video"
@@ -861,34 +856,6 @@ msgstr "%{status} - Aufmerksamkeit erforderlich"
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Reaktivierung nicht möglich - eine andere aktive Integration verwendet dieses Konto bereits"
-
-#: lib/tymeslot_web/helpers/integration_providers.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} day"
-msgid_plural "%{count} days"
-msgstr[0] "%{count} Tag"
-msgstr[1] "%{count} Tage"
-
-#: lib/tymeslot_web/helpers/integration_providers.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} hour"
-msgid_plural "%{count} hours"
-msgstr[0] "%{count} Stunde"
-msgstr[1] "%{count} Stunden"
-
-#: lib/tymeslot_web/helpers/integration_providers.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} minute"
-msgid_plural "%{count} minutes"
-msgstr[0] "%{count} Minute"
-msgstr[1] "%{count} Minuten"
-
-#: lib/tymeslot_web/helpers/integration_providers.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} second"
-msgid_plural "%{count} seconds"
-msgstr[0] "%{count} Sekunde"
-msgstr[1] "%{count} Sekunden"
 
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
@@ -1071,30 +1038,6 @@ msgstr "MiroTalk-Serverfehler (Status %{status}) - bitte versuchen Sie es späte
 msgid "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
 msgstr "Muss eine gültige HTTP- oder HTTPS-URL sein (z. B. https://example.com)"
 
-#: lib/tymeslot/integrations/shared/input_validators.ex
-#, elixir-autogen, elixir-format
-msgid "Name is required"
-msgstr "Name ist erforderlich"
-
-#: lib/tymeslot/integrations/shared/input_validators.ex
-#, elixir-autogen, elixir-format
-msgid "Name must be %{count} character or less"
-msgid_plural "Name must be %{count} characters or less"
-msgstr[0] "Der Name darf höchstens %{count} Zeichen lang sein"
-msgstr[1] "Der Name darf höchstens %{count} Zeichen lang sein"
-
-#: lib/tymeslot/integrations/shared/input_validators.ex
-#, elixir-autogen, elixir-format
-msgid "Name must be at least %{count} character"
-msgid_plural "Name must be at least %{count} characters"
-msgstr[0] "Der Name muss mindestens %{count} Zeichen lang sein"
-msgstr[1] "Der Name muss mindestens %{count} Zeichen lang sein"
-
-#: lib/tymeslot/integrations/shared/input_validators.ex
-#, elixir-autogen, elixir-format
-msgid "Name must be text"
-msgstr "Der Name muss Text sein"
-
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Not Acceptable - The MiroTalk server rejected the request. Please verify your base URL and API configuration"
@@ -1140,11 +1083,6 @@ msgstr "Die Vorlagenvariable kann nicht im URL-Fragment (#) verwendet werden. Fr
 msgid "The provider rejected the stored credentials for this integration. Please reconnect the integration."
 msgstr "Der Anbieter hat die gespeicherten Anmeldedaten für diese Integration abgelehnt. Bitte verbinden Sie die Integration erneut."
 
-#: lib/tymeslot_web/helpers/integration_providers.ex
-#, elixir-autogen, elixir-format
-msgid "Token expired"
-msgstr "Token abgelaufen"
-
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "URL resolves to a private or loopback address"
@@ -1159,11 +1097,6 @@ msgstr "Die URL hat mit HTTP %{status} geantwortet"
 #, elixir-autogen, elixir-format
 msgid "Unexpected response (status %{status}) - Please verify your configuration"
 msgstr "Unerwartete Antwort (Status %{status}) - bitte überprüfen Sie Ihre Konfiguration"
-
-#: lib/tymeslot_web/helpers/integration_providers.ex
-#, elixir-autogen, elixir-format
-msgid "Unknown"
-msgstr "Unbekannt"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
 #, elixir-autogen, elixir-format
@@ -1194,11 +1127,6 @@ msgstr "Die Aktualisierung des Zoom-Tokens ist nach einem 401-Fehler fehlgeschla
 #, elixir-autogen, elixir-format
 msgid "cancel meetings"
 msgstr "Absagen von Meetings"
-
-#: lib/tymeslot_web/helpers/integration_providers.ex
-#, elixir-autogen, elixir-format
-msgid "in %{duration}"
-msgstr "in %{duration}"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format

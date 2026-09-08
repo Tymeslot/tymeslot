@@ -14,17 +14,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
   def get_break(id), do: Repo.get(AvailabilityBreakSchema, id)
 
   @doc """
-  Tagged-tuple variant: returns {:ok, break} | {:error, :not_found}.
-  """
-  @spec get_break_t(integer()) :: {:ok, AvailabilityBreakSchema.t()} | {:error, :not_found}
-  def get_break_t(id) do
-    case get_break(id) do
-      nil -> {:error, :not_found}
-      b -> {:ok, b}
-    end
-  end
-
-  @doc """
   Gets all breaks for a weekly availability.
   """
   @spec get_breaks_by_weekly_availability(integer()) :: [AvailabilityBreakSchema.t()]
@@ -39,21 +28,10 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
   Creates an availability break.
   """
   @spec create_break(map()) :: {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_break(attrs \\ %{}) when is_map(attrs) do
+  def create_break(attrs) when is_map(attrs) do
     %AvailabilityBreakSchema{}
     |> AvailabilityBreakSchema.changeset(attrs)
     |> Repo.insert()
-  end
-
-  @doc """
-  Updates an availability break.
-  """
-  @spec update_break(AvailabilityBreakSchema.t(), map()) ::
-          {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_break(%AvailabilityBreakSchema{} = break, attrs) when is_map(attrs) do
-    break
-    |> AvailabilityBreakSchema.changeset(attrs)
-    |> Repo.update()
   end
 
   @doc """
@@ -63,29 +41,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
           {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
   def delete_break(%AvailabilityBreakSchema{} = break) do
     Repo.delete(break)
-  end
-
-  @doc """
-  Deletes all breaks for a weekly availability.
-  """
-  @spec delete_breaks_by_weekly_availability(integer()) :: {non_neg_integer(), nil | [term()]}
-  def delete_breaks_by_weekly_availability(weekly_availability_id) do
-    Repo.delete_all(
-      where(AvailabilityBreakSchema, [b], b.weekly_availability_id == ^weekly_availability_id)
-    )
-  end
-
-  @doc """
-  Gets breaks within a time range for a weekly availability.
-  """
-  @spec get_breaks_in_time_range(integer(), Time.t(), Time.t()) ::
-          list(AvailabilityBreakSchema.t())
-  def get_breaks_in_time_range(weekly_availability_id, start_time, end_time) do
-    AvailabilityBreakSchema
-    |> where([b], b.weekly_availability_id == ^weekly_availability_id)
-    |> where([b], b.start_time < ^end_time and b.end_time > ^start_time)
-    |> order_by(asc: :start_time)
-    |> Repo.all()
   end
 
   @doc """

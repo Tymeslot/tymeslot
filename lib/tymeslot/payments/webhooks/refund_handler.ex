@@ -260,10 +260,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   end
 
   # Gets the refund revocation threshold percentage from config.
-  # Made public for testing purposes but should be considered internal API.
-  @doc false
   @spec refund_revocation_threshold_percent() :: float()
-  def refund_revocation_threshold_percent do
+  defp refund_revocation_threshold_percent do
     Application.get_env(:tymeslot, :refund_revocation_threshold_percent, 90.0)
   end
 

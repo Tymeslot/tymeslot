@@ -126,11 +126,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
     ApprovalJobs.cancel(meeting)
   end
 
-  @doc """
-  Schedules confirmation notifications for a meeting.
-  """
-  @spec schedule_confirmation_notifications(%{atom() => term()}) :: :ok | {:error, term()}
-  def schedule_confirmation_notifications(meeting) do
+  # Schedules confirmation notifications for a meeting.
+  defp schedule_confirmation_notifications(meeting) do
     recipients = Recipients.determine_recipients(meeting, :confirmation)
     content = ContentBuilder.build_appointment_details(meeting)
 

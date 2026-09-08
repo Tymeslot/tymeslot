@@ -11,13 +11,6 @@ defmodule Tymeslot.Emails.Shared.Buttons do
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Security.UrlValidation
 
-  @type button_spec :: %{
-          required(:text) => String.t(),
-          required(:url) => String.t(),
-          optional(:opts) => keyword(),
-          optional(atom()) => term()
-        }
-
   @doc """
   A primary action button — pill-shaped, bold, centred. The background colour
   comes from the supplied `intent`.
@@ -38,35 +31,6 @@ defmodule Tymeslot.Emails.Shared.Buttons do
       <mj-column>
         #{button_markup(intent, text, url, size, full_width, width)}
       </mj-column>
-    </mj-section>
-    """
-  end
-
-  @doc """
-  A horizontal group of buttons — renders them side-by-side via `mj-group`.
-  Every button shares the same `intent`.
-  """
-  @spec action_button_group(Tokens.intent(), list(button_spec())) :: String.t()
-  def action_button_group(intent, buttons) when is_atom(intent) do
-    columns =
-      Enum.map_join(buttons, "\n", fn button ->
-        opts = Map.get(button, :opts, [])
-        size = Keyword.get(opts, :size, :medium)
-        full_width = Keyword.get(opts, :full_width, false)
-        width = Keyword.get(opts, :width, "auto")
-
-        """
-        <mj-column>
-          #{button_markup(intent, button.text, button.url, size, full_width, width)}
-        </mj-column>
-        """
-      end)
-
-    """
-    <mj-section padding="14px 0">
-      <mj-group>
-        #{columns}
-      </mj-group>
     </mj-section>
     """
   end

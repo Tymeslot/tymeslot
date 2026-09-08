@@ -133,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
           keyword()
         ) ::
           {:ok, %{calendars: list(), discovery_credentials: map()}} | {:error, any()}
-  def discover_and_filter_calendars(provider, url, username, password, user_id, opts \\ []) do
+  def discover_and_filter_calendars(provider, url, username, password, user_id, opts) do
     case Discovery.discover_calendars_for_credentials(
            provider,
            url,

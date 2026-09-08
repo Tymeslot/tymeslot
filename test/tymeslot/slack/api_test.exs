@@ -198,16 +198,4 @@ defmodule Tymeslot.Slack.APITest do
                API.oauth_v2_access("id1", "secret1", "code1", "https://example/cb")
     end
   end
-
-  describe "auth_test/1" do
-    test "returns the verified workspace metadata on success" do
-      expect(Tymeslot.HTTPClientMock, :post, fn url, _body, headers, _opts ->
-        assert url == "https://slack.com/api/auth.test"
-        assert {"authorization", "Bearer xoxb"} in headers
-        {:ok, %{status: 200, body: ~s({"ok":true,"team":"Acme","user":"bot"})}}
-      end)
-
-      assert {:ok, %{"team" => "Acme"}} = API.auth_test("xoxb")
-    end
-  end
 end

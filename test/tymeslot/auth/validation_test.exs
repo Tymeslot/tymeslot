@@ -2,7 +2,6 @@ defmodule Tymeslot.Auth.ValidationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :auth
 
-  alias Ecto.Changeset
   alias Tymeslot.Auth.Validation
 
   describe "validate_login_input/1" do
@@ -64,31 +63,6 @@ defmodule Tymeslot.Auth.ValidationTest do
     test "validate_new_password_input/1 delegates to AuthValidation" do
       params = %{"password" => "short"}
       assert {:error, _reason} = Validation.validate_new_password_input(params)
-    end
-  end
-
-  describe "format_validation_errors/1" do
-    test "formats map errors" do
-      errors = %{email: ["is invalid"]}
-      assert Validation.format_validation_errors(errors) == "Email is invalid"
-    end
-
-    test "formats {:error, map} errors" do
-      errors = {:error, %{email: ["is invalid"]}}
-      assert Validation.format_validation_errors(errors) == "Email is invalid"
-    end
-
-    test "formats changeset errors" do
-      changeset =
-        {%{}, %{email: :string}}
-        |> Changeset.change(%{email: "invalid"})
-        |> Changeset.validate_format(:email, ~r/@/)
-
-      assert Validation.format_validation_errors(changeset) == "Email has invalid format"
-    end
-
-    test "returns default message for unknown error format" do
-      assert Validation.format_validation_errors(nil) == "Invalid input provided."
     end
   end
 end

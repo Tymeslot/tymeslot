@@ -123,7 +123,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   This is a convenience function that handles common calendar operation patterns.
   """
   @spec with_breaker(atom(), keyword(), (-> any())) :: any()
-  def with_breaker(provider, opts \\ [], fun) do
+  def with_breaker(provider, opts, fun) do
     skip_breaker = Keyword.get(opts, :skip_breaker, false)
     host = Keyword.get(opts, :host)
 

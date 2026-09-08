@@ -203,58 +203,6 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
     end
   end
 
-  describe "registration_complete?/2" do
-    test ":github requires non-empty email and github_user_id" do
-      assert UserRegistration.registration_complete?(:github, %{
-               email: "a@b.com",
-               github_user_id: "123"
-             })
-
-      refute UserRegistration.registration_complete?(:github, %{
-               email: "",
-               github_user_id: "123"
-             })
-
-      refute UserRegistration.registration_complete?(:github, %{
-               email: "a@b.com",
-               github_user_id: ""
-             })
-    end
-
-    test ":google requires non-empty email and google_user_id" do
-      assert UserRegistration.registration_complete?(:google, %{
-               email: "a@b.com",
-               google_user_id: "123"
-             })
-
-      refute UserRegistration.registration_complete?(:google, %{
-               email: "",
-               google_user_id: "123"
-             })
-    end
-
-    test ":oauth requires non-empty email and provider_uid" do
-      assert UserRegistration.registration_complete?(:oauth, %{
-               email: "a@b.com",
-               provider_uid: "sub-1"
-             })
-
-      refute UserRegistration.registration_complete?(:oauth, %{
-               email: "",
-               provider_uid: "sub-1"
-             })
-
-      refute UserRegistration.registration_complete?(:oauth, %{
-               email: "a@b.com",
-               provider_uid: ""
-             })
-    end
-
-    test "unknown provider returns false" do
-      refute UserRegistration.registration_complete?(:unknown, %{email: "a@b.com"})
-    end
-  end
-
   describe "normalize_github_id (via find_existing_user)" do
     test "handles non-integer string GitHub ID gracefully" do
       # The function should not crash on "abc" — it returns nil, leading to email fallback

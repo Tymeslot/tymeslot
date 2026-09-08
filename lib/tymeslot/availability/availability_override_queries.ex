@@ -10,24 +10,6 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   alias Tymeslot.Repo
 
   @doc """
-  Gets a single availability override.
-  Returns nil if the override does not exist.
-  """
-  @spec get_override(integer()) :: AvailabilityOverrideSchema.t() | nil
-  def get_override(id), do: Repo.get(AvailabilityOverrideSchema, id)
-
-  @doc """
-  Tagged-tuple variant: returns {:ok, override} | {:error, :not_found}.
-  """
-  @spec get_override_t(integer()) :: {:ok, AvailabilityOverrideSchema.t()} | {:error, :not_found}
-  def get_override_t(id) do
-    case get_override(id) do
-      nil -> {:error, :not_found}
-      o -> {:ok, o}
-    end
-  end
-
-  @doc """
   Gets an override by schedule and date.
   """
   @spec get_override_by_schedule_and_date(integer(), Date.t()) ::
@@ -68,25 +50,5 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
     %AvailabilityOverrideSchema{}
     |> AvailabilityOverrideSchema.changeset(attrs)
     |> Repo.insert()
-  end
-
-  @doc """
-  Updates an availability override.
-  """
-  @spec update_override(AvailabilityOverrideSchema.t(), map()) ::
-          {:ok, AvailabilityOverrideSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_override(%AvailabilityOverrideSchema{} = override, attrs) when is_map(attrs) do
-    override
-    |> AvailabilityOverrideSchema.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
-  Deletes an availability override.
-  """
-  @spec delete_override(AvailabilityOverrideSchema.t()) ::
-          {:ok, AvailabilityOverrideSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_override(%AvailabilityOverrideSchema{} = override) do
-    Repo.delete(override)
   end
 end

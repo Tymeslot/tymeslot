@@ -16,20 +16,20 @@ defmodule TymeslotWeb.Dashboard.AgendaTimelineTest do
 
   describe "spine/3 now-line and gaps" do
     test "returns no rows for an empty day, so no lone now-line is rendered" do
-      assert AgendaTimeline.spine([], @now) == []
+      assert AgendaTimeline.spine([], @now, nil) == []
     end
 
     test "leads with the now-line and a labelled runway to the first entry" do
       entry = entry("a", ~U[2026-07-02 10:00:00Z], ~U[2026-07-02 11:00:00Z])
 
       assert [:now, {:gap, 60}, {:event, ^entry, [next?: false, in_progress?: false]}] =
-               AgendaTimeline.spine([entry], @now)
+               AgendaTimeline.spine([entry], @now, nil)
     end
 
     test "omits a runway shorter than the 30-minute threshold" do
       entry = entry("a", ~U[2026-07-02 09:20:00Z], ~U[2026-07-02 10:00:00Z])
 
-      assert [:now, {:event, ^entry, _meta}] = AgendaTimeline.spine([entry], @now)
+      assert [:now, {:event, ^entry, _meta}] = AgendaTimeline.spine([entry], @now, nil)
     end
 
     test "labels the free stretch between two spaced entries" do
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Dashboard.AgendaTimelineTest do
                {:event, ^earlier, _m1},
                {:gap, 90},
                {:event, ^later, _m2}
-             ] = AgendaTimeline.spine([earlier, later], @now)
+             ] = AgendaTimeline.spine([earlier, later], @now, nil)
     end
 
     test "draws no gap between back-to-back entries" do
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.AgendaTimelineTest do
       later = entry("b", ~U[2026-07-02 11:00:00Z], ~U[2026-07-02 12:00:00Z])
 
       assert [:now, {:gap, 60}, {:event, ^earlier, _m1}, {:event, ^later, _m2}] =
-               AgendaTimeline.spine([earlier, later], @now)
+               AgendaTimeline.spine([earlier, later], @now, nil)
     end
 
     test "sorts entries before assembling the spine" do
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.AgendaTimelineTest do
                {:gap, 90},
                {:event, ^later, _m2}
              ] =
-               AgendaTimeline.spine([later, earlier], @now)
+               AgendaTimeline.spine([later, earlier], @now, nil)
     end
   end
 
@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.AgendaTimelineTest do
                {:event, ^running, [next?: false, in_progress?: true]},
                :now,
                {:event, ^upcoming, [next?: false, in_progress?: false]}
-             ] = AgendaTimeline.spine([running, upcoming], @now)
+             ] = AgendaTimeline.spine([running, upcoming], @now, nil)
     end
   end
 

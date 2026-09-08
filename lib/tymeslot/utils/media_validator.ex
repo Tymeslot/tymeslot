@@ -17,19 +17,13 @@ defmodule Tymeslot.Utils.MediaValidator do
   @spec valid_image?(any()) :: boolean()
   def valid_image?(_other), do: false
 
-  @doc """
-  Validates if a binary is specifically a PNG image using ExImageInfo.
-  """
   @spec valid_png?(binary()) :: boolean()
-  def valid_png?(binary) when is_binary(binary) do
+  defp valid_png?(binary) when is_binary(binary) do
     case ExImageInfo.info(binary) do
       {"image/png", _width, _height, _variant} -> true
       _other -> false
     end
   end
-
-  @spec valid_png?(any()) :: boolean()
-  def valid_png?(_other), do: false
 
   @doc """
   Validates if a file at the given path is a PNG image.
@@ -116,13 +110,5 @@ defmodule Tymeslot.Utils.MediaValidator do
       {:ok, binary} -> {:ok, binary}
       {:error, reason} -> {:error, reason}
     end
-  end
-
-  @doc """
-  Validates if a binary is either a valid image or a valid video.
-  """
-  @spec valid_media?(binary()) :: boolean()
-  def valid_media?(binary) do
-    valid_image?(binary) || valid_video?(binary)
   end
 end

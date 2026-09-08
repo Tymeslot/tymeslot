@@ -117,7 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
           keyword()
         ) ::
           {:ok, String.t()} | {:error, String.t()}
-  def test_caldav_provider_connection(integration, opts \\ []) do
+  def test_caldav_provider_connection(integration, opts) do
     success_msg = Keyword.fetch!(opts, :success_message)
     unauthorized_msg = Keyword.fetch!(opts, :unauthorized_message)
     not_found_msg = Keyword.fetch!(opts, :not_found_message)

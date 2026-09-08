@@ -33,7 +33,7 @@ defmodule Tymeslot.Availability.Conflicts do
           Date.t(),
           Calculate.availability_config()
         ) :: [String.t()]
-  def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config \\ %{}) do
+  def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config) do
     %{
       buffer_minutes: buffer_minutes,
       min_advance_hours: min_advance_hours,
@@ -108,7 +108,7 @@ defmodule Tymeslot.Availability.Conflicts do
         user_timezone,
         events_in_user_tz,
         now,
-        config \\ %{}
+        config
       ) do
     duration_minutes = config |> Map.get(:duration_minutes, 30) |> max(1) |> min(1440)
     slot_interval_minutes = Map.get(config, :slot_interval_minutes)

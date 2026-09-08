@@ -249,7 +249,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   - Recovery suggestion string or nil
   """
   @spec get_recovery_suggestions(error_category(), provider()) :: String.t() | nil
-  def get_recovery_suggestions(category, provider \\ :caldav) do
+  def get_recovery_suggestions(category, provider) do
     get_auth_suggestion(category, provider) ||
       get_network_suggestion(category, provider) ||
       get_config_suggestion(category, provider) ||

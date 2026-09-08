@@ -24,8 +24,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   ## Available Functions
 
   - `submit_booking/2` - Process booking submission with orchestrator
-  - `handle_booking_success/3` - Handle successful booking creation
-  - `handle_booking_error/2` - Handle booking submission errors
   - `check_duplicate_submission/1` - Check for duplicate submissions
   """
 
@@ -114,23 +112,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     end
   end
 
-  @doc """
-  Handles successful booking creation.
-
-  This function processes a successful booking response and updates the socket
-  with the appropriate success state.
-
-  ## Examples
-
-      {:ok, socket} = BookingSubmissionHandlerComponent.handle_booking_success(
-        socket,
-        meeting,
-        validated_data
-      )
-  """
+  # Handles successful booking creation: processes a successful booking
+  # response and updates the socket with the appropriate success state.
   @spec handle_booking_success(Phoenix.LiveView.Socket.t(), map(), map()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_booking_success(socket, meeting, validated_data) do
+  defp handle_booking_success(socket, meeting, validated_data) do
     success_message =
       cond do
         Demo.demo_mode?(socket) and socket.assigns[:is_rescheduling] ->
@@ -167,22 +153,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     {:ok, socket}
   end
 
-  @doc """
-  Handles booking submission errors.
-
-  This function processes booking errors and updates the socket with
-  appropriate error messages and states.
-
-  ## Examples
-
-      {:error, socket} = BookingSubmissionHandlerComponent.handle_booking_error(
-        socket,
-        "Time slot unavailable"
-      )
-  """
+  # Handles booking submission errors: updates the socket with the
+  # appropriate error message and state.
   @spec handle_booking_error(Phoenix.LiveView.Socket.t(), atom() | String.t()) ::
           {:error, Phoenix.LiveView.Socket.t()}
-  def handle_booking_error(socket, reason) do
+  defp handle_booking_error(socket, reason) do
     socket =
       socket
       |> BookingGuards.release_submission()

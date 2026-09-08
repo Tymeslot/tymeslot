@@ -1,7 +1,7 @@
 defmodule Tymeslot.MeetingsContext.LifecycleTest do
   @moduledoc """
   Behaviour tests for the Meetings context covering appointment lifecycle:
-  creation, calendar-validation booking, cancellation, and rescheduling.
+  calendar-validation booking, cancellation, and rescheduling.
   """
 
   use Tymeslot.DataCase, async: true
@@ -9,8 +9,8 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
   import Mox
 
+  alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.MeetingTestHelpers
@@ -24,87 +24,6 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
     TestMocks.setup_calendar_mocks()
 
     :ok
-  end
-
-  describe "when a user books an appointment" do
-    setup do
-      # `build_meeting_params/1` books mid-afternoon, so the host must offer
-      # that hour: booking creation refuses a time the schedule never offers.
-      %{user: user, profile: profile} = create_always_bookable_profile()
-      meeting_type = insert(:meeting_type, user: user)
-
-      %{user: user, profile: profile, meeting_type: meeting_type}
-    end
-
-    test "appointment is created with all required details", %{user: user} do
-      meeting_params = build_meeting_params(user)
-      form_data = build_form_data()
-
-      assert {:ok, meeting} = Meetings.create_appointment(meeting_params, form_data)
-
-      assert meeting.attendee_name == form_data["name"]
-      assert meeting.attendee_email == form_data["email"]
-      assert meeting.attendee_message == form_data["message"]
-      assert meeting.status == "confirmed"
-      assert meeting.organizer_user_id == user.id
-    end
-
-    test "appointment includes correct time zone handling", %{user: user} do
-      meeting_params =
-        build_meeting_params(user, %{
-          user_timezone: "America/Los_Angeles"
-        })
-
-      form_data = build_form_data()
-
-      assert {:ok, meeting} = Meetings.create_appointment(meeting_params, form_data)
-
-      assert meeting.attendee_timezone == "America/Los_Angeles"
-    end
-
-    test "appointment is persisted in database", %{user: user} do
-      meeting_params = build_meeting_params(user)
-      form_data = build_form_data()
-
-      assert {:ok, meeting} = Meetings.create_appointment(meeting_params, form_data)
-
-      {:ok, retrieved} = MeetingQueries.get_meeting_by_uid(meeting.uid)
-      assert retrieved.id == meeting.id
-      assert retrieved.attendee_email == form_data["email"]
-    end
-
-    test "custom field snapshot and answers are persisted on the meeting row", %{user: user} do
-      snapshot = [%{"key" => "q1", "type" => "short_text", "label" => "What's your goal?"}]
-      answers = %{"q1" => "Ship the feature"}
-
-      meeting_params =
-        build_meeting_params(user, %{
-          custom_fields_snapshot: snapshot,
-          custom_field_answers: answers
-        })
-
-      form_data = build_form_data()
-
-      assert {:ok, meeting} = Meetings.create_appointment(meeting_params, form_data)
-      assert meeting.custom_fields_snapshot == snapshot
-      assert meeting.custom_field_answers == answers
-    end
-
-    test "appointment generates unique meeting UID", %{user: user} do
-      meeting_params1 =
-        build_meeting_params(user, %{date: Date.add(Date.utc_today(), 10), time: "10:00"})
-
-      meeting_params2 =
-        build_meeting_params(user, %{date: Date.add(Date.utc_today(), 11), time: "10:00"})
-
-      form_data1 = build_form_data()
-      form_data2 = build_form_data()
-
-      assert {:ok, meeting1} = Meetings.create_appointment(meeting_params1, form_data1)
-      assert {:ok, meeting2} = Meetings.create_appointment(meeting_params2, form_data2)
-
-      assert meeting1.uid != meeting2.uid
-    end
   end
 
   describe "when creating appointment with calendar validation" do
@@ -121,7 +40,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       form_data = build_form_data()
 
       assert {:ok, meeting} =
-               Meetings.create_appointment_with_validation(meeting_params, form_data)
+               Create.execute(meeting_params, form_data)
 
       assert meeting.status == "confirmed"
     end
@@ -151,7 +70,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
 
       form_data = build_form_data()
 
-      result = Meetings.create_appointment_with_validation(meeting_params, form_data)
+      result = Create.execute(meeting_params, form_data)
 
       assert {:error, _reason} = result
     end

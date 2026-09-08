@@ -171,68 +171,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     end
   end
 
-  describe "time conflict detection (prevents double booking)" do
-    test "prevents overlapping meetings" do
-      {start_time, end_time} = build_meeting_times(1, 60)
-
-      existing_meeting =
-        insert(:meeting,
-          start_time: start_time,
-          end_time: end_time,
-          status: "confirmed"
-        )
-
-      overlapping_start = DateTime.add(existing_meeting.start_time, 30, :minute)
-      overlapping_end = DateTime.add(existing_meeting.end_time, 30, :minute)
-
-      assert Scheduling.has_time_conflict?(overlapping_start, overlapping_end)
-    end
-
-    test "allows non-overlapping meetings" do
-      {start_time, end_time} = build_meeting_times(1, 60)
-
-      existing_meeting =
-        insert(:meeting,
-          start_time: start_time,
-          end_time: end_time,
-          status: "confirmed"
-        )
-
-      non_overlapping_start = DateTime.add(existing_meeting.end_time, 30, :minute)
-      non_overlapping_end = DateTime.add(non_overlapping_start, 60, :minute)
-
-      refute Scheduling.has_time_conflict?(non_overlapping_start, non_overlapping_end)
-    end
-
-    test "allows updating existing meeting without self-conflict" do
-      {start_time, end_time} = build_meeting_times(1, 60)
-
-      meeting =
-        insert(:meeting,
-          start_time: start_time,
-          end_time: end_time,
-          status: "confirmed"
-        )
-
-      refute Scheduling.has_time_conflict?(meeting.start_time, meeting.end_time, meeting.uid)
-    end
-
-    test "ignores cancelled meetings for conflicts" do
-      {start_time, end_time} = build_meeting_times(1, 60)
-
-      insert(:meeting,
-        start_time: start_time,
-        end_time: end_time,
-        status: "cancelled"
-      )
-
-      same_time_start = build_base_start_time(1)
-      same_time_end = DateTime.add(same_time_start, 60, :minute)
-
-      refute Scheduling.has_time_conflict?(same_time_start, same_time_end)
-    end
-  end
-
   describe "safe meeting creation (prevents double booking)" do
     test "creates meeting when no conflicts exist" do
       {start_time, end_time} = build_meeting_times(1, 60)

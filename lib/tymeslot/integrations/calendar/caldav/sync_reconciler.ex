@@ -101,29 +101,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
     end
   end
 
-  @doc """
-  Normalises, persists, and reconciles a batch of CalDAV events.
-
-  Optionally processes a list of `deleted_hrefs` from a Tier 1
-  sync-collection response. Returns `:ok` on success or
-  `{:error, reason}` if normalisation or persistence fails.
-
-  **Non-atomic.** Prefer `process_full_fetch/6` or `process_tier1/3`
-  for sync paths where partial-failure consistency matters.
-  """
-  @spec safe_process_events(map(), list(map()), list(String.t())) :: :ok | {:error, term()}
-  def safe_process_events(integration, events, deleted_hrefs \\ []) do
-    context = normalisation_context(integration)
-
-    with {:ok, calendar_events} <- CalDAVProvider.normalise_events(events, context),
-         :ok <- Sync.persist_normalised_events(integration, calendar_events) do
-      process_href_deletions(integration, deleted_hrefs)
-    end
-  rescue
-    e ->
-      {:error, Exception.message(e)}
-  end
-
   # ---------------------------------------------------------------------------
   # Deletion circuit breaker
   # ---------------------------------------------------------------------------
@@ -390,10 +367,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
   # were already deleted inside the transaction.
   defp reconcile_deleted_hrefs(integration, hrefs) do
     Sync.reconcile_deletions(integration, href_refs(hrefs), delete_cache: false)
-  end
-
-  defp process_href_deletions(integration, deleted_hrefs) do
-    Sync.reconcile_deletions(integration, href_refs(deleted_hrefs))
   end
 
   defp uid_refs(uids), do: Enum.map(uids, &%{provider_event_id: nil, uid: &1})

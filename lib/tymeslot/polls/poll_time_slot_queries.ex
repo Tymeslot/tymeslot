@@ -16,11 +16,4 @@ defmodule Tymeslot.Polls.PollTimeSlotQueries do
     |> where([s], s.id == ^slot_id and s.poll_id == ^poll_id)
     |> Repo.one()
   end
-
-  @spec count_for_poll(Ecto.UUID.t()) :: non_neg_integer()
-  def count_for_poll(poll_id) do
-    PollTimeSlotSchema
-    |> where([s], s.poll_id == ^poll_id)
-    |> Repo.aggregate(:count)
-  end
 end

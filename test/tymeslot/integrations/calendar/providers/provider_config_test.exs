@@ -227,7 +227,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
         assert p in breakers, "expected CalDAV provider #{inspect(p)} to have a breaker"
       end)
 
-      Enum.each(ProviderConfig.oauth_providers(), fn p ->
+      Enum.each([:google, :outlook], fn p ->
         assert p in breakers, "expected OAuth provider #{inspect(p)} to have a breaker"
       end)
     end
@@ -305,7 +305,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
       refute :exchange in ProviderConfig.caldav_based_providers()
       refute "exchange" in ProviderConfig.caldav_based_provider_strings()
       refute "exchange" in ProviderConfig.subscription_provider_strings()
-      refute :exchange in ProviderConfig.oauth_providers()
     end
 
     test "is allowed by the database constraint list" do

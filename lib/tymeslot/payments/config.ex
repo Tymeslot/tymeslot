@@ -37,16 +37,6 @@ defmodule Tymeslot.Payments.Config do
   end
 
   @doc """
-  Get PubSub server name.
-
-  Returns `nil` if PubSub is not configured.
-  """
-  @spec pubsub_server() :: atom() | nil
-  def pubsub_server do
-    Application.get_env(:tymeslot, :pubsub_name)
-  end
-
-  @doc """
   Get subscription schema (if configured).
 
   Returns `nil` if no subscription schema is configured (Core standalone mode).

@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   """
   @spec create_meeting_room(pos_integer() | nil, keyword()) ::
           {:ok, MeetingContext.t()} | {:error, any()}
-  def create_meeting_room(user_id \\ nil, opts \\ []) do
+  def create_meeting_room(user_id, opts \\ []) do
     Metrics.time_operation(:video_create_meeting_room, %{}, fn ->
       Logger.info("Creating meeting room for user", user_id: user_id)
       do_create_meeting_room(user_id, opts)
@@ -199,7 +199,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   Handles meeting lifecycle events.
   """
   @spec handle_meeting_event(MeetingContext.t(), atom(), map()) :: :ok | {:error, any()}
-  def handle_meeting_event(meeting_context, event, additional_data \\ %{}) do
+  def handle_meeting_event(meeting_context, event, additional_data) do
     Logger.info("Handling meeting event",
       event: event,
       provider: meeting_context.provider_type,

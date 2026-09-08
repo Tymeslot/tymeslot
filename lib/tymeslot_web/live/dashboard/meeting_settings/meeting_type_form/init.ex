@@ -63,17 +63,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:__initialized__, true)
   end
 
-  @doc """
-  Assigns the profile's availability schedules and the name of its default.
-
-  The list drives the availability picker, and the default's name labels the
-  "Default (…)" option so the user can see which hours a meeting type falls
-  back to. A profile that somehow has no default yet falls back to the name
-  the default is created with, keeping the option readable rather than blank.
-  """
   @spec assign_availability_schedules(Phoenix.LiveView.Socket.t(), map() | nil) ::
           Phoenix.LiveView.Socket.t()
-  def assign_availability_schedules(socket, current_user) do
+  defp assign_availability_schedules(socket, current_user) do
     schedules = list_schedules(current_user)
 
     socket
@@ -97,21 +89,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     end
   end
 
-  @doc """
-  Assigns the payments-section gating state and form values.
-
-  Gating mirrors the payments dashboard: the section is only active when
-  the `:meeting_payments` feature is enabled *and* the host's Stripe
-  Connect account can accept charges. When the feature is off entirely the
-  section is hidden; when it is on but Stripe is not yet connected the
-  toggle renders disabled with a link to connect Stripe.
-  """
   @spec assign_payment_state(
           Phoenix.LiveView.Socket.t(),
           Ecto.Schema.t() | nil,
           map() | nil
         ) :: Phoenix.LiveView.Socket.t()
-  def assign_payment_state(socket, type, current_user) do
+  defp assign_payment_state(socket, type, current_user) do
     feature_enabled? = payments_feature_enabled?(current_user)
     charges_enabled? = feature_enabled? and charges_enabled?(current_user)
     currency = host_currency(current_user)
@@ -148,21 +131,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
   defp host_currency(_user), do: List.first(MeetingPayments.currency_allowlist()) || "usd"
 
-  @doc "Returns whether payment is required for an existing meeting type."
   @spec get_payment_required(Ecto.Schema.t() | nil) :: boolean()
-  def get_payment_required(%{payment_required: true}), do: true
-  def get_payment_required(_type), do: false
+  defp get_payment_required(%{payment_required: true}), do: true
+  defp get_payment_required(_type), do: false
 
-  @doc """
-  Returns the major-unit price string for an existing meeting type's
-  `price_cents`, or an empty string when unset.
-  """
   @spec get_payment_price(Ecto.Schema.t() | nil) :: String.t()
-  def get_payment_price(%{price_cents: cents}) when is_integer(cents) do
+  defp get_payment_price(%{price_cents: cents}) when is_integer(cents) do
     :erlang.float_to_binary(cents / 100, decimals: 2)
   end
 
-  def get_payment_price(_type), do: ""
+  defp get_payment_price(_type), do: ""
 
   @doc "Builds the initial form data map from an existing meeting type or nil."
   @spec build_form_data(Ecto.Schema.t() | nil) :: map()
@@ -186,21 +164,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     }
   end
 
-  @doc "Whether this meeting type holds its bookings for the host to answer."
   @spec get_requires_approval(Ecto.Schema.t() | nil) :: boolean()
-  def get_requires_approval(%{requires_approval: true}), do: true
-  def get_requires_approval(_type), do: false
+  defp get_requires_approval(%{requires_approval: true}), do: true
+  defp get_requires_approval(_type), do: false
 
-  @doc """
-  The saved approval window, or nil.
-
-  Nil is meaningful and is not replaced with the default here: the form shows
-  the default as a placeholder so a host can see what blank means without the
-  value being written into their meeting type.
-  """
+  # Nil is meaningful and is not replaced with the default here: the form shows
+  # the default as a placeholder so a host can see what blank means without the
+  # value being written into their meeting type.
   @spec get_approval_window_hours(Ecto.Schema.t() | nil) :: pos_integer() | nil
-  def get_approval_window_hours(%{approval_window_hours: hours}) when is_integer(hours), do: hours
-  def get_approval_window_hours(_type), do: nil
+  defp get_approval_window_hours(%{approval_window_hours: hours}) when is_integer(hours),
+    do: hours
+
+  defp get_approval_window_hours(_type), do: nil
 
   # nil means "use the meeting type's own duration"; represented as a blank
   # string so the form's "same as meeting length" option is selected.
@@ -227,8 +202,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   def get_allow_guests(_type), do: false
 
   @spec get_show_as_free(Ecto.Schema.t() | nil) :: boolean()
-  def get_show_as_free(%{show_as_free: true}), do: true
-  def get_show_as_free(_type), do: false
+  defp get_show_as_free(%{show_as_free: true}), do: true
+  defp get_show_as_free(_type), do: false
 
   @doc """
   Returns the booking-limit values for an existing meeting type, keyed by
@@ -283,14 +258,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   def get_calendar_integration_id(%{calendar_integration_id: nil}), do: nil
   def get_calendar_integration_id(%{calendar_integration_id: id}), do: id
 
-  @doc """
-  Returns the availability schedule id for a meeting type, or nil when it
-  follows the profile's default schedule.
-  """
+  # nil means the meeting type follows the profile's default schedule.
   @spec get_availability_schedule_id(Ecto.Schema.t() | nil) :: integer() | nil
-  def get_availability_schedule_id(nil), do: nil
-  def get_availability_schedule_id(%{availability_schedule_id: nil}), do: nil
-  def get_availability_schedule_id(%{availability_schedule_id: id}), do: id
+  defp get_availability_schedule_id(nil), do: nil
+  defp get_availability_schedule_id(%{availability_schedule_id: nil}), do: nil
+  defp get_availability_schedule_id(%{availability_schedule_id: id}), do: id
 
   @doc "Returns the target calendar id for a meeting type, or nil."
   @spec get_target_calendar_id(Ecto.Schema.t() | nil) :: String.t() | nil
@@ -345,13 +317,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
   def get_reminders(_arg), do: [%{value: 30, unit: "minutes"}]
 
-  @doc "Returns the custom_fields list from an existing meeting type, or an empty list."
   @spec get_custom_fields(Ecto.Schema.t() | nil) :: list()
-  def get_custom_fields(nil), do: []
+  defp get_custom_fields(nil), do: []
 
-  def get_custom_fields(%{custom_fields: fields}) when is_list(fields) do
+  defp get_custom_fields(%{custom_fields: fields}) when is_list(fields) do
     Enum.sort_by(fields, & &1.position)
   end
 
-  def get_custom_fields(_arg), do: []
+  defp get_custom_fields(_arg), do: []
 end

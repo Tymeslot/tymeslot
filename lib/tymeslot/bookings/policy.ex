@@ -43,8 +43,6 @@ defmodule Tymeslot.Bookings.Policy do
           required(:owner_timezone) => String.t(),
           required(:slot_interval_minutes) => pos_integer() | nil
         }
-  def scheduling_config(organizer_user_id \\ nil, meeting_type \\ nil)
-
   def scheduling_config(nil, _meeting_type) do
     nil
     |> policy_values()

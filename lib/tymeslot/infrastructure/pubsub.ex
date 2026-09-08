@@ -22,13 +22,13 @@ defmodule Tymeslot.Infrastructure.PubSub do
 
   ## Parameters
   - `user`: The newly registered user struct
-  - `metadata`: Optional map of additional data (default: %{})
+  - `metadata`: Map of additional data
 
   ## Example
       Tymeslot.Infrastructure.PubSub.broadcast_user_registered(user, %{source: "signup"})
   """
   @spec broadcast_user_registered(struct(), map()) :: :ok
-  def broadcast_user_registered(user, metadata \\ %{}) do
+  def broadcast_user_registered(user, metadata) do
     message = {:user_registered, %{user: user, metadata: metadata}}
 
     case Phoenix.PubSub.broadcast(Tymeslot.PubSub, @user_registered_topic, message) do

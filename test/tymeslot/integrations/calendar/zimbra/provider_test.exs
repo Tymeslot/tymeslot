@@ -345,7 +345,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
     end
   end
 
-  describe "delete_event/2" do
+  describe "delete_event/3" do
     test "delegates to CaldavCommon, for which deleting from no calendar is a no-op" do
       client = %{
         base_url: "https://mail.example.com",
@@ -355,7 +355,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
         provider: :zimbra
       }
 
-      assert Provider.delete_event(client, "zimbra-event-123") == :ok
+      assert Provider.delete_event(client, "zimbra-event-123", []) == :ok
     end
   end
 

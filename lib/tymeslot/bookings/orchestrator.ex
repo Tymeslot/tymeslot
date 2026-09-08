@@ -71,16 +71,6 @@ defmodule Tymeslot.Bookings.Orchestrator do
   end
 
   @doc """
-  Validates booking time against availability.
-  Used for pre-submission validation in the UI.
-  """
-  @spec validate_booking_time(String.t(), String.t(), String.t()) ::
-          :ok | {:error, String.t()}
-  def validate_booking_time(date_str, time_str, timezone) do
-    Validation.validate_booking_time_from_strings(date_str, time_str, timezone)
-  end
-
-  @doc """
   Fetches a meeting by UID and validates it is eligible for rescheduling.
 
   The `organizer_user_id` is required. The lookup is scoped to that owner,

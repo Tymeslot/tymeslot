@@ -5,7 +5,7 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
-  alias Tymeslot.ThemeCustomizations.{Backgrounds, DataTransform, Defaults}
+  alias Tymeslot.ThemeCustomizations.Backgrounds
 
   # ---- Color validation consistency ----
 
@@ -161,88 +161,6 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
     end
   end
 
-  # ---- atomize_keys unknown string keys ----
-
-  describe "DataTransform.atomize_keys/1" do
-    test "handles unknown string keys without crashing" do
-      input = %{"color_scheme" => "default", "unknown_field" => "value", "another_unknown" => 42}
-
-      result = DataTransform.atomize_keys(input)
-
-      assert result[:color_scheme] == "default"
-      # Unknown string keys are preserved as strings (not converted to atoms)
-      assert result["unknown_field"] == "value"
-      assert result["another_unknown"] == 42
-    end
-
-    test "converts all known string keys to atoms" do
-      input = %{
-        "color_scheme" => "purple",
-        "background_type" => "gradient",
-        "background_value" => "gradient_1",
-        "background_image_path" => nil,
-        "background_video_path" => nil
-      }
-
-      result = DataTransform.atomize_keys(input)
-
-      assert result == %{
-               color_scheme: "purple",
-               background_type: "gradient",
-               background_value: "gradient_1",
-               background_image_path: nil,
-               background_video_path: nil
-             }
-    end
-
-    test "preserves atom keys as-is" do
-      input = %{color_scheme: "default", background_type: "gradient"}
-
-      result = DataTransform.atomize_keys(input)
-
-      assert result == %{color_scheme: "default", background_type: "gradient"}
-    end
-  end
-
-  # ---- merge_with_defaults empty string ----
-
-  describe "Defaults.merge_with_defaults/2 empty string handling" do
-    test "treats empty string color_scheme as missing, falls back to default" do
-      customization = build_customization(1)
-      customization = %{customization | color_scheme: ""}
-
-      result = Defaults.merge_with_defaults(customization, "1")
-
-      assert result.color_scheme == "default"
-    end
-
-    test "treats empty string background_type as missing, falls back to default" do
-      customization = build_customization(1)
-      customization = %{customization | background_type: "", background_value: ""}
-
-      result = Defaults.merge_with_defaults(customization, "1")
-
-      assert result.background_type == "gradient"
-    end
-
-    test "preserves non-empty values" do
-      customization = build_customization(1)
-
-      customization = %{
-        customization
-        | color_scheme: "purple",
-          background_type: "color",
-          background_value: "#123456"
-      }
-
-      result = Defaults.merge_with_defaults(customization, "1")
-
-      assert result.color_scheme == "purple"
-      assert result.background_type == "color"
-      assert result.background_value == "#123456"
-    end
-  end
-
   # ---- clear_conflicting_backgrounds cross-type paths ----
 
   describe "Backgrounds.clear_conflicting_backgrounds/2 cross-type path behavior" do
@@ -366,19 +284,6 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
 
       # Customization must no longer exist
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
-    end
-  end
-
-  # ---- Defaults.theme_supports_feature? no longer hardcoded ----
-
-  describe "Defaults.theme_supports_feature?/2 registry-based" do
-    test "returns false for unknown theme_id" do
-      refute Defaults.theme_supports_feature?("nonexistent_theme", :video_backgrounds)
-    end
-
-    test "returns false for unknown feature" do
-      # Known themes still return false for unrecognized feature atoms
-      refute Defaults.theme_supports_feature?("1", :some_unknown_feature)
     end
   end
 
