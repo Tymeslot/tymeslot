@@ -57,6 +57,12 @@ jobs:
       - run: mix credo --strict
       - run: mix sobelow
       - run: mix deps.audit
+      # mix_audit ships a snapshot of the advisory database baked in at package
+      # build time, so it goes stale between releases: it stayed silent on the
+      # mint 1.9.3 DoS advisories (CVE-2026-82728/82729) that hex.audit caught.
+      # hex.audit queries the live Hex registry instead, so the two are
+      # complementary rather than redundant. Both exit non-zero on a finding.
+      - run: mix hex.audit
       - run: mix excellent_migrations.check_safety
       # test/release/changelog_configs_test.exs renders the real git-cliff
       # templates, and Tymeslot.Test.SuiteConfig excludes those tests wherever
