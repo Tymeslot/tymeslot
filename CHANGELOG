@@ -1,4 +1,12 @@
 
+[1.15.3]
+* Sync every changed Google Calendar event, not just the first 250
+* Connect to CalDAV servers that require digest authentication
+* Keep calendar credentials out of crash reports
+* Keep all-day and Google events visible in the fallback fetch
+* Keep embed pages scrollable after reopening the booking popup
+
+
 [1.15.2]
 * Recognise Tymeslot's own bookings on CalDAV and Outlook calendars
 * Keep non-ASCII values readable when importing them into .env
