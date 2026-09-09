@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
   import ExUnit.CaptureLog
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Http
+  alias Tymeslot.Test.LogCapture
 
   # These tests exercise the real HTTPClient → Req → Req.Test path so that
   # transport-level bugs (method normalisation, header building, option assembly)
@@ -438,6 +439,153 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                  "user",
                  "pass"
                )
+    end
+  end
+
+  # Baikal ships `dav_auth_type: Digest` by default and SabreDAV refuses a Basic
+  # header outright in that mode, so a Basic-only client cannot reach a stock
+  # install however correct its credentials are. Every CalDAV method shares one
+  # challenge-and-retry path, so these exercise it through the methods whose
+  # extra headers differ most.
+  describe "digest authentication" do
+    @digest_challenge ~s(Digest realm="BaikalDAV", qop="auth", ) <>
+                        ~s(nonce="6aa0f27df2c20", opaque="d66d5f0524036afcb61420e358f990ce")
+
+    defp challenge_then(second) do
+      stub_sequential(
+        fn conn ->
+          conn
+          |> Conn.put_resp_header("www-authenticate", @digest_challenge)
+          |> Conn.send_resp(401, "")
+        end,
+        second
+      )
+    end
+
+    test "retries a challenged PROPFIND with a Digest header and returns the second answer" do
+      test_pid = self()
+
+      challenge_then(fn conn ->
+        [auth | _rest] = Conn.get_req_header(conn, "authorization")
+        send(test_pid, {:retry_authorization, auth})
+
+        Conn.send_resp(conn, 207, "<xml/>")
+      end)
+
+      assert {:ok, %Req.Response{status: 207}} =
+               Http.propfind(
+                 "https://caldav.example.com/dav.php/calendars/user/",
+                 "user",
+                 "pass",
+                 max_retries: 0
+               )
+
+      assert_received {:retry_authorization, authorization}
+      assert String.starts_with?(authorization, "Digest ")
+      assert authorization =~ ~s(username="user")
+      assert authorization =~ ~s(realm="BaikalDAV")
+      assert authorization =~ ~s(nonce="6aa0f27df2c20")
+      assert authorization =~ ~s(opaque="d66d5f0524036afcb61420e358f990ce")
+      # The digest covers the request target and method, so both must be the
+      # ones actually being retried.
+      assert authorization =~ ~s(uri="/dav.php/calendars/user/")
+    end
+
+    test "keeps the conditional header on a challenged PUT's retry" do
+      test_pid = self()
+
+      challenge_then(fn conn ->
+        send(
+          test_pid,
+          {:retry_headers, Conn.get_req_header(conn, "if-none-match"),
+           Conn.get_req_header(conn, "authorization")}
+        )
+
+        Conn.send_resp(conn, 201, "")
+      end)
+
+      assert {:ok, %Req.Response{status: 201}} =
+               Http.put_event(
+                 "https://caldav.example.com/dav.php/calendars/user/personal/event.ics",
+                 "user",
+                 "pass",
+                 "BEGIN:VCALENDAR\nEND:VCALENDAR",
+                 operation: :create
+               )
+
+      assert_received {:retry_headers, ["*"], [authorization]}
+      assert String.starts_with?(authorization, "Digest ")
+    end
+
+    test "surfaces a second 401 as :unauthorized rather than retrying forever" do
+      call_count = :counters.new(1, [:atomics])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(call_count, 1, 1)
+
+        conn
+        |> Conn.put_resp_header("www-authenticate", @digest_challenge)
+        |> Conn.send_resp(401, "")
+      end)
+
+      assert {:error, :unauthorized} =
+               Http.propfind(
+                 "https://caldav.example.com/dav.php/calendars/user/",
+                 "user",
+                 "wrong_pass",
+                 max_retries: 0
+               )
+
+      assert :counters.get(call_count, 1) == 2
+    end
+
+    test "does not retry a 401 that carries no Digest challenge" do
+      call_count = :counters.new(1, [:atomics])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(call_count, 1, 1)
+
+        conn
+        |> Conn.put_resp_header("www-authenticate", ~s(Basic realm="CalDAV"))
+        |> Conn.send_resp(401, "")
+      end)
+
+      assert {:error, :unauthorized} =
+               Http.propfind(
+                 "https://caldav.example.com/calendars/user/",
+                 "user",
+                 "bad_pass",
+                 max_retries: 0
+               )
+
+      assert :counters.get(call_count, 1) == 1
+    end
+
+    test "logs the unanswerable parameter when the challenge names one it cannot compute" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header(
+          "www-authenticate",
+          ~s(Digest realm="CalDAV", qop="auth-int", nonce="abc123")
+        )
+        |> Conn.send_resp(401, "")
+      end)
+
+      LogCapture.attach()
+
+      assert {:error, :unauthorized} =
+               Http.propfind(
+                 "https://caldav.example.com/calendars/user/",
+                 "user",
+                 "pass",
+                 max_retries: 0
+               )
+
+      # The account owner only ever sees the generic credentials message, so
+      # the parameter the server insisted on has to reach the operator here.
+      assert_receive {:captured_log, %{level: :warning, meta: %{detail: detail}} = event}
+      assert detail == "qop=auth-int"
+      assert event.meta.method == "PROPFIND"
     end
   end
 end
