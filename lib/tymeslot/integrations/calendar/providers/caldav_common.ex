@@ -8,22 +8,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
+  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
 
   require Logger
 
-  @type caldav_client :: %{
-          required(:base_url) => String.t(),
-          required(:username) => String.t() | nil,
-          required(:password) => String.t() | nil,
-          required(:calendar_paths) => [String.t()],
-          # Carried on the client but never applied here: nothing below this
-          # module builds a TLS option from it, so CalDAV always verifies. See
-          # the field comment on `CalendarIntegrationSchema` before changing it.
-          required(:verify_ssl) => boolean(),
-          required(:provider) => atom()
-        }
+  @type caldav_client :: Client.t()
 
   @spec normalize_url(String.t() | nil) :: String.t()
   def normalize_url(nil), do: ""
@@ -35,15 +25,19 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
-  Builds a client map for downstream Base.* functions.
-  Expects keys: :base_url, :username, :password, :calendar_paths, :verify_ssl
-  Options: provider: atom()
+  Builds the client struct downstream Base.* functions run on.
+
+  Accepts atom- or string-keyed config with `:base_url`, `:username`,
+  `:password`, `:calendar_paths` and `:verify_ssl`; takes the provider from
+  `opts`. This is the only place a `Client` is constructed, which is what
+  makes the password's inspect-time redaction hold for every CalDAV-family
+  provider.
   """
-  @spec build_client(%{atom() => term()}, keyword()) :: caldav_client()
+  @spec build_client(%{atom() => term()} | %{String.t() => term()}, keyword()) :: caldav_client()
   def build_client(config, opts) when is_map(config) do
     provider = Keyword.fetch!(opts, :provider)
 
-    %{
+    %Client{
       base_url: normalize_url(Map.get(config, :base_url) || Map.get(config, "base_url")),
       username: Map.get(config, :username) || Map.get(config, "username"),
       password: Map.get(config, :password) || Map.get(config, "password"),
@@ -100,15 +94,15 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @spec check_connectivity(caldav_client()) :: {:ok, map()} | {:error, term()}
   def check_connectivity(client) do
     with :ok <- validate_credentials(client) do
-      path = List.first(client[:calendar_paths] || []) || "/"
+      path = List.first(client.calendar_paths || []) || "/"
 
       # Use the same URL builder as create/read/delete so server-root-relative
       # paths (e.g. Nextcloud's "/remote.php/dav/calendars/...") aren't
       # double-prefixed when the client's base_url already contains a CalDAV
       # principal path.
-      url = UrlBuilder.build_calendar_url(client[:base_url], path)
+      url = UrlBuilder.build_calendar_url(client.base_url, path)
 
-      case Http.propfind(url, client[:username], client[:password],
+      case Http.propfind(url, client.username, client.password,
              depth: "0",
              timeout: 5_000
            ) do
@@ -373,10 +367,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   defp success_message(_arg),
     do: dgettext("dashboard_calendar_providers", "CalDAV connection successful")
 
-  defp validate_credentials(client) do
-    username = client[:username] || Map.get(client, :username)
-    password = client[:password] || Map.get(client, :password)
-
+  # Matches on the fields rather than on `%Client{}`: the redaction guarantee
+  # comes from `build_client/2` constructing the struct, not from strictness
+  # here, and several callers still hand this a bare client-shaped map.
+  defp validate_credentials(%{username: username, password: password}) do
     if is_binary(username) and String.trim(username) != "" and
          is_binary(password) and String.trim(password) != "" do
       :ok

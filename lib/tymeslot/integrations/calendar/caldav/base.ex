@@ -66,14 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   @spec default_retry_opts() :: keyword()
   def default_retry_opts, do: @default_retry_opts
 
-  @type client :: %{
-          base_url: String.t(),
-          username: String.t(),
-          password: String.t(),
-          calendar_paths: list(String.t()),
-          verify_ssl: boolean(),
-          provider: atom()
-        }
+  @type client :: Tymeslot.Integrations.Calendar.CalDAV.Client.t()
 
   @type error_reason ::
           :unauthorized

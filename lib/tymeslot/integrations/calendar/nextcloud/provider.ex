@@ -156,18 +156,20 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, term()}
   def perform_connection_test(integration) do
-    client = %{
-      base_url:
-        PathUtils.normalize_url(integration.base_url || "",
-          provider: :nextcloud,
-          ensure_trailing_slash: false
-        ),
-      username: integration.username,
-      password: integration.password,
-      calendar_paths: integration.calendar_paths || [],
-      verify_ssl: true,
-      provider: :nextcloud
-    }
+    client =
+      CaldavCommon.build_client(
+        %{
+          base_url:
+            PathUtils.normalize_url(integration.base_url || "",
+              provider: :nextcloud,
+              ensure_trailing_slash: false
+            ),
+          username: integration.username,
+          password: integration.password,
+          calendar_paths: integration.calendar_paths || []
+        },
+        provider: :nextcloud
+      )
 
     case CaldavCommon.test_connection(client) do
       {:ok, _message} ->
