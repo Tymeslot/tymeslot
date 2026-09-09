@@ -70,7 +70,11 @@ defmodule TymeslotWeb.Router do
   # logged in to begin the dance and the callback needs the session cookie to
   # redirect them back to /dashboard/automation).
   scope "/api/slack", TymeslotWeb do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through [
+      :browser,
+      :require_authenticated_user,
+      TymeslotWeb.Plugs.AdditionalDashboardPlugs
+    ]
 
     get "/oauth/start", SlackOAuthController, :start
     get "/oauth/callback", SlackOAuthController, :callback
@@ -196,7 +200,11 @@ defmodule TymeslotWeb.Router do
 
   # Dashboard routes
   scope "/", TymeslotWeb do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through [
+      :browser,
+      :require_authenticated_user,
+      TymeslotWeb.Plugs.AdditionalDashboardPlugs
+    ]
 
     @dashboard_hooks [
       {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
