@@ -249,31 +249,40 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     sync_token = integration.google_sync_token
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      result =
-        CalendarCircuitBreaker.call(:google, fn ->
-          make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, %{
-            "syncToken" => sync_token
-          })
-        end)
-
-      case result do
-        {:ok, response} when is_map(response) ->
-          {:ok,
-           %{
-             events: response["items"] || [],
-             next_sync_token: response["nextSyncToken"]
-           }}
-
-        {:ok, error} ->
-          error
-
-        {:error, :circuit_open} = error ->
-          error
-
-        other ->
-          other
-      end
+      fetch_incremental_page(token, calendar_id, sync_token, nil, [])
     end)
+  end
+
+  defp fetch_incremental_page(token, calendar_id, sync_token, page_token, acc) do
+    params = maybe_put_page_token(%{"syncToken" => sync_token}, page_token)
+
+    result =
+      CalendarCircuitBreaker.call(:google, fn ->
+        make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, params)
+      end)
+
+    case result do
+      {:ok, response} when is_map(response) ->
+        items = response["items"] || []
+        acc = Enum.reverse(items, acc)
+
+        case response["nextPageToken"] do
+          nil ->
+            {:ok, %{events: Enum.reverse(acc), next_sync_token: response["nextSyncToken"]}}
+
+          next_page ->
+            fetch_incremental_page(token, calendar_id, sync_token, next_page, acc)
+        end
+
+      {:ok, error} ->
+        error
+
+      {:error, :circuit_open} = error ->
+        error
+
+      other ->
+        other
+    end
   end
 
   @doc """
