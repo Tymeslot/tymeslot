@@ -22,7 +22,7 @@ jobs:
     steps:
       # Full history: the scan works over the range of incoming commits, which
       # needs their parents present.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Install gitleaks

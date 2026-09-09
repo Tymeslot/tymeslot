@@ -25,7 +25,7 @@ jobs:
       ELIXIR_VERSION: "1.20.3"
       OTP_VERSION: "28.5.0.5"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
@@ -42,7 +42,7 @@ jobs:
       # grows until the next dependency bump. restore-keys drops the SHA, so a
       # run still starts from the newest cache for this lockfile and pays only
       # the delta since it, which is the whole point of an incremental PLT.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             deps
