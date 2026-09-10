@@ -202,5 +202,49 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryHappyPathTest do
 
       assert CalendarManagement.list_calendar_integrations(user.id) == []
     end
+
+    test "a retry after creating a calendar on the server is not refused from the cache" do
+      # The refusal tells the person to create a calendar and try again. Had
+      # the empty discovery been cached, the retry would have been answered
+      # from it and refused for the whole TTL, however many calendars the
+      # server had gained since.
+      responses = :counters.new(1, [])
+
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        :counters.add(responses, 1, 1)
+
+        body =
+          if :counters.get(responses, 1) == 1,
+            do: @propfind_empty_response,
+            else: @propfind_calendar_response
+
+        {:ok, %Req.Response{status: 207, body: body}}
+      end)
+
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      attrs = %{
+        user_id: user.id,
+        name: "My CalDAV",
+        provider: "caldav",
+        base_url: "https://caldav.example.com",
+        username: "user",
+        password: "pass",
+        calendar_paths: [],
+        provider_account_id: "https://caldav.example.com||user",
+        is_active: true
+      }
+
+      assert {:error, %{discovery: _message}} =
+               CalendarManagement.create_calendar_integration(attrs)
+
+      assert {:ok, integration} = CalendarManagement.create_calendar_integration(attrs)
+
+      assert Enum.sort(integration.calendar_paths) == [
+               "/calendars/user/personal/",
+               "/calendars/user/work/"
+             ]
+    end
   end
 end

@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.Shared.DiscoveryCache
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
@@ -149,6 +150,15 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   """
 
   describe "create_calendar_integration/1" do
+    # `DiscoveryCache` is a process-wide ETS table keyed on
+    # `{provider, "username@host"}`, and this fixture shares its key with the
+    # discovery tests, so a result they leave behind would stand in for the
+    # stubbed PROPFIND below.
+    setup do
+      DiscoveryCache.clear_all()
+      :ok
+    end
+
     test "emits [:tymeslot, :calendar, :connected] telemetry with provider on success" do
       stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}

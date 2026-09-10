@@ -399,14 +399,17 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     end
 
     case DiscoveryCache.get_or_compute(cache_key, fn -> run_probe(actor, compute) end) do
-      {:ok, _calendars} = result ->
+      {:ok, [_calendar | _rest]} = result ->
         result
 
-      error ->
+      result ->
         # Never retain transient failures: a single network blip would
-        # otherwise block rediscovery for the whole TTL.
+        # otherwise block rediscovery for the whole TTL. Nor an empty
+        # discovery: `maybe_discover_calendars/1` refuses it with advice to
+        # create a calendar and try again, and a cached empty answer would
+        # refuse that retry for the whole TTL too.
         DiscoveryCache.invalidate(cache_key)
-        error
+        result
     end
   end
 
