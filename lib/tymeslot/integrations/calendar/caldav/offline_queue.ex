@@ -29,6 +29,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   follows the usual conflict-resolution policy (`:keep_local` for
   Tymeslot-owned events, `:fail` otherwise — the default is configured
   per row via `conflict_policy_for/1`).
+
+  A `locally_modified` flush that finds no resource at all is the one case
+  the policies cannot express, since none of them has a server copy to
+  reconcile against. For a Tymeslot-owned row the queue creates the event
+  instead; see `recreate_missing/5`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -101,6 +106,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
           QueueQueries.mark_synced(integration.id, row.uid, nil)
           log_success(row, :modified)
 
+        {:error, :not_found} ->
+          recreate_missing(row, integration, client, path, event_data)
+
         {:error, reason} ->
           record_failure(integration, row, :modified, reason)
       end
@@ -155,6 +163,35 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
+
+  # The server has no resource to update: the event never landed, or the
+  # organiser deleted it from their own client. No conflict policy can repair
+  # that — each one reconciles a local copy against a server copy, and there is
+  # no server copy — so the only repair is a create, which is what
+  # `CalendarEventSync` does on the worker path.
+  #
+  # It is gated on `:keep_local` because that is this module's expression of
+  # ownership: recreating an event Tymeslot does not own would resurrect
+  # somebody else's deletion. A create racing another writer comes back
+  # `:precondition_failed`, which records a failure and leaves the row queued —
+  # the next cycle then finds the resource present and the ordinary update
+  # succeeds.
+  defp recreate_missing(row, integration, client, path, event_data) do
+    case conflict_policy_for(row) do
+      :keep_local ->
+        case Events.create_calendar_event(client, path, event_data, events_opts()) do
+          {:ok, _uid} ->
+            QueueQueries.mark_synced(integration.id, row.uid, nil)
+            log_success(row, :recreated)
+
+          {:error, reason} ->
+            record_failure(integration, row, :recreated, reason)
+        end
+
+      _fail ->
+        record_failure(integration, row, :modified, :not_found)
+    end
+  end
 
   defp row_to_event_data(%ProviderCalendarEventSchema{} = row) do
     event = ProviderCalendarEventSchema.to_calendar_event(row)

@@ -156,6 +156,128 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     end
   end
 
+  describe "flush/2 — locally_modified rows whose event is gone" do
+    # `QueueWiring.tag/3` writes neither `etag` nor `provider_event_id`, and
+    # both are in the replaced-column set, so a real queue row carries neither.
+    # These tests reproduce that shape: with no cached ETag the update HEAD-probes,
+    # gets a 404, falls back to `If-Match: *`, and reads the resulting 412 as
+    # absence rather than conflict.
+    test "creates the event from the local copy when Tymeslot owns it",
+         %{integration: integration} do
+      row =
+        insert_pending_row(integration,
+          sync_state: "locally_modified",
+          created_by_tymeslot: true,
+          etag: nil,
+          provider_event_id: nil
+        )
+
+      counter = :counters.new(1, [])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(counter, 1, 1)
+
+        case :counters.get(counter, 1) do
+          1 ->
+            assert conn.method == "HEAD"
+            Conn.send_resp(conn, 404, "")
+
+          2 ->
+            assert conn.method == "PUT"
+            assert Conn.get_req_header(conn, "if-match") == ["*"]
+            Conn.send_resp(conn, 412, "Precondition Failed")
+
+          3 ->
+            # The recreate: an If-None-Match: * create, not another conditional
+            # update, and carrying the queued event's own summary.
+            assert conn.method == "PUT"
+            assert Conn.get_req_header(conn, "if-none-match") == ["*"]
+            assert Conn.get_req_header(conn, "if-match") == []
+
+            {:ok, body, conn} = Conn.read_body(conn)
+            assert body =~ "SUMMARY:Queued"
+
+            Conn.send_resp(conn, 201, "")
+        end
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      reloaded = Repo.reload!(row)
+      assert reloaded.sync_state == "synced"
+      assert reloaded.sync_attempts == 0
+      assert is_nil(reloaded.sync_last_error)
+      assert :counters.get(counter, 1) == 3
+    end
+
+    test "leaves the row queued and never recreates an event Tymeslot does not own",
+         %{integration: integration} do
+      row =
+        insert_pending_row(integration,
+          sync_state: "locally_modified",
+          created_by_tymeslot: false,
+          etag: nil,
+          provider_event_id: nil
+        )
+
+      counter = :counters.new(1, [])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(counter, 1, 1)
+
+        case :counters.get(counter, 1) do
+          1 ->
+            Conn.send_resp(conn, 404, "")
+
+          2 ->
+            Conn.send_resp(conn, 412, "Precondition Failed")
+
+          _further ->
+            flunk("an event Tymeslot does not own must never be recreated")
+        end
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      reloaded = Repo.reload!(row)
+      assert reloaded.sync_state == "locally_modified"
+      assert reloaded.sync_attempts == 1
+      assert :counters.get(counter, 1) == 2
+    end
+
+    test "keeps the row queued when the recreate itself fails",
+         %{integration: integration} do
+      row =
+        insert_pending_row(integration,
+          sync_state: "locally_modified",
+          created_by_tymeslot: true,
+          etag: nil,
+          provider_event_id: nil
+        )
+
+      counter = :counters.new(1, [])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(counter, 1, 1)
+
+        case :counters.get(counter, 1) do
+          1 -> Conn.send_resp(conn, 404, "")
+          2 -> Conn.send_resp(conn, 412, "Precondition Failed")
+          3 -> Conn.send_resp(conn, 502, "Bad Gateway")
+        end
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      reloaded = Repo.reload!(row)
+      assert reloaded.sync_state == "locally_modified"
+      assert reloaded.sync_attempts == 1
+
+      assert reloaded.sync_last_error ==
+               "The calendar server reported an error. Tymeslot will retry automatically."
+    end
+  end
+
   describe "flush/2 — locally_deleted rows" do
     test "issues DELETE and drops the cache row on success",
          %{integration: integration} do
