@@ -1,5 +1,7 @@
 defmodule Tymeslot.Analytics.ContractTest do
-  use ExUnit.Case, async: true
+  # async: false: :analytics_strict decides whether a contract violation raises or is dropped,
+  # and it is consulted wherever an analytics event is validated.
+  use ExUnit.Case, async: false
   @moduletag :infrastructure
 
   import ExUnit.CaptureLog

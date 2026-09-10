@@ -1,5 +1,8 @@
 defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
-  use TymeslotWeb.ConnCase, async: true
+  # async: false: :analytics_providers is read by SecurityHeadersPlug on every request and
+  # by the layout on every render, so writing it concurrently rewrites the CSP
+  # of every test in flight.
+  use TymeslotWeb.ConnCase, async: false
 
   @moduletag :plugs
   @moduletag :security

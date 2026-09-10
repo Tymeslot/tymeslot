@@ -7,7 +7,9 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorHealthStateTest do
   Transition classification lives in `MonitorTransitionTest`; persistence and
   reporting live in `MonitorPersistenceTest`.
   """
-  use Tymeslot.DataCase, async: true
+  # async: false: :sync_failure_unhealthy_threshold decides the health verdict for six other
+  # health-check and sync modules that assert on it.
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.HealthCheck.Monitor

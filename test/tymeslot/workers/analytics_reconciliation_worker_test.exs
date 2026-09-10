@@ -1,5 +1,7 @@
 defmodule Tymeslot.Workers.AnalyticsReconciliationWorkerTest do
-  use Tymeslot.DataCase, async: true
+  # async: false: :booking_analytics_enabled gates event emission on the public scheduling
+  # routes, which the booking tests exercise throughout.
+  use Tymeslot.DataCase, async: false
 
   @moduletag :analytics
   @moduletag :database

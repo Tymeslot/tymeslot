@@ -1,4 +1,6 @@
 defmodule TymeslotWeb.EndpointTest do
+  # credo:global-config-safe — :robots_file is read only while serving
+  # /robots.txt, and no other test requests that path.
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :infrastructure

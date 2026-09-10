@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
-  use Tymeslot.DataCase, async: true
+  # async: false: :outlook_oauth is read by the OAuth helpers and by OAuthStateGuard on the
+  # web path, both reachable from other tests.
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Tymeslot.Factory

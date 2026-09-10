@@ -1,5 +1,7 @@
 defmodule Tymeslot.Payments.Webhooks.HandlersTest do
-  use Tymeslot.DataCase, async: true
+  # async: false: :subscription_manager is read through Payments.Config by every payment path,
+  # not only by the webhook handlers under test here.
+  use Tymeslot.DataCase, async: false
   @moduletag :payments
 
   alias Tymeslot.Payments.Webhooks.{

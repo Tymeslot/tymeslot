@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.Components.DashboardSidebarTest do
-  use TymeslotWeb.ConnCase, async: true
+  # async: false: :dashboard_extension_gettext is read wherever the sidebar renders, which is
+  # every dashboard LiveView test.
+  use TymeslotWeb.ConnCase, async: false
 
   @moduletag :utils
 
