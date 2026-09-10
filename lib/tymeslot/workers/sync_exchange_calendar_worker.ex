@@ -291,7 +291,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   end
 
   defp fetch_one_calendar(integration, client, from, to) do
-    calendar_id = client[:calendar_id]
+    calendar_id = client.calendar_id
     context = ItemCache.item_context(integration, client)
 
     with {:ok, items} <-

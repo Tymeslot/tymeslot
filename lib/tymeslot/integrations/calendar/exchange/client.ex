@@ -46,23 +46,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerHelpers
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Calendar.Exchange.ClientConfig
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.Shared.HttpLogging
 
   require Logger
 
   @typedoc """
-  A provider config as `Exchange.Provider` builds it: an atom-keyed map, with
-  `:verify_ssl` and `:request_timeout` optional.
+  A connected client as `Exchange.Provider` builds it.
+
+  A struct so that the password it carries is masked wherever the client is
+  inspected; see `ClientConfig`. Nothing below this module matches on the
+  struct itself, only on the fields it needs, so a caller handing over a bare
+  client-shaped map still works.
   """
-  @type config :: %{
-          required(:base_url) => String.t(),
-          required(:username) => String.t(),
-          required(:password) => String.t(),
-          optional(:verify_ssl) => boolean(),
-          optional(:request_timeout) => pos_integer(),
-          optional(atom()) => term()
-        }
+  @type config :: ClientConfig.t()
 
   @type error_reason ::
           :unauthorized
@@ -233,7 +231,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
 
   defp options(config) do
     [
-      receive_timeout: Map.get(config, :request_timeout, @default_timeout),
+      # `Map.get/2` with an explicit fallback rather than a default: the field
+      # is declared on `ClientConfig` and defaults to nil there, so a
+      # three-argument `Map.get/3` would answer nil and never reach this
+      # module's own default.
+      receive_timeout: Map.get(config, :request_timeout) || @default_timeout,
       # The EWS endpoint is a URL the user typed, so it gets the same
       # request-time SSRF validation and redirect refusal the CalDAV family
       # gets. An operator whose Exchange server genuinely sits on a private

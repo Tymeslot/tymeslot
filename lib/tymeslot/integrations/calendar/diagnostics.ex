@@ -361,7 +361,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   end
 
   defp fetch_exchange_folder(integration, client, range_start, range_end) do
-    calendar_id = client[:calendar_id]
+    calendar_id = client.calendar_id
 
     context = %{
       calendar_integration_id: integration.id,
