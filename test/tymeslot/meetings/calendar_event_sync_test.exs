@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
@@ -142,6 +143,126 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
     test "returns {:error, :meeting_not_found} for a non-existent meeting" do
       assert {:error, :meeting_not_found} = CalendarEventSync.update(UUID.generate(), 1)
+    end
+  end
+
+  describe "update/2 cache write-through (reschedule cache staleness fix)" do
+    test "writes the new time through to the linked CalDAV cache row and broadcasts it" do
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario()
+
+      stale_start = DateTime.add(meeting.start_time, -3600, :second)
+      stale_end = DateTime.add(meeting.end_time, -3600, :second)
+
+      cached =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "caldav",
+          uid: meeting.uid,
+          provider_event_id: nil,
+          summary: "Old title",
+          start_at: stale_start,
+          end_at: stale_end
+        )
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{meeting.organizer_user_id}")
+
+      expect_calendar_update_success()
+
+      assert :ok = CalendarEventSync.update(meeting.id, 1)
+
+      reloaded = Repo.get!(cached.__struct__, cached.id)
+      assert DateTime.compare(reloaded.start_at, meeting.start_time) == :eq
+      assert DateTime.compare(reloaded.end_at, meeting.end_time) == :eq
+      assert reloaded.summary == meeting.title
+
+      assert_receive {:calendar_events_updated, user_id, uids}
+      assert user_id == meeting.organizer_user_id
+      assert meeting.uid in uids
+    end
+
+    test "writes through by provider_event_id for OAuth-linked meetings, not uid" do
+      provider_event_id = "google-event-reschedule"
+
+      %{integration: integration, meeting: meeting} =
+        setup_calendar_scenario(uid: UUID.generate())
+
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{provider_event_id: provider_event_id})
+
+      # The cache row's own `uid` is the provider's iCalUID, which is a
+      # different value than the Tymeslot-generated `meeting.uid` for OAuth
+      # providers — only `provider_event_id` links the two.
+      cached =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "google",
+          uid: "google-ical-uid-different-from-meeting-uid",
+          provider_event_id: provider_event_id,
+          start_at: DateTime.add(meeting.start_time, -3600, :second),
+          end_at: DateTime.add(meeting.end_time, -3600, :second)
+        )
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{meeting.organizer_user_id}")
+
+      expect(Tymeslot.CalendarMock, :update_event, fn ^provider_event_id, _data, _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.update(meeting.id, 1)
+
+      reloaded = Repo.get!(cached.__struct__, cached.id)
+      assert DateTime.compare(reloaded.start_at, meeting.start_time) == :eq
+      assert DateTime.compare(reloaded.end_at, meeting.end_time) == :eq
+
+      assert_receive {:calendar_events_updated, _user_id, uids}
+      assert cached.uid in uids
+    end
+
+    test "is a no-op when no cache row exists yet (first outbound push before any inbound sync)" do
+      %{meeting: meeting} = setup_calendar_scenario()
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{meeting.organizer_user_id}")
+
+      expect_calendar_update_success()
+
+      assert :ok = CalendarEventSync.update(meeting.id, 1)
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(
+                 meeting.calendar_integration_id,
+                 meeting.uid
+               )
+
+      refute_receive {:calendar_events_updated, _, _}, 100
+    end
+
+    test "does not write through the cache when the outbound push fails" do
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario()
+
+      stale_start = DateTime.add(meeting.start_time, -3600, :second)
+      stale_end = DateTime.add(meeting.end_time, -3600, :second)
+
+      cached =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "caldav",
+          uid: meeting.uid,
+          provider_event_id: nil,
+          start_at: stale_start,
+          end_at: stale_end
+        )
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{meeting.organizer_user_id}")
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _ctx ->
+        {:error, :connection_failed}
+      end)
+
+      assert {:error, :connection_failed} = CalendarEventSync.update(meeting.id, 1)
+
+      reloaded = Repo.get!(cached.__struct__, cached.id)
+      assert DateTime.compare(reloaded.start_at, stale_start) == :eq
+      assert DateTime.compare(reloaded.end_at, stale_end) == :eq
+
+      refute_receive {:calendar_events_updated, _, _}, 100
     end
   end
 

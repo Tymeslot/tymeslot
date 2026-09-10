@@ -28,6 +28,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
   require Logger
@@ -177,11 +179,13 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     case calendar_module().update_event(calendar_event_identifier(meeting), event_data, meeting) do
       :ok ->
         Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
+        sync_cache_after_outbound_update(meeting, event_data)
         :ok
 
       {:ok, _result} ->
         # Backward/forward compatibility if update returns tagged tuple
         Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
+        sync_cache_after_outbound_update(meeting, event_data)
         :ok
 
       {:error, :not_found} ->
@@ -190,6 +194,67 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       error ->
         error
     end
+  end
+
+  # Write-through for the outbound push above: keeps the local
+  # `provider_calendar_event` cache row (and any live calendar-grid viewers
+  # subscribed via PubSub) in sync with a Tymeslot-initiated change, instead
+  # of waiting on the next inbound sync cycle to notice the drift. Mirrors
+  # what `Tymeslot.Integrations.Calendar.Sync.post_commit_reconciliation/2`
+  # does for the inbound direction.
+  #
+  # Never fails the update: a successful provider push must not be undone or
+  # retried just because the local cache write-through hiccups — the next
+  # inbound sync is the backstop either way.
+  defp sync_cache_after_outbound_update(meeting, event_data) do
+    with {:ok, cached_event} <- find_cached_event(meeting),
+         {:ok, _updated} <- update_cached_event(cached_event, event_data) do
+      SyncBroadcast.broadcast_cache_update(meeting.organizer_user_id, [cached_event.uid])
+    else
+      {:error, :not_found} ->
+        # No cache row yet — e.g. this is the very first outbound push and no
+        # inbound sync has cached the event. Nothing stale to correct.
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to write through outbound calendar update to local cache",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  # Mirrors the provider_event_id-first, uid-fallback lookup that
+  # `Tymeslot.Meetings.ExternalCalendarChanges.find_linked_meeting/3` already
+  # uses for the inbound direction: OAuth providers (Google, Outlook) key the
+  # cache row by their native `provider_event_id`, while CalDAV never
+  # persists one onto the meeting and instead round-trips the same value in
+  # both `meeting.uid` and the cache row's `uid`.
+  defp find_cached_event(%{provider_event_id: provider_event_id} = meeting)
+       when is_binary(provider_event_id) and byte_size(provider_event_id) > 0 do
+    ProviderCalendarEventQueries.get_by_provider_event_id(
+      meeting.calendar_integration_id,
+      provider_event_id
+    )
+  end
+
+  defp find_cached_event(meeting) do
+    ProviderCalendarEventQueries.get_by_uid(meeting.calendar_integration_id, meeting.uid)
+  end
+
+  defp update_cached_event(cached_event, event_data) do
+    attrs = %{
+      start_at: event_data.start_time,
+      end_at: event_data.end_time,
+      summary: event_data.summary,
+      description: event_data.description,
+      location: event_data.location,
+      timezone: event_data.timezone
+    }
+
+    ProviderCalendarEventQueries.update_after_outbound_push(cached_event, attrs)
   end
 
   defp handle_missing_event(meeting_id, event_data, meeting) do
