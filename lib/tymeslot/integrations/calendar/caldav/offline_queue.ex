@@ -32,8 +32,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   A `locally_modified` flush that finds no resource at all is the one case
   the policies cannot express, since none of them has a server copy to
-  reconcile against. For a Tymeslot-owned row the queue creates the event
-  instead; see `recreate_missing/5`.
+  reconcile against. When a meeting that still expects its calendar event
+  claims the row, the queue creates the event instead; see
+  `recreate_missing/5`.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -46,6 +47,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingState
 
   # `sync_last_error` is read by the account owner, so every value written to
   # it is a sentence. Transport failures get theirs from
@@ -170,15 +173,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # no server copy — so the only repair is a create, which is what
   # `CalendarEventSync` does on the worker path.
   #
-  # It is gated on `:keep_local` because that is this module's expression of
-  # ownership: recreating an event Tymeslot does not own would resurrect
-  # somebody else's deletion. A create racing another writer comes back
-  # `:precondition_failed`, which records a failure and leaves the row queued —
-  # the next cycle then finds the resource present and the ordinary update
-  # succeeds.
+  # Two guards decide whether that repair is right.
+  #
+  # An elapsed event is not recreated: the slot has been and gone, so writing
+  # it now would only plant a stale entry in the organiser's calendar. The
+  # server is the truth for the past, and the reconciler already drops a
+  # cached row whose event has vanished from the fetch window, so the row is
+  # dropped the same way here. This is also what clears rows queued before a
+  # missing resource was handled at all: those had retried every cycle and
+  # were, by construction, the ones outside the window.
+  #
+  # A live event is recreated only when a meeting that still expects its
+  # calendar event claims the row. The `created_by_tymeslot` flag cannot gate
+  # this: `QueueWiring.tag/3` stamps it on every write it queues, including an
+  # organiser's grid edit of an event Tymeslot never created, so recreating on
+  # the flag would resurrect somebody else's deletion. Resolving against the
+  # meeting itself is the rule the grid and the reconciler already use. A
+  # create racing another writer comes back `:precondition_failed`, which
+  # records a failure and leaves the row queued — the next cycle then finds
+  # the resource present and the ordinary update succeeds.
   defp recreate_missing(row, integration, client, path, event_data) do
-    case conflict_policy_for(row) do
-      :keep_local ->
+    cond do
+      elapsed?(event_data.end_time) ->
+        ProviderCalendarEventQueries.delete_by_uid(integration.id, row.uid)
+        log_success(row, :dropped_elapsed)
+
+      expects_calendar_event?(row, integration) ->
         case Events.create_calendar_event(client, path, event_data, events_opts()) do
           {:ok, _uid} ->
             QueueQueries.mark_synced(integration.id, row.uid, nil)
@@ -188,9 +208,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
             record_failure(integration, row, :recreated, reason)
         end
 
-      _fail ->
+      true ->
         record_failure(integration, row, :modified, :not_found)
     end
+  end
+
+  defp elapsed?(%DateTime{} = end_time), do: DateTime.before?(end_time, DateTime.utc_now())
+  defp elapsed?(%Date{} = end_date), do: Date.before?(end_date, Date.utc_today())
+
+  defp expects_calendar_event?(row, integration) do
+    integration.id
+    |> Meetings.list_meetings_by_calendar_identifiers(Meetings.calendar_event_identifiers(row))
+    |> Map.values()
+    |> Enum.any?(&MeetingState.expects_calendar_event?/1)
   end
 
   defp row_to_event_data(%ProviderCalendarEventSchema{} = row) do

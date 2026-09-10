@@ -162,18 +162,48 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     # These tests reproduce that shape: with no cached ETag the update HEAD-probes,
     # gets a 404, falls back to `If-Match: *`, and reads the resulting 412 as
     # absence rather than conflict.
-    test "creates the event from the local copy when Tymeslot owns it",
-         %{integration: integration} do
-      row =
-        insert_pending_row(integration,
-          sync_state: "locally_modified",
-          created_by_tymeslot: true,
-          etag: nil,
-          provider_event_id: nil
+    #
+    # `QueueWiring.tag/3` also stamps `created_by_tymeslot: true` on every row
+    # it queues, so the flag is set throughout: what decides a recreate is the
+    # meeting behind the row, never the flag.
+    @future_start DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+    @future_end DateTime.add(@future_start, 1, :hour)
+
+    defp insert_missing_row(integration, attrs) do
+      insert_pending_row(
+        integration,
+        Keyword.merge(
+          [
+            sync_state: "locally_modified",
+            created_by_tymeslot: true,
+            etag: nil,
+            provider_event_id: nil,
+            start_at: @future_start,
+            end_at: @future_end
+          ],
+          attrs
         )
+      )
+    end
 
-      counter = :counters.new(1, [])
+    defp insert_claiming_meeting(integration, row, attrs) do
+      insert(
+        :meeting,
+        Keyword.merge(
+          [
+            calendar_integration_id: integration.id,
+            uid: row.uid,
+            start_time: @future_start,
+            end_time: @future_end
+          ],
+          attrs
+        )
+      )
+    end
 
+    # Counts requests and answers the HEAD probe and the `If-Match: *` update
+    # as absence; anything after that is handed to `on_recreate`.
+    defp stub_missing_event(counter, on_recreate) do
       ReqTest.stub(:tymeslot_http, fn conn ->
         :counters.add(counter, 1, 1)
 
@@ -187,18 +217,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
             assert Conn.get_req_header(conn, "if-match") == ["*"]
             Conn.send_resp(conn, 412, "Precondition Failed")
 
-          3 ->
-            # The recreate: an If-None-Match: * create, not another conditional
-            # update, and carrying the queued event's own summary.
-            assert conn.method == "PUT"
-            assert Conn.get_req_header(conn, "if-none-match") == ["*"]
-            assert Conn.get_req_header(conn, "if-match") == []
-
-            {:ok, body, conn} = Conn.read_body(conn)
-            assert body =~ "SUMMARY:Queued"
-
-            Conn.send_resp(conn, 201, "")
+          _further ->
+            on_recreate.(conn)
         end
+      end)
+    end
+
+    test "creates the event from the local copy when a live meeting claims the row",
+         %{integration: integration} do
+      row = insert_missing_row(integration, [])
+      insert_claiming_meeting(integration, row, status: "confirmed")
+
+      counter = :counters.new(1, [])
+
+      stub_missing_event(counter, fn conn ->
+        # The recreate: an If-None-Match: * create, not another conditional
+        # update, and carrying the queued event's own summary.
+        assert conn.method == "PUT"
+        assert Conn.get_req_header(conn, "if-none-match") == ["*"]
+        assert Conn.get_req_header(conn, "if-match") == []
+
+        {:ok, body, conn} = Conn.read_body(conn)
+        assert body =~ "SUMMARY:Queued"
+
+        Conn.send_resp(conn, 201, "")
       end)
 
       assert :ok = OfflineQueue.flush(integration, @client)
@@ -210,31 +252,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert :counters.get(counter, 1) == 3
     end
 
-    test "leaves the row queued and never recreates an event Tymeslot does not own",
+    test "never recreates an event no meeting claims, whatever the ownership flag says",
          %{integration: integration} do
-      row =
-        insert_pending_row(integration,
-          sync_state: "locally_modified",
-          created_by_tymeslot: false,
-          etag: nil,
-          provider_event_id: nil
-        )
+      row = insert_missing_row(integration, created_by_tymeslot: true)
 
       counter = :counters.new(1, [])
 
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        :counters.add(counter, 1, 1)
-
-        case :counters.get(counter, 1) do
-          1 ->
-            Conn.send_resp(conn, 404, "")
-
-          2 ->
-            Conn.send_resp(conn, 412, "Precondition Failed")
-
-          _further ->
-            flunk("an event Tymeslot does not own must never be recreated")
-        end
+      stub_missing_event(counter, fn _conn ->
+        flunk("an event no meeting claims must never be recreated")
       end)
 
       assert :ok = OfflineQueue.flush(integration, @client)
@@ -245,27 +270,59 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert :counters.get(counter, 1) == 2
     end
 
-    test "keeps the row queued when the recreate itself fails",
+    test "never recreates the event of a cancelled meeting",
          %{integration: integration} do
-      row =
-        insert_pending_row(integration,
-          sync_state: "locally_modified",
-          created_by_tymeslot: true,
-          etag: nil,
-          provider_event_id: nil
-        )
+      row = insert_missing_row(integration, [])
+      insert_claiming_meeting(integration, row, status: "cancelled")
 
       counter = :counters.new(1, [])
 
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        :counters.add(counter, 1, 1)
-
-        case :counters.get(counter, 1) do
-          1 -> Conn.send_resp(conn, 404, "")
-          2 -> Conn.send_resp(conn, 412, "Precondition Failed")
-          3 -> Conn.send_resp(conn, 502, "Bad Gateway")
-        end
+      stub_missing_event(counter, fn _conn ->
+        flunk("a cancelled meeting's event must never be recreated")
       end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      reloaded = Repo.reload!(row)
+      assert reloaded.sync_state == "locally_modified"
+      assert reloaded.sync_attempts == 1
+      assert :counters.get(counter, 1) == 2
+    end
+
+    test "drops an elapsed row instead of planting a stale event",
+         %{integration: integration} do
+      past_start = DateTime.utc_now() |> DateTime.add(-2, :day) |> DateTime.truncate(:second)
+      past_end = DateTime.add(past_start, 1, :hour)
+
+      row = insert_missing_row(integration, start_at: past_start, end_at: past_end)
+
+      insert_claiming_meeting(integration, row,
+        status: "confirmed",
+        start_time: past_start,
+        end_time: past_end
+      )
+
+      counter = :counters.new(1, [])
+
+      stub_missing_event(counter, fn _conn ->
+        flunk("an elapsed event must never be recreated")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      assert is_nil(Repo.reload(row))
+      assert QueueQueries.list_pending(integration.id) == []
+      assert :counters.get(counter, 1) == 2
+    end
+
+    test "keeps the row queued when the recreate itself fails",
+         %{integration: integration} do
+      row = insert_missing_row(integration, [])
+      insert_claiming_meeting(integration, row, status: "confirmed")
+
+      counter = :counters.new(1, [])
+
+      stub_missing_event(counter, fn conn -> Conn.send_resp(conn, 502, "Bad Gateway") end)
 
       assert :ok = OfflineQueue.flush(integration, @client)
 
