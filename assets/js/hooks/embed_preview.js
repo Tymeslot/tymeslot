@@ -275,6 +275,13 @@ export const EmbedPreview = {
 
   // Maps the dataset values (strings) into the shape TymeslotBooking expects.
   // Only includes layout if non-default and only includes maxWidth as a number.
+  //
+  // `previewToken` is what stops the Popup and Floating previews from booking
+  // for real. Unlike the Inline mode, they do not build their own iframe URL;
+  // embed.js does, and it drops anything it was not handed. Without the token
+  // the server sees an ordinary public booking page and persists the meeting,
+  // sends the confirmation email and creates the calendar event — a silent
+  // failure, because a simulated booking ends on the same confirmation screen.
   buildOptionsForJs(options) {
     const out = {};
     if (options.layout && options.layout !== 'default') {
@@ -286,6 +293,17 @@ export const EmbedPreview = {
     if (options.maxWidth) {
       const n = parseInt(options.maxWidth, 10);
       if (Number.isFinite(n) && n > 0) out.maxWidth = n;
+    }
+    if (options.previewToken) {
+      out.previewToken = options.previewToken;
+      // A preview iframe never posts its height: iframe_embed.js bails out of
+      // embedded mode on `?preview=true` so the page renders standalone, the
+      // same way the Inline preview shows it. embed.js sizes its modal from
+      // those posted heights and otherwise leaves the wrapper at its 400px
+      // placeholder, which would crop the page to a letterbox. Open at the
+      // modal's own height cap instead, so the standalone render gets the whole
+      // box.
+      out.initialHeight = Math.max(window.innerHeight - 100, 200);
     }
     return out;
   },

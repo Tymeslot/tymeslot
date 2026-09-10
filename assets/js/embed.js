@@ -166,7 +166,7 @@
     const url = new URL(`${base}/${encodeURIComponent(username)}`);
     
     // Build URL with customization params - STRICT ALLOWLIST
-    const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale', 'layout'];
+    const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale', 'layout', 'previewToken'];
 
     ALLOWED_PARAMS.forEach(key => {
       const val = options[key];
@@ -180,6 +180,22 @@
         url.searchParams.append('locale', val);
       } else if (key === 'layout' && /^(default|column)$/.test(val)) {
         url.searchParams.append('layout', val);
+      } else if (key === 'previewToken' && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(val)) {
+        // Owner preview. One option in, both halves of the contract out:
+        // `preview` is the forgeable display claim, `preview_token` the signed,
+        // owner-bound authorisation to SIMULATE a booking instead of persisting
+        // it. A URL carrying only the claim is failed closed by the server, so
+        // the two are never appended apart — the same guarantee the server-side
+        // PreviewMode.owner_path/3 gives. Absent or malformed, the iframe is a
+        // normal public booking page and books for real, which is what an
+        // ordinary embedder wants.
+        //
+        // Only the dashboard's own preview passes this; it is not read from any
+        // data-* attribute, so third-party snippets are unaffected. It grants no
+        // capability an attacker lacks — `?preview=true` is forgeable by typing
+        // it, and the token is signed and bound to the page owner.
+        url.searchParams.append('preview', 'true');
+        url.searchParams.append('preview_token', val);
       }
     });
 

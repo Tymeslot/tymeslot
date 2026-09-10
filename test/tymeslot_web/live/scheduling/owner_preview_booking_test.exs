@@ -10,6 +10,12 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBookingTest do
   the gates ran before the preview-versus-real decision, so the attempts that
   were about to be refused still spent the public per-IP allowance — an
   organiser testing their page locked real visitors out of booking it.
+
+  Fixing that surfaced the opposite fault in the sibling preview modes: Popup
+  and Floating delegate to `embed.js`, whose parameter allowlist dropped the
+  token, so their previews booked for real. Both directions are covered here,
+  because a simulated booking and a persisted one end on the same screen and
+  only the database tells them apart.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -86,6 +92,32 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBookingTest do
       view = navigate_to_preview(conn, profile, event_type, PreviewToken.sign(user.id))
 
       html = submit_booking(view, "owner-preview@example.com")
+
+      refute html =~ "Preview session expired"
+      assert Repo.aggregate(MeetingSchema, :count, :id) == 0
+    end
+
+    test "simulates an embedded preview too, whatever mode opened it", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      event_type: event_type
+    } do
+      # The Popup and Floating preview modes do not build their own URL: they
+      # hand the token to embed.js, which builds an *embedded* one — `embed=1`
+      # and `parent-origin` alongside the two preview params. Before the token
+      # could reach it, embed.js dropped it at its allowlist and both modes
+      # persisted a real meeting and mailed the address the organiser typed,
+      # while ending on the same "Meeting Confirmed!" screen a simulation does.
+      view =
+        navigate_to_booking_form(conn, profile, event_type, [
+          {"preview", "true"},
+          {"preview_token", PreviewToken.sign(user.id)},
+          {"embed", "1"},
+          {"parent-origin", "http://localhost:4000"}
+        ])
+
+      html = submit_booking(view, "popup-preview@example.com")
 
       refute html =~ "Preview session expired"
       assert Repo.aggregate(MeetingSchema, :count, :id) == 0

@@ -1019,6 +1019,68 @@ describe('parameter allowlist enforcement', () => {
     expect(url.searchParams.get('layout')).toBe('column')
   })
 
+  test('previewToken emits BOTH halves of the owner-preview contract', () => {
+    const container = document.createElement('div')
+    container.id = 'preview-token-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#preview-token-test', 'alice', {
+      previewToken: 'test-token.fake-preview-payload.test_signature'
+    })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    // Without the token the server persists the meeting and mails the
+    // attendee; without the display claim the dashboard iframe is refused by
+    // CSP frame-ancestors. Neither half is useful alone, so both are appended
+    // from one option or not at all.
+    expect(url.searchParams.get('preview_token')).toBe('test-token.fake-preview-payload.test_signature')
+    expect(url.searchParams.get('preview')).toBe('true')
+  })
+
+  test('omits both preview params when no previewToken is given', () => {
+    const container = document.createElement('div')
+    container.id = 'no-preview-token-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#no-preview-token-test', 'alice', { layout: 'column' })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('preview')).toBeNull()
+    expect(url.searchParams.get('preview_token')).toBeNull()
+  })
+
+  test('rejects a previewToken that is not a three-segment signed token', () => {
+    const container = document.createElement('div')
+    container.id = 'preview-token-reject'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#preview-token-reject', 'alice', {
+      previewToken: 'true&preview_token=../../evil'
+    })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('preview_token')).toBeNull()
+    expect(url.searchParams.get('preview')).toBeNull()
+  })
+
+  test('carries the preview contract into the popup modal iframe', () => {
+    window.TymeslotBooking.open('alice', {
+      previewToken: 'test-token.fake-preview-payload.test_signature'
+    })
+
+    const iframe = document.querySelector('#tymeslot-modal iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('preview')).toBe('true')
+    expect(url.searchParams.get('preview_token')).toBe('test-token.fake-preview-payload.test_signature')
+  })
+
   test('rejects layout values outside the allowlist', () => {
     const container = document.createElement('div')
     container.id = 'layout-reject'
