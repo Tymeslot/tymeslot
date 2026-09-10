@@ -99,9 +99,15 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @doc """
   Creates a new calendar integration.
   Automatically sets as primary if it's the user's first calendar.
+
+  A CalDAV-family integration is refused with `{:error, %{discovery: message}}`
+  when there is nothing for it to sync — see
+  `Tymeslot.Integrations.Calendar.Discovery.maybe_discover_calendars/1`, which
+  resolves the calendar selection before anything is written.
   """
   @spec create_calendar_integration(integration_attrs()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | %{discovery: String.t()}}
   def create_calendar_integration(attrs) do
     with {:ok, discovered_attrs} <- Discovery.maybe_discover_calendars(attrs),
          {:ok, integration} <-

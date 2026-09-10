@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Reconnection
@@ -277,15 +278,51 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
       assert {:ok, ^attrs} = Discovery.maybe_discover_calendars(attrs)
     end
 
-    test "handles caldav provider with no paths found" do
-      # Invalid URL causes discovery to fail silently — returns attrs unchanged.
-      attrs = %{provider: "caldav", base_url: "http://invalid"}
-      assert {:ok, ^attrs} = Discovery.maybe_discover_calendars(attrs)
+    test "refuses a caldav connection whose discovery finds nothing" do
+      # An invalid URL fails discovery. Passing the attrs through unchanged
+      # here is what created integrations with an empty calendar_list: a
+      # CalDAV sync iterates calendar_paths and nothing else, so the row could
+      # never sync and had no calendar to book into, while the connection was
+      # presented as working.
+      attrs = %{
+        provider: "caldav",
+        base_url: "http://invalid",
+        username: "user",
+        password: "pass",
+        user_id: 1
+      }
+
+      assert {:error, %{discovery: message}} = Discovery.maybe_discover_calendars(attrs)
+      # The classified provider failure is what reaches the connection form,
+      # not a generic "could not save".
+      assert message =~ "Please verify your server URL"
     end
 
     test "dispatches nextcloud through CalDAV discovery" do
-      # Invalid URL causes discovery to fail silently — returns attrs unchanged.
       attrs = %{provider: "nextcloud", base_url: "http://invalid"}
+      assert {:error, %{discovery: _message}} = Discovery.maybe_discover_calendars(attrs)
+    end
+
+    test "leaves a caller's own calendar selection alone" do
+      # The dashboard form submits the calendars the user ticked. Re-running
+      # discovery over them would replace the subset they chose with every
+      # calendar on the server, so a selection is passed through untouched.
+      # No PROPFIND is stubbed here: DataCase's default stub fails the network
+      # call, so a discovery attempt would surface as a `:discovery` error
+      # rather than the attrs coming back unchanged.
+      selection = [
+        %CalendarEntry{id: "/calendars/user/work/", path: "/calendars/user/work/", selected: true}
+      ]
+
+      attrs = %{
+        provider: "caldav",
+        base_url: "https://caldav.example.com",
+        username: "user",
+        password: "pass",
+        calendar_paths: ["/calendars/user/work/"],
+        calendar_list: selection
+      }
+
       assert {:ok, ^attrs} = Discovery.maybe_discover_calendars(attrs)
     end
   end

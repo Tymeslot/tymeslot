@@ -1284,3 +1284,8 @@ msgstr "Ця поштова скринька і читається, і запи�
 #, elixir-autogen, elixir-format
 msgid "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
 msgstr "Для цієї інтеграції не вибрано жодного календаря, тому синхронізувати нічого. Перепідключіть інтеграцію та виберіть календар."
+
+#: lib/tymeslot/integrations/calendar/discovery.ex
+#, elixir-autogen, elixir-format
+msgid "No calendars were discovered. Create a calendar on your server first, or check your credentials and try again."
+msgstr "Не знайдено жодного календаря. Спочатку створіть календар на своєму сервері або перевірте свої облікові дані та спробуйте ще раз."

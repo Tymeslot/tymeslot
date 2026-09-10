@@ -9,8 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
 
   Every discovery path — an already-persisted integration's "refresh
   calendar list", raw not-yet-persisted credentials
-  (`discover_calendars_for_credentials/5`), and the opportunistic
-  CalDAV/Radicale pre-discovery during integration creation
+  (`discover_calendars_for_credentials/5`), and the CalDAV/Radicale
+  pre-discovery that resolves what a new integration will sync
   (`maybe_discover_calendars/1`) — funnels through here. CalDAV-family
   providers are metered and cached under the `:discovery`
   `Tymeslot.Integrations.Shared.ConnectionProbe` bucket; OAuth providers
@@ -29,8 +29,10 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryCache, DiscoveryService, ErrorHandler}
   alias Tymeslot.Integrations.Shared.ConnectionProbe
 
@@ -205,34 +207,75 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   end
 
   @doc """
-  Maybe perform discovery for CalDAV/Radicale attrs during creation and inject paths.
-  Non-CalDAV providers pass through unchanged.
+  Resolves the calendars a CalDAV-family integration is about to be created
+  with. Non-CalDAV providers pass through unchanged.
 
-  This is a narrow helper used by creation flows to opportunistically set
-  calendar_paths for CalDAV-like providers, deferring all actual discovery
-  logic to `discover_calendars/3`.
+  A caller that already carries a selection (`:calendar_list`, which the
+  dashboard form fills from the calendars the user ticked) is left alone.
+  Otherwise the server is asked what it has, and every calendar it answers
+  with is selected — the connection forms that submit no selection (the
+  onboarding wizard) mean "sync this account", not "sync nothing".
+
+  Returns `{:error, %{discovery: message}}` when that leaves nothing to sync.
+  A CalDAV sync iterates `calendar_paths` and nothing else, so an integration
+  saved with an empty selection is inert: it can never sync, and it has no
+  calendar to book into. Refusing here is the last moment the person
+  connecting is still present to fix the URL or the credentials, or to create
+  a calendar on a server that has none — Tymeslot never issues MKCALENDAR, so
+  an account with no collection stays empty until its owner makes one in
+  their own client. Every alternative surfaces the same dead end hours later
+  and a long way from its cause.
+
+  `calendar_list` and `calendar_paths` are written together, through
+  `Tymeslot.Integrations.Calendar.Selection.calendar_list_attrs/1`. Writing
+  the paths alone leaves an empty calendar list behind, and the first
+  re-discovery then derives an empty selection from that list and wipes the
+  paths — the same inert row, reached one step later.
   """
-  @spec maybe_discover_calendars(map()) :: {:ok, map()}
+  @spec maybe_discover_calendars(map()) :: {:ok, map()} | {:error, %{discovery: String.t()}}
   def maybe_discover_calendars(%{provider: provider} = attrs)
       when provider in @caldav_provider_strings do
-    case discover_caldav_calendar_paths(attrs) do
-      {:ok, paths} when is_list(paths) and paths != [] ->
-        {:ok, Map.put(attrs, :calendar_paths, paths)}
-
-      _other ->
-        {:ok, attrs}
+    case attrs[:calendar_list] do
+      [_entry | _rest] -> {:ok, attrs}
+      _no_selection -> discover_selection(attrs)
     end
   end
 
   def maybe_discover_calendars(attrs), do: {:ok, attrs}
 
-  # Internal helper that returns just the list of paths for CalDAV/Radicale.
-  # Production callers pass atom-keyed attrs from Creation.prepare_attrs/2,
-  # which always carries :user_id — routed through discover_calendars/3 so
-  # this opportunistic pre-discovery is metered like every other discovery
-  # call.
-  @spec discover_caldav_calendar_paths(map()) :: {:ok, list(String.t())} | {:error, String.t()}
-  defp discover_caldav_calendar_paths(%{provider: provider} = attrs) do
+  defp discover_selection(%{provider: provider} = attrs) do
+    case discover_caldav_calendars(attrs) do
+      {:ok, [_calendar | _rest] = calendars} ->
+        selected = Enum.map(calendars, &%{&1 | selected: true})
+        {:ok, Map.merge(attrs, Selection.calendar_list_attrs(selected))}
+
+      {:ok, []} ->
+        Logger.warning("Refusing to save a CalDAV connection that discovered no calendars",
+          provider: provider,
+          user_id: attrs[:user_id]
+        )
+
+        {:error,
+         %{
+           discovery:
+             dgettext(
+               "dashboard_calendar_providers",
+               "No calendars were discovered. Create a calendar on your server first, or check your credentials and try again."
+             )
+         }}
+
+      {:error, message} ->
+        {:error, %{discovery: message}}
+    end
+  end
+
+  # Internal helper that returns the standardized calendars for
+  # CalDAV/Radicale. Production callers pass atom-keyed attrs from
+  # Creation.prepare_attrs/2, which always carries :user_id — routed through
+  # discover_calendars/3 so this pre-discovery is metered like every other
+  # discovery call.
+  @spec discover_caldav_calendars(map()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
+  defp discover_caldav_calendars(%{provider: provider} = attrs) do
     # Built explicitly rather than passing `attrs` through: `discover_calendars/3`
     # declares the exact config shape it accepts, and handing it the whole
     # creation-attrs map (which carries `:user_id`, `:name` and more) breaks
@@ -247,7 +290,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
          {:ok, calendars} <-
            discover_calendars(provider_atom, client_config, actor: {:user, attrs[:user_id]}) do
-      {:ok, extract_calendar_paths(calendars)}
+      {:ok, DiscoveryService.standardize_calendar_data(calendars, provider_atom)}
     else
       {:error, reason} -> {:error, format_discovery_error(reason)}
     end
@@ -430,26 +473,11 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     end
   end
 
-  # Helpers migrated from legacy discovery context
-  defp extract_calendar_paths(calendars) when is_list(calendars) do
-    calendars
-    |> Enum.map(fn
-      %{href: href} -> href
-      %{"href" => href} -> href
-      %{"path" => path} -> path
-      %{path: path} -> path
-      path when is_binary(path) -> path
-      _other -> nil
-    end)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-  end
-
   # `discover_calendars/3`'s classified shape (and `ConnectionProbe`'s
   # `{:rate_limited, message}`): the message is already user-facing and
-  # localised, and this opportunistic pre-discovery has no use for the
-  # category. Raw provider errors never reach here any more — they are
-  # classified and formatted at the `discover_calendars/3` boundary.
+  # localised, and this pre-discovery has no use for the category. Raw
+  # provider errors never reach here any more — they are classified and
+  # formatted at the `discover_calendars/3` boundary.
   defp format_discovery_error({_tag, message}) when is_binary(message), do: message
 
   # Everything the choke point can still refuse with bare: `:unattributable`,
