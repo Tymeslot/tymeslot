@@ -319,14 +319,37 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     end
   end
 
-  @doc "Fetches a single cached event by integration ID and provider event ID."
-  @spec get_by_provider_event_id(integer(), String.t()) ::
+  @doc """
+  Fetches the cached event linked to any of `identifiers`, which is the
+  identifier list of a meeting or event as `Tymeslot.Meetings.CalendarEventLink`
+  defines it.
+
+  Matches `uid` *or* `provider_event_id`, because which of the two carries the
+  link depends on the provider family: Google and Outlook agree with the
+  meeting on `provider_event_id` while their cached `uid` is the provider's own
+  iCalUID, and the CalDAV family is the mirror image, keeping the mapping in
+  `uid` and an href in `provider_event_id`. Testing one column alone therefore
+  matches nothing for half the providers — see that module for the full rule.
+
+  Unlike `get_by_uid/2` this cannot rest on a unique index: only
+  `(calendar_integration_id, uid)` is unique, and an event's
+  `provider_event_id` is not (every expanded occurrence of a recurring series
+  shares its parent's). So it takes the first row rather than raising on a
+  second, ordered by `id` so the choice is at least deterministic.
+  """
+  @spec get_by_identifiers(integer(), [String.t()]) ::
           {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
-  def get_by_provider_event_id(calendar_integration_id, provider_event_id) do
-    case Repo.get_by(ProviderCalendarEventSchema,
-           calendar_integration_id: calendar_integration_id,
-           provider_event_id: provider_event_id
-         ) do
+  def get_by_identifiers(_calendar_integration_id, []), do: {:error, :not_found}
+
+  def get_by_identifiers(calendar_integration_id, identifiers) when is_list(identifiers) do
+    query =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> where([e], e.uid in ^identifiers or e.provider_event_id in ^identifiers)
+      |> order_by([e], asc: e.id)
+      |> limit(1)
+
+    case Repo.one(query) do
       nil -> {:error, :not_found}
       event -> {:ok, event}
     end
@@ -345,12 +368,25 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   sync-queue bookkeeping columns, ...) is left untouched for a real inbound
   sync to reconcile, matching `update_notification_baseline/3`'s narrow
   targeted-update pattern rather than `upsert_batch/1`'s full-row replace.
+
+  `timezone` is not among the castable fields on purpose: what the outbound
+  push carries there is the booker's display zone rather than the event's own
+  TZID, so writing it would put a value on the row that no provider reports
+  back. The caller documents the rest of the field choice.
   """
   @spec update_after_outbound_push(ProviderCalendarEventSchema.t(), map()) ::
           {:ok, ProviderCalendarEventSchema.t()} | {:error, Changeset.t()}
   def update_after_outbound_push(%ProviderCalendarEventSchema{} = event, attrs) do
     event
-    |> Changeset.cast(attrs, [:start_at, :end_at, :summary, :description, :location, :timezone])
+    |> Changeset.cast(attrs, [
+      :start_at,
+      :end_at,
+      :summary,
+      :description,
+      :location,
+      :status,
+      :transparency
+    ])
     |> Repo.update()
   end
 

@@ -26,10 +26,12 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   """
 
   alias Ecto.UUID
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Meetings.CalendarEventLink
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
   require Logger
@@ -199,16 +201,24 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   # Write-through for the outbound push above: keeps the local
   # `provider_calendar_event` cache row (and any live calendar-grid viewers
   # subscribed via PubSub) in sync with a Tymeslot-initiated change, instead
-  # of waiting on the next inbound sync cycle to notice the drift. Mirrors
-  # what `Tymeslot.Integrations.Calendar.Sync.post_commit_reconciliation/2`
-  # does for the inbound direction.
+  # of waiting on the next inbound sync cycle to notice the drift.
   #
-  # Never fails the update: a successful provider push must not be undone or
-  # retried just because the local cache write-through hiccups — the next
-  # inbound sync is the backstop either way.
+  # The inbound counterpart is
+  # `Tymeslot.Integrations.Calendar.Sync.post_commit_reconciliation/2`, and the
+  # availability-cache invalidation is here for the reason it is there, in the
+  # same order: Exchange answers availability out of this very table
+  # (`Exchange.Provider.list_events/2` is a cache read), so a row this function
+  # moves has to drop the slots that were computed from where it used to be
+  # before anyone reacts to the broadcast.
+  #
+  # Never fails the update, and that has to hold for a raise as much as for an
+  # error tuple: the provider push has already landed, so letting an exception
+  # out would have the worker retry a write that succeeded. The next inbound
+  # sync reconciles the row either way.
   defp sync_cache_after_outbound_update(meeting, event_data) do
     with {:ok, cached_event} <- find_cached_event(meeting),
          {:ok, _updated} <- update_cached_event(cached_event, event_data) do
+      AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
       SyncBroadcast.broadcast_cache_update(meeting.organizer_user_id, [cached_event.uid])
     else
       {:error, :not_found} ->
@@ -217,33 +227,48 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to write through outbound calendar update to local cache",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        :ok
+        log_write_through_failure(meeting, reason)
     end
+  rescue
+    error -> log_write_through_failure(meeting, error)
   end
 
-  # Mirrors the provider_event_id-first, uid-fallback lookup that
-  # `Tymeslot.Meetings.ExternalCalendarChanges.find_linked_meeting/3` already
-  # uses for the inbound direction: OAuth providers (Google, Outlook) key the
-  # cache row by their native `provider_event_id`, while CalDAV never
-  # persists one onto the meeting and instead round-trips the same value in
-  # both `meeting.uid` and the cache row's `uid`.
-  defp find_cached_event(%{provider_event_id: provider_event_id} = meeting)
-       when is_binary(provider_event_id) and byte_size(provider_event_id) > 0 do
-    ProviderCalendarEventQueries.get_by_provider_event_id(
+  defp log_write_through_failure(meeting, reason) do
+    Logger.warning("Failed to write through outbound calendar update to local cache",
+      meeting_id: meeting.id,
+      reason: inspect(reason)
+    )
+
+    :ok
+  end
+
+  # `CalendarEventLink` is this project's one rule for "this cached provider
+  # event is that meeting": the two match when they share any non-blank
+  # identifier, within a single integration. Going through it rather than
+  # hand-rolling a lookup order matters here specifically, because the grid
+  # dedup this write-through exists to correct
+  # (`CalendarGrid.BookingEvents.list_for_range/4`) links the two sides by that
+  # same rule — so any narrower rule here would silently fail to update exactly
+  # the rows the grid had already decided were linked.
+  defp find_cached_event(meeting) do
+    ProviderCalendarEventQueries.get_by_identifiers(
       meeting.calendar_integration_id,
-      provider_event_id
+      CalendarEventLink.identifiers(meeting)
     )
   end
 
-  defp find_cached_event(meeting) do
-    ProviderCalendarEventQueries.get_by_uid(meeting.calendar_integration_id, meeting.uid)
-  end
-
+  # `status` and `transparency` belong here because the push carries them and
+  # they are not always the same as last time: approving a pending booking
+  # flips its event TENTATIVE → CONFIRMED through this very "update" action
+  # (`Tymeslot.Meetings.Approval`), and `show_as_free` decides whether the row
+  # blocks time at all (`CalendarEvent.blocking?/1`). Writing the new times
+  # while leaving those two behind produced a row that looked freshly synced
+  # and still claimed the old status.
+  #
+  # `timezone` is left out for the opposite reason: `event_data.timezone` is
+  # the booker's display zone, not the event's TZID, and `ICalBuilder` emits
+  # UTC with no TZID at all — so writing it invents a value the provider never
+  # reports back and the next inbound sync clears again.
   defp update_cached_event(cached_event, event_data) do
     attrs = %{
       start_at: event_data.start_time,
@@ -251,7 +276,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       summary: event_data.summary,
       description: event_data.description,
       location: event_data.location,
-      timezone: event_data.timezone
+      status: Atom.to_string(event_data.status),
+      transparency: Atom.to_string(event_data.transparency)
     }
 
     ProviderCalendarEventQueries.update_after_outbound_push(cached_event, attrs)
