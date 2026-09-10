@@ -54,7 +54,7 @@ defmodule Tymeslot.Utils.MediaValidatorTest do
       File.write!(path, "")
       on_exit(fn -> File.rm(path) end)
 
-      before_count = length(Process.list())
+      before_count = open_file_devices()
 
       for _index <- 1..50 do
         refute MediaValidator.valid_image_file?(path)
@@ -62,10 +62,10 @@ defmodule Tymeslot.Utils.MediaValidatorTest do
         refute MediaValidator.valid_png_file?(path)
       end
 
-      # Other async tests spawn/terminate unrelated processes concurrently, so
-      # assert growth stays well below what 150 leaked file handles would add,
-      # rather than exact equality against a noisy baseline.
-      assert length(Process.list()) - before_count < 20
+      # 150 calls, so a handle leaked once per call is 150 devices. The slack
+      # covers a file another async test holds open across this assertion,
+      # which is the only thing besides a leak that moves this count.
+      assert open_file_devices() - before_count <= 5
     end
 
     test "returns false for a directory path" do
@@ -103,5 +103,25 @@ defmodule Tymeslot.Utils.MediaValidatorTest do
       assert MediaValidator.valid_png_file?(path)
       refute MediaValidator.valid_video_file?(path)
     end
+  end
+
+  # Counts the processes a leaked handle would leave behind, and nothing else:
+  # `File.open/2` without `:raw` spawns a device that sits in
+  # `:file_io_server.server_loop/1` until it is closed.
+  #
+  # Counting these rather than `Process.list/0` is what makes the assertion
+  # above mean anything. The node's total process count moves constantly under
+  # async tests — Oban jobs, LiveViews, Ecto checkouts — so a threshold against
+  # it is either too tight to survive an unrelated test running alongside (this
+  # one failed at 28 against a limit of 20) or too loose to catch the leak it
+  # exists to catch. Restricted to file devices, the count sits near zero, so
+  # the leak signal is unmistakable and the noise is not.
+  defp open_file_devices do
+    Enum.count(Process.list(), fn pid ->
+      match?(
+        {:current_function, {:file_io_server, _fun, _arity}},
+        Process.info(pid, :current_function)
+      )
+    end)
   end
 end
