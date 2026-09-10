@@ -20,6 +20,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
       mailbox with confirmation mail. It runs on the *validated* address, so it
       must come after form validation.
 
+  Both rate limits are skipped for a verified owner preview, which creates
+  nothing to be limited; see `preview_submission?/1` for why the weaker
+  `:theme_preview` claim does not qualify.
+
   ## Why they are composed here
 
   `run/3` applies them in one place and in a fixed order. Spread across a
@@ -135,7 +139,26 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
     end
   end
 
+  # An owner preview persists nothing — no meeting, no mail, no calendar event
+  # — so charging it to the public allowance means an organiser testing their
+  # own page locks real visitors out of booking it (issue #96).
+  #
+  # Keyed on `:owner_preview`, never `:theme_preview`. Only the former requires
+  # a signed, owner-bound token; the latter is a bare `?preview=true` anyone can
+  # type, and exempting it would hand every attacker a one-parameter bypass of
+  # the limit. An unbacked claim is refused later, but it still costs an
+  # outbound reCAPTCHA verification, so it stays rate-limited.
+  defp preview_submission?(socket), do: socket.assigns[:owner_preview] == true
+
   defp check_rate_limit(socket) do
+    if preview_submission?(socket) do
+      {:ok, socket}
+    else
+      enforce_rate_limit(socket)
+    end
+  end
+
+  defp enforce_rate_limit(socket) do
     client_ip = ClientIP.get(socket)
 
     case RateLimiter.check_booking_submission_limit(client_ip) do
@@ -150,6 +173,16 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
 
   defp check_recipient_rate_limit(socket, %{"email" => email})
        when is_binary(email) and email != "" do
+    if preview_submission?(socket) do
+      {:ok, socket}
+    else
+      enforce_recipient_rate_limit(socket, email)
+    end
+  end
+
+  defp check_recipient_rate_limit(socket, _params), do: {:ok, socket}
+
+  defp enforce_recipient_rate_limit(socket, email) do
     case RateLimiter.check_booking_recipient_limit(email) do
       :ok ->
         {:ok, socket}
@@ -163,8 +196,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
         {:error, too_many_attempts(socket)}
     end
   end
-
-  defp check_recipient_rate_limit(socket, _params), do: {:ok, socket}
 
   # Deliberately the same wording for the per-IP and per-recipient limits: a
   # distinguishable message would tell an attacker which limit they hit and so

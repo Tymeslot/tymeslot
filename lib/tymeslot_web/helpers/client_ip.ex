@@ -308,22 +308,74 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     # Phoenix's :x_headers collects only headers whose name starts with "x-",
     # so CF-Connecting-IP (no "x-" prefix) is never present on the socket path.
     # Resolution uses x-real-ip (trusted upstream proxy, e.g. Nginx) then
-    # x-forwarded-for (first hop only). Only called when the direct peer is a
-    # trusted private/loopback address (see get_forwarded_from_socket/1).
-    x_real_ip = find_header(headers, "x-real-ip")
-    x_forwarded_for = find_header(headers, "x-forwarded-for")
+    # x-forwarded-for. Only called when the direct peer is a trusted
+    # private/loopback address (see get_forwarded_from_socket/1).
+    real_ip = headers |> find_header("x-real-ip") |> usable_forwarded_ip()
+    forwarded_for = headers |> find_header("x-forwarded-for") |> rightmost_usable_hop()
 
-    cond do
-      x_real_ip != nil ->
-        String.trim(x_real_ip)
+    real_ip || forwarded_for || "unknown"
+  end
 
-      x_forwarded_for != nil ->
-        # Take the first IP from x-forwarded-for chain
-        x_forwarded_for |> String.split(",") |> List.first() |> String.trim()
+  # A forwarded header may only name a *client*, never another hop.
+  #
+  # `trusted_peer?/1` already draws that line for the socket's direct peer, and
+  # the same line applies here: an address in one of those ranges is a proxy
+  # talking about itself, not a visitor. Accepting one collapses every IP-keyed
+  # rate limit into a single bucket shared by the whole deployment, which is
+  # how a two-tier proxy (`proxy_set_header X-Real-IP $remote_addr` on the
+  # inner hop) locked one self-hoster out of their own booking page — the
+  # limiter kept refusing bookings keyed on `192.168.1.254` (issue #96).
+  #
+  # This matches `Plug.RemoteIp`, which skips reserved blocks on the conn path;
+  # before this the two paths disagreed, and only the socket path was wrong. A
+  # deployment whose visitors genuinely are on a private network resolves to
+  # the peer instead, exactly as the conn path already does for them.
+  defp usable_forwarded_ip(nil), do: nil
 
-      true ->
-        "unknown"
+  defp usable_forwarded_ip(value) when is_binary(value) do
+    candidate = value |> String.trim() |> strip_port()
+
+    case :inet.parse_address(String.to_charlist(candidate)) do
+      {:ok, address} -> if trusted_peer?(address), do: nil, else: candidate
+      {:error, :einval} -> nil
     end
+  end
+
+  # Some proxies write the source port into the header: `[2001:db8::1]:8080`
+  # for IPv6, `203.0.113.9:1234` for IPv4. It has to come off before the value
+  # is used. The port is fresh on every connection, so leaving it in gives each
+  # request from one client its own rate-limit bucket and the limit never fires
+  # for that client at all.
+  defp strip_port("[" <> rest) do
+    case String.split(rest, "]", parts: 2) do
+      [address, _port] -> address
+      _unbracketed -> rest
+    end
+  end
+
+  defp strip_port(value) do
+    # Exactly one colon means IPv4 with a port; a bare IPv6 address has several
+    # and must be left alone.
+    case String.split(value, ":") do
+      [address, _port] -> address
+      _not_ipv4_with_port -> value
+    end
+  end
+
+  # The rightmost usable entry, not the leftmost.
+  #
+  # Each hop appends the address it received the request from, so the tail is
+  # written by our own infrastructure and the head by whoever spoke first — a
+  # client that sends its own `X-Forwarded-For: 1.2.3.4` header puts that value
+  # at the head. Walking from the right and stopping at the first non-hop
+  # address therefore yields the real client and cannot be steered by one.
+  defp rightmost_usable_hop(nil), do: nil
+
+  defp rightmost_usable_hop(value) when is_binary(value) do
+    value
+    |> String.split(",")
+    |> Enum.reverse()
+    |> Enum.find_value(&usable_forwarded_ip/1)
   end
 
   defp find_header(headers, name) do
@@ -335,20 +387,12 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   defp extract_forwarded_ip_from_map(headers) do
     # Check for various header formats (headers might be lowercase).
-    # Same precedence as extract_forwarded_ip_from_tuples/1.
-    cond do
-      Map.has_key?(headers, "cf-connecting-ip") ->
-        String.trim(Map.get(headers, "cf-connecting-ip"))
+    # Same precedence and same hop filtering as extract_forwarded_ip_from_tuples/1.
+    connecting_ip = headers |> Map.get("cf-connecting-ip") |> usable_forwarded_ip()
+    real_ip = headers |> Map.get("x-real-ip") |> usable_forwarded_ip()
+    forwarded_for = headers |> Map.get("x-forwarded-for") |> rightmost_usable_hop()
 
-      Map.has_key?(headers, "x-real-ip") ->
-        String.trim(Map.get(headers, "x-real-ip"))
-
-      Map.has_key?(headers, "x-forwarded-for") ->
-        String.trim(List.first(String.split(headers["x-forwarded-for"], ",")))
-
-      true ->
-        nil
-    end
+    connecting_ip || real_ip || forwarded_for
   end
 
   # Private functions for User Agent extraction

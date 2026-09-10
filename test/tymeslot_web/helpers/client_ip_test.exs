@@ -206,7 +206,81 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
       assert ClientIP.get_from_mount(socket) == "2001:db8::1"
     end
 
-    test "takes the first hop of x-forwarded-for for multi-hop IPv6 chain" do
+    test "ignores a private x-real-ip and resolves the visitor from x-forwarded-for" do
+      # The shape that broke issue #96: an inner proxy doing the usual
+      # `proxy_set_header X-Real-IP $remote_addr` writes the *previous hop's*
+      # LAN address. Trusting it keyed every visitor of the deployment to one
+      # address, so a booking rate limit meant for one abuser refused everyone.
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: @peer_data,
+            x_headers: [
+              {"x-real-ip", "192.168.1.254"},
+              {"x-forwarded-for", "203.0.113.9, 192.168.1.254"}
+            ]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "203.0.113.9"
+    end
+
+    test "distinct visitors behind one proxy resolve to distinct addresses" do
+      # The property the rate limits actually depend on. Asserting the two
+      # differ (rather than each value alone) is what fails if the resolution
+      # ever collapses back onto a shared hop.
+      addresses =
+        for visitor <- ["203.0.113.9", "198.51.100.4"] do
+          socket =
+            mock_socket(
+              connect_info: %{
+                peer_data: @peer_data,
+                x_headers: [
+                  {"x-real-ip", "192.168.1.254"},
+                  {"x-forwarded-for", "#{visitor}, 192.168.1.254"}
+                ]
+              }
+            )
+
+          ClientIP.get_from_mount(socket)
+        end
+
+      assert addresses == ["203.0.113.9", "198.51.100.4"]
+    end
+
+    test "falls back to the peer when every forwarded hop is a private address" do
+      # Nothing in the chain names a visitor, so there is no honest answer but
+      # the peer. This is what Plug.RemoteIp already does on the conn path.
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: @peer_data,
+            x_headers: [{"x-forwarded-for", "10.0.0.8, 192.168.1.254"}]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "127.0.0.1"
+    end
+
+    test "a client-supplied x-forwarded-for cannot displace the address the proxy appended" do
+      # A visitor who sends their own header puts their value at the head of
+      # the chain; the proxy appends the address it actually saw. Reading from
+      # the right means the spoofed entry is never the answer.
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: @peer_data,
+            x_headers: [{"x-forwarded-for", "198.51.100.4, 203.0.113.9"}]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "203.0.113.9"
+    end
+
+    test "takes the last public hop of x-forwarded-for for multi-hop IPv6 chain" do
+      # Each hop appends the address it heard from, so the rightmost public
+      # entry is the one our own infrastructure wrote. Reading the leftmost
+      # instead would let a client name its own address by sending the header.
       socket =
         mock_socket(
           connect_info: %{
@@ -215,14 +289,13 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
           }
         )
 
-      assert ClientIP.get_from_mount(socket) == "2001:db8::1"
+      assert ClientIP.get_from_mount(socket) == "2001:db8::2"
     end
 
-    test "handles bracketed IPv6 address in x-forwarded-for" do
-      # Some proxies emit the bracketed form [addr]:port in x-forwarded-for;
-      # we extract the first comma-delimited hop and return it as-is without
-      # stripping the brackets — the raw string is used for fingerprinting, not
-      # parsed as an IP, so bracket preservation is safer than a fragile strip.
+    test "strips the port from a bracketed IPv6 hop in x-forwarded-for" do
+      # Some proxies emit the bracketed [addr]:port form. The port is fresh per
+      # connection, so keeping it would give every request from this client its
+      # own rate-limit bucket and the limit would never fire for them.
       socket =
         mock_socket(
           connect_info: %{
@@ -231,8 +304,7 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
           }
         )
 
-      # First comma-split token after trim is "[2001:db8::1]:8080"
-      assert ClientIP.get_from_mount(socket) == "[2001:db8::1]:8080"
+      assert ClientIP.get_from_mount(socket) == "2001:db8::1"
     end
 
     test "handles IPv6 in connect_params map fallback" do
