@@ -107,6 +107,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
         selected_embed_type: "inline",
         username: "testuser",
         base_url: "https://tymeslot.com",
+        preview_token: "a-signed-owner-preview-token",
         embed_script_url: "/embed.js",
         is_ready: false,
         error_reason: :no_calendar,
@@ -124,6 +125,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
         selected_embed_type: "inline",
         username: "testuser",
         base_url: "https://tymeslot.com",
+        preview_token: "a-signed-owner-preview-token",
         embed_script_url: "/embed.js",
         is_ready: true,
         error_reason: nil,
@@ -133,6 +135,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       html = render_component(&LivePreview.live_preview/1, assigns)
       assert html =~ "id=\"live-preview-container\""
       assert html =~ "data-username=\"testuser\""
+
+      # The hook copies this into the iframe's ?preview_token=, which is what
+      # lets the owner's test booking simulate instead of being refused.
+      assert html =~ "data-preview-token=\"a-signed-owner-preview-token\""
     end
   end
 end

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection
+  alias TymeslotWeb.Live.Scheduling.PreviewToken
 
   require Logger
 
@@ -69,6 +70,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       |> assign_new(:embed_locale, fn -> "" end)
       |> assign_new(:initial_height, fn -> nil end)
       |> assign_new(:max_width, fn -> nil end)
+      # Minted once per mounted component, not per update: the hook re-creates
+      # the iframe whenever a dataset value it watches changes, so a token that
+      # churned would throw the organiser back to step one mid-preview. It
+      # outliving the component is the failure we want — an hour-old preview
+      # says so plainly rather than silently booking for real.
+      |> assign_new(:preview_token, fn -> PreviewToken.sign(assigns.current_user.id) end)
 
     {:ok, socket}
   end
@@ -127,6 +134,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             selected_embed_type={@selected_embed_type}
             username={@username}
             base_url={@base_url}
+            preview_token={@preview_token}
             embed_script_url={@embed_script_url}
             embed_layout={@embed_layout}
             embed_locale={@embed_locale}

@@ -46,12 +46,12 @@ export const EmbedPreview = {
     }
   },
   initEmbed() {
-    const { username, baseUrl, embedType, isReady, layout, locale, initialHeight, maxWidth } = this.el.dataset;
+    const { username, baseUrl, previewToken, embedType, isReady, layout, locale, initialHeight, maxWidth } = this.el.dataset;
     this._cachedDataset = { username, baseUrl, embedType, isReady, layout, locale, initialHeight, maxWidth };
     const effectiveBaseUrl = baseUrl || window.location.origin;
     const ready = isReady === 'true';
 
-    const options = { layout, locale, initialHeight, maxWidth };
+    const options = { layout, locale, initialHeight, maxWidth, previewToken };
 
     // Clear container
     this.el.innerHTML = '';
@@ -235,6 +235,13 @@ export const EmbedPreview = {
     const iframe = document.createElement('iframe');
     const url = new URL(`/${encodeURIComponent(username)}`, baseUrl);
     url.searchParams.set('preview', 'true');
+    // `?preview=true` is only the display claim; on its own it fails a
+    // submission closed as "Preview session expired". The signed, owner-bound
+    // token is the other half of the contract (see PreviewMode) and is what
+    // makes "Book Meeting" simulate rather than refuse.
+    if (options.previewToken) {
+      url.searchParams.set('preview_token', options.previewToken);
+    }
     // Cache buster to force reload when settings change
     url.searchParams.set('v', String(Date.now()));
     // Mirror embed.js — the server defaults to :column whenever ?embed=1

@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
   alias Plug.Test
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias TymeslotWeb.Live.Scheduling.PreviewToken
 
   describe "embed settings component" do
     setup do
@@ -556,6 +557,27 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # Now preview should be visible
       refute has_element?(view, "#panel-preview[hidden]")
       assert has_element?(view, "#live-preview-container")
+    end
+
+    test "hands the hook a preview token the booking page accepts", %{conn: conn, user: user} do
+      # Regression for issue #96. The hook puts this value into the iframe's
+      # `?preview_token=`, and that is the half of the preview contract that
+      # makes Book Meeting simulate. Without it the page keeps rendering fine
+      # and only the final submit fails, with "Preview session expired".
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      view |> element("button#tab-preview") |> render_click()
+
+      token =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("#live-preview-container", "data-preview-token")
+        |> List.first()
+
+      # Verified against the owner, not merely present: a token bound to
+      # somebody else renders identically and simulates nothing.
+      assert PreviewToken.owner?(token, user.id)
     end
   end
 

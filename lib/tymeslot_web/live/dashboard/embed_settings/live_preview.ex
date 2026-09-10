@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
   attr :selected_embed_type, :string, required: true
   attr :username, :string, required: true
   attr :base_url, :string, required: true
+  attr :preview_token, :string, required: true
   attr :embed_script_url, :string, required: true
   attr :embed_layout, :string, default: "column"
   attr :embed_locale, :string, default: ""
@@ -87,6 +88,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
           phx-hook="EmbedPreview"
           data-username={@username}
           data-base-url={@base_url}
+          data-preview-token={@preview_token}
           data-embed-script-url={@embed_script_url}
           data-embed-type={@selected_embed_type}
           data-is-ready={to_string(@is_ready)}
