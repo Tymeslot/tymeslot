@@ -3411,6 +3411,53 @@
       },
       "publishState": "published",
       "ts": "Wed, 09 Sep 2026 20:01:05 GMT"
+    },
+    "1.15.4": {
+      "creationDate": "Thu, 10 Sep 2026 19:45:04 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* Keep calendar deletion working when two calendars are removed at once\n* Stop the popup and floating previews creating real bookings\n* Restore a CalDAV booking the server no longer has\n* Refuse a CalDAV connection that discovers no calendars\n* Stop the booking rate limit refusing legitimate bookings\n* Let the live preview complete a test booking\n* Keep the organiser signed in when an embedded booking page loads\n* Write through outbound calendar updates to the local event cache",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.4",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.4",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Thu, 10 Sep 2026 19:45:04 GMT"
     }
   }
 }

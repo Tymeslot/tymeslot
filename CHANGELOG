@@ -1,4 +1,15 @@
 
+[1.15.4]
+* Keep calendar deletion working when two calendars are removed at once
+* Stop the popup and floating previews creating real bookings
+* Restore a CalDAV booking the server no longer has
+* Refuse a CalDAV connection that discovers no calendars
+* Stop the booking rate limit refusing legitimate bookings
+* Let the live preview complete a test booking
+* Keep the organiser signed in when an embedded booking page loads
+* Write through outbound calendar updates to the local event cache
+
+
 [1.15.3]
 * Sync every changed Google Calendar event, not just the first 250
 * Connect to CalDAV servers that require digest authentication
