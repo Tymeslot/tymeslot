@@ -21,6 +21,12 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
           scheme: String.t()
         }
 
+  # Budget for reaching the proxy: the TCP/TLS connect to it, and the CONNECT
+  # handshake on a tunnelled request. Stated rather than inherited because a
+  # proxy is the one hop where a stall is somebody else's infrastructure and
+  # not the destination's.
+  @proxy_connect_timeout 10_000
+
   @type t :: %{
           http_proxy: proxy_config() | nil,
           https_proxy: proxy_config() | nil,
@@ -179,7 +185,13 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
     do: <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>>
 
   @doc """
-  Builds Req-compatible proxy options from proxy config.
+  Builds Req-compatible proxy options from proxy config, for a request to
+  `target_url`.
+
+  The target URL is not decoration: mint picks a different proxying strategy
+  from the *target's* scheme, and the two strategies need opposite socket
+  options. See `build_req_proxy_options/2`'s inline notes and the
+  "Proxy socket options" section below.
 
   ## Critical Structure for Mint.TunnelProxy
 
@@ -191,7 +203,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   ```elixir
   [
     connect_options: [
-      proxy: {:http, host, port, []},
+      proxy: {:http, host, port, [...]},
       proxy_headers: [{"Proxy-Authorization", "Basic ..."}]
     ]
   ]
@@ -210,28 +222,31 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   `connect_options` keyword list during the CONNECT handshake, not from
   the proxy tuple options.
 
+  ## Proxy socket options
+
+  The proxy tuple's fourth element holds the options for the socket mint opens
+  to the *proxy*, and what belongs there depends on the target's scheme:
+
+  | Target | mint module | Socket options |
+  |---|---|---|
+  | `http://` | `Mint.UnsafeProxy` | `mode: :passive` (required) |
+  | `https://` | `Mint.TunnelProxy` | `tunnel_timeout` only — **never** `mode: :passive` |
+
   See: https://hexdocs.pm/mint/Mint.TunnelProxy.html
   """
-  @spec build_req_proxy_options(proxy_config() | nil) :: keyword()
-  def build_req_proxy_options(nil), do: []
+  @spec build_req_proxy_options(proxy_config() | nil, String.t()) :: keyword()
+  def build_req_proxy_options(proxy_config, target_url)
 
-  def build_req_proxy_options(proxy_config) do
+  def build_req_proxy_options(nil, _target_url), do: []
+
+  def build_req_proxy_options(proxy_config, target_url) do
     scheme = parse_scheme(proxy_config.scheme)
 
-    # Build proxy tuple WITHOUT headers (they go at connect_options level).
-    #
-    # `mode: :passive` is not ours to want — Finch already asks for it when it
-    # opens a connection (Finch.HTTP1.Conn puts it in the connect options). It is
-    # repeated here because mint 1.10.0 stopped forwarding the caller's options
-    # to the proxy socket on the plain-HTTP path: 1.9.3 did
-    # `Keyword.merge(opts, proxy_opts)` before calling `Mint.UnsafeProxy.connect/3`,
-    # whereas 1.10.0 opens that socket with the proxy tuple's own options alone.
-    # With an empty list here the socket lands in mint's default `:active` mode
-    # and Finch's `recv/3` raises ArgumentError on every proxied http:// request.
-    # This tuple element is the only place 1.10.0 still reads, so the option goes
-    # here. Harmless if mint restores the merge — passive is what Finch needs
-    # either way. HTTPS is unaffected: it goes through Mint.TunnelProxy.
-    proxy_tuple = {scheme, proxy_config.host, proxy_config.port, [mode: :passive]}
+    # Build proxy tuple WITHOUT headers (they go at connect_options level) and
+    # WITH the socket options that the target's scheme requires.
+    proxy_tuple =
+      {scheme, proxy_config.host, proxy_config.port,
+       proxy_socket_options(target_scheme(target_url))}
 
     # Build connect_options with proxy_headers at the correct level. These are
     # the connection options `Infrastructure.FinchPool` builds the request's
@@ -244,13 +259,57 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
           # Proxy-Authorization header must be at connect_options level, not in proxy tuple
           # This is required for Mint.TunnelProxy to properly send auth during CONNECT handshake
           auth_header = {"Proxy-Authorization", "Basic " <> Base.encode64("#{user}:#{password}")}
-          [proxy: proxy_tuple, proxy_headers: [auth_header], timeout: 10_000]
+          [proxy: proxy_tuple, proxy_headers: [auth_header], timeout: @proxy_connect_timeout]
 
         _other ->
-          [proxy: proxy_tuple, timeout: 10_000]
+          [proxy: proxy_tuple, timeout: @proxy_connect_timeout]
       end
 
     [connect_options: connect_opts]
+  end
+
+  # Socket options for the connection mint opens to the proxy itself. These two
+  # clauses are deliberately different, and collapsing them into one shared list
+  # breaks proxied requests — in opposite directions, which is why the pair has
+  # to be read together.
+  #
+  # `:http` target — mint routes it through `Mint.UnsafeProxy`, which forwards
+  # the request over the proxy socket with no handshake and then hands that
+  # socket to Finch. Finch calls `recv/3` on it, so it must be passive. mint
+  # 1.10.0 stopped forwarding the caller's options to the proxy socket on this
+  # path (1.9.3 did `Keyword.merge(opts, proxy_opts)` before calling
+  # `Mint.UnsafeProxy.connect/3`; 1.10.0 opens the socket from the proxy tuple's
+  # own options alone), so Finch's own `mode: :passive` no longer arrives and
+  # this tuple is the only place left that reaches it. Without it every
+  # proxied `http://` request raises
+  # "can't use recv/3 to synchronously receive data when the mode is :active".
+  #
+  # `:https` target — mint routes it through `Mint.TunnelProxy`, which performs
+  # the CONNECT handshake itself before anything is handed to Finch, and it
+  # does that by waiting on `{:tcp, socket, data}` messages. That needs the
+  # socket in mint's default *active* mode. `mode: :passive` here silences those
+  # messages, the handshake blocks until `tunnel_timeout` and every proxied
+  # `https://` request fails with `{:proxy, :tunnel_timeout}` (the regression in
+  # #97, shipped in 1.15.3). Finch's passive mode still applies to the tunnelled
+  # connection: it is rebuilt from the *host* options after the upgrade.
+  #
+  # `tunnel_timeout` is stated so a stalled CONNECT is bounded by the same
+  # budget as the connect itself, rather than mint's 30s default.
+  @spec proxy_socket_options(:http | :https) :: keyword()
+  defp proxy_socket_options(:http), do: [mode: :passive]
+  defp proxy_socket_options(:https), do: [tunnel_timeout: @proxy_connect_timeout]
+
+  # Which mint proxying strategy the request will take. mint dispatches on the
+  # *target's* scheme, not the proxy's, so that is what this reads. Anything
+  # that is not plain HTTP is treated as tunnelled: `get_proxy_for_url/1` falls
+  # back to a configured proxy for a URL whose scheme it does not recognise,
+  # and a needless CONNECT is a better failure than a socket Finch cannot read.
+  @spec target_scheme(String.t()) :: :http | :https
+  defp target_scheme(target_url) do
+    case URI.parse(target_url) do
+      %URI{scheme: "http"} -> :http
+      %URI{} -> :https
+    end
   end
 
   defp parse_scheme("https"), do: :https

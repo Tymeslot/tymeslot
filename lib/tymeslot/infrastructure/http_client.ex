@@ -446,8 +446,11 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
       )
     end
 
-    # Build Req-compatible proxy options
-    ProxyConfig.build_req_proxy_options(proxy_config)
+    # Build Req-compatible proxy options. The URL goes along because the socket
+    # options for the hop to the proxy depend on the target's scheme: mint
+    # proxies http:// and https:// through different modules, and they need
+    # opposite settings. See `ProxyConfig.build_req_proxy_options/2`.
+    ProxyConfig.build_req_proxy_options(proxy_config, url)
   end
 
   @spec get_timeout(atom(), keyword()) :: non_neg_integer()

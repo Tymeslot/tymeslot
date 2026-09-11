@@ -168,7 +168,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
 
   describe "build_req_proxy_options" do
     test "returns empty list when no proxy" do
-      assert ProxyConfig.build_req_proxy_options(nil) == []
+      assert ProxyConfig.build_req_proxy_options(nil, "https://api.example.com") == []
     end
 
     test "builds proxy options without auth" do
@@ -179,7 +179,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
         scheme: "http"
       }
 
-      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      options = ProxyConfig.build_req_proxy_options(proxy_config, "http://api.example.com")
 
       assert options[:connect_options][:proxy] ==
                {:http, "proxy.example.com", 3128, [mode: :passive]}
@@ -198,13 +198,13 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
         scheme: "http"
       }
 
-      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      options = ProxyConfig.build_req_proxy_options(proxy_config, "http://api.example.com")
 
       # CRITICAL: the tuple's 4th element carries connection options ONLY.
       # proxy_headers in here causes 407s — they must be at connect_options level.
-      # `mode: :passive` is the one option that belongs here: mint 1.10.0 opens the
-      # proxy socket from this tuple alone, so it is the only place Finch's
-      # required passive mode still reaches (see ProxyConfig.build_req_proxy_options/1).
+      # The options themselves depend on the *target's* scheme, deliberately:
+      # see ProxyConfig.build_req_proxy_options/2 and the behavioural coverage in
+      # ProxySocketOptionsTest. This one is an http:// target.
       {scheme, host, port, proxy_tuple_opts} = options[:connect_options][:proxy]
       assert scheme == :http
       assert host == "proxy.example.com"
@@ -245,9 +245,9 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
         scheme: "http"
       }
 
-      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      options = ProxyConfig.build_req_proxy_options(proxy_config, "http://api.example.com")
 
-      # Expected structure for Req with authenticated proxy:
+      # Expected structure for Req with an authenticated proxy and an http:// target:
       expected = [
         connect_options: [
           proxy: {:http, "proxy.example.com", 3128, [mode: :passive]},
@@ -271,10 +271,34 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
         scheme: "https"
       }
 
-      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      options = ProxyConfig.build_req_proxy_options(proxy_config, "https://api.example.com")
       {scheme, _host, _port, _opts} = options[:connect_options][:proxy]
 
       assert scheme == :https
+    end
+
+    test "the proxy socket options differ by target scheme, on purpose" do
+      # These two must not converge. Mint proxies http:// through
+      # Mint.UnsafeProxy, which hands the socket straight to Finch and so needs
+      # it passive, and https:// through Mint.TunnelProxy, which speaks CONNECT
+      # over it first by waiting on socket messages and so needs it active.
+      # Giving both `mode: :passive` is what broke every proxied https:// request
+      # in 1.15.3 (issue #97). ProxySocketOptionsTest proves the consequence;
+      # this pins the contract.
+      proxy_config = %{host: "proxy.example.com", port: 3128, auth: nil, scheme: "http"}
+
+      {_scheme, _host, _port, http_opts} =
+        ProxyConfig.build_req_proxy_options(proxy_config, "http://api.example.com")[
+          :connect_options
+        ][:proxy]
+
+      {_scheme, _host, _port, https_opts} =
+        ProxyConfig.build_req_proxy_options(proxy_config, "https://api.example.com")[
+          :connect_options
+        ][:proxy]
+
+      assert http_opts[:mode] == :passive
+      refute Keyword.has_key?(https_opts, :mode)
     end
 
     test "special characters in credentials are properly encoded" do
@@ -286,7 +310,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
         scheme: "http"
       }
 
-      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      options = ProxyConfig.build_req_proxy_options(proxy_config, "https://api.example.com")
       [{"Proxy-Authorization", auth_header}] = options[:connect_options][:proxy_headers]
 
       # Verify it's properly base64 encoded
