@@ -241,9 +241,18 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     do: AvatarHelper.generate_default_avatar(organizer_name)
 
   defp resolve_avatar(url, organizer_name) when is_binary(url) do
-    case UrlValidation.validate_http_url(url) do
-      :ok -> Sanitise.sanitize_for_email(url)
-      _other -> AvatarHelper.generate_default_avatar(organizer_name)
+    cond do
+      # Site-relative path saved by Profiles.avatar_url — convert to absolute.
+      String.starts_with?(url, "/") ->
+        Urls.build_url(url) |> Sanitise.sanitize_for_email()
+
+      # Already an absolute http(s) URL — accept it.
+      UrlValidation.validate_http_url(url) == :ok ->
+        Sanitise.sanitize_for_email(url)
+
+      # Anything else: fall back to generated avatar.
+      true ->
+        AvatarHelper.generate_default_avatar(organizer_name)
     end
   end
 
