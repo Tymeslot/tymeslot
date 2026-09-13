@@ -342,6 +342,13 @@ defmodule Tymeslot.Profiles do
   @spec uploaded_avatar_path(profile | nil) :: String.t() | nil
   def uploaded_avatar_path(profile), do: Avatars.uploaded_avatar_path(profile)
 
+  @doc """
+  Returns the absolute URL of a profile's uploaded avatar image, or `nil` when
+  none has been uploaded (see `Avatars.uploaded_avatar_url/1`).
+  """
+  @spec uploaded_avatar_url(profile | nil) :: String.t() | nil
+  def uploaded_avatar_url(profile), do: Avatars.uploaded_avatar_url(profile)
+
   @spec avatar_alt_text(profile | nil) :: String.t()
   def avatar_alt_text(profile), do: Avatars.avatar_alt_text(profile)
 

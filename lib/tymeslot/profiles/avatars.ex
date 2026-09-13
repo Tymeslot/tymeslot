@@ -9,6 +9,7 @@ defmodule Tymeslot.Profiles.Avatars do
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.AvatarUtils
   alias Tymeslot.Utils.MediaValidator
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Helpers.UploadHandler
 
@@ -174,6 +175,22 @@ defmodule Tymeslot.Profiles.Avatars do
   end
 
   def uploaded_avatar_path(_profile), do: nil
+
+  @doc """
+  Returns the absolute URL of a profile's *uploaded* avatar image, or `nil`
+  when none has been uploaded.
+
+  For images fetched from outside the app, such as by a mail client rendering
+  an email. Like `uploaded_avatar_path/1`, it never returns a data URI, which
+  Gmail refuses to render.
+  """
+  @spec uploaded_avatar_url(profile | nil) :: String.t() | nil
+  def uploaded_avatar_url(profile) do
+    case uploaded_avatar_path(profile) do
+      nil -> nil
+      path -> UrlBuilder.build_url(path)
+    end
+  end
 
   @doc """
   Gets appropriate alt text for the avatar image.
