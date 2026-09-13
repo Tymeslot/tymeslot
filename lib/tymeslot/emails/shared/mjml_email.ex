@@ -244,7 +244,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     cond do
       # Site-relative path saved by Profiles.avatar_url — convert to absolute.
       String.starts_with?(url, "/") ->
-        Urls.build_url(url) |> Sanitise.sanitize_for_email()
+        Sanitise.sanitize_for_email(Urls.build_url(url))
 
       # Already an absolute http(s) URL — accept it.
       UrlValidation.validate_http_url(url) == :ok ->
