@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     # Unreachable or not, it applies the same hop filtering as the socket path
     # and as RemoteIp: leftmost-entry semantics here would mean a deployment
     # that ever does fall through to this branch resolves the head of a
-    # client-supplied `X-Forwarded-For` — the exact divergence between the two
+    # client-supplied `X-Forwarded-For`, the exact divergence between the two
     # paths that issue #96 was about.
     trust_private_clients? = trust_private_clients?()
 
@@ -273,7 +273,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   #
   # `:trust_private_client_ips` deliberately does not move this line. It answers
   # "may a private *forwarded* address name a visitor?", whereas this one answers
-  # "may this peer speak for someone else?" — trusting a public peer's headers
+  # "may this peer speak for someone else?"; trusting a public peer's headers
   # would let any visitor forge their own rate-limit key.
   defp get_forwarded_from_socket(socket, trust_private_clients?) do
     peer_address =
@@ -377,8 +377,8 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   # This matches `Plug.RemoteIp`, which skips reserved blocks on the conn path;
   # before this the two paths disagreed, and only the socket path was wrong.
   #
-  # A deployment whose visitors genuinely are on a private network — an
-  # intranet-only self-host — is the case this gets wrong, and it resolves every
+  # A deployment whose visitors genuinely are on a private network (an
+  # intranet-only self-host) is the case this gets wrong, and it resolves every
   # visitor to the proxy's LAN address. `:trust_private_client_ips` is the
   # opt-out for exactly that shape; see `trust_private_clients?/0`.
   defp usable_forwarded_ip(nil, _trust_private_clients?), do: nil

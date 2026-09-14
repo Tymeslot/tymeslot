@@ -6,8 +6,8 @@ defmodule Tymeslot.Repo.Migrations.RebuildProviderEventIdIndexIfInvalid do
   permanently invalid one.
 
   `CREATE INDEX CONCURRENTLY` cannot run inside a transaction, so an
-  interruption — a container restart mid-migration, a health-check kill, a
-  dropped connection — leaves the half-built index behind marked
+  interruption (a container restart mid-migration, a health-check kill, a
+  dropped connection) leaves the half-built index behind marked
   `pg_index.indisvalid = false` instead of rolling it back. The migration
   itself fails, so its version is never recorded; on the next boot the migrator
   runs it again, `create_if_not_exists` finds an index of that name, skips the
@@ -23,7 +23,7 @@ defmodule Tymeslot.Repo.Migrations.RebuildProviderEventIdIndexIfInvalid do
   `indisvalid`: dropping a healthy index costs exactly the concurrent rebuild
   that follows it, and a guard would need raw SQL to read the catalogue.
 
-  The index this rebuilds is unchanged in shape — see `20260910134458` for why
+  The index this rebuilds is unchanged in shape; see `20260910134458` for why
   it is deliberately not unique (an expanded occurrence of a recurring series
   carries its parent's `provider_event_id`) and why the name is set explicitly
   (the generated name is 72 bytes, nine past PostgreSQL's 63-byte identifier
@@ -57,7 +57,7 @@ defmodule Tymeslot.Repo.Migrations.RebuildProviderEventIdIndexIfInvalid do
   end
 
   def down do
-    # Deliberately a no-op. This migration does not own the index — it only
+    # Deliberately a no-op. This migration does not own the index; it only
     # rebuilds what `20260910134458` created, so rolling it back must leave the
     # index in place for that migration's own `down/0` to drop.
     :ok

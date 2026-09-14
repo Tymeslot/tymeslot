@@ -383,8 +383,8 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
     # or scheme word, and `@derive {Inspect, except: […]}` masks a named field.
     # The proxy password used to sit in the second position of a tuple, where
     # it had no key for any of them to match, so anything that inspected a
-    # proxy config — an exception message, a `dbg/1`, an OTP crash report
-    # printing a task's arguments — printed it in the clear.
+    # proxy config (an exception message, a `dbg/1`, an OTP crash report
+    # printing a task's arguments) printed it in the clear.
     test "the password never appears in inspect/1 output of a loaded config" do
       Application.put_env(:tymeslot, :http_proxy, runtime_shaped_config())
 

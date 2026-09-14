@@ -301,7 +301,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     end
   end
 
-  # Accepts anything carrying the two identity fields — a `CalendarEvent` from
+  # Accepts anything carrying the two identity fields: a `CalendarEvent` from
   # the upsert path, a `deletion_ref()` from the deletion path.
   defp linked_meeting(record, meetings_by_identifier) when is_map(record) do
     record
@@ -334,7 +334,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   the single primitive all sync workers use when a provider reports deleted
   events. For each ref:
 
-  1. The cache rows are deleted — each ref by its `:uid` when it has one,
+  1. The cache rows are deleted, each ref by its `:uid` when it has one,
      falling back to `:provider_event_id`. Pass `delete_cache: false` when
      the cache rows were already deleted inside an enclosing
      `Repo.transaction` (e.g. the CalDAV atomic reconciler) and only the
@@ -351,9 +351,9 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   token can be thousands of events in one job.
 
   Duplicate refs are collapsed, and so are two refs resolving to one meeting.
-  Not for the database's sake — a batched `DELETE … WHERE uid IN (…)` is
+  Not for the database's sake (a batched `DELETE … WHERE uid IN (…)` is
   indifferent to duplicates, unlike the `ON CONFLICT DO UPDATE` in
-  `upsert_batch/1` — and not for correctness either, since
+  `upsert_batch/1`), and not for correctness either, since
   `update_calendar_sync_status_if_changed/2` already makes a repeated signal a
   no-op. It simply saves the repeated round-trip.
 
@@ -393,7 +393,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   defp reconcile_deleted_meetings(integration, refs) do
     # A `deletion_ref()` carries the same two identifiers a meeting does, so it
-    # feeds the shared identity rule directly — no conversion, and the uid
+    # feeds the shared identity rule directly: no conversion, and the uid
     # fallback a CalDAV deletion depends on comes with it. See
     # `Tymeslot.Meetings.CalendarEventLink`.
     identifiers = refs |> Meetings.calendar_identifier_set() |> MapSet.to_list()
@@ -404,7 +404,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     refs
     |> Enum.map(&linked_meeting(&1, meetings_by_identifier))
     |> Enum.reject(&is_nil/1)
-    # One meeting can be reached by two refs — its uid and its provider event
+    # One meeting can be reached by two refs: its uid and its provider event
     # id arriving as separate deletions. The repeat is already harmless
     # downstream, so this only saves the second round-trip.
     |> Enum.uniq_by(& &1.id)

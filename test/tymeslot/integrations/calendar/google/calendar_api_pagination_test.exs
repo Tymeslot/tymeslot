@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
 
   # Both Google listings walk `nextPageToken` through one shared paginator.
   # They were copy-paste twins until they were merged, and the incremental
-  # half spent that time with no pagination at all — so the cases proving the
+  # half spent that time with no pagination at all, so the cases proving the
   # loop, the page size, the error passthrough and the page cap live together
   # here rather than split across the two entry points that share them.
 
@@ -154,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
 
     # Regression: a multi-page delta was truncated after page 1, and since
     # Google only returns nextSyncToken on the final page, the stored token
-    # was never advanced — every later run re-fetched the same stale page.
+    # was never advanced; every later run re-fetched the same stale page.
     test "multi-page response accumulates all events and returns the final sync token",
          %{integration: integration} do
       expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
@@ -189,7 +189,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
          %{integration: integration} do
       # The circuit breaker deliberately does not wrap the calendar clients'
       # 3-tuple, so this must arrive at SyncGoogleCalendarWorker as a bare
-      # {:error, :gone, _} — that is what it matches on to fall back to a full
+      # {:error, :gone, _}: that is what it matches on to fall back to a full
       # sync. Wrapping it would silently disable the fallback, and a 410 on
       # page two was previously covered nowhere at all.
       expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->

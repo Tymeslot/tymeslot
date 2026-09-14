@@ -5,8 +5,8 @@ defmodule Tymeslot.Infrastructure.ProxyCredentials do
   A struct rather than the `{username, password}` tuple it replaces, for one
   reason: it carries the proxy password, and only a struct can refuse to print
   it. `@derive {Inspect, except: [:password]}` masks the field wherever the
-  credentials are inspected — an exception message, a `dbg/1`, an OTP crash
-  report that prints a task's arguments — which a tuple cannot do at all.
+  credentials are inspected (an exception message, a `dbg/1`, an OTP crash
+  report that prints a task's arguments), which a tuple cannot do at all.
 
   A tuple is the worst shape a secret can have here, because every redaction
   this codebase has is keyed. `Logging.MetadataRedactor` scrubs sensitive

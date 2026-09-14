@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeaders.HstsTest do
 
   describe "header/1" do
     test "an absent config binds the sending host only" do
-      # The default Core ships to self-hosters. `max-age` is still sent — the
-      # header must be present and host-scoped, not absent — but neither
+      # The default Core ships to self-hosters. `max-age` is still sent (the
+      # header must be present and host-scoped, not absent), but neither
       # directive that reaches other subdomains is asserted.
       assert Hsts.header([]) == "max-age=31536000"
     end

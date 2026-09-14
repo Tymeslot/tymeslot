@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeaders.Hsts do
   Builds the `strict-transport-security` header value from configuration.
 
   Separate from `TymeslotWeb.Plugs.SecurityHeadersPlug` so the plug can build
-  the header once at compile time — it runs on every response — while every
+  the header once at compile time (it runs on every response) while every
   directive combination stays directly testable.
 
   `max-age` binds only the host that sends the header and is always emitted.

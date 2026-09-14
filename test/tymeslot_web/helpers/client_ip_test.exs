@@ -552,7 +552,7 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
       assert enabled == ClientIP.get_from_mount(socket, true)
 
       # Disabled, RemoteIp finds no client at all and the plug leaves
-      # conn.remote_ip as the peer — which is what the socket path falls back to.
+      # conn.remote_ip as the peer, which is what the socket path falls back to.
       assert RemoteIp.from(headers, @headers_opt) == nil
       assert ClientIP.get_from_mount(socket, false) == "192.168.1.254"
     end

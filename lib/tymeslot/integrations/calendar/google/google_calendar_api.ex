@@ -29,7 +29,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   # Neither listing loop had any bound on iterations: a provider echoing the
   # same page token would occupy one of the ten `calendar_events` queue slots
-  # permanently, with nothing in the logs to say why — `SyncGoogleCalendarWorker`
+  # permanently, with nothing in the logs to say why: `SyncGoogleCalendarWorker`
   # defines no `timeout/1`, so Oban's `:infinity` default applies. At 2500
   # events a page this cap is far past any real calendar, so hitting it means
   # the provider is misbehaving, and saying so beats looping in silence.
@@ -307,7 +307,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   #
   # `maxResults` is set here rather than by either caller, so the page size
   # cannot drift between them again. The incremental path was taking Google's
-  # default of 250 where bootstrap asked for 2500 — about 18 sequential
+  # default of 250 where bootstrap asked for 2500: about 18 sequential
   # round-trips for a 4,465-event backlog where 2 would do, each one through
   # the circuit breaker inside a single Oban job.
   defp fetch_events_page(token, calendar_id, base_params, page_token, acc, page \\ 1)
@@ -358,7 +358,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
       # Load-bearing. The circuit breaker deliberately does not wrap the
       # calendar clients' 3-tuple, so a 410 arrives here as a bare
-      # `{:error, :gone, "Resource no longer available"}` — which is exactly
+      # `{:error, :gone, "Resource no longer available"}`, which is exactly
       # what SyncGoogleCalendarWorker matches on to fall back to
       # `bootstrap_sync/1`. Unrecognised terms must pass through untouched.
       other ->

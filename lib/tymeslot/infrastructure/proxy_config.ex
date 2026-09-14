@@ -368,7 +368,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   defp proxy_auth_header(credentials) when is_tuple(credentials) do
     raise ArgumentError,
           "proxy credentials reached build_req_proxy_options/2 as a raw tuple. " <>
-            "Build them with ProxyCredentials.new/1 — a tuple has no key for any " <>
+            "Build them with ProxyCredentials.new/1: a tuple has no key for any " <>
             "redaction to match, so the password would print in the clear."
   end
 

@@ -499,8 +499,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
     end
 
     test "a repeated ref and two refs naming one meeting both reconcile cleanly" do
-      # Batching lets one meeting be named twice — by its uid and by its
-      # provider event id arriving as separate deletions — and lets the same
+      # Batching lets one meeting be named twice (by its uid and by its
+      # provider event id arriving as separate deletions) and lets the same
       # ref appear twice. Neither may raise or leave the meeting half-handled.
       integration = insert(:calendar_integration)
 

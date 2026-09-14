@@ -454,9 +454,9 @@ config :tymeslot, :payments,
 
 # HSTS directives sent by TymeslotWeb.Plugs.SecurityHeadersPlug, read via
 # Application.compile_env. `max_age` covers the sending host and is always sent.
-# The other two reach past it — `include_subdomains` forces every sibling
+# The other two reach past it (`include_subdomains` forces every sibling
 # subdomain of the operator's domain to HTTPS for the whole max-age, and
-# `preload` declares that domain eligible for the browser preload list — so
+# `preload` declares that domain eligible for the browser preload list), so
 # both default off rather than imposing them on a self-hoster's other services.
 # A deployment that owns its whole domain opts in. `preload` is only meaningful
 # alongside `include_subdomains`; the preload list requires it.

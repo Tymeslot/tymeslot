@@ -8,7 +8,7 @@ defmodule Tymeslot.Infrastructure.IndexHealth do
   cannot run inside a transaction. An interrupted build therefore leaves the
   half-built index behind marked `pg_index.indisvalid = false` rather than
   rolling it back. The migration fails without recording its version, so the
-  migrator runs it again on the next boot — where `CREATE INDEX IF NOT EXISTS`
+  migrator runs it again on the next boot, where `CREATE INDEX IF NOT EXISTS`
   sees an index of that name, skips the create, and records the version. The
   invalid index then stays forever.
 
@@ -21,8 +21,8 @@ defmodule Tymeslot.Infrastructure.IndexHealth do
   ## What it is not
 
   A diagnostic must never become an outage. `check/0` therefore returns `:ok`
-  whatever happens — an unreachable database, an ownership error, a pool
-  timeout — and is started as a `:temporary` task off the boot path, so neither
+  whatever happens (an unreachable database, an ownership error, a pool
+  timeout) and is started as a `:temporary` task off the boot path, so neither
   its failure nor its slowness can stop or delay the application starting. It
   never repairs anything either: rebuilding an index is minutes of I/O on a
   large table and is the operator's call, not a side effect of a restart.

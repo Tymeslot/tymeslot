@@ -1,6 +1,6 @@
 defmodule Tymeslot.Meetings.CalendarEvents do
   @moduledoc """
-  Async calendar event orchestration for meetings — cancellation via Oban
+  Async calendar event orchestration for meetings: cancellation via Oban
   workers.
   """
 

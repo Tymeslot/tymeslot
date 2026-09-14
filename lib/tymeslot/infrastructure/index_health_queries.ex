@@ -38,13 +38,13 @@ defmodule Tymeslot.Infrastructure.IndexHealthQueries do
   #     indisvalid = false)` while it validates, and an interruption in either
   #     window leaves the index sitting in that same state forever. Filtering
   #     `indisready = false` out would have hidden the easiest case of all to
-  #     hit — a unique build that dies on a duplicate during its first scan.
+  #     hit: a unique build that dies on a duplicate during its first scan.
   #     What the flag does say is how much the leftover costs, since a
   #     `indisready = true` index is still maintained on every write while
   #     buying no reads, so it is reported as metadata instead.
   #
-  # The one state that genuinely is transient — a build running right now, on
-  # this or another node — is excluded by `pg_stat_progress_create_index`
+  # The one state that genuinely is transient, a build running right now on
+  # this or another node, is excluded by `pg_stat_progress_create_index`
   # (PostgreSQL 12+; this project requires 14+), which carries exactly one row
   # per in-flight `CREATE INDEX` / `REINDEX` keyed by the index OID. That is
   # the purpose-built signal for "mid-build", where the catalogue flags are

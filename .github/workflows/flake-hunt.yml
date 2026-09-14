@@ -18,7 +18,7 @@ on:
   schedule:
     # Nightly at 23:11 UTC. Deliberately hours clear of the 03:17
     # excluded-suites slot rather than merely a few minutes off it: this is the
-    # long job in the repo — a full loop is measured in hours, not minutes — so
+    # long job in the repo (a full loop is measured in hours, not minutes), so
     # a nearby slot would mean the two runs overlapping most nights. Off the
     # hour for the reason excluded-suites gives: the scheduler is most
     # contended at :00 and jobs queued there are the ones that get dropped.
@@ -114,7 +114,7 @@ jobs:
       #
       # `mix test` here is the alias, which prepends `ecto.create --quiet` and
       # `ecto.migrate --quiet`. That sets the database up on iteration 1 and
-      # costs every later iteration two idempotent no-ops — measured locally at
+      # costs every later iteration two idempotent no-ops, measured locally at
       # ~11s against a suite of ~5 minutes, so roughly 3%. Left in place
       # deliberately: Mix gives no way to invoke a task that the project's own
       # alias shadows, so removing the overhead would mean adding a second
@@ -127,7 +127,7 @@ jobs:
           # Degrade to /dev/null rather than letting `set -u` abort the step and
           # lose the whole loop: the same report goes to stdout via `tee`, so
           # nothing is actually lost if the summary file is missing.
-          # GITHUB_OUTPUT is deliberately *not* guarded the same way — there is
+          # GITHUB_OUTPUT is deliberately *not* guarded the same way: there is
           # no graceful degradation for it, and the Report step silently never
           # firing is a worse failure than a loud one.
           : "${GITHUB_STEP_SUMMARY:=/dev/null}"
@@ -150,7 +150,7 @@ jobs:
           done
           echo "failed=$failed" >> "$GITHUB_OUTPUT"
           # The report is the failing test's name, its file and line, and its
-          # output — never just a seed. ExUnit shuffles only the tests within a
+          # output, never just a seed. ExUnit shuffles only the tests within a
           # module, so a seed fixes nothing about the order between the 1,259
           # test files here, which is the part that decides most flakes. Handing
           # the next person a seed and calling it a reproduction would be

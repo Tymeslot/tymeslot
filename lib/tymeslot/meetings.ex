@@ -346,7 +346,7 @@ defmodule Tymeslot.Meetings do
   Applies an external calendar change signal to a meeting already in hand.
 
   The identifier-free counterpart of `apply_external_calendar_change/4`, for
-  callers that resolved the meeting themselves — a batch that matched many
+  callers that resolved the meeting themselves, such as a batch that matched many
   events in one query rather than two lookups per event.
   """
   defdelegate apply_external_calendar_change_to_meeting(meeting, signal),
