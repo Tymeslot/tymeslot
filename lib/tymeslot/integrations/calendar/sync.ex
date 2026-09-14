@@ -301,8 +301,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     end
   end
 
-  defp linked_meeting(%CalendarEvent{} = cal_event, meetings_by_identifier) do
-    cal_event
+  # Accepts anything carrying the two identity fields — a `CalendarEvent` from
+  # the upsert path, a `deletion_ref()` from the deletion path.
+  defp linked_meeting(record, meetings_by_identifier) when is_map(record) do
+    record
     |> Meetings.calendar_event_identifiers()
     |> Enum.find_value(&Map.get(meetings_by_identifier, &1))
   end
@@ -332,15 +334,28 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   the single primitive all sync workers use when a provider reports deleted
   events. For each ref:
 
-  1. The cache row is deleted — by `:uid` when present, falling back to
-     `:provider_event_id`. Pass `delete_cache: false` when the cache rows
-     were already deleted inside an enclosing `Repo.transaction` (e.g. the
-     CalDAV atomic reconciler) and only the post-commit reconciliation
-     side effects remain.
+  1. The cache rows are deleted — each ref by its `:uid` when it has one,
+     falling back to `:provider_event_id`. Pass `delete_cache: false` when
+     the cache rows were already deleted inside an enclosing
+     `Repo.transaction` (e.g. the CalDAV atomic reconciler) and only the
+     post-commit reconciliation side effects remain.
   2. The linked meeting (if any) is reconciled with `:deleted`. Reconcile
      failures are logged as warnings and do not abort the remaining refs —
      a failed auto-cancellation reverts its own sync status and is retried
      by the next sync run.
+
+  Both steps are batched: the whole list costs two `DELETE`s and one `SELECT`
+  rather than roughly three round-trips per ref, which matters because the
+  common case is a cancelled event with no linked meeting paying the full
+  cost to learn there is nothing to do. A backlog drain after a stuck sync
+  token can be thousands of events in one job.
+
+  Duplicate refs are collapsed, and so are two refs resolving to one meeting.
+  Not for the database's sake — a batched `DELETE … WHERE uid IN (…)` is
+  indifferent to duplicates, unlike the `ON CONFLICT DO UPDATE` in
+  `upsert_batch/1` — and not for correctness either, since
+  `update_calendar_sync_status_if_changed/2` already makes a repeated signal a
+  no-op. It simply saves the repeated round-trip.
 
   Always returns `:ok`.
   """
@@ -351,41 +366,68 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def reconcile_deletions(%CalendarIntegrationSchema{} = integration, refs, opts)
       when is_list(refs) do
-    delete_cache? = Keyword.get(opts, :delete_cache, true)
+    refs = Enum.uniq_by(refs, &{Map.get(&1, :provider_event_id), Map.get(&1, :uid)})
 
-    Enum.each(refs, fn ref ->
-      provider_event_id = Map.get(ref, :provider_event_id)
-      uid = Map.get(ref, :uid)
+    if Keyword.get(opts, :delete_cache, true), do: delete_cached_events(integration.id, refs)
 
-      if delete_cache?, do: delete_cached_event(integration.id, provider_event_id, uid)
+    reconcile_deleted_meetings(integration, refs)
+  end
 
-      case reconcile(integration.id, provider_event_id, uid, :deleted) do
-        :ok ->
-          :ok
+  # Mirrors the per-ref precedence exactly: a ref carrying a uid is deleted by
+  # uid and never by provider event id, and a ref carrying neither is skipped.
+  # Both query helpers chunk internally, so an arbitrarily long list is safe.
+  defp delete_cached_events(integration_id, refs) do
+    {by_uid, rest} = Enum.split_with(refs, &is_binary(Map.get(&1, :uid)))
 
-        {:error, reason} ->
-          Logger.warning("Reconcile failed for deleted event",
-            calendar_integration_id: integration.id,
-            provider_event_id: provider_event_id,
-            uid: uid,
-            reason: inspect(reason)
-          )
-      end
-    end)
+    by_uid
+    |> Enum.map(&Map.get(&1, :uid))
+    |> then(&ProviderCalendarEventQueries.delete_by_uids(integration_id, &1))
+
+    rest
+    |> Enum.map(&Map.get(&1, :provider_event_id))
+    |> Enum.filter(&is_binary/1)
+    |> then(&ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, &1))
 
     :ok
   end
 
-  defp delete_cached_event(integration_id, _provider_event_id, uid) when is_binary(uid) do
-    ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
+  defp reconcile_deleted_meetings(integration, refs) do
+    # A `deletion_ref()` carries the same two identifiers a meeting does, so it
+    # feeds the shared identity rule directly — no conversion, and the uid
+    # fallback a CalDAV deletion depends on comes with it. See
+    # `Tymeslot.Meetings.CalendarEventLink`.
+    identifiers = refs |> Meetings.calendar_identifier_set() |> MapSet.to_list()
+
+    meetings_by_identifier =
+      Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
+
+    refs
+    |> Enum.map(&linked_meeting(&1, meetings_by_identifier))
+    |> Enum.reject(&is_nil/1)
+    # One meeting can be reached by two refs — its uid and its provider event
+    # id arriving as separate deletions. The repeat is already harmless
+    # downstream, so this only saves the second round-trip.
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.each(&reconcile_deleted_meeting(integration, &1))
+
+    :ok
   end
 
-  defp delete_cached_event(integration_id, provider_event_id, _uid)
-       when is_binary(provider_event_id) do
-    ProviderCalendarEventQueries.delete_by_provider_event_id(integration_id, provider_event_id)
-  end
+  defp reconcile_deleted_meeting(integration, meeting) do
+    case Meetings.apply_external_calendar_change_to_meeting(meeting, :deleted) do
+      :ok ->
+        :ok
 
-  defp delete_cached_event(_integration_id, _provider_event_id, _uid), do: :ok
+      {:error, reason} ->
+        Logger.warning("Reconcile failed for deleted event",
+          calendar_integration_id: integration.id,
+          meeting_id: meeting.id,
+          provider_event_id: meeting.provider_event_id,
+          uid: meeting.uid,
+          reason: inspect(reason)
+        )
+    end
+  end
 
   @doc """
   Main reconciliation entry point.
