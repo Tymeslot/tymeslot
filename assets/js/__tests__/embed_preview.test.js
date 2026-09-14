@@ -85,6 +85,15 @@ describe('EmbedPreview', () => {
     expect(url.searchParams.get('preview_token')).toBe(TOKEN);
   });
 
+  test('Link says its anchor is a short-lived preview, not the link to share', () => {
+    // The anchor carries a token that expires after an hour, so an organiser
+    // who right-clicks and copies it must not be told it is their link.
+    const hint = mountHook('link').el.querySelector('p').textContent;
+
+    expect(hint).toMatch(/preview only/i);
+    expect(hint).not.toMatch(/direct link/i);
+  });
+
   test('the modal opens at the height cap, because a preview never self-reports', () => {
     // iframe_embed.js bails out of embedded mode on ?preview=true, so no
     // resize message ever arrives and embed.js would leave its wrapper at the

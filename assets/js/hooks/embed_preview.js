@@ -193,7 +193,7 @@ export const EmbedPreview = {
     link.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors';
 
     const hint = document.createElement('p');
-    hint.textContent = 'This direct link is only active when your account is ready';
+    hint.textContent = 'Preview only: this link opens in test mode and stops working after an hour. Copy the link to share from the Embed Options tab.';
     hint.className = 'text-xs text-slate-400 mt-4';
     
     wrapper.appendChild(link);
