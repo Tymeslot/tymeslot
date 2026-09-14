@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       title={@display_name}
       type_tag={@type_tag}
       summary={@summary}
+      notice={ConnectionRow.reconnect_reason(@integration)}
       status={@status}
       active?={@integration.is_active}
       toggle_event="toggle_integration"

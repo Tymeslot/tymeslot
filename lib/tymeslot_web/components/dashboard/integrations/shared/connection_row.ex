@@ -4,7 +4,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   integration hubs.
 
   Renders a `card-glass` shell with the provider icon, title (plus optional
-  type tag), a one-line summary, a status badge, a `StatusSwitch`, and an
+  type tag), a one-line summary, an optional notice saying what needs the
+  owner's attention, a status badge, a `StatusSwitch`, and an
   always-visible `:actions` cluster (reconnect, test, edit, delete, …). The row
   is flat — there is no expand/collapse; every action is reachable in one click.
   On narrow viewports the action cluster wraps onto its own line below the
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   attr :title, :string, required: true
   attr :type_tag, :string, default: nil
   attr :summary, :string, required: true
+  attr :notice, :string, default: nil
   attr :status, :any, required: true
   attr :active?, :boolean, required: true
   attr :toggle_event, :string, required: true
@@ -56,6 +58,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
               </span>
             </div>
             <p class="mt-0.5 truncate text-token-sm text-tymeslot-500">{@summary}</p>
+            <p :if={@notice} class="mt-1 text-token-sm text-amber-700">{@notice}</p>
           </div>
           <.status_badge variant={@variant} label={@status_label} class="shrink-0" />
         </div>
@@ -77,6 +80,23 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
     </div>
     """
   end
+
+  @doc """
+  The reason an integration awaiting reconnection was flagged, for the row's
+  `notice`, or `nil` when it is not flagged or no reason was recorded.
+
+  `sync_error` also carries transient sync failures, so it is only shown while
+  the flag is set: a reconnection is the one state the owner has to act on.
+  """
+  @spec reconnect_reason(map()) :: String.t() | nil
+  def reconnect_reason(%{needs_reauth: true, sync_error: reason}) when is_binary(reason) do
+    case String.trim(reason) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  def reconnect_reason(_integration), do: nil
 
   # `provider_icon/1` takes the provider category as a string ("calendar" |
   # "video" | "oauth" | nil); the row exposes it as the friendlier atom.

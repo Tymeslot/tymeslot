@@ -386,6 +386,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       title={@display_name}
       type_tag={if @read_only?, do: dgettext("dashboard_calendar_settings", "Read-only")}
       summary={@summary}
+      notice={ConnectionRow.reconnect_reason(@integration)}
       status={@status}
       active?={@integration.is_active}
       toggle_event="toggle_integration"

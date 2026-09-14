@@ -375,6 +375,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert html =~ "bg-amber-50"
     end
 
+    test "says why the integration needs reconnecting" do
+      html = render_row_with(needs_reauth: true, sync_error: "No calendar is selected.")
+
+      assert html =~ "No calendar is selected."
+    end
+
+    # sync_error also carries transient failures, which are not the owner's to fix.
+    test "keeps a stored sync error to itself while the integration is not flagged" do
+      html = render_row_with(needs_reauth: false, sync_error: "Timed out talking to the server.")
+
+      refute html =~ "Timed out talking to the server."
+    end
+
     test "shows a Healthy status when needs_reauth is false" do
       integration = %{
         id: 100,
@@ -420,6 +433,28 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         calendar_list: []
       },
       Map.new(attrs)
+    )
+  end
+
+  defp render_row_with(overrides) do
+    integration =
+      Enum.into(overrides, %{
+        id: 101,
+        name: "Flagged CalDAV",
+        provider: "caldav",
+        is_active: true,
+        calendar_list: [%CalendarEntry{id: "/a/", path: "/a/", name: "A", selected: true}],
+        calendar_paths: ["/a/"],
+        base_url: "https://caldav.example.com",
+        is_primary: false,
+        default_booking_calendar_id: nil,
+        provider_account_email: nil
+      })
+
+    render_component(&Components.calendar_connection_row/1,
+      integration: integration,
+      health_state: nil,
+      myself: "target"
     )
   end
 end

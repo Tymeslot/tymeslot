@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   separated from primary calendar logic and discovery operations.
   """
 
+  alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -244,15 +245,40 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   Discarding rather than returning `{:error, _}` is the point. Retrying re-asks
   a question already answered, and an exhausted retry chain raises a
   permanent-failure admin alert about a condition no operator can fix.
-  A failed *flag write* is worth retrying, though: without it the dashboard
-  never tells the owner why their calendar stopped syncing.
+  A failed *flag write* is worth retrying, though: without it the owner is
+  never told why their calendar stopped syncing.
+
+  The first flag also emails the owner a reconnection notice carrying
+  `message`; re-flagging an integration already awaiting reconnection does not.
   """
   @spec flag_for_reconnection(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
           {:discard, String.t()} | {:error, String.t()}
   def flag_for_reconnection(%CalendarIntegrationSchema{} = integration, message, discard_reason) do
-    case mark_needs_reauth(integration, message) do
+    case flag_and_notify(integration, message) do
       {:ok, _updated} -> {:discard, discard_reason}
       {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
+    end
+  end
+
+  # Only a false → true transition is news. Re-flagging an integration the owner
+  # has already been told about would email them again about a problem they are
+  # already looking at; the scheduler's uniqueness window is a backstop for
+  # that, not the place to decide it.
+  defp flag_and_notify(%{needs_reauth: true} = integration, message),
+    do: mark_needs_reauth(integration, message)
+
+  # The badge alone reaches only owners who open the dashboard. Everyone else
+  # discovers a dead calendar when a booking needs it, which is too late, so
+  # flagging and notifying are one step and cannot come apart.
+  defp flag_and_notify(integration, message) do
+    with {:ok, updated} = result <- mark_needs_reauth(integration, message) do
+      IntegrationScheduler.schedule_integration_reauth_notification(
+        %{id: updated.user_id},
+        updated,
+        :calendar
+      )
+
+      result
     end
   end
 
