@@ -278,19 +278,15 @@ if config_env() == :prod do
          Tymeslot.Repo,
          Tymeslot.Infrastructure.DatabaseConfig.build(deployment_type, System.get_env())
 
-  # Remote IP handling: trust private/loopback proxies and read proxy headers
-  # Cloudron uses x-forwarded-for header from its reverse proxy
-  config :remote_ip, RemoteIp,
-    headers: ~w[x-forwarded-for x-real-ip],
-    proxies: ~w[
-      127.0.0.0/8
-      10.0.0.0/8
-      172.16.0.0/12
-      192.168.0.0/16
-      ::1/128
-      fc00::/7
-      fd00::/8
-    ]
+  # Whether a forwarded address in a loopback or RFC-1918/4193 range names the
+  # visitor (an intranet-only deployment) rather than a proxy hop (the default).
+  # This one key drives both the LiveView socket path and, through
+  # `ClientIP.remote_ip_clients/0`, the `RemoteIp` plug in the endpoint, so the
+  # two cannot be configured apart. RemoteIp reads no application config, which
+  # is why its options live on the plug rather than here.
+  config :tymeslot,
+         :trust_private_client_ips,
+         System.get_env("TRUST_PRIVATE_CLIENT_IPS") in ~w[true 1 yes]
 
   # Configure Oban for production
   # Queue definitions in config.exs are loaded at runtime by application.ex

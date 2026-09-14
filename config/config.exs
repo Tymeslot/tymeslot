@@ -465,6 +465,17 @@ config :tymeslot, :hsts,
   include_subdomains: false,
   preload: false
 
+# Whether a forwarded address in a loopback or RFC-1918/4193 range names the
+# visitor rather than a proxy hop. Off, because for an internet-facing
+# deployment such an address is always a proxy talking about itself, and
+# accepting one collapses every IP-keyed rate limit into a single bucket shared
+# by the whole deployment. An intranet-only self-host, whose visitors really are
+# on the LAN, sets TRUST_PRIVATE_CLIENT_IPS=true, which config/runtime.exs turns
+# into this key. TymeslotWeb.Helpers.ClientIP reads it for the LiveView socket
+# path and hands the endpoint's RemoteIp plug its `clients:` list from it for the
+# conn path, so the two cannot be configured apart.
+config :tymeslot, :trust_private_client_ips, false
+
 # Slack notifications — credentials supplied via env at runtime
 config :tymeslot,
   slack_notifications_allowed: false,
