@@ -167,7 +167,12 @@ jobs:
                 echo
                 echo "### ${log##*/}"
                 echo '```'
-                grep -E -A1 '^[[:space:]]+[0-9]+\) (test|property|doctest) ' "$log" \
+                # A failing test prints `N) test name (Module)`; a failing
+                # setup_all prints `N) Module: failure on setup_all callback`
+                # instead, and names no test. Colour codes are stripped first so
+                # neither a coloured header nor escape codes reach the summary.
+                sed -E 's/\x1b\[[0-9;]*m//g' "$log" \
+                  | grep -E -A1 '^[[:space:]]+[0-9]+\) ((test|property|doctest) |[^ ]+: failure on setup_all callback)' \
                   || echo "(no ExUnit failure block: this run died before or outside the suite)"
                 echo '```'
               done
