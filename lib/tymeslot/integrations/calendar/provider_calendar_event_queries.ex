@@ -459,25 +459,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
-  Deletes a single event identified by its integration and provider event ID.
-
-  Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.
-  """
-  @spec delete_by_provider_event_id(integer(), String.t()) :: {:ok, :deleted | :not_found}
-  def delete_by_provider_event_id(calendar_integration_id, provider_event_id) do
-    {count, _rows} =
-      ProviderCalendarEventSchema
-      |> where(
-        [e],
-        e.calendar_integration_id == ^calendar_integration_id and
-          e.provider_event_id == ^provider_event_id
-      )
-      |> Repo.delete_all()
-
-    if count > 0, do: {:ok, :deleted}, else: {:ok, :not_found}
-  end
-
-  @doc """
   Replaces all cached events for an integration in a single transaction.
 
   Deletes every existing row for the integration, then inserts the provided
