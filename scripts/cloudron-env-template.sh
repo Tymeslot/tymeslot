@@ -90,24 +90,24 @@ print_template() {
 #
 # Single quotes are the default, because both readers of this file agree on
 # them byte for byte: a single-quoted dotenv value is literal, with no escape
-# sequences, no ${VAR} interpolation and no $(cmd) substitution, in Dotenvy
-# (which parses the file inside the release) and in start.sh's load_env_file
-# (which parses it before the release boots).
+# sequences, no ${VAR} interpolation and no $(cmd) substitution, in
+# Tymeslot.Infrastructure.DotenvLoader (which parses the file inside the
+# release) and in start.sh's load_env_file (which parses it before the release
+# boots).
 #
 # A single quote cannot appear inside a single-quoted value: dotenv has no
-# escape for it, and Dotenvy rejects the whole file rather than the one line.
-# Such a value is double-quoted instead, with \\, \" and \$ escaped; those are
-# the escapes load_env_file understands, and Dotenvy resolves them the same
-# way. Escaping $ is what keeps Dotenvy from treating ${...} or $(...) in a
-# secret as something to expand.
+# escape for it, and both readers skip the line. Such a value is double-quoted
+# instead, with \\, \" and \$ escaped; those are the escapes load_env_file
+# understands, and DotenvLoader resolves them the same way. Neither reader
+# expands ${...} or $(...), so escaping $ is belt and braces rather than a
+# requirement, and \$ reads back as a plain $ either way.
 # Rewrites the non-ASCII characters of a value as the \uXXXX escapes both
 # readers of the file resolve identically. This is the inverse of start.sh's
-# dotenv_utf8, and it is not cosmetic: the release's dotenv parser truncates a
-# raw multi-byte character to one byte, so an imported value carrying one would
-# be skipped at boot and the setting would silently fall back to its default.
-# Returns 1 for a codepoint outside the BMP, which \uXXXX cannot express and
-# the reader cannot decode, so the caller can leave the value alone rather than
-# write something wrong.
+# dotenv_utf8. Both readers take raw UTF-8 too, so this is no longer the only
+# form that survives; it is kept because it is also the form that survives a
+# file passing through a tool that is not UTF-8 clean. Returns 1 for a
+# codepoint outside the BMP, which \uXXXX cannot express, so the caller can
+# emit it raw instead.
 dotenv_escape_utf8() {
   local value="$1" out="" i=0 len b1 b2 b3 cp
   local LC_ALL=C LANG=C
@@ -148,9 +148,9 @@ format_assignment() {
   case "$value" in
     *[!A-Za-z0-9_/.:@+=-]*)
       case "$value" in
-        # A non-ASCII value must be double-quoted with \uXXXX escapes, or the
-        # release's parser mangles it. Single quotes are literal and cannot
-        # carry the escapes, so this case comes first.
+        # A non-ASCII value is written with \uXXXX escapes, which needs double
+        # quotes: single quotes are literal and cannot carry them. This case
+        # therefore comes first.
         *[!$'\001'-$'\177']*)
           # Escape the backslash first: doing it after encoding would double
           # the backslash of every \uXXXX sequence and break them all.
@@ -161,8 +161,8 @@ format_assignment() {
           if escaped=$(dotenv_escape_utf8 "$escaped"); then
             printf '%s="%s"\n' "$key" "$escaped"
           else
-            # Outside the BMP: neither form is readable, so emit it unchanged
-            # and let the boot warning name the key.
+            # Outside the BMP: \uXXXX cannot express it, so emit it raw. Both
+            # readers pass raw UTF-8 through unchanged.
             printf "%s='%s'\n" "$key" "$value"
           fi
           ;;
