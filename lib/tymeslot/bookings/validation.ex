@@ -118,23 +118,6 @@ defmodule Tymeslot.Bookings.Validation do
   end
 
   @doc """
-  Validates booking time from string inputs.
-
-  Parses date and time strings, validates the resulting datetime.
-  """
-  @spec validate_booking_time_from_strings(String.t(), String.t(), String.t()) ::
-          :ok | {:error, String.t()}
-  def validate_booking_time_from_strings(date_str, time_str, timezone) do
-    case parse_meeting_times(date_str, time_str, 30, timezone) do
-      {:ok, {start_datetime, end_datetime}} ->
-        validate_booking_time(start_datetime, end_datetime)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @doc """
   Validates that a time slot has no conflicts with existing events.
 
   Takes calendar events and checks for overlaps.
