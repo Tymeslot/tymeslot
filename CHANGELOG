@@ -1,4 +1,11 @@
 
+[1.15.5]
+* Hide deselected calendars from the dashboard agenda
+* Open the dashboard calendar on today in your own timezone
+* Show the host's avatar in booking emails opened in Gmail
+* Restore outbound HTTPS requests through a configured proxy
+
+
 [1.15.4]
 * Keep calendar deletion working when two calendars are removed at once
 * Stop the popup and floating previews creating real bookings

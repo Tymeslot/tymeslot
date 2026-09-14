@@ -6,11 +6,14 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
   Distinct from `Tymeslot.Emails.Templates.IntegrationUnhealthy`, which reports
   intermittent probe failures that may already have resolved themselves. This
   one is sent when the cause is known and permanent until the user acts: a
-  revoked grant, or one whose scopes no longer cover what Tymeslot must do.
-  Saying "may need attention" about a certainty would understate it.
+  revoked grant, scopes that no longer cover what Tymeslot must do, rejected
+  credentials, or a calendar setup with nothing left to sync into. Saying "may
+  need attention" about a certainty would understate it.
 
   The reason shown is the integration's stored `sync_error`, which is the same
-  sentence the dashboard badge carries, so the two cannot drift apart.
+  sentence the dashboard shows, so the two cannot drift apart. The rest of the
+  copy stays true for every cause, because the reason is the only part that
+  varies.
 
   This is an operational alert — always rendered in English.
   """
@@ -48,7 +51,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
       align="left"
       css-class="mobile-text"
     >
-      Your <strong>#{provider_label}</strong> #{type_label} integration is still connected, but the permission it was granted no longer covers everything Tymeslot needs to do on your behalf. Reconnecting re-grants it — nothing else is affected, and your existing bookings stay exactly as they are.
+      Tymeslot can no longer use your <strong>#{provider_label}</strong> #{type_label} integration, and it will stay that way until you reconnect it. The reason is shown above. Your existing bookings are not affected.
     </mj-text>
 
     #{Text.divider()}
@@ -59,7 +62,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
       <ul style="padding-left: 20px; margin: 0;">
         <li style="margin-bottom: 8px;">Open your integration settings</li>
         <li style="margin-bottom: 8px;">Select <strong>Reconnect</strong> on the #{provider_label} row</li>
-        <li style="margin-bottom: 0;">Approve the permissions #{provider_label} asks for</li>
+        <li style="margin-bottom: 0;">Follow the steps #{provider_label} asks for</li>
       </ul>
     </mj-text>
 
@@ -93,12 +96,12 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
     #{reason}
 
     WHAT'S HAPPENING?
-    Your #{provider_label} #{type_label} integration is still connected, but the permission it was granted no longer covers everything Tymeslot needs to do on your behalf. Reconnecting re-grants it — nothing else is affected, and your existing bookings stay exactly as they are.
+    Tymeslot can no longer use your #{provider_label} #{type_label} integration, and it will stay that way until you reconnect it. The reason is shown above. Your existing bookings are not affected.
 
     WHAT SHOULD I DO?
     - Open your integration settings
     - Select Reconnect on the #{provider_label} row
-    - Approve the permissions #{provider_label} asks for
+    - Follow the steps #{provider_label} asks for
 
     Reconnect #{provider_label}:
     #{settings_url}

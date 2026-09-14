@@ -12,9 +12,49 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   setup :verify_on_exit!
+
+  describe "flag_for_reconnection/3" do
+    test "flags the integration with the reason and emails its owner" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, needs_reauth: false)
+
+      assert {:discard, "calendar gone"} =
+               CalendarManagement.flag_for_reconnection(
+                 integration,
+                 "Pick a calendar.",
+                 "calendar gone"
+               )
+
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth
+      assert reloaded.sync_error == "Pick a calendar."
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    # Only the false → true transition is news; the sync workers can re-flag.
+    test "does not email again for an integration already flagged" do
+      integration = insert(:calendar_integration, needs_reauth: true, sync_error: "Old reason.")
+
+      assert {:discard, _reason} =
+               CalendarManagement.flag_for_reconnection(integration, "New reason.", "still gone")
+
+      assert Repo.reload!(integration).sync_error == "New reason."
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
 
   # ---------------------------------------------------------------------------
   # toggle_with_primary_rebalance/1 — reactivation health reset and conflicts

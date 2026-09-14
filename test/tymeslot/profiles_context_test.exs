@@ -245,6 +245,16 @@ defmodule Tymeslot.ProfilesContextTest do
       assert Profiles.avatar_url(%{profile | avatar: nil}) =~ "data:image/svg+xml"
     end
 
+    test "uploaded_avatar_url is absolute for an upload and nil otherwise, never a data URI" do
+      profile = insert(:profile, avatar: "test.jpg")
+
+      assert Profiles.uploaded_avatar_url(profile) ==
+               "http://localhost:4002/uploads/avatars/#{profile.id}/test.jpg"
+
+      assert Profiles.uploaded_avatar_url(%{profile | avatar: nil}) == nil
+      assert Profiles.uploaded_avatar_url(nil) == nil
+    end
+
     test "update_avatar validates image content" do
       user = insert(:user)
       profile = insert(:profile, user: user)

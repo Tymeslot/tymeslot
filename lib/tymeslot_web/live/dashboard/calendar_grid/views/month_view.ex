@@ -148,10 +148,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
   defp month_cell(assigns) do
     chips = Helpers.chip_events(assigns.assigns_ref, assigns.day)
 
-    today =
-      DateTime.utc_now() |> DateTime.shift_zone!(assigns.user_timezone) |> DateTime.to_date()
-
-    is_today = Date.compare(assigns.day, today) == :eq
+    is_today = Date.compare(assigns.day, Helpers.today(assigns.user_timezone)) == :eq
     is_current_month = assigns.day.month == assigns.assigns_ref.date.month
 
     assigns =

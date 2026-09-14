@@ -29,6 +29,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.MeetingSchema
@@ -208,6 +209,49 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
 
       # No emails should be sent on retry (idempotency check)
       assert_no_email_sent()
+    end
+
+    test "shows the host's uploaded avatar by absolute URL, which Gmail can fetch", %{
+      profile: profile,
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      profile |> Changeset.change(avatar: "photo.png") |> Repo.update!()
+
+      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_confirmation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      avatar_src = ~s(src="http://localhost:4002/uploads/avatars/#{profile.id}/photo.png")
+
+      for _recipient <- [:organizer, :attendee] do
+        assert_received {:email, email}
+        assert email.html_body =~ avatar_src
+        refute email.html_body =~ "data:image"
+      end
+    end
+
+    test "shows an initials badge, not a data URI image, when the host has no avatar", %{
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_confirmation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      for _recipient <- [:organizer, :attendee] do
+        assert_received {:email, email}
+        assert email.html_body =~ ~r{>TO</td>}
+        refute email.html_body =~ "data:image"
+      end
     end
 
     test "handles missing meeting gracefully", %{} do
