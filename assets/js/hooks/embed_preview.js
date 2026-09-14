@@ -170,6 +170,16 @@ export const EmbedPreview = {
 
     const link = document.createElement('a');
     const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+    // This anchor is a preview, not the shareable URL: it opens the real
+    // booking page in a new tab, so without the owner-preview contract an
+    // organiser pressing "Book Meeting" here persists a meeting, emails
+    // whatever address they typed and creates a calendar event. Same two
+    // halves `createIframe` sets. The token-free URL an organiser is meant to
+    // hand out is built separately, by `Helpers.embed_code("link", …)`.
+    linkUrl.searchParams.set('preview', 'true');
+    if (options.previewToken) {
+      linkUrl.searchParams.set('preview_token', options.previewToken);
+    }
     if (options.layout && options.layout !== 'default') {
       linkUrl.searchParams.set('layout', options.layout);
     }
@@ -181,7 +191,7 @@ export const EmbedPreview = {
     link.rel = 'noopener noreferrer';
     link.textContent = 'Schedule a meeting with me →';
     link.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors';
-    
+
     const hint = document.createElement('p');
     hint.textContent = 'This direct link is only active when your account is ready';
     hint.className = 'text-xs text-slate-400 mt-4';

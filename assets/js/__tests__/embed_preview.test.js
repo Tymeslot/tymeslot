@@ -73,6 +73,18 @@ describe('EmbedPreview', () => {
     expect(open.mock.calls[0][1].previewToken).toBe(TOKEN);
   });
 
+  test('Link carries both halves of the preview contract too', () => {
+    // Link opens the real booking page in a new tab rather than an iframe, so
+    // without the contract "Book Meeting" here would persist a meeting for
+    // real. The shareable URL an organiser copies is built server-side and
+    // stays token-free; this anchor is only the preview.
+    const hook = mountHook('link');
+    const url = new URL(hook.el.querySelector('a').href);
+
+    expect(url.searchParams.get('preview')).toBe('true');
+    expect(url.searchParams.get('preview_token')).toBe(TOKEN);
+  });
+
   test('the modal opens at the height cap, because a preview never self-reports', () => {
     // iframe_embed.js bails out of embedded mode on ?preview=true, so no
     // resize message ever arrives and embed.js would leave its wrapper at the
