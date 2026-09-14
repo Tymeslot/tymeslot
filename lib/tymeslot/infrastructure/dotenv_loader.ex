@@ -41,13 +41,11 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
     end
   end
 
-  # Dotenvy 1.1.1 accumulates each parsed character as `<<codepoint>>`, which
-  # truncates anything outside ASCII to a single byte, so a value such as
-  # `Müller` comes back as invalid UTF-8. `System.put_env/2` raises on that,
-  # and a raise here would take down every boot and `eval` session that reads
-  # the file. The value cannot be repaired (codepoints past U+00FF lose bits),
-  # so it is skipped with a warning naming the key; at container boot the
-  # entrypoint has already exported the correct value from the same file.
+  # Guards System.put_env/2, which raises on invalid UTF-8, against a
+  # corrupt value reaching it from the file. Skipped with a warning naming
+  # the key rather than crashing every boot and `eval` session that reads
+  # the file; at container boot the entrypoint has already exported the
+  # correct value from the same file.
   defp apply_var({key, value}, path) do
     cond do
       System.get_env(key) != nil ->
