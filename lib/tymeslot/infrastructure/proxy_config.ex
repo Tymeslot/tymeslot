@@ -14,10 +14,12 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   - Special: `*` (bypass proxy for all hosts)
   """
 
+  alias Tymeslot.Infrastructure.ProxyCredentials
+
   @type proxy_config :: %{
           host: String.t(),
           port: integer(),
-          auth: {String.t(), String.t()} | nil,
+          auth: ProxyCredentials.t() | nil,
           scheme: String.t()
         }
 
@@ -35,11 +37,39 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
 
   @doc """
   Loads proxy configuration from application environment.
+
+  This is the boundary where the operator's configuration becomes the shape the
+  rest of the module works with. `config/runtime.exs` builds the `auth:` slot
+  from the proxy URL's userinfo as a `{username, password}` tuple, and a tuple
+  is a shape no keyed redaction can reach, so it is converted here into a
+  `ProxyCredentials` struct that refuses to print its password.
+
+  Converting *here* rather than demanding callers build the struct is the whole
+  point: the value arrives from `Application.get_env/2` exactly as the operator
+  configured it, and a proxied deployment that stopped recognising its own
+  config would lose its proxy at boot with nothing in the logs.
   """
   @spec load() :: t() | nil
   def load do
-    Application.get_env(:tymeslot, :http_proxy)
+    case Application.get_env(:tymeslot, :http_proxy) do
+      nil -> nil
+      config -> normalise_credentials(config)
+    end
   end
+
+  # `Map.update/4` rather than the struct-update syntax: the value is a plain
+  # map from config, and a key that is simply absent should stay absent-shaped
+  # (nil) rather than raise.
+  defp normalise_credentials(config) do
+    config
+    |> Map.update(:http_proxy, nil, &normalise_proxy_credentials/1)
+    |> Map.update(:https_proxy, nil, &normalise_proxy_credentials/1)
+  end
+
+  defp normalise_proxy_credentials(nil), do: nil
+
+  defp normalise_proxy_credentials(proxy),
+    do: Map.update(proxy, :auth, nil, &ProxyCredentials.new/1)
 
   @doc """
   Determines the appropriate proxy for a given URL.
@@ -254,18 +284,36 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
     # rather than inherited because a proxy is the one hop where a stall is
     # somebody else's infrastructure and not the destination's.
     connect_opts =
-      case proxy_config.auth do
-        {user, password} when is_binary(user) and user != "" ->
-          # Proxy-Authorization header must be at connect_options level, not in proxy tuple
-          # This is required for Mint.TunnelProxy to properly send auth during CONNECT handshake
-          auth_header = {"Proxy-Authorization", "Basic " <> Base.encode64("#{user}:#{password}")}
-          [proxy: proxy_tuple, proxy_headers: [auth_header], timeout: @proxy_connect_timeout]
-
-        _other ->
-          [proxy: proxy_tuple, timeout: @proxy_connect_timeout]
+      case proxy_auth_header(proxy_config.auth) do
+        # Proxy-Authorization header must be at connect_options level, not in the
+        # proxy tuple. This is required for Mint.TunnelProxy to send auth during
+        # the CONNECT handshake.
+        nil -> [proxy: proxy_tuple, timeout: @proxy_connect_timeout]
+        header -> [proxy: proxy_tuple, proxy_headers: [header], timeout: @proxy_connect_timeout]
       end
 
     [connect_options: connect_opts]
+  end
+
+  # Credentials reach here as a struct because `load/0` converts them at the
+  # boundary. The raw-tuple clause is the anti-drift guard: without it a caller
+  # still passing `config/runtime.exs`'s tuple would fall through to "no
+  # credentials" and every proxied request would quietly start failing with a
+  # 407 instead of saying why.
+  @spec proxy_auth_header(ProxyCredentials.t() | nil) :: {String.t(), String.t()} | nil
+  defp proxy_auth_header(%ProxyCredentials{username: username, password: password})
+       when username != "" do
+    {"Proxy-Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
+  end
+
+  defp proxy_auth_header(%ProxyCredentials{}), do: nil
+  defp proxy_auth_header(nil), do: nil
+
+  defp proxy_auth_header(credentials) when is_tuple(credentials) do
+    raise ArgumentError,
+          "proxy credentials reached build_req_proxy_options/2 as a raw tuple. " <>
+            "Build them with ProxyCredentials.new/1 — a tuple has no key for any " <>
+            "redaction to match, so the password would print in the clear."
   end
 
   # Socket options for the connection mint opens to the proxy itself. These two

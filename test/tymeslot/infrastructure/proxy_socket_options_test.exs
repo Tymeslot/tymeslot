@@ -20,7 +20,7 @@ defmodule Tymeslot.Infrastructure.ProxySocketOptionsTest do
   @moduletag :infrastructure
 
   alias Mint.HTTP, as: MintHTTP
-  alias Tymeslot.Infrastructure.ProxyConfig
+  alias Tymeslot.Infrastructure.{ProxyConfig, ProxyCredentials}
 
   setup do
     # These tests open the first real TLS socket in some runs, and :ssl is
@@ -143,7 +143,7 @@ defmodule Tymeslot.Infrastructure.ProxySocketOptionsTest do
 
       connect_options =
         ProxyConfig.build_req_proxy_options(
-          %{proxy_config(port) | auth: {"dav-user", "s3cret"}},
+          %{proxy_config(port) | auth: ProxyCredentials.new({"dav-user", "s3cret"})},
           "https://calendar.example.com/dav/"
         )
         |> Keyword.fetch!(:connect_options)

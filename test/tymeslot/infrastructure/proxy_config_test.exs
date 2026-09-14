@@ -2,7 +2,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
   use ExUnit.Case, async: false
   @moduletag :infrastructure
 
-  alias Tymeslot.Infrastructure.ProxyConfig
+  alias Tymeslot.Infrastructure.{ProxyConfig, ProxyCredentials}
 
   describe "NO_PROXY pattern matching" do
     test "matches exact hostname" do
@@ -194,7 +194,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       proxy_config = %{
         host: "proxy.example.com",
         port: 3128,
-        auth: {"user", "pass"},
+        auth: ProxyCredentials.new({"user", "pass"}),
         scheme: "http"
       }
 
@@ -241,7 +241,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       proxy_config = %{
         host: "proxy.example.com",
         port: 3128,
-        auth: {"testuser", "testpass"},
+        auth: ProxyCredentials.new({"testuser", "testpass"}),
         scheme: "http"
       }
 
@@ -267,7 +267,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       proxy_config = %{
         host: "secure-proxy.example.com",
         port: 8443,
-        auth: {"user", "pass"},
+        auth: ProxyCredentials.new({"user", "pass"}),
         scheme: "https"
       }
 
@@ -306,7 +306,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       proxy_config = %{
         host: "proxy.example.com",
         port: 3128,
-        auth: {"user@domain", "p@ss:word!"},
+        auth: ProxyCredentials.new({"user@domain", "p@ss:word!"}),
         scheme: "http"
       }
 
@@ -316,6 +316,131 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       # Verify it's properly base64 encoded
       expected = "Basic " <> Base.encode64("user@domain:p@ss:word!")
       assert auth_header == expected
+    end
+  end
+
+  describe "proxy credentials are not printable" do
+    setup do
+      original_proxy = Application.get_env(:tymeslot, :http_proxy)
+
+      on_exit(fn ->
+        if original_proxy do
+          Application.put_env(:tymeslot, :http_proxy, original_proxy)
+        else
+          Application.delete_env(:tymeslot, :http_proxy)
+        end
+      end)
+
+      :ok
+    end
+
+    # Every redaction this codebase has is keyed: `MetadataRedactor` scrubs
+    # sensitive *keys*, `Logging.Redactor` anchors every pattern on a key name
+    # or scheme word, and `@derive {Inspect, except: […]}` masks a named field.
+    # The proxy password used to sit in the second position of a tuple, where
+    # it had no key for any of them to match, so anything that inspected a
+    # proxy config — an exception message, a `dbg/1`, an OTP crash report
+    # printing a task's arguments — printed it in the clear.
+    test "the password never appears in inspect/1 output of a loaded config" do
+      Application.put_env(:tymeslot, :http_proxy, runtime_shaped_config())
+
+      config = ProxyConfig.load()
+
+      refute inspect(config, limit: :infinity) =~ "hunter2"
+      refute inspect(config.https_proxy, limit: :infinity) =~ "hunter2"
+      refute inspect(config.https_proxy.auth, limit: :infinity) =~ "hunter2"
+
+      # The username is diagnostic, not secret, and masking it would cost the
+      # one detail that tells two configured proxies apart.
+      assert inspect(config.https_proxy.auth) =~ "dav-user"
+    end
+
+    # The credential still has to *work*. `config/runtime.exs` builds the
+    # `auth:` slot as a `{username, password}` tuple out of the proxy URL's
+    # userinfo, so `load/0` must keep accepting that shape: a conversion that
+    # stopped recognising it would drop the header and every proxied request
+    # would start failing with a 407, with nothing in the logs to say why.
+    #
+    # This pins the structure; `ProxySocketOptionsTest` proves the same
+    # structure reaches a real proxy socket on the CONNECT request.
+    test "a runtime.exs-shaped config still produces the Proxy-Authorization header" do
+      Application.put_env(:tymeslot, :http_proxy, runtime_shaped_config())
+
+      proxy = ProxyConfig.get_proxy_for_url("https://api.example.com/v1")
+      assert proxy.host == "proxy.example.com"
+      assert proxy.port == 3128
+
+      options = ProxyConfig.build_req_proxy_options(proxy, "https://api.example.com/v1")
+
+      assert options[:connect_options][:proxy_headers] == [
+               {"Proxy-Authorization", "Basic " <> Base.encode64("dav-user:hunter2")}
+             ]
+    end
+
+    test "a proxy URL with no userinfo still yields a working unauthenticated proxy" do
+      Application.put_env(:tymeslot, :http_proxy, %{
+        http_proxy: nil,
+        https_proxy: parse_proxy_url("http://proxy.example.com:3128"),
+        no_proxy: []
+      })
+
+      proxy = ProxyConfig.get_proxy_for_url("https://api.example.com/v1")
+      assert proxy.auth == nil
+
+      options = ProxyConfig.build_req_proxy_options(proxy, "https://api.example.com/v1")
+      refute Keyword.has_key?(options[:connect_options], :proxy_headers)
+    end
+
+    # A raw tuple must not fall through to "no credentials": that failure is
+    # silent where it happens and only surfaces as a 407 much later.
+    #
+    # The tuple is fetched back out of the application environment rather than
+    # written inline because the `@spec` already excludes it, and Elixir's type
+    # checker rejects the literal call before the runtime guard can be reached.
+    # That is the static half of the same protection; this pins the dynamic half.
+    test "build_req_proxy_options/2 refuses a credential that skipped the boundary" do
+      Application.put_env(:tymeslot, :unconverted_test_credentials, {"dav-user", "hunter2"})
+      on_exit(fn -> Application.delete_env(:tymeslot, :unconverted_test_credentials) end)
+
+      unconverted = %{
+        host: "proxy.example.com",
+        port: 3128,
+        auth: Application.get_env(:tymeslot, :unconverted_test_credentials),
+        scheme: "http"
+      }
+
+      assert_raise ArgumentError, ~r/raw tuple/, fn ->
+        ProxyConfig.build_req_proxy_options(unconverted, "https://api.example.com/v1")
+      end
+    end
+
+    defp runtime_shaped_config do
+      %{
+        http_proxy: nil,
+        https_proxy: parse_proxy_url("http://dav-user:hunter2@proxy.example.com:3128"),
+        no_proxy: []
+      }
+    end
+
+    # Mirrors `config/runtime.exs`'s own `parse_proxy_url` helper, so this suite
+    # starts from the shape an operator's HTTP_PROXY actually produces rather
+    # than from a shape written to suit the code under test.
+    defp parse_proxy_url(proxy_url) do
+      uri = URI.parse(proxy_url)
+
+      auth =
+        case uri.userinfo do
+          nil ->
+            nil
+
+          userinfo ->
+            case String.split(userinfo, ":", parts: 2) do
+              [user, pass] -> {URI.decode(user), URI.decode(pass)}
+              [user] -> {URI.decode(user), ""}
+            end
+        end
+
+      %{host: uri.host, port: uri.port || 8080, auth: auth, scheme: uri.scheme || "http"}
     end
   end
 end

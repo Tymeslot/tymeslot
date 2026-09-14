@@ -19,7 +19,9 @@ defmodule Tymeslot.Application do
     ObanCron,
     ObanFailureAlerter,
     ObanLogger,
-    ObanQueues
+    ObanQueues,
+    ProxyConfig,
+    ProxyCredentials
   }
 
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
@@ -302,33 +304,22 @@ defmodule Tymeslot.Application do
     MailerHealthCheck.validate_startup_config(mailer_config)
   end
 
-  # Logs HTTP proxy configuration for visibility
+  # Logs HTTP proxy configuration for visibility.
+  #
+  # Read through `ProxyConfig.load/0` rather than `Application.get_env/2`, so
+  # the credentials this function reaches are the normalised struct that
+  # refuses to print its password, not the raw tuple `config/runtime.exs`
+  # produces. Nothing here prints them today; going through the one boundary is
+  # what keeps that true if this ever grows a fuller dump.
   defp log_proxy_config do
-    case Application.get_env(:tymeslot, :http_proxy) do
+    case ProxyConfig.load() do
       nil ->
         Logger.info("HTTP/HTTPS Proxy: Not configured (using direct connections)")
         :ok
 
       config ->
-        http_info =
-          case config.http_proxy do
-            nil ->
-              "Not configured"
-
-            %{host: host, port: port, auth: auth} ->
-              auth_status = if auth, do: " (authenticated)", else: ""
-              "#{host}:#{port}#{auth_status}"
-          end
-
-        https_info =
-          case config.https_proxy do
-            nil ->
-              "Not configured"
-
-            %{host: host, port: port, auth: auth} ->
-              auth_status = if auth, do: " (authenticated)", else: ""
-              "#{host}:#{port}#{auth_status}"
-          end
+        http_info = format_proxy_endpoint(config.http_proxy)
+        https_info = format_proxy_endpoint(config.https_proxy)
 
         no_proxy_info =
           if config.no_proxy == [] do
@@ -346,6 +337,14 @@ defmodule Tymeslot.Application do
         :ok
     end
   end
+
+  defp format_proxy_endpoint(nil), do: "Not configured"
+
+  defp format_proxy_endpoint(%{host: host, port: port, auth: auth}),
+    do: "#{host}:#{port}#{auth_status(auth)}"
+
+  defp auth_status(%ProxyCredentials{}), do: " (authenticated)"
+  defp auth_status(nil), do: ""
 
   # Validates database connection pool size against database max_connections
   defp validate_db_pool_config! do
