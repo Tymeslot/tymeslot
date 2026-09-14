@@ -89,6 +89,7 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Phoenix.Component
   alias Phoenix.LiveView.Socket
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -97,6 +98,12 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
 
   setup :setup_dashboard_user
+
+  # The calendar opens on today in the profile's timezone, and the events and
+  # payloads below are dated from the UTC clock, so the two have to agree.
+  setup %{profile: profile} do
+    {:ok, profile: Repo.update!(Changeset.change(profile, timezone: "Etc/UTC"))}
+  end
 
   setup do
     try do

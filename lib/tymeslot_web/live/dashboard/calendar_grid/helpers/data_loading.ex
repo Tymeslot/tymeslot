@@ -112,10 +112,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   @spec precompute_derived(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def precompute_derived(socket) do
+    socket = assign_timezone(socket)
     assigns = socket.assigns
-    raw_tz = get_in(assigns, [:profile, Access.key(:timezone)]) || Timezones.fallback()
-    user_id = get_in(assigns, [:current_user, Access.key(:id)])
-    tz = Timezones.validate_or_utc(raw_tz, user_id: user_id)
 
     v_events =
       do_visible_events(
@@ -127,11 +125,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     v_days = visible_days(assigns)
 
     socket
+    |> assign(:visible_events, v_events)
+    |> assign(:visible_days, v_days)
+  end
+
+  @doc """
+  Resolves the profile's timezone (falling back to UTC when it is invalid) into
+  the `user_timezone` assigns.
+
+  Split from `precompute_derived/1` so the initial load can know the user's
+  timezone before it picks the date the grid opens on.
+  """
+  @spec assign_timezone(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_timezone(socket) do
+    assigns = socket.assigns
+    raw_tz = get_in(assigns, [:profile, Access.key(:timezone)]) || Timezones.fallback()
+    user_id = get_in(assigns, [:current_user, Access.key(:id)])
+    tz = Timezones.validate_or_utc(raw_tz, user_id: user_id)
+
+    socket
     |> assign(:user_timezone, tz)
     |> assign(:timezone_display, Timezones.format(tz))
     |> assign(:timezone_country_code, Timezones.country_code(tz))
-    |> assign(:visible_events, v_events)
-    |> assign(:visible_days, v_days)
   end
 
   @spec range_for_view(map()) :: {DateTime.t(), DateTime.t()}

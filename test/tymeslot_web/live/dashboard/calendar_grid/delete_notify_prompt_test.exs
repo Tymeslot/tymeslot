@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
 

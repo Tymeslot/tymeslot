@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
@@ -262,11 +262,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
       today = Date.utc_today()
 
-      # Start at 06:00 UTC = 09:00 AM Europe/Tallinn (the profile-factory default).
-      # The resize payload uses hour=12 in the user's local timezone; Shared.to_utc
-      # converts 12:00 Tallinn (EEST, UTC+3) back to 09:00 UTC. The original end of
-      # 07:00 UTC (= 10:00 AM Tallinn) becomes 09:00 UTC (= 12:00 PM Tallinn), so
-      # "12:00 PM" only appears in the rendered HTML AFTER the resize is applied.
+      # The profile is in UTC, so the resize payload's hour=12 (in the user's local
+      # timezone) moves the original 07:00 end to 12:00. Neither original edge is
+      # at noon, so "12:00 PM" only appears in the rendered HTML AFTER the resize
+      # is applied.
       event =
         insert_event(integration, %{
           summary: "Resizable Event",
