@@ -36,18 +36,74 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
         }
 
   @doc """
+  Builds the proxy configuration from `HTTP_PROXY`, `HTTPS_PROXY` and
+  `NO_PROXY` (uppercase winning over lowercase), or `nil` when neither proxy
+  variable is set.
+
+  `config/runtime.exs` stores the result under `config :tymeslot, :http_proxy`.
+  Credentials in a proxy URL's userinfo come back as a `ProxyCredentials`
+  struct, so the password is masked from the moment it enters the application
+  environment: `Application.get_all_env(:tymeslot)`, observer and a remote
+  console all inspect that struct rather than a raw tuple.
+
+  Raises when a proxy URL has no host, so a malformed variable stops boot
+  rather than silently disabling the proxy.
+  """
+  @spec from_env(%{optional(String.t()) => String.t()}) :: t() | nil
+  def from_env(env) when is_map(env) do
+    http_proxy_url = env["HTTP_PROXY"] || env["http_proxy"]
+    https_proxy_url = env["HTTPS_PROXY"] || env["https_proxy"]
+
+    if http_proxy_url || https_proxy_url do
+      %{
+        http_proxy: parse_proxy_url(http_proxy_url),
+        https_proxy: parse_proxy_url(https_proxy_url),
+        no_proxy: parse_no_proxy(env["NO_PROXY"] || env["no_proxy"] || "")
+      }
+    end
+  end
+
+  defp parse_proxy_url(nil), do: nil
+  defp parse_proxy_url(""), do: nil
+
+  defp parse_proxy_url(proxy_url) do
+    uri = URI.parse(proxy_url)
+
+    %{
+      host:
+        uri.host ||
+          raise("Proxy URL must include a valid host (check HTTP_PROXY/HTTPS_PROXY format)"),
+      port: uri.port || 8080,
+      auth: uri.userinfo |> parse_userinfo() |> ProxyCredentials.new(),
+      scheme: uri.scheme || "http"
+    }
+  end
+
+  defp parse_userinfo(nil), do: nil
+
+  defp parse_userinfo(userinfo) do
+    case String.split(userinfo, ":", parts: 2) do
+      [user, pass] -> {URI.decode(user), URI.decode(pass)}
+      [user] -> {URI.decode(user), ""}
+    end
+  end
+
+  defp parse_no_proxy(raw) do
+    raw
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc """
   Loads proxy configuration from application environment.
 
-  This is the boundary where the operator's configuration becomes the shape the
-  rest of the module works with. `config/runtime.exs` builds the `auth:` slot
-  from the proxy URL's userinfo as a `{username, password}` tuple, and a tuple
-  is a shape no keyed redaction can reach, so it is converted here into a
-  `ProxyCredentials` struct that refuses to print its password.
-
-  Converting *here* rather than demanding callers build the struct is the whole
-  point: the value arrives from `Application.get_env/2` exactly as the operator
-  configured it, and a proxied deployment that stopped recognising its own
-  config would lose its proxy at boot with nothing in the logs.
+  `from_env/1` already stores credentials as a `ProxyCredentials` struct. This
+  still normalises the `auth:` slot, because a `{username, password}` tuple
+  can arrive by another route (a hand-written `config :tymeslot, :http_proxy`,
+  or a test), and a tuple is a shape no keyed redaction can reach.
+  `ProxyCredentials.new/1` passes a struct through unchanged, so normalising
+  twice is harmless.
   """
   @spec load() :: t() | nil
   def load do

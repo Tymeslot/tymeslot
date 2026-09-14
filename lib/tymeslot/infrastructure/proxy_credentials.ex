@@ -22,9 +22,10 @@ defmodule Tymeslot.Infrastructure.ProxyCredentials do
   and `Tymeslot.Integrations.Calendar.Exchange.ClientConfig` are for their
   respective credential-carrying configs.
 
-  Build one through `new/1`; nothing else should construct one. That single
-  funnel is what lets `ProxyConfig.load/0` accept the operator's configuration
-  unchanged while everything above it sees a struct.
+  Build one through `new/1`; nothing else should construct one.
+  `ProxyConfig.from_env/1` does so while `config/runtime.exs` runs, so the
+  application environment never holds the password as a tuple, and
+  `ProxyConfig.load/0` does so again for a tuple that arrived by another route.
   """
 
   @derive {Inspect, except: [:password]}
@@ -38,11 +39,10 @@ defmodule Tymeslot.Infrastructure.ProxyCredentials do
   @doc """
   Normalises proxy credentials into the struct.
 
-  Accepts exactly what `config/runtime.exs` puts in a proxy's `auth:` slot: a
-  `{username, password}` tuple of binaries parsed out of the proxy URL's
-  userinfo, or `nil` when the URL carries none. A password-less proxy URL
-  yields `{username, ""}` there, which is why the empty password is allowed
-  through rather than rejected.
+  Accepts a `{username, password}` tuple of binaries, as parsed out of a proxy
+  URL's userinfo, or `nil` when the URL carries none. A password-less proxy URL
+  yields `{username, ""}`, which is why the empty password is allowed through
+  rather than rejected.
 
   An existing struct passes back unchanged, so normalising twice is safe.
   """
