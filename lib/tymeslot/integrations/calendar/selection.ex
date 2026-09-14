@@ -277,6 +277,27 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     end
   end
 
+  @doc """
+  Keeps only the cached `events` the user can currently see, judged against the
+  integration each came from (see `event_visible?/2`).
+
+  Rows the previous sync wrote for a calendar the user has since deselected stay
+  in the cache until pruning runs, so every surface that lists cached events has
+  to filter them here to honour the selection immediately. An event whose
+  integration is not in `integrations` is kept.
+  """
+  @spec visible_events([map()], [map()]) :: [map()]
+  def visible_events(events, integrations) do
+    integration_by_id = Map.new(integrations, &{&1.id, &1})
+
+    Enum.filter(events, fn event ->
+      case Map.fetch(integration_by_id, event.calendar_integration_id) do
+        :error -> true
+        {:ok, integration} -> event_visible?(event, integration)
+      end
+    end)
+  end
+
   # Resolves the entry in `calendar_list` that `event` came from, or `nil` when
   # no entry matches.
   #

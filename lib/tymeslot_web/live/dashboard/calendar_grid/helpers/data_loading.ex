@@ -87,27 +87,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
         cached
       )
 
-    events = filter_events_by_selection(cached, integrations) ++ booking_events
+    events = Selection.visible_events(cached, integrations) ++ booking_events
 
     socket
     |> assign(:events, events)
     |> precompute_derived()
-  end
-
-  # Cached events outlive selection changes: a user can toggle a calendar
-  # off in integration settings, but rows the previous sync wrote stay in
-  # the cache until pruning runs. Filter them out here so the grid honours
-  # the user's current selection immediately rather than waiting for the
-  # next sync cycle to delete them.
-  defp filter_events_by_selection(events, integrations) do
-    integration_by_id = Map.new(integrations, &{&1.id, &1})
-
-    Enum.filter(events, fn event ->
-      case Map.fetch(integration_by_id, event.calendar_integration_id) do
-        :error -> true
-        {:ok, integration} -> Selection.event_visible?(event, integration)
-      end
-    end)
   end
 
   @spec precompute_derived(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
