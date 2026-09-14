@@ -3,11 +3,13 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :utils
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
   import Tymeslot.ThemeBookingFlowHelpers
 
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Test.LogCapture
@@ -67,6 +69,38 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
           Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
 
         assert meeting.status == "confirmed"
+      end
+
+      # With a week of notice the first bookable day always falls in a later week
+      # than today, so the page has to jump there before anything is clickable.
+      # This is the Sunday-evening case, where the day's last slot has already
+      # passed, reproduced at any hour.
+      @tag :capture_log
+      test "visitor can book with #{meta.name} theme when the first bookable day is a week out",
+           %{conn: conn} do
+        timezone = "America/New_York"
+
+        %{user: user, profile: profile} =
+          seed_booking_account(unquote(theme_id), "notice-#{unquote(meta.name)}", timezone)
+
+        Repo.update_all(
+          from(s in AvailabilityScheduleSchema, where: s.profile_id == ^profile.id),
+          set: [min_advance_hours: 168]
+        )
+
+        {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=#{timezone}")
+        attendee_email = "notice-#{unquote(meta.name)}@example.com"
+
+        complete_booking_flow(view, unquote(meta.name), unquote(theme_id), %{
+          name: "Test Attendee",
+          email: attendee_email,
+          message: "Hello!"
+        })
+
+        meeting =
+          Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
+
+        assert DateTime.diff(meeting.start_time, DateTime.utc_now(), :hour) >= 167
       end
     end
   end
@@ -367,21 +401,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
         {:ok, view, _html} =
           live(conn, ~p"/#{profile.username}/quick-chat?timezone=#{timezone}")
 
-        target_date = next_business_day(Date.utc_today())
-        date_str = Date.to_string(target_date)
-
-        navigate_calendar_to_date(view, unquote(meta.name), target_date)
-
-        wait_until(fn ->
-          has_element?(
-            view,
-            "button[data-testid='calendar-day'][phx-value-date='#{date_str}']:not([disabled])"
-          )
-        end)
-
-        view
-        |> element("button[data-testid='calendar-day'][phx-value-date='#{date_str}']")
-        |> render_click()
+        select_first_available_day(view)
 
         wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
       end
