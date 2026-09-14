@@ -14,6 +14,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Infrastructure.{
     CrashReporter,
     FinchPool,
+    IndexHealth,
     Metrics,
     ObanCron,
     ObanFailureAlerter,
@@ -148,7 +149,7 @@ defmodule Tymeslot.Application do
       base_children ++
         production_children ++
         dev_children ++
-        tz_watcher_children() ++ [TymeslotWeb.Endpoint] ++ mailer_health_check_children()
+        tz_watcher_children() ++ [TymeslotWeb.Endpoint] ++ startup_check_children()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -223,6 +224,15 @@ defmodule Tymeslot.Application do
     validate_db_pool_config!()
   end
 
+  # The startup checks that only work once the rest of the tree is up: the
+  # mailer credential probe needs Tymeslot.Finch, the invalid-index report
+  # needs Tymeslot.Repo. Both are supervised tasks appended after every other
+  # child for that reason, and both are skipped in test.
+  @spec startup_check_children() :: [Supervisor.child_spec()]
+  defp startup_check_children do
+    mailer_health_check_children() ++ index_health_children()
+  end
+
   # Runs the mailer startup health check as a supervised, transient Task
   # appended after Tymeslot.Finch (and every other child) so its credential
   # probe — which requires the Finch pool to be up — actually executes,
@@ -238,6 +248,32 @@ defmodule Tymeslot.Application do
           {Task, &validate_mailer_config!/0},
           id: Tymeslot.Mailer.HealthCheckTask,
           restart: :transient
+        )
+      ]
+    else
+      []
+    end
+  end
+
+  # Reports indexes PostgreSQL has marked invalid, which is how an interrupted
+  # `CREATE INDEX CONCURRENTLY` leaves a migration's index behind: silently
+  # unused by the planner, and never rebuilt because the replayed migration's
+  # `IF NOT EXISTS` sees the name and skips. See `IndexHealth`.
+  #
+  # A supervised task rather than a call in `start/2`, so a slow or unreachable
+  # database delays nothing on the boot path, and `:temporary` rather than
+  # `:transient`, so a crash is never retried: this is a diagnostic, and a
+  # diagnostic must not be able to take the application down with it. Skipped
+  # in test, like every other startup-only check here; the test suite drives
+  # `IndexHealth.check/0` directly.
+  @spec index_health_children() :: [Supervisor.child_spec()]
+  defp index_health_children do
+    if Application.get_env(:tymeslot, :environment) != :test do
+      [
+        Supervisor.child_spec(
+          {Task, &IndexHealth.check/0},
+          id: Tymeslot.Infrastructure.IndexHealthTask,
+          restart: :temporary
         )
       ]
     else
