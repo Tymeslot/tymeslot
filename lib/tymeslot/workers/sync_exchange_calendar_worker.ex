@@ -344,7 +344,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
     CalendarManagement.flag_for_reconnection(
       integration,
-      dgettext(
+      dgettext_noop(
         "dashboard_calendar_providers",
         "The Exchange server rejected the stored credentials. Please reconnect the integration."
       ),
@@ -358,7 +358,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   defp handle_result({:error, :no_mailbox_address}, integration) do
     CalendarManagement.flag_for_reconnection(
       integration,
-      dgettext(
+      dgettext_noop(
         "dashboard_calendar_providers",
         "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
       ),

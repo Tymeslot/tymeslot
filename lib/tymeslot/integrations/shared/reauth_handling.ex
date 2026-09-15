@@ -49,9 +49,12 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   # One row per cause: the operator-facing log line and the message persisted
   # to the integration's `sync_error`, which the account owner reads. Keeping
   # them together stops the two from drifting, and stops a decryption
-  # diagnosis being reused for an OAuth failure it does not describe. Only
-  # `message` is translated — `log` stays English so operator-facing logs read
-  # the same whatever locale the flagging process happens to carry.
+  # diagnosis being reused for an OAuth failure it does not describe.
+  #
+  # `message` is persisted as its English msgid, never translated here: the
+  # flagging process's locale belongs to whoever happened to trigger the flag,
+  # not to the owner who reads it. The dashboard translates it into the
+  # viewer's locale when it renders (`ConnectionRow.reconnect_reason/1`).
   @causes %{
     credentials_undecryptable: %{
       log: "Integration credentials cannot be decrypted — flagging for reauth",
@@ -88,7 +91,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   }
 
   @doc """
-  The error message recorded when flagging an integration for reauth.
+  The error message recorded when flagging an integration for reauth: the
+  untranslated msgid, exactly as persisted to `sync_error`.
 
   Exposed so callers that build their own Oban return shapes can embed it.
   Defaults to the decryption cause, which is the path this module was built
@@ -96,7 +100,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   """
   @spec reauth_error_message(cause()) :: String.t()
   def reauth_error_message(cause \\ @default_cause),
-    do: translate_message(fetch_cause(cause).message)
+    do: fetch_cause(cause).message
 
   @doc """
   Flags an integration for reauthentication.
@@ -134,7 +138,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
       user_id: integration.user_id
     )
 
-    case mark_needs_reauth.(integration, translate_message(cause.message)) do
+    case mark_needs_reauth.(integration, cause.message) do
       {:ok, _integration} ->
         :ok
 
@@ -151,7 +155,4 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   end
 
   defp fetch_cause(cause), do: Map.get(@causes, cause) || @causes[@default_cause]
-
-  defp translate_message(msgid),
-    do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_integrations", msgid)
 end

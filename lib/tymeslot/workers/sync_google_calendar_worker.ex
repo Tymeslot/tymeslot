@@ -313,7 +313,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
     CalendarManagement.flag_for_reconnection(
       integration,
-      dgettext(
+      dgettext_noop(
         "dashboard_calendar_providers",
         "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
       ),

@@ -1113,20 +1113,10 @@ msgstr "Hai effettuato l'accesso con un account diverso da quello collegato a qu
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr "L'accesso a Zoom è stato revocato. Ricollega il tuo account Zoom."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
-msgstr "A Zoom manca il permesso necessario per %{action}. Ricollega il tuo account Zoom."
-
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
 msgstr "Aggiornamento del token Zoom non riuscito dopo un errore 401. Ricollega il tuo account Zoom."
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "cancel meetings"
-msgstr "annullare le riunioni"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1172,10 +1162,15 @@ msgstr "L’URL reindirizza troppe volte"
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "create meetings"
-msgstr "creare le riunioni"
+msgid "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
+msgstr "A Zoom manca il permesso necessario per annullare le riunioni. Ricollega il tuo account Zoom."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "reschedule meetings"
-msgstr "riprogrammare le riunioni"
+msgid "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
+msgstr "A Zoom manca il permesso necessario per creare le riunioni. Ricollega il tuo account Zoom."
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
+msgstr "A Zoom manca il permesso necessario per riprogrammare le riunioni. Ricollega il tuo account Zoom."

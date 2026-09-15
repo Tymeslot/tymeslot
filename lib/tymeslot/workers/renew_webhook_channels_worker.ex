@@ -208,14 +208,14 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   # Separate clauses rather than an interpolated provider name: gettext
   # extracts literals, so an interpolated msgid could never be translated.
   defp booking_calendar_missing_message("google") do
-    dgettext(
+    dgettext_noop(
       "dashboard_calendar_providers",
       "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
     )
   end
 
   defp booking_calendar_missing_message("outlook") do
-    dgettext(
+    dgettext_noop(
       "dashboard_calendar_providers",
       "The booking calendar no longer exists on Outlook. Please reconnect the integration and choose a different calendar."
     )

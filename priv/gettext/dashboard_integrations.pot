@@ -1113,19 +1113,9 @@ msgstr ""
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
-msgstr ""
-
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
-msgstr ""
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "cancel meetings"
 msgstr ""
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
@@ -1172,10 +1162,15 @@ msgstr ""
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "create meetings"
+msgid "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
 msgstr ""
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "reschedule meetings"
+msgid "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
+msgstr ""
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
 msgstr ""

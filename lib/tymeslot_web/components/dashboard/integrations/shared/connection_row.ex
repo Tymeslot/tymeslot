@@ -81,13 +81,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
     """
   end
 
-  # The flagging callers (Oban workers, `ReauthHandling`) translate the reason
-  # once, eagerly, in whatever Gettext locale that process happens to carry
-  # (typically the default, "en"), and persist the result, so the stored
-  # text is, for every known cause, exactly the English msgid. Looking it up
-  # again here, against the viewer's actual locale, recovers the translation;
-  # a reason that isn't a known msgid in either domain (a raw diagnostic
-  # string, custom text) simply comes back unchanged.
+  # The flagging callers (Oban workers, `ReauthHandling`, the video providers)
+  # persist the reason as its untranslated English msgid, marked with
+  # `dgettext_noop/2` in one of these domains. Translating at write time would
+  # bake in the locale of whichever process raised the flag, which is not the
+  # owner's. Looking the msgid up here, in the viewer's locale, is the one place
+  # it is translated; a reason that isn't a known msgid in either domain (a raw
+  # diagnostic string, or a row flagged before reasons were stored this way)
+  # comes back unchanged.
   @reason_domains ~w[dashboard_calendar_providers dashboard_integrations]
 
   @doc """

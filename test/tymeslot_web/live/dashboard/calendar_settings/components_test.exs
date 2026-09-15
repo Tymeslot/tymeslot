@@ -381,10 +381,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert html =~ "No calendar is selected."
     end
 
-    # The stored sync_error is whatever English sentence the flagging Oban
-    # worker's dgettext call produced (workers never set a Gettext locale),
-    # so the row must re-translate it against the viewer's own locale rather
-    # than rendering the persisted English text verbatim.
+    # The stored sync_error is the reason's untranslated English msgid, so the
+    # row must translate it into the viewer's own locale rather than rendering
+    # the persisted English text verbatim.
     test "translates a known reason into the viewer's locale" do
       Gettext.put_locale(TymeslotWeb.Gettext, "de")
       on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)

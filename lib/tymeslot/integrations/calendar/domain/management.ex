@@ -239,7 +239,10 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   should return, for failures only the owner can resolve: a deleted booking
   calendar, or credentials the provider now rejects.
 
-  `message` is the translated explanation shown on the dashboard;
+  `message` is the explanation shown on the dashboard, passed as its
+  untranslated msgid (mark it with `dgettext_noop/2` in the
+  `dashboard_calendar_providers` or `dashboard_integrations` domain) so the
+  dashboard can translate it into the viewer's locale;
   `discard_reason` is the operator-facing reason recorded on the job.
 
   Discarding rather than returning `{:error, _}` is the point. Retrying re-asks

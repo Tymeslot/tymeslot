@@ -129,22 +129,34 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
 
   Both the runtime rejection path and the nightly audit flag integrations with
   this, so the wording a user sees does not depend on which one noticed first.
+
+  Returned as the untranslated msgid, because it is persisted and translated
+  only when the dashboard renders it. That is also why each operation has a
+  whole sentence of its own rather than one sentence with the action
+  interpolated: an interpolated string is not a msgid, so it could never be
+  looked up again in the viewer's locale.
   """
   @spec reauth_message(operation()) :: String.t()
-  def reauth_message(operation) do
-    dgettext(
+  def reauth_message(:write) do
+    dgettext_noop(
       "dashboard_integrations",
-      "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account.",
-      action: action_phrase(operation)
+      "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
     )
   end
 
-  # Phrase naming what the user loses while `operation` is unauthorised.
-  defp action_phrase(:write), do: dgettext("dashboard_integrations", "create meetings")
+  def reauth_message(:update) do
+    dgettext_noop(
+      "dashboard_integrations",
+      "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
+    )
+  end
 
-  defp action_phrase(:update), do: dgettext("dashboard_integrations", "reschedule meetings")
-
-  defp action_phrase(:delete), do: dgettext("dashboard_integrations", "cancel meetings")
+  def reauth_message(:delete) do
+    dgettext_noop(
+      "dashboard_integrations",
+      "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
+    )
+  end
 
   @doc """
   Detects Zoom's `4711` response, which means the token's grant predates a

@@ -288,8 +288,9 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
     * `:label` — provider name used in log lines. **Required.**
     * `:event` — machine-readable event name, e.g. `"zoom_token_revoked"`.
       **Required.**
-    * `:message` — the already-translated message the account owner reads on
-      the dashboard. **Required.**
+    * `:message`: the message the account owner reads on the dashboard, as
+      its untranslated msgid (`dgettext_noop/2` in `dashboard_integrations`),
+      which the dashboard translates into the viewer's locale. **Required.**
   """
   @spec flag_needs_reauth(config(), keyword()) :: :ok
   def flag_needs_reauth(config, opts) do
