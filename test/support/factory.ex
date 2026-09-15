@@ -403,6 +403,16 @@ defmodule Tymeslot.Factory do
     }
   end
 
+  # A settled charge, which is what the refund flow acts on.
+  @spec paid_booking_payment_factory() :: Tymeslot.MeetingPayments.BookingPaymentSchema.t()
+  def paid_booking_payment_factory do
+    struct!(booking_payment_factory(),
+      stripe_charge_id: sequence(:bp_stripe_charge_id, &"ch_#{&1}"),
+      status: "paid",
+      paid_at: DateTime.utc_now(:second)
+    )
+  end
+
   @spec poll_factory() :: Tymeslot.Polls.PollSchema.t()
   def poll_factory do
     %PollSchema{

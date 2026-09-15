@@ -88,24 +88,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
   end
 
   defp paid_payment_for(user, attrs \\ %{}) do
-    defaults = %{
-      host_user_id: user.id,
-      host_email: user.email,
-      stripe_account_id: "acct_REFUND",
-      stripe_charge_id: "ch_REFUND_#{System.unique_integer([:positive])}",
-      amount_cents: 5000,
-      application_fee_cents: 25,
-      currency: "eur",
-      status: "paid",
-      paid_at: DateTime.utc_now(:second),
-      refunded_amount_cents: 0,
-      attendee_email: "alice@example.com",
-      attendee_name: "Alice",
-      meeting_type_name: "Consult",
-      booking_theme_id: "1"
-    }
-
-    insert(:booking_payment, Map.merge(defaults, Map.new(attrs)))
+    defaults = %{host_user_id: user.id, host_email: user.email, stripe_account_id: "acct_REFUND"}
+    insert(:paid_booking_payment, Map.merge(defaults, Map.new(attrs)))
   end
 
   defp open_payments(conn, user) do
