@@ -97,6 +97,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, :not_found, _message} ->
         handle_booking_calendar_missing(integration)
 
+      {:error, :not_a_calendar_user, _message} ->
+        handle_calendar_not_enabled(integration)
+
       {:error, :circuit_open} ->
         Logger.warning("Google Calendar circuit breaker open; snoozing",
           calendar_integration_id: integration.id
@@ -141,6 +144,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
       {:error, :not_found, _message} ->
         handle_booking_calendar_missing(integration)
+
+      {:error, :not_a_calendar_user, _message} ->
+        handle_calendar_not_enabled(integration)
 
       {:error, :circuit_open} ->
         Logger.warning("Google Calendar circuit breaker open during bootstrap; snoozing",
@@ -297,6 +303,26 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
       ),
       "Booking calendar not found — user action required"
+    )
+  end
+
+  # Google answers every call with 403 `notACalendarUser` when the connected
+  # account has no Google Calendar (typically a Workspace account whose admin
+  # has disabled the service). Retrying cannot recover, so treat it like a
+  # missing booking calendar: flag for reconnection and discard.
+  defp handle_calendar_not_enabled(integration) do
+    Logger.warning(
+      "Google account has no Google Calendar; flagging integration for reconnection",
+      calendar_integration_id: integration.id
+    )
+
+    CalendarManagement.flag_for_reconnection(
+      integration,
+      dgettext(
+        "dashboard_calendar_providers",
+        "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
+      ),
+      "Google Calendar not enabled for account: user action required"
     )
   end
 

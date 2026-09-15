@@ -1288,3 +1288,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "No calendars were discovered. Create a calendar on your server first, or check your credentials and try again."
 msgstr ""
+
+#: lib/tymeslot/workers/sync_google_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
+msgstr ""

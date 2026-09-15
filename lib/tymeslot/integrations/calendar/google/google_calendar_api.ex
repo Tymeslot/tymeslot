@@ -470,6 +470,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       |> Enum.map(&String.downcase/1)
 
     cond do
+      "notacalendaruser" in reason_strings -> {:error, :not_a_calendar_user, error_msg}
       rate_limited?(error_msg, reason_strings) -> {:error, :rate_limited, error_msg}
       unauthorized_forbidden?(error_msg, reason_strings) -> {:error, :unauthorized, error_msg}
       true -> {:error, :network_error, error_msg}

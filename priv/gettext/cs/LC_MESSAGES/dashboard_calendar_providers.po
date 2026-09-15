@@ -1289,3 +1289,8 @@ msgstr "Pro tuto integraci není vybrán žádný kalendář, takže nelze nic s
 #, elixir-autogen, elixir-format
 msgid "No calendars were discovered. Create a calendar on your server first, or check your credentials and try again."
 msgstr "Nepodařilo se najít žádné kalendáře. Nejprve na svém serveru vytvořte kalendář, nebo zkontrolujte přihlašovací údaje a zkuste to znovu."
+
+#: lib/tymeslot/workers/sync_google_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
+msgstr "Tento účet Google nemá zapnutý Google Calendar. Zapněte pro účet Google Calendar (možná to bude muset udělat administrátor Google Workspace), nebo připojte jiný účet Google."

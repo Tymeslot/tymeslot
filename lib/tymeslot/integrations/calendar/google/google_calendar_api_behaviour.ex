@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
            :unauthorized
            | :not_found
            | :rate_limited
+           | :not_a_calendar_user
            | :network_error
            | :authentication_error
            | :gone, String.t()}

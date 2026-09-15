@@ -62,6 +62,59 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
     end
   end
 
+  describe "perform/1 - Google account has no Google Calendar (403 notACalendarUser)" do
+    # Retrying this can never succeed. Returning {:error, _} let Oban exhaust
+    # five attempts, raise a permanent-failure admin alert, and the stale
+    # refresh enqueue a fresh job straight away: an alert every two minutes.
+    test "flags for reconnection, emails the owner and discards on bootstrap" do
+      integration = insert(:calendar_integration, provider: "google", google_sync_token: nil)
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
+      assert refreshed.needs_reauth == true
+      assert refreshed.sync_error =~ "doesn't have Google Calendar enabled"
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => integration.user_id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    test "flags for reconnection and discards on incremental sync" do
+      integration =
+        insert(:calendar_integration, provider: "google", google_sync_token: "valid-token")
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
+      assert refreshed.needs_reauth == true
+    end
+  end
+
   describe "perform/1 - sync token expired (HTTP 410)" do
     test "re-bootstraps and persists events + fresh sync token when token is gone" do
       integration =
