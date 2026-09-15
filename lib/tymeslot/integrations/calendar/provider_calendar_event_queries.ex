@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.EventRole
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
@@ -71,19 +72,34 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   Only timed events are returned — all-day events have no meaningful clock time
   to fire a desktop reminder against. Reminder filtering (events that actually
   carry reminders) is done by the caller after normalisation.
+
+  ## Options
+
+  - `:limit`: maximum number of rows to return (default #{@upcoming_reminder_limit}).
+  - `:visibility_rules`: a map of `integration_id => Selection.visibility_rule/0`
+    (see `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`), applied
+    as a `where` clause so a deselected calendar's rows never occupy a limit
+    slot a real match could have used. Omitted or `%{}` returns every row
+    regardless of selection, matching the pre-selection behaviour.
   """
-  @spec list_upcoming_timed([integer()], DateTime.t(), DateTime.t()) :: [
+  @spec list_upcoming_timed([integer()], DateTime.t(), DateTime.t(), keyword()) :: [
           ProviderCalendarEventSchema.t()
         ]
-  def list_upcoming_timed([], _now, _window_end), do: []
+  def list_upcoming_timed(integration_ids, now, window_end, opts \\ [])
 
-  def list_upcoming_timed(integration_ids, now, window_end) do
+  def list_upcoming_timed([], _now, _window_end, _opts), do: []
+
+  def list_upcoming_timed(integration_ids, now, window_end, opts) do
+    limit = Keyword.get(opts, :limit, @upcoming_reminder_limit)
+    rules = Keyword.get(opts, :visibility_rules, %{})
+
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
     |> where([e], e.all_day == false and not is_nil(e.start_at))
     |> where([e], e.start_at >= ^now and e.start_at < ^window_end)
-    |> order_by([e], asc: e.start_at)
-    |> limit(@upcoming_reminder_limit)
+    |> where([e], ^Visibility.dynamic_for(rules))
+    |> order_by([e], asc: e.start_at, asc: e.id)
+    |> limit(^limit)
     |> Repo.all()
   end
 
@@ -105,6 +121,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   - `:hidden_integration_ids` — list of integration ids to exclude (default `[]`).
   - `:limit` — maximum number of rows to return (default #{@default_search_limit}).
+  - `:visibility_rules`: a map of `integration_id => Selection.visibility_rule/0`
+    (see `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`), applied
+    as a `where` clause so a deselected calendar's rows never occupy a limit
+    slot a real match could have used. Omitted or `%{}` returns every row
+    regardless of selection, matching the pre-selection behaviour.
   """
   @spec search(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
   def search(user_id, term, opts \\ []) when is_integer(user_id) do
@@ -115,6 +136,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     else
       hidden_ids = Keyword.get(opts, :hidden_integration_ids, [])
       limit = Keyword.get(opts, :limit, @default_search_limit)
+      rules = Keyword.get(opts, :visibility_rules, %{})
       pattern = "%" <> escape_like(trimmed) <> "%"
 
       ProviderCalendarEventSchema
@@ -126,7 +148,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
         ilike(e.summary, ^pattern) or ilike(e.description, ^pattern) or
           ilike(e.location, ^pattern)
       )
-      |> order_by([e, _i], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
+      |> where([e, _i], ^Visibility.dynamic_for(rules))
+      |> order_by([e, _i],
+        asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
+        asc: e.id
+      )
       |> limit(^limit)
       |> Repo.all()
     end
@@ -456,25 +482,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
       acc + count
     end)
-  end
-
-  @doc """
-  Deletes a single event identified by its integration and provider event ID.
-
-  Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.
-  """
-  @spec delete_by_provider_event_id(integer(), String.t()) :: {:ok, :deleted | :not_found}
-  def delete_by_provider_event_id(calendar_integration_id, provider_event_id) do
-    {count, _rows} =
-      ProviderCalendarEventSchema
-      |> where(
-        [e],
-        e.calendar_integration_id == ^calendar_integration_id and
-          e.provider_event_id == ^provider_event_id
-      )
-      |> Repo.delete_all()
-
-    if count > 0, do: {:ok, :deleted}, else: {:ok, :not_found}
   end
 
   @doc """

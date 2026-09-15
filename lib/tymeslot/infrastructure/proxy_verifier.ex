@@ -48,7 +48,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
   """
 
   require Logger
-  alias Tymeslot.Infrastructure.{HTTPClient, ProxyConfig}
+  alias Tymeslot.Infrastructure.{HTTPClient, ProxyConfig, ProxyCredentials}
 
   @type verification_result :: %{
           proxy_configured: boolean(),
@@ -389,9 +389,14 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
   end
 
   defp format_proxy_endpoint(proxy) do
-    auth_indicator = if proxy.auth, do: "[auth]", else: ""
-    "#{proxy.scheme}://#{auth_indicator}#{proxy.host}:#{proxy.port}"
+    "#{proxy.scheme}://#{auth_indicator(proxy.auth)}#{proxy.host}:#{proxy.port}"
   end
+
+  # Dispatched on shape rather than truthiness so a credential that reached here
+  # as anything other than `ProxyConfig.load/0`'s normalised struct crashes
+  # naming this function, instead of being reported as an unauthenticated proxy.
+  defp auth_indicator(%ProxyCredentials{}), do: "[auth]"
+  defp auth_indicator(nil), do: ""
 
   defp sanitize_config(config) do
     %{
@@ -408,9 +413,12 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
       host: proxy.host,
       port: proxy.port,
       scheme: proxy.scheme,
-      auth: if(proxy.auth, do: "configured", else: nil)
+      auth: auth_summary(proxy.auth)
     }
   end
+
+  defp auth_summary(%ProxyCredentials{}), do: "configured"
+  defp auth_summary(nil), do: nil
 
   defp preview_body(body) when is_binary(body) do
     String.slice(body, 0, 200)

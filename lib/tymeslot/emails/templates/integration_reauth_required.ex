@@ -10,8 +10,9 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
   credentials, or a calendar setup with nothing left to sync into. Saying "may
   need attention" about a certainty would understate it.
 
-  The reason shown is the integration's stored `sync_error`, which is the same
-  sentence the dashboard shows, so the two cannot drift apart. The rest of the
+  The reason shown is the integration's stored `sync_error`: the English
+  source of the sentence the dashboard shows translated, so the two cannot
+  drift apart. The rest of the
   copy stays true for every cause, because the reason is the only part that
   varies.
 

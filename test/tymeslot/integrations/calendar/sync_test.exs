@@ -437,5 +437,99 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       integration = insert(:calendar_integration)
       assert :ok = Sync.reconcile_deletions(integration, [])
     end
+
+    test "a batch deletes every cache row and reconciles every linked meeting" do
+      integration = insert(:calendar_integration)
+
+      refs =
+        for n <- 1..5 do
+          insert(:provider_calendar_event,
+            calendar_integration: integration,
+            uid: "batch-uid-#{n}",
+            provider_event_id: "batch-evt-#{n}"
+          )
+
+          %{provider_event_id: "batch-evt-#{n}", uid: "batch-uid-#{n}"}
+        end
+
+      meetings =
+        for n <- 1..5 do
+          insert(:meeting,
+            calendar_integration_id: integration.id,
+            provider_event_id: "batch-evt-#{n}"
+          )
+        end
+
+      assert :ok = Sync.reconcile_deletions(integration, refs)
+
+      # Assert on the rejects rather than inside a loop, so an empty or
+      # short-circuiting collection cannot pass for success.
+      assert Enum.reject(refs, fn ref ->
+               ProviderCalendarEventQueries.get_by_uid(integration.id, ref.uid) ==
+                 {:error, :not_found}
+             end) == []
+
+      assert Enum.reject(meetings, fn meeting ->
+               {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+               updated.calendar_sync_status == "externally_deleted"
+             end) == []
+    end
+
+    test "uid-only refs still find their meetings, as CalDAV deletions need" do
+      # A CalDAV event carries an href in provider_event_id while the meeting
+      # it mirrors has no provider event ID at all and is reachable only by
+      # uid. A batched lookup that matched on provider_event_id alone would
+      # silently stop reconciling every CalDAV deletion.
+      integration = insert(:calendar_integration)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: nil,
+          uid: "caldav-uid-1"
+        )
+
+      assert :ok =
+               Sync.reconcile_deletions(integration, [
+                 %{provider_event_id: nil, uid: "caldav-uid-1"}
+               ])
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_deleted"
+    end
+
+    test "a repeated ref and two refs naming one meeting both reconcile cleanly" do
+      # Batching lets one meeting be named twice (by its uid and by its
+      # provider event id arriving as separate deletions) and lets the same
+      # ref appear twice. Neither may raise or leave the meeting half-handled.
+      integration = insert(:calendar_integration)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "dup-uid-1",
+        provider_event_id: "dup-evt-1"
+      )
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "dup-evt-1",
+          uid: "dup-uid-1"
+        )
+
+      assert :ok =
+               Sync.reconcile_deletions(integration, [
+                 %{provider_event_id: "dup-evt-1", uid: nil},
+                 %{provider_event_id: nil, uid: "dup-uid-1"},
+                 %{provider_event_id: "dup-evt-1", uid: nil}
+               ])
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "dup-uid-1")
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_deleted"
+      assert updated.status == "cancelled"
+    end
   end
 end

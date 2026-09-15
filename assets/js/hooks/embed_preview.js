@@ -1,3 +1,7 @@
+// Every string this hook shows comes from a `data-*` attribute on the
+// container, translated server-side by `EmbedSettings.LivePreview`: the snippet
+// labels (`popupLabel`, `linkLabel`) in the embed's chosen language, the rest in
+// the dashboard's. Nothing user-facing is written here.
 export const EmbedPreview = {
   mounted() {
     this._cachedDataset = {};
@@ -87,11 +91,10 @@ export const EmbedPreview = {
         <div class="h-4 bg-slate-300 rounded w-1/2 mx-auto"></div>
         <div class="mt-8 py-3 bg-slate-300 rounded-xl w-3/4 mx-auto"></div>
       </div>
-      <p class="text-slate-500 text-sm font-medium italic">
-        The preview is disabled because your booking link is currently deactivated.
-      </p>
+      <p class="text-slate-500 text-sm font-medium italic"></p>
     `;
-    
+    wrapper.querySelector('p').textContent = this.el.dataset.deactivatedMessage || '';
+
     this.el.appendChild(wrapper);
   },
 
@@ -105,7 +108,7 @@ export const EmbedPreview = {
     wrapper.className = 'text-center p-8 w-full';
 
     const button = document.createElement('button');
-    button.textContent = 'Book a Meeting';
+    button.textContent = this.el.dataset.popupLabel || '';
     
     const primaryColor = '#14b8a6';
     // Determine text color based on background brightness
@@ -133,7 +136,7 @@ export const EmbedPreview = {
     };
 
     const hint = document.createElement('p');
-    hint.textContent = 'Click to test the booking modal';
+    hint.textContent = this.el.dataset.popupHint || '';
     hint.className = 'text-xs text-slate-400 mt-4';
 
     wrapper.appendChild(button);
@@ -155,7 +158,7 @@ export const EmbedPreview = {
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;
         } else if (retries > 10) {
-          alert('Booking widget is still loading. Please try again in a second.');
+          alert(this.el.dataset.loadingMessage || '');
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;
         }
@@ -168,25 +171,39 @@ export const EmbedPreview = {
     const wrapper = document.createElement('div');
     wrapper.className = 'text-center p-8 w-full';
 
-    const link = document.createElement('a');
-    const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
-    if (options.layout && options.layout !== 'default') {
-      linkUrl.searchParams.set('layout', options.layout);
-    }
-    if (options.locale) {
-      linkUrl.searchParams.set('locale', options.locale);
-    }
-    link.href = linkUrl.toString();
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'Schedule a meeting with me →';
-    link.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors';
-    
+    // A real <a href> here is a real, copyable URL: right-click "Copy link
+    // address" (or copying it back out of the new tab's address bar) hands a
+    // visitor a token-bearing preview link that silently simulates their
+    // booking for up to an hour, then fails closed; see the module-level
+    // note above renderLinkPreview's caller in initEmbed. Building the token
+    // URL only inside the click handler, on a <button> with no href, means
+    // there is nothing to copy short of reading the JS. The token-free URL an
+    // organiser is meant to hand out is built separately, by
+    // `Helpers.embed_code("link", …)`.
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = this.el.dataset.linkLabel || '';
+    button.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors cursor-pointer bg-transparent border-0 p-0';
+    button.onclick = () => {
+      const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+      linkUrl.searchParams.set('preview', 'true');
+      if (options.previewToken) {
+        linkUrl.searchParams.set('preview_token', options.previewToken);
+      }
+      if (options.layout && options.layout !== 'default') {
+        linkUrl.searchParams.set('layout', options.layout);
+      }
+      if (options.locale) {
+        linkUrl.searchParams.set('locale', options.locale);
+      }
+      window.open(linkUrl.toString(), '_blank', 'noopener,noreferrer');
+    };
+
     const hint = document.createElement('p');
-    hint.textContent = 'This direct link is only active when your account is ready';
+    hint.textContent = this.el.dataset.linkHint || '';
     hint.className = 'text-xs text-slate-400 mt-4';
-    
-    wrapper.appendChild(link);
+
+    wrapper.appendChild(button);
     wrapper.appendChild(hint);
     this.el.appendChild(wrapper);
   },
@@ -261,7 +278,7 @@ export const EmbedPreview = {
     }
 
     iframe.src = url.toString();
-    iframe.setAttribute('title', 'Booking Preview');
+    iframe.setAttribute('title', this.el.dataset.iframeTitle || '');
     iframe.style.width = '100%';
     iframe.style.height = (options.initialHeight ? options.initialHeight + 'px' : '100%');
     iframe.style.minHeight = '400px';

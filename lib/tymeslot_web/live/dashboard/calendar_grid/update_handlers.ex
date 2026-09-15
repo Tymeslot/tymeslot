@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   import Phoenix.LiveView, only: [connected?: 1]
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar
   alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -275,11 +274,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       timezone = socket.assigns[:user_timezone] || "Etc/UTC"
       time_format = Helpers.time_format(socket.assigns)
 
+      integrations = Map.get(socket.assigns, :integrations, [])
+
       feed =
         socket
         |> visible_integration_ids()
-        |> CalendarGrid.list_upcoming_events_with_reminders(now)
-        |> Calendar.visible_events(Map.get(socket.assigns, :integrations, []))
+        |> CalendarGrid.list_upcoming_events_with_reminders(now, integrations)
         |> DesktopReminderFeed.build(now, timezone, time_format)
 
       assign(socket, :desktop_reminders_feed, feed)

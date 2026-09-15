@@ -51,6 +51,44 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
       assert_enqueued(worker: TokenRefreshJob, args: %{"integration_id" => g_integration.id})
       assert_enqueued(worker: TokenRefreshJob, args: %{"integration_id" => o_integration.id})
     end
+
+    test "schedules a refresh for an integration flagged for reconnection so its refresh token doesn't lapse" do
+      # An integration flagged via flag_for_reconnection/3 for a reason that
+      # has nothing to do with its OAuth grant (no calendar selected, a
+      # deleted booking calendar) must still have its token refreshed.
+      # Microsoft in particular lapses a refresh token after ~90 days of
+      # inactivity, so excluding a flagged integration here would leave a
+      # dead grant behind by the time the owner gets around to reconnecting.
+      # `Tokens.persist_and_return/4` and `handle_refresh_error/3` are what
+      # keep `sync_error` intact across the refresh, not this query.
+      now = DateTime.utc_now(:second)
+      rt_encrypted = Encryption.encrypt("rt")
+
+      g_flagged =
+        insert(:calendar_integration,
+          provider: "google",
+          token_expires_at: DateTime.add(now, 1, :hour),
+          refresh_token_encrypted: rt_encrypted,
+          is_active: true,
+          needs_reauth: true,
+          sync_error: "The booking calendar no longer exists on Google."
+        )
+
+      o_flagged =
+        insert(:calendar_integration,
+          provider: "outlook",
+          token_expires_at: DateTime.add(now, 30, :minute),
+          refresh_token_encrypted: rt_encrypted,
+          is_active: true,
+          needs_reauth: true,
+          sync_error: "The booking calendar no longer exists on Outlook."
+        )
+
+      assert :ok = TokenRefreshJob.perform(%Oban.Job{args: %{}})
+
+      assert_enqueued(worker: TokenRefreshJob, args: %{"integration_id" => g_flagged.id})
+      assert_enqueued(worker: TokenRefreshJob, args: %{"integration_id" => o_flagged.id})
+    end
   end
 
   describe "perform/1 - individual refresh" do
@@ -73,18 +111,19 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
       assert :ok = TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
     end
 
-    test "leaves an outstanding needs_reauth flag intact" do
+    test "leaves an outstanding needs_reauth flag and its sync_error intact on a successful refresh" do
       # The observed production loop: a sync worker flags an integration whose
       # booking calendar was deleted, the hourly token refresh writes fresh
-      # tokens and clears the flag as a side effect, and the sweep picks the
-      # integration up again — 404ing every hour, forever.
+      # tokens and clears the flag (and the reason) as a side effect, and the
+      # sweep picks the integration up again, 404ing every hour, forever.
       integration =
         insert(:calendar_integration,
           provider: "google",
           token_expires_at:
             DateTime.truncate(DateTime.add(DateTime.utc_now(), -1, :hour), :second),
           refresh_token: "rt-123",
-          needs_reauth: true
+          needs_reauth: true,
+          sync_error: "The booking calendar no longer exists on Google."
         )
 
       expect(GoogleCalendarAPIMock, :refresh_token, fn _refresh_token ->
@@ -97,6 +136,35 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
 
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth
+
+      assert reloaded.sync_error ==
+               "The booking calendar no longer exists on Google."
+    end
+
+    test "does not overwrite a flagged integration's stored reason with a refresh failure diagnostic" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          is_active: true,
+          token_expires_at:
+            DateTime.truncate(DateTime.add(DateTime.utc_now(), -1, :hour), :second),
+          refresh_token: "rt-123",
+          needs_reauth: true,
+          sync_error: "The booking calendar no longer exists on Google."
+        )
+
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _refresh_token ->
+        {:error, :retryable, "timeout"}
+      end)
+
+      assert {:error, _reason} =
+               TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth
+
+      assert reloaded.sync_error ==
+               "The booking calendar no longer exists on Google."
     end
 
     test "handles permanent errors by deactivating integration" do

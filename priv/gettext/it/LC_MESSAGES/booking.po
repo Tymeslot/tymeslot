@@ -1839,3 +1839,8 @@ msgstr "Cerca fusi orari"
 #, elixir-autogen, elixir-format
 msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
 msgstr "Questa richiesta è cambiata da quando la pagina è stata aperta, quindi non può più essere gestita qui. Apri l'email di richiesta più recente per rispondere."
+
+#: lib/tymeslot_web/themes/shared/components/preview_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
+msgstr "Modalità anteprima: le prenotazioni effettuate qui sono simulate. Non viene salvato né inviato nulla."

@@ -9,6 +9,7 @@ defmodule Tymeslot.CalendarGrid do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
@@ -94,18 +95,35 @@ defmodule Tymeslot.CalendarGrid do
   @doc """
   Returns the user's upcoming timed events that carry at least one reminder,
   within `[now, now + #{@reminder_feed_window_days}d)`, scoped to the given
-  (already visibility-filtered) integration IDs.
+  integration IDs.
+
+  `integrations` (the full structs, not just their ids) is used to drop rows
+  from a calendar the user has since deselected. Selection is pushed into the
+  query itself (see `Tymeslot.Integrations.Calendar.visibility_rules/1` and
+  `ProviderCalendarEventQueries.list_upcoming_timed/4`) rather than filtered
+  afterwards, so a busy deselected calendar can't crowd real matches out of
+  the feed: the `LIMIT` only ever counts rows the caller can actually see.
 
   Reminders are normalised to the canonical `%{method:, minutes_before:}` shape,
   so callers can read `minutes_before` regardless of how the row was stored.
+
+  ## Options
+
+  - `:limit`: maximum number of rows to return (default: see
+    `ProviderCalendarEventQueries.list_upcoming_timed/4`).
   """
-  @spec list_upcoming_events_with_reminders([integer()], DateTime.t()) ::
+  @spec list_upcoming_events_with_reminders([integer()], DateTime.t(), [map()], keyword()) ::
           [ProviderCalendarEventSchema.t()]
-  def list_upcoming_events_with_reminders(integration_ids, now) do
+  def list_upcoming_events_with_reminders(integration_ids, now, integrations, opts \\ []) do
     window_end = DateTime.add(now, @reminder_feed_window_days, :day)
+    rules = Calendar.visibility_rules(integrations)
 
     integration_ids
-    |> ProviderCalendarEventQueries.list_upcoming_timed(now, window_end)
+    |> ProviderCalendarEventQueries.list_upcoming_timed(
+      now,
+      window_end,
+      Keyword.put(opts, :visibility_rules, rules)
+    )
     |> Enum.map(&normalise_event_reminders/1)
     |> Enum.reject(&(&1.reminders == []))
   end
@@ -123,12 +141,28 @@ defmodule Tymeslot.CalendarGrid do
 
   Matches case-insensitively against event title, description, and location,
   scoped to the user's active integrations. Pass `:hidden_integration_ids` in
-  `opts` to exclude calendars the user has toggled off; results are ordered by
-  start time and capped at a sensible limit. A blank term returns `[]`.
+  `opts` to exclude calendars the user has toggled off entirely; results are
+  ordered by start time and capped at a sensible limit. A blank term returns
+  `[]`.
+
+  `integrations` (the full structs, not just their ids) is used to drop rows
+  from a calendar the user has *selectively* deselected, a finer grain than
+  `:hidden_integration_ids`. Selection is pushed into the query itself (see
+  `Tymeslot.Integrations.Calendar.visibility_rules/1` and
+  `ProviderCalendarEventQueries.search/3`) rather than filtered afterwards, so
+  a busy deselected calendar can't crowd real matches out of the results: the
+  `LIMIT` only ever counts rows the caller can actually see.
   """
-  @spec search_events(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
-  def search_events(user_id, term, opts) do
-    ProviderCalendarEventQueries.search(user_id, term, opts)
+  @spec search_events(integer(), String.t(), [map()], keyword()) ::
+          [ProviderCalendarEventSchema.t()]
+  def search_events(user_id, term, integrations, opts \\ []) do
+    rules = Calendar.visibility_rules(integrations)
+
+    ProviderCalendarEventQueries.search(
+      user_id,
+      term,
+      Keyword.put(opts, :visibility_rules, rules)
+    )
   end
 
   @doc """

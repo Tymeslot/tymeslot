@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   import TymeslotWeb.Themes.Shared.Customization.Helpers
   import TymeslotWeb.Themes.Shared.VideoSources, only: [video_sources: 1]
   import TymeslotWeb.Components.LanguageSwitcher
+  import TymeslotWeb.Themes.Shared.Components.PreviewNotice, only: [banner: 1]
 
   attr :theme_customization, :map, default: nil
   attr :custom_css, :string, default: nil
@@ -21,6 +22,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   attr :organizer_user_id, :integer, default: nil
   attr :should_show_branding, :boolean, default: false
   attr :show_language_switcher, :boolean, default: nil
+  attr :owner_preview, :boolean, default: false
   slot :inner_block, required: true
 
   @doc """
@@ -80,6 +82,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
         }
       >
         <div class="content-area">
+          <.banner owner_preview={@owner_preview} />
           <%= if assigns[:locale] && assigns[:language_dropdown_open] != nil do %>
             <div class={[
               "fixed top-6 right-6 z-50 language-switcher-wrapper",

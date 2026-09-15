@@ -40,11 +40,13 @@ function mountHook(embedType, overrides = {}) {
 
 describe('EmbedPreview', () => {
   let open;
+  let windowOpen;
 
   beforeEach(() => {
     document.body.innerHTML = '';
     open = vi.fn();
     window.TymeslotBooking = { open };
+    windowOpen = vi.spyOn(window, 'open').mockImplementation(() => {});
   });
 
   test('Inline builds an iframe carrying both halves of the preview contract', () => {
@@ -71,6 +73,61 @@ describe('EmbedPreview', () => {
 
     expect(open).toHaveBeenCalledTimes(1);
     expect(open.mock.calls[0][1].previewToken).toBe(TOKEN);
+  });
+
+  test('Link renders no href a visitor could copy the preview token from', () => {
+    // A real <a href> is trivially copyable ("Copy link address", or the new
+    // tab's own address bar) and would hand a real visitor a token-bearing
+    // URL that silently simulates their booking for up to an hour. There must
+    // be no anchor at all, and the element that stands in for it must expose
+    // no href/src attribute carrying the token.
+    const hook = mountHook('link');
+
+    expect(hook.el.querySelector('a')).toBeNull();
+    const html = hook.el.innerHTML;
+    expect(html).not.toContain('preview_token');
+    expect(html).not.toContain(TOKEN);
+  });
+
+  test('Link opens both halves of the preview contract, but only from a click', () => {
+    const hook = mountHook('link');
+    const button = hook.el.querySelector('button');
+
+    expect(windowOpen).not.toHaveBeenCalled();
+
+    button.click();
+
+    expect(windowOpen).toHaveBeenCalledTimes(1);
+    const url = new URL(windowOpen.mock.calls[0][0]);
+    expect(url.searchParams.get('preview')).toBe('true');
+    expect(url.searchParams.get('preview_token')).toBe(TOKEN);
+  });
+
+  test('shows only the text the server translated, never wording of its own', () => {
+    // The wording itself (the Link hint calling the preview short-lived, not
+    // the link to share) is asserted where it is translated, in the
+    // LivePreview component test. Here the point is that each mode reads it.
+    const labels = {
+      popupLabel: 'Meeting buchen',
+      popupHint: 'Popup-Hinweis',
+      linkLabel: 'Meeting planen',
+      linkHint: 'Link-Hinweis',
+      iframeTitle: 'Buchungsvorschau',
+      deactivatedMessage: 'Vorschau deaktiviert'
+    };
+
+    const popup = mountHook('popup', labels).el;
+    expect(popup.querySelector('button').textContent).toBe('Meeting buchen');
+    expect(popup.querySelector('p').textContent).toBe('Popup-Hinweis');
+
+    const link = mountHook('link', labels).el;
+    expect(link.querySelector('button').textContent).toBe('Meeting planen');
+    expect(link.querySelector('p').textContent).toBe('Link-Hinweis');
+
+    expect(mountHook('inline', labels).el.querySelector('iframe').title).toBe('Buchungsvorschau');
+
+    const deactivated = mountHook('popup', { ...labels, isReady: 'false' }).el;
+    expect(deactivated.querySelector('p').textContent).toBe('Vorschau deaktiviert');
   });
 
   test('the modal opens at the height cap, because a preview never self-reports', () => {

@@ -81,6 +81,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
     """
   end
 
+  # The flagging callers (Oban workers, `ReauthHandling`, the video providers)
+  # persist the reason as its untranslated English msgid, marked with
+  # `dgettext_noop/2` in one of these domains. Translating at write time would
+  # bake in the locale of whichever process raised the flag, which is not the
+  # owner's. Looking the msgid up here, in the viewer's locale, is the one place
+  # it is translated; a reason that isn't a known msgid in either domain (a raw
+  # diagnostic string, or a row flagged before reasons were stored this way)
+  # comes back unchanged.
+  @reason_domains ~w[dashboard_calendar_providers dashboard_integrations]
+
   @doc """
   The reason an integration awaiting reconnection was flagged, for the row's
   `notice`, or `nil` when it is not flagged or no reason was recorded.
@@ -92,11 +102,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   def reconnect_reason(%{needs_reauth: true, sync_error: reason}) when is_binary(reason) do
     case String.trim(reason) do
       "" -> nil
-      trimmed -> trimmed
+      trimmed -> translate_reason(trimmed)
     end
   end
 
   def reconnect_reason(_integration), do: nil
+
+  defp translate_reason(reason) do
+    Enum.find_value(@reason_domains, reason, fn domain ->
+      case Gettext.dgettext(TymeslotWeb.Gettext, domain, reason) do
+        ^reason -> nil
+        translated -> translated
+      end
+    end)
+  end
 
   # `provider_icon/1` takes the provider category as a string ("calendar" |
   # "video" | "oauth" | nil); the row exposes it as the friendlier atom.

@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
       language_dropdown_open={assigns[:language_dropdown_open]}
       current_state={assigns[:current_state]}
       organizer_user_id={@organizer_user_id}
+      owner_preview={assigns[:owner_preview]}
       should_show_branding={assigns[:should_show_branding]}
     >
       <%= if assigns[:scheduling_error_message] do %>

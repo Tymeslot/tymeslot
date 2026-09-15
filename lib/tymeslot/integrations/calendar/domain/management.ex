@@ -239,7 +239,10 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   should return, for failures only the owner can resolve: a deleted booking
   calendar, or credentials the provider now rejects.
 
-  `message` is the translated explanation shown on the dashboard;
+  `message` is the explanation shown on the dashboard, passed as its
+  untranslated msgid (mark it with `dgettext_noop/2` in the
+  `dashboard_calendar_providers` or `dashboard_integrations` domain) so the
+  dashboard can translate it into the viewer's locale;
   `discard_reason` is the operator-facing reason recorded on the job.
 
   Discarding rather than returning `{:error, _}` is the point. Retrying re-asks
@@ -282,12 +285,17 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     end
   end
 
-  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific opts.
+  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific
+  # opts. `mark_needs_reauth` is wired to `flag_and_notify/2` rather than the
+  # bare DB write, so that every path ending in "the owner has to reconnect",
+  # this one included and not just `flag_for_reconnection/3`, sends the reauth
+  # email on the false to true transition. See the deferred ticket this closed
+  # for why the two calendar entry points used to disagree on that.
   defp flag_for_reauth(integration, opts \\ []) do
     ReauthHandling.flag(
       integration,
       Keyword.merge(
-        [mark_needs_reauth: &mark_needs_reauth/2, log_prefix: "Calendar"],
+        [mark_needs_reauth: &flag_and_notify/2, log_prefix: "Calendar"],
         opts
       )
     )

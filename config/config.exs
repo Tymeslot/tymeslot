@@ -452,6 +452,36 @@ config :tymeslot, :payments,
     payload_days: 30
   ]
 
+# HSTS directives sent by TymeslotWeb.Plugs.SecurityHeadersPlug, read via
+# Application.compile_env. `max_age` covers the sending host and is always sent.
+# The other two reach past it (`include_subdomains` forces every sibling
+# subdomain of the operator's domain to HTTPS for the whole max-age, and
+# `preload` declares that domain eligible for the browser preload list), so
+# both default off rather than imposing them on a self-hoster's other services.
+# A deployment that owns its whole domain opts in. `preload` is only meaningful
+# alongside `include_subdomains`; the preload list requires it.
+config :tymeslot, :hsts,
+  max_age: 31_536_000,
+  include_subdomains: false,
+  preload: false
+
+# Whether a forwarded address in a loopback or RFC-1918/4193 range names the
+# visitor rather than a proxy hop. Off, because for an internet-facing
+# deployment such an address is always a proxy talking about itself, and
+# accepting one collapses every IP-keyed rate limit into a single bucket shared
+# by the whole deployment. An intranet-only self-host, whose visitors really are
+# on the LAN, sets TRUST_PRIVATE_CLIENT_IPS=true, which config/runtime.exs turns
+# into this key. TymeslotWeb.Helpers.ClientIP reads it for the LiveView socket
+# path and hands the endpoint's RemoteIp plug its `clients:` list from it for the
+# conn path, so the two cannot be configured apart.
+#
+# Only fixes a single proxy tier: it works when the reverse proxy directly in
+# front of the app is the only hop between it and the visitor. With a further
+# private proxy tier upstream of that one, the flag cannot tell the outer hop
+# apart from a visitor, and everyone behind it still collapses onto the outer
+# proxy's address.
+config :tymeslot, :trust_private_client_ips, false
+
 # Slack notifications — credentials supplied via env at runtime
 config :tymeslot,
   slack_notifications_allowed: false,

@@ -54,6 +54,20 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   end
 
   @doc """
+  The text a visitor sees on the popup button or the link snippet, in the
+  embed's chosen language (see `localized_label/2`).
+
+  Shared by `embed_code/2` and the live preview, so the preview shows the words
+  the copied snippet will, in the same language.
+  """
+  @spec snippet_label(String.t(), map()) :: String.t()
+  def snippet_label("popup", options),
+    do: localized_label(options, fn -> dgettext("dashboard_embed", "Book a Meeting") end)
+
+  def snippet_label("link", options),
+    do: localized_label(options, fn -> dgettext("dashboard_embed", "Schedule a meeting") end)
+
+  @doc """
   Generates the embed code snippet for a given type.
   """
   @spec embed_code(String.t(), map()) :: String.t()
@@ -84,8 +98,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     base_url = escape(base_url)
     js_options = build_js_options(options)
 
-    label =
-      escape(localized_label(options, fn -> dgettext("dashboard_embed", "Book a Meeting") end))
+    label = escape(snippet_label("popup", options))
 
     unavailable =
       js_escape(
@@ -106,10 +119,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     booking_url = escape(booking_url)
     query = link_query(options)
 
-    label =
-      escape(
-        localized_label(options, fn -> dgettext("dashboard_embed", "Schedule a meeting") end)
-      )
+    label = escape(snippet_label("link", options))
 
     String.trim("""
     <a href="#{booking_url}#{query}">#{label}</a>

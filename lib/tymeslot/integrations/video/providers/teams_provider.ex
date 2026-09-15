@@ -403,7 +403,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       label: "Teams",
       event: "teams_token_revoked",
       message:
-        dgettext(
+        dgettext_noop(
           "dashboard_integrations",
           "Microsoft Teams access was revoked. Please reconnect your Teams account."
         )

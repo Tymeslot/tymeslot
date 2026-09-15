@@ -1837,3 +1837,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/preview_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
+msgstr ""

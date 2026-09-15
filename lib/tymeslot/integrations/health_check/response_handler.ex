@@ -16,10 +16,14 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   - The in-app badge shows immediately on `:unhealthy` status, regardless
     of the 48-hour email threshold.
   - Permanent auth failures (e.g. Google `invalid_grant`) bypass the 48-hour
-    threshold via `handle_permanent_auth_failure/4`: the integration is flagged
-    `needs_reauth: true` and the notification is enqueued on the same check.
-    Oban's 30-day uniqueness window prevents duplicates while the user
-    has not reconnected.
+    threshold via `handle_permanent_auth_failure/4`: the integration is
+    flagged `needs_reauth: true`, which itself owns the notification (the
+    reauth email, not the unhealthy one; see `CalendarManagement.flag_and_notify/2`
+    and `Video.flag_and_notify/2`) on the false to true transition. This
+    fast-path only stamps `notification_sent_at` so the 48-hour threshold
+    does not also fire an unhealthy email for the same failure; it sends
+    nothing itself. Oban's 30-day uniqueness window prevents duplicate reauth
+    emails while the user has not reconnected.
 
   ## Atomicity Notes
 
@@ -27,7 +31,9 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   atomically with the rest of the health state via `Monitor.put_state/3`.
 
   `notification_sent_at` is stamped by the email worker handler after
-  confirmed delivery, not on job enqueue.
+  confirmed delivery for the 48-hour threshold path, and directly by
+  `maybe_notify_on_reauth/2` for the permanent-auth fast-path, which sends
+  no email of its own to stamp for.
   """
 
   require Logger
@@ -215,11 +221,13 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     end
   end
 
-  # Sends a notification for a permanent auth failure if the cooldown window
-  # allows it. Fetches the current health state row for `notification_sent_at`
-  # so we don't duplicate an email that `maybe_notify_user` already enqueued
-  # for the same 30-day window (e.g. the 48-hour threshold fired on the same
-  # check before this fast-path ran).
+  # A permanent auth failure is already announced by the reauth email that
+  # `flag_for_reauth/3` triggers on the false to true transition (see
+  # `CalendarManagement.flag_and_notify/2` / `Video.flag_and_notify/2`), so
+  # this fast-path sends nothing itself. It still stamps `notification_sent_at`
+  # when the cooldown window allows it, purely as bookkeeping: without that
+  # stamp the 48-hour unhealthy threshold would fire its own email on top of
+  # the reauth one for the same underlying failure.
   defp maybe_notify_on_reauth(type, integration) do
     now = DateTime.utc_now()
 
@@ -230,7 +238,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
       end
 
     if outside_cooldown?(notification_sent_at, now) do
-      send_user_notification(type, integration)
+      IntegrationHealthStateQueries.update_fields(type, integration.id, notification_sent_at: now)
     end
   end
 

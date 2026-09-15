@@ -534,7 +534,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       label: "Google Meet",
       event: "google_meet_token_revoked",
       message:
-        dgettext(
+        dgettext_noop(
           "dashboard_integrations",
           "Google Meet access was revoked. Please reconnect your Google account."
         )

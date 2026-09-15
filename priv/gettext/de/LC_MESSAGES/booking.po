@@ -1839,3 +1839,8 @@ msgstr "Zeitzonen suchen"
 #, elixir-autogen, elixir-format
 msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
 msgstr "Diese Anfrage hat sich geändert, seit diese Seite geöffnet wurde, und kann hier nicht mehr beantwortet werden. Öffnen Sie die neueste Anfrage-E-Mail, um sie zu beantworten."
+
+#: lib/tymeslot_web/themes/shared/components/preview_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
+msgstr "Vorschaumodus: Buchungen hier sind simuliert. Es wird nichts gespeichert oder versendet."

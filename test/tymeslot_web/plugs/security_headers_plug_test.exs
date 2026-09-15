@@ -20,9 +20,13 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
       assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
 
-      assert get_resp_header(conn, "strict-transport-security") == [
-               "max-age=31536000; includeSubDomains; preload"
-             ]
+      # Core's shipped default: `max-age` binds this host, and neither
+      # directive that reaches an operator's other subdomains is sent unless
+      # they opt in. Pinned as a literal rather than rebuilt from :hsts config,
+      # so a change to that default fails here instead of moving with it.
+      # Every directive combination is covered in
+      # TymeslotWeb.Plugs.SecurityHeaders.HstsTest.
+      assert get_resp_header(conn, "strict-transport-security") == ["max-age=31536000"]
 
       # Legacy headers must no longer be sent (deprecated / obsolete).
       assert get_resp_header(conn, "x-xss-protection") == []

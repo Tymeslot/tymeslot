@@ -17,6 +17,8 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
   # One commit per rendering decision the configs make.
   @commits [
     "fix(core): keep the reconnect prompt until the owner reconnects",
+    {"fix(core)!: read config files strictly",
+     "BREAKING CHANGE: values are no longer interpolated.\nWrite the final value out."},
     "fix(security): redact secret tokens from request logs",
     "fix: fall back to UTC when a profile has no timezone set",
     "feat(core)!: remove the LEGACY_MODE environment variable",
@@ -43,7 +45,17 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
     test "marks a breaking change without reintroducing the scope", %{repo: repo} do
       changelog = render(repo, "cliff-cloudron.toml")
 
-      assert changelog =~ "* [BREAKING] Remove the LEGACY_MODE environment variable"
+      assert changelog =~ "* [BREAKING] Remove the LEGACY_MODE environment variable\n"
+    end
+
+    # The update prompt keeps only `[BREAKING]` lines once a release has curated
+    # highlights, so the migration note must sit on that line to survive.
+    test "keeps a breaking change's migration note on its [BREAKING] line", %{repo: repo} do
+      changelog = render(repo, "cliff-cloudron.toml")
+
+      assert changelog =~
+               "* [BREAKING] Read config files strictly: values are no longer interpolated. " <>
+                 "Write the final value out.\n"
     end
 
     test "leaves out `saas`-scoped and chore commits", %{repo: repo} do
@@ -71,6 +83,16 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
 
       assert changelog =~ "- **saas:** Add a pricing page"
     end
+
+    test "follows a breaking change with its migration note", %{repo: repo} do
+      changelog = render(repo, "cliff.toml")
+
+      assert changelog =~
+               "- Read config files strictly: values are no longer interpolated. " <>
+                 "Write the final value out.\n"
+
+      assert changelog =~ "- Remove the LEGACY_MODE environment variable\n"
+    end
   end
 
   defp render(repo, config) do
@@ -82,19 +104,29 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
     changelog
   end
 
-  # A repository with one empty commit per subject, tagged so git-cliff renders
-  # a released section rather than an unreleased one.
-  defp build_repo(subjects) do
+  # A repository with one empty commit per message, tagged so git-cliff renders
+  # a released section rather than an unreleased one. A `{subject, body}` pair
+  # becomes a commit with a body, which is where a `BREAKING CHANGE:` footer
+  # lives.
+  defp build_repo(messages) do
     repo = Path.join(System.tmp_dir!(), "tymeslot-cliff-#{System.unique_integer([:positive])}")
     File.mkdir_p!(repo)
     on_exit(fn -> File.rm_rf(repo) end)
 
     git!(repo, ["init", "--quiet"])
-    Enum.each(subjects, &git!(repo, ["commit", "--allow-empty", "--no-verify", "-m", &1]))
+
+    Enum.each(
+      messages,
+      &git!(repo, ["commit", "--allow-empty", "--no-verify" | message_args(&1)])
+    )
+
     git!(repo, ["tag", @tag_name])
 
     repo
   end
+
+  defp message_args({subject, body}), do: ["-m", subject, "-m", body]
+  defp message_args(subject), do: ["-m", subject]
 
   # Identity and signing come from flags rather than the environment, so the
   # test does not depend on (or write to) the developer's git configuration.
