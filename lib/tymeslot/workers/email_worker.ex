@@ -20,15 +20,24 @@ defmodule Tymeslot.Workers.EmailWorker do
     # Higher priority (0-3, lower number = higher priority)
     priority: 1
 
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Workers.EmailWorkerHandlers
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.TransactionalEmailDelivery
   require Logger
 
-  # Configuration
-  # 30 seconds — overridable via config (e.g. lowered in tests)
-  @default_email_timeout_ms 30_000
+  # Every send is bounded by `Delivery.send_deadline_ms/0`, so the job timeout
+  # is a backstop for a wedged job rather than a send timeout, and it must
+  # outlast the longest legitimate job: a booking confirmation to the
+  # organiser, the attendee and every guest, each allowed the full send
+  # deadline, plus one deadline's headroom for building the emails. A fixed
+  # 30 seconds let two stalled sends exhaust it, and a timed-out job is
+  # discarded, so the recipients after them were never emailed.
+  # `:email_timeout_ms` overrides it (e.g. lowered in tests).
+  @sends_beyond_guests 2
+  @headroom_deadlines 1
   # 1 second base for exponential backoff
   @backoff_base_ms 1_000
 
@@ -154,7 +163,9 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   defp email_timeout_ms do
-    Application.get_env(:tymeslot, :email_timeout_ms, @default_email_timeout_ms)
+    Application.get_env(:tymeslot, :email_timeout_ms) ||
+      (Guests.max_guests() + @sends_beyond_guests + @headroom_deadlines) *
+        Delivery.send_deadline_ms()
   end
 
   defp calculate_backoff(attempt) do

@@ -27,10 +27,10 @@ defmodule Tymeslot.Emails.Delivery do
   @smtp_permanent_rejection ~r/\b5\.1\.(1|2|3|10)\b|\b5\.2\.1\b/
 
   # gen_smtp waits a fixed 20 minutes for each reply once connected, and Oban
-  # workers kill a send that outlives their own budget from the outside,
-  # where neither the breaker nor the retry policy sees it. Bounding the send
-  # here, inside the breaker and below `EmailWorker`'s 30 seconds, turns a
-  # hung relay into an ordinary timeout. It must stay above
+  # workers kill a job that outlives their own budget from the outside,
+  # where neither the breaker nor the retry policy sees it. Bounding each send
+  # here, inside the breaker, turns a hung relay into an ordinary timeout;
+  # `EmailWorker` sizes its budget from this deadline. It must stay above
   # `Tymeslot.Mailer.SMTPAdapter`'s 15-second session deadline, which is what
   # reports a relay that hung before any message data was sent as retryable.
   @default_send_deadline_ms 20_000
@@ -103,7 +103,9 @@ defmodule Tymeslot.Emails.Delivery do
     end
   end
 
-  defp send_deadline_ms do
+  @doc "The longest a single `deliver/1` call may take before it gives up."
+  @spec send_deadline_ms() :: pos_integer()
+  def send_deadline_ms do
     Application.get_env(:tymeslot, :email_send_deadline_ms, @default_send_deadline_ms)
   end
 
