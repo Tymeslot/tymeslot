@@ -247,8 +247,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       assert %Swoosh.Attachment{} = attachment
       assert attachment.filename == "meeting.ics"
-      assert attachment.content_type =~ "text/calendar"
-      assert attachment.content_type =~ "method=PUBLISH"
+      assert attachment.content_type == "text/calendar"
+      assert attachment.data =~ "METHOD:PUBLISH"
       assert attachment.data =~ "BEGIN:VCALENDAR"
     end
 
@@ -278,7 +278,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       attachment = IcsGenerator.generate_ics_attachment(meeting_details)
 
-      assert attachment.content_type == "text/calendar; charset=utf-8; method=PUBLISH"
+      assert attachment.content_type == "text/calendar"
       assert attachment.data =~ "METHOD:PUBLISH"
       refute attachment.data =~ "METHOD:REQUEST"
     end
@@ -298,7 +298,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       attachment = IcsGenerator.generate_ics_cancel_attachment(meeting_details, 3)
 
       assert %Swoosh.Attachment{} = attachment
-      assert attachment.content_type == "text/calendar; charset=utf-8; method=PUBLISH"
+      assert attachment.content_type == "text/calendar"
       assert attachment.data =~ "METHOD:PUBLISH"
       refute attachment.data =~ "METHOD:CANCEL"
       assert attachment.data =~ "SEQUENCE:3"
@@ -318,7 +318,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       attachment = IcsGenerator.generate_ics_update_attachment(meeting_details, 1)
 
-      assert attachment.content_type =~ "method=PUBLISH"
+      assert attachment.content_type == "text/calendar"
       assert attachment.data =~ "METHOD:PUBLISH"
       refute attachment.data =~ "METHOD:REQUEST"
     end
