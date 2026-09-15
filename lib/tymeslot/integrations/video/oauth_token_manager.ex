@@ -53,7 +53,6 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
 
   require Logger
 
-  alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -319,36 +318,13 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
     :ok
   end
 
+  # Delegates to `Video.flag_and_notify/2`, the same false → true seam used by
+  # `Video.handle_reauth_required/2`, so the two paths cannot drift on whether
+  # reconnecting is announced.
   defp mark_needs_reauth(integration_id, user_id, message) do
     case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, integration} -> flag_and_notify(integration, user_id, message)
+      {:ok, integration} -> Video.flag_and_notify(integration, message)
       {:error, :not_found} -> :ok
-    end
-  end
-
-  # Only a false → true transition is news. Re-flagging an integration the user
-  # has already been told about would email them again about a problem they are
-  # already looking at; the scheduler's uniqueness window is a backstop for
-  # that, not the place to decide it.
-  defp flag_and_notify(%{needs_reauth: true} = integration, _user_id, message),
-    do: VideoIntegrationQueries.mark_needs_reauth(integration, message)
-
-  # The badge alone reaches only users who open the dashboard. Everyone else
-  # discovers a dead integration when a booking needs it, which is too late, so
-  # flagging and notifying are one step and cannot come apart.
-  defp flag_and_notify(integration, user_id, message) do
-    case VideoIntegrationQueries.mark_needs_reauth(integration, message) do
-      {:ok, updated} = result ->
-        IntegrationScheduler.schedule_integration_reauth_notification(
-          %{id: user_id},
-          updated,
-          :video
-        )
-
-        result
-
-      error ->
-        error
     end
   end
 end

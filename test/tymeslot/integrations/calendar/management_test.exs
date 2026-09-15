@@ -56,6 +56,36 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
     end
   end
 
+  describe "handle_reauth_required/2" do
+    test "flags the integration and emails its owner on the false → true transition" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, needs_reauth: false)
+
+      assert {:discard, _reason} = CalendarManagement.handle_reauth_required(integration)
+
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    test "does not email again for an integration already flagged" do
+      integration = insert(:calendar_integration, needs_reauth: true, sync_error: "Old reason.")
+
+      assert {:discard, _reason} = CalendarManagement.handle_reauth_required(integration)
+
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # toggle_with_primary_rebalance/1 — reactivation health reset and conflicts
   # ---------------------------------------------------------------------------

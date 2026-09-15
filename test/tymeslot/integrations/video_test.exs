@@ -12,10 +12,41 @@ defmodule Tymeslot.Integrations.VideoTest do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationHealthWorker
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
 
   setup :verify_on_exit!
+
+  describe "handle_reauth_required/2" do
+    test "flags the integration and emails its owner on the false → true transition" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, needs_reauth: false)
+
+      assert {:discard, _reason} = Video.handle_reauth_required(integration)
+
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "video"
+        }
+      )
+    end
+
+    test "does not email again for an integration already flagged" do
+      integration = insert(:video_integration, needs_reauth: true, sync_error: "Old reason.")
+
+      assert {:discard, _reason} = Video.handle_reauth_required(integration)
+
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
 
   describe "list_integrations/1" do
     test "lists all integrations for a user" do

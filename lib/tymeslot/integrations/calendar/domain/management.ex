@@ -282,12 +282,17 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     end
   end
 
-  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific opts.
+  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific
+  # opts. `mark_needs_reauth` is wired to `flag_and_notify/2` rather than the
+  # bare DB write, so that every path ending in "the owner has to reconnect",
+  # this one included and not just `flag_for_reconnection/3`, sends the reauth
+  # email on the false to true transition. See the deferred ticket this closed
+  # for why the two calendar entry points used to disagree on that.
   defp flag_for_reauth(integration, opts \\ []) do
     ReauthHandling.flag(
       integration,
       Keyword.merge(
-        [mark_needs_reauth: &mark_needs_reauth/2, log_prefix: "Calendar"],
+        [mark_needs_reauth: &flag_and_notify/2, log_prefix: "Calendar"],
         opts
       )
     )
