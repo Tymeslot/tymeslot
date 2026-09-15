@@ -50,8 +50,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
 
       ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
 
-      assert ics.content_type =~ "method=PUBLISH"
-      refute ics.content_type =~ "method=REQUEST"
+      assert ics.content_type == "text/calendar"
       assert ics.data =~ "METHOD:PUBLISH"
       refute ics.data =~ "METHOD:REQUEST"
       assert ics.data =~ ~r/^ORGANIZER;SCHEDULE-AGENT=CLIENT[;:]/m

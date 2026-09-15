@@ -66,9 +66,16 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp build_attachment(meeting_details, method, sequence, locale, filename) do
     ics_content = generate_ics_with(meeting_details, method, sequence, locale)
 
+    # Bare `text/calendar`, no inline params. Swoosh splits the attachment
+    # content_type on "/", so a value like "text/calendar; method=PUBLISH"
+    # lands the params inside the subtype and the MIME encoder emits an
+    # ambiguous Content-Type that strict gateways defer (Proxmox Mail Gateway
+    # since PSA-2026-00005-1). The method is already carried in the body
+    # (METHOD:PUBLISH) and the part is base64-encoded, so a charset param is
+    # moot on the wire.
     %Swoosh.Attachment{
       filename: filename,
-      content_type: "text/calendar; charset=utf-8; method=PUBLISH",
+      content_type: "text/calendar",
       data: ics_content
     }
   end
