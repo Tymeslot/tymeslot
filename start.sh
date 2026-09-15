@@ -127,6 +127,7 @@ dotenv_utf8() {
 # malformed \uXXXX.
 dotenv_unescape() {
   local rest="$1" out="" chunk char hex
+  local LC_ALL=C LANG=C
 
   while :; do
     case "$rest" in
@@ -178,6 +179,7 @@ dotenv_unescape() {
 load_env_file() {
   local file="$1"
   local line key value rest tail file_applied=""
+  local LC_ALL=C LANG=C
 
   [ -f "$file" ] || return 0
 

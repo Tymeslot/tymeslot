@@ -107,9 +107,10 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
   end
 
   # `System.put_env/2` raises on a value that is not valid UTF-8, which a file
-  # saved as Latin-1 produces, and a raise here would take down every boot and
-  # `eval` session that reads the file. Such a value is skipped with a warning
-  # naming the key instead.
+  # saved as Latin-1 produces, or that contains a raw NUL byte (valid UTF-8,
+  # but `os:putenv/2` rejects it), and a raise here would take down every boot
+  # and `eval` session that reads the file. Such a value is skipped with a
+  # warning naming the key instead.
   #
   # The `System.get_env/1` check comes first deliberately: a key the shell
   # already set is not ours to touch, valid or not.
@@ -118,7 +119,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
       System.get_env(key) != nil ->
         :ok
 
-      String.valid?(value) ->
+      String.valid?(value) and not String.contains?(value, <<0>>) ->
         System.put_env(key, value)
 
       true ->

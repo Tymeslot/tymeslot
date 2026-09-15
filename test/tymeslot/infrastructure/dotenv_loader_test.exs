@@ -35,6 +35,11 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     "AGREE_BARE_COMMENT=value # trailing comment",
     # Written as a concatenation so the trailing spaces survive an editor.
     "AGREE_BARE_TRAILING_SPACE=value" <> "   ",
+    # An ideographic space (U+3000) is not ASCII whitespace, so neither
+    # reader may treat it as one, even though bash's `[[:space:]]` does under
+    # a `LANG=C.UTF-8` locale, which is what production runs `start.sh` in.
+    "AGREE_CJK_SPACE_COMMENT=value" <> "　" <> "# trailing comment",
+    "AGREE_CJK_TRAILING_SPACE=value" <> "　",
     "AGREE_SPACED_KEY = spaced",
     "AGREE_EMPTY=",
     "AGREE_EMPTY_DQ=\"\"",
@@ -157,6 +162,25 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     File.write!(
       path,
       <<"TYMESLOT_DOTENV_TEST_A=M", 252, "ller\nTYMESLOT_DOTENV_TEST_ASCII=plain\n">>
+    )
+
+    log = capture_log(fn -> assert :ok = DotenvLoader.load([path]) end)
+
+    assert System.get_env("TYMESLOT_DOTENV_TEST_A") == nil
+    assert System.get_env("TYMESLOT_DOTENV_TEST_ASCII") == "plain"
+    assert log =~ "TYMESLOT_DOTENV_TEST_A"
+  end
+
+  test "a value containing a raw NUL byte is skipped without taking the file with it",
+       %{tmp_dir: tmp_dir} do
+    # A raw NUL is valid UTF-8, so `String.valid?/1` alone would let it through,
+    # but `System.put_env/2` raises `ArgumentError` on it, which would take
+    # down boot. It must be skipped like invalid UTF-8, not raise.
+    path = Path.join(tmp_dir, ".env")
+
+    File.write!(
+      path,
+      <<"TYMESLOT_DOTENV_TEST_A=a", 0, "b\nTYMESLOT_DOTENV_TEST_ASCII=plain\n">>
     )
 
     log = capture_log(fn -> assert :ok = DotenvLoader.load([path]) end)
@@ -305,11 +329,19 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     done
     """)
 
-    # The child gets an empty environment: every inherited variable is cleared,
-    # so nothing the test runner holds can shadow a fixture key and quietly turn
-    # a disagreement into a skipped line. The harness needs no PATH; bash is
-    # named absolutely and it uses only builtins.
-    cleared = Enum.map(System.get_env(), fn {name, _value} -> {name, nil} end)
+    # The child gets an empty environment, every inherited variable cleared, so
+    # nothing the test runner holds can shadow a fixture key and quietly turn a
+    # disagreement into a skipped line; then `LANG` is set to `C.UTF-8`, the
+    # locale Dockerfile.cloudron's runtime stage exports and `start.sh` runs
+    # under in production. Leaving the child on the implicit POSIX "C" locale
+    # would make bash's `[[:space:]]` byte-oriented for free and hide any
+    # divergence that only shows up under the locale that actually ships. The
+    # harness needs no PATH; bash is named absolutely and it uses only
+    # builtins.
+    cleared =
+      System.get_env()
+      |> Enum.map(fn {name, _value} -> {name, nil} end)
+      |> Kernel.++([{"LANG", "C.UTF-8"}])
 
     {output, 0} = System.cmd("/bin/bash", [harness, env_path], env: cleared)
 
