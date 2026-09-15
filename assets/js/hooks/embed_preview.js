@@ -168,35 +168,39 @@ export const EmbedPreview = {
     const wrapper = document.createElement('div');
     wrapper.className = 'text-center p-8 w-full';
 
-    const link = document.createElement('a');
-    const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
-    // This anchor is a preview, not the shareable URL: it opens the real
-    // booking page in a new tab, so without the owner-preview contract an
-    // organiser pressing "Book Meeting" here persists a meeting, emails
-    // whatever address they typed and creates a calendar event. Same two
-    // halves `createIframe` sets. The token-free URL an organiser is meant to
-    // hand out is built separately, by `Helpers.embed_code("link", …)`.
-    linkUrl.searchParams.set('preview', 'true');
-    if (options.previewToken) {
-      linkUrl.searchParams.set('preview_token', options.previewToken);
-    }
-    if (options.layout && options.layout !== 'default') {
-      linkUrl.searchParams.set('layout', options.layout);
-    }
-    if (options.locale) {
-      linkUrl.searchParams.set('locale', options.locale);
-    }
-    link.href = linkUrl.toString();
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'Schedule a meeting with me →';
-    link.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors';
+    // A real <a href> here is a real, copyable URL: right-click "Copy link
+    // address" (or copying it back out of the new tab's address bar) hands a
+    // visitor a token-bearing preview link that silently simulates their
+    // booking for up to an hour, then fails closed; see the module-level
+    // note above renderLinkPreview's caller in initEmbed. Building the token
+    // URL only inside the click handler, on a <button> with no href, means
+    // there is nothing to copy short of reading the JS. The token-free URL an
+    // organiser is meant to hand out is built separately, by
+    // `Helpers.embed_code("link", …)`.
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Schedule a meeting with me →';
+    button.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors cursor-pointer bg-transparent border-0 p-0';
+    button.onclick = () => {
+      const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+      linkUrl.searchParams.set('preview', 'true');
+      if (options.previewToken) {
+        linkUrl.searchParams.set('preview_token', options.previewToken);
+      }
+      if (options.layout && options.layout !== 'default') {
+        linkUrl.searchParams.set('layout', options.layout);
+      }
+      if (options.locale) {
+        linkUrl.searchParams.set('locale', options.locale);
+      }
+      window.open(linkUrl.toString(), '_blank', 'noopener,noreferrer');
+    };
 
     const hint = document.createElement('p');
     hint.textContent = 'Preview only: this link opens in test mode and stops working after an hour. Copy the link to share from the Embed Options tab.';
     hint.className = 'text-xs text-slate-400 mt-4';
-    
-    wrapper.appendChild(link);
+
+    wrapper.appendChild(button);
     wrapper.appendChild(hint);
     this.el.appendChild(wrapper);
   },
