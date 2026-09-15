@@ -171,10 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (PERMANENT)"
           )
 
-        CalendarIntegrationQueries.update(integration, %{
-          sync_error: error_msg,
-          is_active: false
-        })
+        persist_refresh_failure(integration, error_msg, %{is_active: false})
 
         {:discard, "Permanent error: #{reason}"}
 
@@ -189,7 +186,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (RATE_LIMITED)"
           )
 
-        CalendarIntegrationQueries.update(integration, %{sync_error: error_msg})
+        persist_refresh_failure(integration, error_msg, %{})
 
         {:snooze, retry_after}
 
@@ -202,10 +199,27 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (RETRYABLE)"
           )
 
-        CalendarIntegrationQueries.update(integration, %{sync_error: error_msg})
+        persist_refresh_failure(integration, error_msg, %{})
 
         {:error, "#{reason}"}
     end
+  end
+
+  # A flagged integration's `sync_error` already carries the reason the owner
+  # needs to act on (no calendar selected, deleted booking calendar, expired
+  # grant). A refresh failure diagnostic is a different, unrelated cause
+  # hitting the same field, so it must not clobber that reason. Any other
+  # attrs (e.g. deactivating on a permanent error) still apply regardless.
+  defp persist_refresh_failure(%{needs_reauth: true} = integration, _error_msg, extra_attrs) do
+    if map_size(extra_attrs) > 0 do
+      CalendarIntegrationQueries.update(integration, extra_attrs)
+    else
+      :ok
+    end
+  end
+
+  defp persist_refresh_failure(integration, error_msg, extra_attrs) do
+    CalendarIntegrationQueries.update(integration, Map.put(extra_attrs, :sync_error, error_msg))
   end
 
   defp categorize_error(reason) when is_binary(reason) do
