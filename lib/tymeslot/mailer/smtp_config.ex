@@ -13,6 +13,23 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   - **Port 587**: STARTTLS (explicit TLS) - `ssl: false, tls: :always`
   - **Other ports**: Opportunistic TLS - `ssl: false, tls: :if_available`
 
+  The port is only a convention: some providers serve implicit TLS on 2465 or
+  8465. `:ssl` overrides the port rule, so `ssl: true` speaks TLS from the
+  first byte on any port. Without it a plain-TCP client waits for a greeting
+  the relay never sends, because the relay is itself waiting for a TLS
+  handshake.
+
+  ## Authentication
+
+  Credentials are optional, for a relay that authorises by network (a local
+  Postfix, a company relay). Supplied credentials are always used
+  (`auth: :always`): with `:if_available`, gen_smtp treats a rejected login as
+  "no login" and carries on unauthenticated, so a wrong password surfaced as
+  a misleading "530 Authentication required" on MAIL FROM rather than as an
+  authentication failure. A relay that offers no AUTH at all is still sent to,
+  without a login and with a warning, by `Tymeslot.Mailer.SMTPAdapter`.
+  Without credentials no login is attempted (`auth: :never`).
+
   On port 465 the TLS options are additionally passed as `:sockopts`. gen_smtp
   reads `:tls_options` only when upgrading an existing connection with
   STARTTLS; on the implicit-TLS path it forwards `:sockopts` into
@@ -45,7 +62,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
         password: "app_password"
       )
 
-      # Returns keyword list suitable for Swoosh.Adapters.SMTP
+      # Returns keyword list suitable for Tymeslot.Mailer.SMTPAdapter
   """
 
   require Logger
@@ -67,8 +84,9 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   @type smtp_opts :: [
           host: String.t(),
           port: pos_integer(),
-          username: String.t(),
-          password: String.t(),
+          username: String.t() | nil,
+          password: String.t() | nil,
+          ssl: boolean() | nil,
           tls_verify: tls_verify(),
           cacertfile: String.t() | nil
         ]
@@ -82,8 +100,10 @@ defmodule Tymeslot.Mailer.SMTPConfig do
 
   - `:host` (required) - SMTP server hostname
   - `:port` (optional) - SMTP port (default: 587)
-  - `:username` (required) - SMTP username
-  - `:password` (required) - SMTP password
+  - `:username` (optional) - SMTP username; given together with `:password`
+  - `:password` (optional) - SMTP password; given together with `:username`
+  - `:ssl` (optional) - `true` forces implicit TLS, `false` forbids it;
+    `nil` (default) decides by port
   - `:tls_verify` (optional) - `:peer` (default) or `:none`
   - `:cacertfile` (optional) - path to a PEM bundle to trust instead of the
     public certificate store
@@ -96,30 +116,33 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   def build(opts) do
     smtp_host = validate_host!(opts[:host])
     smtp_port = validate_port!(opts[:port] || 587)
-    smtp_username = validate_username!(opts[:username])
-    smtp_password = validate_password!(opts[:password])
+    credentials = validate_credentials!(opts[:username], opts[:password])
 
-    {use_ssl, tls_mode} = determine_tls_mode(smtp_port)
+    {use_ssl, tls_mode} = determine_tls_mode(smtp_port, validate_ssl!(opts[:ssl]))
     tls_options = build_tls_options(smtp_host, opts)
 
     config =
       [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: smtp_host,
         port: smtp_port,
-        username: smtp_username,
-        password: smtp_password,
         ssl: use_ssl,
         tls: tls_mode,
         tls_options: tls_options,
-        auth: :if_available,
-        # Retry failed sends twice (total 3 attempts: initial + 2 retries)
-        retries: 2,
-        # Connection timeout in milliseconds
+        # gen_smtp retries only the session opening (connect, EHLO, TLS,
+        # AUTH), never the message itself, but each retry spends another
+        # connection timeout. Oban is the retry authority for mail: three
+        # 10-second attempts here filled the email worker's 30-second budget
+        # exactly, so an unreachable relay was killed by the worker and
+        # discarded instead of coming back as a retryable error.
+        retries: 0,
+        # Connection timeout in milliseconds. gen_smtp waits a fixed 20
+        # minutes for each reply once connected; `Tymeslot.Emails.Delivery`
+        # bounds that.
         timeout: 10_000,
         # Direct relay to configured host, skip DNS MX lookup overhead
         no_mx_lookups: true
-      ] ++ implicit_tls_sockopts(use_ssl, tls_options)
+      ] ++ credentials ++ implicit_tls_sockopts(use_ssl, tls_options)
 
     log_config(config)
     config
@@ -162,9 +185,26 @@ defmodule Tymeslot.Mailer.SMTPConfig do
     raise ArgumentError, "SMTP port must be an integer, got: #{inspect(port)}"
   end
 
-  # Validates SMTP username is present
-  defp validate_username!(nil) do
-    raise ArgumentError, "SMTP username is required (set SMTP_USERNAME environment variable)"
+  # A relay that authorises by network takes no credentials; one that takes
+  # credentials needs both. Half a pair is a configuration mistake either way.
+  defp validate_credentials!(nil, nil), do: [auth: :never]
+
+  defp validate_credentials!(nil, _password) do
+    raise ArgumentError,
+          "SMTP username is required when a password is set (set SMTP_USERNAME environment variable)"
+  end
+
+  defp validate_credentials!(_username, nil) do
+    raise ArgumentError,
+          "SMTP password is required when a username is set (set SMTP_PASSWORD environment variable)"
+  end
+
+  defp validate_credentials!(username, password) do
+    [
+      auth: :always,
+      username: validate_username!(username),
+      password: validate_password!(password)
+    ]
   end
 
   defp validate_username!("") do
@@ -175,11 +215,6 @@ defmodule Tymeslot.Mailer.SMTPConfig do
 
   defp validate_username!(username) do
     raise ArgumentError, "SMTP username must be a string, got: #{inspect(username)}"
-  end
-
-  # Validates SMTP password is present
-  defp validate_password!(nil) do
-    raise ArgumentError, "SMTP password is required (set SMTP_PASSWORD environment variable)"
   end
 
   defp validate_password!("") do
@@ -202,10 +237,20 @@ defmodule Tymeslot.Mailer.SMTPConfig do
     raise ArgumentError, "SMTP password must be a string, got: #{inspect(password)}"
   end
 
-  # Determines SSL/TLS mode based on SMTP port
-  defp determine_tls_mode(465), do: {true, :never}
-  defp determine_tls_mode(587), do: {false, :always}
-  defp determine_tls_mode(_arg), do: {false, :if_available}
+  defp validate_ssl!(ssl) when ssl in [nil, true, false], do: ssl
+
+  defp validate_ssl!(ssl) do
+    raise ArgumentError, "SMTP ssl must be true, false or nil, got: #{inspect(ssl)}"
+  end
+
+  # Determines SSL/TLS mode from an explicit `:ssl` choice, else the port.
+  # Implicit TLS turned off on 465 still demands STARTTLS rather than
+  # dropping to opportunistic TLS.
+  defp determine_tls_mode(_port, true), do: {true, :never}
+  defp determine_tls_mode(465, false), do: {false, :always}
+  defp determine_tls_mode(465, nil), do: {true, :never}
+  defp determine_tls_mode(587, _ssl), do: {false, :always}
+  defp determine_tls_mode(_port, _ssl), do: {false, :if_available}
 
   # gen_smtp reads `:tls_options` only in its STARTTLS upgrade path. On the
   # implicit-TLS path (`ssl: true`) it builds the socket options from
@@ -376,7 +421,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   defp log_config(config) do
     {ssl_mode, tls_mode} =
       case {config[:ssl], config[:tls]} do
-        {true, :never} -> {"SSL (port 465)", "disabled"}
+        {true, :never} -> {"SSL (implicit TLS)", "disabled"}
         {false, :always} -> {"no", "STARTTLS (required)"}
         {false, :if_available} -> {"no", "opportunistic"}
         _config_values -> {"unknown", "unknown"}
@@ -387,6 +432,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
       host: config[:relay],
       port: config[:port],
       username: config[:username],
+      auth: config[:auth],
       ssl: ssl_mode,
       tls: tls_mode,
       verify: config[:tls_options][:verify],
