@@ -1,4 +1,13 @@
 
+[1.15.6]
+* Tell users when their Google account has no Google Calendar
+* Stop discarding booking emails after two slow sends
+* Stop silently dropping email when the SMTP relay is unreachable
+* Email calendar owners when a calendar needs reconnecting
+* Hide deselected calendars from search and desktop reminders
+* Stop strict mail gateways deferring booking calendar invites
+
+
 [1.15.5]
 * Hide deselected calendars from the dashboard agenda
 * Open the dashboard calendar on today in your own timezone
