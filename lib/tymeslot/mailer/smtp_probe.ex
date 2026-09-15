@@ -2,9 +2,10 @@ defmodule Tymeslot.Mailer.SmtpProbe do
   @moduledoc """
   SMTP server reachability probe used during mailer health checks.
 
-  Resolves the configured host's DNS, opens a connection appropriate for the
-  port (plain TCP, STARTTLS, or direct SSL), and validates the SMTP greeting
-  (220 response code). Closes the socket cleanly with QUIT. Returns
+  Resolves the configured host's DNS, opens the connection a send would open
+  (implicit TLS, or plain TCP upgraded with STARTTLS), validates the SMTP
+  greeting (220 response code), and completes the TLS handshake with the
+  same certificate checks a send applies. Closes the socket cleanly with QUIT. Returns
   human-readable error messages with port-specific troubleshooting hints
   when the probe fails.
 
@@ -57,19 +58,21 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     e -> {:error, {:dns_failed, Exception.message(e)}}
   end
 
+  # Follows the same transport decision as a real send: implicit TLS when the
+  # config says `ssl: true`, whatever the port, and otherwise plain TCP with a
+  # STARTTLS upgrade unless `tls: :never`.
   defp test_smtp_connectivity(host, port, timeout, config) do
-    case port do
-      465 -> test_ssl_connection(host, port, timeout, config)
-      587 -> test_starttls_connection(host, port, timeout)
-      _other -> test_starttls_connection(host, port, timeout)
+    if config[:ssl] do
+      test_ssl_connection(host, port, timeout, config)
+    else
+      test_plain_connection(host, port, timeout, config)
     end
   end
 
-  # Port 587 (and other non-SSL ports): plain TCP connection, validate greeting.
-  defp test_starttls_connection(host, port, timeout) do
-    case :gen_tcp.connect(host, port, [:binary, active: false], timeout) do
+  defp test_plain_connection(host, port, timeout, config) do
+    case :gen_tcp.connect(host, port, [:binary, active: false, packet: :line], timeout) do
       {:ok, socket} ->
-        result = exchange_greeting(socket, :gen_tcp, timeout)
+        result = plain_session(socket, host, timeout, config)
         :gen_tcp.close(socket)
         result
 
@@ -80,9 +83,70 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     e -> {:error, Exception.message(e)}
   end
 
-  # Port 465: direct SSL connection.
+  defp plain_session(socket, host, timeout, config) do
+    with {:ok, greeting} <- read_reply(socket, :gen_tcp, timeout),
+         :ok <- validate_smtp_greeting(greeting) do
+      maybe_starttls(socket, host, timeout, config)
+    end
+  end
+
+  # Without this the probe accepted a relay after its plain-text greeting,
+  # so a certificate no send could trust still reported the mailer healthy
+  # and every real send then failed its STARTTLS handshake. An absent `:tls`
+  # is gen_smtp's default, `:if_available`.
+  defp maybe_starttls(socket, host, timeout, config) do
+    case config[:tls] do
+      :never -> quit(socket, :gen_tcp)
+      mode -> negotiate_starttls(socket, host, timeout, config, mode)
+    end
+  end
+
+  defp negotiate_starttls(socket, host, timeout, config, mode) do
+    :gen_tcp.send(socket, "EHLO tymeslot-probe\r\n")
+
+    with {:ok, extensions} <- read_reply(socket, :gen_tcp, timeout) do
+      case {extensions =~ ~r/^250[- ]STARTTLS\s*$/mi, mode} do
+        {true, _mode} -> upgrade(socket, host, timeout, config)
+        {false, :always} -> {:error, :starttls_not_offered}
+        {false, _if_available} -> quit(socket, :gen_tcp)
+      end
+    end
+  end
+
+  defp upgrade(socket, host, timeout, config) do
+    :gen_tcp.send(socket, "STARTTLS\r\n")
+
+    with {:ok, "220" <> _rest} <- read_reply(socket, :gen_tcp, timeout),
+         :ok <- :inet.setopts(socket, packet: :raw),
+         {:ok, tls_socket} <-
+           :ssl.connect(socket, ssl_options(host, config), timeout) do
+      result = quit(tls_socket, :ssl)
+      :ssl.close(tls_socket)
+      result
+    else
+      {:ok, reply} -> {:error, "STARTTLS refused: #{String.slice(reply, 0, 100)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Reads one possibly multi-line SMTP reply ("250-..." continues, "250 ..."
+  # ends it).
+  defp read_reply(socket, mod, timeout, acc \\ "") do
+    case mod.recv(socket, 0, timeout) do
+      {:ok, <<_code::binary-size(3), "-", _rest::binary>> = line} ->
+        read_reply(socket, mod, timeout, acc <> line)
+
+      {:ok, line} ->
+        {:ok, acc <> line}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Port 465, or any port with `ssl: true`: TLS from the first byte.
   defp test_ssl_connection(host, port, timeout, config) do
-    ssl_opts = ssl_options(host, config)
+    ssl_opts = [:binary, active: false] ++ ssl_options(host, config)
 
     case :ssl.connect(host, port, ssl_opts, timeout) do
       {:ok, socket} ->
@@ -100,10 +164,14 @@ defmodule Tymeslot.Mailer.SmtpProbe do
   defp exchange_greeting(socket, mod, timeout) do
     with {:ok, greeting} <- mod.recv(socket, 0, timeout),
          :ok <- validate_smtp_greeting(greeting) do
-      mod.send(socket, "QUIT\r\n")
-      drain_quit(socket, mod)
-      :ok
+      quit(socket, mod)
     end
+  end
+
+  defp quit(socket, mod) do
+    mod.send(socket, "QUIT\r\n")
+    drain_quit(socket, mod)
+    :ok
   end
 
   defp drain_quit(socket, mod) do
@@ -131,8 +199,6 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     tls = config[:tls_options] || []
 
     base = [
-      :binary,
-      active: false,
       server_name_indication: host,
       versions: tls[:versions] || [:"tlsv1.2", :"tlsv1.3"],
       depth: tls[:depth] || 5
@@ -214,6 +280,10 @@ defmodule Tymeslot.Mailer.SmtpProbe do
 
   defp format_readable_reason({:tls_alert, alert}), do: "SSL/TLS alert: #{inspect(alert)}"
   defp format_readable_reason(:closed), do: "Connection closed by server"
+
+  defp format_readable_reason(:starttls_not_offered),
+    do: "Server does not offer STARTTLS, which this port requires"
+
   defp format_readable_reason(reason), do: inspect(reason)
 
   defp get_error_suggestion(:econnrefused, 587) do
@@ -236,6 +306,8 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     "\n\nConnection timed out. Common causes:\n" <>
       "  - Firewall blocking outbound SMTP\n" <>
       "  - Network connectivity issues\n" <>
+      "  - The port serves implicit TLS, so the relay waits for a handshake\n" <>
+      "    instead of greeting: set SMTP_SSL=true\n" <>
       "  - SMTP server is slow to respond"
   end
 
@@ -251,6 +323,20 @@ defmodule Tymeslot.Mailer.SmtpProbe do
       "  - Server requires different TLS version\n" <>
       "  - Server doesn't support port 465 SSL\n" <>
       "  - Try port 587 (STARTTLS) instead: SMTP_PORT=587"
+  end
+
+  defp get_error_suggestion({:tls_alert, _alert}, _port) do
+    "\n\nThe relay's TLS certificate was not accepted. Common causes:\n" <>
+      "  - A self-hosted relay with a private or self-signed certificate:\n" <>
+      "    set SMTP_CACERTFILE to the CA that issued it (or, as a last resort,\n" <>
+      "    SMTP_TLS_VERIFY=none)\n" <>
+      "  - SMTP_HOST does not match the name on the certificate"
+  end
+
+  defp get_error_suggestion(:starttls_not_offered, _port) do
+    "\n\nThe relay did not advertise STARTTLS. Common causes:\n" <>
+      "  - The port serves implicit TLS: set SMTP_SSL=true\n" <>
+      "  - The relay has TLS disabled: use a port other than 587"
   end
 
   defp get_error_suggestion(_other_reason, _port), do: ""

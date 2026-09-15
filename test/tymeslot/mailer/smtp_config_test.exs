@@ -18,15 +18,15 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
           password: "secret123"
         )
 
-      assert config[:adapter] == Swoosh.Adapters.SMTP
+      assert config[:adapter] == Tymeslot.Mailer.SMTPAdapter
       assert config[:relay] == "smtp.example.com"
       assert config[:port] == 587
       assert config[:username] == "user@example.com"
       assert config[:password] == "secret123"
       assert config[:ssl] == false
       assert config[:tls] == :always
-      assert config[:auth] == :if_available
-      assert config[:retries] == 2
+      assert config[:auth] == :always
+      assert config[:retries] == 0
       assert config[:timeout] == 10_000
       assert config[:no_mx_lookups] == true
       assert config[:tls_options][:verify] == :verify_peer
@@ -44,6 +44,36 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       assert config[:ssl] == true
       assert config[:tls] == :never
       assert config[:port] == 465
+    end
+
+    test "ssl: true speaks implicit TLS on a port other than 465" do
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          port: 2465,
+          username: "user@example.com",
+          password: "secret123",
+          ssl: true
+        )
+
+      assert config[:ssl] == true
+      assert config[:tls] == :never
+      assert config[:sockopts] == config[:tls_options]
+    end
+
+    test "ssl: false on port 465 still requires STARTTLS" do
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          port: 465,
+          username: "user@example.com",
+          password: "secret123",
+          ssl: false
+        )
+
+      assert config[:ssl] == false
+      assert config[:tls] == :always
+      refute Keyword.has_key?(config, :sockopts)
     end
 
     test "creates valid SMTP configuration for non-standard port (opportunistic TLS)" do
@@ -283,13 +313,17 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       end
     end
 
-    test "raises when username is nil" do
-      assert_raise ArgumentError, ~r/SMTP username is required/, fn ->
-        SMTPConfig.build(
-          host: "smtp.example.com",
-          username: nil,
-          password: "pass"
-        )
+    test "configures an unauthenticated session when no credentials are given" do
+      config = SMTPConfig.build(host: "relay.internal", port: 25)
+
+      assert config[:auth] == :never
+      refute Keyword.has_key?(config, :username)
+      refute Keyword.has_key?(config, :password)
+    end
+
+    test "raises when a password is given without a username" do
+      assert_raise ArgumentError, ~r/SMTP username is required when a password is set/, fn ->
+        SMTPConfig.build(host: "smtp.example.com", username: nil, password: "pass")
       end
     end
 
@@ -303,13 +337,9 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       end
     end
 
-    test "raises when password is nil" do
-      assert_raise ArgumentError, ~r/SMTP password is required/, fn ->
-        SMTPConfig.build(
-          host: "smtp.example.com",
-          username: "user",
-          password: nil
-        )
+    test "raises when a username is given without a password" do
+      assert_raise ArgumentError, ~r/SMTP password is required when a username is set/, fn ->
+        SMTPConfig.build(host: "smtp.example.com", username: "user", password: nil)
       end
     end
 

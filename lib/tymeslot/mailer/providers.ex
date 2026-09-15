@@ -9,7 +9,7 @@ defmodule Tymeslot.Mailer.Providers do
 
       | `EMAIL_ADAPTER` | Adapter                    | Kind    | Credentials |
       |-----------------|----------------------------|---------|-------------|
-      | `smtp`          | `Swoosh.Adapters.SMTP`     | `:smtp` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_TLS_VERIFY`, `SMTP_CACERTFILE` |
+      | `smtp`          | `Tymeslot.Mailer.SMTPAdapter` | `:smtp` | `SMTP_HOST`, optional `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_SSL`, `SMTP_TLS_VERIFY`, `SMTP_CACERTFILE` |
       | `postmark`      | `Swoosh.Adapters.Postmark` | `:api`  | `POSTMARK_API_KEY` |
       | `sendgrid`      | `Swoosh.Adapters.Sendgrid` | `:api`  | `SENDGRID_API_KEY` |
       | `mailgun`       | `Swoosh.Adapters.Mailgun`  | `:api`  | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` |
@@ -83,14 +83,17 @@ defmodule Tymeslot.Mailer.Providers do
   @providers %{
     "smtp" => %{
       label: "SMTP",
-      adapter: Swoosh.Adapters.SMTP,
-      required_config: [:relay, :username, :password],
-      env_vars: %{
-        relay: "SMTP_HOST",
-        username: "SMTP_USERNAME",
-        password: "SMTP_PASSWORD"
-      },
-      optional_env_vars: ["SMTP_PORT", "SMTP_TLS_VERIFY", "SMTP_CACERTFILE"],
+      adapter: Tymeslot.Mailer.SMTPAdapter,
+      required_config: [:relay],
+      env_vars: %{relay: "SMTP_HOST"},
+      optional_env_vars: [
+        "SMTP_PORT",
+        "SMTP_USERNAME",
+        "SMTP_PASSWORD",
+        "SMTP_SSL",
+        "SMTP_TLS_VERIFY",
+        "SMTP_CACERTFILE"
+      ],
       kind: :smtp,
       probe: :smtp,
       dev_only: false
@@ -163,6 +166,9 @@ defmodule Tymeslot.Mailer.Providers do
   # presents; see `Tymeslot.Mailer.SMTPConfig` for why that is a last resort.
   @tls_verify_modes %{"peer" => :peer, "none" => :none}
   @tls_verify_mode_names @tls_verify_modes |> Map.keys() |> Enum.sort()
+
+  # Accepted `SMTP_SSL` values: force implicit TLS on or off regardless of port.
+  @ssl_modes %{"true" => true, "false" => false}
 
   @doc "Every accepted `EMAIL_ADAPTER` value, sorted."
   @spec names() :: [name()]
@@ -336,15 +342,17 @@ defmodule Tymeslot.Mailer.Providers do
   # Swoosh expects for its adapter, or an error naming the variables to set.
 
   defp build_config("smtp") do
-    with {:ok, host} <- env_present("SMTP_HOST"),
-         {:ok, username} <- env_present("SMTP_USERNAME"),
-         {:ok, password} <- env_present("SMTP_PASSWORD") do
+    # Credentials are optional (a relay that authorises by network takes
+    # none), and read blank-as-unset: the Docker entrypoint exports both as
+    # empty strings when the operator leaves them out.
+    with {:ok, host} <- env_present("SMTP_HOST") do
       {:ok,
        SMTPConfig.build(
          host: host,
          port: env_port!("SMTP_PORT", 587),
-         username: username,
-         password: password,
+         username: env_optional("SMTP_USERNAME"),
+         password: env_optional("SMTP_PASSWORD"),
+         ssl: env_ssl!("SMTP_SSL"),
          tls_verify: env_tls_verify!("SMTP_TLS_VERIFY"),
          cacertfile: env_optional("SMTP_CACERTFILE")
        )}
@@ -422,6 +430,22 @@ defmodule Tymeslot.Mailer.Providers do
             raise ArgumentError,
                   "Invalid #{var}: #{inspect(value)} " <>
                     "(expected one of: #{Enum.join(@tls_verify_mode_names, ", ")})"
+        end
+    end
+  end
+
+  defp env_ssl!(var) do
+    case env_optional(var) do
+      nil ->
+        nil
+
+      value ->
+        case Map.fetch(@ssl_modes, String.downcase(value)) do
+          {:ok, ssl} ->
+            ssl
+
+          :error ->
+            raise ArgumentError, "Invalid #{var}: #{inspect(value)} (expected true or false)"
         end
     end
   end
