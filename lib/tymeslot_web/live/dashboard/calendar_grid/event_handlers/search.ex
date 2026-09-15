@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -20,9 +19,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search do
     hidden_ids = socket.assigns.hidden_integration_ids
 
     results =
-      user_id
-      |> CalendarGrid.search_events(term, hidden_integration_ids: hidden_ids)
-      |> Calendar.visible_events(socket.assigns.integrations)
+      CalendarGrid.search_events(user_id, term, socket.assigns.integrations,
+        hidden_integration_ids: hidden_ids
+      )
 
     {:noreply,
      socket
