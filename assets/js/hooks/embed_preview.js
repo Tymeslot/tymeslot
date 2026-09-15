@@ -1,3 +1,7 @@
+// Every string this hook shows comes from a `data-*` attribute on the
+// container, translated server-side by `EmbedSettings.LivePreview`: the snippet
+// labels (`popupLabel`, `linkLabel`) in the embed's chosen language, the rest in
+// the dashboard's. Nothing user-facing is written here.
 export const EmbedPreview = {
   mounted() {
     this._cachedDataset = {};
@@ -87,11 +91,10 @@ export const EmbedPreview = {
         <div class="h-4 bg-slate-300 rounded w-1/2 mx-auto"></div>
         <div class="mt-8 py-3 bg-slate-300 rounded-xl w-3/4 mx-auto"></div>
       </div>
-      <p class="text-slate-500 text-sm font-medium italic">
-        The preview is disabled because your booking link is currently deactivated.
-      </p>
+      <p class="text-slate-500 text-sm font-medium italic"></p>
     `;
-    
+    wrapper.querySelector('p').textContent = this.el.dataset.deactivatedMessage || '';
+
     this.el.appendChild(wrapper);
   },
 
@@ -105,7 +108,7 @@ export const EmbedPreview = {
     wrapper.className = 'text-center p-8 w-full';
 
     const button = document.createElement('button');
-    button.textContent = 'Book a Meeting';
+    button.textContent = this.el.dataset.popupLabel || '';
     
     const primaryColor = '#14b8a6';
     // Determine text color based on background brightness
@@ -133,7 +136,7 @@ export const EmbedPreview = {
     };
 
     const hint = document.createElement('p');
-    hint.textContent = 'Click to test the booking modal';
+    hint.textContent = this.el.dataset.popupHint || '';
     hint.className = 'text-xs text-slate-400 mt-4';
 
     wrapper.appendChild(button);
@@ -155,7 +158,7 @@ export const EmbedPreview = {
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;
         } else if (retries > 10) {
-          alert('Booking widget is still loading. Please try again in a second.');
+          alert(this.el.dataset.loadingMessage || '');
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;
         }
@@ -179,7 +182,7 @@ export const EmbedPreview = {
     // `Helpers.embed_code("link", …)`.
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = 'Schedule a meeting with me →';
+    button.textContent = this.el.dataset.linkLabel || '';
     button.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors cursor-pointer bg-transparent border-0 p-0';
     button.onclick = () => {
       const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
@@ -197,7 +200,7 @@ export const EmbedPreview = {
     };
 
     const hint = document.createElement('p');
-    hint.textContent = 'Preview only: this link opens in test mode and stops working after an hour. Copy the link to share from the Embed Options tab.';
+    hint.textContent = this.el.dataset.linkHint || '';
     hint.className = 'text-xs text-slate-400 mt-4';
 
     wrapper.appendChild(button);
@@ -275,7 +278,7 @@ export const EmbedPreview = {
     }
 
     iframe.src = url.toString();
-    iframe.setAttribute('title', 'Booking Preview');
+    iframe.setAttribute('title', this.el.dataset.iframeTitle || '');
     iframe.style.width = '100%';
     iframe.style.height = (options.initialHeight ? options.initialHeight + 'px' : '100%');
     iframe.style.minHeight = '400px';

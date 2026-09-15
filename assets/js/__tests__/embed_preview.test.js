@@ -103,13 +103,31 @@ describe('EmbedPreview', () => {
     expect(url.searchParams.get('preview_token')).toBe(TOKEN);
   });
 
-  test('Link says its anchor is a short-lived preview, not the link to share', () => {
-    // The anchor carries a token that expires after an hour, so an organiser
-    // who right-clicks and copies it must not be told it is their link.
-    const hint = mountHook('link').el.querySelector('p').textContent;
+  test('shows only the text the server translated, never wording of its own', () => {
+    // The wording itself (the Link hint calling the preview short-lived, not
+    // the link to share) is asserted where it is translated, in the
+    // LivePreview component test. Here the point is that each mode reads it.
+    const labels = {
+      popupLabel: 'Meeting buchen',
+      popupHint: 'Popup-Hinweis',
+      linkLabel: 'Meeting planen',
+      linkHint: 'Link-Hinweis',
+      iframeTitle: 'Buchungsvorschau',
+      deactivatedMessage: 'Vorschau deaktiviert'
+    };
 
-    expect(hint).toMatch(/preview only/i);
-    expect(hint).not.toMatch(/direct link/i);
+    const popup = mountHook('popup', labels).el;
+    expect(popup.querySelector('button').textContent).toBe('Meeting buchen');
+    expect(popup.querySelector('p').textContent).toBe('Popup-Hinweis');
+
+    const link = mountHook('link', labels).el;
+    expect(link.querySelector('button').textContent).toBe('Meeting planen');
+    expect(link.querySelector('p').textContent).toBe('Link-Hinweis');
+
+    expect(mountHook('inline', labels).el.querySelector('iframe').title).toBe('Buchungsvorschau');
+
+    const deactivated = mountHook('popup', { ...labels, isReady: 'false' }).el;
+    expect(deactivated.querySelector('p').textContent).toBe('Vorschau deaktiviert');
   });
 
   test('the modal opens at the height cap, because a preview never self-reports', () => {
