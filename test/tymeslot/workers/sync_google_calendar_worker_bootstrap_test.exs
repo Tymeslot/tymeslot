@@ -10,10 +10,13 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   setup :verify_on_exit!
+
+  defp health(integration), do: Monitor.get_state(:calendar, integration.id, integration.user_id)
 
   describe "perform/1 - booking calendar no longer exists (HTTP 404)" do
     test "flags the integration for reconnection and discards on incremental 404" do
@@ -59,6 +62,56 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
 
       {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
       assert refreshed.needs_reauth == true
+    end
+  end
+
+  describe "perform/1 - pagination cap exceeded during bootstrap" do
+    test "discards the job instead of retrying when bootstrap listing exceeds the page cap" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: nil
+        )
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :too_many_pages, "Event listing exceeded 200 pages of 2500 events"}
+      end)
+
+      assert {:discard, reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "exceeded 200 pages"
+    end
+
+    test "records the cap hit against the integration's health, same as the incremental path" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: nil
+        )
+
+      assert health(integration).consecutive_sync_failures == 0
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :too_many_pages, "Event listing exceeded 200 pages of 2500 events"}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert health(integration).consecutive_sync_failures == 1
     end
   end
 

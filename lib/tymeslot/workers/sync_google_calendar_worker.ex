@@ -104,6 +104,16 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
         {:snooze, 120}
 
+      {:error, :too_many_pages, message} ->
+        Logger.error(
+          "Google Calendar incremental sync exceeded pagination limit; discarding job",
+          calendar_integration_id: integration.id,
+          error: message
+        )
+
+        HealthCheck.record_sync_failure(:calendar, integration)
+        {:discard, message}
+
       {:error, _type, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
@@ -149,6 +159,16 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
         {:snooze, 120}
 
+      {:error, :too_many_pages, message} ->
+        Logger.error(
+          "Google Calendar bootstrap exceeded pagination limit; discarding job",
+          calendar_integration_id: integration.id,
+          error: message
+        )
+
+        HealthCheck.record_sync_failure(:calendar, integration)
+        {:discard, message}
+
       {:error, _type, reason} ->
         Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
@@ -171,6 +191,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     with :ok <- safe_process_events(integration, events),
          :ok <- persist_sync_state(integration, next_sync_token),
          :ok <- sync_secondary_calendars(integration) do
+      HealthCheck.mark_synced_successfully(:calendar, integration.id)
       SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
       :ok
     else
@@ -351,10 +372,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     attrs =
       maybe_put_sync_token(%{last_external_sync_at: DateTime.utc_now(:second)}, next_sync_token)
 
-    result = CalendarIntegrationQueries.update_sync_state(integration, attrs)
-    HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
         :ok
 
