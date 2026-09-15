@@ -15,6 +15,10 @@ defmodule Tymeslot.Test.TagTaxonomy do
   | Test type / layer | What kind of tests these are (unit, integration, schema, etc.) |
   | Special / env     | Tags used for selective exclusion or CI environment control    |
 
+  One tag in the last category runs the other way round: `:cross_tenant` is never
+  excluded, and exists so the authorization tests scattered across several
+  feature areas can be run as one slice.
+
   ## Every Test Module Needs a Domain Tag
 
   `CredoChecks.TestModuleTagRequired` requires at least one tag from the
@@ -104,6 +108,13 @@ defmodule Tymeslot.Test.TagTaxonomy do
       # General-purpose exclusion / environment markers
       :external,
       :integration_test,
+      # Tests that push a forged event or a foreign object id at an authenticated
+      # surface and assert it is refused. Not excluded from any run — the point of
+      # the tag is the opposite, `mix test --only cross_tenant` as a slice worth
+      # running before a release. A path-based selection cannot find these: the
+      # regression they guard against arrives as a *new caller* in an unrelated
+      # file, which is exactly what `mix test.affected` will not select.
+      :cross_tenant,
       # Guards that span both repositories, and so can only run from the SaaS
       # checkout (see tymeslot-saas/test/cross_repo/)
       :cross_repo,
