@@ -551,7 +551,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       # provider client, so it reaches every crash report that prints a task's
       # arguments. The virtual credential fields are already redacted; this
       # one is persisted, and was not.
-      integration = %CalendarIntegrationSchema{google_channel_secret: "secretchannel"}
+      integration = build(:calendar_integration, google_channel_secret: "secretchannel")
 
       refute inspect(integration) =~ "secretchannel"
     end

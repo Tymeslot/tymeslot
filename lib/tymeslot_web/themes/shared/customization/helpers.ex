@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   end
 
   defp get_uploaded_image_style(image_path) do
-    path = sanitize_path(image_path)
+    path = Validation.sanitize_path(image_path)
 
     """
     background-image: url('/uploads/#{path}');
@@ -136,9 +136,6 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
     background-repeat: no-repeat;
     """
   end
-
-  @spec sanitize_path(String.t() | nil) :: String.t()
-  defp sanitize_path(path), do: Validation.sanitize_path(path)
 
   @doc """
   Safely gets the background type from a customization map or struct.
