@@ -1,7 +1,8 @@
 defmodule Tymeslot.Migrations.RebuildProviderEventIdIndexTest do
   @moduledoc """
   Covers `20260911153135_rebuild_provider_event_id_index_if_invalid`, whose
-  whole point is that it drops before it creates.
+  whole point is that it drops before it creates, and only where the index
+  needs it.
 
   The migration it heals (`20260910134458`) builds its index with
   `create_if_not_exists ... concurrently: true`. An interrupted concurrent
@@ -75,7 +76,21 @@ defmodule Tymeslot.Migrations.RebuildProviderEventIdIndexTest do
     assert index_valid?()
   end
 
+  # An unconditional rebuild would cost every existing installation a full
+  # concurrent rebuild of its event cache at upgrade time, to repair a state
+  # almost none of them are in. A rebuilt index gets a new OID; a skipped one
+  # keeps its own.
+  test "leaves a healthy index untouched" do
+    assert index_valid?()
+    before = index_oid()
+
+    MigrationRunner.rerun!(@version)
+
+    assert index_oid() == before
+  end
+
   test "rebuilds it with the shape the query it serves needs" do
+    mark_invalid!()
     MigrationRunner.rerun!(@version)
 
     assert %{rows: [[definition]]} =
@@ -113,6 +128,11 @@ defmodule Tymeslot.Migrations.RebuildProviderEventIdIndexTest do
       )
 
     valid
+  end
+
+  defp index_oid do
+    %{rows: [[oid]]} = Repo.query!("SELECT to_regclass($1)::oid", [@index])
+    oid
   end
 
   defp index_exists? do
