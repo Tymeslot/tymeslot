@@ -378,6 +378,8 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
   end
 
   describe "answering somebody else's request" do
+    @describetag :cross_tenant
+
     test "an id belonging to another host is refused", %{conn: conn, user: user} do
       held_meeting(user)
       stranger = insert(:user)
