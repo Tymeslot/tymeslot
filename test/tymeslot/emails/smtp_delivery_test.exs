@@ -16,6 +16,7 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
   @moduletag :mailer
   @moduletag :integration
 
+  import ExUnit.CaptureLog
   import Tymeslot.ConfigTestHelpers
 
   alias Swoosh.Email
@@ -67,6 +68,25 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
                Delivery.deliver(email("Wrong password"))
 
       refute_received {:smtp_relay, {:mail_from, _line}}
+    end
+  end
+
+  describe "credentials configured for a relay that offers no login" do
+    # `auth: :always` alone refused such a relay outright, so an operator who
+    # left the credentials filled in lost every email on upgrading.
+    test "delivers without logging in and warns about the unused credentials" do
+      relay = FakeSmtpRelay.start(auth: :not_offered)
+      use_relay(relay)
+
+      log =
+        capture_log(fn ->
+          assert {:ok, _receipt} = Delivery.deliver(email("No AUTH offered"))
+        end)
+
+      assert_receive {:smtp_relay, {:message, data}}
+      assert data =~ "Subject: No AUTH offered"
+      refute_received {:smtp_relay, {:auth, _mechanism}}
+      assert log =~ "does not offer authentication"
     end
   end
 

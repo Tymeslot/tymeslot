@@ -27,6 +27,7 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
 
   use Swoosh.Adapter, required_config: [:relay], required_deps: [gen_smtp: :gen_smtp_client]
 
+  require Logger
   require Record
 
   alias Swoosh.Adapters.SMTP
@@ -66,18 +67,7 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   defp open_session(options, config) do
     owner = self()
     timeout = Keyword.get(config, :session_timeout, @default_session_timeout_ms)
-
-    task =
-      Task.async(fn ->
-        case :gen_smtp_client.open(options) do
-          {:ok, client} ->
-            :ok = :smtp_socket.controlling_process(smtp_client_socket(client, :socket), owner)
-            {:ok, client}
-
-          error ->
-            error
-        end
-      end)
+    task = Task.async(fn -> open_owned_by(options, owner) end)
 
     case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
       {:ok, {:ok, client}} ->
@@ -92,6 +82,33 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
       nil ->
         {:error,
          {:retries_exceeded, {:network_failure, to_charlist(config[:relay]), {:error, :timeout}}}}
+    end
+  end
+
+  # `auth: :always` makes a rejected login fail loudly, but it also refuses a
+  # relay that offers no AUTH at all, which `:if_available` used to send to
+  # without logging in. Credentials left configured for such a relay are a
+  # harmless leftover rather than a wrong password, so that one case is
+  # reopened without a login instead of failing every send. Stripping AUTH
+  # from the relay's reply can only make the session unauthenticated, never
+  # expose the credentials.
+  defp open_owned_by(options, owner) do
+    case :gen_smtp_client.open(options) do
+      {:ok, client} ->
+        :ok = :smtp_socket.controlling_process(smtp_client_socket(client, :socket), owner)
+        {:ok, client}
+
+      {:error, :retries_exceeded, {:missing_requirement, host, :auth}} ->
+        Logger.warning(
+          "SMTP relay does not offer authentication; sending without logging in. " <>
+            "Unset SMTP_USERNAME and SMTP_PASSWORD if the relay authorises by network.",
+          relay: to_string(host)
+        )
+
+        options |> Keyword.put(:auth, :never) |> open_owned_by(owner)
+
+      error ->
+        error
     end
   end
 

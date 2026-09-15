@@ -26,8 +26,9 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   (`auth: :always`): with `:if_available`, gen_smtp treats a rejected login as
   "no login" and carries on unauthenticated, so a wrong password surfaced as
   a misleading "530 Authentication required" on MAIL FROM rather than as an
-  authentication failure. Without credentials no login is attempted
-  (`auth: :never`).
+  authentication failure. A relay that offers no AUTH at all is still sent to,
+  without a login and with a warning, by `Tymeslot.Mailer.SMTPAdapter`.
+  Without credentials no login is attempted (`auth: :never`).
 
   On port 465 the TLS options are additionally passed as `:sockopts`. gen_smtp
   reads `:tls_options` only when upgrading an existing connection with
