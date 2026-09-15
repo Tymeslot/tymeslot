@@ -32,6 +32,7 @@ on:
         description: "Number of suite runs"
         required: false
         default: "12"
+        type: number
 
 permissions:
   contents: read
@@ -131,6 +132,12 @@ jobs:
           # no graceful degradation for it, and the Report step silently never
           # firing is a worse failure than a loud one.
           : "${GITHUB_STEP_SUMMARY:=/dev/null}"
+          # `seq 1 "$RUNS"` on a non-numeric or zero RUNS produces no words,
+          # so the loop below silently runs zero times and reports a green
+          # "no failures" having tested nothing. Fail loudly instead.
+          case "$RUNS" in
+            ''|*[!0-9]*|0) echo "::error::RUNS must be a positive integer, got '$RUNS'"; exit 1 ;;
+          esac
           mkdir -p flake-logs
           failed=0
           for i in $(seq 1 "$RUNS"); do
