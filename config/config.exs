@@ -474,6 +474,12 @@ config :tymeslot, :hsts,
 # into this key. TymeslotWeb.Helpers.ClientIP reads it for the LiveView socket
 # path and hands the endpoint's RemoteIp plug its `clients:` list from it for the
 # conn path, so the two cannot be configured apart.
+#
+# Only fixes a single proxy tier: it works when the reverse proxy directly in
+# front of the app is the only hop between it and the visitor. With a further
+# private proxy tier upstream of that one, the flag cannot tell the outer hop
+# apart from a visitor, and everyone behind it still collapses onto the outer
+# proxy's address.
 config :tymeslot, :trust_private_client_ips, false
 
 # Slack notifications — credentials supplied via env at runtime

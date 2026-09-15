@@ -37,6 +37,17 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   def remote_ip_clients(false), do: []
 
   @doc """
+  Parses the `TRUST_PRIVATE_CLIENT_IPS` environment variable into the boolean
+  `config/runtime.exs` stores under `:trust_private_client_ips`.
+
+  Accepts `"true"`, `"1"` or `"yes"` (case-sensitive); anything else,
+  including unset (`nil`), leaves the flag off, the fail-safe default for an
+  internet-facing deployment.
+  """
+  @spec trust_private_clients_from_env(String.t() | nil) :: boolean()
+  def trust_private_clients_from_env(value), do: value in ~w[true 1 yes]
+
+  @doc """
   Extracts the client IP address from a Plug.Conn or Phoenix.LiveView.Socket.
 
   IMPORTANT: For LiveViews, this function is safe to call at any time (mount/events),
@@ -381,6 +392,13 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   # intranet-only self-host) is the case this gets wrong, and it resolves every
   # visitor to the proxy's LAN address. `:trust_private_client_ips` is the
   # opt-out for exactly that shape; see `trust_private_clients?/0`.
+  #
+  # That opt-out only restores per-visitor limits when the reverse proxy
+  # directly in front of the app is the only hop between it and the visitor.
+  # With a further private proxy tier upstream of that one (e.g. a LAN proxy
+  # in front of an inner nginx), the flag cannot tell the outer hop apart from
+  # a visitor either, and everyone behind it still collapses onto the outer
+  # proxy's address.
   defp usable_forwarded_ip(nil, _trust_private_clients?), do: nil
 
   defp usable_forwarded_ip(value, trust_private_clients?) when is_binary(value) do

@@ -557,4 +557,22 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
       assert ClientIP.get_from_mount(socket, false) == "192.168.1.254"
     end
   end
+
+  # config/runtime.exs calls this to turn TRUST_PRIVATE_CLIENT_IPS into the
+  # application env value both paths above read; pinned here so a change to
+  # the accepted set is a deliberate one.
+  describe "trust_private_clients_from_env/1" do
+    test "accepts the documented values" do
+      assert ClientIP.trust_private_clients_from_env("true")
+      assert ClientIP.trust_private_clients_from_env("1")
+      assert ClientIP.trust_private_clients_from_env("yes")
+    end
+
+    test "rejects everything else, including unset and case variants" do
+      refute ClientIP.trust_private_clients_from_env("TRUE")
+      refute ClientIP.trust_private_clients_from_env("false")
+      refute ClientIP.trust_private_clients_from_env("")
+      refute ClientIP.trust_private_clients_from_env(nil)
+    end
+  end
 end

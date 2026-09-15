@@ -230,9 +230,17 @@ if config_env() == :prod do
   # `ClientIP.remote_ip_clients/0`, the `RemoteIp` plug in the endpoint, so the
   # two cannot be configured apart. RemoteIp reads no application config, which
   # is why its options live on the plug rather than here.
+  #
+  # Only fixes a single proxy tier: it works when the reverse proxy directly in
+  # front of the app is the only hop between it and the visitor. With a further
+  # private proxy tier upstream of that one, the flag cannot tell the outer hop
+  # apart from a visitor, and everyone behind it still collapses onto the outer
+  # proxy's address.
   config :tymeslot,
          :trust_private_client_ips,
-         System.get_env("TRUST_PRIVATE_CLIENT_IPS") in ~w[true 1 yes]
+         TymeslotWeb.Helpers.ClientIP.trust_private_clients_from_env(
+           System.get_env("TRUST_PRIVATE_CLIENT_IPS")
+         )
 
   # Configure Oban for production
   # Queue definitions in config.exs are loaded at runtime by application.ex
