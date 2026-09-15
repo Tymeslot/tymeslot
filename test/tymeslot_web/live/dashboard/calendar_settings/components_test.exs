@@ -381,6 +381,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert html =~ "No calendar is selected."
     end
 
+    # The stored sync_error is whatever English sentence the flagging Oban
+    # worker's dgettext call produced (workers never set a Gettext locale),
+    # so the row must re-translate it against the viewer's own locale rather
+    # than rendering the persisted English text verbatim.
+    test "translates a known reason into the viewer's locale" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+
+      html =
+        render_row_with(
+          needs_reauth: true,
+          sync_error:
+            "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
+        )
+
+      assert html =~
+               "Der Buchungskalender existiert bei Google nicht mehr. Bitte verbinden Sie die Integration erneut und wählen Sie einen anderen Kalender."
+    end
+
     # sync_error also carries transient failures, which are not the owner's to fix.
     test "keeps a stored sync error to itself while the integration is not flagged" do
       html = render_row_with(needs_reauth: false, sync_error: "Timed out talking to the server.")

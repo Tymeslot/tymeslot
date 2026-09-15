@@ -239,6 +239,39 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
              )
     end
 
+    test "shows why a flagged video integration needs reconnecting", %{conn: conn, user: user} do
+      insert(:video_integration,
+        user: user,
+        provider: "google_meet",
+        is_active: true,
+        needs_reauth: true,
+        sync_error: "Stored credentials could not be decrypted."
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert html =~ "Stored credentials could not be decrypted."
+    end
+
+    # sync_error also carries transient failures, which are not the owner's to
+    # fix, so an unflagged row must keep the stored text to itself.
+    test "keeps a stored sync error to itself while a video integration is not flagged", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:video_integration,
+        user: user,
+        provider: "google_meet",
+        is_active: true,
+        needs_reauth: false,
+        sync_error: "Timed out talking to the server."
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      refute html =~ "Timed out talking to the server."
+    end
+
     # NOTE: the end-to-end click → OAuth-redirect for a *reconnect* is not
     # asserted here. `Video.oauth_reconnect_url/2` calls the google helper's
     # `authorization_url/4` (scopes + opts), but the injected test double
