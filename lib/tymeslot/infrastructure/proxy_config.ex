@@ -353,7 +353,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
 
   # Credentials reach here as a struct because `load/0` converts them at the
   # boundary. The raw-tuple clause is the anti-drift guard: without it a caller
-  # still passing `config/runtime.exs`'s tuple would fall through to "no
+  # still passing a `{username, password}` tuple would fall through to "no
   # credentials" and every proxied request would quietly start failing with a
   # 407 instead of saying why.
   @spec proxy_auth_header(ProxyCredentials.t() | nil) :: {String.t(), String.t()} | nil

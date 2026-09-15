@@ -241,7 +241,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
     defaults
   end
 
-  defp check_capability_support(features, :background) do
+  defp supports_background?(features) do
     features[:supports_gradient_background] ||
       features[:supports_image_background] ||
       features[:supports_video_background] ||
@@ -269,7 +269,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
     # Generate background CSS if supported
     # Background comes after color scheme in the list so it overrides it in the merge process
     css_parts =
-      if check_capability_support(features, :background) do
+      if supports_background?(features) do
         background_css = generate_background_css(customizations)
         if background_css, do: [background_css | css_parts], else: css_parts
       else

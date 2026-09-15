@@ -307,10 +307,10 @@ defmodule Tymeslot.Application do
   # Logs HTTP proxy configuration for visibility.
   #
   # Read through `ProxyConfig.load/0` rather than `Application.get_env/2`, so
-  # the credentials this function reaches are the normalised struct that
-  # refuses to print its password, not the raw tuple `config/runtime.exs`
-  # produces. Nothing here prints them today; going through the one boundary is
-  # what keeps that true if this ever grows a fuller dump.
+  # the credentials this function reaches are always the normalised struct that
+  # refuses to print its password, whatever shape was put in the application
+  # environment. Nothing here prints them today; going through the one boundary
+  # is what keeps that true if this ever grows a fuller dump.
   defp log_proxy_config do
     case ProxyConfig.load() do
       nil ->
