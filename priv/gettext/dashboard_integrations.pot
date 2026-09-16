@@ -933,7 +933,7 @@ msgstr ""
 msgid "Connection timeout - Server took too long to respond"
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Connection timeout while reaching the URL"
 msgstr ""
@@ -973,7 +973,7 @@ msgstr ""
 msgid "Failed to authenticate with Zoom: %{reason}"
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to reach URL: %{reason}"
 msgstr ""
@@ -1063,7 +1063,7 @@ msgstr ""
 msgid "Please enter a valid server URL (e.g., https://mirotalk.example.com)"
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})"
 msgstr ""
@@ -1083,12 +1083,13 @@ msgstr ""
 msgid "The provider rejected the stored credentials for this integration. Please reconnect the integration."
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL resolves to a private or loopback address"
 msgstr ""
 
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL responded with HTTP %{status}"
 msgstr ""
@@ -1155,7 +1156,7 @@ msgstr[1] ""
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL redirects too many times"
 msgstr ""
