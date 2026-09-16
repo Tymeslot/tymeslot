@@ -8,8 +8,6 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
 
   require Logger
 
-  alias Tymeslot.Integrations.Common.ConfigManager
-
   # Type definitions
   @type oauth_config :: %{
           access_token: String.t(),
@@ -23,7 +21,12 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   """
   @spec config_schema() :: map()
   def config_schema do
-    ConfigManager.oauth_schema()
+    %{
+      access_token: %{type: :string, required: true},
+      refresh_token: %{type: :string, required: true},
+      token_expires_at: %{type: :datetime, required: true},
+      oauth_scope: %{type: :string, required: true}
+    }
   end
 
   @doc """

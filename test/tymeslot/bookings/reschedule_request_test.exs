@@ -62,10 +62,18 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
 
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
 
-      # The void slot must not keep blocking conflict detection — otherwise
-      # nobody, including the original attendee, could ever book that window
-      # again.
-      refute MeetingConflictQueries.time_conflict_exists?(meeting.start_time, meeting.end_time)
+      # The void slot must not keep blocking the host's conflict detection,
+      # otherwise nobody, including the original attendee, could ever book that
+      # window again.
+      Repo.transaction(fn ->
+        assert {:ok, :no_conflicts} =
+                 MeetingConflictQueries.count_locked_conflicts(
+                   meeting.start_time,
+                   meeting.end_time,
+                   nil,
+                   user.id
+                 )
+      end)
 
       # A fresh booking landing on the exact original window — the same path
       # a new attendee's booking or the original attendee's rebooking near

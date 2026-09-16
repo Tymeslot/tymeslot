@@ -50,7 +50,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   # then fail on the day itself.
   @before_santiago_gap ~U[2026-09-01 12:00:00Z]
 
-  property "month_availability returns valid map for any timezone pair", %{schedule: schedule} do
+  property "range_availability returns valid map for any timezone pair", %{schedule: schedule} do
     check all(
             year <- integer(2026..2027),
             month <- integer(1..12),
@@ -65,8 +65,10 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
         schedule_id: schedule.id
       }
 
+      {first_day, last_day} = month_bounds(year, month)
+
       {:ok, availability} =
-        Calculate.month_availability(year, month, owner_tz, user_tz, [], config)
+        Calculate.range_availability(first_day, last_day, owner_tz, user_tz, [], config)
 
       # Result must be a map of date_string => boolean
       assert is_map(availability)
@@ -81,7 +83,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
       end
 
       # Must cover all days in the month
-      days_in_month = Date.days_in_month(Date.new!(year, month, 1))
+      days_in_month = Date.days_in_month(first_day)
       assert map_size(availability) == days_in_month
     end
   end
@@ -89,7 +91,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   # The property above only reaches this pair on some seeds. America/Santiago
   # has no midnight on 2026-09-06 (DST gap), and an owner in Asia/Macau pushes
   # availability across that boundary, so pin the case deterministically.
-  test "month_availability spans an attendee midnight that DST skips", %{schedule: schedule} do
+  test "range_availability spans an attendee midnight that DST skips", %{schedule: schedule} do
     config = %{
       duration_minutes: 30,
       buffer_minutes: 0,
@@ -98,8 +100,17 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     }
 
     with_frozen_clock(@before_santiago_gap, fn ->
+      {first_day, last_day} = month_bounds(2026, 9)
+
       assert {:ok, availability} =
-               Calculate.month_availability(2026, 9, "Asia/Macau", "America/Santiago", [], config)
+               Calculate.range_availability(
+                 first_day,
+                 last_day,
+                 "Asia/Macau",
+                 "America/Santiago",
+                 [],
+                 config
+               )
 
       assert map_size(availability) == 30
       # The owner's window still lands on the attendee's DST-gap day, so it stays bookable.
@@ -187,7 +198,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     end)
   end
 
-  property "month_availability respects min_advance_hours in any timezone", %{schedule: schedule} do
+  property "range_availability respects min_advance_hours in any timezone", %{schedule: schedule} do
     check all(
             advance_hours <- integer(0..72),
             user_tz <- member_of(@timezones),
@@ -221,10 +232,12 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   end
 
   defp day_available?(schedule, user_tz, advance_hours, date) do
+    {first_day, last_day} = month_bounds(date.year, date.month)
+
     {:ok, availability} =
-      Calculate.month_availability(
-        date.year,
-        date.month,
+      Calculate.range_availability(
+        first_day,
+        last_day,
         user_tz,
         user_tz,
         [],
@@ -232,5 +245,11 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
       )
 
     Map.fetch!(availability, Date.to_string(date))
+  end
+
+  # First and last day of a calendar month, the span each check above covers.
+  defp month_bounds(year, month) do
+    first_day = Date.new!(year, month, 1)
+    {first_day, Date.end_of_month(first_day)}
   end
 end

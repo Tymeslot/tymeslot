@@ -60,22 +60,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
-  Gets a profile by user ID, creating one if it doesn't exist.
-  Note: The caller is responsible for any post-creation side effects
-  (e.g. creating default weekly schedules).
-  """
-  @spec get_or_create_by_user_id(integer()) :: {:ok, ProfileSchema.t()} | {:error, term()}
-  def get_or_create_by_user_id(user_id) do
-    case get_by_user_id(user_id) do
-      {:error, :not_found} ->
-        insert_profile(user_id)
-
-      {:ok, profile} ->
-        {:ok, profile}
-    end
-  end
-
-  @doc """
   Gets a profile by user ID.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.
   """
@@ -132,17 +116,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     |> where([p], p.id == ^profile_id)
     |> preload(:user)
     |> Repo.one()
-  end
-
-  @doc """
-  Updates a specific field in the profile.
-  """
-  @spec update_field(ProfileSchema.t(), atom(), term()) ::
-          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_field(%ProfileSchema{} = profile, field, value) do
-    profile
-    |> ProfileSchema.changeset(%{field => value})
-    |> Repo.update()
   end
 
   @doc """

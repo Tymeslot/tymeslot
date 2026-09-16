@@ -8,11 +8,11 @@ defmodule Tymeslot.Profiles.ProfileQueriesTest do
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
-  describe "get_or_create_by_user_id/1" do
+  describe "insert_profile/1" do
     test "applies correct business defaults for new user profiles" do
       user = insert(:user)
 
-      assert {:ok, profile} = ProfileQueries.get_or_create_by_user_id(user.id)
+      assert {:ok, profile} = ProfileQueries.insert_profile(user.id)
 
       # These are business rules, not framework behavior. The scheduling
       # policy now belongs to the profile's default availability schedule.
@@ -22,15 +22,6 @@ defmodule Tymeslot.Profiles.ProfileQueriesTest do
       assert schedule.buffer_minutes == 15
       assert schedule.advance_booking_days == 90
       assert schedule.min_advance_hours == 3
-    end
-
-    test "prevents duplicate profiles per user" do
-      existing_profile = insert(:profile)
-      # Reload to get the user_id that was auto-created
-      existing_profile = ProfileQueries.get_with_user(existing_profile.id)
-
-      assert {:ok, profile} = ProfileQueries.get_or_create_by_user_id(existing_profile.user_id)
-      assert profile.id == existing_profile.id
     end
   end
 

@@ -13,7 +13,6 @@ defmodule Tymeslot.Auth do
     AuthActions,
     Authentication,
     EmailChange,
-    PasswordReset,
     PasswordUpdate,
     Registration,
     Session,
@@ -131,29 +130,6 @@ defmodule Tymeslot.Auth do
   @spec delete_session(Plug.Conn.t()) :: Plug.Conn.t()
   def delete_session(conn) do
     Session.delete_session(conn)
-  end
-
-  @doc """
-  Initiates the password reset process.
-
-  This will:
-  - Generate a reset token
-  - Send reset instructions via email
-  - Return success regardless of whether user exists (security)
-  """
-  @spec initiate_password_reset(String.t(), keyword()) ::
-          {:ok, atom(), String.t()} | {:error, atom(), String.t()}
-  def initiate_password_reset(email, opts \\ []) do
-    PasswordReset.initiate_reset(email, opts)
-  end
-
-  @doc """
-  Resets a user's password using a valid reset token.
-  """
-  @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, term(), String.t()} | {:error, atom(), String.t()}
-  def reset_password(token, new_password, password_confirmation, opts \\ []) do
-    PasswordReset.reset_password(token, new_password, password_confirmation, opts)
   end
 
   @doc """

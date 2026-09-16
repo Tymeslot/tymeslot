@@ -23,11 +23,6 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   end
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
-  def get_event(uid, user_id) do
-    EventOperations.get_event(uid, user_id)
-  end
-
-  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def create_event(event_data, context) do
     EventOperations.create_event(event_data, context)
   end

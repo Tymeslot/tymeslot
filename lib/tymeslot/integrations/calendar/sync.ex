@@ -72,35 +72,33 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     end
   end
 
-  @doc """
-  Marks the events that mirror one of this integration's own bookings.
-
-  Providers infer ownership from the payload where they can: Google stamps
-  `extendedProperties.private.createdBy`, and the iCal normaliser recognises a
-  `…@tymeslot.com` UID. Neither reaches a booking on a CalDAV or Outlook
-  calendar — a booking's UID is a bare `UUID.uuid4()` (`Bookings.Create`), so
-  `created_by_tymeslot` stayed false on every mirrored booking those providers
-  hold.
-
-  That flag is load-bearing: `CalDAV.OfflineQueue` grants the `:keep_local`
-  force-write only to rows carrying it, so the recovery a conflicting write
-  depends on was inert for exactly the events it was written for.
-
-  Callers writing through `upsert_cache/2` get this for free and must not call
-  it themselves; the one caller that needs it explicitly is
-  `full_refresh_for_role/3`, which writes by a different query.
-
-  Ownership does not have to be inferred from the payload at all. A mirrored
-  booking shares an identifier with the meeting it came from, which is the
-  same rule the grid and the agenda deduplicate on, so resolve it against the
-  integration's meetings. Only ever raises the flag: a provider that already
-  recognised its own marker keeps it.
-  """
+  # Marks the events that mirror one of this integration's own bookings.
+  #
+  # Providers infer ownership from the payload where they can: Google stamps
+  # `extendedProperties.private.createdBy`, and the iCal normaliser recognises a
+  # `…@tymeslot.com` UID. Neither reaches a booking on a CalDAV or Outlook
+  # calendar — a booking's UID is a bare `UUID.uuid4()` (`Bookings.Create`), so
+  # `created_by_tymeslot` stayed false on every mirrored booking those providers
+  # hold.
+  #
+  # That flag is load-bearing: `CalDAV.OfflineQueue` grants the `:keep_local`
+  # force-write only to rows carrying it, so the recovery a conflicting write
+  # depends on was inert for exactly the events it was written for.
+  #
+  # Callers writing through `upsert_cache/2` get this for free and must not call
+  # it themselves; the one caller that needs it explicitly is
+  # `full_refresh_for_role/3`, which writes by a different query.
+  #
+  # Ownership does not have to be inferred from the payload at all. A mirrored
+  # booking shares an identifier with the meeting it came from, which is the
+  # same rule the grid and the agenda deduplicate on, so resolve it against the
+  # integration's meetings. Only ever raises the flag: a provider that already
+  # recognised its own marker keeps it.
   @spec flag_tymeslot_owned(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
           [CalendarEvent.t()]
-  def flag_tymeslot_owned(_integration, []), do: []
+  defp flag_tymeslot_owned(_integration, []), do: []
 
-  def flag_tymeslot_owned(%CalendarIntegrationSchema{} = integration, calendar_events) do
+  defp flag_tymeslot_owned(%CalendarIntegrationSchema{} = integration, calendar_events) do
     identifiers =
       calendar_events
       |> Meetings.calendar_identifier_set()

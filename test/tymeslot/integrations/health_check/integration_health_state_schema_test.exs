@@ -75,38 +75,4 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchemaTest do
       assert "has already been taken" in errors_on(changeset).integration_type
     end
   end
-
-  describe "upsert_changeset/2" do
-    test "valid with only integration_type and integration_id" do
-      attrs = %{integration_type: "video", integration_id: 5}
-
-      changeset =
-        IntegrationHealthStateSchema.upsert_changeset(%IntegrationHealthStateSchema{}, attrs)
-
-      assert changeset.valid?
-    end
-
-    test "invalid without required fields" do
-      changeset =
-        IntegrationHealthStateSchema.upsert_changeset(%IntegrationHealthStateSchema{}, %{})
-
-      refute changeset.valid?
-
-      assert %{
-               integration_type: ["can't be blank"],
-               integration_id: ["can't be blank"]
-             } = errors_on(changeset)
-    end
-
-    test "does not require user_id or status" do
-      attrs = %{integration_type: "calendar", integration_id: 1}
-
-      changeset =
-        IntegrationHealthStateSchema.upsert_changeset(%IntegrationHealthStateSchema{}, attrs)
-
-      assert changeset.valid?
-      refute Map.has_key?(errors_on(changeset), :user_id)
-      refute Map.has_key?(errors_on(changeset), :status)
-    end
-  end
 end

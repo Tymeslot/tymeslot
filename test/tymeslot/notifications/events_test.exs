@@ -33,34 +33,6 @@ defmodule Tymeslot.Notifications.EventsTest do
     def schedule_reminder_emails(_meeting_id, _value, _unit, _schedule_at), do: :ok
   end
 
-  describe "should_trigger_notifications?/2" do
-    test "returns true for confirmed meetings on creation" do
-      assert Events.should_trigger_notifications?(:meeting_created, %{status: "confirmed"})
-    end
-
-    test "returns false for pending meetings on creation" do
-      refute Events.should_trigger_notifications?(:meeting_created, %{status: "pending"})
-    end
-
-    test "returns true for cancelled status on cancellation" do
-      assert Events.should_trigger_notifications?(:meeting_cancelled, %{status: "cancelled"})
-    end
-
-    test "returns true for reminder_triggered when confirmed and not sent" do
-      assert Events.should_trigger_notifications?(:reminder_triggered, %{
-               status: "confirmed",
-               reminder_email_sent: false
-             })
-    end
-
-    test "returns false for reminder_triggered when already sent" do
-      refute Events.should_trigger_notifications?(:reminder_triggered, %{
-               status: "confirmed",
-               reminder_email_sent: true
-             })
-    end
-  end
-
   describe "dispatch wiring" do
     setup do
       setup_config(:tymeslot,

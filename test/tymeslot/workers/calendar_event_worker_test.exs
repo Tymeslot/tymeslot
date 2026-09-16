@@ -595,15 +595,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   end
 
   describe "scheduling" do
-    test "schedule_calendar_creation/1 enqueues job" do
-      assert :ok = CalendarEventScheduler.schedule_calendar_creation(123)
-
-      assert_enqueued(
-        worker: CalendarEventWorker,
-        args: %{"action" => "create", "meeting_id" => 123}
-      )
-    end
-
     test "schedule_calendar_update/1 enqueues job" do
       assert {:ok, _result} = CalendarEventScheduler.schedule_calendar_update(123)
 

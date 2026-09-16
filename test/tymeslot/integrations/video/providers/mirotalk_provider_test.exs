@@ -310,37 +310,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
     end
   end
 
-  describe "create_direct_join_url/3" do
-    test "creates join URL with correct parameters" do
-      config = %{base_url: "https://mirotalk.example.com"}
-      room_id = "room123"
-      participant_name = "John Doe"
-
-      url = JoinUrlBuilder.create_direct_join_url(config, room_id, participant_name)
-
-      assert String.starts_with?(url, "https://mirotalk.example.com/join?")
-      assert String.contains?(url, "room=room123")
-      assert String.contains?(url, "name=John+Doe")
-      assert String.contains?(url, "audio=1")
-      assert String.contains?(url, "video=1")
-      assert String.contains?(url, "screen=0")
-    end
-
-    test "sanitizes participant name in URL" do
-      config = %{base_url: "https://mirotalk.example.com"}
-
-      url =
-        JoinUrlBuilder.create_direct_join_url(
-          config,
-          "room123",
-          "John<script>alert(1)</script>"
-        )
-
-      assert String.contains?(url, "name=Johnscriptalert1script")
-      refute String.contains?(url, "<script>")
-    end
-  end
-
   describe "create_secure_direct_join_url/5" do
     test "creates secure join URL with token for organizer" do
       config = %{base_url: "https://mirotalk.example.com", api_key: "test_key"}

@@ -32,9 +32,8 @@ defmodule TymeslotWeb.Plugs.AdditionalDashboardPlugs do
   defp run({module, opts}, conn), do: module.call(conn, module.init(opts))
   defp run(module, conn) when is_atom(module), do: module.call(conn, module.init([]))
 
-  @doc false
   @spec configured_plugs() :: list()
-  def configured_plugs do
+  defp configured_plugs do
     case Application.get_env(:tymeslot, :dashboard_additional_plugs, []) do
       plugs when is_list(plugs) ->
         plugs

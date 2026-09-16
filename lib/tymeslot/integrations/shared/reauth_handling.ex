@@ -91,16 +91,14 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   }
 
   @doc """
-  The error message recorded when flagging an integration for reauth: the
-  untranslated msgid, exactly as persisted to `sync_error`.
+  The error message recorded when flagging an integration for reauth for the
+  given `t:cause/0`: the untranslated msgid, exactly as persisted to
+  `sync_error`.
 
-  Exposed so callers that build their own Oban return shapes can embed it.
-  Defaults to the decryption cause, which is the path this module was built
-  for; pass a `t:cause/0` for the others.
+  Exposed so tests can pin the persisted message without restating the copy.
   """
   @spec reauth_error_message(cause()) :: String.t()
-  def reauth_error_message(cause \\ @default_cause),
-    do: fetch_cause(cause).message
+  def reauth_error_message(cause), do: fetch_cause(cause).message
 
   @doc """
   Flags an integration for reauthentication.

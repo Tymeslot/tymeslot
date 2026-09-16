@@ -12,14 +12,6 @@ defmodule Tymeslot.Availability.Breaks do
   alias Tymeslot.Utils.TimeRange
 
   @doc """
-  Gets all breaks for a weekly availability day.
-  """
-  @spec get_breaks_for_day(integer()) :: list(AvailabilityBreakSchema.t())
-  def get_breaks_for_day(weekly_availability_id) do
-    AvailabilityBreakQueries.get_breaks_by_weekly_availability(weekly_availability_id)
-  end
-
-  @doc """
   Adds a new break to a day.
   """
   @spec add_break(integer(), Time.t(), Time.t(), String.t() | nil) ::

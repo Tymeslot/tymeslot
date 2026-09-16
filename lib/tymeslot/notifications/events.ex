@@ -293,28 +293,4 @@ defmodule Tymeslot.Notifications.Events do
         :ok
     end
   end
-
-  @doc """
-  Determines if an event should trigger notifications.
-  """
-  @spec should_trigger_notifications?(atom(), term()) :: boolean()
-  def should_trigger_notifications?(event_type, meeting) do
-    case event_type do
-      :meeting_created ->
-        meeting.status == "confirmed"
-
-      :meeting_cancelled ->
-        meeting.status == "cancelled"
-
-      :meeting_rescheduled ->
-        meeting.status == "confirmed"
-
-      :reminder_triggered ->
-        meeting.status == "confirmed" and
-          meeting.reminder_email_sent == false
-
-      _unknown_event ->
-        false
-    end
-  end
 end

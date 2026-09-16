@@ -10,28 +10,6 @@ defmodule Tymeslot.Meetings.MeetingConflictQueries do
   alias Tymeslot.Repo
 
   @doc """
-  Checks whether any active meetings overlap the given time window.
-
-  Optionally excludes a meeting by UID (for update-without-self-conflict).
-  """
-  @spec time_conflict_exists?(DateTime.t(), DateTime.t(), String.t() | nil) :: boolean()
-  def time_conflict_exists?(start_time, end_time, exclude_uid \\ nil) do
-    query =
-      Meeting
-      |> MeetingState.where_slot_live()
-      |> where([m], m.start_time < ^end_time and m.end_time > ^start_time)
-
-    query =
-      if exclude_uid do
-        from(m in query, where: m.uid != ^exclude_uid)
-      else
-        query
-      end
-
-    Repo.exists?(query)
-  end
-
-  @doc """
   Counts conflicting meetings with row-level locking (FOR UPDATE NOWAIT).
 
   Used inside transactions for atomic conflict-checked create/update.

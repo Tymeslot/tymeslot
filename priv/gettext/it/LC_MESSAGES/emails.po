@@ -658,11 +658,6 @@ msgstr "Azione richiesta: l'evento «%{title}» è stato riprogrammato nel tuo c
 msgid "Active"
 msgstr "Attivo"
 
-#: lib/tymeslot/emails/shared/meeting/calendar_links.ex
-#, elixir-autogen, elixir-format
-msgid "Add to your calendar"
-msgstr "Aggiungi al tuo calendario"
-
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "All future emails will be sent to your new address"

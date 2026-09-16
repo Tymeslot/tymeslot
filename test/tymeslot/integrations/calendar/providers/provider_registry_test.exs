@@ -112,21 +112,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "valid_provider?/1" do
-    test "returns true for valid providers" do
-      assert ProviderRegistry.valid_provider?(:caldav)
-      assert ProviderRegistry.valid_provider?(:google)
-      assert ProviderRegistry.valid_provider?(:nextcloud)
-      assert ProviderRegistry.valid_provider?(:radicale)
-      # Outlook may not be enabled in all environments
-    end
-
-    test "returns false for invalid providers" do
-      refute ProviderRegistry.valid_provider?(:invalid)
-      refute ProviderRegistry.valid_provider?(:unknown)
-    end
-  end
-
   describe "ProviderConfig.all_providers_with_dev/0" do
     test "returns list of all valid provider atoms" do
       providers = ProviderConfig.all_providers_with_dev()

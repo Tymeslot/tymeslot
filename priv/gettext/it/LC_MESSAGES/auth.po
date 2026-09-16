@@ -803,11 +803,6 @@ msgstr "Il nuovo indirizzo email deve essere diverso da quello attuale"
 msgid "New password must be different from current password"
 msgstr "La nuova password deve essere diversa da quella attuale"
 
-#: lib/tymeslot/auth/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Password is too long"
-msgstr "La password è troppo lunga"
-
 #: lib/tymeslot/auth/password_update.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be at least 8 characters long"

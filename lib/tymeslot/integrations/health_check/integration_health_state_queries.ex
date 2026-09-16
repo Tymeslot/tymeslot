@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @moduledoc """
   Database queries for integration health state persistence.
 
-  Provides get/upsert operations for the `integration_health_states` table,
+  Provides read and write operations for the `integration_health_states` table,
   which stores the current health monitoring state for each calendar and video
   integration so that state survives process restarts.
   """
@@ -68,32 +68,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       nil -> {:error, :not_found}
       record -> {:ok, record}
     end
-  end
-
-  @doc """
-  Upserts the health state for an integration.
-
-  Replaces all provided fields on conflict against the `[integration_type, integration_id]`
-  unique index. Returns `{:ok, record}` on success.
-  """
-  @spec upsert(String.t() | atom(), integer(), map()) ::
-          {:ok, IntegrationHealthStateSchema.t()} | {:error, any()}
-  def upsert(type, integration_id, attrs) do
-    type_str = to_string(type)
-    replace_fields = Map.keys(attrs) ++ [:updated_at]
-
-    attrs_with_identity =
-      attrs
-      |> Map.put(:integration_type, type_str)
-      |> Map.put(:integration_id, integration_id)
-
-    %IntegrationHealthStateSchema{}
-    |> IntegrationHealthStateSchema.upsert_changeset(attrs_with_identity)
-    |> Repo.insert(
-      on_conflict: {:replace, replace_fields},
-      conflict_target: [:integration_type, :integration_id],
-      returning: true
-    )
   end
 
   @doc """

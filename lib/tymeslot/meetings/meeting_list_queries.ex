@@ -15,17 +15,10 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
-  # Cancelled meetings accumulate indefinitely; bound the default read so the
-  # list can never grow unbounded. Callers needing more can pass :limit.
-  @default_cancelled_limit 200
-
   # Query building helpers
 
   defp for_user_email(query, email),
     do: from(m in query, where: m.organizer_email == ^email or m.attendee_email == ^email)
-
-  defp for_attendee_email(query, email),
-    do: from(m in query, where: m.attendee_email == ^email)
 
   defp with_status(query, nil), do: query
   defp with_status(query, status), do: from(m in query, where: m.status == ^status)
@@ -40,7 +33,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   defp upcoming(query, now), do: from(m in query, where: m.end_time > ^now)
   defp past(query, now), do: from(m in query, where: m.end_time < ^now)
-  defp order_by_start_desc(query), do: from(m in query, order_by: [desc: m.start_time])
   defp order_by_start_asc(query), do: from(m in query, order_by: [asc: m.start_time])
 
   defp apply_limit(query, limit), do: from(m in query, limit: ^limit)
@@ -62,55 +54,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   defp order_by_start_desc_id_desc(query),
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
-
-  @doc """
-  Returns the list of upcoming meetings (future meetings only).
-  """
-  @spec list_upcoming_meetings() :: [Meeting.t()]
-  def list_upcoming_meetings do
-    now = DateTime.utc_now()
-
-    Meeting
-    |> upcoming(now)
-    |> order_by_start_asc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the list of meetings for a specific attendee email.
-
-  ## Examples
-
-      iex> list_meetings_by_attendee_email("attendee@example.com")
-      [%Meeting{}, ...]
-
-  """
-  @spec list_meetings_by_attendee_email(String.t()) :: [Meeting.t()]
-  def list_meetings_by_attendee_email(email) do
-    Meeting
-    |> for_attendee_email(email)
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns meetings in the reminder window with confirmed status.
-  Business logic for determining which meetings need reminders should be in the Meetings context.
-
-  Excludes meetings with a pending reschedule request: their slot is void
-  (see `Tymeslot.Meetings.MeetingState`), so reminding anyone of the old
-  time would contradict the reschedule-request email already sent.
-  """
-  @spec list_meetings_needing_reminders(DateTime.t(), DateTime.t()) :: [Meeting.t()]
-  def list_meetings_needing_reminders(start_time, end_time) do
-    base_query =
-      Meeting
-      |> where([m], m.start_time >= ^start_time and m.start_time <= ^end_time)
-      |> MeetingState.where_live_booking()
-      |> order_by([m], asc: m.start_time)
-
-    Repo.all(base_query)
-  end
 
   @doc """
   Returns upcoming meetings that should have a video room link but do not.
@@ -238,40 +181,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> for_user_email(user_email)
     |> upcoming(now)
     |> order_by_start_asc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Get past meetings for a specific user with proper database filtering.
-  Replaces the N+1 pattern of loading all meetings and filtering in memory.
-  """
-  @spec list_past_meetings_for_user(String.t()) :: [Meeting.t()]
-  def list_past_meetings_for_user(user_email) do
-    now = DateTime.utc_now()
-
-    Meeting
-    |> for_user_email(user_email)
-    |> past(now)
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Get cancelled meetings for a specific user with proper database filtering.
-  Replaces the N+1 pattern of loading all meetings and filtering in memory.
-
-  Bounded by `:limit` (default #{@default_cancelled_limit}) so this read is
-  never unbounded as cancelled meetings accrue over time.
-  """
-  @spec list_cancelled_meetings_for_user(String.t(), keyword()) :: [Meeting.t()]
-  def list_cancelled_meetings_for_user(user_email, opts) do
-    limit = Keyword.get(opts, :limit, @default_cancelled_limit)
-
-    Meeting
-    |> with_status("cancelled")
-    |> for_user_email(user_email)
-    |> order_by_start_desc()
-    |> apply_limit(limit)
     |> Repo.all()
   end
 

@@ -121,16 +121,4 @@ defmodule Tymeslot.CrossProviderTestHelpers do
 
     :ok
   end
-
-  @doc """
-  Tests that provider validation works through registry.
-  """
-  @spec assert_provider_validation_works(module(), list(atom())) :: :ok
-  def assert_provider_validation_works(registry_module, production_providers) do
-    Enum.each(production_providers, fn provider_type ->
-      assert registry_module.valid_provider?(provider_type)
-    end)
-
-    :ok
-  end
 end

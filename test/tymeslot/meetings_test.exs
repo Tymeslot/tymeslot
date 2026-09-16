@@ -13,7 +13,6 @@ defmodule Tymeslot.MeetingsTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Listing
-  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
@@ -63,35 +62,6 @@ defmodule Tymeslot.MeetingsTest do
 
       assert %DateTime{} = result
       assert result.time_zone == "Etc/UTC"
-    end
-  end
-
-  describe "list_past_meetings_for_user/1" do
-    test "returns empty list for user with no past meetings" do
-      %{user: user} = create_user_with_profile()
-
-      result = MeetingListQueries.list_past_meetings_for_user(user.email)
-
-      assert result == []
-    end
-  end
-
-  describe "list_cancelled_meetings_for_user/1" do
-    test "bounds the result set with the :limit option" do
-      user = insert(:user)
-
-      for _n <- 1..3 do
-        insert(:meeting,
-          organizer_email: user.email,
-          organizer_user_id: user.id,
-          status: "cancelled",
-          start_time: DateTime.add(DateTime.utc_now(), 86_400, :second),
-          end_time: DateTime.add(DateTime.utc_now(), 90_000, :second)
-        )
-      end
-
-      assert length(MeetingListQueries.list_cancelled_meetings_for_user(user.email, limit: 2)) ==
-               2
     end
   end
 

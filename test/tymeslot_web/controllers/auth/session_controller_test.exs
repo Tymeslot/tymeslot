@@ -5,7 +5,7 @@ defmodule TymeslotWeb.SessionControllerTest do
   import Mox
 
   alias Phoenix.Flash
-  alias Tymeslot.Auth.{UserQueries, UserTokenQueries}
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Auth.Verification
   alias Tymeslot.Auth.VerificationMock
   alias Tymeslot.AuthTestHelpers
@@ -285,7 +285,7 @@ defmodule TymeslotWeb.SessionControllerTest do
       assert Flash.get(conn.assigns.flash, :success) =~ "successfully verified"
       assert get_session(conn, :user_token)
 
-      updated_user = UserQueries.get_user!(user.id)
+      updated_user = Repo.reload!(user)
       assert updated_user.verified_at
     end
 
@@ -298,7 +298,7 @@ defmodule TymeslotWeb.SessionControllerTest do
       assert Flash.get(conn.assigns.flash, :info) =~ "Please log in to continue"
       refute get_session(conn, :user_token)
 
-      updated_user = UserQueries.get_user!(user.id)
+      updated_user = Repo.reload!(user)
       assert updated_user.verified_at
     end
 

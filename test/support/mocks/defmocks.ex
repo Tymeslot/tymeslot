@@ -40,10 +40,6 @@ Mox.defmock(Tymeslot.OutlookOAuthHelperMock,
 )
 
 # --- Video ---
-Mox.defmock(Tymeslot.MiroTalkAPIMock,
-  for: Tymeslot.Integrations.Video.MiroTalk.MiroTalkClientBehaviour
-)
-
 Mox.defmock(Tymeslot.TeamsOAuthHelperMock,
   for: Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperBehaviour
 )

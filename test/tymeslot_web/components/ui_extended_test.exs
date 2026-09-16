@@ -4,7 +4,6 @@ defmodule TymeslotWeb.Components.UIExtendedTest do
   @moduletag :utils
 
   import Phoenix.LiveViewTest
-  import Phoenix.Component
 
   alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Components.Shared.TimeOptions
@@ -24,23 +23,6 @@ defmodule TymeslotWeb.Components.UIExtendedTest do
       html = render_component(&Navigation.detail_row/1, assigns)
       assert html =~ "Test Label"
       assert html =~ "Test Value"
-    end
-
-    test "back_link/1 renders correctly" do
-      assigns = %{to: "/test"}
-
-      html =
-        render_component(
-          fn assigns ->
-            ~H"""
-            <Navigation.back_link to={@to}>Back</Navigation.back_link>
-            """
-          end,
-          assigns
-        )
-
-      assert html =~ "/test"
-      assert html =~ "Back"
     end
   end
 end

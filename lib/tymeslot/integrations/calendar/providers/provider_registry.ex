@@ -29,21 +29,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
       demo: Tymeslot.Integrations.Calendar.DemoCalendarProvider
     }
 
-  @doc """
-  Validates if a provider type is supported.
-  Delegates to ProviderConfig for consistency.
-
-  ## Examples
-
-      iex> ProviderRegistry.valid_provider?(:google)
-      true
-      
-      iex> ProviderRegistry.valid_provider?(:invalid)
-      false
-  """
-  @spec valid_provider?(atom()) :: boolean()
-  defdelegate valid_provider?(provider), to: ProviderConfig
-
   # Toggle-agnostic module lookup: returns the provider module for any known
   # provider, regardless of whether it is currently enabled via config. This
   # ensures persisted integrations (sync, room creation, connection test)

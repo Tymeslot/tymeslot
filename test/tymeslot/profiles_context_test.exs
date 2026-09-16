@@ -104,11 +104,6 @@ defmodule Tymeslot.ProfilesContextTest do
       assert updated.max_bookings_per_day == 5
       assert updated.full_name == "Test User"
     end
-
-    test "update_field updates a single profile field", %{profile: profile} do
-      assert {:ok, updated} = ProfileQueries.update_field(profile, :timezone, "Europe/London")
-      assert updated.timezone == "Europe/London"
-    end
   end
 
   # =====================================

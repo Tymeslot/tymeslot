@@ -665,11 +665,6 @@ msgstr "Vyžaduje pozornost: schůzka „%{title}“ byla přesunuta v externí
 msgid "Active"
 msgstr "Aktivní"
 
-#: lib/tymeslot/emails/shared/meeting/calendar_links.ex
-#, elixir-autogen, elixir-format
-msgid "Add to your calendar"
-msgstr "Přidat do kalendáře"
-
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "All future emails will be sent to your new address"

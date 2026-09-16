@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   @moduledoc """
-  Calendar event CRUD operations (Create, Read, Update, Delete).
+  Calendar event write operations (create, update, delete).
 
   Responsibilities:
   - Create calendar events with validation
   - Update existing events by UID
   - Delete events by UID
-  - Get single events by UID
   - Context-aware routing (integration_id vs Meeting context)
 
   Failures surface as `{:error, type}`, where `type` is the provider's
@@ -21,7 +20,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
-  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
   alias Tymeslot.Meetings.MeetingSchema
@@ -208,31 +206,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
           boolean()
   def event_linked_to_booking?(integration_id, provider_event_id, uid) do
     match?({:ok, _}, Sync.find_meeting(integration_id, provider_event_id, uid))
-  end
-
-  @doc """
-  Get a single event by UID.
-  Searches across all calendars for the event for a specific user.
-  """
-  @spec get_event(event_uid(), user_id() | nil) :: {:ok, map()} | {:error, :not_found | term()}
-  def get_event(uid, user_id) do
-    Logger.debug("Getting calendar event", uid: uid, user_id: user_id)
-
-    case EventFetcher.list_events(user_id) do
-      {:ok, events} ->
-        event = Enum.find(events, &(&1.uid == uid))
-
-        if event do
-          Logger.debug("Found calendar event", uid: uid)
-          {:ok, event}
-        else
-          Logger.warning("Calendar event not found", uid: uid)
-          {:error, :not_found}
-        end
-
-      error ->
-        error
-    end
   end
 
   # --- Private Helpers ---

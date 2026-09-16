@@ -160,38 +160,6 @@ defmodule Tymeslot.Payments do
   end
 
   @doc """
-  Downgrades a subscription to a lower-tier plan at the end of the current period.
-
-  No proration credits are given. The downgrade takes effect at period end.
-  Primary use case: Annual subscription → Monthly subscription after year ends.
-
-  ## Parameters
-    * subscription_id - The Stripe subscription ID
-    * new_stripe_price_id - The new (lower-tier) Stripe price ID
-    * user_id - The ID of the user downgrading
-    * metadata - Additional metadata (optional)
-
-  ## Returns
-    * `{:ok, subscription}` - If downgrade is scheduled successfully
-    * `{:error, reason}` - If downgrade fails
-  """
-  @spec downgrade_subscription(String.t(), String.t(), pos_integer(), map()) ::
-          {:ok, map()} | {:error, term()}
-  def downgrade_subscription(
-        subscription_id,
-        new_stripe_price_id,
-        user_id,
-        metadata \\ %{}
-      ) do
-    Subscriptions.downgrade_subscription(
-      subscription_id,
-      new_stripe_price_id,
-      user_id,
-      metadata
-    )
-  end
-
-  @doc """
   Reads a user id out of Stripe metadata, which carries it as a string.
 
   Returns `nil` for anything that is not a whole number, so a malformed or

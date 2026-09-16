@@ -373,14 +373,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Gets a user by ID and raises if not found.
-  """
-  @spec get_user!(integer()) :: UserSchema.t()
-  def get_user!(id) do
-    Repo.get!(UserSchema, id)
-  end
-
-  @doc """
   Updates a user's password with confirmation.
   """
   @spec update_user_password(UserSchema.t(), String.t(), String.t()) ::

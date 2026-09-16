@@ -10,7 +10,7 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
   describe "username operations" do
     test "get_by_username/1 returns profile with matching username" do
       user = insert(:user)
-      {:ok, profile} = ProfileQueries.get_or_create_by_user_id(user.id)
+      {:ok, profile} = ProfileQueries.insert_profile(user.id)
       username = "user_#{System.unique_integer([:positive])}"
       {:ok, updated} = ProfileQueries.update_username(profile, username)
 
@@ -30,7 +30,7 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
 
     test "username_available?/1 returns false for taken username" do
       user = insert(:user)
-      {:ok, profile} = ProfileQueries.get_or_create_by_user_id(user.id)
+      {:ok, profile} = ProfileQueries.insert_profile(user.id)
       username = "taken_#{System.unique_integer([:positive])}"
       {:ok, _result} = ProfileQueries.update_username(profile, username)
 
@@ -39,7 +39,7 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
 
     test "update_username/2 updates the username" do
       user = insert(:user)
-      {:ok, profile} = ProfileQueries.get_or_create_by_user_id(user.id)
+      {:ok, profile} = ProfileQueries.insert_profile(user.id)
 
       assert is_nil(profile.username)
 
@@ -56,8 +56,8 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
       user1 = insert(:user)
       user2 = insert(:user)
 
-      {:ok, profile1} = ProfileQueries.get_or_create_by_user_id(user1.id)
-      {:ok, profile2} = ProfileQueries.get_or_create_by_user_id(user2.id)
+      {:ok, profile1} = ProfileQueries.insert_profile(user1.id)
+      {:ok, profile2} = ProfileQueries.insert_profile(user2.id)
 
       username = "dup_#{System.unique_integer([:positive])}"
       {:ok, _result} = ProfileQueries.update_username(profile1, username)
@@ -69,7 +69,7 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
 
     test "update_username/2 validates username format" do
       user = insert(:user)
-      {:ok, profile} = ProfileQueries.get_or_create_by_user_id(user.id)
+      {:ok, profile} = ProfileQueries.insert_profile(user.id)
 
       # Invalid format
       assert {:error, changeset} = ProfileQueries.update_username(profile, "Invalid_Username")

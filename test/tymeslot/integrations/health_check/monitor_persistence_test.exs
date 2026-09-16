@@ -1,8 +1,7 @@
 defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
   @moduledoc """
   Covers the database-backed side of the monitor: reading and writing health
-  state, decoding unexpected column values, cleaning up orphaned rows, and
-  building the per-user health report.
+  state, decoding unexpected column values, and cleaning up orphaned rows.
 
   The in-memory state machine lives in `MonitorHealthStateTest` and
   `MonitorTransitionTest`.
@@ -170,77 +169,6 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorPersistenceTest do
       {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, cal.id, user.id)
 
       assert {0, _nil} = IntegrationHealthStateQueries.delete_orphaned()
-    end
-  end
-
-  describe "build_user_report/1" do
-    test "builds report for user with calendar and video integrations" do
-      user = insert(:user)
-      cal_int = insert(:calendar_integration, user: user, provider: "google", is_active: true)
-      vid_int = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
-
-      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, cal_int.id, user.id)
-      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:video, vid_int.id, user.id)
-
-      {1, _nil} =
-        IntegrationHealthStateQueries.update_fields(:calendar, cal_int.id,
-          status: "degraded",
-          failures: 1,
-          successes: 0,
-          backoff_ms: :timer.minutes(5),
-          last_check_at: DateTime.utc_now()
-        )
-
-      {1, _nil} =
-        IntegrationHealthStateQueries.update_fields(:video, vid_int.id,
-          status: "unhealthy",
-          failures: 3,
-          successes: 0,
-          backoff_ms: :timer.hours(1),
-          last_check_at: DateTime.utc_now()
-        )
-
-      report = Monitor.build_user_report(user.id)
-
-      assert length(report.calendar_integrations) == 1
-      assert length(report.video_integrations) == 1
-
-      cal_report = Enum.find(report.calendar_integrations, &(&1.id == cal_int.id))
-      assert cal_report.provider == "google"
-      assert cal_report.is_active == true
-      assert cal_report.health.status == :degraded
-
-      vid_report = Enum.find(report.video_integrations, &(&1.id == vid_int.id))
-      assert vid_report.provider == "mirotalk"
-      assert vid_report.is_active == true
-      assert vid_report.health.status == :unhealthy
-
-      assert report.summary.healthy_count == 0
-      assert report.summary.degraded_count == 1
-      assert report.summary.unhealthy_count == 1
-    end
-
-    test "uses initial state for integrations without tracked health" do
-      user = insert(:user)
-      cal_int = insert(:calendar_integration, user: user, provider: "google", is_active: true)
-
-      report = Monitor.build_user_report(user.id)
-
-      cal_report = Enum.find(report.calendar_integrations, &(&1.id == cal_int.id))
-      assert cal_report.health.status == :healthy
-      assert cal_report.health.failures == 0
-    end
-
-    test "returns empty report for user with no integrations" do
-      user = insert(:user)
-
-      report = Monitor.build_user_report(user.id)
-
-      assert report.calendar_integrations == []
-      assert report.video_integrations == []
-      assert report.summary.healthy_count == 0
-      assert report.summary.degraded_count == 0
-      assert report.summary.unhealthy_count == 0
     end
   end
 end
