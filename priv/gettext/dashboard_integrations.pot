@@ -1003,7 +1003,7 @@ msgstr ""
 msgid "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid URL scheme. Only http and https are supported"
 msgstr ""

@@ -183,8 +183,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
           test_url =
             String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
-          with :ok <- assert_http_or_https(test_url),
-               {:ok, status} <- LinkRoom.probe(test_url) do
+          with {:ok, status} <- LinkRoom.probe(test_url) do
             # Shares the msgid the non-2xx branches use: the caller wraps a
             # success in "✓ Custom provider configured - …", so the status
             # line does not have to carry the verdict itself.
@@ -192,8 +191,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
              dgettext("dashboard_integrations", "URL responded with HTTP %{status}",
                status: status
              )}
-          else
-            {:error, reason} -> {:error, reason}
           end
         end
     end
@@ -281,22 +278,5 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
       credential_pairs: [],
       url_fields: [:custom_meeting_url]
     }
-  end
-
-  # Deliberately looser than `LinkRoom.http_url?/1`: the connection test checks
-  # only the scheme here and leaves a hostless URL to fail in the probe, so the
-  # user sees the probe's own reason rather than a scheme error.
-  defp assert_http_or_https(url) do
-    uri = URI.parse(url)
-
-    if uri.scheme in ["http", "https"] do
-      :ok
-    else
-      {:error,
-       dgettext(
-         "dashboard_integrations",
-         "Invalid URL scheme. Only http and https are supported"
-       )}
-    end
   end
 end

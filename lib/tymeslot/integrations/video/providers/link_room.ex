@@ -52,11 +52,12 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   path traversal in the id inert. A `nil` or empty id is refused, since every
   meeting would otherwise share the same room.
   """
-  @spec slug(String.t() | integer() | atom() | nil) :: {:ok, String.t()} | {:error, String.t()}
+  @spec slug(String.t() | integer() | atom() | nil) ::
+          {:ok, String.t()} | {:error, :empty_meeting_id}
   def slug(meeting_id)
       when is_binary(meeting_id) or is_integer(meeting_id) or is_atom(meeting_id) do
     case to_string(meeting_id) do
-      "" -> {:error, "meeting_id is required but was empty"}
+      "" -> {:error, :empty_meeting_id}
       string_id -> {:ok, hash_meeting_id(string_id)}
     end
   end
@@ -123,17 +124,39 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   Checks that a URL answers, following redirects and classifying every hop
   through `Tymeslot.Security.SsrfGuard`.
 
-  Returns the final 2xx status, or the status of a 3xx whose target cannot be
-  followed, since that is still a host that answered. Every failure carries a
-  user-facing message.
+  A URL whose scheme is not http or https is refused before any request is
+  made. Returns the final 2xx status, or the status of a 3xx whose target
+  cannot be followed, since that is still a host that answered. Every failure,
+  the scheme refusal included, carries a user-facing message.
   """
   @spec probe(String.t()) :: {:ok, non_neg_integer()} | {:error, String.t()}
-  def probe(url), do: check_reachable(url, @max_redirects, probe_deadline())
+  def probe(url) do
+    with :ok <- assert_http_or_https(url) do
+      check_reachable(url, @max_redirects, probe_deadline())
+    end
+  end
 
   defp hash_meeting_id(meeting_id) do
-    :crypto.hash(:sha256, to_string(meeting_id))
+    :crypto.hash(:sha256, meeting_id)
     |> Base.encode16(case: :lower)
     |> String.slice(0, TemplateConfig.hash_length())
+  end
+
+  # Deliberately looser than `http_url?/1`: the probe checks only the scheme
+  # here and leaves a hostless URL to fail in the request itself, so the user
+  # sees the probe's own reason rather than a scheme error.
+  defp assert_http_or_https(url) do
+    uri = URI.parse(url)
+
+    if uri.scheme in ["http", "https"] do
+      :ok
+    else
+      {:error,
+       dgettext(
+         "dashboard_integrations",
+         "Invalid URL scheme. Only http and https are supported"
+       )}
+    end
   end
 
   defp probe_deadline, do: System.monotonic_time(:millisecond) + @overall_budget_ms
