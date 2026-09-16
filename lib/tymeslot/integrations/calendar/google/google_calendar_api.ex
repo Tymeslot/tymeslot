@@ -22,6 +22,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
 
+  import ErrorParser, only: [is_oauth_error_status: 1]
+
   @base_url "https://www.googleapis.com/calendar/v3"
   @token_url "https://oauth2.googleapis.com/token"
 
@@ -394,8 +396,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         {:ok, %{access_token: access_token, refresh_token: new_refresh, expires_at: expires_at}} ->
           {:ok, {access_token, new_refresh, expires_at}}
 
-        {:error, {:http_error, 400, body}} ->
-          {:error, :unauthorized, ErrorParser.build_message("Token refresh failed", 400, body)}
+        {:error, {:http_error, status, body}} when is_oauth_error_status(status) ->
+          {:error, :unauthorized, ErrorParser.build_message("Token refresh failed", status, body)}
 
         {:error, {:http_error, status, _body}} ->
           {:error, :network_error, "HTTP #{status}"}

@@ -178,8 +178,12 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
         {:error, :unauthorized, "Token refresh failed: invalid_grant"}
       end)
 
-      assert {:discard, _job_result} =
+      assert {:discard, discard_reason} =
                TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
+
+      # The job record is where an operator reads the cause; the flag alone
+      # cannot tell a revoked grant from a broken client registration.
+      assert discard_reason =~ "invalid_grant"
 
       updated = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert updated.needs_reauth
@@ -208,12 +212,58 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
         {:error, :unauthorized, "Token refresh failed: invalid_client"}
       end)
 
-      assert {:discard, _job_result} =
+      assert {:discard, discard_reason} =
                TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
+
+      assert discard_reason =~ "invalid_client"
 
       updated = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert updated.needs_reauth
       assert updated.sync_error == ReauthHandling.reauth_error_message(:rejected_credentials)
+    end
+
+    test "retries a 400 whose body carries no OAuth error code instead of flagging the owner" do
+      # Every token-endpoint refusal reaches the job prefixed "unauthorized:",
+      # so a substring match on that word would call an unparseable 400 body
+      # (or invalid_request, unsupported_grant_type) a revoked grant and send
+      # an email the owner cannot act on. Only a recognised permanent code
+      # may do that.
+      integration = insert_expired_google_integration(insert(:user))
+
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, "Token refresh failed: HTTP 400 (see logs for details)"}
+      end)
+
+      assert {:error, _reason} =
+               TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
+
+      updated = Repo.get!(CalendarIntegrationSchema, integration.id)
+      refute updated.needs_reauth
+      assert updated.sync_error =~ "RETRYABLE"
+
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "retries a refreshed token that failed to persist instead of flagging the owner" do
+      # `Tokens.persist_and_return/4` reports a failed write of freshly
+      # refreshed tokens as `{:error, :token_persistence_failed}`; the API
+      # error passes through `Tokens.perform_refresh/1` unchanged, so the mock
+      # stands in for it. The provider accepted the credential, so the owner
+      # has nothing to reconnect and the write is worth another attempt.
+      integration = insert_expired_google_integration(insert(:user))
+
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :token_persistence_failed}
+      end)
+
+      assert {:error, _reason} =
+               TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
+
+      updated = Repo.get!(CalendarIntegrationSchema, integration.id)
+      refute updated.needs_reauth
+      assert updated.sync_error =~ "RETRYABLE"
+
+      refute_enqueued(worker: EmailWorker)
     end
 
     test "handles retryable errors" do

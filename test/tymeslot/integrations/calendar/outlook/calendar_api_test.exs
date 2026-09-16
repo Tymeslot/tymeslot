@@ -304,6 +304,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
       assert {:error, :unauthorized, "Token refresh failed: invalid_grant"} =
                CalendarAPI.refresh_token(integration)
     end
+
+    # Microsoft answers a rejected client registration with a 401, not a 400.
+    # Reported as a network error it would be retried eight times and the
+    # owner never told.
+    test "keeps the OAuth error code from a 401 response in the message", %{
+      integration: integration
+    } do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post,
+                                                   "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+                                                   _body,
+                                                   _headers,
+                                                   _opts ->
+        {:ok, %Req.Response{status: 401, body: ~s({"error":"invalid_client"})}}
+      end)
+
+      assert {:error, :unauthorized, "Token refresh failed: invalid_client"} =
+               CalendarAPI.refresh_token(integration)
+    end
   end
 
   describe "convert_to_common_format/1" do
