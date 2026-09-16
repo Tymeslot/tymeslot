@@ -219,7 +219,7 @@ config :tymeslot, :locales,
     %{code: "it", name: "Italiano", country_code: :ita},
     %{code: "uk", name: "Українська", country_code: :ukr},
     %{code: "cs", name: "Čeština", country_code: :cze},
-    %{code: "pt_BR", name: "Português (Brasil)", country_code: :bra}
+    %{code: "pt", name: "Português (Brasil)", country_code: :bra}
   ],
   default: "en"
 
