@@ -26,6 +26,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Meetings
+  alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
   alias Tymeslot.Workers.SnoozePolicy
@@ -49,7 +50,8 @@ defmodule Tymeslot.Workers.TelegramWorker do
          :ok <- check_active(integration),
          {:ok, meeting} <- Meetings.get_meeting(meeting_id),
          {:ok, token} <- Telegram.resolve_bot_token(integration) do
-      message = MessageBuilder.build_message(event_type, meeting)
+      timezone = Recipients.get_organizer_timezone(meeting)
+      message = MessageBuilder.build_message(event_type, meeting, timezone)
       result = send_message(token, integration.chat_id, message)
       handle_result(integration, event_type, meeting_id, message, job, result)
     else
