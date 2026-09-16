@@ -1,0 +1,258 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day ago"
+msgid_plural "%{count} days ago"
+msgstr[0] "há %{count} dia"
+msgstr[1] "há %{count} dias"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour ago"
+msgid_plural "%{count} hours ago"
+msgstr[0] "há %{count} hora"
+msgstr[1] "há %{count} horas"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute ago"
+msgid_plural "%{count} minutes ago"
+msgstr[0] "há %{count} minuto"
+msgstr[1] "há %{count} minutos"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "A verification email has been sent to"
+msgstr "Um e-mail de verificação foi enviado para"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Account Security"
+msgstr "Segurança da conta"
+
+#: lib/tymeslot_web/live/account_live.ex
+#, elixir-autogen, elixir-format
+msgid "Account Settings"
+msgstr "Configurações da conta"
+
+#: lib/tymeslot_web/live/account_live/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "An unexpected error occurred"
+msgstr "Ocorreu um erro inesperado"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least 8 characters"
+msgstr "Pelo menos 8 caracteres"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication is managed through %{provider}"
+msgstr "A autenticação é gerenciada pelo %{provider}"
+
+#: lib/tymeslot_web/live/account_live.ex
+#, elixir-autogen, elixir-format
+msgid "Back to Dashboard"
+msgstr "Voltar ao painel"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel email change"
+msgstr "Cancelar troca de e-mail"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Change Email"
+msgstr "Trocar e-mail"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Change Password"
+msgstr "Trocar senha"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm New Password"
+msgstr "Confirmar nova senha"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new password"
+msgstr "Confirme a sua nova senha"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Current Password"
+msgstr "Senha atual"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Current email:"
+msgstr "E-mail atual:"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Email Address"
+msgstr "Endereço de e-mail"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Email Change Pending"
+msgstr "Troca de e-mail pendente"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Email changes are managed through your %{provider} account"
+msgstr "As trocas de e-mail são feitas na sua conta do %{provider}"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your current password"
+msgstr "Digite a sua senha atual"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Last changed: %{last_changed}"
+msgstr "Última troca: %{last_changed}"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Managed by %{provider}"
+msgstr "Gerenciado pelo %{provider}"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "New Email Address"
+msgstr "Novo endereço de e-mail"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "New Password"
+msgstr "Nova senha"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "New password must be different from current password"
+msgstr "A nova senha precisa ser diferente da atual"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Senha"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Password authentication is not available for %{provider} login"
+msgstr "A autenticação por senha não está disponível para o login do %{provider}"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Password authentication is not available for social login accounts"
+msgstr "A autenticação por senha não está disponível para contas de login social"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Pending change to:"
+msgstr "Troca pendente para:"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Sent %{time}"
+msgstr "Enviado %{time}"
+
+#: lib/tymeslot_web/live/account_live/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please try again later."
+msgstr "Tentativas demais. Tente novamente mais tarde."
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Update Email"
+msgstr "Atualizar e-mail"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Update Password"
+msgstr "Atualizar senha"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Updating Email"
+msgstr "Atualizando e-mail"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Updating Password"
+msgstr "Atualizando senha"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your password has been changed. Please sign in again with your new password."
+msgstr "Sua senha foi alterada. Entre novamente com a nova senha."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "just now"
+msgstr "agora mesmo"
+
+#: lib/tymeslot_web/live/account_live/forms.ex
+#, elixir-autogen, elixir-format
+msgid "your.new@email.com"
+msgstr "your.new@email.com"
+
+#: lib/tymeslot_web/live/account_live/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Never"
+msgstr "Nunca"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Choose the language for your dashboard. Automatic follows your browser's preference."
+msgstr "Escolha o idioma do seu painel. “Automático” segue a preferência do navegador."
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save language preference."
+msgstr "Não foi possível salvar a preferência de idioma."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Interface language"
+msgstr "Idioma da interface"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr "Idioma"
+
+#: lib/tymeslot_web/live/account_live/handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Language preference saved."
+msgstr "Preferência de idioma salva."
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr "Automático"
+
+#: lib/tymeslot_web/live/account_live/components.ex
+#, elixir-autogen, elixir-format
+msgid "Follow your browser's language setting instead of a fixed choice."
+msgstr "Segue o idioma configurado no navegador, em vez de uma escolha fixa."
