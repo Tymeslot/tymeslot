@@ -113,6 +113,32 @@ INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active,
 SELECT id, 'radicale', 'https://radicale.example.com', 'Radicale', true, true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
 FROM users WHERE email = 'seed-user-2@example.com';
 
+-- Rows the token refresh job stranded before 20260916121729, in the two shapes
+-- that make an unguarded reactivation raise unique_violation against the
+-- partial indexes on is_active = true.
+--
+-- Google, user 2: an active NULL-account row next to a stranded NULL-account
+-- twin. The twin falls under unique_active_calendar_null_account_per_user, so
+-- it must stay inactive.
+INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active, needs_reauth, verify_ssl, calendar_paths, calendar_list, inserted_at, updated_at)
+SELECT id, 'google', 'https://www.googleapis.com/calendar/v3', 'Google (active)', true, false, true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
+FROM users WHERE email = 'seed-user-2@example.com';
+
+INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active, needs_reauth, sync_error, verify_ssl, calendar_paths, calendar_list, inserted_at, updated_at)
+SELECT id, 'google', 'https://www.googleapis.com/calendar/v3', 'Google (stranded twin)', false, false, 'Google integration failed during token refresh: unauthorized: Token refresh failed (PERMANENT)', true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
+FROM users WHERE email = 'seed-user-2@example.com';
+
+-- Outlook, user 2: two stranded rows for the same account and nothing active.
+-- Reactivating both would collide under unique_active_calendar_account_per_user;
+-- exactly one may come back.
+INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active, needs_reauth, provider_account_id, sync_error, verify_ssl, calendar_paths, calendar_list, inserted_at, updated_at)
+SELECT id, 'outlook', 'https://graph.microsoft.com/v1.0', 'Outlook (stranded 1)', false, false, 'outlook-account-1', 'Outlook integration failed during token refresh: unauthorized: Token refresh failed: invalid_grant (PERMANENT)', true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
+FROM users WHERE email = 'seed-user-2@example.com';
+
+INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active, needs_reauth, provider_account_id, sync_error, verify_ssl, calendar_paths, calendar_list, inserted_at, updated_at)
+SELECT id, 'outlook', 'https://graph.microsoft.com/v1.0', 'Outlook (stranded 2)', false, false, 'outlook-account-1', 'Outlook integration failed during token refresh: unauthorized: Token refresh failed: invalid_grant (PERMANENT)', true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
+FROM users WHERE email = 'seed-user-2@example.com';
+
 -- ============================================================================
 -- VIDEO INTEGRATIONS
 -- ============================================================================

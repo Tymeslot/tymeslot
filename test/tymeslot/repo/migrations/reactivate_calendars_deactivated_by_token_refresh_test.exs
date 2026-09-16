@@ -78,6 +78,76 @@ defmodule Tymeslot.Repo.Migrations.ReactivateCalendarsDeactivatedByTokenRefreshT
     refute reload(other_provider).is_active
   end
 
+  # Both uniqueness indexes on the table are predicated on `is_active = true`,
+  # so reactivating a row moves it into one of them: the `(user_id, provider)`
+  # index when its account id is NULL, the account index otherwise. The
+  # application refuses such a reactivation (`toggle_active/1`); the migration
+  # has to skip it, because a raised unique_violation here fails the migration
+  # and stops the release from booting.
+  describe "when reactivating would collide with an active integration" do
+    test "leaves a stranded NULL-account row inactive beside an active NULL-account row" do
+      user = insert(:user)
+
+      active =
+        insert(:calendar_integration, user: user, provider: "google", provider_account_id: nil)
+
+      collides = stranded(user: user, provider_account_id: nil)
+
+      MigrationRunner.replay!(@version)
+
+      assert reload(active).is_active
+      refute reload(collides).is_active
+    end
+
+    test "leaves a stranded row inactive when an active row has the same account" do
+      user = insert(:user)
+
+      active =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          provider_account_id: "acct-1"
+        )
+
+      collides = stranded(user: user, provider_account_id: "acct-1")
+
+      MigrationRunner.replay!(@version)
+
+      assert reload(active).is_active
+      refute reload(collides).is_active
+    end
+
+    test "reactivates exactly one of two stranded rows for the same account" do
+      user = insert(:user)
+      first = stranded(user: user, provider_account_id: "acct-1")
+      second = stranded(user: user, provider_account_id: "acct-1")
+
+      MigrationRunner.replay!(@version)
+
+      assert Enum.count([reload(first), reload(second)], & &1.is_active) == 1
+    end
+
+    test "reactivates exactly one of two stranded NULL-account rows" do
+      user = insert(:user)
+      first = stranded(user: user, provider_account_id: nil)
+      second = stranded(user: user, provider_account_id: nil)
+
+      MigrationRunner.replay!(@version)
+
+      assert Enum.count([reload(first), reload(second)], & &1.is_active) == 1
+    end
+
+    test "a different account of the same provider does not block reactivation" do
+      user = insert(:user)
+      insert(:calendar_integration, user: user, provider: "google", provider_account_id: "acct-1")
+      other_account = stranded(user: user, provider_account_id: "acct-2")
+
+      MigrationRunner.replay!(@version)
+
+      assert reload(other_account).is_active
+    end
+  end
+
   # The migration only undoes the deactivation; the owner is told by the path
   # the job now takes. This is the reason it must not set `needs_reauth`
   # itself: an already-flagged integration is never emailed.
