@@ -16,6 +16,10 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       reading the row back.
     * A meeting type with a single location renders no picker at all, and
       still records that location on the booking.
+    * A reschedule offers the same picker, opened on where the meeting
+      already is, and moving it persists on the existing meeting. With a
+      single location there is nothing to choose, and the meeting keeps its
+      location even if the host has replaced that location since.
 
   Events are driven through the parent LiveView's `{:step_event, :booking, …}`
   message path, the same path `BookingComponent` uses to relay picker events
@@ -35,7 +39,9 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingListQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -242,6 +248,118 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert [meeting] = MeetingListQueries.list_meetings_by_attendee_email("single@example.com")
       assert meeting.location == "Our office (12 High Street)"
       assert meeting.location_kind == "in_person"
+    end
+  end
+
+  describe "rescheduling a meeting" do
+    setup %{user: user} do
+      start = DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
+
+      book = fn locations, meeting_attrs ->
+        meeting_type =
+          insert(:meeting_type,
+            user: user,
+            duration_minutes: 30,
+            name: "Consultation",
+            is_active: true,
+            locations: locations
+          )
+
+        insert(
+          :meeting,
+          Map.merge(
+            %{
+              organizer_user_id: user.id,
+              meeting_type_id: meeting_type.id,
+              attendee_name: "Booker",
+              attendee_email: "rebook@example.com",
+              attendee_timezone: "America/New_York",
+              start_time: start,
+              end_time: DateTime.add(start, 30, :minute),
+              duration: 30,
+              status: "confirmed"
+            },
+            meeting_attrs
+          )
+        )
+      end
+
+      %{book: book, original_start: start}
+    end
+
+    defp submit_reschedule(view, meeting, original_start) do
+      submit(view, meeting.attendee_email)
+
+      wait_until(fn ->
+        Repo.get!(MeetingSchema, meeting.id).start_time != original_start
+      end)
+
+      Repo.get!(MeetingSchema, meeting.id)
+    end
+
+    defp booked_by_phone do
+      %{
+        location: "Phone call (+1 555 0100)",
+        location_kind: "phone",
+        location_option_id: "loc-call",
+        attendee_phone: "+1 555 0100"
+      }
+    end
+
+    @tag :capture_log
+    test "the picker opens on the location the meeting was booked at",
+         %{conn: conn, profile: profile, book: book} do
+      meeting = book.([office(), call_me()], booked_by_phone())
+
+      view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert assigns.is_rescheduling
+      assert has_element?(view, "[data-testid='location-field']")
+      assert assigns.selected_location_id == "loc-call"
+      assert assigns.location_phone == "+1 555 0100"
+    end
+
+    @tag :capture_log
+    test "choosing another location moves the existing meeting there",
+         %{conn: conn, profile: profile, book: book, original_start: original_start} do
+      meeting = book.([office(), call_me()], booked_by_phone())
+
+      view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
+
+      send(view.pid, {:step_event, :booking, :select_location, "loc-office"})
+      _drain = :sys.get_state(view.pid)
+
+      moved = submit_reschedule(view, meeting, original_start)
+
+      assert moved.location == "Our office (12 High Street)"
+      assert moved.location_option_id == "loc-office"
+      assert moved.location_kind == "in_person"
+      assert moved.attendee_phone == nil
+
+      # Moved, not rebooked.
+      assert [_only] = MeetingListQueries.list_meetings_by_attendee_email("rebook@example.com")
+    end
+
+    @tag :capture_log
+    test "a single location asks nothing and keeps the meeting where it was booked",
+         %{conn: conn, profile: profile, book: book, original_start: original_start} do
+      # The host has replaced the location this meeting was booked against.
+      meeting =
+        book.([office()], %{
+          location: "The old office",
+          location_kind: "in_person",
+          location_option_id: "loc-old-office"
+        })
+
+      view = navigate_to_booking_form(conn, profile, nil, reschedule_meeting_uid: meeting.uid)
+
+      refute has_element?(view, "[data-testid='location-field']")
+
+      moved = submit_reschedule(view, meeting, original_start)
+
+      assert moved.location == "The old office"
+      assert moved.location_option_id == "loc-old-office"
     end
   end
 end

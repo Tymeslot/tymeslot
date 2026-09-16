@@ -18,6 +18,15 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   The client-side check here is for fast feedback only. `resolve_location/3`
   re-derives everything from the meeting type on submission regardless of
   what these assigns say.
+
+  ## On a reschedule
+
+  The picker opens on the location the meeting already has, not the host's
+  first, and the booker can move it. A meeting type with a single location
+  still asks nothing, and then no choice is submitted at all
+  (`submitted_option_id/1`): with nothing shown, nothing the booker did can
+  have meant "move it", even when the host has since replaced the location
+  the meeting was booked against.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -48,21 +57,35 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
 
   A selection the booker has already made survives a re-entry into the step,
   which is what makes going back to the calendar and returning non-destructive.
+
+  `current`, on a reschedule, is the meeting's own choice
+  (`%{option_id: …, phone: …}`), which opens the picker there instead of on
+  the first option. A choice the meeting type no longer offers falls back to
+  the first option like any other.
   """
-  @spec assign_for_meeting_type(Phoenix.LiveView.Socket.t(), map() | nil) ::
+  @spec assign_for_meeting_type(Phoenix.LiveView.Socket.t(), map() | nil, map() | nil) ::
           Phoenix.LiveView.Socket.t()
-  def assign_for_meeting_type(socket, meeting_type) do
+  def assign_for_meeting_type(socket, meeting_type, current \\ nil) do
     options = MeetingTypes.location_options(meeting_type)
     ids = Enum.map(options, & &1.id)
 
-    current = socket.assigns[:selected_location_id]
-    selected = if current in ids, do: current, else: List.first(ids)
+    selected =
+      Enum.find([socket.assigns[:selected_location_id], current[:option_id]], &(&1 in ids)) ||
+        List.first(ids)
 
     socket
     |> assign(:location_options, options)
     |> assign(:selected_location_id, selected)
+    |> assign(:location_phone, seeded_phone(socket.assigns[:location_phone], current))
     |> assign(:location_error, nil)
   end
+
+  # A number the booker has typed this session wins over the one on the
+  # meeting, for the same reason the selection does.
+  defp seeded_phone(phone, %{phone: stored}) when phone in [nil, ""] and is_binary(stored),
+    do: stored
+
+  defp seeded_phone(phone, _current), do: phone || ""
 
   @doc "Records the booker's choice."
   @spec choose(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
@@ -85,16 +108,27 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   end
 
   @doc """
-  Whether the booking form should render the picker at all.
-
-  Never on a reschedule: `Bookings.Reschedule` moves the times and leaves
-  every other field of the meeting alone, so a picker there would be a
-  control that silently does nothing. Guests are hidden on a reschedule for
-  the same reason.
+  Whether the booking form should render the picker at all: only when there
+  is more than one location to choose between, on a new booking and a
+  reschedule alike.
   """
   @spec choice_required?(map()) :: boolean()
   def choice_required?(assigns) do
-    assigns[:is_rescheduling] != true and length(assigns[:location_options] || []) > 1
+    length(assigns[:location_options] || []) > 1
+  end
+
+  @doc """
+  The option id a submission carries.
+
+  On a reschedule, only a choice the booker was actually shown: a hidden
+  picker's default would otherwise move a meeting whose host has replaced its
+  location since it was booked. See the module doc.
+  """
+  @spec submitted_option_id(map()) :: String.t() | nil
+  def submitted_option_id(assigns) do
+    if assigns[:is_rescheduling] == true and not choice_required?(assigns),
+      do: nil,
+      else: assigns[:selected_location_id]
   end
 
   @doc "The option currently chosen, or nil when there is nothing to choose."
@@ -113,13 +147,13 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
   The chosen location as one line, for the confirmation screen.
 
   Nil when there is nothing to show: an ad-hoc booking with no meeting type,
-  or a reschedule, whose location is the original meeting's and not this
-  session's picker state.
+  or a reschedule that asked nothing, whose location is the original
+  meeting's and not this session's picker state.
   """
   @spec chosen_display(map()) :: String.t() | nil
   def chosen_display(assigns) do
     cond do
-      assigns[:is_rescheduling] == true -> nil
+      is_nil(submitted_option_id(assigns)) -> nil
       option = selected(assigns) -> LocationSelection.display(option, assigns[:location_phone])
       true -> nil
     end

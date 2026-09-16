@@ -32,6 +32,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.VideoSyncWorker
 
   # Get Video module dynamically to avoid compile-time warnings with mocks
   @spec video_module() :: module()
@@ -228,21 +229,23 @@ defmodule Tymeslot.Meetings.VideoRooms do
   defp provider_string(provider_type) when is_atom(provider_type),
     do: Atom.to_string(provider_type)
 
+  # The room was created for the integration `meeting` named when it was read,
+  # before the provider call. A reschedule can move the meeting to another
+  # location while that call is in flight, and attaching the room anyway would
+  # hand an in-person meeting a join link. So the integration is re-checked
+  # under the lock too, and a room created for a location the meeting has left
+  # is released rather than attached.
   @spec persist_video_room(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, term()}
-  defp persist_video_room(meeting, video_room_attrs) do
+  defp persist_video_room(
+         %MeetingSchema{video_integration_id: integration_id} = meeting,
+         video_room_attrs
+       ) do
     transaction_result =
       Repo.transaction(fn ->
         case MeetingQueries.get_meeting_for_update(meeting.id) do
-          {:ok, %MeetingSchema{video_room_id: nil} = locked_meeting} ->
-            case update_meeting_with_video_room(locked_meeting, video_room_attrs) do
-              {:ok, updated_meeting} -> {:attached, updated_meeting}
-              {:error, reason} -> Repo.rollback(reason)
-            end
-
-          {:ok, %MeetingSchema{} = already_attached} ->
-            # Another worker won the race; keep the existing attachment.
-            {:already_attached, already_attached}
+          {:ok, locked_meeting} ->
+            attach_to_locked(locked_meeting, integration_id, video_room_attrs)
 
           {:error, :not_found} ->
             Repo.rollback(:meeting_not_found)
@@ -266,6 +269,14 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
         {:ok, updated_meeting}
 
+      {:ok, {:location_changed, moved_meeting}} ->
+        Logger.info("Meeting changed location while its video room was created; releasing it",
+          meeting_id: moved_meeting.id
+        )
+
+        release_unattached_room(meeting, video_room_attrs)
+        {:ok, moved_meeting}
+
       {:ok, {:already_attached, existing_meeting}} ->
         Logger.info(
           "Video room already attached by a concurrent writer; discarding provider response",
@@ -285,6 +296,48 @@ defmodule Tymeslot.Meetings.VideoRooms do
         error
     end
   end
+
+  defp attach_to_locked(
+         %MeetingSchema{video_room_id: nil, video_integration_id: integration_id} = locked_meeting,
+         integration_id,
+         video_room_attrs
+       ) do
+    case update_meeting_with_video_room(locked_meeting, video_room_attrs) do
+      {:ok, updated_meeting} -> {:attached, updated_meeting}
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  defp attach_to_locked(
+         %MeetingSchema{video_room_id: nil} = moved_meeting,
+         _integration_id,
+         _attrs
+       ),
+       do: {:location_changed, moved_meeting}
+
+  # Another worker won the race; keep the existing attachment.
+  defp attach_to_locked(%MeetingSchema{} = already_attached, _integration_id, _attrs),
+    do: {:already_attached, already_attached}
+
+  defp release_unattached_room(meeting, %{video_room_id: room_id} = video_room_attrs)
+       when is_binary(room_id) do
+    room = %{meeting | video_room_id: room_id, video_provider: video_room_attrs.video_provider}
+
+    case VideoSyncWorker.release(room) do
+      {:ok, _status} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to enqueue release of an unattached video room",
+          meeting_id: meeting.id,
+          orphaned_video_room_id: room_id,
+          reason: inspect(reason)
+        )
+    end
+  end
+
+  # A provider with no room id (a static custom link) has nothing to delete.
+  defp release_unattached_room(_meeting, _video_room_attrs), do: :ok
 
   @spec update_meeting_with_video_room(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, :database_update_failed}

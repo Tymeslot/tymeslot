@@ -29,7 +29,15 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   require Logger
 
-  alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
+  alias Tymeslot.Bookings.{
+    CalendarJobs,
+    Errors,
+    Policy,
+    RescheduleLocation,
+    ScheduleCheck,
+    Validation
+  }
+
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.Approval
@@ -47,12 +55,19 @@ defmodule Tymeslot.Bookings.Reschedule do
   `duration` is accepted for shape-compatibility with the booking form but is
   never used: the rescheduled meeting keeps the original meeting's persisted
   duration (see `prepare_new_times/3`), never the request's.
+
+  `location_option_id` and `location_phone` are the booker's location choice,
+  applied only when it differs from the meeting's current location (see
+  `Tymeslot.Bookings.RescheduleLocation`).
   """
   @type reschedule_params :: %{
           required(:date) => String.t(),
           required(:time) => String.t(),
           required(:duration) => integer() | String.t(),
-          required(:user_timezone) => String.t()
+          required(:user_timezone) => String.t(),
+          optional(:location_option_id) => String.t() | nil,
+          optional(:location_phone) => String.t() | nil,
+          optional(atom()) => term()
         }
 
   @doc """
@@ -61,9 +76,12 @@ defmodule Tymeslot.Bookings.Reschedule do
   This includes:
   1. Validating the new time
   2. Cancelling the original calendar event
-  3. Updating meeting times with conflict checking
+  3. Updating meeting times, and the location when the booker chose a new
+     one, with conflict checking
   4. Creating new calendar event
-  5. Sending rescheduling notifications
+  5. Deleting a video room the new location no longer uses, and creating one
+     it does
+  6. Sending rescheduling notifications
 
   The `organizer_user_id` is required. The meeting lookup is scoped to that
   owner, preventing IDOR attacks from the public booking flow.
@@ -92,8 +110,14 @@ defmodule Tymeslot.Bookings.Reschedule do
            ),
          {:ok, new_times} <- prepare_new_times(new_params, original_meeting, meeting_type),
          {:ok, updated_meeting} <-
-           apply_time_update_and_schedule_job(original_meeting, new_times, meeting_type) do
+           apply_time_update_and_schedule_job(
+             original_meeting,
+             new_times,
+             meeting_type,
+             RescheduleLocation.attributes(original_meeting, meeting_type, new_params)
+           ) do
       AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
+      RescheduleLocation.release_abandoned_room(updated_meeting, original_meeting)
       sync_provider_video_room(updated_meeting)
       announce(updated_meeting, original_meeting)
       {:ok, updated_meeting}
@@ -108,7 +132,8 @@ defmodule Tymeslot.Bookings.Reschedule do
   defp apply_time_update_and_schedule_job(
          meeting,
          %{start_time: start_dt, end_time: end_dt, duration_minutes: _dur},
-         meeting_type
+         meeting_type,
+         location_attrs
        ) do
     # Booking a new time settles any pending organizer reschedule request, so
     # the slot becomes live again — clear the timestamp.
@@ -116,17 +141,19 @@ defmodule Tymeslot.Bookings.Reschedule do
     # Reminder sent-tracking is reset too: the reminder(s) already sent were
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
+    #
+    # The location lands in the same write as the times, so the calendar job
+    # scheduled below already carries it.
     attrs =
-      Map.merge(
-        %{
-          start_time: start_dt,
-          end_time: end_dt,
-          reschedule_requested_at: nil,
-          reminders_sent: [],
-          reminder_email_sent: false
-        },
-        gate_attributes(meeting_type, start_dt, meeting)
-      )
+      %{
+        start_time: start_dt,
+        end_time: end_dt,
+        reschedule_requested_at: nil,
+        reminders_sent: [],
+        reminder_email_sent: false
+      }
+      |> Map.merge(location_attrs)
+      |> Map.merge(gate_attributes(meeting_type, start_dt, meeting))
 
     case Repo.transaction(fn ->
            with {:ok, updated} <- update_meeting(meeting, attrs),
@@ -291,7 +318,14 @@ defmodule Tymeslot.Bookings.Reschedule do
     Approval.activate_confirmed(updated)
   end
 
-  defp announce(updated, original), do: send_reschedule_notifications(updated, original)
+  # A room on a newly chosen video integration is created here rather than
+  # alongside the release, because only this path confirms nothing on its own:
+  # the two clauses above leave room creation to the approval that confirms
+  # the booking.
+  defp announce(updated, original) do
+    RescheduleLocation.create_room(updated, original)
+    send_reschedule_notifications(updated, original)
+  end
 
   # A booking re-entering the gate must not carry reminders pinned to the
   # time it was confirmed for before: left alone, they would fire and remind
@@ -430,6 +464,9 @@ defmodule Tymeslot.Bookings.Reschedule do
   # reach the room is decided inside the job by `IntegrationResolver`, so a
   # meeting whose integration was disconnected is still synced rather than left
   # advertising the old time.
+  #
+  # A room the reschedule detached for a new location has no `video_room_id`
+  # left on `updated`, so it is skipped here; `RescheduleLocation` releases it.
   defp sync_provider_video_room(%{video_room_id: nil}), do: :ok
   defp sync_provider_video_room(%{organizer_user_id: nil}), do: :ok
 

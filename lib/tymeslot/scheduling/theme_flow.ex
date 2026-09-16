@@ -47,6 +47,26 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
 
   def resolve_meeting_type_for_reschedule(_meeting_uid, _organizer_user_id), do: nil
 
+  @doc """
+  The location the meeting being rescheduled was booked at, as the picker
+  records a choice: the option id and the booker's own number, if the option
+  asked for one.
+
+  Returns `nil` when this is not a reschedule or the meeting is not the
+  organiser's, which leaves the picker opening on the host's first option.
+  """
+  @spec reschedule_location_choice(String.t() | nil, integer() | nil) ::
+          %{option_id: String.t() | nil, phone: String.t() | nil} | nil
+  def reschedule_location_choice(meeting_uid, organizer_user_id)
+      when is_binary(meeting_uid) and is_integer(organizer_user_id) do
+    case Orchestrator.get_meeting_for_reschedule(meeting_uid, organizer_user_id) do
+      {:ok, meeting} -> %{option_id: meeting.location_option_id, phone: meeting.attendee_phone}
+      {:error, _reason} -> nil
+    end
+  end
+
+  def reschedule_location_choice(_meeting_uid, _organizer_user_id), do: nil
+
   @spec build_booking_form_data(String.t() | nil, integer() | nil) :: map()
   def build_booking_form_data(nil, _organizer_user_id), do: default_booking_form_data()
 

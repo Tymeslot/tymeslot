@@ -17,6 +17,23 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   current times — never stale args captured at enqueue time. A meeting that no
   longer carries a video room (or vanished entirely) is treated as already
   synced and the job is discarded.
+
+  ## Releasing a room the meeting no longer owns
+
+  A reschedule that moves a meeting to a different location detaches its room
+  in the same write that changes the location, so the meeting never advertises
+  a join link for a place it is no longer held. The room still exists on the
+  provider and nothing on the meeting points at it any more, so a `"release"`
+  job (`release/1`) carries the room's identity in its own args instead of
+  re-reading the meeting.
+
+  That makes the job the room's only record. A cancelled meeting that could
+  not reach its provider is retried nightly by
+  `Tymeslot.Workers.OrphanedVideoRoomScanWorker`, because the meeting row still
+  holds the room; a released room has no row to scan. So where a delete would
+  discard an unreachable room, a release waits for the user to reconnect the
+  provider instead, snoozing a day at a time for up to two weeks before it
+  gives up loudly.
   """
 
   use Oban.Worker,
@@ -27,9 +44,16 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.IntegrationResolver
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
 
   require Logger
+
+  @unique_states [:available, :scheduled, :executing, :retryable]
+
+  # How long a released room waits for an integration that can reach it.
+  @release_snooze_seconds 86_400
+  @release_max_snoozes 14
 
   @doc """
   Enqueues a video-room sync job for a meeting.
@@ -39,15 +63,45 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   """
   @spec enqueue(String.t(), String.t()) :: {:ok, atom()} | {:error, term()}
   def enqueue(meeting_id, action) when is_binary(meeting_id) and action in ["update", "delete"] do
+    insert(%{"meeting_id" => meeting_id, "action" => action}, [:meeting_id, :action])
+  end
+
+  @doc """
+  Enqueues deletion of the provider room `meeting` holds, for a meeting that
+  is about to stop holding it (see the module doc).
+
+  Pass the meeting as it was *before* the room was detached: the room id, its
+  provider, and the integration that created it are copied into the job, since
+  the meeting will no longer carry them when the job runs. Keyed by room, so
+  two rooms released from the same meeting in quick succession are both
+  deleted.
+  """
+  @spec release(map()) :: {:ok, atom()} | {:error, term()}
+  def release(%{id: meeting_id, video_room_id: room_id} = meeting)
+      when is_binary(meeting_id) and is_binary(room_id) do
+    insert(
+      %{
+        "action" => "release",
+        "meeting_id" => meeting_id,
+        "room_id" => room_id,
+        "video_provider" => meeting.video_provider,
+        "video_integration_id" => meeting.video_integration_id,
+        "organizer_user_id" => meeting.organizer_user_id
+      },
+      [:room_id, :action]
+    )
+  end
+
+  defp insert(args, unique_keys) do
     job_changeset =
-      new(%{"meeting_id" => meeting_id, "action" => action},
+      new(args,
         queue: :video_rooms,
         priority: 2,
         unique: [
           period: 300,
           fields: [:args, :queue],
-          keys: [:meeting_id, :action],
-          states: [:available, :scheduled, :executing, :retryable]
+          keys: unique_keys,
+          states: @unique_states
         ]
       )
 
@@ -70,6 +124,16 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   end
 
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"action" => "release"} = args, attempt: attempt} = job) do
+    Logger.metadata(job_id: job.id, attempt: attempt)
+    room = released_room(args)
+
+    case IntegrationResolver.resolve_for_meeting(room) do
+      {:ok, integration_id} -> perform_action("release", room, integration_id, attempt)
+      {:error, reason} -> await_reachable_integration(room, reason, job)
+    end
+  end
+
   def perform(%Oban.Job{args: args, attempt: attempt} = job) do
     %{"meeting_id" => meeting_id, "action" => action} = args
     Logger.metadata(job_id: job.id, attempt: attempt)
@@ -120,7 +184,64 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     handle_result(result, "delete", meeting, attempt)
   end
 
+  # The same provider call as a delete, but nothing to clear afterwards: the
+  # meeting let go of this room before the job was enqueued.
+  defp perform_action("release", room, integration_id, attempt) do
+    result =
+      Video.delete_meeting_room(room.organizer_user_id,
+        integration_id: integration_id,
+        room_id: room.video_room_id
+      )
+
+    handle_result(result, "release", room, attempt)
+  end
+
   defp discard_no_room, do: {:discard, "No provider video room to sync"}
+
+  # The integration id captured at enqueue time is only a hint. The row can be
+  # deleted while the job waits, and unlike a meeting's foreign key nothing
+  # nils the copy in the args, so a stale id would pin every attempt to an
+  # integration that no longer exists. Dropping it lets `IntegrationResolver`
+  # fall back to whichever integration the user now holds for the provider.
+  defp released_room(args) do
+    user_id = args["organizer_user_id"]
+
+    %{
+      id: args["meeting_id"],
+      video_room_id: args["room_id"],
+      video_provider: args["video_provider"],
+      organizer_user_id: user_id,
+      video_integration_id: live_integration_id(args["video_integration_id"], user_id)
+    }
+  end
+
+  defp live_integration_id(id, user_id) when is_integer(id) and is_integer(user_id) do
+    case Video.fetch_integration_for_user(id, user_id) do
+      {:ok, _integration} -> id
+      {:error, :not_found} -> nil
+    end
+  end
+
+  defp live_integration_id(_id, _user_id), do: nil
+
+  defp await_reachable_integration(room, reason, job) do
+    case SnoozePolicy.snooze_or_exhaust(SnoozePolicy.executions(job),
+           max_snoozes: @release_max_snoozes,
+           base_seconds: @release_snooze_seconds
+         ) do
+      {:snooze, _seconds} = snooze ->
+        Logger.info("Released video room has no reachable integration yet, waiting",
+          meeting_id: room.id,
+          provider: room.video_provider,
+          reason: reason
+        )
+
+        snooze
+
+      :exhausted ->
+        discard_unreachable(room, "release", reason)
+    end
+  end
 
   # The meeting holds a live provider room but nothing can authenticate against
   # it: the integration was disconnected and never replaced, or the row predates

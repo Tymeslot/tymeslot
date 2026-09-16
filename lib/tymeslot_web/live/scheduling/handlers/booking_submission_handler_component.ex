@@ -43,6 +43,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingGuards
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Themes.Shared.BookingLocation
 
   require Logger
 
@@ -365,7 +366,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       # Only the chosen option's id travels. What it means is re-derived from
       # the host's own meeting type in `Bookings.Policy`, so a forged id
       # resolves to a location the host already offers.
-      location_option_id: socket.assigns[:selected_location_id],
+      location_option_id: BookingLocation.submitted_option_id(socket.assigns),
       location_phone: socket.assigns[:location_phone]
     }
   end

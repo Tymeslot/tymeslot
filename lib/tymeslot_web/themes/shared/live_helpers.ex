@@ -350,7 +350,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     socket
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
-    |> BookingLocation.assign_for_meeting_type(meeting_type)
+    |> BookingLocation.assign_for_meeting_type(
+      meeting_type,
+      ThemeFlow.reschedule_location_choice(
+        socket.assigns[:reschedule_meeting_uid],
+        socket.assigns[:organizer_user_id]
+      )
+    )
     |> OrganizerHelpers.assign_booking_window()
   end
 
