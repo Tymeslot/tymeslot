@@ -24,6 +24,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
+
   require Logger
 
   @typedoc """
@@ -99,6 +101,32 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   """
   @spec reauth_error_message(cause()) :: String.t()
   def reauth_error_message(cause), do: fetch_cause(cause).message
+
+  @doc """
+  Which `t:cause/0` a permanent credential failure describes.
+
+  `invalid_grant` and `:token_expired` mean the grant itself is gone: expired,
+  or revoked by the user in their provider account. Anything else the provider
+  refused counts as rejected credentials. The two get different messages
+  because they send the owner to different places.
+
+  A binary reason is matched on whole-word tokens, so the marker has to reach
+  this function intact: a caller that replaces the provider's error text with
+  its own wording loses the distinction.
+  """
+  @spec rejection_cause(term()) :: :expired_grant | :rejected_credentials
+  def rejection_cause(:token_expired), do: :expired_grant
+
+  def rejection_cause(reason) when is_binary(reason) do
+    if "invalid_grant" in BreakerOutcome.error_tokens(reason),
+      do: :expired_grant,
+      else: :rejected_credentials
+  end
+
+  def rejection_cause({:exception, message}) when is_binary(message),
+    do: rejection_cause(message)
+
+  def rejection_cause(_reason), do: :rejected_credentials
 
   @doc """
   Flags an integration for reauthentication.

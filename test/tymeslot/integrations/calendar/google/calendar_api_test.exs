@@ -352,16 +352,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
   end
 
   describe "refresh_token/1" do
-    test "calls Google token endpoint and returns new tokens" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          refresh_token_encrypted: Encryption.encrypt("old_refresh_token")
-        )
-
+    setup do
       prior = Application.get_env(:tymeslot, :google_oauth)
       Application.put_env(:tymeslot, :google_oauth, client_id: "client", client_secret: "secret")
 
@@ -371,6 +362,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
           else: Application.delete_env(:tymeslot, :google_oauth)
       end)
 
+      integration =
+        insert(:calendar_integration,
+          user: insert(:user),
+          provider: "google",
+          refresh_token_encrypted: Encryption.encrypt("old_refresh_token")
+        )
+
+      %{integration: integration}
+    end
+
+    test "calls Google token endpoint and returns new tokens", %{integration: integration} do
       expect(Tymeslot.HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
         assert url == "https://oauth2.googleapis.com/token"
         assert String.contains?(body, "grant_type=refresh_token")
@@ -389,6 +391,24 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       end)
 
       assert {:ok, {"new_access_token", "new_refresh_token", %DateTime{}}} =
+               CalendarAPI.refresh_token(integration)
+    end
+
+    # The body is where the OAuth error code lives; the health check can only
+    # tell a revoked grant from other refusals if the code survives into the
+    # message.
+    test "keeps the OAuth error code from a 400 response in the message", %{
+      integration: integration
+    } do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post,
+                                                   "https://oauth2.googleapis.com/token",
+                                                   _body,
+                                                   _headers,
+                                                   _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      assert {:error, :unauthorized, "Token refresh failed: invalid_grant"} =
                CalendarAPI.refresh_token(integration)
     end
   end

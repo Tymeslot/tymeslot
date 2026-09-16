@@ -11,8 +11,26 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.ErrorMessages
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
+
+  @doc """
+  The reason a connection test reports when an OAuth provider refused the
+  stored credentials, given the calendar client's error message.
+
+  A revoked or expired grant becomes `:token_expired`, anything else
+  `:unauthorized`. Both are permanent credential failures, but only the first
+  tells the owner to look in their provider account, and the health check can
+  tell them apart only if the distinction survives this far as an atom.
+  """
+  @spec unauthorized_reason(String.t()) :: :token_expired | :unauthorized
+  def unauthorized_reason(message) do
+    case ReauthHandling.rejection_cause(message) do
+      :expired_grant -> :token_expired
+      :rejected_credentials -> :unauthorized
+    end
+  end
 
   @doc """
   Ensures all required fields are present in the config map.

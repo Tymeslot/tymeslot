@@ -223,8 +223,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       {:ok, _events} ->
         {:ok, dgettext("dashboard_calendar_providers", "Google Calendar connection successful")}
 
-      {:error, :unauthorized, _message} ->
-        {:error, :unauthorized}
+      {:error, :unauthorized, message} ->
+        {:error, ProviderCommon.unauthorized_reason(message)}
 
       {:error, :rate_limited, _message} ->
         {:error,

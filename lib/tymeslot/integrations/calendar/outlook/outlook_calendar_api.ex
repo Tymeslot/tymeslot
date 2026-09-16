@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
+  alias Tymeslot.Integrations.Common.OAuth.ErrorParser
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
@@ -239,8 +240,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
            {response["access_token"], response["refresh_token"] || integration.refresh_token,
             expires_at}}
 
-        {:error, {:http_error, 400, _body}} ->
-          {:error, :unauthorized, "Token refresh failed"}
+        {:error, {:http_error, 400, body}} ->
+          {:error, :unauthorized, ErrorParser.build_message("Token refresh failed", 400, body)}
 
         {:error, {:http_error, status, _body}} ->
           {:error, :network_error, "HTTP #{status}"}

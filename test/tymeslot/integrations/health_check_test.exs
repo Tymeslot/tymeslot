@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
@@ -319,6 +320,27 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
           "integration_type" => "calendar"
         }
       )
+    end
+
+    for {provider, api_mock} <- [
+          {"google", GoogleCalendarAPIMock},
+          {"outlook", OutlookCalendarAPIMock}
+        ] do
+      test "a revoked #{provider} grant is described to the owner as expired, not rejected" do
+        integration =
+          insert(:calendar_integration, is_active: true, provider: unquote(provider))
+
+        expect(unquote(api_mock), :list_primary_events, 1, fn _int, _start, _end ->
+          {:error, :unauthorized, "Token refresh failed: invalid_grant"}
+        end)
+
+        run_health_checks()
+        sync_with_server()
+
+        {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
+        assert updated.needs_reauth
+        assert updated.sync_error == ReauthHandling.reauth_error_message(:expired_grant)
+      end
     end
 
     test "transient errors do not trigger fast path" do

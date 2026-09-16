@@ -44,6 +44,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video
 
   @type integration_type :: :calendar | :video
@@ -165,7 +166,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
         reason: inspect(reason)
       )
 
-      case flag_for_reauth(type, integration, reauth_cause(reason)) do
+      case flag_for_reauth(type, integration, ReauthHandling.rejection_cause(reason)) do
         :ok ->
           maybe_notify_on_reauth(type, integration)
 
@@ -185,22 +186,6 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   def handle_permanent_auth_failure(_type, _integration, _check_result), do: :ok
 
   # Private Functions
-
-  # Splits the reason into whole-word tokens for matching. Non-UTF-8 reasons
-  # `invalid_grant` and `:token_expired` mean the grant itself is gone —
-  # expired, or revoked by the user in their provider account. Everything else
-  # on the permanent list is the provider refusing the credentials for some
-  # other reason. The two get different messages because they send the user to
-  # different places, and neither is a decryption problem.
-  defp reauth_cause(reason) when is_binary(reason) do
-    if "invalid_grant" in BreakerOutcome.error_tokens(reason),
-      do: :expired_grant,
-      else: :rejected_credentials
-  end
-
-  defp reauth_cause(:token_expired), do: :expired_grant
-  defp reauth_cause({:exception, message}) when is_binary(message), do: reauth_cause(message)
-  defp reauth_cause(_other), do: :rejected_credentials
 
   # Re-uses the worker entry points on each domain. Their return values are
   # Oban-shaped (`{:discard, _} | {:error, _}`). We normalise to `:ok | {:error, _}`
