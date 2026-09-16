@@ -145,6 +145,18 @@ defmodule Tymeslot.Profiles.Avatars do
   end
 
   @doc """
+  Removes every avatar file stored for a profile, including earlier uploads a
+  replacement left behind. For erasing a profile that no longer exists: it
+  touches no database row.
+  """
+  @spec delete_all_files(pos_integer()) :: :ok | {:error, File.posix(), Path.t()}
+  def delete_all_files(profile_id) when is_integer(profile_id) do
+    [get_upload_directory(), "avatars", Integer.to_string(profile_id)]
+    |> Path.join()
+    |> remove_directory()
+  end
+
+  @doc """
   Gets the avatar URL for a profile.
   """
   @spec avatar_url(profile | nil, atom()) :: String.t()
@@ -244,6 +256,13 @@ defmodule Tymeslot.Profiles.Avatars do
   defp build_avatar_path(filename, profile) do
     upload_dir = get_upload_directory()
     Path.join([upload_dir, "avatars", to_string(profile.id), filename])
+  end
+
+  defp remove_directory(path) do
+    case File.rm_rf(path) do
+      {:ok, _removed} -> :ok
+      {:error, reason, failed_path} -> {:error, reason, failed_path}
+    end
   end
 
   defp get_upload_directory do

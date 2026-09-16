@@ -332,6 +332,13 @@ defmodule Tymeslot.Profiles do
   @spec delete_avatar(profile) :: result(profile)
   def delete_avatar(profile), do: Avatars.delete_avatar(profile)
 
+  @doc """
+  Removes every avatar file stored for a deleted profile. See
+  `Avatars.delete_all_files/1`.
+  """
+  @spec delete_avatar_files(pos_integer()) :: :ok | {:error, File.posix(), Path.t()}
+  def delete_avatar_files(profile_id), do: Avatars.delete_all_files(profile_id)
+
   @spec avatar_url(profile | nil, atom()) :: String.t()
   def avatar_url(profile, version \\ :original), do: Avatars.avatar_url(profile, version)
 
