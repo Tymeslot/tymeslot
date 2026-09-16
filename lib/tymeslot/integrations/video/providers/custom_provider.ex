@@ -183,15 +183,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
           test_url =
             String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
-          with {:ok, status} <- LinkRoom.probe(test_url) do
-            # Shares the msgid the non-2xx branches use: the caller wraps a
-            # success in "✓ Custom provider configured - …", so the status
-            # line does not have to carry the verdict itself.
-            {:ok,
-             dgettext("dashboard_integrations", "URL responded with HTTP %{status}",
-               status: status
-             )}
-          end
+          LinkRoom.connection_test(test_url)
         end
     end
   end

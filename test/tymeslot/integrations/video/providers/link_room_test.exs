@@ -47,6 +47,36 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
     end
   end
 
+  describe "build_room/2" do
+    test "builds the room id and URL from the base host and meeting id" do
+      assert {:ok, %{room_id: room_id, meeting_url: url}} =
+               LinkRoom.build_room("https://meet.example.com", "meeting-42")
+
+      assert {:ok, room_id} == LinkRoom.slug("meeting-42")
+      assert url == "https://meet.example.com/" <> room_id
+    end
+
+    test "does not double the separator when the base URL has a trailing slash" do
+      assert {:ok, %{room_id: room_id, meeting_url: url}} =
+               LinkRoom.build_room("https://meet.example.com/", "meeting-42")
+
+      assert url == "https://meet.example.com/" <> room_id
+    end
+
+    test "refuses a missing meeting id with a plain-English message" do
+      assert LinkRoom.build_room("https://meet.example.com", nil) ==
+               {:error, "A meeting ID is required to create a video room"}
+
+      assert LinkRoom.build_room("https://meet.example.com", "") ==
+               {:error, "A meeting ID is required to create a video room"}
+    end
+
+    test "refuses a URL over the length limit" do
+      base_url = "https://" <> String.duplicate("e", TemplateConfig.max_url_length()) <> ".com"
+      assert {:error, _message} = LinkRoom.build_room(base_url, "meeting-42")
+    end
+  end
+
   describe "append_slug/2" do
     test "joins base URL and slug with a single separator" do
       assert LinkRoom.append_slug("https://meet.example.com", "abc123") ==
@@ -108,6 +138,35 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
     end
   end
 
+  describe "slug_from_url/1" do
+    test "returns the last non-empty path segment" do
+      assert LinkRoom.slug_from_url("https://meet.example.com/abc123") == "abc123"
+    end
+
+    test "returns the last segment when the base URL has a path prefix" do
+      assert LinkRoom.slug_from_url("https://example.com/jitsi/abc123") == "abc123"
+    end
+
+    test "ignores a trailing slash" do
+      assert LinkRoom.slug_from_url("https://meet.example.com/abc123/") == "abc123"
+    end
+
+    test "returns nil for a URL with no path" do
+      assert LinkRoom.slug_from_url("https://meet.example.com") == nil
+    end
+
+    test "returns nil for a URL whose path is only slashes" do
+      assert LinkRoom.slug_from_url("https://meet.example.com/") == nil
+    end
+
+    test "round-trips with build_room/2's room id" do
+      assert {:ok, %{room_id: room_id, meeting_url: url}} =
+               LinkRoom.build_room("https://meet.example.com", "meeting-42")
+
+      assert LinkRoom.slug_from_url(url) == room_id
+    end
+  end
+
   describe "probe/1" do
     test "refuses a non-http scheme before making any request" do
       expect(Tymeslot.HTTPClientMock, :head, 0, fn _url, _headers, _opts -> :unreachable end)
@@ -156,6 +215,24 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
       end)
 
       assert LinkRoom.probe(@public_url) == {:error, "URL responded with HTTP 503"}
+    end
+  end
+
+  describe "connection_test/1" do
+    test "renders a reachable URL as a status message" do
+      expect(Tymeslot.HTTPClientMock, :head, fn @public_url, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, headers: %{}}}
+      end)
+
+      assert LinkRoom.connection_test(@public_url) == {:ok, "URL responded with HTTP 200"}
+    end
+
+    test "renders a non-2xx status as probe/1's own error" do
+      expect(Tymeslot.HTTPClientMock, :head, fn @public_url, _headers, _opts ->
+        {:ok, %Req.Response{status: 503, headers: %{}}}
+      end)
+
+      assert LinkRoom.connection_test(@public_url) == {:error, "URL responded with HTTP 503"}
     end
   end
 end

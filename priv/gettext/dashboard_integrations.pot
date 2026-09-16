@@ -1088,8 +1088,6 @@ msgstr ""
 msgid "URL resolves to a private or loopback address"
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
-#: lib/tymeslot/integrations/video/providers/kmeet_provider.ex
 #: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL responded with HTTP %{status}"
@@ -1182,6 +1180,8 @@ msgstr ""
 msgid "Write the template variable exactly as {{meeting_id}}"
 
 #: lib/tymeslot/integrations/video/providers/kmeet_provider.ex
+
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
-msgid "meeting_id is required"
+msgid "A meeting ID is required to create a video room"
 msgstr ""

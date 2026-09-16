@@ -72,6 +72,39 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   @doc """
+  Builds a room on a fixed host: hashes the meeting id into a slug, appends
+  it to `base_url`, and validates the result's length. This is the whole
+  room-creation flow shared by every provider addressed purely by URL and a
+  meeting id (kMeet, Jitsi); the custom provider stays off this path because
+  it also has a static-URL mode and substitutes the slug into a template
+  rather than always appending it.
+
+  Refuses a missing meeting id with a plain-English message rather than the
+  bare `:empty_meeting_id` atom `slug/1` returns, since this is the entry
+  point callers use directly.
+  """
+  @spec build_room(String.t(), String.t() | integer() | atom() | nil) ::
+          {:ok, %{room_id: String.t(), meeting_url: String.t()}} | {:error, String.t()}
+  def build_room(base_url, meeting_id) do
+    with {:ok, room_id} <- slug_or_missing_id_message(meeting_id),
+         meeting_url = append_slug(base_url, room_id),
+         :ok <- validate_length(meeting_url) do
+      {:ok, %{room_id: room_id, meeting_url: meeting_url}}
+    end
+  end
+
+  defp slug_or_missing_id_message(meeting_id) do
+    case slug(meeting_id) do
+      {:ok, room_id} ->
+        {:ok, room_id}
+
+      {:error, :empty_meeting_id} ->
+        {:error,
+         dgettext("dashboard_integrations", "A meeting ID is required to create a video room")}
+    end
+  end
+
+  @doc """
   Whether the value is an http or https URL with a non-empty host.
   """
   @spec http_url?(any()) :: boolean()
@@ -112,6 +145,23 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   @doc """
+  Extracts the room id from a meeting URL built by `build_room/2`: the last
+  non-empty path segment. Returns `nil` for a URL with no path (or one that
+  is only slashes), since there is no segment to return; a room built by
+  `build_room/2` always has one, so this only bites a hand-edited or foreign
+  URL.
+  """
+  @spec slug_from_url(String.t()) :: String.t() | nil
+  def slug_from_url(url) do
+    path = url |> URI.parse() |> Map.get(:path)
+
+    case path do
+      nil -> nil
+      path -> path |> String.split("/", trim: true) |> List.last()
+    end
+  end
+
+  @doc """
   Reduces a URL to its scheme and host for logging, dropping the room path.
   """
   @spec mask_url(String.t()) :: String.t()
@@ -133,6 +183,22 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   def probe(url) do
     with :ok <- assert_http_or_https(url) do
       check_reachable(url, @max_redirects, probe_deadline())
+    end
+  end
+
+  @doc """
+  Probes a URL and renders the result as the connection-test message every
+  link-room provider shows the user: a status line on success, `probe/1`'s
+  own message on failure.
+  """
+  @spec connection_test(String.t()) :: {:ok, String.t()} | {:error, String.t()}
+  def connection_test(url) do
+    with {:ok, status} <- probe(url) do
+      # Shares the msgid the non-2xx branches use: the caller wraps a
+      # success in "✓ Custom provider configured - …", so the status
+      # line does not have to carry the verdict itself.
+      {:ok,
+       dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
     end
   end
 

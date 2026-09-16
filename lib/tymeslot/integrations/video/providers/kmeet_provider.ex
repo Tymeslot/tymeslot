@@ -5,15 +5,13 @@ defmodule Tymeslot.Integrations.Video.Providers.KmeetProvider do
   kMeet (Infomaniak's Jitsi-based offering) is addressed purely by URL: every
   meeting gets a room on the fixed `kmeet.infomaniak.com` host, keyed off a
   hash of the meeting id, exactly like the custom link provider's template
-  mode. There is no API integration and nothing for the user to configure, so
-  `validate_config/1` and `config_schema/1` are trivially empty and
+  mode. There is no API integration and nothing for the user to configure:
+  `config_schema/0` is empty and `validate_config/1` accepts anything, and
   `credential_spec/0` declares no required fields.
 
   Room derivation, URL validation and the reachability probe are shared with
   the custom provider and Jitsi via `Tymeslot.Integrations.Video.Providers.LinkRoom`.
   """
-
-  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
@@ -36,25 +34,14 @@ defmodule Tymeslot.Integrations.Video.Providers.KmeetProvider do
 
   @impl ProviderBehaviour
   def create_meeting_room(config) do
-    with {:ok, slug} <- meeting_slug(Map.get(config, :meeting_id)),
-         url = LinkRoom.append_slug(@host, slug),
-         :ok <- LinkRoom.validate_length(url) do
+    with {:ok, %{room_id: room_id, meeting_url: meeting_url}} <-
+           LinkRoom.build_room(@host, Map.get(config, :meeting_id)) do
       {:ok,
        %RoomData{
-         room_id: slug,
-         meeting_url: url,
+         room_id: room_id,
+         meeting_url: meeting_url,
          provider_data: %{host: @host, created_at: DateTime.utc_now()}
        }}
-    end
-  end
-
-  defp meeting_slug(meeting_id) do
-    case LinkRoom.slug(meeting_id) do
-      {:ok, slug} ->
-        {:ok, slug}
-
-      {:error, :empty_meeting_id} ->
-        {:error, dgettext("dashboard_integrations", "meeting_id is required")}
     end
   end
 
@@ -63,18 +50,13 @@ defmodule Tymeslot.Integrations.Video.Providers.KmeetProvider do
     do: {:ok, room_data.meeting_url}
 
   @impl ProviderBehaviour
-  def extract_room_id(meeting_url), do: LinkRoom.room_id(meeting_url)
+  def extract_room_id(meeting_url), do: LinkRoom.slug_from_url(meeting_url)
 
   @impl ProviderBehaviour
   def valid_meeting_url?(meeting_url), do: LinkRoom.http_url?(meeting_url)
 
   @impl ProviderBehaviour
-  def perform_connection_test(_config) do
-    with {:ok, status} <- LinkRoom.probe(@host) do
-      {:ok,
-       dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
-    end
-  end
+  def perform_connection_test(_config), do: LinkRoom.connection_test(@host)
 
   @impl ProviderBehaviour
   def provider_type, do: :kmeet
