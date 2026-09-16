@@ -140,5 +140,32 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       # lets the owner's test booking simulate instead of being refused.
       assert html =~ "data-preview-token=\"a-signed-owner-preview-token\""
     end
+
+    # The hook writes no wording of its own. The snippet labels stand in for the
+    # copied snippet, so they follow the embed's language; the rest is dashboard
+    # chrome and follows the viewer's.
+    test "hands the hook translated text, labels in the embed's language" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+
+      assigns = %{
+        selected_embed_type: "link",
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        preview_token: "a-signed-owner-preview-token",
+        embed_script_url: "/embed.js",
+        embed_locale: "fr",
+        is_ready: true,
+        error_reason: nil,
+        myself: "myself"
+      }
+
+      html = render_component(&LivePreview.live_preview/1, assigns)
+
+      assert html =~ ~s(data-link-label="Planifier une réunion")
+      assert html =~ ~s(data-popup-label="Réserver une réunion")
+      assert html =~ ~s(data-link-hint="Nur Vorschau: Dieser Link öffnet sich im Testmodus)
+      assert html =~ ~s(data-iframe-title="Buchungsvorschau")
+    end
   end
 end

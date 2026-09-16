@@ -4,13 +4,14 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Workers.EmailWorker
 
   describe "handle_permanent_auth_failure/3" do
-    test "flags video integration for reauth and enqueues email on invalid_grant" do
+    test "flags video integration for reauth and enqueues the reauth email (not the unhealthy one) on invalid_grant" do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
@@ -28,15 +29,20 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       assert_enqueued(
         worker: EmailWorker,
         args: %{
-          "action" => "send_integration_unhealthy_notification",
+          "action" => "send_integration_reauth_notification",
           "user_id" => user.id,
           "integration_id" => integration.id,
           "integration_type" => "video"
         }
       )
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_integration_unhealthy_notification"}
+      )
     end
 
-    test "flags calendar integration for reauth and enqueues email on invalid_grant" do
+    test "flags calendar integration for reauth and enqueues the reauth email (not the unhealthy one) on invalid_grant" do
       user = insert(:user)
 
       integration =
@@ -54,9 +60,35 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       assert_enqueued(
         worker: EmailWorker,
         args: %{
-          "action" => "send_integration_unhealthy_notification",
+          "action" => "send_integration_reauth_notification",
           "integration_type" => "calendar"
         }
+      )
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_integration_unhealthy_notification"}
+      )
+    end
+
+    test "stamps notification_sent_at on the reauth fast-path without sending an unhealthy email" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
+
+      {:ok, _state} = IntegrationHealthStateQueries.get_or_init(:video, integration.id, user.id)
+
+      assert ResponseHandler.handle_permanent_auth_failure(
+               :video,
+               integration,
+               {:error, "Connection test failed: Failed to refresh token: invalid_grant"}
+             ) == :ok
+
+      {:ok, state} = IntegrationHealthStateQueries.get(:video, integration.id)
+      assert %DateTime{} = state.notification_sent_at
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_integration_unhealthy_notification"}
       )
     end
 
@@ -74,7 +106,11 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
 
       {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
       assert updated.needs_reauth == true
-      assert_enqueued(worker: EmailWorker)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_integration_reauth_notification"}
+      )
     end
 
     # An expired or revoked OAuth grant has nothing to do with encryption keys.
@@ -177,7 +213,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
         all_enqueued(
           worker: EmailWorker,
           args: %{
-            "action" => "send_integration_unhealthy_notification",
+            "action" => "send_integration_reauth_notification",
             "user_id" => user.id,
             "integration_id" => integration.id,
             "integration_type" => "video"

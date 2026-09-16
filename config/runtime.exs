@@ -59,63 +59,9 @@ end
 # Supports: HTTP_PROXY, HTTPS_PROXY, NO_PROXY (case-insensitive)
 # This configuration applies to all outbound HTTP requests (CalDAV, Google API, etc.)
 
-# Helper to parse a proxy URL into structured config
-parse_proxy_url = fn proxy_url ->
-  if proxy_url && proxy_url != "" do
-    uri = URI.parse(proxy_url)
-
-    # Parse authentication from URL userinfo
-    proxy_auth =
-      case uri.userinfo do
-        nil ->
-          nil
-
-        userinfo ->
-          case String.split(userinfo, ":", parts: 2) do
-            [user, pass] -> {URI.decode(user), URI.decode(pass)}
-            [user] -> {URI.decode(user), ""}
-          end
-      end
-
-    %{
-      host:
-        uri.host ||
-          raise("Proxy URL must include a valid host (check HTTP_PROXY/HTTPS_PROXY format)"),
-      port: uri.port || 8080,
-      auth: proxy_auth,
-      scheme: uri.scheme || "http"
-    }
-  else
-    nil
-  end
-end
-
-# Read proxy environment variables (case-insensitive, uppercase takes precedence)
-http_proxy_url = System.get_env("HTTP_PROXY") || System.get_env("http_proxy")
-https_proxy_url = System.get_env("HTTPS_PROXY") || System.get_env("https_proxy")
-no_proxy_raw = System.get_env("NO_PROXY") || System.get_env("no_proxy") || ""
-
-# Parse NO_PROXY into list of patterns
-no_proxy_list =
-  no_proxy_raw
-  |> String.split(",", trim: true)
-  |> Enum.map(&String.trim/1)
-  |> Enum.reject(&(&1 == ""))
-
-# Build proxy configuration
-proxy_config =
-  if http_proxy_url || https_proxy_url do
-    %{
-      http_proxy: parse_proxy_url.(http_proxy_url),
-      https_proxy: parse_proxy_url.(https_proxy_url),
-      no_proxy: no_proxy_list
-    }
-  else
-    nil
-  end
-
-# Store proxy config for use by Req
-config :tymeslot, :http_proxy, proxy_config
+# Credentials in a proxy URL are stored as a struct that masks the password
+# wherever the application environment is inspected.
+config :tymeslot, :http_proxy, Tymeslot.Infrastructure.ProxyConfig.from_env(System.get_env())
 
 # ## Using releases
 #
@@ -278,19 +224,23 @@ if config_env() == :prod do
          Tymeslot.Repo,
          Tymeslot.Infrastructure.DatabaseConfig.build(deployment_type, System.get_env())
 
-  # Remote IP handling: trust private/loopback proxies and read proxy headers
-  # Cloudron uses x-forwarded-for header from its reverse proxy
-  config :remote_ip, RemoteIp,
-    headers: ~w[x-forwarded-for x-real-ip],
-    proxies: ~w[
-      127.0.0.0/8
-      10.0.0.0/8
-      172.16.0.0/12
-      192.168.0.0/16
-      ::1/128
-      fc00::/7
-      fd00::/8
-    ]
+  # Whether a forwarded address in a loopback or RFC-1918/4193 range names the
+  # visitor (an intranet-only deployment) rather than a proxy hop (the default).
+  # This one key drives both the LiveView socket path and, through
+  # `ClientIP.remote_ip_clients/0`, the `RemoteIp` plug in the endpoint, so the
+  # two cannot be configured apart. RemoteIp reads no application config, which
+  # is why its options live on the plug rather than here.
+  #
+  # Only fixes a single proxy tier: it works when the reverse proxy directly in
+  # front of the app is the only hop between it and the visitor. With a further
+  # private proxy tier upstream of that one, the flag cannot tell the outer hop
+  # apart from a visitor, and everyone behind it still collapses onto the outer
+  # proxy's address.
+  config :tymeslot,
+         :trust_private_client_ips,
+         TymeslotWeb.Helpers.ClientIP.trust_private_clients_from_env(
+           System.get_env("TRUST_PRIVATE_CLIENT_IPS")
+         )
 
   # Configure Oban for production
   # Queue definitions in config.exs are loaded at runtime by application.ex

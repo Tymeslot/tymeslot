@@ -183,6 +183,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   # Expiring tokens
   # ---------------------------------------------------------------------------
 
+  # `needs_reauth` is deliberately NOT excluded here, unlike
+  # `list_expiring_webhook_integrations/4`. A flagged integration may be
+  # awaiting reconnection for a reason that has nothing to do with its OAuth
+  # grant (a deleted booking calendar, no calendar selected), and Microsoft in
+  # particular lapses a refresh token after roughly 90 days of inactivity;
+  # excluding these integrations from the hourly sweep let their refresh
+  # tokens go stale while the owner was still deciding what to reconnect,
+  # turning a fixable flag into a dead grant. `Tokens.persist_and_return/4`
+  # and `TokenRefreshJob.handle_refresh_error/3` are responsible for keeping
+  # `sync_error` intact for a flagged integration across both a successful and
+  # a failed refresh, so exercising the token here does not erase the reason
+  # the dashboard notice and reauth email depend on.
   @doc """
   Lists Google Calendar integrations with tokens expiring before the given threshold.
   """

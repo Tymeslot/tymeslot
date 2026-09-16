@@ -149,6 +149,35 @@ defmodule TymeslotWeb.Live.Scheduling.OwnerPreviewBookingTest do
     end
   end
 
+  describe "the preview notice" do
+    test "is shown whenever a valid owner-preview token is verified", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      event_type: event_type
+    } do
+      # A copied preview link is indistinguishable from a real one to a
+      # visitor unless the page itself discloses the simulation; this is that
+      # disclosure. It must survive to whichever step the visitor lands on,
+      # not just the first one, since `navigate_to_booking_form` advances all
+      # the way to the booking form.
+      view = navigate_to_preview(conn, profile, event_type, PreviewToken.sign(user.id))
+
+      assert has_element?(view, "[data-testid='preview-notice']")
+      assert render(view) =~ "Preview mode"
+    end
+
+    test "is not shown on an ordinary booking page", %{
+      conn: conn,
+      profile: profile,
+      event_type: event_type
+    } do
+      view = navigate_to_booking_form(conn, profile, event_type)
+
+      refute has_element?(view, "[data-testid='preview-notice']")
+    end
+  end
+
   describe "a preview claim with no valid token" do
     test "is refused, and is still charged to the rate limit", %{
       conn: conn,

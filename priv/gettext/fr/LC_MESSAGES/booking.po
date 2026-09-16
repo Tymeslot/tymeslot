@@ -1839,3 +1839,8 @@ msgstr "Rechercher des fuseaux horaires"
 #, elixir-autogen, elixir-format
 msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
 msgstr "Cette demande a changé depuis l'ouverture de cette page et ne peut plus être traitée ici. Ouvrez le dernier e-mail de demande pour y répondre."
+
+#: lib/tymeslot_web/themes/shared/components/preview_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
+msgstr "Mode aperçu : les réservations effectuées ici sont simulées. Rien n'est enregistré ni envoyé."

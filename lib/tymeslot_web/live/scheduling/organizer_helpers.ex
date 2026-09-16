@@ -118,12 +118,6 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
     |> assign(:saving, false)
   end
 
-  @spec assign_form_errors(Phoenix.LiveView.Socket.t(), map()) ::
-          Phoenix.LiveView.Socket.t()
-  def assign_form_errors(socket, error_map) when is_map(error_map) do
-    assign(socket, :validation_errors, error_map)
-  end
-
   @doc """
   Marks a form field as touched.
   """

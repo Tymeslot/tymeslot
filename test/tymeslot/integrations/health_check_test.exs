@@ -325,7 +325,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert_enqueued(
         worker: EmailWorker,
         args: %{
-          "action" => "send_integration_unhealthy_notification",
+          "action" => "send_integration_reauth_notification",
           "user_id" => user.id,
           "integration_id" => integration.id,
           "integration_type" => "calendar"
@@ -396,7 +396,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert_enqueued(
         worker: EmailWorker,
         args: %{
-          "action" => "send_integration_unhealthy_notification",
+          "action" => "send_integration_reauth_notification",
           "user_id" => user.id,
           "integration_id" => integration.id,
           "integration_type" => "calendar"

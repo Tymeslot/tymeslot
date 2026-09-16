@@ -1114,20 +1114,10 @@ msgstr "Ви пройшли автентифікацію не тим облік�
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr "Доступ до Zoom відкликано. Перепідключіть свій обліковий запис Zoom."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
-msgstr "У Zoom немає дозволу, потрібного, щоб %{action}. Перепідключіть свій обліковий запис Zoom."
-
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
 msgstr "Не вдалося оновити токен Zoom після помилки 401. Перепідключіть свій обліковий запис Zoom."
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "cancel meetings"
-msgstr "скасовувати зустрічі"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1174,10 +1164,15 @@ msgstr "URL-адреса перенаправляє забагато разів"
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "create meetings"
-msgstr "створювати зустрічі"
+msgid "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
+msgstr "У Zoom немає дозволу, потрібного, щоб скасовувати зустрічі. Перепідключіть свій обліковий запис Zoom."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "reschedule meetings"
-msgstr "переносити зустрічі"
+msgid "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
+msgstr "У Zoom немає дозволу, потрібного, щоб створювати зустрічі. Перепідключіть свій обліковий запис Zoom."
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
+msgstr "У Zoom немає дозволу, потрібного, щоб переносити зустрічі. Перепідключіть свій обліковий запис Zoom."

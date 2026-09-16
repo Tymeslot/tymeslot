@@ -95,20 +95,6 @@ defmodule Tymeslot.Integrations.Common.ConfigManager do
     }
   end
 
-  @doc """
-  Returns the common HTTP client configuration schema.
-  """
-  @spec http_client_schema() :: schema()
-  def http_client_schema do
-    %{
-      timeout: %{type: :integer, default: 30_000},
-      retries: %{type: :integer, default: 3},
-      base_url: %{type: :string, required: true},
-      headers: %{type: :map, default: %{}},
-      follow_redirects: %{type: :boolean, default: true}
-    }
-  end
-
   # Private functions
 
   defp validate_required_fields(config, schema) do

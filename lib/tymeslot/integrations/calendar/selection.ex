@@ -298,6 +298,46 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     end)
   end
 
+  @typedoc """
+  A single integration's visibility rule, in the shape a query builder can
+  turn into a `where` clause: `:all` (no selection list, show everything),
+  `:none` (a selection list with nothing selected, show nothing), or
+  `{:selected, entries}` where each entry carries the `provider_calendar_id`
+  to match non-CalDAV rows against (`:id`) and the href prefix to match
+  CalDAV rows against (`:prefix`).
+  """
+  @type visibility_rule ::
+          :all | :none | {:selected, [%{id: String.t() | nil, prefix: String.t() | nil}]}
+
+  @doc """
+  Derives, per integration id, the `t:visibility_rule/0` a SQL query needs to
+  filter cached events the same way `visible_events/2` does in memory.
+
+  This is the pure half of that filtering: it reads only `integration.id` and
+  `integration.calendar_list`, and returns plain data a query module can turn
+  into a `where` clause without depending on this module's types. It mirrors
+  `event_visible?/2`'s dispatch exactly: nil/empty `calendar_list` is `:all`,
+  a `calendar_list` with nothing selected is `:none`, otherwise the selected
+  entries carry both matching signals `calendar_for_event/2` picks between
+  (CalDAV path prefix vs `provider_calendar_id`), since which one applies is a
+  property of the event, not the integration, and only the query layer sees
+  the row.
+  """
+  @spec visibility_rules([map()]) :: %{integer() => visibility_rule()}
+  def visibility_rules(integrations) do
+    Map.new(integrations, fn integration -> {integration.id, integration_rule(integration)} end)
+  end
+
+  defp integration_rule(%{calendar_list: nil}), do: :all
+  defp integration_rule(%{calendar_list: []}), do: :all
+
+  defp integration_rule(%{calendar_list: calendar_list}) do
+    case selected_calendars(calendar_list) do
+      [] -> :none
+      selected -> {:selected, Enum.map(selected, &%{id: &1.id, prefix: &1.path || &1.id})}
+    end
+  end
+
   # Resolves the entry in `calendar_list` that `event` came from, or `nil` when
   # no entry matches.
   #

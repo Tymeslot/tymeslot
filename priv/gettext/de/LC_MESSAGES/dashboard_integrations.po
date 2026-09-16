@@ -1113,20 +1113,10 @@ msgstr "Sie haben sich mit einem anderen Konto angemeldet als dem, das mit diese
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr "Der Zugriff auf Zoom wurde widerrufen. Bitte verbinden Sie Ihr Zoom-Konto erneut."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
-msgstr "Zoom fehlt die für das %{action} erforderliche Berechtigung. Bitte verbinden Sie Ihr Zoom-Konto erneut."
-
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
 msgstr "Die Aktualisierung des Zoom-Tokens ist nach einem 401-Fehler fehlgeschlagen. Bitte verbinden Sie Ihr Zoom-Konto erneut."
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "cancel meetings"
-msgstr "Absagen von Meetings"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1172,10 +1162,15 @@ msgstr "Die URL leitet zu oft weiter"
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "create meetings"
-msgstr "Erstellen von Meetings"
+msgid "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
+msgstr "Zoom fehlt die für das Absagen von Meetings erforderliche Berechtigung. Bitte verbinden Sie Ihr Zoom-Konto erneut."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "reschedule meetings"
-msgstr "Verschieben von Meetings"
+msgid "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
+msgstr "Zoom fehlt die für das Erstellen von Meetings erforderliche Berechtigung. Bitte verbinden Sie Ihr Zoom-Konto erneut."
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
+msgstr "Zoom fehlt die für das Verschieben von Meetings erforderliche Berechtigung. Bitte verbinden Sie Ihr Zoom-Konto erneut."

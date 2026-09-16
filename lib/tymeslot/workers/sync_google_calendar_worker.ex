@@ -113,6 +113,15 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
         {:snooze, 120}
 
+      {:error, :too_many_pages, message} ->
+        Logger.error(
+          "Google Calendar incremental sync exceeded pagination limit; discarding job",
+          calendar_integration_id: integration.id,
+          error: message
+        )
+
+        {:discard, message}
+
       {:error, _type, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
@@ -160,6 +169,15 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         )
 
         {:snooze, 120}
+
+      {:error, :too_many_pages, message} ->
+        Logger.error(
+          "Google Calendar bootstrap exceeded pagination limit; discarding job",
+          calendar_integration_id: integration.id,
+          error: message
+        )
+
+        {:discard, message}
 
       {:error, _type, reason} ->
         Logger.error("Google Calendar bootstrap failed",
@@ -304,7 +322,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
     CalendarManagement.flag_for_reconnection(
       integration,
-      dgettext(
+      dgettext_noop(
         "dashboard_calendar_providers",
         "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
       ),
@@ -380,7 +398,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     {cancelled, active} =
       Enum.split_with(raw_events, fn event -> event["status"] == "cancelled" end)
 
-    Enum.each(cancelled, &process_cancelled_event(integration, &1))
+    Sync.reconcile_deletions(integration, Enum.map(cancelled, &cancelled_ref/1))
 
     context = normalisation_context(integration, calendar_id)
 
@@ -400,11 +418,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     }
   end
 
-  defp process_cancelled_event(integration, event) do
-    Sync.reconcile_deletions(integration, [
-      %{provider_event_id: event["id"], uid: event["iCalUID"]}
-    ])
-  end
+  defp cancelled_ref(event), do: %{provider_event_id: event["id"], uid: event["iCalUID"]}
 
   defp persist_sync_state(integration, next_sync_token) do
     attrs =
