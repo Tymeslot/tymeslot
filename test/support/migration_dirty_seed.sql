@@ -513,6 +513,18 @@ VALUES (gen_random_uuid(), 'seed-mtg-utm-5', 'Seed Meeting 5', NOW(), NOW() + IN
 INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, utm_source, inserted_at, updated_at)
 VALUES (gen_random_uuid(), 'seed-mtg-utm-6', 'Seed Meeting 6', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-6@example.com', NULL, 'direct', NOW(), NOW());
 
+-- Row 7: A Google Meet room booked before the provider stopped appending the
+-- participant's email, name and a host flag to the join link, with the
+-- integration link already gone. Exercises two migrations in sequence:
+--   * 20260805125809_add_video_provider_to_meetings — with no integration to
+--     copy from, it has to infer 'google_meet' from the stored join URL.
+--   * 20260916134203_rewrite_google_meet_join_urls_to_meeting_url — then
+--     rewrites both per-role links to the plain meeting_url.
+-- video_provider does not exist at the pin, so the row deliberately relies on
+-- the first migration's inference to reach the second.
+INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, video_room_id, video_room_enabled, meeting_url, organizer_video_url, attendee_video_url, inserted_at, updated_at)
+VALUES (gen_random_uuid(), 'seed-mtg-meet-1', 'Seed Meet Meeting', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days' + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-7@example.com', (SELECT id FROM users WHERE email = 'seed-user-1@example.com' LIMIT 1), 'abc-defg-hij', true, 'https://meet.google.com/abc-defg-hij', 'https://meet.google.com/abc-defg-hij?authuser=host-seed%40example.com&role=host&uname=Seed+Host', 'https://meet.google.com/abc-defg-hij?authuser=att-seed-7%40example.com&uname=Seed+Attendee', NOW(), NOW());
+
 -- ============================================================================
 -- PROFILE WITH NULL SCHEDULING POLICY
 -- ============================================================================
