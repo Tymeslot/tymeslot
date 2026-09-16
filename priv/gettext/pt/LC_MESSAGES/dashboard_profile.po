@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete your profile picture? This action cannot be undone."
-msgstr "Tem certeza de que quer excluir a sua foto de perfil? Esta ação não pode ser desfeita."
+msgstr "Tem certeza de que quer excluir sua foto de perfil? Esta ação não pode ser desfeita."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -44,7 +44,7 @@ msgstr "Cancelar"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a unique username for your personal booking page."
-msgstr "Escolha um nome de usuário único para a sua página de agendamento."
+msgstr "Escolha um nome de usuário único para sua página de agendamento."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -74,7 +74,7 @@ msgstr "Nome de exibição atualizado"
 #: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your full name"
-msgstr "Digite o seu nome completo"
+msgstr "Digite seu nome completo"
 
 #: lib/tymeslot_web/components/dashboard/profile/delete_avatar_modal.ex
 #, elixir-autogen, elixir-format
@@ -252,7 +252,7 @@ msgstr "Trocar URL"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Change your URL to %{username}?"
-msgstr "Trocar a sua URL para %{username}?"
+msgstr "Trocar sua URL para %{username}?"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format

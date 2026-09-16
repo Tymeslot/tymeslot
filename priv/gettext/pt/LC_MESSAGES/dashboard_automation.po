@@ -122,7 +122,7 @@ msgstr "Criar webhook"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Create Your First Webhook"
-msgstr "Crie o seu primeiro webhook"
+msgstr "Crie seu primeiro webhook"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
@@ -504,7 +504,7 @@ msgstr "Status do webhook atualizado"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Webhook test successful! Check your endpoint."
-msgstr "Teste do webhook bem-sucedido! Confira o seu endpoint."
+msgstr "Teste do webhook bem-sucedido! Confira seu endpoint."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex
 #, elixir-autogen, elixir-format
@@ -519,7 +519,7 @@ msgstr "Webhooks"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur. Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations."
-msgstr "Webhooks mandam notificações HTTP POST em tempo real para as suas ferramentas de automação sempre que acontece um evento de agendamento. Ideal para disparar fluxos automáticos, mandar e-mails próprios, sincronizar dados ou construir integrações."
+msgstr "Webhooks mandam notificações HTTP POST em tempo real para suas ferramentas de automação sempre que acontece um evento de agendamento. Ideal para disparar fluxos automáticos, mandar e-mails próprios, sincronizar dados ou construir integrações."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format

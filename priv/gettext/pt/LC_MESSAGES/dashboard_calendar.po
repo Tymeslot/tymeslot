@@ -355,7 +355,7 @@ msgstr "Agendamentos"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Bring your calendar into Tymeslot"
-msgstr "Traga o seu calendário para o Tymeslot"
+msgstr "Traga seu calendário para o Tymeslot"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
@@ -385,4 +385,4 @@ msgstr "Nenhum agendamento à frente"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
-msgstr "Os seus agendamentos já aparecem aqui. Conecte um calendário para ver o resto dos seus eventos e evitar agendamentos duplicados."
+msgstr "Seus agendamentos já aparecem aqui. Conecte um calendário para ver o resto dos seus eventos e evitar agendamentos duplicados."

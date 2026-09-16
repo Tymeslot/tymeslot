@@ -75,7 +75,7 @@ msgstr "Cor"
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar to see your whole schedule here"
-msgstr "Conecte um calendário para ver a sua agenda inteira aqui"
+msgstr "Conecte um calendário para ver sua agenda inteira aqui"
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex
 #, elixir-autogen, elixir-format

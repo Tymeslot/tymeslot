@@ -338,7 +338,7 @@ msgstr "Você foi rebaixado de administrador."
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
-msgstr "Você perde o acesso às configurações de administração e ao gerenciamento de usuários, e volta para o seu painel."
+msgstr "Você perde o acesso às configurações de administração e ao gerenciamento de usuários, e volta para seu painel."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
@@ -458,7 +458,7 @@ msgstr "Não dá para desativar a autenticação por senha enquanto pelo menos u
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
-msgstr "Coleta análises respeitosas da privacidade para as páginas de agendamento desta instância: visualizações, origem do tráfego (UTM/referenciador) e conversão. Conta visitantes únicos com uma impressão digital sem cookies, que gira todo dia — nenhum IP bruto é guardado. Desligado por padrão; revise a sua política de privacidade antes de ativar."
+msgstr "Coleta análises respeitosas da privacidade para as páginas de agendamento desta instância: visualizações, origem do tráfego (UTM/referenciador) e conversão. Conta visitantes únicos com uma impressão digital sem cookies, que gira todo dia — nenhum IP bruto é guardado. Desligado por padrão; revise sua política de privacidade antes de ativar."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format

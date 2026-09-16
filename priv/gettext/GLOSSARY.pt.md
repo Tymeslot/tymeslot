@@ -305,11 +305,13 @@ markers a Brazilian reader notices in the first three seconds.
 | utilizador | **usuário** |
 | ficheiro | **arquivo** |
 | guardar (a file) | **salvar** |
-| apagar (a record) | **excluir** |
+| apagar (as a UI **button label** on a record) | **Excluir** — in running prose, *apagar este e-mail* is fine Brazilian |
 | palavra-passe | **senha** |
 | ecrã | **tela** |
 | equipa | **equipe** |
 | telemóvel | **celular** |
+| caducar (a request lapses) | **expirar** — *caducar* is legal register, and European in an interface |
+| peço desculpa | **peço desculpas** |
 | correio eletrónico | **e-mail** |
 | hiperligação | **link** |
 | autenticação de dois fatores | fine, but prefer **verificação em duas etapas** (Google's pt-BR) |
@@ -319,6 +321,40 @@ markers a Brazilian reader notices in the first three seconds.
 | carregar (a button) | **clicar** |
 | a gestão | **o gerenciamento** |
 | endereço eletrónico | **endereço de e-mail** |
+
+### The markers a Brazilian notices first are grammatical, not lexical
+
+A word list catches *ficheiro*. It does not catch the thing that actually makes a
+Brazilian reader say *"isto é português de Portugal"*. These do:
+
+**No article before a possessive.** This is the big one.
+
+| European / formal | Brazilian product copy |
+|---|---|
+| Confira **o seu** e-mail | Confira **seu** e-mail |
+| Digite **a sua** senha | Digite **sua** senha |
+| **A sua** reunião foi cancelada. | **Sua** reunião foi cancelada. |
+
+Brazilian formal grammar allows both, which is exactly why a catalogue drifts into
+mixing them — and the mix is what reads as foreign. So the rule is absolute: **drop
+the bare article.** Three places it stays, because Brazilian keeps it too:
+
+- **contracted with a preposition** — *na sua página*, *do seu calendário*,
+  *pela sua conta*. These are Brazilian.
+- **after a quantifier** — *todos **os** seus eventos*, *todas **as** suas
+  integrações*. Dropping it here is colloquial, not correct.
+- when the possessive is **pronominal**, standing alone — *a sua* in *"a minha e a
+  sua"*. Rare in UI.
+
+**Gerund, never *estar a*.** *Está carregando*, never *está a carregar*. The single
+strongest European marker. (This catalogue has none.)
+
+**Você, never *tu*.** Already §1; listed here because it is the second-strongest.
+
+A first draft of this catalogue had **279** article-plus-possessive constructions
+against 455 without — a 38% mix, inside one product. That is the defect, and it is
+the kind a generic machine translation produces: grammatical, and wrong for the
+reader. All 279 were removed before submission.
 
 Spelling: post-1990 orthographic agreement, Brazilian variant — `ação`, `direção`,
 `econômico` (circumflex, not `económico`), `fato` (not `facto`), `registro` (not
@@ -368,7 +404,7 @@ that fix produces a language nobody can select.
 ## 9. ONE-LINE SUMMARY
 
 Informal **você**, never *tu* or *o senhor*; rewrite around grammatical gender rather
-than picking one. **reunião** (the booked meeting) · **agendamento** (booking) ·
+than picking one. **No article before a possessive** (*seu e-mail*, not *o seu e-mail*). **reunião** (the booked meeting) · **agendamento** (booking) ·
 **tipo de reunião** · **horário** (slot) · **folga** (buffer) · **anfitrião** (host) ·
 **participante** (attendee) · **convidado** (guest/invitee) · **compromisso**
 (appointment). Keep **Tymeslot / brand names / env vars / `%{…}`** verbatim. Use `“…”`,
