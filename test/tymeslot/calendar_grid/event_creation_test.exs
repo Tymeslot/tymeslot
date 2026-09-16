@@ -231,6 +231,46 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
     end
   end
 
+  describe "run_create_event/1 with a separate custom video integration using a template URL" do
+    test "derives the meeting_id-based room URL and embeds it in the description" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      video_integration =
+        insert(:video_integration,
+          user: user,
+          provider: "custom",
+          custom_meeting_url: "https://meet.example.com/{{meeting_id}}"
+        )
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.description =~ "https://meet.example.com/"
+        {:ok, "custom-template-uid-1"}
+      end)
+
+      start_at = ~U[2026-04-10 09:00:00Z]
+      end_at = ~U[2026-04-10 09:30:00Z]
+
+      payload = %{
+        creating: %{
+          title: "Custom Link Sync",
+          integration_id: integration.id,
+          calendar_id: "primary",
+          attendees: [],
+          video_integration_id: video_integration.id
+        },
+        user_id: user.id,
+        start_at: start_at,
+        end_at: end_at
+      }
+
+      assert {:ok, result} = EventCreation.run_create_event(payload)
+
+      assert result.meeting_url =~ ~r/\Ahttps:\/\/meet\.example\.com\/[0-9a-f]{16}\z/
+      assert result.description =~ "Join video call: #{result.meeting_url}"
+    end
+  end
+
   describe "run_create_event/1 — credentials require re-encryption" do
     test "flags the integration for reauth and returns reauth_required: true (no send/2)" do
       user = insert(:user)

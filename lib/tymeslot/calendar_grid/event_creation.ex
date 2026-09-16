@@ -90,7 +90,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     plan =
       MeetingProvisioning.plan(creating.integration_id, creating[:video_integration_id], user_id)
 
-    video_context = provision_video_room_for_plan(plan, event_details, user_id)
+    video_context = provision_video_room_for_plan(plan, event_details, user_id, uid)
 
     event_data =
       build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan)
@@ -226,11 +226,13 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  defp provision_video_room_for_plan(:none, _event_details, _user_id), do: %{}
-  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _user_id), do: %{}
+  defp provision_video_room_for_plan(:none, _event_details, _user_id, _uid), do: %{}
 
-  defp provision_video_room_for_plan({:separate, video_id}, event_details, user_id) do
-    provision_video_room(video_id, user_id, event_details)
+  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _user_id, _uid),
+    do: %{}
+
+  defp provision_video_room_for_plan({:separate, video_id}, event_details, user_id, uid) do
+    provision_video_room(video_id, user_id, event_details, uid)
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
@@ -276,9 +278,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
      }}
   end
 
-  defp provision_video_room(integration_id, user_id, event_details)
+  defp provision_video_room(integration_id, user_id, event_details, meeting_id)
        when is_integer(integration_id) do
-    opts = [integration_id: integration_id, event_details: event_details]
+    opts = [integration_id: integration_id, event_details: event_details, meeting_id: meeting_id]
 
     case VideoRooms.create_meeting_room(user_id, opts) do
       {:ok, %{room_data: room_data}} ->
