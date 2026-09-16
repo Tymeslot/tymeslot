@@ -530,7 +530,7 @@ msgstr "Quem agenda precisa responder esta pergunta antes de continuar."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/show_as_free_section.ex
 #, elixir-autogen, elixir-format
 msgid "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
-msgstr "O evento continua sendo criado, mas marcado como tempo livre, então não bloqueia outros agendamentos nem aparece como ocupado para quem vê a sua disponibilidade."
+msgstr "O evento continua sendo criado, mas marcado como tempo livre, então não bloqueia outros agendamentos nem aparece como ocupado para quem vê sua disponibilidade."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -798,7 +798,7 @@ msgstr "Confirmar cada agendamento eu mesmo"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
 #, elixir-autogen, elixir-format
 msgid "If you don't answer in time the request lapses, the slot is released, and the invitee is told. Silence never confirms a booking. Leave blank to use %{default} hours."
-msgstr "Se você não responder a tempo, o pedido caduca, o horário é liberado e o convidado é avisado. Silêncio nunca confirma um agendamento. Deixe em branco para usar %{default} horas."
+msgstr "Se você não responder a tempo, o pedido expira, o horário é liberado e o convidado é avisado. Silêncio nunca confirma um agendamento. Deixe em branco para usar %{default} horas."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/approval_section.ex
 #, elixir-autogen, elixir-format

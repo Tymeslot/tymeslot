@@ -106,7 +106,7 @@ msgstr "Mais algumas coisas que lançamos há pouco:"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "All your integrations in one place"
-msgstr "Todas as suas integrações num lugar só"
+msgstr "Todas suas integrações num lugar só"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -176,7 +176,7 @@ msgstr "Incorporações mais espertas, que ajustam a altura sozinhas, com layout
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot now speaks your language"
-msgstr "O Tymeslot agora fala a sua língua"
+msgstr "O Tymeslot agora fala sua língua"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -196,22 +196,22 @@ msgstr "Calendários, vídeo e pagamentos agora moram juntos num hub de Integra�
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Connect your Zoom account and Tymeslot creates a Zoom meeting for every booking - the link is added to the calendar invite and confirmation automatically."
-msgstr "Conecte a sua conta do Zoom e o Tymeslot cria uma reunião do Zoom para cada agendamento — o link entra no convite do calendário e na confirmação automaticamente."
+msgstr "Conecte sua conta do Zoom e o Tymeslot cria uma reunião do Zoom para cada agendamento — o link entra no convite do calendário e na confirmação automaticamente."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Every meeting type now has its own direct link that takes people straight to booking it - without showing your other meeting types. Mark a type as unlisted to keep it off your public page, and randomise its link any time to make it unguessable or to retire an old one."
-msgstr "Agora cada tipo de reunião tem o próprio link direto, que leva as pessoas direto ao agendamento dele — sem mostrar os seus outros tipos de reunião. Marque um tipo como não listado para mantê-lo fora da sua página pública, e sorteie o link quando quiser para torná-lo impossível de adivinhar ou aposentar um antigo."
+msgstr "Agora cada tipo de reunião tem o próprio link direto, que leva as pessoas direto ao agendamento dele — sem mostrar seus outros tipos de reunião. Marque um tipo como não listado para mantê-lo fora da sua página pública, e sorteie o link quando quiser para torná-lo impossível de adivinhar ou aposentar um antigo."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Give any event its own colour, right from your dashboard agenda. Colours you set in Tymeslot write back to your connected calendar, and colours already on your Google or CalDAV events show up here too - so your day is colour-coded exactly the way you like it, everywhere you look."
-msgstr "Dê a cada evento a sua cor, direto da agenda do seu painel. As cores que você define no Tymeslot voltam para o calendário conectado, e as cores que já estão nos seus eventos do Google ou CalDAV aparecem aqui também — então o seu dia fica colorido do jeito que você gosta, onde quer que você olhe."
+msgstr "Dê a cada evento sua cor, direto da agenda do seu painel. As cores que você define no Tymeslot voltam para o calendário conectado, e as cores que já estão nos seus eventos do Google ou CalDAV aparecem aqui também — então seu dia fica colorido do jeito que você gosta, onde quer que você olhe."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Go create your first event type - and let people book you."
-msgstr "Vá criar o seu primeiro tipo de evento — e deixe as pessoas agendarem com você."
+msgstr "Vá criar seu primeiro tipo de evento — e deixe as pessoas agendarem com você."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -226,7 +226,7 @@ msgstr "Defina um número máximo de agendamentos por dia, semana ou mês — pa
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
-msgstr "O app inteiro — o seu painel, as páginas de agendamento e todos os e-mails — agora está disponível em alemão, francês, italiano, ucraniano e tcheco. O Tymeslot segue o idioma do seu navegador automaticamente, ou você escolhe um nas configurações da conta. Quem agenda com você também recebe páginas de agendamento e confirmações no próprio idioma."
+msgstr "O app inteiro — Seu painel, as páginas de agendamento e todos os e-mails — agora está disponível em alemão, francês, italiano, ucraniano e tcheco. O Tymeslot segue o idioma do seu navegador automaticamente, ou você escolhe um nas configurações da conta. Quem agenda com você também recebe páginas de agendamento e confirmações no próprio idioma."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -236,12 +236,12 @@ msgstr "Tudo fica aqui"
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
-msgstr "O seu calendário é a casa. Reuniões, disponibilidade, integrações e o seu perfil estão todos a um clique."
+msgstr "Seu calendário é a casa. Reuniões, disponibilidade, integrações e seu perfil estão todos a um clique."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Open it to connect a calendar, customise your booking page, and share your link. It disappears once every step is done."
-msgstr "Abra para conectar um calendário, personalizar a sua página de agendamento e compartilhar o seu link. Ele some quando todos os passos estiverem prontos."
+msgstr "Abra para conectar um calendário, personalizar sua página de agendamento e compartilhar seu link. Ele some quando todos os passos estiverem prontos."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -251,12 +251,12 @@ msgstr "Sua lista de primeiros passos"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Availability is now built from named schedules - office hours, evening consults, weekend intensives - and every meeting type follows the one you choose. Keep up to five, each with its own hours, breaks and booking rules; anything you don't assign follows your default schedule."
-msgstr "Agora a disponibilidade é feita de agendas com nome — horário comercial, consultas à noite, intensivos de fim de semana — e cada tipo de reunião segue a que você escolher. Mantenha até cinco, cada uma com os próprios horários, pausas e regras de agendamento; o que você não atribuir segue a sua agenda padrão."
+msgstr "Agora a disponibilidade é feita de agendas com nome — horário comercial, consultas à noite, intensivos de fim de semana — e cada tipo de reunião segue a que você escolher. Mantenha até cinco, cada uma com os próprios horários, pausas e regras de agendamento; o que você não atribuir segue sua agenda padrão."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Give every meeting type its own hours"
-msgstr "Dê a cada tipo de reunião os seus próprios horários"
+msgstr "Dê a cada tipo de reunião seus próprios horários"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -266,12 +266,12 @@ msgstr "Aprove os agendamentos antes de confirmar"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen
 msgid "The heading, greeting and instruction at the top of your booking page are now yours to write. Say what you actually do, in your own words, and watch it in the live preview as you type - every change saves itself. Switch it off any time to go back to the built-in wording, translated into every language Tymeslot supports."
-msgstr "O título, a saudação e a instrução no topo da sua página de agendamento agora são seus para escrever. Diga o que você realmente faz, com as suas palavras, e veja na prévia ao vivo enquanto digita — cada mudança se salva sozinha. Desligue quando quiser para voltar ao texto embutido, traduzido para todos os idiomas que o Tymeslot suporta."
+msgstr "O título, a saudação e a instrução no topo da sua página de agendamento agora são seus para escrever. Diga o que você realmente faz, com suas palavras, e veja na prévia ao vivo enquanto digita — cada mudança se salva sozinha. Desligue quando quiser para voltar ao texto embutido, traduzido para todos os idiomas que o Tymeslot suporta."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Turn on approval for a meeting type and its bookings wait for you. The slot is held so nobody else can take it, the person booking is told it's a request rather than a confirmed meeting, and your answer is one click from the email. Don't answer in time and the request lapses on its own."
-msgstr "Ative a aprovação para um tipo de reunião e os agendamentos dele passam a esperar por você. O horário fica reservado para ninguém mais tomar, quem agendou é avisado de que é um pedido e não uma reunião confirmada, e a sua resposta está a um clique do e-mail. Se você não responder a tempo, o pedido caduca sozinho."
+msgstr "Ative a aprovação para um tipo de reunião e os agendamentos dele passam a esperar por você. O horário fica reservado para ninguém mais tomar, quem agendou é avisado de que é um pedido e não uma reunião confirmada, e sua resposta está a um clique do e-mail. Se você não responder a tempo, o pedido expira sozinho."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen

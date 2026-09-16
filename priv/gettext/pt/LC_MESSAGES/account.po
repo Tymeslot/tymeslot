@@ -95,7 +95,7 @@ msgstr "Confirmar nova senha"
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your new password"
-msgstr "Confirme a sua nova senha"
+msgstr "Confirme sua nova senha"
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
@@ -125,7 +125,7 @@ msgstr "As trocas de e-mail são feitas na sua conta do %{provider}"
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your current password"
-msgstr "Digite a sua senha atual"
+msgstr "Digite sua senha atual"
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format

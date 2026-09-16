@@ -176,7 +176,7 @@ msgstr "Carregando…"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments."
-msgstr "Gerencie todas as suas reuniões agendadas num lugar só. Filtre por status e aja rápido sobre os seus compromissos."
+msgstr "Gerencie todas as suas reuniões agendadas num lugar só. Filtre por status e aja rápido sobre seus compromissos."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -376,7 +376,7 @@ msgstr "Os dois recebem a confirmação assim que a pessoa escolher um novo hor�
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "Your upcoming appointments will appear here automatically."
-msgstr "Os seus próximos compromissos aparecem aqui automaticamente."
+msgstr "Seus próximos compromissos aparecem aqui automaticamente."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
@@ -408,7 +408,7 @@ msgstr "Aprovar"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Awaiting your approval"
-msgstr "Esperando a sua aprovação"
+msgstr "Esperando sua aprovação"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format

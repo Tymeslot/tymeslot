@@ -142,7 +142,7 @@ msgstr "Este app requer JavaScript para funcionar. Ative o JavaScript nas config
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "This timezone will be used for your availability and scheduling."
-msgstr "Este fuso horário será usado para a sua disponibilidade e os seus agendamentos."
+msgstr "Este fuso horário será usado para sua disponibilidade e seus agendamentos."
 
 #: lib/tymeslot_web/components/core_components/brand.ex
 #, elixir-autogen, elixir-format
@@ -207,7 +207,7 @@ msgstr "Alternar menu"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
-msgstr "Agendamento de reuniões bonito e com a sua marca. Sem anúncios, sem rastreamento."
+msgstr "Agendamento de reuniões bonito e com sua marca. Sem anúncios, sem rastreamento."
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format

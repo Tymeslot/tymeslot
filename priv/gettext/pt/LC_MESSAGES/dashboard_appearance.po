@@ -34,12 +34,12 @@ msgstr "Design do fundo"
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Choose Your Style"
-msgstr "Escolha o seu estilo"
+msgstr "Escolha seu estilo"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
-msgstr "Escolha um estilo visual que combine com a sua identidade profissional."
+msgstr "Escolha um estilo visual que combine com sua identidade profissional."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
@@ -145,12 +145,12 @@ msgstr "Mais estilos em breve"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
-msgstr "Ou envie o seu"
+msgstr "Ou envie seu"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Nosso time de design está criando novos temas para você expressar o seu estilo profissional."
+msgstr "Nosso time de design está criando novos temas para você expressar seu estilo profissional."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -180,7 +180,7 @@ msgstr "Selecione uma cor sólida"
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select the interface that best represents your personal brand and creates the best experience for your clients."
-msgstr "Escolha a interface que melhor representa a sua marca e cria a melhor experiência para os seus clientes."
+msgstr "Escolha a interface que melhor representa sua marca e cria a melhor experiência para seus clientes."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
@@ -212,7 +212,7 @@ msgstr "Tema atualizado para %{theme_name}"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
 msgid "This preview reflects your current color scheme and background."
-msgstr "Esta prévia mostra o seu esquema de cores e o fundo atuais."
+msgstr "Esta prévia mostra seu esquema de cores e o fundo atuais."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex
 #, elixir-autogen, elixir-format
@@ -268,7 +268,7 @@ msgstr "Não foi possível salvar a personalização do tema. Tente novamente."
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
-msgstr "(o seu tema atual)"
+msgstr "(Seu tema atual)"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -303,7 +303,7 @@ msgstr "Ainda não há prévia"
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a username for your booking page to see it here."
-msgstr "Escolha um nome de usuário para a sua página de agendamento para vê-la aqui."
+msgstr "Escolha um nome de usuário para sua página de agendamento para vê-la aqui."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -313,7 +313,7 @@ msgstr "Troque o texto que apresenta você no topo da sua página de agendamento
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Use my own wording"
-msgstr "Usar o meu próprio texto"
+msgstr "Usar meu próprio texto"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -323,7 +323,7 @@ msgstr "Seu título substitui:"
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Your own wording is shown to everyone, in whatever language they pick. Only the built-in text is translated."
-msgstr "O seu texto aparece para todo mundo, em qualquer idioma que a pessoa escolher. Só o texto embutido é traduzido."
+msgstr "Seu texto aparece para todo mundo, em qualquer idioma que a pessoa escolher. Só o texto embutido é traduzido."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -348,7 +348,7 @@ msgstr "Alterações demais — salvando daqui a pouco…"
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Turn this off to go back to the built-in text, which is translated into every language Tymeslot supports. Your own wording is discarded."
-msgstr "Desligue para voltar ao texto embutido, que é traduzido para todos os idiomas que o Tymeslot suporta. O seu texto é descartado."
+msgstr "Desligue para voltar ao texto embutido, que é traduzido para todos os idiomas que o Tymeslot suporta. Seu texto é descartado."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format

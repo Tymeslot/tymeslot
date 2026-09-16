@@ -76,7 +76,7 @@ msgstr "Conectar um calendário"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar so Tymeslot can read your availability and stop meetings being booked when you're already busy."
-msgstr "Conecte um calendário para o Tymeslot ler a sua disponibilidade e impedir que marquem reuniões quando você já tem compromisso."
+msgstr "Conecte um calendário para o Tymeslot ler sua disponibilidade e impedir que marquem reuniões quando você já tem compromisso."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -196,12 +196,12 @@ msgstr "Remover conexão"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
-msgstr "Compartilhe um link somente leitura que publica os seus horários ocupados (sem os detalhes dos eventos) como um feed iCalendar padrão, para que outros sistemas de calendário possam sobrepor a sua disponibilidade."
+msgstr "Compartilhe um link somente leitura que publica seus horários ocupados (sem os detalhes dos eventos) como um feed iCalendar padrão, para que outros sistemas de calendário possam sobrepor sua disponibilidade."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Sync your availability to prevent double bookings."
-msgstr "Sincronize a sua disponibilidade para evitar agendamentos duplicados."
+msgstr "Sincronize sua disponibilidade para evitar agendamentos duplicados."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format

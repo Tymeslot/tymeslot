@@ -493,7 +493,7 @@ msgstr "Algo deu errado. Tente novamente."
 #: lib/tymeslot_web/components/dashboard/availability/delete_schedule_modal.ex
 #, elixir-autogen, elixir-format
 msgid "These meeting types will fall back to your default schedule:"
-msgstr "Estes tipos de reunião voltam para a sua agenda padrão:"
+msgstr "Estes tipos de reunião voltam para sua agenda padrão:"
 
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format

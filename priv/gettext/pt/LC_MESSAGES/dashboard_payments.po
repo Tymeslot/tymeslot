@@ -60,7 +60,7 @@ msgstr "Conecte o Stripe para começar a cobrar pelas reuniões."
 #: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
-msgstr "Conecte o Stripe para começar a cobrar pelas reuniões. O dinheiro vai direto para a sua conta do Stripe."
+msgstr "Conecte o Stripe para começar a cobrar pelas reuniões. O dinheiro vai direto para sua conta do Stripe."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
@@ -127,12 +127,12 @@ msgstr "Desconectar o Stripe"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot. Existing payments remain visible. New paid bookings will fail until you reconnect."
-msgstr "Desconecte a sua conta do Stripe do Tymeslot. Os pagamentos existentes continuam visíveis. Novos agendamentos pagos vão falhar até você reconectar."
+msgstr "Desconecte sua conta do Stripe do Tymeslot. Os pagamentos existentes continuam visíveis. Novos agendamentos pagos vão falhar até você reconectar."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot? Existing payments remain visible, but new paid bookings will fail until you reconnect."
-msgstr "Desconectar a sua conta do Stripe do Tymeslot? Os pagamentos existentes continuam visíveis, mas novos agendamentos pagos vão falhar até você reconectar."
+msgstr "Desconectar sua conta do Stripe do Tymeslot? Os pagamentos existentes continuam visíveis, mas novos agendamentos pagos vão falhar até você reconectar."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
@@ -335,7 +335,7 @@ msgstr "O Stripe ainda não capturou uma cobrança para este agendamento. Tente 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
-msgstr "O Stripe está analisando a sua conta. As cobranças são ativadas automaticamente assim que for aprovada."
+msgstr "O Stripe está analisando sua conta. As cobranças são ativadas automaticamente assim que for aprovada."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format

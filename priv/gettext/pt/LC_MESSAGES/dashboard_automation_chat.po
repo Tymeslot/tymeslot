@@ -126,7 +126,7 @@ msgstr "Chat: %{chat_id}"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences."
-msgstr "Clique no botão abaixo para abrir o Telegram e vincular a sua conta. Depois de conectar, você configura as preferências de notificação."
+msgstr "Clique no botão abaixo para abrir o Telegram e vincular sua conta. Depois de conectar, você configura as preferências de notificação."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
@@ -137,7 +137,7 @@ msgstr "Fechar"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Configure your Telegram notification settings."
-msgstr "Configure as suas notificações do Telegram."
+msgstr "Configure suas notificações do Telegram."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
 #, elixir-autogen, elixir-format
@@ -411,7 +411,7 @@ msgstr "Abrir no Telegram"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Paste the Incoming Webhook URL Slack generated for your channel."
-msgstr "Cole a URL de Incoming Webhook que o Slack gerou para o seu canal."
+msgstr "Cole a URL de Incoming Webhook que o Slack gerou para seu canal."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
@@ -662,7 +662,7 @@ msgstr "Retorno do Slack inválido. Tente novamente."
 #: lib/tymeslot_web/controllers/slack_oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Slack callback did not match your session. Please retry."
-msgstr "O retorno do Slack não bateu com a sua sessão. Tente de novo."
+msgstr "O retorno do Slack não bateu com sua sessão. Tente de novo."
 
 #: lib/tymeslot_web/controllers/slack_oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -677,7 +677,7 @@ msgstr "Mande mensagem para %{bot} no Telegram para criar um bot e pegar o token
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API."
-msgstr "Para descobrir o seu ID do chat, mande mensagem para %{bot} ou adicione o seu bot a um grupo e use a API do Telegram."
+msgstr "Para descobrir seu ID do chat, mande mensagem para %{bot} ou adicione seu bot a um grupo e use a API do Telegram."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format

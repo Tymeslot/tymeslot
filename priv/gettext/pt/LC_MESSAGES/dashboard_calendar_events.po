@@ -586,7 +586,7 @@ msgstr "Lembretes"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr "Os lembretes são sincronizados com o seu calendário para ele avisar você nos seus próprios aparelhos."
+msgstr "Os lembretes são sincronizados com seu calendário para ele avisar você nos seus próprios aparelhos."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
 #, elixir-autogen, elixir-format
