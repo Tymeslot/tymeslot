@@ -1,4 +1,26 @@
 
+[1.15.7]
+* [BREAKING] Read .env files identically at boot and in the release: .env values are no longer interpolated. ${VAR} and $(command) are kept as literal text, and a # not preceded by whitespace is part of an unquoted value. A .env that relied on either needs the final value written out.
+* Tell users when a calendar has stopped syncing
+* Show Telegram and Slack meeting times in the organiser's timezone
+* Keep meeting links and query strings out of analytics
+* Show the embed live preview in your language
+* Mark booking pages opened from the embed preview as test mode
+* Surface Google calendars whose event listing exceeds the page limit
+* Stop deselected calendars hiding matches in search and reminders
+* Email owners whenever a calendar or video connection needs reconnecting
+* Keep the reconnection reason when calendar tokens refresh
+* Show why a calendar needs reconnecting in the owner's language
+* Read .env files safely with NUL bytes and Unicode spaces
+* Email calendar owners when a calendar needs reconnecting
+* Hide deselected calendars from search and desktop reminders
+* Give intranet visitors their own rate limits
+* Rebuild the calendar event index if an interrupted migration broke it
+* Stop forcing HTTPS onto sibling subdomains by default
+* Stop the Link embed preview from making real bookings
+* Restore outbound HTTPS requests through a configured proxy
+
+
 [1.15.6]
 * Tell users when their Google account has no Google Calendar
 * Stop discarding booking emails after two slow sends
@@ -292,7 +314,7 @@
 
 
 [1.5.0]
-* [BREAKING] Select an external database only when DATABASE_URL is remote
+* [BREAKING] Select an external database only when DATABASE_URL is remote: DATABASE_URL now selects an external database on the Docker image, where releases up to 1.4.4 ignored it and always used the bundled PostgreSQL. Only a URL naming a remote host changes behaviour, as a URL pointing at localhost still means the bundled database. Remove any stale DATABASE_URL before upgrading if you want to keep using the bundled database.
 * Recover calendar sync when a provider event no longer exists
 * Accept calendar event ids up to Google's documented maximum
 * Keep database credentials out of the process list at startup
@@ -469,7 +491,7 @@
 
 
 [1.1.0]
-* [BREAKING] Correct Docker Compose env forwarding, volumes, and DB config
+* [BREAKING] Correct Docker Compose env forwarding, volumes, and DB config: the embedded PostgreSQL volume is now named tymeslot_pg everywhere. Installs created before this change keep their data in the old volume (postgres_data, or <project>_postgres_data under Compose). Re-point the new mount at the old volume, or migrate the data into tymeslot_pg, before upgrading or the app starts against an empty database.
 * Correct sender identity in host operational alert emails
 * Treat unfinished Stripe onboarding as incomplete, not restricted
 * Distinguish superseded from expired email verification links
