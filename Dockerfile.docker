@@ -104,8 +104,9 @@ WORKDIR /app
 # Copy the release from build stage
 COPY --from=build --chown=app:app /app/_build/prod/rel/tymeslot ./
 
-# Copy start script
+# Copy start script and the .env reader it sources
 COPY --chown=app:app start-docker.sh /app/start-docker.sh
+COPY --chown=app:app scripts/dotenv-reader.sh /app/dotenv-reader.sh
 RUN chmod +x /app/start-docker.sh
 
 ENV LANG=C.UTF-8 \

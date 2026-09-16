@@ -82,6 +82,9 @@ RUN mkdir -p /data/logs /app/data/uploads && \
 COPY start.sh ./
 RUN chmod +x start.sh
 
+# The .env reader start.sh sources, shared with the Docker entrypoint.
+COPY scripts/dotenv-reader.sh ./dotenv-reader.sh
+
 # The annotated variable reference. start.sh seeds /app/data/.env from it on
 # first boot, so operators can configure the app by editing a file instead of
 # running one `cloudron env set` per key.

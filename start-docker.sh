@@ -3,7 +3,7 @@
 # start-docker.sh - Initialize and start Tymeslot inside a Docker container
 #
 # This script runs inside the Docker container as the entry point. It:
-#   1. Sets environment variables with sensible defaults
+#   1. Applies /app/data/.env, then sets environment variables with sensible defaults
 #   2. Validates required SECRET_KEY_BASE is set
 #   3. Initializes PostgreSQL database (first run only)
 #   4. Starts the PostgreSQL service
@@ -18,9 +18,28 @@
 
 set -eu  # Exit on error and on undefined variables
 
+# ==================== SECTION 0: Operator .env File ====================
+# /app/data/.env lives on the persistent volume and is the defaults layer under
+# anything passed with -e or --env-file, which still win. It is applied here,
+# before the defaults below and the database detection, so a value set only in
+# the file reaches both. Left to the release alone it arrived too late: by then
+# this script had exported its own default, often an empty string, for every
+# key it knows, and the release's reader leaves a key that is already set alone.
+#
+# The file is parsed, never sourced, by the same reader start.sh uses on
+# Cloudron.
+ENV_FILE=/app/data/.env
+# shellcheck source=scripts/dotenv-reader.sh
+. "$(dirname "$0")/dotenv-reader.sh"
+loaded_keys=""
+load_env_file "$ENV_FILE"
+if [ -n "$loaded_keys" ]; then
+    echo "✓ Loaded from $ENV_FILE:$loaded_keys"
+fi
+
 # ==================== SECTION 1: Environment Variable Defaults ====================
 # Set sensible defaults to avoid unbound variable errors when env vars are missing
-# These can be overridden by passing -e flags to 'docker run'
+# These can be overridden by passing -e flags to 'docker run' or in /app/data/.env
 POSTGRES_USER=${POSTGRES_USER:-tymeslot}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-tymeslot}
 POSTGRES_DB=${POSTGRES_DB:-tymeslot}

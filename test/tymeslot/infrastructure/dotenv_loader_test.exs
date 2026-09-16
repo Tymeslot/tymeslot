@@ -5,9 +5,10 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
   import ExUnit.CaptureLog, only: [capture_log: 1]
 
   alias Tymeslot.Infrastructure.DotenvLoader
+  alias Tymeslot.Test.LogCapture
 
   # The grammar both readers of a `.env` implement, written out line by line.
-  # `start.sh`'s `load_env_file` is the specification; this fixture is fed to
+  # `scripts/dotenv-reader.sh` is the specification; this fixture is fed to
   # both it and `DotenvLoader` by the agreement test below, so every line here
   # is a case the two have to resolve to the same bytes. Keys share a prefix so
   # the shell harness can be handed a clean environment and still be told which
@@ -37,7 +38,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     "AGREE_BARE_TRAILING_SPACE=value" <> "   ",
     # An ideographic space (U+3000) is not ASCII whitespace, so neither
     # reader may treat it as one, even though bash's `[[:space:]]` does under
-    # a `LANG=C.UTF-8` locale, which is what production runs `start.sh` in.
+    # a `LANG=C.UTF-8` locale, which is what production runs the reader in.
     "AGREE_CJK_SPACE_COMMENT=value" <> "　" <> "# trailing comment",
     "AGREE_CJK_TRAILING_SPACE=value" <> "　",
     "AGREE_SPACED_KEY = spaced",
@@ -107,14 +108,50 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     assert System.get_env("TYMESLOT_DOTENV_TEST_SHELL") == "from_shell"
   end
 
+  # An entry the environment overrides has no effect, and used to say nothing
+  # about it. Named, never valued: the value may be a secret.
+  test "names a key the environment overrides with a different value", %{tmp_dir: tmp_dir} do
+    path = write_env(tmp_dir, "TYMESLOT_DOTENV_TEST_SHELL=file_secret\n")
+    System.put_env("TYMESLOT_DOTENV_TEST_SHELL", "shell_secret")
+
+    messages = info_messages(fn -> DotenvLoader.load([path]) end)
+
+    assert [message] = Enum.filter(messages, &(&1 =~ "TYMESLOT_DOTENV_TEST_SHELL"))
+    refute message =~ "secret"
+  end
+
+  # The container entrypoints apply the file before the release does, so every
+  # key arrives already set to the file's own value.
+  test "says nothing about a key the environment already holds at the file's value", %{
+    tmp_dir: tmp_dir
+  } do
+    path = write_env(tmp_dir, "TYMESLOT_DOTENV_TEST_SHELL=same\n")
+    System.put_env("TYMESLOT_DOTENV_TEST_SHELL", "same")
+
+    messages = info_messages(fn -> DotenvLoader.load([path]) end)
+
+    assert Enum.filter(messages, &(&1 =~ "TYMESLOT_DOTENV_TEST_SHELL")) == []
+  end
+
   test "earlier files in the list win over later files", %{tmp_dir: tmp_dir} do
     primary = Path.join(tmp_dir, ".env")
     secondary = Path.join(tmp_dir, ".env.fallback")
     File.write!(primary, "TYMESLOT_DOTENV_TEST_B=primary\n")
     File.write!(secondary, "TYMESLOT_DOTENV_TEST_B=secondary\n")
 
-    assert :ok = DotenvLoader.load([primary, secondary])
+    messages = info_messages(fn -> DotenvLoader.load([primary, secondary]) end)
+
     assert System.get_env("TYMESLOT_DOTENV_TEST_B") == "primary"
+    # The earlier file set it, not the environment, so nothing was overridden.
+    assert Enum.filter(messages, &(&1 =~ "TYMESLOT_DOTENV_TEST_B")) == []
+  end
+
+  defp info_messages(fun) do
+    LogCapture.with_capture([logger_level: :info], fun)
+
+    LogCapture.drain()
+    |> Enum.filter(&(&1.level == :info))
+    |> Enum.map(&LogCapture.message_text(&1.msg))
   end
 
   # The round-trip table this parser exists for. Every row used to come back as
@@ -232,11 +269,11 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
   end
 
   # The property the in-house parser exists to establish: the file is read by
-  # two implementations, `start.sh` before the release boots and this module
+  # two implementations, the entrypoints' shell reader before the release boots and this module
   # once it has, and a value that differs between them is a value the operator
   # cannot reason about. Rather than assert a hand-written expectation twice,
   # this runs the real shell reader over the same fixture and compares.
-  test "agrees with start.sh's load_env_file byte for byte", %{tmp_dir: tmp_dir} do
+  test "agrees with the shell reader's load_env_file byte for byte", %{tmp_dir: tmp_dir} do
     contents = Enum.join(@agreement_lines, "\n") <> "\n"
     path = write_env(tmp_dir, contents)
 
@@ -272,7 +309,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
   # A file edited on Windows and pushed in with `cloudron push`. Each reader
   # strips one trailing carriage return per line; neither may leave one inside
   # a value, and a quoted value must still be seen to close.
-  test "agrees with start.sh on a file with CRLF line endings", %{tmp_dir: tmp_dir} do
+  test "agrees with the shell reader on a file with CRLF line endings", %{tmp_dir: tmp_dir} do
     contents = Enum.join(@agreement_lines, "\r\n") <> "\r\n"
     path = write_env(tmp_dir, contents)
 
@@ -308,20 +345,16 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     |> Enum.uniq()
   end
 
-  # Runs the fixture through `start.sh`'s own reader. The three functions are
-  # lifted out of the script verbatim: sourcing it whole would run the seeding
-  # and key-generation the rest of it does. Extraction asserts they are still
-  # there, so a rename in `start.sh` fails this test rather than skipping it.
+  # Runs the fixture through the shell reader both container entrypoints
+  # source. The file defines functions only, so it is sourced whole.
   defp shell_load(tmp_dir, env_path) do
-    source = File.read!(Path.expand("../../../start.sh", __DIR__))
+    reader = Path.expand("../../../scripts/dotenv-reader.sh", __DIR__)
 
     harness = Path.join(tmp_dir, "harness.sh")
 
     File.write!(harness, """
     set -eu
-    #{shell_function(source, "dotenv_utf8")}
-    #{shell_function(source, "dotenv_unescape")}
-    #{shell_function(source, "load_env_file")}
+    . #{reader}
     loaded_keys=""
     load_env_file "$1"
     for shell_harness_key in $loaded_keys; do
@@ -353,18 +386,5 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
       _trailing -> []
     end)
     |> Map.new()
-  end
-
-  defp shell_function(source, name) do
-    lines = String.split(source, "\n")
-
-    start = Enum.find_index(lines, &(&1 == "#{name}() {"))
-    assert start, "start.sh no longer defines #{name}()"
-
-    rest = Enum.drop(lines, start)
-    closing = Enum.find_index(rest, &(&1 == "}"))
-    assert closing, "start.sh's #{name}() has no closing brace at column 0"
-
-    rest |> Enum.take(closing + 1) |> Enum.join("\n")
   end
 end

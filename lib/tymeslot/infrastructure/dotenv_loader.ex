@@ -15,12 +15,13 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
 
   ## The grammar
 
-  On Cloudron the same file is read twice: `start.sh`'s `load_env_file`
-  applies it before the release boots, and this module applies it again
-  from `config/runtime.exs` (and in every `cloudron exec` eval session).
+  In both container images the same file is read twice: the entrypoint
+  (`start.sh` on Cloudron, `start-docker.sh` on Docker) applies it with
+  `scripts/dotenv-reader.sh` before the release boots, and this module
+  applies it again from `config/runtime.exs` (and in every eval session).
   A value the two read differently is a value an operator cannot reason
   about, so the parser below implements exactly the grammar that shell
-  reader accepts, and nothing else. `start.sh` is the specification;
+  reader accepts, and nothing else. The shell reader is the specification;
   `DotenvLoaderTest` runs both over one fixture and compares.
 
     * A line is stripped of a trailing `\\r`, then of leading whitespace.
@@ -73,21 +74,25 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
   """
   @spec load([Path.t()]) :: :ok
   def load(paths) when is_list(paths) do
-    Enum.each(paths, &load_one/1)
+    _applied = Enum.reduce(paths, MapSet.new(), &load_one/2)
+    :ok
   end
 
-  defp load_one(path) do
+  # `applied` holds the keys an earlier file in this call already set, which are
+  # not the environment's and so are not worth reporting as overridden.
+  defp load_one(path, applied) do
     case File.read(path) do
       {:ok, contents} ->
         {vars, rejected} = parse(contents)
-        Enum.each(vars, &apply_var(&1, path))
         warn_rejected(rejected, path)
+        Enum.reduce(vars, applied, &apply_var(&1, path, &2))
 
       {:error, :enoent} ->
-        :ok
+        applied
 
       {:error, reason} ->
         Logger.warning("DotenvLoader: cannot read .env file", path: path, reason: reason)
+        applied
     end
   end
 
@@ -114,19 +119,42 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
   #
   # The `System.get_env/1` check comes first deliberately: a key the shell
   # already set is not ours to touch, valid or not.
-  defp apply_var({key, value}, path) do
-    cond do
-      System.get_env(key) != nil ->
-        :ok
+  #
+  # A key the environment holds with a different value is reported, by name
+  # only since the value may be a secret, so a file entry that has no effect
+  # does not fail silently. The same value is not news: the container
+  # entrypoints apply this file themselves before the release boots.
+  defp apply_var({key, value}, path, applied) do
+    case System.get_env(key) do
+      nil ->
+        put_var(key, value, path, applied)
 
-      String.valid?(value) and not String.contains?(value, <<0>>) ->
-        System.put_env(key, value)
+      ^value ->
+        applied
 
-      true ->
-        Logger.warning(
-          "DotenvLoader: skipping #{key} in #{path}: its value is not valid UTF-8; " <>
-            "save the file as UTF-8 or set the variable in the environment instead"
-        )
+      _different ->
+        unless MapSet.member?(applied, key) do
+          Logger.info(
+            "DotenvLoader: ignoring #{key} in #{path}: " <>
+              "the environment already sets it, and the environment wins"
+          )
+        end
+
+        applied
+    end
+  end
+
+  defp put_var(key, value, path, applied) do
+    if String.valid?(value) and not String.contains?(value, <<0>>) do
+      System.put_env(key, value)
+      MapSet.put(applied, key)
+    else
+      Logger.warning(
+        "DotenvLoader: skipping #{key} in #{path}: its value is not valid UTF-8; " <>
+          "save the file as UTF-8 or set the variable in the environment instead"
+      )
+
+      applied
     end
   end
 
@@ -219,7 +247,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
   defp unescape(<<?\\, char, rest::binary>>, acc), do: unescape(rest, acc <> <<char>>)
   defp unescape(<<char, rest::binary>>, acc), do: unescape(rest, acc <> <<char>>)
 
-  # Encodes one `\uXXXX` codepoint exactly as `start.sh`'s `dotenv_utf8` does,
+  # Encodes one `\uXXXX` codepoint exactly as the shell reader's `dotenv_utf8` does,
   # by hand rather than through `<<codepoint::utf8>>`: the two have to produce
   # the same bytes for every input, including the surrogates and the NUL that
   # `::utf8` refuses and a shell cannot hold. Four hex digits reach 0xFFFF at
