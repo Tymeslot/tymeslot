@@ -30,6 +30,11 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   Moving between two options on the *same* integration keeps the room, whose
   times the ordinary reschedule sync already moves.
 
+  A new room also takes over the reschedule's announcement, exactly as a new
+  booking's room takes over its confirmation: the email is the attendee's one
+  message about the move, and sent before the room exists it would carry no
+  join link.
+
   ## The booker submits an id, never a location
 
   As on a new booking, everything the choice means is re-derived from the
@@ -112,35 +117,42 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   @doc """
   Schedules a room for a confirmed meeting that a reschedule moved onto a new
-  video integration.
+  video integration, handing it the reschedule's announcement.
+
+  Returns `:scheduled` when the room's job now owns the announcement, and
+  `:not_scheduled` when the caller still has to send it.
 
   Only a confirmed meeting gets one here. A booking still held for approval,
   or not yet paid for, is given its room by the path that confirms it, exactly
   as a new booking is.
   """
-  @spec create_room(Meeting.t(), Meeting.t()) :: :ok
+  @spec create_room(Meeting.t(), Meeting.t()) :: :scheduled | :not_scheduled
   def create_room(
         %Meeting{status: "confirmed", video_room_id: nil, video_integration_id: new_id} = updated,
-        %Meeting{video_integration_id: old_id}
+        %Meeting{video_integration_id: old_id} = original
       )
       when is_integer(new_id) and new_id != old_id do
-    case VideoRoomWorker.schedule_video_room_creation(updated.id) do
+    case VideoRoomWorker.schedule_video_room_creation_with_reschedule_announcement(
+           updated,
+           original
+         ) do
       :ok ->
-        :ok
+        :scheduled
 
       {:error, reason} ->
         # `VideoRoomRecoveryScanWorker` finds confirmed meetings missing the
-        # room their integration promises, so this is a delay, not a loss.
+        # room their integration promises, so the room is a delay, not a loss.
+        # The announcement cannot wait for that sweep.
         Logger.warning("Failed to schedule a video room for a rescheduled meeting",
           meeting_id: updated.id,
           reason: inspect(reason)
         )
 
-        :ok
+        :not_scheduled
     end
   end
 
-  def create_room(%Meeting{}, %Meeting{}), do: :ok
+  def create_room(%Meeting{}, %Meeting{}), do: :not_scheduled
 
   defp chosen(meeting_type, option_id, phone) when is_binary(option_id) do
     if Enum.any?(MeetingTypes.location_options(meeting_type), &(&1.id == option_id)) do

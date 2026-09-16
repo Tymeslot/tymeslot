@@ -81,7 +81,8 @@ defmodule Tymeslot.Bookings.Reschedule do
   4. Creating new calendar event
   5. Deleting a video room the new location no longer uses, and creating one
      it does
-  6. Sending rescheduling notifications
+  6. Sending rescheduling notifications, which a room being created sends
+     instead once its join link exists
 
   The `organizer_user_id` is required. The meeting lookup is scoped to that
   owner, preventing IDOR attacks from the public booking flow.
@@ -321,10 +322,13 @@ defmodule Tymeslot.Bookings.Reschedule do
   # A room on a newly chosen video integration is created here rather than
   # alongside the release, because only this path confirms nothing on its own:
   # the two clauses above leave room creation to the approval that confirms
-  # the booking.
+  # the booking. When a room is on its way, its job sends these notifications
+  # once the join link exists.
   defp announce(updated, original) do
-    RescheduleLocation.create_room(updated, original)
-    send_reschedule_notifications(updated, original)
+    case RescheduleLocation.create_room(updated, original) do
+      :scheduled -> :ok
+      :not_scheduled -> send_reschedule_notifications(updated, original)
+    end
   end
 
   # A booking re-entering the gate must not carry reminders pinned to the

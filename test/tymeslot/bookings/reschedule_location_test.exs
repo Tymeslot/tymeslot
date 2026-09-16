@@ -20,8 +20,10 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.MeetingTestHelpers
+  import Tymeslot.WorkerTestHelpers, only: [expect_mirotalk_success: 0]
 
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.EmailServiceMock
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
@@ -302,7 +304,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting.id, "announce" => false}
+        args: %{"meeting_id" => meeting.id, "announce" => "rescheduled"}
       )
     end
 
@@ -342,10 +344,61 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
       assert_enqueued(
         worker: VideoRoomWorker,
-        args: %{"meeting_id" => meeting.id, "announce" => false}
+        args: %{"meeting_id" => meeting.id, "announce" => "rescheduled"}
       )
 
       refute_enqueued(worker: VideoSyncWorker)
+    end
+
+    test "tells the attendee about the move once the join link exists, not before",
+         %{user: user, mirotalk: mirotalk} do
+      test_pid = self()
+
+      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+        send(test_pid, {:reschedule_emails, details})
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      meeting =
+        meeting_on(user, [office(), video("loc-miro", mirotalk, 1)], office_meeting_attrs())
+
+      updated = reschedule(meeting, %{location_option_id: "loc-miro"})
+
+      # Sent now, the email would have no room to link to.
+      refute_received {:reschedule_emails, _details}
+
+      [job] = all_enqueued(worker: VideoRoomWorker)
+      expect_mirotalk_success()
+
+      assert :ok = perform_job(VideoRoomWorker, job.args)
+
+      assert_received {:reschedule_emails, details}
+      assert details.attendee_video_url =~ "https://test.mirotalk.com/join/test-room-123"
+      assert details.original_start_time == meeting.start_time
+      assert details.start_time == updated.start_time
+      refute_received {:reschedule_emails, _details}
+    end
+
+    test "tells the attendee straight away when no room is on its way",
+         %{user: user, zoom: zoom} do
+      test_pid = self()
+
+      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+        send(test_pid, {:reschedule_emails, details})
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      meeting =
+        meeting_on(
+          user,
+          [video("loc-zoom", zoom, 0), video("loc-zoom-long", zoom, 1)],
+          zoom_meeting_attrs(zoom, "loc-zoom")
+        )
+
+      reschedule(meeting, %{location_option_id: "loc-zoom-long"})
+
+      assert_received {:reschedule_emails, %{attendee_video_url: url}}
+      assert url =~ "https://zoom.us/j/123456789"
     end
 
     test "leaves room creation to the approval when the move re-enters the gate",
