@@ -14,862 +14,862 @@ msgstr ""
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} hours"
-msgstr ""
+msgstr "%{count} horas"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} minutes"
-msgstr ""
+msgstr "%{count} minutos"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
-msgstr ""
+msgstr "%{date} às %{time}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "%{days} days in advance"
-msgstr ""
+msgstr "%{days} dias de antecedência"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{day} %{month} %{year} at %{time} %{timezone}"
-msgstr ""
+msgstr "%{day} de %{month} de %{year} às %{time} %{timezone}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{hour_text} %{minute_text}"
-msgstr ""
+msgstr "%{hour_text} %{minute_text}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{minutes} minutes"
-msgstr ""
+msgstr "%{minutes} minutos"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "%{months} months in advance"
-msgstr ""
+msgstr "%{months} meses de antecedência"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{month} %{day}, %{year}"
-msgstr ""
+msgstr "%{day} de %{month} de %{year}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{month} %{year}"
-msgstr ""
+msgstr "%{month} de %{year}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."
-msgstr ""
+msgstr "%{name}, a sua reunião %{organizer} foi remarcada."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is all set."
-msgstr ""
+msgstr "%{name}, está tudo certo com a sua reunião %{organizer}."
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is confirmed"
-msgstr ""
+msgstr "%{name}, a sua reunião %{organizer} está confirmada"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{start_month} %{start_year} - %{end_month} %{end_year}"
-msgstr ""
+msgstr "%{start_month} de %{start_year} – %{end_month} de %{end_year}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{start_month} - %{end_month} %{year}"
-msgstr ""
+msgstr "%{start_month} – %{end_month} de %{year}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "%{time} local time"
-msgstr ""
+msgstr "%{time} no horário local"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}"
-msgstr ""
+msgstr "%{weekday}, %{day} de %{month} de %{year} às %{time} %{timezone}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "%{weeks} weeks in advance"
-msgstr ""
+msgstr "%{weeks} semanas de antecedência"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "%{years} years in advance"
-msgstr ""
+msgstr "%{years} anos de antecedência"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
-msgstr ""
+msgstr "1 dia de antecedência"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 hour"
-msgstr ""
+msgstr "1 hora"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "1 minute"
-msgstr ""
+msgstr "1 minuto"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "1 month in advance"
-msgstr ""
+msgstr "1 mês de antecedência"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "1 week in advance"
-msgstr ""
+msgstr "1 semana de antecedência"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "1 year in advance"
-msgstr ""
+msgstr "1 ano de antecedência"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
-msgstr ""
+msgstr "90 dias de antecedência"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "A cancellation email will be sent to all participants"
-msgstr ""
+msgstr "Um e-mail de cancelamento vai ser enviado a todos os participantes"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Additional Message (Optional)"
-msgstr ""
+msgstr "Mensagem adicional (opcional)"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Afternoon"
-msgstr ""
+msgstr "Tarde"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Appointment host"
-msgstr ""
+msgstr "Anfitrião do compromisso"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "April"
-msgstr ""
+msgstr "abril"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to cancel this appointment?"
-msgstr ""
+msgstr "Tem certeza de que quer cancelar este compromisso?"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "August"
-msgstr ""
+msgstr "agosto"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Available Times"
-msgstr ""
+msgstr "Horários disponíveis"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed"
-msgstr ""
+msgstr "Agendamento confirmado"
 
 #: lib/tymeslot_web/themes/shared/booking_flow.ex
 #, elixir-autogen, elixir-format
 msgid "Booking submitted successfully! You'll receive a confirmation email shortly."
-msgstr ""
+msgstr "Agendamento enviado! Você vai receber um e-mail de confirmação em instantes."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings available up to %{advance}"
-msgstr ""
+msgstr "Agendamentos disponíveis até %{advance}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar is loading slowly"
-msgstr ""
+msgstr "O calendário está carregando devagar"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Appointment"
-msgstr ""
+msgstr "Cancelar compromisso"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel_confirmed.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "Cancellation emails have been sent to all participants."
-msgstr ""
+msgstr "Os e-mails de cancelamento foram enviados a todos os participantes."
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelling..."
-msgstr ""
+msgstr "Cancelando…"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Choose New Time"
-msgstr ""
+msgstr "Escolher outro horário"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Click to schedule your meeting"
-msgstr ""
+msgstr "Clique para agendar a sua reunião"
 
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Complete your payment in the new tab"
-msgstr ""
+msgstr "Conclua o seu pagamento na nova aba"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmation sent to"
-msgstr ""
+msgstr "Confirmação enviada para"
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Confirming your payment…"
-msgstr ""
+msgstr "Confirmando o seu pagamento…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #, elixir-autogen, elixir-format
 msgid "Continue"
-msgstr ""
+msgstr "Continuar"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Current Meeting"
-msgstr ""
+msgstr "Reunião atual"
 
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Current Meeting Details"
-msgstr ""
+msgstr "Detalhes da reunião atual"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
 msgid "Date"
-msgstr ""
+msgstr "Data"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "December"
-msgstr ""
+msgstr "dezembro"
 
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Did the new tab not open?"
-msgstr ""
+msgstr "A nova aba não abriu?"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
-msgstr ""
+msgstr "Pronto"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Duration"
-msgstr ""
+msgstr "Duração"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Duration: %{duration}"
-msgstr ""
+msgstr "Duração: %{duration}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Early Morning"
-msgstr ""
+msgstr "Começo da manhã"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Email Address"
-msgstr ""
+msgstr "Endereço de e-mail"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Enter Your Details"
-msgstr ""
+msgstr "Seus dados"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Evening"
-msgstr ""
+msgstr "Noite"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "FRI"
-msgstr ""
+msgstr "SEX"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "February"
-msgstr ""
+msgstr "fevereiro"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Fri"
-msgstr ""
+msgstr "Sex"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Friday"
-msgstr ""
+msgstr "sexta-feira"
 
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Go to Calendar"
-msgstr ""
+msgstr "Ir para o calendário"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Great! Your meeting is still scheduled as planned."
-msgstr ""
+msgstr "Ótimo! A sua reunião continua marcada como estava."
 
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Hi! I'm %{name}."
-msgstr ""
+msgstr "Oi! Eu sou %{name}."
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/note.ex
 #, elixir-autogen, elixir-format
 msgid "I acknowledge the above"
-msgstr ""
+msgstr "Li e concordo com o aviso acima"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
-msgstr ""
+msgstr "Data/hora inválida"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "January"
-msgstr ""
+msgstr "janeiro"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "John Doe"
-msgstr ""
+msgstr "João Silva"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "July"
-msgstr ""
+msgstr "julho"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "June"
-msgstr ""
+msgstr "junho"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Keep Meeting"
-msgstr ""
+msgstr "Manter reunião"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Late Night"
-msgstr ""
+msgstr "Madrugada"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Let me know what you'd like to discuss..."
-msgstr ""
+msgstr "Conte o que você gostaria de conversar…"
 
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
-msgstr ""
+msgstr "Vamos conversar!"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Loading available times..."
-msgstr ""
+msgstr "Carregando os horários disponíveis…"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "MON"
-msgstr ""
+msgstr "SEG"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "March"
-msgstr ""
+msgstr "março"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "May"
-msgstr ""
+msgstr "maio"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel_confirmed.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Cancelled"
-msgstr ""
+msgstr "Reunião cancelada"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Confirmed"
-msgstr ""
+msgstr "Reunião confirmada"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
-msgstr ""
+msgstr "Detalhes da reunião"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled!"
-msgstr ""
+msgstr "Reunião remarcada!"
 
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting with"
-msgstr ""
+msgstr "Reunião com"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Mon"
-msgstr ""
+msgstr "Seg"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Monday"
-msgstr ""
+msgstr "segunda-feira"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Morning"
-msgstr ""
+msgstr "Manhã"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Need to make changes? Check your email for reschedule options"
-msgstr ""
+msgstr "Precisa mudar algo? Confira o seu e-mail para as opções de remarcação"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Need to reschedule? Check your confirmation email."
-msgstr ""
+msgstr "Precisa remarcar? Confira o seu e-mail de confirmação."
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "No"
-msgstr ""
+msgstr "Não"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "No meeting types available"
-msgstr ""
+msgstr "Nenhum tipo de reunião disponível"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "No time selected"
-msgstr ""
+msgstr "Nenhum horário selecionado"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "November"
-msgstr ""
+msgstr "novembro"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "October"
-msgstr ""
+msgstr "outubro"
 
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Open Stripe Checkout"
-msgstr ""
+msgstr "Abrir o Stripe Checkout"
 
 #: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex
 #, elixir-autogen, elixir-format
 msgid "Payment cancelled"
-msgstr ""
+msgstr "Pagamento cancelado"
 
 #: lib/tymeslot_web/themes/shared/info_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Payment was cancelled. Please try booking again."
-msgstr ""
+msgstr "O pagamento foi cancelado. Tente agendar de novo."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please contact the organizer"
-msgstr ""
+msgstr "Fale com quem organiza"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
-msgstr ""
+msgstr "Corrija os erros abaixo antes de enviar."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
-msgstr ""
+msgstr "Corrija os erros abaixo."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please fill in all required fields"
-msgstr ""
+msgstr "Preencha todos os campos obrigatórios"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date to see available times"
-msgstr ""
+msgstr "Escolha uma data para ver os horários disponíveis"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
-msgstr ""
+msgstr "Escolha primeiro a duração da reunião"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select another date"
-msgstr ""
+msgstr "Escolha outra data"
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait while we confirm your booking."
-msgstr ""
+msgstr "Espere um instante enquanto confirmamos o seu agendamento."
 
 #: lib/tymeslot_web/themes/shared/security_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Privacy Policy"
-msgstr ""
+msgstr "Política de Privacidade"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #, elixir-autogen, elixir-format
 msgid "Question %{n} of %{m}"
-msgstr ""
+msgstr "Pergunta %{n} de %{m}"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Ready to pick a new time? Let's find one that works better for you."
-msgstr ""
+msgstr "Pronto para escolher outro horário? Vamos achar um que sirva melhor para você."
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Appointment"
-msgstr ""
+msgstr "Remarcar compromisso"
 
 #: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex
 #, elixir-autogen, elixir-format
 msgid "Return to booking"
-msgstr ""
+msgstr "Voltar ao agendamento"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "SAT"
-msgstr ""
+msgstr "SÁB"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "SUN"
-msgstr ""
+msgstr "DOM"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Sat"
-msgstr ""
+msgstr "Sáb"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Saturday"
-msgstr ""
+msgstr "sábado"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule Another Meeting"
-msgstr ""
+msgstr "Agendar outra reunião"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel_confirmed.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule a New Meeting"
-msgstr ""
+msgstr "Agendar uma nova reunião"
 
 #: lib/tymeslot_web/themes/rhythm/shared/organizer_header.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with"
-msgstr ""
+msgstr "Agende com"
 
 #: lib/tymeslot/profiles/organizer_context.ex
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
-msgstr ""
+msgstr "Agende com %{name}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Search cities, countries, or timezones..."
-msgstr ""
+msgstr "Busque cidades, países ou fusos horários…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date"
-msgstr ""
+msgstr "Escolha uma data"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select a Date & Time"
-msgstr ""
+msgstr "Escolha a data e o horário"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Select a new time for your meeting"
-msgstr ""
+msgstr "Escolha um novo horário para a sua reunião"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select timezone"
-msgstr ""
+msgstr "Selecionar fuso horário"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/single_select.ex
 #, elixir-autogen, elixir-format
 msgid "Select…"
-msgstr ""
+msgstr "Selecione…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Sent to"
-msgstr ""
+msgstr "Enviado para"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "September"
-msgstr ""
+msgstr "setembro"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Service slow"
-msgstr ""
+msgstr "Serviço lento"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Successfully Rescheduled!"
-msgstr ""
+msgstr "Remarcada!"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Sun"
-msgstr ""
+msgstr "Dom"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Sunday"
-msgstr ""
+msgstr "domingo"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "THU"
-msgstr ""
+msgstr "QUI"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "TUE"
-msgstr ""
+msgstr "TER"
 
 #: lib/tymeslot_web/themes/shared/security_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Terms of Service"
-msgstr ""
+msgstr "Termos de Serviço"
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Thank you, your booking is confirmed for %{date}."
-msgstr ""
+msgstr "Obrigado, o seu agendamento está confirmado para %{date}."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "This date is fully booked"
-msgstr ""
+msgstr "Esta data está toda tomada"
 
 #: lib/tymeslot_web/themes/shared/security_fields.ex
 #, elixir-autogen, elixir-format
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
-msgstr ""
+msgstr "Este site é protegido por reCAPTCHA, e a %{privacy_link} e os %{terms_link} do Google se aplicam."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Thu"
-msgstr ""
+msgstr "Qui"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Thursday"
-msgstr ""
+msgstr "quinta-feira"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Time"
-msgstr ""
+msgstr "Horário"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
-msgstr ""
+msgstr "Fuso horário"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Tue"
-msgstr ""
+msgstr "Ter"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
-msgstr ""
+msgstr "terça-feira"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown duration"
-msgstr ""
+msgstr "Duração desconhecida"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Verifying slot availability and creating your meeting..."
-msgstr ""
+msgstr "Conferindo se o horário está livre e criando a sua reunião…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Verifying..."
-msgstr ""
+msgstr "Conferindo…"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "WED"
-msgstr ""
+msgstr "QUA"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "We look forward to seeing you at the scheduled time."
-msgstr ""
+msgstr "Esperamos você no horário marcado."
 
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
-msgstr ""
+msgstr "Abrimos o Stripe Checkout numa nova aba do navegador. Assim que o seu pagamento for confirmado, esta página se atualiza sozinha."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Wed"
-msgstr ""
+msgstr "Qua"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Wednesday"
-msgstr ""
+msgstr "quarta-feira"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
-msgstr ""
+msgstr "Sim"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Yes, Cancel Meeting"
-msgstr ""
+msgstr "Sim, cancelar a reunião"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're All Set!"
-msgstr ""
+msgstr "Tudo pronto!"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're booking a %{duration} meeting"
-msgstr ""
+msgstr "Você está agendando uma reunião de %{duration}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "You're booking a %{duration} meeting with %{name}"
-msgstr ""
+msgstr "Você está agendando uma reunião de %{duration} com %{name}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "Your Name"
-msgstr ""
+msgstr "Seu nome"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Your answers"
-msgstr ""
+msgstr "Suas respostas"
 
 #: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. You can return and try again at any time."
-msgstr ""
+msgstr "O seu agendamento não está confirmado. Você pode voltar e tentar de novo quando quiser."
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel_confirmed.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "Your meeting has been successfully cancelled."
-msgstr ""
+msgstr "A sua reunião foi cancelada."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Your timezone"
-msgstr ""
+msgstr "Seu fuso horário"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "add_details"
-msgstr ""
+msgstr "Adicione os seus dados"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
@@ -879,52 +879,52 @@ msgstr ""
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "back"
-msgstr ""
+msgstr "Voltar"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "book_meeting"
-msgstr ""
+msgstr "Agendar reunião"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "email"
-msgstr ""
+msgstr "E-mail"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "enter_email"
-msgstr ""
+msgstr "Digite o seu e-mail"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "enter_full_name"
-msgstr ""
+msgstr "Digite o seu nome completo"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "john@example.com"
-msgstr ""
+msgstr "john@example.com"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "meeting"
-msgstr ""
+msgstr "Reunião"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "meeting_confirmed"
-msgstr ""
+msgstr "Reunião confirmada"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "message_optional"
-msgstr ""
+msgstr "Mensagem (opcional)"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "name"
-msgstr ""
+msgstr "Nome"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
@@ -933,912 +933,912 @@ msgstr ""
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "next"
-msgstr ""
+msgstr "Avançar"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "next_step"
-msgstr ""
+msgstr "Próximo passo"
 
 #: lib/tymeslot_web/themes/shared/booking_labels.ex
 #, elixir-autogen, elixir-format
 msgid "reschedule_meeting"
-msgstr ""
+msgstr "Remarcar reunião"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #, elixir-autogen, elixir-format
 msgid "same day only"
-msgstr ""
+msgstr "só no mesmo dia"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #, elixir-autogen, elixir-format
 msgid "submit"
-msgstr ""
+msgstr "Enviar"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
-msgstr ""
+msgstr "com %{name}"
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} has already been added."
-msgstr ""
+msgstr "%{email} já foi adicionado."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "+ Add guests"
-msgstr ""
+msgstr "+ Adicionar convidados"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Able to make it after all?"
-msgstr ""
+msgstr "No fim das contas vai dar?"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Accept instead"
-msgstr ""
+msgstr "Aceitar em vez disso"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
-msgstr ""
+msgstr "Adicionar"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Changed your mind?"
-msgstr ""
+msgstr "Mudou de ideia?"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm attendance"
-msgstr ""
+msgstr "Confirmar presença"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm decline"
-msgstr ""
+msgstr "Confirmar recusa"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm to let %{name} know you can't make it."
-msgstr ""
+msgstr "Confirme para avisar %{name} de que você não vai poder."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm to let %{name} know you'll be attending."
-msgstr ""
+msgstr "Confirme para avisar %{name} de que você vai."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Decline instead"
-msgstr ""
+msgstr "Recusar em vez disso"
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
-msgstr ""
+msgstr "Digite um endereço de e-mail válido."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "Guest email address"
-msgstr ""
+msgstr "Endereço de e-mail do convidado"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "Guests"
-msgstr ""
+msgstr "Convidados"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Hosted by %{name}"
-msgstr ""
+msgstr "Anfitrião: %{name}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
-msgstr ""
+msgstr "Espere um instante e tente de novo."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "Remove guest %{email}"
-msgstr ""
+msgstr "Remover o convidado %{email}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "The invitation link may have expired or already been used. Please contact the meeting host."
-msgstr ""
+msgstr "O link do convite pode ter expirado ou já ter sido usado. Fale com quem organiza a reunião."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid"
-msgstr ""
+msgstr "Este link não é mais válido"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
-msgstr ""
+msgstr "Tentativas demais"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "We've let %{name} know you can't make it."
-msgstr ""
+msgstr "Avisamos %{name} de que você não vai poder."
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
 msgid "You can add up to %{count} guests."
-msgstr ""
+msgstr "Você pode adicionar até %{count} convidados."
 
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
 msgid "You don't need to add your own email as a guest."
-msgstr ""
+msgstr "Você não precisa adicionar o seu próprio e-mail como convidado."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "You're about to accept"
-msgstr ""
+msgstr "Você está prestes a aceitar"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "You're about to decline"
-msgstr ""
+msgstr "Você está prestes a recusar"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "You're going!"
-msgstr ""
+msgstr "Você vai!"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "You've declined"
-msgstr ""
+msgstr "Você recusou"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Your response has been sent to %{name}."
-msgstr ""
+msgstr "A sua resposta foi enviada para %{name}."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
-msgstr ""
+msgstr "guest@example.com"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
-msgstr ""
+msgstr "Fechar"
 
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Book a meeting with %{name}. Pick a time that works for you."
-msgstr ""
+msgstr "Agende uma reunião com %{name}. Escolha um horário que sirva para você."
 
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a time that works for you and book a meeting in seconds."
-msgstr ""
+msgstr "Escolha um horário que sirva para você e agende uma reunião em segundos."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
-msgstr ""
+msgstr "A sessão de prévia expirou. Recarregue a página para continuar."
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{date}"
-msgstr ""
+msgstr "%{weekday}, %{date}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add to calendar"
-msgstr ""
+msgstr "Adicionar ao calendário"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to create appointment. Please try again."
-msgstr ""
+msgstr "Não foi possível criar o compromisso. Tente novamente."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to process booking. Please try again."
-msgstr ""
+msgstr "Não foi possível processar o agendamento. Tente novamente."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to save meeting to database"
-msgstr ""
+msgstr "Não foi possível salvar a reunião no banco de dados"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Host could not be found. Please refresh and try again."
-msgstr ""
+msgstr "Não foi possível encontrar o anfitrião. Atualize a página e tente novamente."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Organizer is required for booking"
-msgstr ""
+msgstr "É preciso um organizador para agendar"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Payments are not available for this booking. Please contact the host."
-msgstr ""
+msgstr "Os pagamentos não estão disponíveis neste agendamento. Fale com o anfitrião."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please fill in all required fields before submitting."
-msgstr ""
+msgstr "Preencha todos os campos obrigatórios antes de enviar."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting could not be found. Please refresh and try again."
-msgstr ""
+msgstr "Não foi possível encontrar esta reunião. Atualize a página e tente novamente."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type is no longer available. Please go back and select another."
-msgstr ""
+msgstr "Este tipo de reunião não está mais disponível. Volte e escolha outro."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type is no longer available. Please refresh the page."
-msgstr ""
+msgstr "Este tipo de reunião não está mais disponível. Atualize a página."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This time slot is no longer available. Please select a different time."
-msgstr ""
+msgstr "Este horário não está mais disponível. Escolha outro."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "We couldn't start the payment process. Please try again."
-msgstr ""
+msgstr "Não foi possível iniciar o pagamento. Tente novamente."
 
 #: lib/tymeslot_web/themes/shared/live_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
-msgstr ""
+msgstr "Tipo de reunião inválido"
 
 #: lib/tymeslot_web/themes/shared/payment_return.ex
 #, elixir-autogen, elixir-format
 msgid "Payment not found."
-msgstr ""
+msgstr "Pagamento não encontrado."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification failed. Please try again."
-msgstr ""
+msgstr "A verificação de segurança falhou. Tente novamente."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
-msgstr ""
+msgstr "A verificação de segurança está indisponível no momento. Isso pode ser causado por JavaScript desativado, extensões de privacidade do navegador (Privacy Badger, uBlock Origin etc.) ou políticas de segurança da rede. Ajuste as suas configurações ou fale com o suporte se o problema continuar."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
 #, elixir-autogen, elixir-format
 msgid "Too many booking attempts. Please try again later."
-msgstr ""
+msgstr "Tentativas de agendamento demais. Tente novamente mais tarde."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_guards.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is already being processed. Please wait..."
-msgstr ""
+msgstr "O seu agendamento já está sendo processado. Espere um instante…"
 
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
-msgstr ""
+msgstr "Escolha uma opção abaixo."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Booking submitted successfully!"
-msgstr ""
+msgstr "Agendamento enviado!"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
-msgstr ""
+msgstr "Demonstração: agendamento enviado! (No app de verdade, você receberia um e-mail de confirmação)"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
-msgstr ""
+msgstr "Demonstração: reunião remarcada! (No app de verdade, você receberia um e-mail de confirmação)"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting rescheduled successfully!"
-msgstr ""
+msgstr "Reunião remarcada com sucesso!"
 
 #: lib/tymeslot_web/components/layouts/scheduling_root.html.heex
 #, elixir-autogen, elixir-format
 msgid "Schedule a meeting"
-msgstr ""
+msgstr "Agendar uma reunião"
 
 #: lib/tymeslot_web/components/layouts/scheduling_root.html.heex
 #, elixir-autogen, elixir-format
 msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
-msgstr ""
+msgstr "Esta página de agendamento precisa de JavaScript para agendar reuniões. Ative o JavaScript para continuar."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Continue to vote"
-msgstr ""
+msgstr "Continuar para votar"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "If need be"
-msgstr ""
+msgstr "Se precisar"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "One of the selected times is no longer available. Please refresh and try again."
-msgstr ""
+msgstr "Um dos horários escolhidos não está mais disponível. Atualize a página e tente novamente."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "One of your responses wasn't recognised. Please refresh and try again."
-msgstr ""
+msgstr "Uma das suas respostas não foi reconhecida. Atualize a página e tente novamente."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please check your name and email, then try again."
-msgstr ""
+msgstr "Confira o seu nome e o seu e-mail e tente de novo."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Please register before voting."
-msgstr ""
+msgstr "Cadastre-se antes de votar."
 
 #: lib/tymeslot_web/themes/core/mount_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Poll not found"
-msgstr ""
+msgstr "Enquete não encontrada"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Save my responses"
-msgstr ""
+msgstr "Salvar as minhas respostas"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduled for %{time}"
-msgstr ""
+msgstr "Marcada para %{time}"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll has been cancelled and is no longer accepting responses."
-msgstr ""
+msgstr "Esta enquete foi cancelada e não aceita mais respostas."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "This poll has been scheduled."
-msgstr ""
+msgstr "Esta enquete já virou reunião marcada."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "This poll has reached its participant limit."
-msgstr ""
+msgstr "Esta enquete chegou ao limite de participantes."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please wait a moment and try again."
-msgstr ""
+msgstr "Tentativas demais. Espere um instante e tente de novo."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Voting as %{name}"
-msgstr ""
+msgstr "Votando como %{name}"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes %{deadline}"
-msgstr ""
+msgstr "A votação fecha %{deadline}"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed for this poll."
-msgstr ""
+msgstr "A votação desta enquete está encerrada."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Here are the final responses."
-msgstr ""
+msgstr "A votação está encerrada. Estas são as respostas finais."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "We couldn't find your registration. Please register again."
-msgstr ""
+msgstr "Não encontramos o seu cadastro. Cadastre-se de novo."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "You're registered. Your responses are saved as you vote."
-msgstr ""
+msgstr "Você está cadastrado. As suas respostas são salvas conforme você vota."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Your email"
-msgstr ""
+msgstr "Seu e-mail"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Your name"
-msgstr ""
+msgstr "Seu nome"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Your responses have been saved."
-msgstr ""
+msgstr "As suas respostas foram salvas."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "The host is no longer accepting bookings for this period. Please pick a different day."
-msgstr ""
+msgstr "O anfitrião não está mais aceitando agendamentos neste período. Escolha outro dia."
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "%{weekday} %{day} %{month}, %{time}"
-msgstr ""
+msgstr "%{weekday}, %{day} de %{month}, %{time}"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"
-msgstr ""
+msgstr "Horários mostrados em %{timezone}"
 
 #: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Complete setup to enable this feature"
-msgstr ""
+msgstr "Conclua a configuração para ativar este recurso"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting duration selected"
-msgstr ""
+msgstr "A duração de reunião escolhida é inválida"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date"
-msgstr ""
+msgstr "Selecione uma data"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date and time"
-msgstr ""
+msgstr "Escolha uma data e um horário"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration"
-msgstr ""
+msgstr "Escolha a duração da reunião"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a time"
-msgstr ""
+msgstr "Escolha um horário"
 
 #: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
-msgstr ""
+msgstr "Esta página de agendamento não está disponível agora. Quem organiza ainda não conectou um calendário."
 
 #: lib/tymeslot/scheduling/link_access_policy.ex
 #, elixir-autogen, elixir-format
 msgid "This scheduling page isn’t available yet. The organizer hasn’t set a username."
-msgstr ""
+msgstr "Esta página de agendamento ainda não está disponível. Quem organiza ainda não definiu um nome de usuário."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot cancel a completed meeting"
-msgstr ""
+msgstr "Não dá para cancelar uma reunião concluída"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot cancel a meeting that has already occurred"
-msgstr ""
+msgstr "Não dá para cancelar uma reunião que já aconteceu"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot cancel a meeting that has already started"
-msgstr ""
+msgstr "Não dá para cancelar uma reunião que já começou"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule a cancelled meeting"
-msgstr ""
+msgstr "Não dá para remarcar uma reunião cancelada"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule a completed meeting"
-msgstr ""
+msgstr "Não dá para remarcar uma reunião concluída"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule a meeting that has already occurred"
-msgstr ""
+msgstr "Não dá para remarcar uma reunião que já aconteceu"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule a meeting that has already started"
-msgstr ""
+msgstr "Não dá para remarcar uma reunião que já começou"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting is already cancelled"
-msgstr ""
+msgstr "A reunião já está cancelada"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email is required"
-msgstr ""
+msgstr "O e-mail do participante é obrigatório"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee name is required"
-msgstr ""
+msgstr "O nome do participante é obrigatório"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Booking requires at least %{hours} hours in advance"
-msgstr ""
+msgstr "O agendamento exige pelo menos %{hours} horas de antecedência"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Booking time must be in the future"
-msgstr ""
+msgstr "O horário do agendamento precisa estar no futuro"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
-msgstr ""
+msgstr "O horário de término precisa ser depois do de início"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to create meeting"
-msgstr ""
+msgstr "Não foi possível criar a reunião"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update meeting status"
-msgstr ""
+msgstr "Não foi possível atualizar o status da reunião"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "The guest email must differ from your own address"
-msgstr ""
+msgstr "O e-mail do convidado precisa ser diferente do seu"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Title is required"
-msgstr ""
+msgstr "O título é obrigatório"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "You cannot book more than %{days} days in advance"
-msgstr ""
+msgstr "Você não pode agendar com mais de %{days} dias de antecedência"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{hour}, %{count} available time"
 msgid_plural "%{hour}, %{count} available times"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{hour}, %{count} horário disponível"
+msgstr[1] "%{hour}, %{count} horários disponíveis"
 
 #: lib/tymeslot_web/live/scheduling/handlers/slot_fetching_handler_component.ex
 #, elixir-autogen, elixir-format
 msgid "No time slots could be loaded. Please try again."
-msgstr ""
+msgstr "Não foi possível carregar os horários. Tente novamente."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has been sent the confirmation and the calendar invite."
-msgstr ""
+msgstr "%{name} recebeu a confirmação e o convite de calendário."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} would like to book time with you."
-msgstr ""
+msgstr "%{name} quer agendar um horário com você."
 
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. The slot is held for you while they decide."
-msgstr ""
+msgstr "%{organizer} confirma cada agendamento pessoalmente, então enviar isto manda um pedido, em vez de agendar o horário direto. O horário fica reservado para você enquanto a decisão não sai."
 
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} still has to accept this time. We'll email you either way, and the slot is held for you until then."
-msgstr ""
+msgstr "%{organizer} ainda precisa aceitar este horário. Vamos mandar um e-mail de qualquer forma, e o horário fica reservado para você até lá."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Approve booking"
-msgstr ""
+msgstr "Aprovar agendamento"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
-msgstr ""
+msgstr "Voltar"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Booking declined"
-msgstr ""
+msgstr "Agendamento recusado"
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Booking request"
-msgstr ""
+msgstr "Pedido de agendamento"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Decline"
-msgstr ""
+msgstr "Recusar"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Decline booking"
-msgstr ""
+msgstr "Recusar agendamento"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "From"
-msgstr ""
+msgstr "De"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and the slot is released."
-msgstr ""
+msgstr "Se você não responder até %{deadline}, este pedido caduca e o horário é liberado."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Link not recognised"
-msgstr ""
+msgstr "Link não reconhecido"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
-msgstr ""
+msgstr "Reunião"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Message"
-msgstr ""
+msgstr "Mensagem"
 
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Needs approval"
-msgstr ""
+msgstr "Precisa de aprovação"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody answered in time, so the slot was released and %{name} was told."
-msgstr ""
+msgstr "Ninguém respondeu a tempo, então o horário foi liberado e %{name} foi avisado."
 
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "Ainda não confirmado"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Not set"
-msgstr ""
+msgstr "Não definido"
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Payment received"
-msgstr ""
+msgstr "Pagamento recebido"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Reason (optional)"
-msgstr ""
+msgstr "Motivo (opcional)"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Request expired"
-msgstr ""
+msgstr "Pedido expirado"
 
 #: lib/tymeslot_web/themes/shared/booking_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Request meeting"
-msgstr ""
+msgstr "Pedir reunião"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Request sent!"
-msgstr ""
+msgstr "Pedido enviado!"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Shared with %{name}."
-msgstr ""
+msgstr "Vai para %{name}."
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Thanks, your payment went through. Your booking is not confirmed yet though:"
-msgstr ""
+msgstr "Obrigado, o seu pagamento passou. Mas o seu agendamento ainda não está confirmado:"
 
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "The host"
-msgstr ""
+msgstr "O anfitrião"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The slot is free again and %{name} has been told."
-msgstr ""
+msgstr "O horário está livre de novo e %{name} foi avisado."
 
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "This booking needs approval"
-msgstr ""
+msgstr "Este agendamento precisa de aprovação"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid. It may have expired, or the request may have been removed."
-msgstr ""
+msgstr "Este link não é mais válido. Ele pode ter expirado, ou o pedido pode ter sido removido."
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's start time has already passed."
-msgstr ""
+msgstr "O horário de início desta reunião já passou."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's start time has passed, so it can no longer be confirmed."
-msgstr ""
+msgstr "O horário de início desta reunião já passou, então ela não pode mais ser confirmada."
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "This request had already been answered."
-msgstr ""
+msgstr "Este pedido já tinha sido respondido."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Too late to answer"
-msgstr ""
+msgstr "Tarde demais para responder"
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Try again in a moment."
-msgstr ""
+msgstr "Tentativas demais. Tente de novo num instante."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Type"
-msgstr ""
+msgstr "Tipo"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "When"
-msgstr ""
+msgstr "Quando"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "the person who booked"
-msgstr ""
+msgstr "quem agendou"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Approving..."
-msgstr ""
+msgstr "Aprovando…"
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Booking not accepted"
-msgstr ""
+msgstr "Agendamento não aceito"
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Booking request expired"
-msgstr ""
+msgstr "Pedido de agendamento expirado"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Deadline passed"
-msgstr ""
+msgstr "Prazo esgotado"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Declining..."
-msgstr ""
+msgstr "Recusando…"
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
-msgstr ""
+msgstr "Se não houver resposta até %{deadline}, o pedido caduca e você é reembolsado automaticamente."
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
-msgstr ""
+msgstr "Ninguém respondeu a este pedido a tempo, então ele caducou. O seu pagamento está sendo reembolsado."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The deadline to answer this request has passed, so it can no longer be confirmed. The slot will be released shortly; %{name} has not been told yet."
-msgstr ""
+msgstr "O prazo para responder a este pedido passou, então ele não pode mais ser confirmado. O horário vai ser liberado em breve; %{name} ainda não foi avisado."
 
 #: lib/tymeslot_web/themes/quill/payment_processing/live.ex
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
-msgstr ""
+msgstr "Este agendamento não foi aceito, então ele não vai acontecer. O seu pagamento está sendo reembolsado."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your request has been sent."
-msgstr ""
+msgstr "%{name}, o seu pedido foi enviado."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name}, your request to %{organizer_name} has been sent."
-msgstr ""
+msgstr "%{name}, o seu pedido para %{organizer_name} foi enviado."
 
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. You'll pay now to hold the slot; if %{organizer} declines or doesn't answer in time, you're refunded in full."
-msgstr ""
+msgstr "%{organizer} confirma cada agendamento pessoalmente, então enviar isto manda um pedido, em vez de agendar o horário direto. Você paga agora para reservar o horário; se %{organizer} recusar ou não responder a tempo, você é reembolsado por inteiro."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Add tentative hold to calendar"
-msgstr ""
+msgstr "Adicionar reserva provisória ao calendário"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #, elixir-autogen, elixir-format
 msgid "Changed your mind? Your request email has a link to withdraw it."
-msgstr ""
+msgstr "Mudou de ideia? O e-mail do seu pedido tem um link para retirá-lo."
 
 #: lib/tymeslot_web/themes/shared/booking_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Request new time"
-msgstr ""
+msgstr "Pedir outro horário"
 
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "Hi there!"
-msgstr ""
+msgstr "Olá!"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Cannot reschedule an expired meeting"
-msgstr ""
+msgstr "Não dá para remarcar uma reunião expirada"
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "That time has since been booked by somebody else, so this request can no longer be approved."
-msgstr ""
+msgstr "Esse horário já foi agendado por outra pessoa desde então, então este pedido não pode mais ser aprovado."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
-msgstr ""
+msgstr "Buscar fusos horários"
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
-msgstr ""
+msgstr "Este pedido mudou desde que esta página foi aberta, então ele não pode mais ser respondido aqui. Abra o e-mail de pedido mais recente para responder."
 
 #: lib/tymeslot_web/themes/shared/components/preview_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Preview mode: bookings made here are simulated. Nothing is saved or sent."
-msgstr ""
+msgstr "Modo de prévia: os agendamentos feitos aqui são simulados. Nada é salvo nem enviado."
