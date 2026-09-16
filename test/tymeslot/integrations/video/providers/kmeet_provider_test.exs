@@ -1,0 +1,63 @@
+defmodule Tymeslot.Integrations.Video.Providers.KmeetProviderTest do
+  use ExUnit.Case, async: true
+
+  @moduletag :integrations
+
+  alias Tymeslot.Integrations.Video.Providers.KmeetProvider
+  alias Tymeslot.Integrations.Video.RoomData
+
+  describe "identity" do
+    test "declares its provider type, name and bucket" do
+      assert KmeetProvider.provider_type() == :kmeet
+      assert KmeetProvider.display_name() == "kMeet"
+      assert KmeetProvider.connection_test_bucket() == :kmeet
+    end
+  end
+
+  describe "create_meeting_room/1" do
+    test "builds a room on the kMeet host from the meeting id" do
+      assert {:ok, %RoomData{} = room} = KmeetProvider.create_meeting_room(%{meeting_id: "m-1"})
+      assert room.meeting_url =~ ~r/\Ahttps:\/\/kmeet\.infomaniak\.com\/[0-9a-f]{16}\z/
+    end
+
+    test "is deterministic for the same meeting id" do
+      {:ok, first} = KmeetProvider.create_meeting_room(%{meeting_id: "m-1"})
+      {:ok, second} = KmeetProvider.create_meeting_room(%{meeting_id: "m-1"})
+      assert first.meeting_url == second.meeting_url
+    end
+
+    test "gives different meetings different rooms" do
+      {:ok, first} = KmeetProvider.create_meeting_room(%{meeting_id: "m-1"})
+      {:ok, second} = KmeetProvider.create_meeting_room(%{meeting_id: "m-2"})
+      refute first.meeting_url == second.meeting_url
+    end
+
+    test "refuses a missing meeting id rather than inventing a shared room" do
+      assert {:error, _message} = KmeetProvider.create_meeting_room(%{})
+    end
+  end
+
+  describe "validate_config/1" do
+    test "accepts an empty config: there is nothing for the user to get wrong" do
+      assert :ok = KmeetProvider.validate_config(%{})
+    end
+  end
+
+  describe "create_join_url/5" do
+    test "hands every participant the same room URL" do
+      {:ok, room} = KmeetProvider.create_meeting_room(%{meeting_id: "m-1"})
+
+      assert {:ok, url} =
+               KmeetProvider.create_join_url(room, "Ada", "ada@example.com", "organizer", nil)
+
+      assert url == room.meeting_url
+    end
+  end
+
+  describe "valid_meeting_url?/1" do
+    test "accepts a kMeet room URL and rejects a non-HTTP one" do
+      assert KmeetProvider.valid_meeting_url?("https://kmeet.infomaniak.com/abc")
+      refute KmeetProvider.valid_meeting_url?("ftp://kmeet.infomaniak.com/abc")
+    end
+  end
+end
