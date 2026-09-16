@@ -5,10 +5,13 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.EmailWorker
   import Tymeslot.Factory
   import Mox
 
@@ -167,29 +170,50 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
                "The booking calendar no longer exists on Google."
     end
 
-    test "handles permanent errors by deactivating integration" do
-      integration =
-        insert(:calendar_integration,
-          provider: "google",
-          is_active: true,
-          token_expires_at:
-            DateTime.truncate(DateTime.add(DateTime.utc_now(), -1, :hour), :second),
-          refresh_token: "rt-123"
-        )
+    test "flags a revoked grant for reconnection and emails the owner instead of deactivating" do
+      user = insert(:user)
+      integration = insert_expired_google_integration(user)
 
-      # invalid_grant is a permanent error
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _refresh_token ->
-        {:error, :permanent, "invalid_grant"}
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, "Token refresh failed: invalid_grant"}
       end)
 
       assert {:discard, _job_result} =
                TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
 
-      updated =
-        Repo.get(CalendarIntegrationSchema, integration.id)
+      updated = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert updated.needs_reauth
+      assert updated.is_active
+      assert updated.sync_error == ReauthHandling.reauth_error_message(:expired_grant)
 
-      refute updated.is_active
-      assert updated.sync_error =~ "PERMANENT"
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+
+      # The health probe only reaches active integrations; deactivating here
+      # used to remove it from the one path that could revise the verdict.
+      assert integration.id in Enum.map(CalendarIntegrationQueries.list_all_active(), & &1.id)
+    end
+
+    test "describes credentials the provider refused for another reason as rejected, not expired" do
+      integration = insert_expired_google_integration(insert(:user))
+
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, "Token refresh failed: invalid_client"}
+      end)
+
+      assert {:discard, _job_result} =
+               TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
+
+      updated = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert updated.needs_reauth
+      assert updated.sync_error == ReauthHandling.reauth_error_message(:rejected_credentials)
     end
 
     test "handles retryable errors" do
@@ -226,5 +250,16 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
 
       assert total < 2 * 60 * 60
     end
+  end
+
+  defp insert_expired_google_integration(user) do
+    insert(:calendar_integration,
+      user: user,
+      provider: "google",
+      is_active: true,
+      needs_reauth: false,
+      token_expires_at: DateTime.truncate(DateTime.add(DateTime.utc_now(), -1, :hour), :second),
+      refresh_token: "rt-123"
+    )
   end
 end
