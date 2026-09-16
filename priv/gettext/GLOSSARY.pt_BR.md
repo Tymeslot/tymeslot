@@ -178,6 +178,28 @@ Loanwords kept as-is: **link**, **webhook**, **slug**, **e-mail**, **upgrade**, 
 `PASSWORD_AUTH_ENABLED`, `STRIPE_SECRET_KEY`, `RECAPTCHA_SITE_KEY`, `GITHUB_CLIENT_ID`,
 `OAUTH_*`, and friends.
 
+### One open question: Google Calendar is called "Google Agenda" in Brazil
+
+Google's own Brazilian branding for the product is **Google Agenda**, not Google
+Calendar. That puts two rules of this guide against each other: the do-not-translate
+list above says keep it verbatim, and §2's *"Third-party UI labels — never guess"*
+says match what the product shows the reader.
+
+Everywhere it is a bare product reference, this translation **keeps "Google
+Calendar"**, following the explicit list. But one string quotes Google's consent
+screen back to the reader, and there the argument is the other way — the reader is
+being told to find a checkbox, and the checkbox is in Portuguese:
+
+    dashboard_integrations:
+    "…tick the box for \"See, edit, share, and permanently delete all the
+     calendars you can access using Google Calendar\"…"
+
+It is left as **Google Calendar** for now, because inventing Google's Brazilian
+consent wording without seeing that screen would be exactly the guessing §2 forbids.
+Whoever has a Brazilian Google account in front of them should read the real consent
+text and correct this one msgstr — and then decide whether the do-not-translate list
+wants a "Google Calendar → Google Agenda" exception written into it.
+
 ---
 
 ## 4. PLACEHOLDERS, MARKUP, TYPOGRAPHY
@@ -190,6 +212,14 @@ Loanwords kept as-is: **link**, **webhook**, **slug**, **e-mail**, **upgrade**, 
   - `"You're booking a %{duration} meeting with %{name}"` →
     `"Você está agendando uma reunião de %{duration} com %{name}"`
 - A dropped or invented placeholder is a runtime crash, not a typo.
+
+**`{{meeting_id}}` is a second kind of placeholder, and nothing checks it.**
+`dashboard_integrations` has twenty strings that teach the reader to type a URL
+template. Those braces are literal text the reader must copy exactly, not a gettext
+binding, so the `%{…}` gate does not see them. Reproduce every `{{meeting_id}}`
+byte-for-byte — including the deliberately wrong forms (`{{MEETING_ID}}`,
+`{{meeting-id}}`, `((meeting_id))`) that the error messages quote in order to
+correct them. Translating or "fixing" one of those turns the message into nonsense.
 
 **Markup / entities:** verbatim inside the msgstr.
 - `"<strong>removed from your external calendar</strong>"` →
