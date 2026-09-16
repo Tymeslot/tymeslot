@@ -21,6 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
@@ -172,6 +173,30 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
                CalendarGrid.change_event_video(user.id, event, video_integration.id)
 
       assert reload(event).video_link == @old_url
+    end
+
+    test "derives a templated custom link's room from the event's own uid", %{
+      user: user,
+      integration: integration
+    } do
+      # The real `CustomProvider` path, no HTTP: a template URL has no room to
+      # create, only a slug to derive, and it derives it from the `meeting_id`
+      # it is given. Passing the event's uid is what makes the room the same
+      # whether video was picked when the event was made or switched on here.
+      video_integration =
+        insert(:video_integration,
+          user: user,
+          provider: "custom",
+          custom_meeting_url: "https://meet.example.com/{{meeting_id}}"
+        )
+
+      event = insert_event(integration)
+      expect_provider_update(:ok)
+
+      assert {:ok, url} = CalendarGrid.change_event_video(user.id, event, video_integration.id)
+
+      assert {:ok, slug} = LinkRoom.slug(event.uid)
+      assert url == "https://meet.example.com/#{slug}"
     end
 
     test "refuses a video integration that belongs to another organiser", %{

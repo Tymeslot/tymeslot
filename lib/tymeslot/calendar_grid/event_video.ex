@@ -113,9 +113,14 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   defp join_line(url), do: @join_line_prefix <> url
 
   defp create_room(user_id, event, video_integration_id) do
+    # The event's iCal uid, the same identifier the creation flow passes as
+    # `meeting_id`, so a provider that derives its room from it (a templated
+    # custom link, say) produces the same room whether video was chosen when
+    # the event was made or switched on afterwards.
     opts = [
       integration_id: video_integration_id,
-      event_details: EventDetails.from_grid_event(event)
+      event_details: EventDetails.from_grid_event(event),
+      meeting_id: event.uid
     ]
 
     case Video.create_meeting_room(user_id, opts) do
