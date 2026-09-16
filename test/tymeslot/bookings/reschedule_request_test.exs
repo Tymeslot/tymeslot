@@ -56,7 +56,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
       )
     end
 
-    test "the original slot becomes bookable by someone else, via the real conflict-checked booking path" do
+    test "the original slot becomes bookable with the same host, via the real conflict-checked booking path" do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{start_offset: 86_400, duration: 3_600})
 
@@ -75,23 +75,48 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
                  )
       end)
 
-      # A fresh booking landing on the exact original window — the same path
-      # a new attendee's booking or the original attendee's rebooking near
-      # their original time takes — succeeds instead of being rejected as a
-      # conflict.
-      other_user = insert(:user)
-      insert(:profile, user: other_user)
-
+      # A fresh booking with the same host at the exact original start time
+      # succeeds. Conflicts are scoped per host, so only the same host can
+      # prove this: the database's own uniqueness guarantee on
+      # (organizer_user_id, start_time) must also treat the voided row as free.
       attrs =
         params_for(:meeting,
-          organizer_user_id: other_user.id,
-          organizer_email: other_user.email,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
           start_time: meeting.start_time,
           end_time: meeting.end_time
         )
 
       assert {:ok, new_meeting} = Scheduling.create_meeting_with_conflict_check(attrs)
       assert new_meeting.id != meeting.id
+    end
+
+    test "once someone else has taken the voided time, the original attendee cannot move back to it" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{start_offset: 86_400, duration: 3_600})
+
+      assert :ok = RescheduleRequest.send_reschedule_request(meeting)
+
+      {:ok, _taken} =
+        :meeting
+        |> params_for(
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          start_time: meeting.start_time,
+          end_time: meeting.end_time
+        )
+        |> Scheduling.create_meeting_with_conflict_check()
+
+      {:ok, voided} = MeetingQueries.get_meeting(meeting.id)
+
+      # The update `Bookings.Reschedule` makes when the attendee picks a time:
+      # it clears the request, which puts the slot back in play.
+      assert {:error, :time_conflict} =
+               Scheduling.update_meeting_with_conflict_check(voided, %{
+                 start_time: meeting.start_time,
+                 end_time: meeting.end_time,
+                 reschedule_requested_at: nil
+               })
     end
 
     test "rejects a second request against an already-voided slot, without a duplicate email" do
