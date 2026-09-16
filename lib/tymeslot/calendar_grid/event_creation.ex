@@ -306,8 +306,16 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   # signal the user-facing "reconnect" condition by returning `true` rather than
   # sending a flash — this runs in a Task whose mailbox the LiveView never
   # reads. The web layer maps the flag to a flash.
+  #
+  # An integration already flagged (its provider refused the credentials) gets
+  # the same signal: the booking client never writes to a flagged integration,
+  # so the event the user just created landed in another of their calendars,
+  # and reconnecting is the only thing that puts the one they picked back.
   defp lookup_integration_metadata(integration_id) do
     case CalendarIntegrationQueries.get(integration_id) do
+      {:ok, %{needs_reauth: true} = integration} ->
+        {integration.provider, integration.default_booking_calendar_id, true}
+
       {:ok, integration} ->
         {integration.provider, integration.default_booking_calendar_id, false}
 
