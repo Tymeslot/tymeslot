@@ -8,14 +8,17 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   reconciles any linked Tymeslot meeting whose times may have changed.
 
   On a 404 (event deleted by the user) the cache row is removed and the linked
-  meeting (if any) is reconciled with `:deleted`. On 401 the job is silently
-  discarded rather than retried, matching REQ-012.
+  meeting (if any) is reconciled with `:deleted`. On 401 the integration is
+  flagged for reconnection and the job discarded rather than retried, matching
+  REQ-012: no retry can re-authorise a credential Graph has rejected.
   """
 
   use Oban.Worker,
     queue: :calendar_events,
     max_attempts: 5,
     unique: [period: 60, keys: [:calendar_integration_id, :graph_resource_id]]
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
@@ -26,8 +29,8 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Workers.RetryHelpers
+  alias Tymeslot.Workers.SyncHealth
 
   # CalendarGrid enqueues Outlook jobs with only calendar_integration_id (no graph_resource_id).
   # Outlook syncs are event-driven via Microsoft Graph webhooks — there is no full-sync path yet.
@@ -99,7 +102,9 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         end
       end)
 
-    handle_sync_result(result, integration, graph_resource_id)
+    result
+    |> handle_sync_result(integration, graph_resource_id)
+    |> tap(&SyncHealth.record_outcome(integration, &1))
   end
 
   defp handle_sync_result(result, integration, graph_resource_id) do
@@ -111,12 +116,12 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         handle_event_fetched(integration, graph_resource_id, event)
 
       {:error, :unauthorized, _message} ->
-        Logger.warning("Outlook Calendar sync unauthorised; discarding job",
+        Logger.warning("Outlook Calendar sync unauthorised; flagging for reauth",
           calendar_integration_id: integration.id,
           graph_resource_id: graph_resource_id
         )
 
-        :ok
+        handle_credentials_rejected(integration)
 
       {:error, :circuit_open} ->
         Logger.warning("Outlook Calendar circuit breaker open; snoozing",
@@ -140,6 +145,26 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
         {:error, reason}
     end
+  end
+
+  # Graph is refusing the credentials, not this one event: the 401 is caught
+  # ahead of the circuit breaker, and `AccessToken.with_access_token/4` has
+  # already tried a refresh, so reaching here means the refresh failed or the
+  # refreshed token was rejected too. Every other event notification for this
+  # integration is about to be refused the same way, and the 15-minute sweep
+  # would keep re-queueing them; flagging removes the integration from that
+  # population until its owner reconnects. Only the false-to-true transition
+  # emails them, and the scheduler's uniqueness window backstops the race
+  # between two event jobs flagging at once.
+  defp handle_credentials_rejected(integration) do
+    CalendarManagement.flag_for_reconnection(
+      integration,
+      dgettext(
+        "dashboard_calendar_providers",
+        "Microsoft rejected the stored credentials. Please reconnect the integration."
+      ),
+      "Microsoft Graph rejected credentials — reauthentication required"
+    )
   end
 
   defp handle_event_deleted(integration, graph_resource_id) do
@@ -178,14 +203,9 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   end
 
   defp update_last_sync_at(integration) do
-    result =
-      CalendarIntegrationQueries.update_sync_state(integration, %{
-        last_external_sync_at: DateTime.utc_now(:second)
-      })
-
-    HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, %{
+           last_external_sync_at: DateTime.utc_now(:second)
+         }) do
       {:ok, _updated} ->
         :ok
 

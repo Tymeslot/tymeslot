@@ -23,7 +23,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
   end
 
   describe "perform/1 - unauthorized" do
-    test "returns :ok and discards quietly on auth error" do
+    test "discards quietly on auth error" do
       integration =
         insert(:calendar_integration,
           provider: "google",
@@ -34,7 +34,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
         {:error, :unauthorized, "Token revoked"}
       end)
 
-      assert :ok =
+      assert {:discard, _reason} =
                perform_job(SyncGoogleCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })

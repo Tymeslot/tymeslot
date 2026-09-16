@@ -10,6 +10,10 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   On sync-token expiry (HTTP 410) the worker re-registers the push channel to
   obtain a fresh token; the next webhook or fallback sweep will pick up the full
   delta.
+
+  Whatever the cycle ends up doing, its verdict is recorded against the
+  integration's health state at the job boundary; see
+  `Tymeslot.Workers.SyncHealth`.
   """
 
   use Oban.Worker,
@@ -32,7 +36,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Workers.SyncHealth
 
   @sync_window_past_days ProviderConfig.sync_window_past_days()
   @sync_window_future_days ProviderConfig.sync_window_future_days()
@@ -43,7 +47,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        sync_integration(integration)
+        integration
+        |> sync_integration()
+        |> tap(&SyncHealth.record_outcome(integration, &1))
 
       {:error, :not_found} ->
         Logger.warning("Calendar integration not found, discarding sync job",
@@ -88,11 +94,11 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         bootstrap_integration(integration)
 
       {:error, :unauthorized, _message} ->
-        Logger.warning("Google Calendar sync unauthorised; discarding job",
+        Logger.warning("Google Calendar sync unauthorised; flagging for reauth",
           calendar_integration_id: integration.id
         )
 
-        :ok
+        handle_credentials_rejected(integration)
 
       {:error, :not_found, _message} ->
         handle_booking_calendar_missing(integration)
@@ -136,11 +142,11 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         process_incremental_sync(integration, events, next_sync_token)
 
       {:error, :unauthorized, _message} ->
-        Logger.warning("Google Calendar bootstrap unauthorised; skipping",
+        Logger.warning("Google Calendar bootstrap unauthorised; flagging for reauth",
           calendar_integration_id: integration.id
         )
 
-        :ok
+        handle_credentials_rejected(integration)
 
       {:error, :not_found, _message} ->
         handle_booking_calendar_missing(integration)
@@ -306,6 +312,29 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     )
   end
 
+  # Google is refusing the credentials themselves: either the token refresh
+  # failed, so the grant is gone, or a 403 named insufficient permissions.
+  # Rate limiting and a Calendar-less account are classified ahead of this in
+  # `GoogleCalendarAPI.classify_403/2`, so nothing merely transient lands here
+  # and no retry can re-authorise anything.
+  #
+  # The scheduled probe reaches the same verdict on its own cadence, but not
+  # before the 15-minute sweep has re-queued this job repeatedly against a
+  # credential Google has already rejected. Flagging here ends that on the
+  # first refusal: the sweep's population excludes integrations awaiting
+  # reconnection. Flagging twice is harmless — only the false-to-true
+  # transition emails the owner.
+  defp handle_credentials_rejected(integration) do
+    CalendarManagement.flag_for_reconnection(
+      integration,
+      dgettext(
+        "dashboard_calendar_providers",
+        "Google rejected the stored credentials. Please reconnect the integration."
+      ),
+      "Google rejected credentials — reauthentication required"
+    )
+  end
+
   # Google answers every call with 403 `notACalendarUser` when the connected
   # account has no Google Calendar (typically a Workspace account whose admin
   # has disabled the service). Retrying cannot recover, so treat it like a
@@ -381,10 +410,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     attrs =
       maybe_put_sync_token(%{last_external_sync_at: DateTime.utc_now(:second)}, next_sync_token)
 
-    result = CalendarIntegrationQueries.update_sync_state(integration, attrs)
-    HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
         :ok
 

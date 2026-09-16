@@ -227,7 +227,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
                })
     end
 
-    test "bootstrap tolerates unauthorised errors without crashing" do
+    test "bootstrap discards on unauthorised errors without crashing" do
       integration =
         insert(:calendar_integration,
           provider: "google",
@@ -242,7 +242,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
         {:error, :unauthorized, "Token revoked"}
       end)
 
-      assert :ok =
+      assert {:discard, _reason} =
                perform_job(SyncGoogleCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })

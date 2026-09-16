@@ -180,7 +180,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Workers.SyncHealth
 
   @busy_only EventRole.busy_only()
   @display_only EventRole.display_only()
@@ -199,6 +199,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
         integration
         |> sync()
         |> handle_result(integration)
+        |> tap(&SyncHealth.record_outcome(integration, &1))
 
       {:error, :not_found} ->
         Logger.warning("Exchange integration not found, discarding sync job",
@@ -425,8 +426,6 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
-        HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
         Logger.info("Exchange calendar refreshed",
           calendar_integration_id: integration.id,
           event_count: count
@@ -447,6 +446,10 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   defp full_read_stamp(:full, now), do: %{last_full_sync_at: now}
   defp full_read_stamp(:incremental, _now), do: %{}
 
+  # The failure streak is not recorded here: `perform/1` feeds the whole
+  # cycle's verdict to `SyncHealth.record_outcome/2`, and the clauses that
+  # flag for reconnection never reach this helper at all. This one owns the
+  # message the dashboard shows.
   defp record_failure(integration, reason) do
     Logger.error("Exchange calendar sync failed",
       calendar_integration_id: integration.id,

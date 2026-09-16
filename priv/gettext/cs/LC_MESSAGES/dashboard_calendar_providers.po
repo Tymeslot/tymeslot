@@ -1294,3 +1294,13 @@ msgstr "Nepodařilo se najít žádné kalendáře. Nejprve na svém serveru vyt
 #, elixir-autogen, elixir-format
 msgid "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
 msgstr "Tento účet Google nemá zapnutý Google Calendar. Zapněte pro účet Google Calendar (možná to bude muset udělat administrátor Google Workspace), nebo připojte jiný účet Google."
+
+#: lib/tymeslot/workers/sync_google_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Google rejected the stored credentials. Please reconnect the integration."
+msgstr "Google odmítl uložené přihlašovací údaje. Připojte prosím integraci znovu."
+
+#: lib/tymeslot/workers/sync_outlook_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Microsoft rejected the stored credentials. Please reconnect the integration."
+msgstr "Microsoft odmítl uložené přihlašovací údaje. Připojte prosím integraci znovu."
