@@ -134,7 +134,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoader do
 
       _different ->
         unless MapSet.member?(applied, key) do
-          Logger.info(
+          Logger.warning(
             "DotenvLoader: ignoring #{key} in #{path}: " <>
               "the environment already sets it, and the environment wins"
           )

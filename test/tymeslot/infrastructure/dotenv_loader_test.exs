@@ -114,7 +114,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     path = write_env(tmp_dir, "TYMESLOT_DOTENV_TEST_SHELL=file_secret\n")
     System.put_env("TYMESLOT_DOTENV_TEST_SHELL", "shell_secret")
 
-    messages = info_messages(fn -> DotenvLoader.load([path]) end)
+    messages = warning_messages(fn -> DotenvLoader.load([path]) end)
 
     assert [message] = Enum.filter(messages, &(&1 =~ "TYMESLOT_DOTENV_TEST_SHELL"))
     refute message =~ "secret"
@@ -128,7 +128,7 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     path = write_env(tmp_dir, "TYMESLOT_DOTENV_TEST_SHELL=same\n")
     System.put_env("TYMESLOT_DOTENV_TEST_SHELL", "same")
 
-    messages = info_messages(fn -> DotenvLoader.load([path]) end)
+    messages = warning_messages(fn -> DotenvLoader.load([path]) end)
 
     assert Enum.filter(messages, &(&1 =~ "TYMESLOT_DOTENV_TEST_SHELL")) == []
   end
@@ -139,18 +139,18 @@ defmodule Tymeslot.Infrastructure.DotenvLoaderTest do
     File.write!(primary, "TYMESLOT_DOTENV_TEST_B=primary\n")
     File.write!(secondary, "TYMESLOT_DOTENV_TEST_B=secondary\n")
 
-    messages = info_messages(fn -> DotenvLoader.load([primary, secondary]) end)
+    messages = warning_messages(fn -> DotenvLoader.load([primary, secondary]) end)
 
     assert System.get_env("TYMESLOT_DOTENV_TEST_B") == "primary"
     # The earlier file set it, not the environment, so nothing was overridden.
     assert Enum.filter(messages, &(&1 =~ "TYMESLOT_DOTENV_TEST_B")) == []
   end
 
-  defp info_messages(fun) do
-    LogCapture.with_capture([logger_level: :info], fun)
+  defp warning_messages(fun) do
+    LogCapture.with_capture(fun)
 
     LogCapture.drain()
-    |> Enum.filter(&(&1.level == :info))
+    |> Enum.filter(&(&1.level == :warning))
     |> Enum.map(&LogCapture.message_text(&1.msg))
   end
 
