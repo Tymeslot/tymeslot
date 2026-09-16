@@ -1,11 +1,11 @@
-# Tymeslot — Brazilian Portuguese (pt_BR) Translation Style Guide & Termbase
+# Tymeslot — Brazilian Portuguese (`pt`) Translation Style Guide & Termbase
 
 Authoritative. Written **before** the catalogues, not mined from them, so that every one
 of the 3,438 msgstrs could be translated against a fixed termbase instead of drifting
 across 28 domains. Where this guide and a msgstr disagree, **this guide wins**.
 
-Brazilian Portuguese only. See §8 for why this is `pt_BR` and not `pt`, and why that
-choice changes runtime behaviour rather than just a label.
+Brazilian Portuguese only. See §8 for why the directory is `pt` even so — the
+reason is in `LocalePlug`, not in the language.
 
 ---
 
@@ -247,34 +247,30 @@ correct them. Translating or "fixing" one of those turns the message into nonsen
 
 ## 5. PLURALS
 
-pt_BR is `nplurals=2; plural=(n > 1);`.
-
-**This is not the same split as German, and it is the trap in this language.**
+`pt` is `nplurals=2; plural=(n != 1);` — the same split as German and French.
 
 ```
-msgstr[0]  →  n == 0 AND n == 1
-msgstr[1]  →  n > 1
+msgstr[0]  →  n == 1 only
+msgstr[1]  →  everything else, INCLUDING zero
 ```
 
-Zero takes the **singular** form, because gettext's pt_BR rule is `n > 1`, not `n != 1`.
-So `msgstr[0]` has to read correctly for both "0" and "1", and the naive singular
-sometimes does not:
+Zero taking the plural is what Brazilians actually write: *0 reuniões*, *0 itens*,
+not *0 reunião*. So the natural singular and the natural plural go straight in, with
+nothing to work around:
 
 ```po
 msgid "%{count} booking"
 msgid_plural "%{count} bookings"
-msgstr[0] "%{count} agendamento"     # "0 agendamento" — awkward but correct per the rule
+msgstr[0] "%{count} agendamento"
 msgstr[1] "%{count} agendamentos"
 ```
 
-Where a zero case is genuinely reachable in the UI and "0 <singular>" would look broken,
-**rephrase the msgstr[0] so it survives both** — e.g. prefer a form without the bare
-noun-count juxtaposition. Where zero is unreachable (durations, "%{count} minutes"),
-translate naturally and move on.
+> **Worth knowing if this locale is ever renamed `pt_BR`.** Expo's table gives the
+> two tags different rules: `pt` is `n != 1`, but `pt_BR` is `n > 1`, which puts
+> zero in `msgstr[0]` and would render *0 reunião*. Renaming the directory would
+> silently change what 63 entries print at zero. See §8.
 
 Both forms must be filled. Placeholders present in a form must appear in that form.
-
----
 
 ## 6. TONE BY REGISTER
 
@@ -330,26 +326,44 @@ Spelling: post-1990 orthographic agreement, Brazilian variant — `ação`, `dir
 
 ---
 
-## 8. WHY `pt_BR` AND NOT `pt`
+## 8. WHY `pt` AND NOT `pt_BR`, THOUGH THE TEXT IS BRAZILIAN
 
-Two reasons, and the second is not cosmetic.
+The vocabulary in §7 is Brazilian and the guide makes no apology for it. So the
+obvious directory name is `pt_BR`. It is not, and the reason is in the code rather
+than in the language.
 
-**1. The vocabulary above.** §7 is not a list of preferences; it is a list of words that
-make the other readership feel the product was not built for them. One catalogue cannot
-serve both.
+**`LocalePlug` cannot reach a region tag.** Every locale source — the `?locale=`
+param, the session, and the `Accept-Language` header — funnels through
+`normalize_locale/1`, which ends with:
 
-**2. The locale name changes runtime pluralisation.** Expo's plural-forms table, which
-Elixir's `Gettext.Plural` delegates to, gives the two tags different rules:
+```elixir
+|> String.replace(~r/[^a-z0-9\-]/, "")   # the underscore in "pt_BR" is deleted
+|> String.split("-")                     # "pt-BR" becomes ["pt", "BR"]
+|> List.first()                          # ... and only "pt" survives
+```
 
-| locale | rule | `msgstr[0]` serves |
-|---|---|---|
-| `pt` | `nplurals=2; plural=(n != 1);` | n == 1 only |
-| `pt_BR` | `nplurals=2; plural=(n > 1);` | **n == 0 and n == 1** |
+So a Brazilian visitor whose browser asks for `pt-BR` is matched against `"pt"`, and
+`?locale=pt_BR` is mangled to `"ptbr"`. Registering the locale as `pt_BR` would put
+Portuguese in the language switcher and then **never apply it** — the exact failure
+`TRANSLATING.md` calls out: *"the alternative is shipping a language switcher that
+quietly serves English."*
 
-Naming the directory `pt` and filling it with Brazilian text would silently change which
-form 63 plural entries render at zero. The tag is a behaviour switch, not a label.
+This is also why all five existing locales are bare two-letter tags. Nothing else
+can currently work.
 
----
+Two consequences, both deliberate:
+
+- The catalogue is named for the language and labelled for the readership:
+  `config :tymeslot, :locales` carries `%{code: "pt", name: "Português (Brasil)"}`,
+  so a European Portuguese reader sees what they are getting before they pick it.
+- The plural rule is `n != 1` rather than `n > 1` (§5). For Brazilian Portuguese this
+  is the better of the two anyway — zero belongs in the plural.
+
+**If you would rather have proper region tags**, the change is in `normalize_locale/1`,
+not here: keep the full tag when it is supported and fall back to the language subtag
+otherwise. That is a behaviour change to locale resolution for every existing locale,
+which is why it is not bundled with a translation. Renaming this directory without
+that fix produces a language nobody can select.
 
 ## 9. ONE-LINE SUMMARY
 
